@@ -1,0 +1,55 @@
+function(target_qt5_deploy TARGET_NAME)
+	if(NOT WIN32 AND NOT APPLE)
+		message(FATAL_ERROR "Unsupported platform")
+	endif()
+	if(NOT TARGET Qt5::qmake)
+		message(FATAL_ERROR "You must call find_package(Qt5 ...) before calling target_qt5_deploy")
+	endif()
+	if(NOT TARGET Qt5::deployqt)
+		get_target_property(_qmake_location Qt5::qmake IMPORTED_LOCATION)
+		get_filename_component(_deployqt_dir ${_qmake_location} DIRECTORY)
+		if(WIN32)
+			file(TO_CMAKE_PATH "${_deployqt_dir}/windeployqt" _deployqt_location)
+		elseif(APPLE)
+			file(TO_CMAKE_PATH "${_deployqt_dir}/macdeployqt" _deployqt_location)
+		endif()
+		add_executable(Qt5::deployqt IMPORTED)
+		set_target_properties(Qt5::deployqt PROPERTIES IMPORTED_LOCATION ${_deployqt_location})
+	endif()
+
+	cmake_parse_arguments(DEPLOY "INSTALL" "QML_DIR" "" ${ARGN})
+
+	set(_deploy_deps deployqt.deps)
+
+	if(WIN32)
+		if(EXISTS ${DEPLOY_QML_DIR})
+			add_custom_command(OUTPUT deployqt.qml.deps
+				COMMAND Qt5::deployqt -verbose 0 --dir $<TARGET_FILE_DIR:${TARGET_NAME}>/_deployqtqml --no-plugins --no-libraries --no-angle --no-opengl-sw --no-webkit2 --no-system-d3d-compiler --no-translations --qmldir ${DEPLOY_QML_DIR} $<TARGET_FILE:${TARGET_NAME}>
+				COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:${TARGET_NAME}>/_deployqtqml $<TARGET_FILE_DIR:${TARGET_NAME}>/qml)
+			if(DEPLOY_INSTALL)
+				install(DIRECTORY $<TARGET_FILE_DIR:${TARGET_NAME}>/_deployqtqml/ DESTINATION bin/qml)
+			endif()
+			list(APPEND _deploy_deps deployqt.qml.deps)
+		endif()
+		add_custom_command(OUTPUT deployqt.deps
+			COMMAND Qt5::deployqt -verbose 0 --dir $<TARGET_FILE_DIR:${TARGET_NAME}>/_deployqt --no-quick-import --no-angle --no-opengl-sw --no-webkit2 --no-system-d3d-compiler --no-translations $<TARGET_FILE:${TARGET_NAME}>
+			COMMAND ${CMAKE_COMMAND} -E copy_directory $<TARGET_FILE_DIR:${TARGET_NAME}>/_deployqt $<TARGET_FILE_DIR:${TARGET_NAME}>)
+		if(DEPLOY_INSTALL)
+			install(DIRECTORY $<TARGET_FILE_DIR:${TARGET_NAME}>/_deployqt/ DESTINATION bin)
+		endif()
+	elseif(APPLE)
+		get_target_property(_is_bundle ${TARGET_NAME} MACOSX_BUNDLE)
+		if(NOT _is_bundle)
+			message(FATAL_ERROR "target_qt5_deploy called on non bundle application target ${TARGET_NAME}")
+		endif()
+		if(EXISTS ${DEPLOY_QML_DIR})
+			add_custom_command(OUTPUT deployqt.deps
+				COMMAND Qt5::deployqt $<TARGET_BUNDLE_DIR:${TARGET_NAME}> -qmldir=${DEPLOY_QML_DIR} -verbose=0)
+		else()
+			add_custom_command(OUTPUT deployqt.deps
+				COMMAND Qt5::deployqt $<TARGET_BUNDLE_DIR:${TARGET_NAME}> -verbose=0)
+		endif()
+	endif()
+
+	add_custom_target(${TARGET_NAME}_deployqt ALL DEPENDS ${_deploy_deps})
+endfunction()

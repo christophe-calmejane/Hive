@@ -1,0 +1,18 @@
+[attr]text_lf text eol=lf
+[attr]text_crlf text eol=crlf
+
+*.cpp			text_lf
+*.c				text_lf
+*.hpp			text_lf
+*.h				text_lf
+*.ui			text_lf
+*.js			text_lf
+
+*.txt			text_lf
+*.in			text_lf
+*.cmake			text_lf
+*.md			text_lf
+*.sh			text_lf
+
+Doxyfile		text_lf
+*.eap			binary

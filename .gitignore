@@ -1,0 +1,16 @@
+# CMake build directoy
+/_build*
+
+# CPack generation directory and archives
+_CPack_Packages/
+*.tar.gz
+
+# OS Generated files
+.DS_Store
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# TMP "local" module
+/3rdparty/avdecc-local
