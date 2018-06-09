@@ -20,7 +20,7 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 
 - Clone this repository
 - Update submodules: *git submodule update --init*
-- Follow LA_avdecc [installation instructions](3rdparty/avdecc/README.md)
+- Follow LA_avdecc [installation instructions](https://github.com/L-Acoustics/avdecc/blob/master/README.md)
 - Run the gen_cmake.sh script with whatever optional parameters required (run *gen_cmake.sh -h* to display the help)
 - Go into the generated output folder
 - Open the generated solution
