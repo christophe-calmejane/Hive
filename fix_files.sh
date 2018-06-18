@@ -16,14 +16,14 @@ function applyFileAttributes()
 	local filePattern="$1"
 	local attribs="$2"
 	
-	find . -iname "$filePattern" | xargs chmod "$attribs"
+	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./_*" -exec chmod "$attribs" {} \;
 }
 
 function applyLineEndings()
 {
 	local filePattern="$1"
 	
-	find . -iname "$filePattern" | xargs dos2unix
+	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./_*" -exec dos2unix {} \;
 }
 
 which dos2unix &> /dev/null
