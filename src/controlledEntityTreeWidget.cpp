@@ -406,6 +406,12 @@ private:
 		addItem(parent, &node, name);
 	}
 
+	void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
+	{
+		auto const name = genName(controlledEntity, node);
+		addItem(parent, &node, name);
+	}
+
 private:
 	ControlledEntityTreeWidget * const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControlledEntityTreeWidget);

@@ -472,6 +472,31 @@ private:
 		//createNameItem(controlledEntity, node.clockDomainDescriptor, avdecc::ControllerManager::CommandType::None, {}); // SetName not supported yet
 	}
 
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
+	{
+		createIdItem(&node);
+		createAccessItem(&node);
+		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::None, {}); // SetName not supported yet
+
+		Q_Q(NodeTreeWidget);
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Descriptor");
+
+			auto const* const model = node.staticModel;
+			addTextItem(descriptorItem, "Memory object type", avdecc::helper::memoryObjectTypeToString(model->memoryObjectType));
+			addTextItem(descriptorItem, "Target descriptor type", avdecc::helper::descriptorTypeToString(model->targetDescriptorType));
+			addTextItem(descriptorItem, "Target descriptor index", model->targetDescriptorIndex);
+			addTextItem(descriptorItem, "Start address", avdecc::helper::toHexQString(model->startAddress, false, true));
+			addTextItem(descriptorItem, "Maximum length", avdecc::helper::toHexQString(model->maximumLength, false, true));
+			addTextItem(descriptorItem, "Length", avdecc::helper::toHexQString(model->length, false, true));
+		}
+
+		// TODO: Dynamic stuff necessary?
+	}
+
 private:
 	QTreeWidgetItem * createIdItem(la::avdecc::controller::model::EntityModelNode const* node)
 	{
