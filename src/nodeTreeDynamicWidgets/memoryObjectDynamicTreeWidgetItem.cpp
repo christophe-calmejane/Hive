@@ -31,20 +31,20 @@ MemoryObjectDynamicTreeWidgetItem::MemoryObjectDynamicTreeWidgetItem(la::avdecc:
 		_length->setText(0, "Length");
 
 		// Update info right now
-		updateMemoryObjectLength(dynamicModel->objectMemoryLength);
+		updateMemoryObjectLength(dynamicModel->length);
 
 		// Listen for MemoryObjectLengthChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectLengthChanged, this, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::entity::model::MemoryObjectLength const& memoryObjectLength)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectLengthChanged, this, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length)
 		{
 			if (entityID == _entityID && memoryObjectIndex == _memoryObjectIndex)
 			{
-				updateMemoryObjectLength(memoryObjectLength);
+				updateMemoryObjectLength(length);
 			}
 		});
 	}
 }
 
-void MemoryObjectDynamicTreeWidgetItem::updateMemoryObjectLength(la::avdecc::entity::model::MemoryObjectLength const& memoryObjectLength)
+void MemoryObjectDynamicTreeWidgetItem::updateMemoryObjectLength(std::uint64_t const length)
 {
-	_length->setText(1, avdecc::helper::toHexQString(memoryObjectLength.length, false, true));
+	_length->setText(1, avdecc::helper::toHexQString(length, false, true));
 }
