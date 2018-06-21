@@ -87,6 +87,7 @@ set(TOOLKIT_SOURCE_FILES
 set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
+    nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamConnectionWidget.hpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
@@ -97,6 +98,7 @@ set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
+    nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamConnectionWidget.cpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
