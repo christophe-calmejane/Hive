@@ -29,6 +29,7 @@
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
+#include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
 
 #include <vector>
 #include <utility>
@@ -491,10 +492,13 @@ private:
 			addTextItem(descriptorItem, "Target descriptor index", model->targetDescriptorIndex);
 			addTextItem(descriptorItem, "Start address", avdecc::helper::toHexQString(model->startAddress, false, true));
 			addTextItem(descriptorItem, "Maximum length", avdecc::helper::toHexQString(model->maximumLength, false, true));
-			addTextItem(descriptorItem, "Length", avdecc::helper::toHexQString(model->length, false, true));
 		}
 
-		// TODO: Dynamic stuff necessary?
+		// Dynamic model
+		{
+			auto* dynamicItem = new MemoryObjectDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel, q);
+			dynamicItem->setText(0, "Dynamic Info");
+		}
 	}
 
 private:
