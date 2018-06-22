@@ -158,7 +158,7 @@ do
 			;;
 		-64)
 			if isWindows; then
-				generator="Visual Studio 14 2015 Win64"
+				generator="Visual Studio 15 2017 Win64"
 				arch="x64"
 			else
 				echo "ERROR: -64 option is only supported on Windows platform"

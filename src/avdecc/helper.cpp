@@ -472,6 +472,46 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 	}
 }
 
+QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type)
+{
+	switch (type)
+	{
+		case la::avdecc::entity::model::MemoryObjectType::FirmwareImage:
+			return "Firmware Image";
+		case la::avdecc::entity::model::MemoryObjectType::VendorSpecific:
+			return "Vendor Specific";
+		case la::avdecc::entity::model::MemoryObjectType::CrashDump:
+			return "Crash Dump";
+		case la::avdecc::entity::model::MemoryObjectType::LogObject:
+			return "Log Object";
+		case la::avdecc::entity::model::MemoryObjectType::AutostartSettings:
+			return "Autostart Settings";
+		case la::avdecc::entity::model::MemoryObjectType::SnapshotSettings:
+			return "Snapshot Settings";
+		case la::avdecc::entity::model::MemoryObjectType::SvgManufacturer:
+			return "Svg Manufacturer";
+		case la::avdecc::entity::model::MemoryObjectType::SvgEntity:
+			return "Svg Entity";
+		case la::avdecc::entity::model::MemoryObjectType::SvgGeneric:
+			return "Svg Generic";
+		case la::avdecc::entity::model::MemoryObjectType::PngManufacturer:
+			return "Png Manufacturer";
+		case la::avdecc::entity::model::MemoryObjectType::PngEntity:
+			return "PngEntity";
+		case la::avdecc::entity::model::MemoryObjectType::PngGeneric:
+			return "Png Generic";
+		case la::avdecc::entity::model::MemoryObjectType::DaeManufacturer:
+			return "Dae Manufacturer";
+		case la::avdecc::entity::model::MemoryObjectType::DaeEntity:
+			return "Dae Entity";
+		case la::avdecc::entity::model::MemoryObjectType::DaeGeneric:
+			return "Dae Generic";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
+
 QString loggerLayerToString(la::avdecc::logger::Layer const layer)
 {
 	switch (layer)

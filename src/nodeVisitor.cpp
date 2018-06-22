@@ -63,6 +63,7 @@ void NodeVisitor::accept(NodeVisitor* const visitor, la::avdecc::controller::Con
 		// ClockSourceNode
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::ClockSourceNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::ClockSourceNode const*>();
 		// MemoryObjectNode
+		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::MemoryObjectNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::MemoryObjectNode const*>();
 		// LocaleNode
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::LocaleNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::LocaleNode const*>();
 		// StringsNode
