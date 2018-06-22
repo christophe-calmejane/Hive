@@ -50,7 +50,7 @@ public:
 	{
 		Q_Q(ControlledEntityTreeWidget);
 
-		q->setControlledEntityID(la::avdecc::getUninitializedIdentifier());
+		q->setControlledEntityID(la::avdecc::UniqueIdentifier{});
 		q->clearSelection();
 
 		_entityExpandedStates.clear();
@@ -118,7 +118,7 @@ public:
 		q->clear();
 		_map.clear();
 
-		if (!la::avdecc::isValidUniqueIdentifier(_controlledEntityID))
+		if (!_controlledEntityID)
 			return;
 
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -142,7 +142,7 @@ public:
 
 		Q_Q(ControlledEntityTreeWidget);
 
-		if (la::avdecc::isValidUniqueIdentifier(_controlledEntityID))
+		if (_controlledEntityID)
 		{
 			saveExpandedState();
 		}
@@ -416,11 +416,11 @@ private:
 	ControlledEntityTreeWidget * const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControlledEntityTreeWidget);
 
-	la::avdecc::UniqueIdentifier _controlledEntityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier _controlledEntityID{};
 	std::unordered_map<la::avdecc::controller::model::Node const*, TreeWidgetItem*> _map;
 
 	using NodeExpandedStates = std::unordered_map<la::avdecc::controller::model::Node const*, bool>;
-	std::unordered_map<la::avdecc::UniqueIdentifier, NodeExpandedStates> _entityExpandedStates;
+	std::unordered_map<la::avdecc::UniqueIdentifier, NodeExpandedStates, la::avdecc::UniqueIdentifier::hash> _entityExpandedStates;
 };
 
 ControlledEntityTreeWidget::ControlledEntityTreeWidget(QWidget* parent)

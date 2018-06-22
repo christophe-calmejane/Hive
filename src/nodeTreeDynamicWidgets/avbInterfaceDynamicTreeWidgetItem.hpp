@@ -39,7 +39,7 @@ private:
 	void updateAvbInfo(la::avdecc::entity::model::AvbInfo const& avbInfo);
 	//void updateAsPath(la::avdecc::entity::model::AsPath const& asPath);
 
-	la::avdecc::UniqueIdentifier const _entityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex{ 0u };
 
 	// AvbInfo

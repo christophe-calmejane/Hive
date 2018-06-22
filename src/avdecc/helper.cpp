@@ -46,7 +46,7 @@ QString protocolInterfaceTypeName(la::avdecc::EndStation::ProtocolInterfaceType 
 
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 {
-	return toHexQString(identifier, true, true);
+	return toHexQString(identifier.getValue(), true, true);
 }
 
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node)

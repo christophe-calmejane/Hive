@@ -35,7 +35,7 @@ public:
 private:
 	void updateMemoryObjectLength(std::uint64_t const memoryObjectLength);
 
-	la::avdecc::UniqueIdentifier const _entityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::MemoryObjectIndex const _memoryObjectIndex{ 0u };
 
 	// AvbInfo

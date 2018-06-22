@@ -192,7 +192,7 @@ la::avdecc::UniqueIdentifier ControllerModelPrivate::controlledEntityID(QModelIn
 	{
 		return _entities.at(index.row());
 	}
-	return la::avdecc::getNullIdentifier();
+	return la::avdecc::UniqueIdentifier{};
 }
 
 int ControllerModelPrivate::entityRow(la::avdecc::UniqueIdentifier const entityID) const

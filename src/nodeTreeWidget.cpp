@@ -56,7 +56,7 @@ public:
 	{
 		Q_Q(NodeTreeWidget);
 
-		q->setNode(la::avdecc::getUninitializedIdentifier(), {});
+		q->setNode(la::avdecc::UniqueIdentifier{}, {});
 		q->clearSelection();
 	}
 
@@ -69,7 +69,7 @@ public:
 		if (_controlledEntityID == entityID)
 		{
 			Q_Q(NodeTreeWidget);
-			q->setNode(la::avdecc::getUninitializedIdentifier(), {});
+			q->setNode(la::avdecc::UniqueIdentifier{}, {});
 			q->clearSelection();
 		}
 	}
@@ -702,7 +702,7 @@ private:
 	NodeTreeWidget * const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(NodeTreeWidget);
 
-	la::avdecc::UniqueIdentifier _controlledEntityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier _controlledEntityID{};
 };
 
 NodeTreeWidget::NodeTreeWidget(QWidget* parent)

@@ -178,7 +178,7 @@ private:
 	}
 
 	// ControllerManager overrides
-	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::entity::model::VendorEntityModel const vendorEntityModelID, QString const& preferedLocale) override
+	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
 	{
 		// If we have a previous controller, remove it
 		if (_controller)
@@ -197,7 +197,7 @@ private:
 		}
 
 		// Create a new controller and store it
-		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, vendorEntityModelID, preferedLocale.toStdString());
+		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString());
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
 #else // !HAVE_ATOMIC_SMART_POINTERS
@@ -220,7 +220,7 @@ private:
 		{
 			return controller->getControllerEID();
 		}
-		return la::avdecc::getNullIdentifier();
+		return la::avdecc::UniqueIdentifier{};
 	}
 
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept override

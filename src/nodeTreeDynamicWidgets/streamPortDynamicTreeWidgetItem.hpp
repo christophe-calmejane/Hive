@@ -39,7 +39,7 @@ public:
 private:
 	void editMappingsButtonClicked();
 
-	la::avdecc::UniqueIdentifier const _entityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamPortType{ la::avdecc::entity::model::DescriptorType::Entity };
 	la::avdecc::entity::model::StreamPortIndex const _streamPortIndex{ 0u };
 };

@@ -41,7 +41,7 @@ private:
 	void updateConnections(la::avdecc::controller::model::StreamConnections const& connections);
 	void updateConnectionState(la::avdecc::controller::model::StreamConnectionState const& connectionState);
 
-	la::avdecc::UniqueIdentifier const _entityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamType{ la::avdecc::entity::model::DescriptorType::Entity };
 	la::avdecc::entity::model::StreamIndex const _streamIndex{ 0u };
 

@@ -83,8 +83,8 @@ void MainWindow::currentControllerChanged()
 	{
 		// Create a new Controller
 		auto& manager = avdecc::ControllerManager::getInstance();
-		manager.createController(protocolType, interfaceName, 0x0003, la::avdecc::entity::model::makeVendorEntityModel(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
-		_controllerEntityIDLabel.setText(avdecc::helper::toHexQString(manager.getControllerEID(), true, true));
+		manager.createController(protocolType, interfaceName, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
@@ -96,7 +96,7 @@ void MainWindow::currentControlledEntityChanged(QModelIndex const& index)
 {
 	if (!index.isValid())
 	{
-		entityInspector->setControlledEntityID(la::avdecc::getNullIdentifier());
+		entityInspector->setControlledEntityID(la::avdecc::UniqueIdentifier{});
 		return;
 	}
 
