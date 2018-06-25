@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Support for Memory Object descriptors (Contributed by Florian Harmuth)
 
+### Fixed
+- [Matrix connections contextual menu not always correct](https://github.com/christophe-calmejane/Hive/issues/4)
+
 ## [1.0.2] - 2018-06-18
 ### Fixed
 - [Possible crash using "macOS native interface"](https://github.com/christophe-calmejane/Hive/issues/1)
