@@ -109,7 +109,7 @@ void ConnectionMatrixModel::ConnectionMatrixModelPrivate::entityOnline(la::avdec
 {
 	auto& manager = avdecc::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(entityID);
-	if (controlledEntity && !controlledEntity->gotEnumerationError())
+	if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
 	{
 		if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented))
 		{

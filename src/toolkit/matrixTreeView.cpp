@@ -387,14 +387,14 @@ public:
 					{
 						auto const& streamInputNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamName = avdecc::helper::objectName(controlledEntity.get(), streamInputNode);
-						isStreamRunning = streamInputNode.dynamicModel->isRunning;
+						isStreamRunning = controlledEntity->isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamNode = &streamInputNode;
 					}
 					else
 					{
 						auto const& streamOutputNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamName = avdecc::helper::objectName(controlledEntity.get(), streamOutputNode);
-						isStreamRunning = streamOutputNode.dynamicModel->isRunning;
+						isStreamRunning = controlledEntity->isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamNode = &streamOutputNode;
 					}
 
