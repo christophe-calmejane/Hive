@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - [Matrix connections contextual menu not always correct](https://github.com/christophe-calmejane/Hive/issues/4)
+- [Descriptor name randomly change in entity inspector](https://github.com/christophe-calmejane/Hive/issues/5)
 
 ## [1.0.2] - 2018-06-18
 ### Fixed

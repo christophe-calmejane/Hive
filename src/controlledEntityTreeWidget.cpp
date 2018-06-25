@@ -265,9 +265,9 @@ private:
 		};
 		auto* item = addItem(parent, &node, genName(avdecc::helper::configurationName(controlledEntity, node)));
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::configurationNameChanged, item, [genName, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& /*configurationName*/)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::configurationNameChanged, item, [this, genName, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& /*configurationName*/)
 		{
-			if (configurationIndex == node.descriptorIndex)
+			if (entityID == _controlledEntityID && configurationIndex == node.descriptorIndex)
 			{
 				auto& manager = avdecc::ControllerManager::getInstance();
 				auto controlledEntity = manager.getControlledEntity(entityID);
@@ -299,11 +299,12 @@ private:
 	template<class Node>
 	void updateName(TreeWidgetItem* item, Node const& node, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex)
 	{
-		if (descriptorType == node.descriptorType && descriptorIndex == node.descriptorIndex)
+		if (entityID == _controlledEntityID && descriptorType == node.descriptorType && descriptorIndex == node.descriptorIndex)
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
+			// Filter configuration, we currently expand nodes only for current configuration
 			if (controlledEntity && configurationIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration)
 			{
 				auto name = genName(controlledEntity.get(), node);
