@@ -210,6 +210,8 @@ private:
 		{
 			emit controllerOnline();
 			ctrl->registerObserver(this);
+			//ctrl->enableEntityAdvertising(10);
+			//ctrl->enableEntityModelCache();
 		}
 	}
 
