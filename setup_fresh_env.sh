@@ -89,7 +89,8 @@ setupEnv()
 	echo "done (feel free to change created '3rdparty/avdecc-local' symlink to something custom)"
 	
 	echo -n "Downloading WinPcap Developer's Pack... "
-	local result=$(which wget 2>&1)
+	local result
+	result=$(which wget 2>&1)
 	if [ $? -ne 0 ];
 	then
 		echo "failed, wget not found (see 3rdparty/avdecc/externals/3rdparty/winpcap/README.me for manually installation instructions)"
@@ -109,10 +110,10 @@ setupEnv()
 		echo "done"
 		
 		echo -n "Installing WinPcap Developer's Pack... "
-		local result=$(which unzip 2>&1)
+		result=$(which unzip 2>&1)
 		if [ $? -ne 0 ];
 		then
-			echo "failed, wget not found (see 3rdparty/avdecc/externals/3rdparty/winpcap/README.me for manually installation instructions)"
+			echo "failed, unzip not found (see 3rdparty/avdecc/externals/3rdparty/winpcap/README.me for manually installation instructions)"
 			rm -f "$outputFile"
 		else
 			local outputFolder="_WpdPack"
