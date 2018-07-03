@@ -247,7 +247,7 @@ private:
 
 			addTextItem(descriptorItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(model->macAddress, true));
 			addTextItem(descriptorItem, "Flags", avdecc::helper::toHexQString(la::avdecc::to_integral(model->interfaceFlags), true, true) + QString(" (") + avdecc::helper::flagsToString(model->interfaceFlags) + QString(")"));
-			addTextItem(descriptorItem, "Clock Identity", avdecc::helper::uniqueIdentifierToString(model->clockIdentify));
+			addTextItem(descriptorItem, "Clock Identity", avdecc::helper::uniqueIdentifierToString(model->clockIdentity));
 			addTextItem(descriptorItem, "Priority 1", avdecc::helper::toHexQString(model->priority1, true, true));
 			addTextItem(descriptorItem, "Clock Class", avdecc::helper::toHexQString(model->clockClass, true, true));
 			addTextItem(descriptorItem, "Offset Scaled Log Variance", avdecc::helper::toHexQString(model->offsetScaledLogVariance, true, true));
