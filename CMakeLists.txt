@@ -61,6 +61,7 @@ set(BUILD_AVDECC_TESTS OFF CACHE BOOL "Build unit tests." FORCE)
 set(BUILD_AVDECC_LIB_SHARED_CXX ON CACHE BOOL "Build C++ shared library." FORCE)
 set(BUILD_AVDECC_LIB_STATIC_RT_SHARED OFF CACHE BOOL "Build static library (runtime shared)." FORCE)
 set(BUILD_AVDECC_DOC OFF CACHE BOOL "Build documentation." FORCE)
+set(BUILD_AVDECC_WRAPPER_LUA OFF CACHE BOOL "Build avdecc lua wrapper library." FORCE)
 set(BUILD_AVDECC_CONTROLLER ON CACHE BOOL "Build avdecc controller library." FORCE)
 set(BUILD_AVDECC_INTERFACE_PCAP ON CACHE BOOL "Build the pcap protocol interface." FORCE)
 set(BUILD_AVDECC_INTERFACE_PCAP_DYNAMIC_LINKING ON CACHE BOOL "Pcap protocol interface uses dynamic shared library linking (instead of static linking)." FORCE)
@@ -79,10 +80,13 @@ set(ENABLE_AVDECC_SIGNING ${ENABLE_HIVE_SIGNING} CACHE BOOL "Enable binaries sig
 # Enable features
 set(ENABLE_AVDECC_FEATURE_REDUNDANCY ON CACHE BOOL "Enable 'Network Redundancy' feature as defined by AVnu Alliance." FORCE)
 # Compatibility options
+set(ENABLE_AVDECC_USE_FMTLIB ON CACHE BOOL "Use fmtlib" FORCE)
+set(ENABLE_AVDECC_CUSTOM_ANY ON CACHE BOOL "Use custom std::any instead of c++17 one (for compilers not supporting std::any yet)" FORCE)
 set(ENABLE_AVDECC_STRICT_2018_REDUNDANCY ON CACHE BOOL "Be strict about 'Network Redundancy' feature, using AVnu 2018 specifications." FORCE)
 set(IGNORE_INVALID_CONTROL_DATA_LENGTH ON CACHE BOOL "Allow messages with an invalid advertised 'Control Data Length' field." FORCE)
 set(IGNORE_INVALID_NON_SUCCESS_AEM_RESPONSES ON CACHE BOOL "Allow invalid AEM non-success responses messages." FORCE)
 set(IGNORE_NEITHER_STATIC_NOR_DYNAMIC_MAPPINGS ON CACHE BOOL "Allow Entities not supporting Dynamic Mapping and not adversiting AUDIO_MAP." FORCE)
+set(ALLOW_BIG_AEM_PAYLOADS ON CACHE BOOL "Allow AEM payloads bigger than the allowed 524 bytes." FORCE)
 
 # Include avdecc project
 add_subdirectory(${AVDECC_BASE_FOLDER})
