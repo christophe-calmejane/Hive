@@ -21,6 +21,7 @@
 #include <atomic>
 #include <la/avdecc/logger.hpp>
 #include "avdecc/helper.hpp"
+#include "settingsManager/settings.hpp"
 
 #if __cpp_lib_experimental_atomic_smart_pointers
 #define HAVE_ATOMIC_SMART_POINTERS
@@ -29,7 +30,7 @@
 namespace avdecc
 {
 
-class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer
+class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer, public settings::SettingsManager::Observer
 {
 public:
 	using SharedController = std::shared_ptr<la::avdecc::controller::Controller>;
@@ -63,9 +64,37 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnectionState>("la::avdecc::controller::model::StreamConnectionState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnections>("la::avdecc::controller::model::StreamConnections");
+
+		// Configure settings observers
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+	}
+
+	~ControllerManagerImpl() noexcept
+	{
+		// Remove settings observers
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
 	}
 
 private:
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
+	{
+		auto ctrl = getController();
+		if (ctrl)
+		{
+			if (value.toBool())
+			{
+				ctrl->enableEntityModelCache();
+			}
+			else
+			{
+				ctrl->disableEntityModelCache();
+			}
+		}
+	}
+
 	// la::avdecc::controller::Controller::Observer overrides
 	// Global notifications
 	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/) noexcept override
@@ -211,7 +240,10 @@ private:
 			emit controllerOnline();
 			ctrl->registerObserver(this);
 			//ctrl->enableEntityAdvertising(10);
-			//ctrl->enableEntityModelCache();
+
+			// Trigger setting observers
+			auto& settings = settings::SettingsManager::getInstance();
+			settings.triggerSettingObserver(settings::AemCacheEnabled.name, this);
 		}
 	}
 

@@ -33,7 +33,7 @@ namespace helper
 {
 
 template<typename T>
-constexpr QString toHexQString(T const v, bool const zeroFilled = false, bool const upper = false) noexcept
+inline QString toHexQString(T const v, bool const zeroFilled = false, bool const upper = false) noexcept
 {
 	static_assert(std::numeric_limits<T>::is_integer, "toHexQString requires an integer value");
 

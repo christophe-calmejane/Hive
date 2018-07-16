@@ -23,7 +23,7 @@ option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
 project(Hive)
 
 # Using c++14 standard for all targets
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # Set minimum OSX version

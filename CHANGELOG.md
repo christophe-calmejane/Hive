@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Support for Memory Object descriptors (Contributed by Florian Harmuth)
+- Settings menu
 
 ### Fixed
 - [Matrix connections contextual menu not always correct](https://github.com/christophe-calmejane/Hive/issues/4)

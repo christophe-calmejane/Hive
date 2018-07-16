@@ -30,7 +30,9 @@
 #include "toolkit/dynamicHeaderView.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "aboutDialog.hpp"
+#include "settingsDialog.hpp"
 #include "acquireStateItemDelegate.hpp"
+#include "settingsManager/settings.hpp"
 
 #include <mutex>
 
@@ -40,10 +42,9 @@
 
 Q_DECLARE_METATYPE(la::avdecc::EndStation::ProtocolInterfaceType);
 
-MainWindow::MainWindow(QSettings* const settings, QWidget* parent)
+MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
 	, _controllerModel(new avdecc::ControllerModel(this))
-	, _settings(settings)
 {
 	setupUi(this);
 
@@ -76,8 +77,9 @@ void MainWindow::currentControllerChanged()
 	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::EndStation::ProtocolInterfaceType>();
 	auto const interfaceName = _interfaceComboBox.currentData().toString();
 
-	_settings->setValue("protocolType", _protocolComboBox.currentText());
-	_settings->setValue("interfaceName", _interfaceComboBox.currentText());
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ProtocolType, _protocolComboBox.currentText());
+	settings.setValue(settings::InterfaceName, _interfaceComboBox.currentText());
 
 	try
 	{
@@ -222,18 +224,20 @@ void MainWindow::populateInterfaceComboBox()
 
 void MainWindow::loadSettings()
 {
-	_protocolComboBox.setCurrentText(_settings->value("protocolType").toString());
-	_interfaceComboBox.setCurrentText(_settings->value("interfaceName").toString());
+	auto& settings = settings::SettingsManager::getInstance();
+
+	_protocolComboBox.setCurrentText(settings.getValue(settings::ProtocolType).toString());
+	_interfaceComboBox.setCurrentText(settings.getValue(settings::InterfaceName).toString());
 
 	currentControllerChanged();
 
-	_controllerDynamicHeaderView.restoreState(_settings->value("controllerDynamicHeaderView/state").toByteArray());
-	loggerView->header()->restoreState(_settings->value("loggerDynamicHeaderView/state").toByteArray());
-	entityInspector->restoreState(_settings->value("entityInspector/state").toByteArray());
-	splitter->restoreState(_settings->value("splitter/state").toByteArray());
+	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
+	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
+	entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
+	splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
 
-	restoreGeometry(_settings->value("mainWindow/geometry").toByteArray());
-	restoreState(_settings->value("mainWindow/state").toByteArray());
+	restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
+	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
 }
 
 void MainWindow::connectSignals()
@@ -244,7 +248,8 @@ void MainWindow::connectSignals()
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this, [this]()
 	{
-		_settings->setValue("controllerDynamicHeaderView/state", _controllerDynamicHeaderView.saveState());
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 	});
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this, [this](QPoint const& pos)
 	{
@@ -300,17 +305,20 @@ void MainWindow::connectSignals()
 
 	connect(entityInspector, &EntityInspector::stateChanged, this, [this]()
 	{
-		_settings->setValue("entityInspector/state", entityInspector->saveState());
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.setValue(settings::EntityInspectorState, entityInspector->saveState());
 	});
 
 	connect(loggerView->header(), &qt::toolkit::DynamicHeaderView::sectionChanged, this, [this]()
 	{
-		_settings->setValue("loggerDynamicHeaderView/state", loggerView->header()->saveState());
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.setValue(settings::LoggerDynamicHeaderViewState, loggerView->header()->saveState());
 	});
 
 	connect(splitter, &QSplitter::splitterMoved, this, [this]()
 	{
-		_settings->setValue("splitter/state", splitter->saveState());
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.setValue(settings::SplitterState, splitter->saveState());
 	});
 
 	// Connect ControllerManager events
@@ -332,6 +340,14 @@ void MainWindow::connectSignals()
 
 	//
 
+	connect(actionSettings, &QAction::triggered, this, [this]()
+	{
+		SettingsDialog dialog{ this };
+		dialog.exec();
+	});
+
+	//
+
 	connect(actionAbout, &QAction::triggered, this, [this]()
 	{
 		AboutDialog dialog{ this };
@@ -347,8 +363,9 @@ void MainWindow::showEvent(QShowEvent* event)
 	std::call_once(once, [this]()
 	{
 		// Check version change
-		auto lastVersion = _settings->value("LastLaunchedVersion", "1.0.0.0").toString();
-		_settings->setValue("LastLaunchedVersion", hive::internals::versionString);
+		auto& settings = settings::SettingsManager::getInstance();
+		auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
+		settings.setValue(settings::LastLaunchedVersion.name, hive::internals::versionString);
 
 		if (lastVersion == hive::internals::versionString)
 			return;
@@ -404,8 +421,9 @@ void MainWindow::showEvent(QShowEvent* event)
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-	_settings->setValue("mainWindow/geometry", saveGeometry());
-	_settings->setValue("mainWindow/state", saveState());
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::MainWindowGeometry, saveGeometry());
+	settings.setValue(settings::MainWindowState, saveState());
 
 	qApp->closeAllWindows();
 
