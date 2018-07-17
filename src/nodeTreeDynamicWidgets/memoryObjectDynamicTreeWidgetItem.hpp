@@ -26,29 +26,18 @@
 
 #include <QObject>
 #include <QTreeWidgetItem>
-#include <QPushButton>
-#include <QLabel>
-#include <QHBoxLayout>
 
-class AvbInterfaceDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
+class MemoryObjectDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, QTreeWidget *parent = nullptr);
+	MemoryObjectDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::controller::model::MemoryObjectNodeDynamicModel const* const dynamicModel, QTreeWidget *parent = nullptr);
 
 private:
-	void updateAvbInfo(la::avdecc::entity::model::AvbInfo const& avbInfo);
-	//void updateAsPath(la::avdecc::entity::model::AsPath const& asPath);
+	void updateMemoryObjectLength(std::uint64_t const memoryObjectLength);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
-	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex{ 0u };
+	la::avdecc::entity::model::MemoryObjectIndex const _memoryObjectIndex{ 0u };
 
 	// AvbInfo
-	QTreeWidgetItem* _gptpGrandmasterID{ nullptr };
-	QTreeWidgetItem* _gptpDomainNumber{ nullptr };
-	QTreeWidgetItem* _propagationDelay{ nullptr };
-	QTreeWidgetItem* _flags{ nullptr };
-	//addTextItem(dynamicItem, "Msrp Mappings", node.avbInfo->mappings);
-
-	// AsPath
-	// ...
+	QTreeWidgetItem* _length{ nullptr };
 };

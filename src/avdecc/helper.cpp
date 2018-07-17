@@ -46,7 +46,7 @@ QString protocolInterfaceTypeName(la::avdecc::EndStation::ProtocolInterfaceType 
 
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 {
-	return toHexQString(identifier, true, true);
+	return toHexQString(identifier.getValue(), true, true);
 }
 
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node)
@@ -466,6 +466,46 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 			return "MIDI";
 		case la::avdecc::entity::model::AudioClusterFormat::Smpte:
 			return "SMPTE";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
+
+QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type)
+{
+	switch (type)
+	{
+		case la::avdecc::entity::model::MemoryObjectType::FirmwareImage:
+			return "Firmware Image";
+		case la::avdecc::entity::model::MemoryObjectType::VendorSpecific:
+			return "Vendor Specific";
+		case la::avdecc::entity::model::MemoryObjectType::CrashDump:
+			return "Crash Dump";
+		case la::avdecc::entity::model::MemoryObjectType::LogObject:
+			return "Log Object";
+		case la::avdecc::entity::model::MemoryObjectType::AutostartSettings:
+			return "Autostart Settings";
+		case la::avdecc::entity::model::MemoryObjectType::SnapshotSettings:
+			return "Snapshot Settings";
+		case la::avdecc::entity::model::MemoryObjectType::SvgManufacturer:
+			return "Svg Manufacturer";
+		case la::avdecc::entity::model::MemoryObjectType::SvgEntity:
+			return "Svg Entity";
+		case la::avdecc::entity::model::MemoryObjectType::SvgGeneric:
+			return "Svg Generic";
+		case la::avdecc::entity::model::MemoryObjectType::PngManufacturer:
+			return "Png Manufacturer";
+		case la::avdecc::entity::model::MemoryObjectType::PngEntity:
+			return "PngEntity";
+		case la::avdecc::entity::model::MemoryObjectType::PngGeneric:
+			return "Png Generic";
+		case la::avdecc::entity::model::MemoryObjectType::DaeManufacturer:
+			return "Dae Manufacturer";
+		case la::avdecc::entity::model::MemoryObjectType::DaeEntity:
+			return "Dae Entity";
+		case la::avdecc::entity::model::MemoryObjectType::DaeGeneric:
+			return "Dae Generic";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";

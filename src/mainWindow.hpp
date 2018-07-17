@@ -34,7 +34,7 @@ class MainWindow : public QMainWindow, private Ui::MainWindow
 {
 	Q_OBJECT
 public:
-	MainWindow(QSettings* const settings, QWidget* parent = nullptr);
+	MainWindow(QWidget* parent = nullptr);
 
 	Q_SLOT void currentControllerChanged();
 	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
@@ -66,6 +66,4 @@ private:
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };
 	std::unique_ptr<connectionMatrix::ConnectionMatrixModel> _connectionMatrixModel{ nullptr };
 	std::unique_ptr<connectionMatrix::ConnectionMatrixItemDelegate> _connectionMatrixItemDelegate{ nullptr };
-
-	QSettings* _settings{ nullptr };
 };

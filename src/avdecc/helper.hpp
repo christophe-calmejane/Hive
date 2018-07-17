@@ -33,7 +33,7 @@ namespace helper
 {
 
 template<typename T>
-QString toHexQString(T const v, bool const zeroFilled = false, bool const upper = false) noexcept
+inline QString toHexQString(T const v, bool const zeroFilled = false, bool const upper = false) noexcept
 {
 	static_assert(std::numeric_limits<T>::is_integer, "toHexQString requires an integer value");
 
@@ -84,6 +84,8 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags);
 
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type);
 QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format);
+
+QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type);
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer);
 QString loggerLevelToString(la::avdecc::logger::Level const& level);

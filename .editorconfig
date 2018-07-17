@@ -1,0 +1,43 @@
+# Plugins are available for the following editors and IDE: Atom, Eclipse, Emacs, Notepad++, SublimeText, Vim, VisualStudio, Xcode (see http://editorconfig.org/)
+
+# Force Makefile files settings (just in case someone changes the default settings)
+[Makefile]
+indent_style = tab
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = false
+
+# Force CMake files settings (just in case someone changes the default settings)
+[{CMakeLists.txt,*.cmake}]
+indent_style = tab
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = false
+
+# Force shell files settings (just in case someone changes the default settings)
+[*.sh]
+indent_style = tab
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = false
+
+# Force LUA files settings (just in case someone changes the default settings)
+[*.lua]
+indent_style = tab
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{c,cpp,h,hpp}]
+charset = utf-8
+indent_style = tab
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+indent_style = space
+indent_size = 1
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = false

@@ -40,7 +40,7 @@ public:
 private:
 	void updateSamplingRate(la::avdecc::entity::model::SamplingRate const samplingRate);
 
-	la::avdecc::UniqueIdentifier const _entityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::AudioUnitIndex const _audioUnitIndex{ 0u };
 
 	//

@@ -13,7 +13,7 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 ## Minimum requirements for compilation
 
 - CMake 3.10
-- Qt 5.10.1
+- Qt 5.10.1 (including QtWebEngine)
 - Visual Studio 2017 15.7.0, Xcode 9.2, or any c++17 compliant compiler
 
 ## Compilation

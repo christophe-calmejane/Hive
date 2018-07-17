@@ -87,6 +87,7 @@ set(TOOLKIT_SOURCE_FILES
 set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
+	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamConnectionWidget.hpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
@@ -97,6 +98,7 @@ set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
+	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamConnectionWidget.cpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
@@ -118,6 +120,21 @@ set(AVDECC_HELPER_SOURCE_FILES
 	avdecc/controllerModel.cpp
 	avdecc/helper.cpp
 	avdecc/loggerModel.cpp
+)
+
+# Settings Dialog header files
+set(SETTINGS_DIALOG_HEADER_FILES
+	settingsDialog.hpp
+)
+
+# Settings Dialog source files
+set(SETTINGS_DIALOG_SOURCE_FILES
+	settingsDialog.cpp
+)
+
+# Settings Dialog resource files
+set(SETTINGS_DIALOG_RESOURCE_FILES
+	settingsDialog.ui
 )
 
 # About Dialog header files
@@ -150,6 +167,17 @@ set(LOGGER_VIEW_RESOURCE_FILES
 	loggerView.ui
 )
 
+# Settings header files
+set(SETTINGS_HEADER_FILES
+	settingsManager/settingsManager.hpp
+	settingsManager/settings.hpp
+)
+
+# Settings source files
+set(SETTINGS_SOURCE_FILES
+	settingsManager/settingsManager.cpp
+)
+
 # Main windows header files
 set(MAIN_WINDOW_HEADER_FILES
 	mainWindow.hpp
@@ -174,6 +202,7 @@ set(COMMON_HEADER_FILES
 	mappingMatrix.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
+	settingsManager/settingsManager.hpp
 )
 
 # Common source files
@@ -190,14 +219,18 @@ set(COMMON_SOURCE_FILES
 # Group sources
 source_group("Resource Files" FILES ${RESOURCE_FILES})
 source_group("Resource Files\\About Dialog" FILES ${ABOUT_DIALOG_RESOURCE_FILES})
+source_group("Resource Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_RESOURCE_FILES})
 source_group("Resource Files\\Logger View" FILES ${LOGGER_VIEW_RESOURCE_FILES})
+source_group("Resource Files\\Settings" FILES ${SETTINGS_RESOURCE_FILES})
 source_group("Resource Files\\Main Window" FILES ${MAIN_WINDOW_RESOURCE_FILES})
 
 source_group("Header Files\\Toolkit" FILES ${TOOLKIT_HEADER_FILES})
 source_group("Header Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_HEADER_FILES})
 source_group("Header Files\\Avdecc Helper" FILES ${AVDECC_HELPER_HEADER_FILES})
 source_group("Header Files\\About Dialog" FILES ${ABOUT_DIALOG_HEADER_FILES})
+source_group("Header Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_HEADER_FILES})
 source_group("Header Files\\Logger View" FILES ${LOGGER_VIEW_HEADER_FILES})
+source_group("Header Files\\Settings" FILES ${SETTINGS_HEADER_FILES})
 source_group("Header Files\\Main Window" FILES ${MAIN_WINDOW_HEADER_FILES})
 source_group("Header Files" FILES ${COMMON_HEADER_FILES})
 
@@ -205,6 +238,7 @@ source_group("Source Files\\Toolkit" FILES ${TOOLKIT_SOURCE_FILES})
 source_group("Source Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES})
 source_group("Source Files\\Avdecc Helper" FILES ${AVDECC_HELPER_SOURCE_FILES})
 source_group("Source Files\\About Dialog" FILES ${ABOUT_DIALOG_SOURCE_FILES})
+source_group("Source Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Logger View" FILES ${LOGGER_VIEW_SOURCE_FILES})
 source_group("Source Files\\Main Window" FILES ${MAIN_WINDOW_SOURCE_FILES})
 source_group("Source Files" FILES ${COMMON_SOURCE_FILES})
@@ -213,6 +247,7 @@ source_group("Source Files" FILES ${COMMON_SOURCE_FILES})
 target_sources(${PROJECT_NAME} PUBLIC
 	${RESOURCE_FILES}
 	${ABOUT_DIALOG_RESOURCE_FILES}
+	${SETTINGS_DIALOG_RESOURCE_FILES}
 	${LOGGER_VIEW_RESOURCE_FILES}
 	${MAIN_WINDOW_RESOURCE_FILES}
 
@@ -220,7 +255,9 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${NODETREE_DYNAMIC_WIDGETS_HEADER_FILES}
 	${AVDECC_HELPER_HEADER_FILES}
 	${ABOUT_DIALOG_HEADER_FILES}
+	${SETTINGS_DIALOG_HEADER_FILES}
 	${LOGGER_VIEW_HEADER_FILES}
+	${SETTINGS_HEADER_FILES}
 	${MAIN_WINDOW_HEADER_FILES}
 	${COMMON_HEADER_FILES}
 
@@ -228,7 +265,9 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES}
 	${AVDECC_HELPER_SOURCE_FILES}
 	${ABOUT_DIALOG_SOURCE_FILES}
+	${SETTINGS_DIALOG_SOURCE_FILES}
 	${LOGGER_VIEW_SOURCE_FILES}
+	${SETTINGS_SOURCE_FILES}
 	${MAIN_WINDOW_SOURCE_FILES}
 	${COMMON_SOURCE_FILES}
 )

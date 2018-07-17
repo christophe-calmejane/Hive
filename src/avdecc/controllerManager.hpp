@@ -66,7 +66,7 @@ public:
 	* @note Might throw la::avdecc::controller::Controller::Exception.
 	*       All observers should be removed from the previous controller before setting a new one.
 	*/
-	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::entity::model::VendorEntityModel const vendorEntityModelID, QString const& preferedLocale) = 0;
+	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) = 0;
 
 	/** Gets the controller's EID */
 	virtual la::avdecc::UniqueIdentifier getControllerEID() const noexcept = 0;
@@ -102,6 +102,7 @@ public:
 	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept = 0;
 	//virtual void getListenerStreamState(la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept = 0;
 
+	/* Static methods */
 	static QString typeToString(AecpCommandType const type) noexcept;
 	static QString typeToString(AcmpCommandType const type) noexcept;
 
@@ -127,6 +128,7 @@ public:
 	Q_SIGNAL void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning);
 	Q_SIGNAL void avbInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInfo const& info);
 	Q_SIGNAL void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex);
+	Q_SIGNAL void memoryObjectLengthChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length);
 
 	/* Connection changed signals */
 	Q_SIGNAL void streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state);
@@ -137,6 +139,7 @@ public:
 	Q_SIGNAL void endAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status);
 	Q_SIGNAL void beginAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType);
 	Q_SIGNAL void endAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status);
+
 };
 
 } // namespace avdecc

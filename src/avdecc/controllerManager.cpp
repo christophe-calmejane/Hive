@@ -21,6 +21,7 @@
 #include <atomic>
 #include <la/avdecc/logger.hpp>
 #include "avdecc/helper.hpp"
+#include "settingsManager/settings.hpp"
 
 #if __cpp_lib_experimental_atomic_smart_pointers
 #define HAVE_ATOMIC_SMART_POINTERS
@@ -29,7 +30,7 @@
 namespace avdecc
 {
 
-class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer
+class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer, public settings::SettingsManager::Observer
 {
 public:
 	using SharedController = std::shared_ptr<la::avdecc::controller::Controller>;
@@ -63,9 +64,37 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnectionState>("la::avdecc::controller::model::StreamConnectionState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnections>("la::avdecc::controller::model::StreamConnections");
+
+		// Configure settings observers
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+	}
+
+	~ControllerManagerImpl() noexcept
+	{
+		// Remove settings observers
+		auto& settings = settings::SettingsManager::getInstance();
+		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
 	}
 
 private:
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
+	{
+		auto ctrl = getController();
+		if (ctrl)
+		{
+			if (value.toBool())
+			{
+				ctrl->enableEntityModelCache();
+			}
+			else
+			{
+				ctrl->disableEntityModelCache();
+			}
+		}
+	}
+
 	// la::avdecc::controller::Controller::Observer overrides
 	// Global notifications
 	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/) noexcept override
@@ -178,7 +207,7 @@ private:
 	}
 
 	// ControllerManager overrides
-	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::entity::model::VendorEntityModel const vendorEntityModelID, QString const& preferedLocale) override
+	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
 	{
 		// If we have a previous controller, remove it
 		if (_controller)
@@ -197,7 +226,7 @@ private:
 		}
 
 		// Create a new controller and store it
-		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, vendorEntityModelID, preferedLocale.toStdString());
+		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString());
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
 #else // !HAVE_ATOMIC_SMART_POINTERS
@@ -210,6 +239,11 @@ private:
 		{
 			emit controllerOnline();
 			ctrl->registerObserver(this);
+			//ctrl->enableEntityAdvertising(10);
+
+			// Trigger setting observers
+			auto& settings = settings::SettingsManager::getInstance();
+			settings.triggerSettingObserver(settings::AemCacheEnabled.name, this);
 		}
 	}
 
@@ -220,7 +254,7 @@ private:
 		{
 			return controller->getControllerEID();
 		}
-		return la::avdecc::getNullIdentifier();
+		return la::avdecc::UniqueIdentifier{};
 	}
 
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept override

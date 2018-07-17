@@ -1,3 +1,1 @@
-# Tests samples
-
-add_subdirectory(testConnections)
+# Tests

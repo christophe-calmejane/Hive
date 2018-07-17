@@ -57,7 +57,7 @@ struct UserData
 		RedundantOutputStreamNode,
 	};
 	Type type{ Type::None };
-	la::avdecc::UniqueIdentifier entityID{ la::avdecc::getUninitializedIdentifier() };
+	la::avdecc::UniqueIdentifier entityID{};
 	la::avdecc::entity::model::StreamIndex streamIndex{ la::avdecc::entity::model::StreamIndex(-1) }; // The entity stream index (real index)
 	la::avdecc::controller::model::VirtualIndex redundantIndex{ la::avdecc::controller::model::VirtualIndex(-1) }; // The entity redundant stream index (virtual index)
 	std::int32_t redundantStreamOrder{ -1 }; // Stream order in case of redundant one (Primary = 0, Secondary = 1, Tertiary = 2, ...)

@@ -151,14 +151,14 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo)
 {
-	_streamFormat->setText(1, avdecc::helper::uniqueIdentifierToString(streamInfo.streamFormat));
+	_streamFormat->setText(1, avdecc::helper::toHexQString(streamInfo.streamFormat, true, true));
 	_streamFlags->setText(1, avdecc::helper::flagsToString(streamInfo.streamInfoFlags));
 	_streamDestMac->setText(1, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(streamInfo.streamDestMac, true)));
-	_streamID->setText(1, avdecc::helper::uniqueIdentifierToString(streamInfo.streamID));
+	_streamID->setText(1, avdecc::helper::toHexQString(streamInfo.streamID, true, true));
 	_streamVlanID->setText(1, QString::number(streamInfo.streamVlanID));
 	_msrpAccumulatedLatency->setText(1, QString::number(streamInfo.msrpAccumulatedLatency));
 	_msrpFailureCode->setText(1, QString::number(streamInfo.msrpFailureCode));
-	_msrpFailureBridgeID->setText(1, avdecc::helper::uniqueIdentifierToString(streamInfo.msrpFailureBridgeID));
+	_msrpFailureBridgeID->setText(1, avdecc::helper::toHexQString(streamInfo.msrpFailureBridgeID, true, true));
 }
 
 void StreamDynamicTreeWidgetItem::updateConnections(la::avdecc::controller::model::StreamConnections const& connections)

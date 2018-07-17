@@ -75,6 +75,7 @@ public:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AudioMapNode const& node) noexcept = 0;
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ClockDomainNode const& node) noexcept = 0;
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept = 0;
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept = 0;
 
 	static void accept(NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, AnyNode const& node) noexcept;
 

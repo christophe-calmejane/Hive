@@ -363,7 +363,15 @@ public:
 				if (index == -1)
 					return;
 
-				auto const& node = model()->nodeAtColumn(index);
+				auto const isInputStreamKind = this->orientation() == Qt::Orientation::Horizontal;
+				MatrixModel::Node const* node{ nullptr };
+				if (isInputStreamKind)
+					node = model()->nodeAtColumn(index);
+				else
+					node = model()->nodeAtRow(index);
+				if (node == nullptr)
+					return;
+
 				auto const& data = node->userData.value<connectionMatrix::UserData>();
 				auto controlledEntity = manager.getControlledEntity(data.entityID);
 				if (controlledEntity)
@@ -372,7 +380,6 @@ public:
 
 					auto const& entityNode = controlledEntity->getEntityNode();
 					la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
-					auto const isInputStreamKind = this->orientation() == Qt::Orientation::Horizontal;
 					QString streamName{};
 					bool isStreamRunning{ false };
 
@@ -380,14 +387,14 @@ public:
 					{
 						auto const& streamInputNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamName = avdecc::helper::objectName(controlledEntity.get(), streamInputNode);
-						isStreamRunning = streamInputNode.dynamicModel->isRunning;
+						isStreamRunning = controlledEntity->isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamNode = &streamInputNode;
 					}
 					else
 					{
 						auto const& streamOutputNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamName = avdecc::helper::objectName(controlledEntity.get(), streamOutputNode);
-						isStreamRunning = streamOutputNode.dynamicModel->isRunning;
+						isStreamRunning = controlledEntity->isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
 						streamNode = &streamOutputNode;
 					}
 
