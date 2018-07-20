@@ -197,8 +197,10 @@ set(MAIN_WINDOW_RESOURCE_FILES
 set(COMMON_HEADER_FILES
 	acquireStateItemDelegate.hpp
 	connectionMatrix.hpp
+	connectionMatrix.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
+	entityLogoCache.hpp
 	mappingMatrix.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
@@ -208,6 +210,7 @@ set(COMMON_HEADER_FILES
 # Common source files
 set(COMMON_SOURCE_FILES
 	acquireStateItemDelegate.cpp
+	entityLogoCache.cpp
 	main.cpp
 	connectionMatrix.cpp
 	controlledEntityTreeWidget.cpp

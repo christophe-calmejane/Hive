@@ -87,6 +87,16 @@ void MainWindow::currentControllerChanged()
 		auto& manager = avdecc::ControllerManager::getInstance();
 		manager.createController(protocolType, interfaceName, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
+
+		_entityLogoCache = std::make_unique<EntityLogoCache>();
+
+		connect(_entityLogoCache.get(), &EntityLogoCache::logoChanged, this, [](QImage const& image)
+		{
+			auto* label = new QLabel;
+			label->setPixmap(QPixmap::fromImage(image));
+			label->show();
+		});
+
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{

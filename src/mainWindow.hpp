@@ -27,6 +27,7 @@
 #include "connectionMatrix.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/comboBox.hpp"
+#include "entityLogoCache.hpp"
 
 class DynamicHeaderView;
 
@@ -66,4 +67,5 @@ private:
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };
 	std::unique_ptr<connectionMatrix::ConnectionMatrixModel> _connectionMatrixModel{ nullptr };
 	std::unique_ptr<connectionMatrix::ConnectionMatrixItemDelegate> _connectionMatrixItemDelegate{ nullptr };
+	std::unique_ptr<EntityLogoCache> _entityLogoCache{ nullptr };
 };
