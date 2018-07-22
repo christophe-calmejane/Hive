@@ -23,6 +23,7 @@
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 #include "settingsManager/settings.hpp"
+#include "entityLogoCache.hpp"
 
 class SettingsDialogImpl final : private Ui::SettingsDialog
 {
@@ -34,6 +35,12 @@ public:
 
 		// Initialize settings (blocking signals)
 		auto& settings = settings::SettingsManager::getInstance();
+		
+		// Automatic PNG Download
+		{
+			QSignalBlocker lock(automaticPNGDownloadCheckBox);
+			automaticPNGDownloadCheckBox->setChecked(settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool());
+		}
 
 		// AEM Cache
 		{
@@ -52,6 +59,19 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 SettingsDialog::~SettingsDialog() noexcept
 {
 	delete _pImpl;
+}
+
+void SettingsDialog::on_automaticPNGDownloadCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	
+	settings.setValue(settings::AutomaticPNGDownloadEnabled.name, checked);
+}
+
+void SettingsDialog::on_clearLogoCacheButton_clicked()
+{
+	auto& logoCache{EntityLogoCache::getInstance()};
+	logoCache.clear();
 }
 
 void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)

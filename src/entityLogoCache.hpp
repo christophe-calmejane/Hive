@@ -20,25 +20,30 @@
 #pragma once
 
 #include <QObject>
+#include <QImage>
+#include <QHash>
+
 #include "avdecc/controllerManager.hpp"
 
 class EntityLogoCache : public QObject
 {
 	Q_OBJECT
 public:
-	enum LogoType
+	enum class Type
 	{
+		None,
 		Entity,
 		Manufacturer
 	};
-
-	EntityLogoCache(QObject* parent = nullptr);
-
-	Q_SIGNAL void logoChanged(QImage const& image);
-
-private:
-	void requestEntityLogo(la::avdecc::UniqueIdentifier const entityID, LogoType const type);
-
-private:
-	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const entityID);
+	
+	static EntityLogoCache& getInstance() noexcept;
+	
+	virtual void clear() noexcept = 0;
+	
+	virtual QImage getImage(la::avdecc::UniqueIdentifier const entityID, Type const type, bool const forceDownload = false) noexcept = 0;
+	
+	Q_SIGNAL void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
+	
+protected:
+	EntityLogoCache() = default;
 };

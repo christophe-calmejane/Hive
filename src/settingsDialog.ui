@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>323</width>
-    <height>242</height>
+    <width>466</width>
+    <height>332</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -77,6 +77,30 @@
         </property>
        </widget>
       </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="automaticPNGDownloadLabel">
+        <property name="text">
+         <string>Automatic PNG Download</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <property name="spacing">
+         <number>-1</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="automaticPNGDownloadCheckBox"/>
+        </item>
+        <item>
+         <widget class="QPushButton" name="clearLogoCacheButton">
+          <property name="text">
+           <string>Clear Cache</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
     </widget>
    </item>
@@ -88,6 +112,12 @@
      <layout class="QFormLayout" name="formLayout_2">
       <property name="fieldGrowthPolicy">
        <enum>QFormLayout::FieldsStayAtSizeHint</enum>
+      </property>
+      <property name="horizontalSpacing">
+       <number>-1</number>
+      </property>
+      <property name="verticalSpacing">
+       <number>-1</number>
       </property>
       <item row="0" column="0">
        <widget class="QLabel" name="enableAEMCacheLabel">
@@ -116,6 +146,13 @@
         </property>
        </widget>
       </item>
+      <item row="2" column="1">
+       <widget class="QLineEdit" name="controllerIDLineEdit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
       <item row="2" column="0">
        <widget class="QLabel" name="controllerIDLabel">
         <property name="enabled">
@@ -123,13 +160,6 @@
         </property>
         <property name="text">
          <string>Controller ID (Coming Soon)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="controllerIDLineEdit">
-        <property name="enabled">
-         <bool>false</bool>
         </property>
        </widget>
       </item>

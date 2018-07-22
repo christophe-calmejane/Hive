@@ -31,8 +31,9 @@
 #include "avdecc/controllerManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
-#include "acquireStateItemDelegate.hpp"
+#include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
+#include "entityLogoCache.hpp"
 
 #include <mutex>
 
@@ -87,16 +88,6 @@ void MainWindow::currentControllerChanged()
 		auto& manager = avdecc::ControllerManager::getInstance();
 		manager.createController(protocolType, interfaceName, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
-
-		_entityLogoCache = std::make_unique<EntityLogoCache>();
-
-		connect(_entityLogoCache.get(), &EntityLogoCache::logoChanged, this, [](QImage const& image)
-		{
-			auto* label = new QLabel;
-			label->setPixmap(QPixmap::fromImage(image));
-			label->show();
-		});
-
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
@@ -137,6 +128,8 @@ void MainWindow::registerMetaTypes()
 	qRegisterMetaType<la::avdecc::logger::Layer>("la::avdecc::logger::Layer");
 	qRegisterMetaType<la::avdecc::logger::Level>("la::avdecc::logger::Level");
 	qRegisterMetaType<std::string>("std::string");
+	
+	qRegisterMetaType<EntityLogoCache::Type>("EntityLogoCache::Type");
 }
 
 void MainWindow::createViewMenu()
@@ -185,19 +178,24 @@ void MainWindow::createControllerView()
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
-	controllerTableView->setItemDelegateForColumn(3, new AcquireStateItemDelegate{this});
+	
+	auto* imageItemDelegate{new ImageItemDelegate};
+	controllerTableView->setItemDelegateForColumn(0, imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(4, imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	controllerTableView->setColumnWidth(0, 120);
-	controllerTableView->setColumnWidth(1, 160);
-	controllerTableView->setColumnWidth(2, 120);
-	controllerTableView->setColumnWidth(3, 80);
-	controllerTableView->setColumnWidth(4, 120);
-	controllerTableView->setColumnWidth(5, 80);
-	controllerTableView->setColumnWidth(6, 90);
-	controllerTableView->setColumnWidth(7, 120);
+	int column{0};
+	controllerTableView->setColumnWidth(column++, 32);
+	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 160);
+	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 90);
+	controllerTableView->setColumnWidth(column++, 120);
 }
 
 void MainWindow::populateProtocolComboBox()

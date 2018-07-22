@@ -30,14 +30,61 @@
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
+#include "entityLogoCache.hpp"
 
 #include <vector>
 #include <utility>
 #include <algorithm>
 
 #include <QListWidget>
+
 #include <QLabel>
-#include <QDebug>
+#include "painterHelper.hpp"
+
+class Label : public QLabel
+{
+	Q_OBJECT
+	static constexpr int size{16};
+	static constexpr int halfSize{size/2};
+	
+public:
+	Label(QWidget* parent = nullptr)
+		: QLabel{parent}
+		, _backgroundPixmap{size, size}
+	{
+		setAlignment(Qt::AlignCenter);
+		
+		QColor evenColor{0x5E5E5E};
+		QColor oddColor{0xE5E5E5};
+		
+		QPainter painter{&_backgroundPixmap};
+		painter.fillRect(_backgroundPixmap.rect(), evenColor);
+		painter.fillRect(QRect{0, 0, halfSize, halfSize}, oddColor);
+		painter.fillRect(QRect{halfSize, halfSize, halfSize, halfSize}, oddColor);
+	}
+	
+	Q_SIGNAL void clicked();
+	
+protected:
+	virtual void mouseReleaseEvent(QMouseEvent* event) override
+	{
+		emit clicked();
+		QLabel::mouseReleaseEvent(event);
+	}
+	virtual void paintEvent(QPaintEvent* event) override
+	{
+		QPainter painter{this};
+		painter.fillRect(rect(), QBrush{_backgroundPixmap});
+		
+		if (auto* p = pixmap())
+		{
+			painterHelper::drawCentered(&painter, rect(), *p);
+		}
+	}
+	
+private:
+	QPixmap _backgroundPixmap;
+};
 
 class NodeTreeWidgetPrivate : public QObject, public NodeVisitor
 {
@@ -492,6 +539,8 @@ private:
 			addTextItem(descriptorItem, "Target descriptor index", model->targetDescriptorIndex);
 			addTextItem(descriptorItem, "Start address", avdecc::helper::toHexQString(model->startAddress, false, true));
 			addTextItem(descriptorItem, "Maximum length", avdecc::helper::toHexQString(model->maximumLength, false, true));
+			
+			addImageItem(descriptorItem, "Preview", model->memoryObjectType);
 		}
 
 		// Dynamic model
@@ -696,6 +745,48 @@ private:
 		catch (...)
 		{
 		}
+	}
+	
+	void addImageItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, la::avdecc::entity::model::MemoryObjectType const memoryObjectType)
+	{
+		auto type = EntityLogoCache::Type::None;
+		switch (memoryObjectType)
+		{
+			case la::avdecc::entity::model::MemoryObjectType::PngEntity:
+				type = EntityLogoCache::Type::Entity;
+				break;
+			case la::avdecc::entity::model::MemoryObjectType::PngManufacturer:
+				type = EntityLogoCache::Type::Manufacturer;
+				break;
+			default:
+				return;
+		}
+		
+		auto const image = EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
+
+		Q_Q(NodeTreeWidget);
+		
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+		
+		auto* label = new Label;
+		label->setFixedSize(128, 128);
+		label->setPixmap(QPixmap::fromImage(image));
+		q->setItemWidget(item, 1, label);
+		
+		connect(label, &Label::clicked, label, [this, requestedType = type]()
+		{
+			EntityLogoCache::getInstance().getImage(_controlledEntityID, requestedType, true);
+		});
+		
+		connect(&EntityLogoCache::getInstance(), &EntityLogoCache::imageChanged, label, [this, label, requestedType = type](const la::avdecc::UniqueIdentifier entityID, const EntityLogoCache::Type type)
+		{
+			if (entityID == _controlledEntityID && type == requestedType)
+			{
+				auto const image = EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
+				label->setPixmap(QPixmap::fromImage(image));
+			}
+		});
 	}
 
 private:
