@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - [Display entity's logo image in the entity list](https://github.com/christophe-calmejane/Hive/issues/10)
 - Support for manufacturer and entity images download in Memory Object descriptors
+- Automatic check for new version
 
 ## [1.0.3] - 2018-07-17
 ### Added

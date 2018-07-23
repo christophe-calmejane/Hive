@@ -187,6 +187,16 @@ set(SETTINGS_SOURCE_FILES
 	settingsManager/settingsManager.cpp
 )
 
+# Updater header files
+set(UPDATER_HEADER_FILES
+	updater/updater.hpp
+)
+
+# Updater source files
+set(UPDATER_SOURCE_FILES
+	updater/updater.cpp
+)
+
 # Main windows header files
 set(MAIN_WINDOW_HEADER_FILES
 	mainWindow.hpp
@@ -245,6 +255,7 @@ source_group("Header Files\\About Dialog" FILES ${ABOUT_DIALOG_HEADER_FILES})
 source_group("Header Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_HEADER_FILES})
 source_group("Header Files\\Logger View" FILES ${LOGGER_VIEW_HEADER_FILES})
 source_group("Header Files\\Settings" FILES ${SETTINGS_HEADER_FILES})
+source_group("Header Files\\Updater" FILES ${UPDATER_HEADER_FILES})
 source_group("Header Files\\Main Window" FILES ${MAIN_WINDOW_HEADER_FILES})
 source_group("Header Files" FILES ${COMMON_HEADER_FILES})
 
@@ -254,6 +265,7 @@ source_group("Source Files\\Avdecc Helper" FILES ${AVDECC_HELPER_SOURCE_FILES})
 source_group("Source Files\\About Dialog" FILES ${ABOUT_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Logger View" FILES ${LOGGER_VIEW_SOURCE_FILES})
+source_group("Source Files\\Updater" FILES ${UPDATER_SOURCE_FILES})
 source_group("Source Files\\Main Window" FILES ${MAIN_WINDOW_SOURCE_FILES})
 source_group("Source Files" FILES ${COMMON_SOURCE_FILES})
 
@@ -272,6 +284,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${SETTINGS_DIALOG_HEADER_FILES}
 	${LOGGER_VIEW_HEADER_FILES}
 	${SETTINGS_HEADER_FILES}
+	${UPDATER_HEADER_FILES}
 	${MAIN_WINDOW_HEADER_FILES}
 	${COMMON_HEADER_FILES}
 
@@ -282,6 +295,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${SETTINGS_DIALOG_SOURCE_FILES}
 	${LOGGER_VIEW_SOURCE_FILES}
 	${SETTINGS_SOURCE_FILES}
+	${UPDATER_SOURCE_FILES}
 	${MAIN_WINDOW_SOURCE_FILES}
 	${COMMON_SOURCE_FILES}
 )

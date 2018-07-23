@@ -35,6 +35,8 @@
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
 
+#include "updater/updater.hpp"
+
 #include <mutex>
 
 #define VENDOR_ID 0x001B92
@@ -392,6 +394,9 @@ void MainWindow::showEvent(QShowEvent* event)
 	static std::once_flag once;
 	std::call_once(once, [this]()
 	{
+		// Start a new version check
+		Updater::getInstance().checkForNewVersion();
+
 		// Check version change
 		auto& settings = settings::SettingsManager::getInstance();
 		auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
