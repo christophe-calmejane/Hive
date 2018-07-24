@@ -24,6 +24,8 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QApplication>
+#include <QtGlobal>
+#include <QThread>
 
 inline uint qHash(EntityLogoCache::Type const type, uint seed = 0) {
 	return qHash(static_cast<int>(type), seed);
@@ -32,54 +34,82 @@ inline uint qHash(EntityLogoCache::Type const type, uint seed = 0) {
 class EntityLogoCacheImpl : public EntityLogoCache
 {
 public:
+	virtual QImage getImage(la::avdecc::UniqueIdentifier const entityID, Type const type, bool const downloadIfNotInCache) noexcept override
+	{
+		Q_ASSERT_X(QThread::currentThread() == qApp->thread(), "EntityLogoCache", "getImage must be called in the GUI thread.");
+
+		auto const key{makeKey(entityID)};
+
+		// Check if we have something in the memory cache for this key (entityID-entityModelID)
+		auto imagesIt = _cache.find(key);
+		if (imagesIt != _cache.end())
+		{
+			// Check if we have the specified image type in the memory cache
+			auto imageIt = imagesIt->find(type);
+			if (imageIt != imagesIt->end())
+			{
+				// Return the cached image (might be an empty QImage if the download is in progress)
+				return imageIt.value();
+			}
+		}
+
+		QImage image;
+
+		// Try to load from the disk
+		QFileInfo fileInfo{imagePath(entityID, type)};
+		if (fileInfo.exists())
+		{
+			// Found the image on the disk, add it to the memory cache
+			image = QImage{fileInfo.filePath()};
+			_cache[key][type] = image;
+		}
+		else if (downloadIfNotInCache)
+		{
+			// Add a temporary empty QImage in the memory cache so we won't start another download while this one is pending
+			_cache[key][type] = image;
+			downloadImage(entityID, type);
+		}
+		
+		return image;
+	}
+
+	virtual bool isImageInCache(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept override
+	{
+		Q_ASSERT_X(QThread::currentThread() == qApp->thread(), "EntityLogoCache", "isImageInCache must be called in the GUI thread.");
+
+		auto const key{ makeKey(entityID) };
+		auto imagesIt = _cache.find(key);
+		if (imagesIt != _cache.end())
+		{
+			// Check if we have the specified image type in the memory cache
+			auto imageIt = imagesIt->find(type);
+			if (imageIt != imagesIt->end())
+			{
+				// The image has been found in the memory cache (either a real one, or a temporary one)
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	virtual void clear() noexcept override
 	{
+		Q_ASSERT_X(QThread::currentThread() == qApp->thread(), "EntityLogoCache", "clear must be called in the GUI thread.");
+
 		QDir dir(imageDir());
 		dir.removeRecursively();
-	
-		auto const keys{_cache.keys()};
+
+		auto const keys{ _cache.keys() };
 		_cache.clear();
-		
+
 		for (auto const& key : keys)
 		{
 			emit imageChanged(key.first, Type::Entity);
 			emit imageChanged(key.first, Type::Manufacturer);
 		}
 	}
-	
-	virtual QImage getImage(la::avdecc::UniqueIdentifier const entityID, Type const type, bool const forceDownload) noexcept override
-	{
-		QImage image;
-		
-		auto const key{makeKey(entityID)};
-		if (_cache.count(key))
-		{
-			image = _cache[key][type];
-		}
-		
-		if (!image.isNull())
-		{
-			return image;
-		}
-		else
-		{
-			// Try to load from the disk
-			QFileInfo fileInfo{imagePath(entityID, type)};
-			if (fileInfo.exists())
-			{
-				image = QImage{fileInfo.filePath()};
-				_cache[key][type] = image;
-			}
-			else if (forceDownload)
-			{
-				_cache[key][type] = image; // This will avoid downloading it twice
-				downloadImage(entityID, type);
-			}
-		}
-		
-		return image;
-	}
-	
+
 private:
 	QString typeToString(Type const type) const noexcept
 	{
@@ -145,24 +175,36 @@ private:
 						(type == Type::Manufacturer && model->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngManufacturer)
 						)
 				{
-					manager.readDeviceMemory(entityID, model->startAddress, model->maximumLength, [this, entityID, type](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
+					manager.readDeviceMemory(entityID, model->startAddress, model->maximumLength, [this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
 					{
-						if (!!status && entity)
+						auto image = QImage::fromData(memoryBuffer.data(), memoryBuffer.size());
+
+						// Be sure to run this code in the UI thread so we don't have to lock the cache
+						QMetaObject::invokeMethod(this, [this, entityID, type, status, image = std::move(image)]()
 						{
-							QImage image;
-							if (image.loadFromData(memoryBuffer.data(), memoryBuffer.size(), "PNG"))
+							auto const key = makeKey(entityID);
+							if (!!status && !image.isNull())
 							{
-								QFileInfo fileInfo{imagePath(entityID, type)};
-								
+								QFileInfo fileInfo{ imagePath(entityID, type) };
+
 								// Make sure this directory exists & save the image to the disk
 								QDir().mkpath(fileInfo.absoluteDir().absolutePath());
 								image.save(fileInfo.filePath());
 
 								// Save the image to the cache
-								_cache[makeKey(entityID)][type] = image;
+								_cache[key][type] = image;
 								emit imageChanged(entityID, type);
 							}
-						}
+							else
+							{
+								// Error downloading the image, remove the temporary one from the cache
+								auto imagesIt = _cache.find(key);
+								if (imagesIt != _cache.end())
+								{
+									imagesIt->remove(type);
+								}
+							}
+						});
 					});
 				}
 			}

@@ -67,6 +67,8 @@ AboutDialog::AboutDialog(QWidget* parent)
 	: QDialog(parent), _pImpl(new AboutDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " - Version " + QCoreApplication::applicationVersion());
+	layout()->setSizeConstraint(QLayout::SetFixedSize);
+	setWindowFlag(Qt::MSWindowsFixedSizeDialogHint);
 }
 
 AboutDialog::~AboutDialog() noexcept

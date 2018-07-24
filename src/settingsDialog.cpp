@@ -54,6 +54,8 @@ SettingsDialog::SettingsDialog(QWidget* parent)
 	: QDialog(parent), _pImpl(new SettingsDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " Settings");
+	layout()->setSizeConstraint(QLayout::SetFixedSize);
+	setWindowFlag(Qt::MSWindowsFixedSizeDialogHint);
 }
 
 SettingsDialog::~SettingsDialog() noexcept

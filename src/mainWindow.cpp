@@ -281,6 +281,8 @@ void MainWindow::connectSignals()
 			auto* releaseAction = menu.addAction("Release");
 			menu.addSeparator();
 			auto* inspect = menu.addAction("Inspect");
+			auto* getLogo = menu.addAction("Retrieve Entity Logo");
+			getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
 			menu.addSeparator();
 			menu.addAction("Cancel");
 
@@ -289,23 +291,25 @@ void MainWindow::connectSignals()
 
 			if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 			{
-				auto const targetEntityId = controlledEntity->getEntity().getEntityID();
-
 				if (action == acquireAction)
 				{
-					manager.acquireEntity(targetEntityId, false);
+					manager.acquireEntity(entityID, false);
 				}
 				else if (action == releaseAction)
 				{
-					manager.releaseEntity(targetEntityId);
+					manager.releaseEntity(entityID);
 				}
 				else if (action == inspect)
 				{
 					auto* inspector = new EntityInspector;
 					inspector->setAttribute(Qt::WA_DeleteOnClose);
-					inspector->setControlledEntityID(targetEntityId);
+					inspector->setControlledEntityID(entityID);
 					inspector->restoreGeometry(entityInspector->saveGeometry());
 					inspector->show();
+				}
+				else if (action == getLogo)
+				{
+					EntityLogoCache::getInstance().getImage(entityID, EntityLogoCache::Type::Entity, true);
 				}
 			}
 		}
