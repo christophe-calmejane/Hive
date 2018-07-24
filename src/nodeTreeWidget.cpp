@@ -38,10 +38,9 @@
 
 #include <QListWidget>
 
-#include <QLabel>
 #include "painterHelper.hpp"
 
-class Label : public QLabel
+class Label : public QWidget
 {
 	Q_OBJECT
 	static constexpr int size{16};
@@ -49,11 +48,9 @@ class Label : public QLabel
 	
 public:
 	Label(QWidget* parent = nullptr)
-		: QLabel{parent}
+		: QWidget{parent}
 		, _backgroundPixmap{size, size}
 	{
-		setAlignment(Qt::AlignCenter);
-		
 		QColor evenColor{0x5E5E5E};
 		QColor oddColor{0xE5E5E5};
 		
@@ -65,25 +62,37 @@ public:
 	
 	Q_SIGNAL void clicked();
 	
+	void setImage(QImage const& image)
+	{
+		_image = image;
+		repaint();
+	}
+	
 protected:
 	virtual void mouseReleaseEvent(QMouseEvent* event) override
 	{
 		emit clicked();
-		QLabel::mouseReleaseEvent(event);
+		QWidget::mouseReleaseEvent(event);
 	}
+	
 	virtual void paintEvent(QPaintEvent* event) override
 	{
 		QPainter painter{this};
-		painter.fillRect(rect(), QBrush{_backgroundPixmap});
 		
-		if (auto* p = pixmap())
+		if (_image.isNull())
 		{
-			painterHelper::drawCentered(&painter, rect(), *p);
+			painter.drawText(rect(), Qt::AlignCenter, "Click To Download");
+		}
+		else
+		{
+			painter.fillRect(rect(), QBrush{_backgroundPixmap});
+			painterHelper::drawCentered(&painter, rect(), _image);
 		}
 	}
 	
 private:
 	QPixmap _backgroundPixmap;
+	QImage _image;
 };
 
 class NodeTreeWidgetPrivate : public QObject, public NodeVisitor
@@ -770,8 +779,8 @@ private:
 		item->setText(0, std::move(itemName));
 		
 		auto* label = new Label;
-		label->setFixedSize(128, 128);
-		label->setPixmap(QPixmap::fromImage(image));
+		label->setFixedHeight(96);
+		label->setImage(image);
 		q->setItemWidget(item, 1, label);
 		
 		connect(label, &Label::clicked, label, [this, requestedType = type]()
@@ -784,7 +793,7 @@ private:
 			if (entityID == _controlledEntityID && type == requestedType)
 			{
 				auto const image = EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
-				label->setPixmap(QPixmap::fromImage(image));
+				label->setImage(image);
 			}
 		});
 	}
