@@ -211,7 +211,7 @@ private:
 		}
 		catch(...)
 		{
-			AVDECC_ASSERT(false, "Failed to download image");
+			AVDECC_ASSERT(false, "Failed to find logo descriptor information in AEM");
 		}
 	}
 	

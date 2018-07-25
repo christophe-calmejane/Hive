@@ -270,24 +270,42 @@ void MainWindow::connectSignals()
 		if (controlledEntity)
 		{
 			QMenu menu;
+			auto const& entity = controlledEntity->getEntity();
 
-			QString acquireText;
-			if (controlledEntity->isAcquiredByOther())
-				acquireText = "Try to acquire";
-			else
-				acquireText = "Acquire";
+			auto* acquireAction{ static_cast<QAction*>(nullptr) };
+			auto* releaseAction{ static_cast<QAction*>(nullptr) };
+			auto* inspect{ static_cast<QAction*>(nullptr) };
+			auto* getLogo{ static_cast<QAction*>(nullptr) };
 
-			auto* acquireAction = menu.addAction(acquireText);
-			auto* releaseAction = menu.addAction("Release");
-			menu.addSeparator();
-			auto* inspect = menu.addAction("Inspect");
-			auto* getLogo = menu.addAction("Retrieve Entity Logo");
-			getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
+			if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			{
+				QString acquireText;
+				auto const isAcquired = controlledEntity->isAcquired();
+				auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
+
+				{
+					if (isAcquiredByOther)
+						acquireText = "Try to acquire";
+					else
+						acquireText = "Acquire";
+					acquireAction = menu.addAction(acquireText);
+					acquireAction->setEnabled(!isAcquired);
+				}
+				{
+					releaseAction = menu.addAction("Release");
+					releaseAction->setEnabled(isAcquired);
+				}
+				menu.addSeparator();
+				{
+					inspect = menu.addAction("Inspect");
+				}
+				{
+					getLogo = menu.addAction("Retrieve Entity Logo");
+					getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
+				}
+			}
 			menu.addSeparator();
 			menu.addAction("Cancel");
-
-			acquireAction->setEnabled(!controlledEntity->isAcquired());
-			releaseAction->setEnabled(controlledEntity->isAcquired());
 
 			if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 			{

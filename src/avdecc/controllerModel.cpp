@@ -176,11 +176,15 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 	{
 		if (role == Qt::UserRole)
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			auto const& forceDownload{settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool()};
-			
-			auto& logoCache = EntityLogoCache::getInstance();
-			return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, forceDownload);
+			auto const& entity = controlledEntity->getEntity();
+			if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			{
+				auto& settings = settings::SettingsManager::getInstance();
+				auto const& forceDownload{ settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool() };
+
+				auto& logoCache = EntityLogoCache::getInstance();
+				return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, forceDownload);
+			}
 		}
 	}
 	else if (column == ControllerModelColumn::AcquireState)
