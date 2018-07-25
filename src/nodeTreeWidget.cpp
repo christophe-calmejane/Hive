@@ -53,11 +53,18 @@ public:
 	{
 		QColor evenColor{0x5E5E5E};
 		QColor oddColor{0xE5E5E5};
-		
+
+		evenColor.setAlpha(96);
+		oddColor.setAlpha(96);
+	
 		QPainter painter{&_backgroundPixmap};
 		painter.fillRect(_backgroundPixmap.rect(), evenColor);
 		painter.fillRect(QRect{0, 0, halfSize, halfSize}, oddColor);
 		painter.fillRect(QRect{halfSize, halfSize, halfSize, halfSize}, oddColor);
+
+		connect(&_downloadButton, &QPushButton::clicked, this, &Label::clicked);
+
+		_layout.addWidget(&_downloadButton);
 	}
 	
 	Q_SIGNAL void clicked();
@@ -65,32 +72,28 @@ public:
 	void setImage(QImage const& image)
 	{
 		_image = image;
+		_downloadButton.setVisible(image.isNull());
 		repaint();
 	}
 	
-protected:
-	virtual void mouseReleaseEvent(QMouseEvent* event) override
-	{
-		emit clicked();
-		QWidget::mouseReleaseEvent(event);
-	}
-	
+protected:	
 	virtual void paintEvent(QPaintEvent* event) override
 	{
-		QPainter painter{this};
-		
 		if (_image.isNull())
 		{
-			painter.drawText(rect(), Qt::AlignCenter, "Click To Download");
+			QWidget::paintEvent(event);
 		}
 		else
 		{
+			QPainter painter{this};
 			painter.fillRect(rect(), QBrush{_backgroundPixmap});
 			painterHelper::drawCentered(&painter, rect(), _image);
 		}
 	}
 	
 private:
+	QHBoxLayout _layout{this};
+	QPushButton _downloadButton{"Click to Download", this};
 	QPixmap _backgroundPixmap;
 	QImage _image;
 };
