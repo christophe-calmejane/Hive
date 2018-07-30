@@ -31,8 +31,11 @@
 #include "avdecc/controllerManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
-#include "acquireStateItemDelegate.hpp"
+#include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
+#include "entityLogoCache.hpp"
+
+#include "updater/updater.hpp"
 
 #include <mutex>
 
@@ -127,6 +130,8 @@ void MainWindow::registerMetaTypes()
 	qRegisterMetaType<la::avdecc::logger::Layer>("la::avdecc::logger::Layer");
 	qRegisterMetaType<la::avdecc::logger::Level>("la::avdecc::logger::Level");
 	qRegisterMetaType<std::string>("std::string");
+	
+	qRegisterMetaType<EntityLogoCache::Type>("EntityLogoCache::Type");
 }
 
 void MainWindow::createViewMenu()
@@ -175,19 +180,24 @@ void MainWindow::createControllerView()
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
-	controllerTableView->setItemDelegateForColumn(3, new AcquireStateItemDelegate{this});
+	
+	auto* imageItemDelegate{new ImageItemDelegate};
+	controllerTableView->setItemDelegateForColumn(0, imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(4, imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	controllerTableView->setColumnWidth(0, 120);
-	controllerTableView->setColumnWidth(1, 160);
-	controllerTableView->setColumnWidth(2, 120);
-	controllerTableView->setColumnWidth(3, 80);
-	controllerTableView->setColumnWidth(4, 120);
-	controllerTableView->setColumnWidth(5, 80);
-	controllerTableView->setColumnWidth(6, 90);
-	controllerTableView->setColumnWidth(7, 120);
+	int column{0};
+	controllerTableView->setColumnWidth(column++, 32);
+	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 160);
+	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 90);
+	controllerTableView->setColumnWidth(column++, 120);
 }
 
 void MainWindow::populateProtocolComboBox()
@@ -262,42 +272,64 @@ void MainWindow::connectSignals()
 		if (controlledEntity)
 		{
 			QMenu menu;
+			auto const& entity = controlledEntity->getEntity();
 
-			QString acquireText;
-			if (controlledEntity->isAcquiredByOther())
-				acquireText = "Try to acquire";
-			else
-				acquireText = "Acquire";
+			auto* acquireAction{ static_cast<QAction*>(nullptr) };
+			auto* releaseAction{ static_cast<QAction*>(nullptr) };
+			auto* inspect{ static_cast<QAction*>(nullptr) };
+			auto* getLogo{ static_cast<QAction*>(nullptr) };
 
-			auto* acquireAction = menu.addAction(acquireText);
-			auto* releaseAction = menu.addAction("Release");
-			menu.addSeparator();
-			auto* inspect = menu.addAction("Inspect");
+			if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			{
+				QString acquireText;
+				auto const isAcquired = controlledEntity->isAcquired();
+				auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
+
+				{
+					if (isAcquiredByOther)
+						acquireText = "Try to acquire";
+					else
+						acquireText = "Acquire";
+					acquireAction = menu.addAction(acquireText);
+					acquireAction->setEnabled(!isAcquired);
+				}
+				{
+					releaseAction = menu.addAction("Release");
+					releaseAction->setEnabled(isAcquired);
+				}
+				menu.addSeparator();
+				{
+					inspect = menu.addAction("Inspect");
+				}
+				{
+					getLogo = menu.addAction("Retrieve Entity Logo");
+					getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
+				}
+			}
 			menu.addSeparator();
 			menu.addAction("Cancel");
 
-			acquireAction->setEnabled(!controlledEntity->isAcquired());
-			releaseAction->setEnabled(controlledEntity->isAcquired());
-
 			if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 			{
-				auto const targetEntityId = controlledEntity->getEntity().getEntityID();
-
 				if (action == acquireAction)
 				{
-					manager.acquireEntity(targetEntityId, false);
+					manager.acquireEntity(entityID, false);
 				}
 				else if (action == releaseAction)
 				{
-					manager.releaseEntity(targetEntityId);
+					manager.releaseEntity(entityID);
 				}
 				else if (action == inspect)
 				{
 					auto* inspector = new EntityInspector;
 					inspector->setAttribute(Qt::WA_DeleteOnClose);
-					inspector->setControlledEntityID(targetEntityId);
+					inspector->setControlledEntityID(entityID);
 					inspector->restoreGeometry(entityInspector->saveGeometry());
 					inspector->show();
+				}
+				else if (action == getLogo)
+				{
+					EntityLogoCache::getInstance().getImage(entityID, EntityLogoCache::Type::Entity, true);
 				}
 			}
 		}
@@ -362,6 +394,9 @@ void MainWindow::showEvent(QShowEvent* event)
 	static std::once_flag once;
 	std::call_once(once, [this]()
 	{
+		// Start a new version check
+		Updater::getInstance().checkForNewVersion();
+
 		// Check version change
 		auto& settings = settings::SettingsManager::getInstance();
 		auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();

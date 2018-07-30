@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.10)
 # Using Semantic Versioning (http://semver.org/spec/v2.0.0.html)
 # Project version number x.y.z on main branch, x.y.z.w on dev and task branches
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task)
-set(HIVE_VERSION 1.0.3)
+set(HIVE_VERSION 1.0.4)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -22,7 +22,7 @@ option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
 
 project(Hive)
 
-# Using c++14 standard for all targets
+# Using c++17 standard for all targets
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 

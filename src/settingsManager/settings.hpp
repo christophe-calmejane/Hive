@@ -26,6 +26,11 @@ namespace settings
 
 // Settings with a default initial value
 static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVersion", "1.0.0.0" };
+
+// General settings
+static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
+	
+// Controller settings
 static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those

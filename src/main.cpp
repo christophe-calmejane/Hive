@@ -24,7 +24,6 @@
 #include <QMessageBox>
 
 #include <QSplashScreen>
-#include <QDebug>
 
 #include <iostream>
 #include <chrono>
@@ -107,6 +106,7 @@ int main(int argc, char *argv[])
 	// Register settings
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSetting(settings::LastLaunchedVersion);
+	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
 	settings.registerSetting(settings::AemCacheEnabled);
 
 	QPixmap logo(":/Logo.png");

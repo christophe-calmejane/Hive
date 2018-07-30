@@ -19,26 +19,21 @@
 
 #pragma once
 
-#include <QDialog>
+#include <memory>
+#include <QObject>
+#include <QString>
 
-class SettingsDialogImpl;
-class SettingsDialog : public QDialog
+class Updater : public QObject
 {
 	Q_OBJECT
 public:
-	SettingsDialog(QWidget* parent = nullptr);
-	virtual ~SettingsDialog() noexcept;
+	static Updater& getInstance() noexcept;
 
-	// Deleted compiler auto-generated methods
-	SettingsDialog(SettingsDialog&&) = delete;
-	SettingsDialog(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog&&) = delete;
+	/** Gets a ControlledEntity */
+	virtual void checkForNewVersion() noexcept = 0;
 
-private:
-	Q_SLOT void on_automaticPNGDownloadCheckBox_toggled(bool checked);
-	Q_SLOT void on_clearLogoCacheButton_clicked();
-	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
 
-	SettingsDialogImpl* _pImpl{ nullptr };
+	/* Updater signals */
+	Q_SIGNAL void newVersionAvailble(QString version, QString downloadURL);
+
 };

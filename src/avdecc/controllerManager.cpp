@@ -548,6 +548,25 @@ private:
 		}
 	}
 
+	/* Enumeration and Control Protocol (AECP) AA */
+	virtual void readDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, std::uint64_t const length, la::avdecc::controller::Controller::ReadDeviceMemoryHandler const& handler) const noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			controller->readDeviceMemory(targetEntityID, address, length, handler);
+		}
+	}
+
+	virtual void writeDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, la::avdecc::controller::Controller::DeviceMemoryBuffer memoryBuffer, la::avdecc::controller::Controller::WriteDeviceMemoryHandler const& handler) const noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			controller->writeDeviceMemory(targetEntityID, address, memoryBuffer, handler);
+		}
+	}
+
 	/* Connection Management Protocol (ACMP) */
 	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
 	{
