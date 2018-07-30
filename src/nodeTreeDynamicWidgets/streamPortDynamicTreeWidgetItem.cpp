@@ -25,6 +25,7 @@
 #include "mappingMatrix.hpp"
 
 #include <QPushButton>
+#include <QMessageBox>
 
 StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::controller::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget *parent)
 	: QTreeWidgetItem(parent)
@@ -272,6 +273,8 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 			{
 				mappingMatrix::MappingMatrixDialog dialog(outputs, inputs, connections);
 
+				QMessageBox::warning(nullptr, "", "Dynamic Mappings modification is partially bugged:<br>See https://github.com/christophe-calmejane/Hive/issues/12<br><br>Will be fixed in next release.");
+				
 				if (dialog.exec() == QDialog::Accepted)
 				{
 					if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
