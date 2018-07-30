@@ -19,26 +19,32 @@
 
 #pragma once
 
-#include <QDialog>
+#include <QObject>
+#include <QImage>
+#include <QHash>
 
-class SettingsDialogImpl;
-class SettingsDialog : public QDialog
+#include "avdecc/controllerManager.hpp"
+
+class EntityLogoCache : public QObject
 {
 	Q_OBJECT
 public:
-	SettingsDialog(QWidget* parent = nullptr);
-	virtual ~SettingsDialog() noexcept;
+	enum class Type
+	{
+		None,
+		Entity,
+		Manufacturer
+	};
+	
+	static EntityLogoCache& getInstance() noexcept;
+	
+	virtual QImage getImage(la::avdecc::UniqueIdentifier const entityID, Type const type, bool const downloadIfNotInCache = false) noexcept = 0;
+	virtual bool isImageInCache(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept = 0;
 
-	// Deleted compiler auto-generated methods
-	SettingsDialog(SettingsDialog&&) = delete;
-	SettingsDialog(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog&&) = delete;
+	virtual void clear() noexcept = 0;
 
-private:
-	Q_SLOT void on_automaticPNGDownloadCheckBox_toggled(bool checked);
-	Q_SLOT void on_clearLogoCacheButton_clicked();
-	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
-
-	SettingsDialogImpl* _pImpl{ nullptr };
+	Q_SIGNAL void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
+	
+protected:
+	EntityLogoCache() = default;
 };

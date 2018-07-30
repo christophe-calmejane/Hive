@@ -29,7 +29,6 @@
 #include <QHeaderView>
 #include <QPainter>
 #include <QMenu>
-#include <QDebug>
 
 namespace qt
 {

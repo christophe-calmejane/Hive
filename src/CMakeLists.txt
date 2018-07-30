@@ -204,24 +204,29 @@ set(MAIN_WINDOW_RESOURCE_FILES
 
 # Common Header files
 set(COMMON_HEADER_FILES
-	acquireStateItemDelegate.hpp
+	connectionMatrix.hpp
 	connectionMatrix.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
+	entityLogoCache.hpp
+	imageItemDelegate.hpp
 	mappingMatrix.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
+	painterHelper.hpp
 	settingsManager/settingsManager.hpp
 )
 
 # Common source files
 set(COMMON_SOURCE_FILES
-	acquireStateItemDelegate.cpp
+	entityLogoCache.cpp
+	imageItemDelegate.cpp
 	main.cpp
 	connectionMatrix.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
 	nodeTreeWidget.cpp
+	painterHelper.cpp
 	nodeVisitor.cpp
 )
 

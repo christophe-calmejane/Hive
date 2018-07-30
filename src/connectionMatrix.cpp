@@ -25,7 +25,6 @@
 
 #include <QApplication>
 #include <QPainter>
-#include <QDebug>
 #include <QMessageBox>
 #include <QMenu>
 #include <QHeaderView>
