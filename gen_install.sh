@@ -278,6 +278,20 @@ fi
 echo "done"
 popd &> /dev/null
 
+which tar &> /dev/null
+if [ $? -eq 0 ]; then
+	symbolsFile="${installerBaseName}-symbols.tgz"
+	echo -n "Archiving symbols... "
+	log=$(tar cvzf "${symbolsFile}" ${outputFolder}/Symbols)
+	if [ $? -ne 0 ]; then
+		echo "Failed to archive symbols ;("
+		echo ""
+		echo $log
+		exit 1
+	fi
+	echo "done"
+fi
+
 #pushd "${outputFolder}" &> /dev/null
 #echo -n "Signing package... "
 #log=$("$cmake_path" --build . --config "${buildConfig}" --target SignPackage)
@@ -300,5 +314,8 @@ mv "${installerFile}" .
 
 echo ""
 echo "Installer generated: ${fullInstallerName}"
+if [ ! -z "${symbolsFile}" ]; then
+	echo "Symbols generated: ${symbolsFile}"
+fi
 
 exit 0

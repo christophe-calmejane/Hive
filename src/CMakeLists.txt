@@ -15,6 +15,15 @@ endif()
 # Declare executable target
 add_executable(${PROJECT_NAME} MACOSX_BUNDLE WIN32 "")
 
+# Setup debug symbols
+setup_symbols(${PROJECT_NAME})
+
+# Set the "DEBUG" define in debug compilation mode
+set_debug_define(${PROJECT_NAME})
+
+# Add a postfix in debug mode
+set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "-d")
+
 # Configure file based on CMakeLists.txt
 configure_file(
 	internals/config.hpp.in
@@ -273,19 +282,11 @@ target_sources(${PROJECT_NAME} PUBLIC
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-	CXX_STANDARD 14
-	CXX_STANDARD_REQUIRED ON
-	DEBUG_POSTFIX "-d"
-)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
 	AUTOMOC ON
 	AUTOUIC ON
 	AUTORCC ON
 )
 
-set_debug_define(${PROJECT_NAME})
-	
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Widgets Qt5::WebEngineWidgets la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES})
 
@@ -312,4 +313,8 @@ if(TargetQt5Deploy_INCLUDED)
 	target_qt5_deploy(${PROJECT_NAME} INSTALL QML_DIR ${PROJECT_ROOT_DIR}/resources/qml)
 endif()
 
+# Install and sign target
 install(TARGETS ${PROJECT_NAME}	RUNTIME DESTINATION bin	BUNDLE DESTINATION .)
+if(ENABLE_HIVE_SIGNING)
+	sign_target(${PROJECT_NAME})
+endif()
