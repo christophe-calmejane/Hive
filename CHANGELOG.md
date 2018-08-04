@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - [Crash when changing active configuration](https://github.com/christophe-calmejane/Hive/issues/15)
+- [Incorrect dynamic mappings sent when adding/removing them](https://github.com/christophe-calmejane/Hive/issues/12)
 
 ## [1.0.4] - 2018-07-30
 ### Added

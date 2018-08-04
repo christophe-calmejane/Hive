@@ -113,7 +113,7 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 				// Build list of current connections
 				for (auto const& mapping : streamPortNode.dynamicModel->dynamicAudioMap)
 				{
-					// Find the existing mapping
+					// Find the existing mapping, as mappingMatrix::SlotID
 					mappingMatrix::SlotID streamSlotID{ -1, -1 };
 					mappingMatrix::SlotID clusterSlotID{ -1, -1 };
 
@@ -273,73 +273,88 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 			{
 				mappingMatrix::MappingMatrixDialog dialog(outputs, inputs, connections);
 
-				QMessageBox::warning(nullptr, "", "Dynamic Mappings modification is partially bugged:<br>See https://github.com/christophe-calmejane/Hive/issues/12<br><br>Will be fixed in next release.");
-				
 				if (dialog.exec() == QDialog::Accepted)
 				{
+					using HashType = std::uint64_t;
+					using HashedConnectionsList = std::set<HashType>;
+					auto const makeHash = [](mappingMatrix::Connection const& connection) -> HashType
+					{
+						return (static_cast<HashType>(connection.first.first & 0xFFFF) << 48) + (static_cast<HashType>(connection.first.second & 0xFFFF) << 32) + (static_cast<HashType>(connection.second.first & 0xFFFF) << 16) + static_cast<HashType>(connection.second.second & 0xFFFF);
+					};
+					auto const unmakeHash = [](HashType const& hash) -> mappingMatrix::Connection
+					{
+						mappingMatrix::Connection connection;
+						
+						connection.first.first = (hash >> 48) & 0xFFFF;
+						connection.first.second = (hash >> 32) & 0xFFFF;
+						connection.second.first = (hash >> 16) & 0xFFFF;
+						connection.second.second = hash & 0xFFFF;
+						
+						return connection;
+					};
+					auto const hashConnectionsList = [&makeHash](mappingMatrix::Connections const& connections) -> HashedConnectionsList
+					{
+						HashedConnectionsList list;
+						
+						for (auto const& c : connections)
+						{
+							list.insert(makeHash(c));
+						}
+						
+						return list;
+					};
+					auto const substractList = [](HashedConnectionsList const& a, HashedConnectionsList const& b) -> HashedConnectionsList
+					{
+						HashedConnectionsList sub{a};
+						
+						for (auto const& v : b)
+						{
+							sub.erase(v);
+						}
+						
+						return sub;
+					};
+
 					if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 					{
-						using HashType = std::uint64_t;
-						auto const makeHash = [](mappingMatrix::Connection const& connection) -> HashType
+						//std::vector<NodeMapping> streamMappings;
+						//std::vector<NodeMapping> clusterMappings;
+						auto const convertToAudioMapping = [&streamMappings, &clusterMappings](mappingMatrix::Connection const& connection) -> la::avdecc::entity::model::AudioMapping
 						{
-							return (static_cast<HashType>(connection.first.first & 0xFFFF) << 48) + (static_cast<HashType>(connection.first.second & 0xFFFF) << 32) + (static_cast<HashType>(connection.second.first & 0xFFFF) << 16) + static_cast<HashType>(connection.second.second & 0xFFFF);
+							auto const& streamMapping = streamMappings[connection.first.first];
+							auto const& clusterMapping = clusterMappings[connection.second.first];
+							
+							return la::avdecc::entity::model::AudioMapping{ streamMapping.descriptorIndex, static_cast<std::uint16_t>(connection.first.second), clusterMapping.descriptorIndex, static_cast<std::uint16_t>(connection.second.second) };
 						};
-						auto const unmakeHash = [](HashType const& hash) -> la::avdecc::entity::model::AudioMapping
-						{
-							la::avdecc::entity::model::AudioMapping m;
-							
-							m.streamIndex = (hash >> 48) & 0xFFFF;
-							m.streamChannel = (hash >> 32) & 0xFFFF;
-							m.clusterOffset = (hash >> 16) & 0xFFFF;
-							m.clusterChannel = hash & 0xFFFF;
-							
-							return m;
-						};
-						using ConvertedList = std::set<HashType>;
-						auto const convertList = [&makeHash](mappingMatrix::Connections const& connections)
-						{
-							ConvertedList list;
-							
-							for (auto const& c : connections)
-							{
-								list.insert(makeHash(c));
-							}
-							
-							return list;
-						};
-						auto const unconvertList = [&unmakeHash](ConvertedList const& list)
+						auto const convertList = [&unmakeHash, &convertToAudioMapping](HashedConnectionsList const& list) -> la::avdecc::entity::model::AudioMappings
 						{
 							la::avdecc::entity::model::AudioMappings mappings;
 							
 							for (auto const& l : list)
 							{
-								mappings.push_back(unmakeHash(l));
+								auto const c = unmakeHash(l);
+								mappings.push_back(convertToAudioMapping(c));
 							}
 							
 							return mappings;
 						};
-						auto const substractList = [](ConvertedList const& a, ConvertedList const& b)
-						{
-							ConvertedList sub{a};
-							
-							for (auto const& v : b)
-							{
-								sub.erase(v);
-							}
-							
-							return sub;
-						};
 
 						// Build lists of mappings to add/remove
-						auto const oldConnections = convertList(connections);
-						auto const newConnections = convertList(dialog.connections());
-						auto const toRemove = unconvertList(substractList(oldConnections, newConnections));
-						auto const toAdd = unconvertList(substractList(newConnections, oldConnections));
+						auto const oldConnections = hashConnectionsList(connections);
+						auto const newConnections = hashConnectionsList(dialog.connections());
+						auto const toRemove = convertList(substractList(oldConnections, newConnections));
+						auto const toAdd = convertList(substractList(newConnections, oldConnections));
 						
 						// Remove and Add the mappings
 						auto& manager = avdecc::ControllerManager::getInstance();
-						manager.removeStreamPortInputAudioMappings(_entityID, _streamPortIndex, toRemove);
-						manager.addStreamPortInputAudioMappings(_entityID, _streamPortIndex, toAdd);
+						if (!toRemove.empty())
+						{
+							manager.removeStreamPortInputAudioMappings(_entityID, _streamPortIndex, toRemove);
+						}
+						if (!toAdd.empty())
+						{
+							manager.addStreamPortInputAudioMappings(_entityID, _streamPortIndex, toAdd);
+						}
 					}
 				}
 			}
