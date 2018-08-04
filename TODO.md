@@ -1,13 +1,11 @@
 # TODO
 ## Global
-- Add winpcap redist to windows installer
 - Enable (via option?) Hive advertising (la_avdecc_controller has to support ADP name/group configuration, and probably partial AEM support)
 - Support multiple eth interfaces at the same time to support redundancy (Hive being connected to multiple interfaces at the same time and aggregating information on both interfaces)
   - Have to properly split dynamic/static model in Hive (not only relying on la_avdecc_controller)
   - For each descriptor that have dynamic information, find a way to display them separately in Hive
   - The Entities list will have to properly aggregate entities with the same EID on different networks (and display all possible gptpt and interface index)
 - Find something more lightweight than QtWebEngine to display the Changelog
-- Online check for new version
 - Auto save the log file in case of a crash
 - Save the selected inspector's node when changing inspected entity (and restore it when reselecting it)
 
@@ -15,15 +13,10 @@
 - Menu: "File/Save log..."
 - Menu: "Help/Bug Report"
 - Menu: "Help/ChangeLog"
-- Menu Settings:
-  - Choice for the "ProgID" (or later use the windows/mac service to get a local host unique EID)
-  - Choice for the default locale (primary and backpup)
-  - Active or not advertising
-  - Display choice for indexes: Riedel style (starting at 1) or developer style (starting at 0)
 
 ## Entities list
 - Icons displaying the type of entity (controller, listener, talker, 3 icons max then)
-- Possiblity to copy (right click context menu?) some elements, like the entityID in the list
+- Possiblity to copy (right click context menu?) some elements, like the entityID in the list -> already done by Qt, just have to selection row/column and ctrl-c (TODO: Explain that in some tutorial)
 
 ## AEM Inspector
 - Add Strings descriptor as sub node of Locale
@@ -34,7 +27,6 @@
 - Improve the "Connection list" for a StreamOutput
   - Add an icon indicating the FastConnecting status
   - Move the right click menu "Clear all ghost connections" from item to the list itself, and implement it
-- Implement Dynamic mappings for StreamOutput
 - Right click menu:
   - Copy values (like all EID for ex)
 
