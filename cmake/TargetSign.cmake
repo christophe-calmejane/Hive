@@ -1,0 +1,11 @@
+function(target_sign TARGET_NAME INSTALL_RELATIVE_PATH)
+	set(GET_TARGET_FILE_CODE "$<TARGET_FILE_NAME:${TARGET_NAME}>")
+	get_target_property(isBundle ${TARGET_NAME} MACOSX_BUNDLE)
+	if(isBundle)
+		string(APPEND GET_TARGET_FILE_CODE ".app")
+	endif()
+
+	set(GENERATED_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/targetSign_${TARGET_NAME}.cmake")
+	file(GENERATE OUTPUT "${GENERATED_FILE_PATH}" CONTENT "execute_process(COMMAND codesign -s \"${LA_TEAM_IDENTIFIER}\" --timestamp --verbose=4 --deep --strict --force \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${INSTALL_RELATIVE_PATH}/${GET_TARGET_FILE_CODE}\")")
+	install(SCRIPT "${GENERATED_FILE_PATH}")
+endfunction()

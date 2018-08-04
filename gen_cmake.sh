@@ -52,7 +52,7 @@ fi
 
 outputFolder="./_build"
 cmake_config=""
-add_cmake_opt=""
+add_cmake_opt=()
 outputFolderForced=0
 useVSclang=0
 hasTeamId=0
@@ -108,7 +108,7 @@ do
 				echo "ERROR: Missing parameter for -a option, see help (-h)"
 				exit 4
 			fi
-			add_cmake_opt="$add_cmake_opt $1"
+			add_cmake_opt+=("$1")
 			;;
 		-b)
 			shift
@@ -180,7 +180,7 @@ do
 					echo "ERROR: Missing parameter for -id option, see help (-h)"
 					exit 4
 				fi
-				add_cmake_opt="$add_cmake_opt -DLA_TEAM_IDENTIFIER=$1"
+				add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$1")
 				hasTeamId=1
 			else
 				echo "ERROR: -id option is only supported on macOS platform"
@@ -204,7 +204,7 @@ do
 			fi
 			;;
 		-sign)
-			add_cmake_opt="$add_cmake_opt -DENABLE_AVDECC_SIGNING=TRUE"
+			add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
 			doSign=1
 			;;
 		*)
@@ -272,10 +272,10 @@ IFS='.' read -a versionSplit <<< "$hiveVersion"
 IFS="$oldIFS"
 
 if [ ${#versionSplit[*]} -eq 4 ]; then
-	add_cmake_opt="$add_cmake_opt -DAVDECC_BASE_FOLDER=3rdparty/avdecc-local"
+	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc-local")
 	echo "Development version, using local avdecc copy"
 else
-	add_cmake_opt="$add_cmake_opt -DAVDECC_BASE_FOLDER=3rdparty/avdecc"
+	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc")
 	echo "Release version, using offical avdecc"
 fi
 
@@ -283,13 +283,13 @@ fi
 qtVersion="5.10.1"
 
 if isWindows; then
-	add_cmake_opt="$add_cmake_opt -DQt5_DIR=c:/Qt/${qtVersion}/msvc2015/lib/cmake/Qt5"
+	add_cmake_opt+=("-DQt5_DIR=c:/Qt/${qtVersion}/msvc2015/lib/cmake/Qt5")
 elif isMac; then
-	add_cmake_opt="$add_cmake_opt -DQt5_DIR=/Applications/Qt/${qtVersion}/clang_64/lib/cmake/Qt5"
+	add_cmake_opt+=("-DQt5_DIR=/Applications/Qt/${qtVersion}/clang_64/lib/cmake/Qt5")
 fi
 
 echo "Generating cmake project..."
-"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $toolset_option $sdk_option $cmake_opt $add_cmake_opt $cmake_config
+"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}" $cmake_config
 
 echo ""
 echo "All done, generated project lies in ${outputFolder}"
