@@ -57,6 +57,7 @@ outputFolderForced=0
 useVSclang=0
 hasTeamId=0
 doSign=0
+useSources=0
 
 while [ $# -gt 0 ]
 do
@@ -83,6 +84,7 @@ do
 				echo " -release -> Force release configuration (Linux only)"
 			fi
 			echo " -sign -> Sign binaries (Default: No signing)"
+			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources)"
 			exit 3
 			;;
 		-o)
@@ -207,6 +209,9 @@ do
 			add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
 			doSign=1
 			;;
+		-source)
+			useSources=1
+			;;
 		*)
 			echo "ERROR: Unknown option '$1' (use -h for help)"
 			exit 4
@@ -283,10 +288,20 @@ fi
 qtVersion="5.10.1"
 
 if isWindows; then
-	add_cmake_opt+=("-DQt5_DIR=c:/Qt/${qtVersion}/msvc2015/lib/cmake/Qt5")
+	qtBasePath="c:/Qt/${qtVersion}"
+	qtArch="msvc2015"
 elif isMac; then
-	add_cmake_opt+=("-DQt5_DIR=/Applications/Qt/${qtVersion}/clang_64/lib/cmake/Qt5")
+	qtBasePath="/Applications/Qt/${qtVersion}"
+	qtArch="clang_64"
 fi
+if [ $useSources -eq 1 ]; then
+	# Except for WebEngine
+	add_cmake_opt+=("-DQt5WebEngineWidgets_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5WebEngineWidgets")
+	# Override qtArch path with Source path
+	qtArch="Src/qtbase"
+	echo "Using Qt source instead of precompiled libraries"
+fi
+add_cmake_opt+=("-DQt5_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5")
 
 echo "Generating cmake project..."
 "$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}" $cmake_config
