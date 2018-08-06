@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.10)
 # Using Semantic Versioning (http://semver.org/spec/v2.0.0.html)
 # Project version number x.y.z on main branch, x.y.z.w on dev and task branches
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task)
-set(HIVE_VERSION 1.0.6.1)
+set(HIVE_VERSION 1.0.6.2)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -101,7 +101,8 @@ set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")
 set(PROJECT_FULL_NAME "${PROJECT_NAME} - Pro Audio Avdecc Controller")
 set(PROJECT_COMPANYNAME "KikiSoft")
 set(PROJECT_AUTHORS "Emilien Vallot, Christophe Calmejane and other contributors")
-set(PROJECT_DOMAINNAME "fr.${PROJECT_COMPANYNAME}")
+set(PROJECT_REVERSE_DOMAINNAME "fr.${PROJECT_COMPANYNAME}")
+set(PROJECT_DOMAINNAME "${PROJECT_COMPANYNAME}.fr")
 set(PROJECT_URL "https://github.com/christophe-calmejane/Hive")
 set(PROJECT_LEGALCOPYRIGHT "(c) ${PROJECT_AUTHORS}")
 set(PROJECT_READABLE_COPYRIGHT "Copyright ${PROJECT_COPYRIGHT_YEAR}, ${PROJECT_AUTHORS}")
