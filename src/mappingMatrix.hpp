@@ -40,8 +40,9 @@ struct Node
 	std::vector<std::string> sockets;
 };
 
-using Outputs = std::vector<Node>;
-using Inputs = std::vector<Node>;
+using Nodes = std::vector<Node>;
+using Outputs = Nodes;
+using Inputs = Nodes;
 using SlotID = std::pair<size_t, size_t>; // Pair of "Node Index", "Socket Index"
 using Connection = std::pair<SlotID, SlotID>; // Pair of "Output SlotID", "Input SlotID"
 using Connections = std::vector<Connection>;

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- [Support for dynamic mappings on StreamOutput](https://github.com/christophe-calmejane/Hive/issues/9)
+
 ### Fixed
 - [Crash when changing active configuration](https://github.com/christophe-calmejane/Hive/issues/15)
 - [Incorrect dynamic mappings sent when adding/removing them](https://github.com/christophe-calmejane/Hive/issues/12)

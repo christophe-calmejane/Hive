@@ -395,7 +395,7 @@ private:
 		}
 
 		// Dynamic model
-		if (node.staticModel->hasDynamicAudioMap && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+		if (node.staticModel->hasDynamicAudioMap)
 		{
 			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, node.dynamicModel, q);
 
