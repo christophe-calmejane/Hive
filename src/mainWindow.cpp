@@ -190,15 +190,15 @@ void MainWindow::createControllerView()
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
 	int column{0};
-	controllerTableView->setColumnWidth(column++, 32);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 40);
 	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 180);
 	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 160);
 	controllerTableView->setColumnWidth(column++, 80);
 	controllerTableView->setColumnWidth(column++, 90);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 160);
 }
 
 void MainWindow::populateProtocolComboBox()
