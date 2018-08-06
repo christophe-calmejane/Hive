@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.10)
 # Using Semantic Versioning (http://semver.org/spec/v2.0.0.html)
 # Project version number x.y.z on main branch, x.y.z.w on dev and task branches
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task)
-set(HIVE_VERSION 1.0.4)
+set(HIVE_VERSION 1.0.5)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -71,12 +71,12 @@ set(BUILD_AVDECC_INTERFACE_VIRTUAL ON CACHE BOOL "Build the virtual protocol int
 # Install options
 set(INSTALL_AVDECC_EXAMPLES OFF CACHE BOOL "Install examples." FORCE)
 set(INSTALL_AVDECC_TESTS OFF CACHE BOOL "Install unit tests." FORCE)
-set(INSTALL_AVDECC_LIB_SHARED_CXX OFF CACHE BOOL "Install C++ shared library." FORCE)
+set(INSTALL_AVDECC_LIB_SHARED_CXX OFF CACHE BOOL "Install C++ shared library." FORCE) # Don't install the libraries, we copy them manually (we want them inside the Bundle on macOS)
 set(INSTALL_AVDECC_LIB_STATIC OFF CACHE BOOL "Install static library." FORCE)
 set(INSTALL_AVDECC_HEADERS OFF CACHE BOOL "Install headers." FORCE)
 set(INSTALL_AVDECC_DOC OFF CACHE BOOL "Install documentation." FORCE)
 # Signing options
-set(ENABLE_AVDECC_SIGNING ${ENABLE_HIVE_SIGNING} CACHE BOOL "Enable binaries signing." FORCE)
+set(ENABLE_AVDECC_SIGNING OFF CACHE BOOL "Enable binaries signing." FORCE) # Don't sign the libraries, we copy them manually (we'll sign everything later)
 # Enable features
 set(ENABLE_AVDECC_FEATURE_REDUNDANCY ON CACHE BOOL "Enable 'Network Redundancy' feature as defined by AVnu Alliance." FORCE)
 # Compatibility options

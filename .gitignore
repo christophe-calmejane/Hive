@@ -1,5 +1,6 @@
-# CMake build directoy
+# CMake build directories
 /_build*
+/_install*
 
 # CPack generation directory and archives
 _CPack_Packages/
@@ -14,3 +15,7 @@ ehthumbs.db
 
 # TMP "local" module
 /3rdparty/avdecc-local
+
+# Ignore .identity file
+/.identity
+

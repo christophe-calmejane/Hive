@@ -907,7 +907,7 @@ public:
 					auto const rect = geometry();
 					_drawFunction(&painter, QRect(0, 0, rect.width(), rect.height()));
 				}
-				DrawFunctionType const& _drawFunction{};
+				DrawFunctionType const& _drawFunction;
 			};
 
 			for (auto& drawFunction : drawFunctions)
