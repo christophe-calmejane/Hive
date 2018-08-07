@@ -177,7 +177,6 @@ void MainWindow::createMainToolBar()
 void MainWindow::createControllerView()
 {
 	controllerTableView->setModel(_controllerModel);
-	controllerTableView->resizeColumnsToContents();
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
