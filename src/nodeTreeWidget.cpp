@@ -37,6 +37,7 @@
 #include <algorithm>
 
 #include <QListWidget>
+#include <QHeaderView>
 
 #include "painterHelper.hpp"
 
@@ -814,6 +815,7 @@ NodeTreeWidget::NodeTreeWidget(QWidget* parent)
 {
 	setSelectionBehavior(QAbstractItemView::SelectRows);
 	setSelectionMode(QAbstractItemView::SingleSelection);
+	header()->resizeSection(0, 200);
 }
 
 NodeTreeWidget::~NodeTreeWidget()
