@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- [Display missing basic entity information](https://github.com/christophe-calmejane/Hive/issues/11)
+
 ### Removed
 - ["Access" information from all descriptors but Entity](https://github.com/christophe-calmejane/Hive/issues/3)
 
