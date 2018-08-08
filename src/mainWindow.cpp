@@ -24,6 +24,7 @@
 #include <QFile>
 
 #include "avdecc/helper.hpp"
+#include "avdecc/hiveLogItems.hpp"
 #include "internals/config.hpp"
 
 #include "nodeVisitor.hpp"
@@ -176,7 +177,6 @@ void MainWindow::createMainToolBar()
 void MainWindow::createControllerView()
 {
 	controllerTableView->setModel(_controllerModel);
-	controllerTableView->resizeColumnsToContents();
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -189,15 +189,15 @@ void MainWindow::createControllerView()
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
 	int column{0};
-	controllerTableView->setColumnWidth(column++, 32);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 40);
 	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 180);
 	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 160);
 	controllerTableView->setColumnWidth(column++, 80);
 	controllerTableView->setColumnWidth(column++, 90);
-	controllerTableView->setColumnWidth(column++, 120);
+	controllerTableView->setColumnWidth(column++, 160);
 }
 
 void MainWindow::populateProtocolComboBox()
@@ -235,6 +235,8 @@ void MainWindow::populateInterfaceComboBox()
 void MainWindow::loadSettings()
 {
 	auto& settings = settings::SettingsManager::getInstance();
+
+	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());
 
 	_protocolComboBox.setCurrentText(settings.getValue(settings::ProtocolType).toString());
 	_interfaceComboBox.setCurrentText(settings.getValue(settings::InterfaceName).toString());
@@ -384,6 +386,20 @@ void MainWindow::connectSignals()
 	{
 		AboutDialog dialog{ this };
 		dialog.exec();
+	});
+	
+	// Connect updater signals
+	auto const& updater = Updater::getInstance();
+	connect(&updater, &Updater::newVersionAvailable, this, [](QString version, QString downloadURL)
+	{
+		QString message{ "New version (" + version + ") available here " + downloadURL };
+
+		QMessageBox::information(nullptr, "", message);
+		LOG_HIVE_INFO(message);
+	});
+	connect(&updater, &Updater::checkFailed, this, [](QString reason)
+	{
+		LOG_HIVE_WARN("Failed to check for new version: " + reason);
 	});
 }
 

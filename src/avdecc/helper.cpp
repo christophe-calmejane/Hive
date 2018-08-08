@@ -436,6 +436,106 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags)
 	return str;
 }
 
+QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps)
+{
+	QString str;
+	
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::EfuMode))
+		concatenateFlags(str, "EfuMode");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AddressAccessSupported))
+		concatenateFlags(str, "AddressAccessSupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::GatewayEntity))
+		concatenateFlags(str, "GatewayEntity");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemSupported))
+		concatenateFlags(str, "AemSupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::LegacyAvc))
+		concatenateFlags(str, "LegacyAvc");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AssociationIDSupported))
+		concatenateFlags(str, "AssociationIDSupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::VendorUniqueSupported))
+		concatenateFlags(str, "VendorUniqueSupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::ClassASupported))
+		concatenateFlags(str, "ClassASupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::ClassBSupported))
+		concatenateFlags(str, "ClassBSupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::GptpSupported))
+		concatenateFlags(str, "GptpSupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemAuthenticationSupported))
+		concatenateFlags(str, "AemAuthenticationSupported");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemAuthenticationRequired))
+		concatenateFlags(str, "AemAuthenticationRequired");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemPersistentAcquireSupported))
+		concatenateFlags(str, "AemPersistentAcquireSupported");
+	
+	if (str.isEmpty())
+		str = "None";
+	return str;
+}
+	
+QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps)
+{
+	QString str;
+	
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::Implemented))
+		concatenateFlags(str, "Implemented");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::OtherSource))
+		concatenateFlags(str, "OtherSource");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::ControlSource))
+		concatenateFlags(str, "ControlSource");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::MediaClockSource))
+		concatenateFlags(str, "MediaClockSource");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::SmpteSource))
+		concatenateFlags(str, "SmpteSource");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::MidiSource))
+		concatenateFlags(str, "MidiSource");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::AudioSource))
+		concatenateFlags(str, "AudioSource");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::VideoSource))
+		concatenateFlags(str, "VideoSource");
+
+	if (str.isEmpty())
+		str = "None";
+	return str;
+}
+
+QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps)
+{
+	QString str;
+	
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::Implemented))
+		concatenateFlags(str, "Implemented");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::OtherSink))
+		concatenateFlags(str, "OtherSink");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::ControlSink))
+		concatenateFlags(str, "ControlSink");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::MediaClockSink))
+		concatenateFlags(str, "MediaClockSink");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::SmpteSink))
+		concatenateFlags(str, "SmpteSink");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::MidiSink))
+		concatenateFlags(str, "MidiSink");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::AudioSink))
+		concatenateFlags(str, "AudioSink");
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::VideoSink))
+		concatenateFlags(str, "VideoSink");
+
+	if (str.isEmpty())
+		str = "None";
+	return str;
+}
+
+QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps)
+{
+	QString str;
+
+	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ControllerCapabilities::Implemented))
+		concatenateFlags(str, "Implemented");
+
+	if (str.isEmpty())
+		str = "None";
+	return str;
+}
+
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type)
 {
 	switch (type)

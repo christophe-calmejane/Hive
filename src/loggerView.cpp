@@ -86,7 +86,6 @@ LoggerView::LoggerView(QWidget* parent)
 #endif
 
 	tableView->setModel(&_loggerModel);
-	tableView->resizeColumnsToContents();
 	tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	tableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	tableView->setVerticalScrollBar(new AutoScrollBar{Qt::Vertical, this});

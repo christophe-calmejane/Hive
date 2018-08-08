@@ -53,8 +53,12 @@ public:
 				auto const newVersion = packVersionString(newVersionString);
 				if (newVersion > currentVersion)
 				{
-					emit newVersionAvailble(newVersionString, DownloadUrlPath);
+					emit newVersionAvailable(newVersionString, DownloadUrlPath);
 				}
+			}
+			else
+			{
+				emit checkFailed(reply->errorString());
 			}
 			reply->deleteLater();
 			_checkInProgress = false;

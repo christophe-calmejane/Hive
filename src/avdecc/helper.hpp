@@ -82,6 +82,11 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags);
 QString flagsToString(la::avdecc::entity::PortFlags const flags);
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags);
 
+QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps);
+QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps);
+QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps);
+QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps);
+
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type);
 QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format);
 

@@ -119,6 +119,7 @@ set(AVDECC_HELPER_HEADER_FILES
 	avdecc/controllerManager.hpp
 	avdecc/controllerModel.hpp
 	avdecc/helper.hpp
+	avdecc/hiveLogItems.hpp
 	avdecc/loggerModel.hpp
 	avdecc/stringValidator.hpp
 )
