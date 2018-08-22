@@ -66,7 +66,12 @@ setupEnv()
 	then
 		local absPath
 		getFolderAbsoluteOSDependantPath absPath "3rdparty/"
-		local log=$(cmd /C "mklink /J ${absPath}avdecc-local ${absPath}avdecc" 2>&1)
+		local cmdParam="/C"
+		if [[ $OSTYPE = msys ]];
+		then
+			cmdParam="//C" # We have to escape /C or msys will convert it to c:
+		fi
+		local log=$(cmd $cmdParam "mklink /J ${absPath}avdecc-local ${absPath}avdecc" 2>&1)
 		if [ $? -ne 0 ];
 		then
 			echo "failed!"
