@@ -57,6 +57,8 @@ public:
 
 		evenColor.setAlpha(96);
 		oddColor.setAlpha(96);
+
+		_backgroundPixmap.fill(Qt::transparent);
 	
 		QPainter painter{&_backgroundPixmap};
 		painter.fillRect(_backgroundPixmap.rect(), evenColor);
