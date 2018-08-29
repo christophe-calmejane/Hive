@@ -47,7 +47,6 @@
 - Save selected layer/level in configuration (not filter string)
 
 # BUGS
-- Connection matrix highlight issue: Should be unhighlighted when the mouse leaves the matrix
 - GroupName issue if it's set to "语语语语语语语语语语语语语语语语语语语语语|" (a value is being added at the end of the string)
 - If a Talker Stream is in Waiting status and we connect a new listener, it automatically goes into NonWaiting status because we are always sending the connection request without taking Wait flag into account
 - ProtocolInterface loaded multiple times during launch (pcap at least)
