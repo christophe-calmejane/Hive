@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - [Image/Logo background garbage](https://github.com/christophe-calmejane/Hive/issues/26)
 - Connection matrix highlighting issues
+- Optimize the code for ConnectionMatrixModel::ConnectionMatrixModelPrivate::refreshHeader
 
 ## [1.0.6] - 2018-08-08
 ### Added
