@@ -37,7 +37,6 @@
   - Maybe just use only one new color code (purple) or a new form (triangle?) for when the avdecc connection is established, but there is an error (for all cases above) that we display with a tooltip
 - Separate the connection matrix in 2 matrices, one for normal streams and one for CRF?
 - Implement colors for entities (the squares)
-- Optimize the code for ConnectionMatrixModel::ConnectionMatrixModelPrivate::refreshHeader
 - Add feature "Start all Streams" and "Stop all Streams" when right clicking on the header of a entity
 
 ## Log window

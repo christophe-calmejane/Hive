@@ -60,13 +60,12 @@ private:
 	Q_SLOT void streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state);
 	Q_SLOT void streamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat);
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);
-	Q_SLOT void entityNameChanged();
-	Q_SLOT void streamNameChanged();
+	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID);
+	Q_SLOT void streamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex);
 
 	// Private methods
 	void addEntity(bool const orientationIsRow, la::avdecc::UniqueIdentifier const entityID);
 	void removeEntity(bool const orientationIsRow, la::avdecc::UniqueIdentifier const entityID);
-	void refreshHeader() const noexcept;
 	static inline bool areUserDataEqual(QVariant const& lhs, QVariant const& rhs)
 	{
 		auto const& lhsData = lhs.value<UserData>();
@@ -265,14 +264,55 @@ void ConnectionMatrixModel::ConnectionMatrixModelPrivate::gptpChanged(la::avdecc
 	}
 }
 
-void ConnectionMatrixModel::ConnectionMatrixModelPrivate::entityNameChanged()
+void ConnectionMatrixModel::ConnectionMatrixModelPrivate::entityNameChanged(la::avdecc::UniqueIdentifier const entityID)
 {
-	refreshHeader();
+	auto const toCompare = QVariant::fromValue(UserData{ UserData::Type::EntityNode, entityID });
+
+	{
+		auto const result = q_ptr->columnAndNodeForUserData(toCompare, &ConnectionMatrixModel::ConnectionMatrixModelPrivate::areUserDataEqual);
+		auto const columnIndex = result.first;
+		if (columnIndex != -1)
+		{
+			emit q_ptr->headerDataChanged(Qt::Horizontal, columnIndex, columnIndex);
+		}
+	}
+
+	{
+		auto const result = q_ptr->rowAndNodeForUserData(toCompare, &ConnectionMatrixModel::ConnectionMatrixModelPrivate::areUserDataEqual);
+		auto const rowIndex = result.first;
+		if (rowIndex != -1)
+		{
+			emit q_ptr->headerDataChanged(Qt::Vertical, rowIndex, rowIndex);
+		}
+	}
 }
 
-void ConnectionMatrixModel::ConnectionMatrixModelPrivate::streamNameChanged()
+void ConnectionMatrixModel::ConnectionMatrixModelPrivate::streamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
 {
-	refreshHeader();
+	Q_UNUSED(configurationIndex);
+
+	if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+	{
+		auto const columnIndex = q_ptr->columnForUserData(QVariant::fromValue(UserData{ UserData::Type::InputStreamNode, entityID, streamIndex }), &ConnectionMatrixModel::ConnectionMatrixModelPrivate::areUserDataEqual);
+
+		if (columnIndex != -1)
+		{
+			emit q_ptr->headerDataChanged(Qt::Vertical, columnIndex, columnIndex);
+		}
+	}
+	else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+	{
+		auto const rowIndex = q_ptr->rowForUserData(QVariant::fromValue(UserData{ UserData::Type::OutputStreamNode, entityID, streamIndex }), &ConnectionMatrixModel::ConnectionMatrixModelPrivate::areUserDataEqual);
+
+		if (rowIndex != -1)
+		{
+			emit q_ptr->headerDataChanged(Qt::Horizontal, rowIndex, rowIndex);
+		}
+	}
+	else
+	{
+		AVDECC_ASSERT(false, "DescriptorType should be StreamInput or StreamOutput");
+	}
 }
 
 bool ConnectionMatrixModel::ConnectionMatrixModelPrivate::isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) const noexcept
@@ -608,13 +648,6 @@ void ConnectionMatrixModel::ConnectionMatrixModelPrivate::removeEntity(bool cons
 		if (index != -1)
 			q_ptr->removeColumns(index, q_ptr->countChildren(result.second) + 1);
 	}
-}
-
-void ConnectionMatrixModel::ConnectionMatrixModelPrivate::refreshHeader() const noexcept
-{
-	// TODO: Optimiser pour ne refresh que les items necessaire (donc ajouter params a la method, entityID), en faisant un search pour trouver dans horizontal et vertical
-	emit q_ptr->headerDataChanged(Qt::Horizontal, 0, q_ptr->columnCount({}));
-	emit q_ptr->headerDataChanged(Qt::Vertical, 0, q_ptr->rowCount({}));
 }
 
 ConnectionMatrixModel::ConnectionMatrixModel(QObject* parent)
