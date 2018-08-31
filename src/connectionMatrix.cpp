@@ -751,6 +751,12 @@ QVariant ConnectionMatrixModel::headerData(int section, Qt::Orientation orientat
 /* ************************************************************ */
 void ConnectionMatrixItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
+	// Highlighted background if needed
+	if (option.state & QStyle::State_Selected)
+	{
+		painter->fillRect(option.rect, option.palette.highlight());
+	}
+
 	auto const* const model = static_cast<ConnectionMatrixModel const*>(index.model());
 	auto const& talkerNode = model->nodeAtRow(index.row());
 	auto const& listenerNode = model->nodeAtColumn(index.column());
@@ -1011,6 +1017,11 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 {
 	setCornerButtonEnabled(false);
 	setMouseTracking(true);
+
+	// Configure highlight color
+	auto p = palette();
+	p.setColor(QPalette::Highlight, 0xf3e5f5);
+	setPalette(p);
 	
 	auto* legend = new ConnectionMatrixLegend{ *this };
 	connect(verticalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
@@ -1178,52 +1189,9 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 
 void ConnectionMatrixView::mouseMoveEvent(QMouseEvent* event)
 {
-	auto const index = indexAt(event->pos());
-	
-	auto setRowBackgroundRoleData = [this](int row, QVariant const& data)
-	{
-		if (row == -1)
-		{
-			return;
-		}
-
-		for (auto column = 0; column < model()->columnCount(); ++column)
-		{
-			auto const idx = model()->index(row, column);
-			model()->setData(idx, data, Qt::BackgroundRole);
-		}
-	};
-	
-	
-	auto setColumnBackgroundRoleData = [this](int column, QVariant const& data)
-	{
-		if (column == -1)
-		{
-			return;
-		}
-
-		for (auto row = 0; row < model()->rowCount(); ++row)
-		{
-			auto const idx = model()->index(row, column);
-			model()->setData(idx, data, Qt::BackgroundRole);
-		}
-	};
-	
-	auto const backgroundColor = QColor{Qt::white};
-	
-	setRowBackgroundRoleData(_row, backgroundColor);
-	setColumnBackgroundRoleData(_column, backgroundColor);
-	
-	_row = index.row();
-	_column = index.column();
-	
-	
-	auto highlightColor = QColor{0xf3e5f5};
-
-	setRowBackgroundRoleData(_row, highlightColor);
-	setColumnBackgroundRoleData(_column, highlightColor);
-	
 	MatrixTreeView::mouseMoveEvent(event);
+	auto const index = indexAt(event->pos());
+	selectionModel()->select(index, QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows|QItemSelectionModel::Columns);
 }
 
 static inline void drawCircle(QPainter* painter, QRect const& rect)

@@ -540,6 +540,8 @@ public:
 				break;
 		}
 
+		auto highlighted{false};
+
 		QPainterPath path;
 		if (orientation() == Qt::Horizontal)
 		{
@@ -548,6 +550,8 @@ public:
 			path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
 			path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
 			path.lineTo(rect.topRight());
+
+			highlighted = selectionModel()->isColumnSelected(logicalIndex, {});
 		}
 		else
 		{
@@ -556,6 +560,13 @@ public:
 			path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
 			path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
 			path.lineTo(rect.bottomLeft());
+
+			highlighted = selectionModel()->isRowSelected(logicalIndex, {});
+		}
+
+		if (highlighted)
+		{
+			backgroundBrush = QColor{ "#007ACC" };
 		}
 
 		painter->fillPath(path, backgroundBrush);
@@ -591,8 +602,8 @@ public:
 		{
 			painter->setPen(Qt::white);
 		}
-		painter->drawText(textRect, Qt::AlignVCenter, elidedText);
 
+		painter->drawText(textRect, Qt::AlignVCenter, elidedText);
 		painter->restore();
 	}
 
@@ -631,10 +642,19 @@ MatrixTreeView::MatrixTreeView(QWidget* parent)
 
 void MatrixTreeView::setModel(MatrixModel* model)
 {
-	QTableView::setModel(model);
+	if (auto* previousModel = QTableView::model())
+	{
+		previousModel->disconnect(verticalHeader());
+		previousModel->disconnect(horizontalHeader());
+	}
 
-	connect(model, &MatrixModel::rowsInserted, static_cast<MatrixHeaderView*>(verticalHeader()), &MatrixHeaderView::sectionInserted);
-	connect(model, &MatrixModel::columnsInserted, static_cast<MatrixHeaderView*>(horizontalHeader()), &MatrixHeaderView::sectionInserted);
+	QTableView::setModel(model);
+	
+	if (model)
+	{
+		connect(model, &MatrixModel::rowsInserted, static_cast<MatrixHeaderView*>(verticalHeader()), &MatrixHeaderView::sectionInserted);
+		connect(model, &MatrixModel::columnsInserted, static_cast<MatrixHeaderView*>(horizontalHeader()), &MatrixHeaderView::sectionInserted);
+	}
 }
 
 } // namespace toolkit
