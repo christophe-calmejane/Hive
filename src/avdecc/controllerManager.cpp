@@ -548,6 +548,24 @@ private:
 		}
 	}
 
+	virtual void startOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint16_t const operationId, la::avdecc::entity::model::MemoryObjectOperations const operationType, la::avdecc::controller::Controller::StartOperationHandler const& handler) noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			controller->startOperation(targetEntityID, descriptorType, descriptorIndex, operationId, operationType, handler);
+		}
+	}
+
+	virtual void startUploadOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, la::avdecc::controller::Controller::StartOperationHandler const& handler) noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			controller->startUploadOperation(targetEntityID, descriptorType, descriptorIndex, dataLength, handler);
+		}
+	}
+
 	/* Enumeration and Control Protocol (AECP) AA */
 	virtual void readDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, std::uint64_t const length, la::avdecc::controller::Controller::ReadDeviceMemoryHandler const& handler) const noexcept override
 	{

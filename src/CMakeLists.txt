@@ -226,6 +226,7 @@ set(COMMON_HEADER_FILES
 	nodeVisitor.hpp
 	painterHelper.hpp
 	settingsManager/settingsManager.hpp
+    MemoryObjectUploadWidget.hpp
 )
 
 # Common source files
@@ -239,6 +240,7 @@ set(COMMON_SOURCE_FILES
 	nodeTreeWidget.cpp
 	painterHelper.cpp
 	nodeVisitor.cpp
+    MemoryObjectUploadWidget.cpp
 )
 
 # Group sources
