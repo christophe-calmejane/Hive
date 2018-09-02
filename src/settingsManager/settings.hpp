@@ -29,6 +29,7 @@ static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVers
 
 // General settings
 static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
+static SettingsManager::SettingDefault TransposeConnectionMatrix =  { "avdecc/general/transposeConnectionMatrix", false };
 	
 // Controller settings
 static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
