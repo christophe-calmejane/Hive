@@ -1015,7 +1015,10 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
 
 	//
+	verticalHeader()->installEventFilter(this);
+	horizontalHeader()->installEventFilter(this);
 
+	//
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(this, &ConnectionMatrixView::customContextMenuRequested, this, [this](QPoint const& pos)
 	{
@@ -1179,10 +1182,35 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 
 void ConnectionMatrixView::mouseMoveEvent(QMouseEvent* event)
 {
-	MatrixTreeView::mouseMoveEvent(event);
-	auto const index = indexAt(event->pos());
+	qt::toolkit::MatrixTreeView::mouseMoveEvent(event);
+
+	auto const index = indexAt(static_cast<QMouseEvent*>(event)->pos());
 	selectionModel()->select(index, QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows|QItemSelectionModel::Columns);
 }
+
+bool ConnectionMatrixView::eventFilter(QObject* object, QEvent* event)
+{
+	if (event->type() == QEvent::Leave)
+	{
+		selectionModel()->clearSelection();
+	}
+	else if (event->type() == QEvent::HoverMove)
+	{
+		if (object == verticalHeader())
+		{
+			auto const row = verticalHeader()->logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
+			selectionModel()->select(model()->index(row, 0), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows);
+		}
+		else if (object == horizontalHeader())
+		{
+			auto const column = horizontalHeader()->logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
+			selectionModel()->select(model()->index(0, column), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Columns);
+		}
+	}
+
+	return qt::toolkit::MatrixTreeView::eventFilter(object, event);
+}
+
 
 static inline void drawCircle(QPainter* painter, QRect const& rect)
 {

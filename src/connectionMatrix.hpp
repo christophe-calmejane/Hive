@@ -108,6 +108,7 @@ public:
 	
 private:
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	virtual bool eventFilter(QObject* object, QEvent* event) override;
 
 private:
 	int _row{-1};
