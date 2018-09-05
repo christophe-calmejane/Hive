@@ -97,6 +97,8 @@ public:
 	virtual void removeStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept = 0;
 	virtual void startOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint16_t const operationId, la::avdecc::entity::model::MemoryObjectOperations const operationType, la::avdecc::controller::Controller::StartOperationHandler const & handler) noexcept = 0;
 	virtual void startUploadOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, la::avdecc::controller::Controller::StartOperationHandler const & handler) noexcept = 0;
+	//virtual void onOperationStatus(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType descriptorType, la::avdecc::entity::model::DescriptorIndex descriptorIndex, std::uint16_t operationId, std::uint16_t percentComplete) noexcept = 0;
+	//virtual void onOperationStatus(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType descriptorType, la::avdecc::entity::model::DescriptorIndex descriptorIndex, std::uint16_t operationId, std::uint16_t percentComplete) noexcept override
 
 	/* Enumeration and Control Protocol (AECP) AA */
 	virtual void readDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, std::uint64_t const length, la::avdecc::controller::Controller::ReadDeviceMemoryHandler const& handler) const noexcept = 0;
@@ -146,6 +148,8 @@ public:
 	Q_SIGNAL void beginAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType);
 	Q_SIGNAL void endAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status);
 
+	/* Unsolicited Response */
+	Q_SIGNAL void operationStatus(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType descriptorType, la::avdecc::entity::model::DescriptorIndex descriptorIndex, std::uint16_t operationId, std::uint16_t percentComplete);
 };
 
 } // namespace avdecc

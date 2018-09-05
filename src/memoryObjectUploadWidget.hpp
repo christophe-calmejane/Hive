@@ -67,4 +67,6 @@ private:
 	void fileSelectClicked();
 	void uploadClicked();
 	void abortClicked();
+
+	Q_SLOT void progressUpdate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType descriptorType, la::avdecc::entity::model::DescriptorIndex descriptorIndex, std::uint16_t operationId, std::uint16_t percentComplete);
 };

@@ -60,13 +60,15 @@ MemoryObjectUploadWidget::MemoryObjectUploadWidget(la::avdecc::UniqueIdentifier 
 	_actionLayout = new QVBoxLayout(parent);
 
 	_stateLabel = new QLabel("State", parent);
-	_currentUploadState = new QLabel("Unknown", parent);
+	_currentUploadState = new QLabel("Inactive", parent);
 
 	_stateLayout->addWidget(_stateLabel);
 	_stateLayout->addWidget(_currentUploadState);
 
 	_progressLabel = new QLabel("Progress", parent);
 	_progressBar = new QProgressBar(parent);
+	_progressBar->setMinimum(0);
+	_progressBar->setMaximum(1000);
 	_progressLayout->addWidget(_progressLabel);
 	_progressLayout->addWidget(_progressBar);
 
@@ -95,6 +97,12 @@ MemoryObjectUploadWidget::MemoryObjectUploadWidget(la::avdecc::UniqueIdentifier 
 	connect(&_fileSelect, &QPushButton::clicked, this, &MemoryObjectUploadWidget::fileSelectClicked);
 	connect(&_actionStartButton, &QPushButton::clicked, this, &MemoryObjectUploadWidget::uploadClicked);
 	connect(&_actionAbortButton, &QPushButton::clicked, this, &MemoryObjectUploadWidget::abortClicked);
+
+	auto& controllerManager = avdecc::ControllerManager::getInstance();
+
+	qRegisterMetaType<std::uint16_t>("std::uint16_t");
+
+	connect(&controllerManager, &avdecc::ControllerManager::operationStatus, this, &MemoryObjectUploadWidget::progressUpdate);
 
 	setLayout(_uploadMainLayout);
 }
@@ -136,10 +144,30 @@ void MemoryObjectUploadWidget::uploadClicked()
 	{
 		QByteArray fileData = uploadFile.readAll();
 
+		_progressBar->reset();
+		_currentUploadState->setText("Upload");
+
 		la::avdecc::controller::Controller::DeviceMemoryBuffer memoryBuffer(fileData.constData(), fileData.count());
 
+		// TODO: should we store the operation id which will be returned by START_OPERATION
 		manager.startUploadOperation(_targetEntityID, la::avdecc::entity::model::DescriptorType::MemoryObject, _descriptorIndex, fileData.count(), startOperationHandler);
 
 		manager.writeDeviceMemory(_targetEntityID, _address, memoryBuffer, writeMemoryHandler);
+	}
+}
+
+void MemoryObjectUploadWidget::progressUpdate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType descriptorType, la::avdecc::entity::model::DescriptorIndex descriptorIndex, std::uint16_t operationId, std::uint16_t percentComplete)
+{
+	if (_targetEntityID == targetEntityID
+		&& la::avdecc::entity::model::DescriptorType::MemoryObject == descriptorType
+		&& _descriptorIndex == descriptorIndex)
+		// TODO /* check the operation id? */
+	{
+		if (_progressBar->value() > percentComplete)
+		{
+			_currentUploadState->setText("Storing");
+		}
+
+		_progressBar->setValue(percentComplete);
 	}
 }

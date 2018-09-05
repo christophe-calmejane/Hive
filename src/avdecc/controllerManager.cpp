@@ -205,6 +205,10 @@ private:
 	{
 		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamPortIndex);
 	}
+	virtual void onOperationStatus(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType descriptorType, la::avdecc::entity::model::DescriptorIndex descriptorIndex, std::uint16_t operationId, std::uint16_t percentComplete) noexcept override
+	{
+		emit operationStatus(targetEntityID, descriptorType, descriptorIndex, operationId, percentComplete);
+	}
 
 	// ControllerManager overrides
 	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
