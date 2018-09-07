@@ -211,7 +211,7 @@ private:
 	}
 
 	// ControllerManager overrides
-	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
+	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
 	{
 		// If we have a previous controller, remove it
 		if (_controller)
@@ -552,21 +552,21 @@ private:
 		}
 	}
 
-	virtual void startOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint16_t const operationId, la::avdecc::entity::model::MemoryObjectOperations const operationType, la::avdecc::controller::Controller::StartOperationHandler const& handler) noexcept
+	virtual void startStoreAndRebootMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::controller::Controller::StartMemoryObjectOperationHandler const& handler) noexcept
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			controller->startOperation(targetEntityID, descriptorType, descriptorIndex, operationId, operationType, handler);
+			controller->startStoreAndRebootMemoryObjectOperation(targetEntityID, descriptorIndex, handler);
 		}
 	}
 
-	virtual void startUploadOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, la::avdecc::controller::Controller::StartOperationHandler const& handler) noexcept
+	virtual void startUploadMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, la::avdecc::controller::Controller::StartMemoryObjectOperationHandler const& handler) noexcept
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			controller->startUploadOperation(targetEntityID, descriptorType, descriptorIndex, dataLength, handler);
+			controller->startUploadMemoryObjectOperation(targetEntityID, descriptorIndex, dataLength, handler);
 		}
 	}
 

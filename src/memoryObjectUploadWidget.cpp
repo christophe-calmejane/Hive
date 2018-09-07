@@ -25,7 +25,7 @@
 #include <QFileDialog>
 
 
-static void startOperationHandler(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+static void startUploadOperationHandler(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID operationId)
 {
 	if (entity != nullptr)
 	{
@@ -38,6 +38,19 @@ static void startOperationHandler(la::avdecc::controller::ControlledEntity const
 	
 }
 
+static void startStoreAndEraseOperationHandler(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID /* operationId */)
+{
+	if (entity != nullptr)
+	{
+		qDebug() << __FUNCTION__ << "(): " << la::avdecc::toHexString(entity->getEntity().getEntityID()).c_str() << " finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
+	}
+	else
+	{
+		qDebug() << __FUNCTION__ << "(): unknown entity finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
+	}
+
+}
+
 static void writeMemoryHandler(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
 {
 	qDebug() << __FUNCTION__ << "(): " << la::avdecc::toHexString(entity->getEntity().getEntityID()).c_str() << " finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
@@ -46,7 +59,7 @@ static void writeMemoryHandler(la::avdecc::controller::ControlledEntity const* c
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 
-		manager.startOperation(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::MemoryObject, 0, 0, la::avdecc::entity::model::MemoryObjectOperations::StoreAndReboot, startOperationHandler);
+		manager.startStoreAndRebootMemoryObjectOperation(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::MemoryObject, 0, startStoreAndEraseOperationHandler);
 	}
 }
 
@@ -150,7 +163,7 @@ void MemoryObjectUploadWidget::uploadClicked()
 		la::avdecc::controller::Controller::DeviceMemoryBuffer memoryBuffer(fileData.constData(), fileData.count());
 
 		// TODO: should we store the operation id which will be returned by START_OPERATION
-		manager.startUploadOperation(_targetEntityID, la::avdecc::entity::model::DescriptorType::MemoryObject, _descriptorIndex, fileData.count(), startOperationHandler);
+		manager.startUploadMemoryObjectOperation(_targetEntityID, la::avdecc::entity::model::DescriptorType::MemoryObject, _descriptorIndex, fileData.count(), startUploadOperationHandler);
 
 		manager.writeDeviceMemory(_targetEntityID, _address, memoryBuffer, writeMemoryHandler);
 	}
