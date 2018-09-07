@@ -552,7 +552,7 @@ private:
 		}
 	}
 
-	virtual void startStoreAndRebootMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::controller::Controller::StartMemoryObjectOperationHandler const& handler) noexcept
+	virtual void startStoreAndRebootMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::controller::Controller::StartMemoryObjectOperationHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
@@ -561,7 +561,7 @@ private:
 		}
 	}
 
-	virtual void startUploadMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, la::avdecc::controller::Controller::StartMemoryObjectOperationHandler const& handler) noexcept
+	virtual void startUploadMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, la::avdecc::controller::Controller::StartMemoryObjectOperationHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
