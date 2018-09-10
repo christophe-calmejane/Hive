@@ -25,36 +25,18 @@
 #include <QFileDialog>
 
 
-static void startUploadOperationHandler(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID operationId)
+static void startUploadOperationHandler(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/, la::avdecc::entity::model::OperationID /*operationId*/)
 {
-	if (entity != nullptr)
-	{
-		qDebug() << __FUNCTION__ << "(): " << la::avdecc::toHexString(entity->getEntity().getEntityID()).c_str() << " finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
-	}
-	else
-	{
-		qDebug() << __FUNCTION__ << "(): unknown entity finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
-	}
-	
+	// TODO: store the operation id on success
 }
 
-static void startStoreAndEraseOperationHandler(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID /* operationId */)
+static void startStoreAndEraseOperationHandler(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/, la::avdecc::entity::model::OperationID /*operationId*/)
 {
-	if (entity != nullptr)
-	{
-		qDebug() << __FUNCTION__ << "(): " << la::avdecc::toHexString(entity->getEntity().getEntityID()).c_str() << " finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
-	}
-	else
-	{
-		qDebug() << __FUNCTION__ << "(): unknown entity finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
-	}
-
+	
 }
 
 static void writeMemoryHandler(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
 {
-	qDebug() << __FUNCTION__ << "(): " << la::avdecc::toHexString(entity->getEntity().getEntityID()).c_str() << " finished with " << la::avdecc::entity::ControllerEntity::statusToString(status).c_str();
-
 	if (status == la::avdecc::entity::ControllerEntity::AaCommandStatus::Success)
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -145,7 +127,7 @@ void MemoryObjectUploadWidget::fileSelectClicked()
 
 void MemoryObjectUploadWidget::abortClicked()
 {
-	// TODO: necessary?
+	// TODO: handle me
 }
 
 void MemoryObjectUploadWidget::uploadClicked()
