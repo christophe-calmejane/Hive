@@ -83,8 +83,6 @@ private:
 	//using MatrixModel::endAppendColumns;
 
 	// QAbstractTableModel overrides
-	virtual QVariant data(QModelIndex const& index, int role) const override;
-	virtual bool setData(QModelIndex const& index, QVariant const& value, int role = Qt::EditRole) override;
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
 
 	friend class ConnectionMatrixItemDelegate;
