@@ -76,8 +76,6 @@ private:
 	// Private members
 	Entities _talkers{};
 	Entities _listeners{};
-	
-	QMap<QPair<int, int>, QColor> _backgroundColor{};
 
 	ConnectionMatrixModel * const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ConnectionMatrixModel);
@@ -660,44 +658,6 @@ ConnectionMatrixModel::~ConnectionMatrixModel() {
 	delete d_ptr;
 }
 
-QVariant ConnectionMatrixModel::data(QModelIndex const& index, int role) const
-{
-	switch (role)
-	{
-		case Qt::BackgroundRole:
-		{
-			auto const key = qMakePair(index.row(), index.column());
-			auto const it = d_ptr->_backgroundColor.constFind(key);
-			if (it != d_ptr->_backgroundColor.end())
-			{
-				return it.value();
-			}
-			else
-			{
-				return {};
-			}
-		}
-		default:
-			return MatrixModel::data(index, role);
-	}
-}
-
-bool ConnectionMatrixModel::setData(QModelIndex const& index, QVariant const& value, int role)
-{
-	if (role == Qt::BackgroundRole)
-	{
-		if (value.canConvert(QVariant::Color))
-		{
-			auto const key = qMakePair(index.row(), index.column());
-			d_ptr->_backgroundColor.insert(key, value.value<QColor>());
-			emit dataChanged(index, index, {Qt::BackgroundRole});
-			return true;
-		}
-	}
-	
-	return false;
-}
-
 QVariant ConnectionMatrixModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
 	// Early return - Optimization
@@ -795,12 +755,6 @@ void ConnectionMatrixItemDelegate::paint(QPainter* painter, QStyleOptionViewItem
 	auto const& listenerNode = model->nodeAtColumn(index.column());
 	auto const& talkerData = talkerNode->userData.value<UserData>();
 	auto const& listenerData = listenerNode->userData.value<UserData>();
-	
-	auto const backgroundColor = index.data(Qt::BackgroundRole);
-	if (!backgroundColor.isNull())
-	{
-		painter->fillRect(option.rect, backgroundColor.value<QColor>());
-	}
 
 	// Entity row or column
 	if (talkerData.type == UserData::Type::EntityNode || listenerData.type == UserData::Type::EntityNode)
@@ -1060,8 +1014,14 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 	connect(verticalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
 
-	//
+	// Be sure to be notified by the mouse events & install filter to catch those events
+	verticalHeader()->setAttribute(Qt::WA_Hover);
+	horizontalHeader()->setAttribute(Qt::WA_Hover);
 
+	verticalHeader()->installEventFilter(this);
+	horizontalHeader()->installEventFilter(this);
+
+	//
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(this, &ConnectionMatrixView::customContextMenuRequested, this, [this](QPoint const& pos)
 	{
@@ -1225,10 +1185,35 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 
 void ConnectionMatrixView::mouseMoveEvent(QMouseEvent* event)
 {
-	MatrixTreeView::mouseMoveEvent(event);
-	auto const index = indexAt(event->pos());
+	qt::toolkit::MatrixTreeView::mouseMoveEvent(event);
+
+	auto const index = indexAt(static_cast<QMouseEvent*>(event)->pos());
 	selectionModel()->select(index, QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows|QItemSelectionModel::Columns);
 }
+
+bool ConnectionMatrixView::eventFilter(QObject* object, QEvent* event)
+{
+	if (event->type() == QEvent::Leave)
+	{
+		selectionModel()->clearSelection();
+	}
+	else if (event->type() == QEvent::HoverMove)
+	{
+		if (object == verticalHeader())
+		{
+			auto const row = verticalHeader()->logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
+			selectionModel()->select(model()->index(row, 0), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows);
+		}
+		else if (object == horizontalHeader())
+		{
+			auto const column = horizontalHeader()->logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
+			selectionModel()->select(model()->index(0, column), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Columns);
+		}
+	}
+
+	return qt::toolkit::MatrixTreeView::eventFilter(object, event);
+}
+
 
 static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
