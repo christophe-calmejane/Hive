@@ -66,7 +66,7 @@ public:
 	* @note Might throw la::avdecc::controller::Controller::Exception.
 	*       All observers should be removed from the previous controller before setting a new one.
 	*/
-	virtual void createController(la::avdecc::EndStation::ProtocolInterfaceType const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) = 0;
+	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) = 0;
 
 	/** Gets the controller's EID */
 	virtual la::avdecc::UniqueIdentifier getControllerEID() const noexcept = 0;

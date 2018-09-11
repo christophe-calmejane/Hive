@@ -54,7 +54,7 @@ inline QString toHexQString(T const v, bool const zeroFilled = false, bool const
 	}
 }
 
-QString protocolInterfaceTypeName(la::avdecc::EndStation::ProtocolInterfaceType const& protocolInterfaceType);
+QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type const& protocolInterfaceType);
 
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
 

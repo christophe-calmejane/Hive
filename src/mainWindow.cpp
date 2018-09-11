@@ -44,7 +44,7 @@
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
 
-Q_DECLARE_METATYPE(la::avdecc::EndStation::ProtocolInterfaceType);
+Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type);
 
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
@@ -78,7 +78,7 @@ MainWindow::MainWindow(QWidget* parent)
 
 void MainWindow::currentControllerChanged()
 {
-	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::EndStation::ProtocolInterfaceType>();
+	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceName = _interfaceComboBox.currentData().toString();
 
 	auto& settings = settings::SettingsManager::getInstance();
@@ -202,22 +202,22 @@ void MainWindow::createControllerView()
 
 void MainWindow::populateProtocolComboBox()
 {
-	const std::map<la::avdecc::EndStation::ProtocolInterfaceType, QString> protocolInterfaceName
+	const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName
 	{
-		{la::avdecc::EndStation::ProtocolInterfaceType::None, "None"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::PCap, "PCap"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::MacOSNative, "MacOS Native"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::Proxy, "Proxy"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::Virtual, "Virtual"},
+		{la::avdecc::protocol::ProtocolInterface::Type::None, "None"},
+		{la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap"},
+		{la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native"},
+		{la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy"},
+		{la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual"},
 	};
 
-	for (auto const& type : la::avdecc::EndStation::getSupportedProtocolInterfaceTypes())
+	for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
 	{
 #ifndef DEBUG
 		if (type == la::avdecc::EndStation::ProtocolInterfaceType::Virtual)
 			continue;
 #endif // !DEBUG
-		_protocolComboBox.addItem(protocolInterfaceName.at(type), QVariant::fromValue<la::avdecc::EndStation::ProtocolInterfaceType>(type));
+		_protocolComboBox.addItem(protocolInterfaceName.at(type), QVariant::fromValue<la::avdecc::protocol::ProtocolInterface::Type>(type));
 	}
 }
 
@@ -310,6 +310,9 @@ void MainWindow::connectSignals()
 			}
 			menu.addSeparator();
 			menu.addAction("Cancel");
+
+			// Release the controlled entity before starting a long operation (menu.exec)
+			controlledEntity.reset();
 
 			if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 			{

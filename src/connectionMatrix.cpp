@@ -1079,38 +1079,41 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 			auto const& listenerNode = model->nodeAtColumn(index.column());
 			auto const& talkerData = talkerNode->userData.value<UserData>();
 			auto const& listenerData = listenerNode->userData.value<UserData>();
-			auto talkerEntity = manager.getControlledEntity(talkerData.entityID);
-			auto listenerEntity = manager.getControlledEntity(listenerData.entityID);
-			if (talkerEntity && listenerEntity)
+			if ((talkerData.type == UserData::Type::OutputStreamNode && listenerData.type == UserData::Type::InputStreamNode)
+					|| (talkerData.type == UserData::Type::RedundantOutputStreamNode && listenerData.type == UserData::Type::RedundantInputStreamNode))
 			{
-				if ((talkerData.type == UserData::Type::OutputStreamNode && listenerData.type == UserData::Type::InputStreamNode)
-						|| (talkerData.type == UserData::Type::RedundantOutputStreamNode && listenerData.type == UserData::Type::RedundantInputStreamNode))
-				{
 					auto const caps = model->d_ptr->connectionCapabilities(talkerData, listenerData);
 
 #pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
-					if (caps != ConnectionCapabilities::None && la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongFormat))
-					{
-						QMenu menu;
+				if (caps != ConnectionCapabilities::None && la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongFormat))
+				{
+					QMenu menu;
 
-						auto* matchTalkerAction = menu.addAction("Match formats using Talker");
-						auto* matchListenerAction = menu.addAction("Match formats using Listener");
-						menu.addSeparator();
-						menu.addAction("Cancel");
+					auto* matchTalkerAction = menu.addAction("Match formats using Talker");
+					auto* matchListenerAction = menu.addAction("Match formats using Listener");
+					menu.addSeparator();
+					menu.addAction("Cancel");
 
 #pragma message("TODO: setEnabled() based on format compatibility -> If talker can be set from listener, and vice versa.")
-						matchTalkerAction->setEnabled(true);
-						matchListenerAction->setEnabled(true);
+					matchTalkerAction->setEnabled(true);
+					matchListenerAction->setEnabled(true);
 
-						if (auto* action = menu.exec(viewport()->mapToGlobal(pos)))
+					if (auto* action = menu.exec(viewport()->mapToGlobal(pos)))
+					{
+						if (action == matchTalkerAction)
 						{
-							if (action == matchTalkerAction)
+							auto talkerEntity = manager.getControlledEntity(talkerData.entityID);
+							if (talkerEntity)
 							{
 								auto const& talkerEntityNode = talkerEntity->getEntityNode();
 								auto const& talkerStreamNode = talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerData.streamIndex);
 								manager.setStreamInputFormat(listenerData.entityID, listenerData.streamIndex, talkerStreamNode.dynamicModel->currentFormat);
 							}
-							else if (action == matchListenerAction)
+						}
+						else if (action == matchListenerAction)
+						{
+							auto listenerEntity = manager.getControlledEntity(listenerData.entityID);
+							if (listenerEntity)
 							{
 								auto const& listenerEntityNode = listenerEntity->getEntityNode();
 								auto const& listenerStreamNode = listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerData.streamIndex);
@@ -1119,10 +1122,10 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 						}
 					}
 				}
-				else if (talkerData.type == UserData::Type::RedundantOutputNode && listenerData.type == UserData::Type::RedundantInputNode)
-				{
-					// TODO
-				}
+			}
+			else if (talkerData.type == UserData::Type::RedundantOutputNode && listenerData.type == UserData::Type::RedundantInputNode)
+			{
+				// TODO
 			}
 		}
 		catch (...)

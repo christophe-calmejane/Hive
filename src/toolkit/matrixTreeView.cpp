@@ -421,6 +421,9 @@ public:
 					startStreamingAction->setEnabled(!isStreamRunning);
 					stopStreamingAction->setEnabled(isStreamRunning);
 
+					// Release the controlled entity before starting a long operation (menu.exec)
+					controlledEntity.reset();
+
 					if (auto* action = menu.exec(/*horizontalHeader()->*/mapToGlobal(pos)))
 					{
 						if (action == startStreamingAction)

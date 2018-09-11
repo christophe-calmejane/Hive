@@ -24,19 +24,19 @@ namespace avdecc
 {
 namespace helper
 {
-QString protocolInterfaceTypeName(la::avdecc::EndStation::ProtocolInterfaceType const& protocolInterfaceType)
+QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type const& protocolInterfaceType)
 {
 	switch (protocolInterfaceType)
 	{
-		case la::avdecc::EndStation::ProtocolInterfaceType::None:
+		case la::avdecc::protocol::ProtocolInterface::Type::None:
 			return "None";
-		case la::avdecc::EndStation::ProtocolInterfaceType::PCap:
+		case la::avdecc::protocol::ProtocolInterface::Type::PCap:
 			return "PCap";
-		case la::avdecc::EndStation::ProtocolInterfaceType::MacOSNative:
+		case la::avdecc::protocol::ProtocolInterface::Type::MacOSNative:
 			return "MacOS Native";
-		case la::avdecc::EndStation::ProtocolInterfaceType::Proxy:
+		case la::avdecc::protocol::ProtocolInterface::Type::Proxy:
 			return "Proxy";
-		case la::avdecc::EndStation::ProtocolInterfaceType::Virtual:
+		case la::avdecc::protocol::ProtocolInterface::Type::Virtual:
 			return "Virtual";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");

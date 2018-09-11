@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 	// Runtime sanity check on Avdecc Library compilation options
 	{
 		auto const options = la::avdecc::getCompileOptions();
-		if (!la::avdecc::hasFlag(options, la::avdecc::CompileOption::EnableRedundancy))
+		if (!options.test(la::avdecc::CompileOption::EnableRedundancy))
 		{
 			QMessageBox::warning(nullptr, "", "Avdecc Library was not compiled with Redundancy feature, which is required by " + hive::internals::applicationShortName);
 			return 0;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
 	// Runtime sanity check on Avdecc Controller Library compilation options
 	auto const options = la::avdecc::controller::getCompileOptions();
-	if (!la::avdecc::hasFlag(options, la::avdecc::controller::CompileOption::EnableRedundancy))
+	if (!options.test(la::avdecc::controller::CompileOption::EnableRedundancy))
 	{
 		QMessageBox::warning(nullptr, "", "Avdecc Controller Library was not compiled with Redundancy feature, which is required by " + hive::internals::applicationShortName);
 		return 0;
