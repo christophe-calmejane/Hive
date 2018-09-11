@@ -1014,7 +1014,10 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 	connect(verticalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
 
-	//
+	// Be sure to be notified by the mouse events & install filter to catch those events
+	verticalHeader()->setAttribute(Qt::WA_Hover);
+	horizontalHeader()->setAttribute(Qt::WA_Hover);
+
 	verticalHeader()->installEventFilter(this);
 	horizontalHeader()->installEventFilter(this);
 
