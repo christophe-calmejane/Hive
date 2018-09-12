@@ -111,10 +111,6 @@ private:
 	virtual bool eventFilter(QObject* object, QEvent* event) override;
 
 	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
-
-private:
-	int _row{-1};
-	int _column{-1};
 };
 
 static void drawConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);

@@ -98,13 +98,7 @@ int MatrixModel::columnCount(QModelIndex const& parent) const
 
 QVariant MatrixModel::data(QModelIndex const& index, int role) const
 {
-	switch (role)
-	{
-		case Qt::BackgroundRole:
-			return QColor{Qt::blue};
-		default:
-			return {};
-	}
+	return {};
 }
 
 void MatrixModel::beginAppendRows(QModelIndex const& parent, int count)

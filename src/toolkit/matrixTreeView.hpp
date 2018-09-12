@@ -46,7 +46,8 @@ public:
 
 	virtual int rowCount(QModelIndex const& parent) const override;
 	virtual int columnCount(QModelIndex const& parent) const override;
-	virtual QVariant data(QModelIndex const& index, int role) const override;
+	virtual QVariant data(QModelIndex const& index, int role = Qt::DisplayRole) const override;
+
 
 	void beginAppendRows(QModelIndex const& parent, int count);
 	std::pair<QModelIndex, Node&> appendRow(QModelIndex const& parent = QModelIndex());
