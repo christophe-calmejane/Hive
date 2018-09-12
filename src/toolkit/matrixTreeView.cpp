@@ -348,6 +348,11 @@ public:
 		});
 	}
 
+	virtual void mouseDoubleClickEvent(QMouseEvent* e) override
+	{
+		mousePressEvent(e);
+	}
+
 	void updateSectionVisibility(int const logicalIndex)
 	{
 		MatrixModel::Node* node{ nullptr };
