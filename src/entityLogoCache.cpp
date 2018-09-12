@@ -175,7 +175,8 @@ private:
 						(type == Type::Manufacturer && model->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngManufacturer)
 						)
 				{
-					manager.readDeviceMemory(entityID, model->startAddress, model->maximumLength, [this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
+					auto const& dynamicModel{ obj.dynamicModel };
+					manager.readDeviceMemory(entityID, model->startAddress, dynamicModel->length, [this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
 					{
 						auto image = QImage::fromData(memoryBuffer.data(), memoryBuffer.size());
 

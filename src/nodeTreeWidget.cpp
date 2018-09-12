@@ -20,6 +20,7 @@
 #include "nodeTreeWidget.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
+#include <la/avdecc/controller/internals/avdeccControlledEntityStaticModel.hpp>
 #include <la/avdecc/logger.hpp>
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
@@ -31,6 +32,7 @@
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
+#include "memoryObjectUploadWidget.hpp"
 
 #include <vector>
 #include <utility>
@@ -592,6 +594,25 @@ private:
 		{
 			auto* dynamicItem = new MemoryObjectDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
+		}
+
+		// Memory object upload part
+		{
+			auto const* const model = node.staticModel;
+			
+			if (model->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+			{
+				auto* uploadItem = new QTreeWidgetItem(q);
+				auto const* const model = node.staticModel;
+
+				uploadItem->setText(0, "Upload");
+
+				auto* uploadItemSub = new QTreeWidgetItem(uploadItem);
+				auto* uploadWidget = new MemoryObjectUploadWidget(_controlledEntityID, model->targetDescriptorIndex, model->startAddress);
+
+				q->setItemWidget(uploadItemSub, 0, uploadWidget);
+				q->setFirstItemColumnSpanned(uploadItemSub, true);
+			}
 		}
 	}
 
