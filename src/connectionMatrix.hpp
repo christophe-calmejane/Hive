@@ -110,6 +110,8 @@ private:
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual bool eventFilter(QObject* object, QEvent* event) override;
 
+	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
+
 private:
 	int _row{-1};
 	int _column{-1};

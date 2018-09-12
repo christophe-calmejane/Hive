@@ -19,7 +19,6 @@
 
 #include "connectionMatrix.hpp"
 #include "matrixTreeView.hpp"
-#include "avdecc/helper.hpp"
 
 #include <vector>
 #include <cassert>
@@ -346,114 +345,6 @@ public:
 
 			node->isExpanded = !node->isExpanded;
 			updateSectionVisibility(logicalIndex);
-		});
-
-
-		//
-		setContextMenuPolicy(Qt::CustomContextMenu);
-		connect(this, &MatrixHeaderView::customContextMenuRequested, this, [this](QPoint const& pos)
-		{
-			try
-			{
-				auto& manager = avdecc::ControllerManager::getInstance();
-
-				auto const index = logicalIndexAt(pos);
-
-				if (index == -1)
-					return;
-
-				auto const isInputStreamKind = this->orientation() == Qt::Orientation::Horizontal;
-				MatrixModel::Node const* node{ nullptr };
-				if (isInputStreamKind)
-					node = model()->nodeAtColumn(index);
-				else
-					node = model()->nodeAtRow(index);
-				if (node == nullptr)
-					return;
-
-				auto const& data = node->userData.value<connectionMatrix::UserData>();
-				auto controlledEntity = manager.getControlledEntity(data.entityID);
-				if (controlledEntity)
-				{
-					QMenu menu;
-
-					auto const& entityNode = controlledEntity->getEntityNode();
-					la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
-					QString streamName{};
-					bool isStreamRunning{ false };
-
-					if (isInputStreamKind)
-					{
-						auto const& streamInputNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
-						streamName = avdecc::helper::objectName(controlledEntity.get(), streamInputNode);
-						isStreamRunning = controlledEntity->isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
-						streamNode = &streamInputNode;
-					}
-					else
-					{
-						auto const& streamOutputNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
-						streamName = avdecc::helper::objectName(controlledEntity.get(), streamOutputNode);
-						isStreamRunning = controlledEntity->isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
-						streamNode = &streamOutputNode;
-					}
-
-					{
-						auto* header = menu.addAction("Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
-						auto font = header->font();
-						font.setBold(true);
-						header->setFont(font);
-						header->setEnabled(false);
-					}
-					{
-						auto* header = menu.addAction("Stream: " + streamName);
-						auto font = header->font();
-						font.setBold(true);
-						header->setFont(font);
-						header->setEnabled(false);
-					}
-					menu.addSeparator();
-
-					auto* startStreamingAction = menu.addAction("Start Streaming");
-					auto* stopStreamingAction = menu.addAction("Stop Streaming");
-					menu.addSeparator();
-					menu.addAction("Cancel");
-
-					startStreamingAction->setEnabled(!isStreamRunning);
-					stopStreamingAction->setEnabled(isStreamRunning);
-
-					// Release the controlled entity before starting a long operation (menu.exec)
-					controlledEntity.reset();
-
-					if (auto* action = menu.exec(/*horizontalHeader()->*/mapToGlobal(pos)))
-					{
-						if (action == startStreamingAction)
-						{
-							if (isInputStreamKind)
-							{
-								manager.startStreamInput(data.entityID, data.streamIndex);
-							}
-							else
-							{
-								manager.startStreamOutput(data.entityID, data.streamIndex);
-							}
-						}
-						else if (action == stopStreamingAction)
-						{
-							if (isInputStreamKind)
-							{
-								manager.stopStreamInput(data.entityID, data.streamIndex);
-							}
-							else
-							{
-								manager.stopStreamOutput(data.entityID, data.streamIndex);
-							}
-						}
-					}
-				}
-			}
-			catch (...)
-			{
-			}
 		});
 	}
 

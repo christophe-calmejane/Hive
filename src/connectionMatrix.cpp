@@ -1009,16 +1009,20 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 	auto p = palette();
 	p.setColor(QPalette::Highlight, 0xf3e5f5);
 	setPalette(p);
-	
+
 	auto* legend = new ConnectionMatrixLegend{ *this };
+
+	// Configure table headers
 	connect(verticalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
-	connect(horizontalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
-
-	// Be sure to be notified by the mouse events & install filter to catch those events
+	connect(verticalHeader(), &QHeaderView::customContextMenuRequested, this, &ConnectionMatrixView::onHeaderCustomContextMenuRequested);
+	verticalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	verticalHeader()->setAttribute(Qt::WA_Hover);
-	horizontalHeader()->setAttribute(Qt::WA_Hover);
-
 	verticalHeader()->installEventFilter(this);
+
+	connect(horizontalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
+	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &ConnectionMatrixView::onHeaderCustomContextMenuRequested);
+	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
+	horizontalHeader()->setAttribute(Qt::WA_Hover);
 	horizontalHeader()->installEventFilter(this);
 
 	//
@@ -1214,6 +1218,111 @@ bool ConnectionMatrixView::eventFilter(QObject* object, QEvent* event)
 	return qt::toolkit::MatrixTreeView::eventFilter(object, event);
 }
 
+void ConnectionMatrixView::onHeaderCustomContextMenuRequested(QPoint const& pos)
+{
+	auto* header = static_cast<QHeaderView*>(sender());
+
+	try
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+
+		auto const index = header->logicalIndexAt(pos);
+
+		if (index == -1)
+			return;
+
+		auto const* const m = static_cast<ConnectionMatrixModel const*>(model());
+
+		auto const isInputStreamKind = header->orientation() == Qt::Orientation::Horizontal;
+		qt::toolkit::MatrixModel::Node const* node{ nullptr };
+		if (isInputStreamKind)
+			node = m->nodeAtColumn(index);
+		else
+			node = m->nodeAtRow(index);
+		if (node == nullptr)
+			return;
+
+		auto const& data = node->userData.value<connectionMatrix::UserData>();
+		auto controlledEntity = manager.getControlledEntity(data.entityID);
+		if (controlledEntity)
+		{
+			QMenu menu;
+
+			auto const& entityNode = controlledEntity->getEntityNode();
+			la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
+			QString streamName{};
+			bool isStreamRunning{ false };
+
+			if (isInputStreamKind)
+			{
+				auto const& streamInputNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
+				streamName = avdecc::helper::objectName(controlledEntity.get(), streamInputNode);
+				isStreamRunning = controlledEntity->isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
+				streamNode = &streamInputNode;
+			}
+			else
+			{
+				auto const& streamOutputNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
+				streamName = avdecc::helper::objectName(controlledEntity.get(), streamOutputNode);
+				isStreamRunning = controlledEntity->isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, data.streamIndex);
+				streamNode = &streamOutputNode;
+			}
+
+			{
+				auto* header = menu.addAction("Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
+				auto font = header->font();
+				font.setBold(true);
+				header->setFont(font);
+				header->setEnabled(false);
+			}
+			{
+				auto* header = menu.addAction("Stream: " + streamName);
+				auto font = header->font();
+				font.setBold(true);
+				header->setFont(font);
+				header->setEnabled(false);
+			}
+			menu.addSeparator();
+
+			auto* startStreamingAction = menu.addAction("Start Streaming");
+			auto* stopStreamingAction = menu.addAction("Stop Streaming");
+			menu.addSeparator();
+			menu.addAction("Cancel");
+
+			startStreamingAction->setEnabled(!isStreamRunning);
+			stopStreamingAction->setEnabled(isStreamRunning);
+
+			if (auto* action = menu.exec(header->mapToGlobal(pos)))
+			{
+				if (action == startStreamingAction)
+				{
+					if (isInputStreamKind)
+					{
+						manager.startStreamInput(data.entityID, data.streamIndex);
+					}
+					else
+					{
+						manager.startStreamOutput(data.entityID, data.streamIndex);
+					}
+				}
+				else if (action == stopStreamingAction)
+				{
+					if (isInputStreamKind)
+					{
+						manager.stopStreamInput(data.entityID, data.streamIndex);
+					}
+					else
+					{
+						manager.stopStreamOutput(data.entityID, data.streamIndex);
+					}
+				}
+			}
+		}
+	}
+	catch (...)
+	{
+	}
+}
 
 static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
