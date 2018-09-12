@@ -214,7 +214,7 @@ void MainWindow::populateProtocolComboBox()
 	for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
 	{
 #ifndef DEBUG
-		if (type == la::avdecc::EndStation::ProtocolInterfaceType::Virtual)
+		if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
 			continue;
 #endif // !DEBUG
 		_protocolComboBox.addItem(protocolInterfaceName.at(type), QVariant::fromValue<la::avdecc::protocol::ProtocolInterface::Type>(type));
