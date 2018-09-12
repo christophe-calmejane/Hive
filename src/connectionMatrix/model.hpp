@@ -27,10 +27,17 @@
 
 namespace connectionMatrix
 {
-	
+
+class ModelPrivate;
 class Model : public QStandardItemModel
 {
 public:
+	Model(QObject* parent = nullptr);
+	virtual ~Model();
+	
+private:
+	ModelPrivate* const d_ptr{ nullptr };
+	Q_DECLARE_PRIVATE(Model);
 };
 
 } // namespace connectionMatrix

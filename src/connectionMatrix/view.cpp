@@ -18,8 +18,23 @@
 */
 
 #include "connectionMatrix/view.hpp"
+#include "connectionMatrix/model.hpp"
+
+#include <QHeaderView>
 
 namespace connectionMatrix
 {
+
+View::View(QWidget* parent)
+	: QTableView{parent}
+	, _model{std::make_unique<Model>()} {
+	setModel(_model.get());
+	
+	verticalHeader()->setDefaultSectionSize(20);
+	verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	
+	horizontalHeader()->setDefaultSectionSize(20);
+	horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+}
 
 } // namespace connectionMatrix

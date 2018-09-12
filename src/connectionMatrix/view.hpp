@@ -28,10 +28,17 @@
 namespace connectionMatrix
 {
 
-class View : public QTableView
+class Model;
+	
+class View final : public QTableView
 {
+	using QTableView::setModel;
+	
 public:
-	using QTableView::QTableView;
+	View(QWidget* parent = nullptr);
+	
+private:
+	std::unique_ptr<Model> _model;
 };
 
 } // namespace connectionMatrix
