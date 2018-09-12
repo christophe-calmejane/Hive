@@ -71,6 +71,10 @@ constexpr bool operator==(UserData const& lhs, UserData const& rhs)
 class ConnectionMatrixModel final : public qt::toolkit::MatrixModel
 {
 public:
+	enum Roles {
+		StreamWaitingRole = Qt::UserRole + 1,
+	};
+
 	ConnectionMatrixModel(QObject* parent = nullptr);
 	virtual ~ConnectionMatrixModel();
 
@@ -101,6 +105,12 @@ private:
 	virtual QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 };
 
+class ConnectionMatrixHeaderDelegate final : public qt::toolkit::MatrixHeaderDelegate
+{
+public:
+	virtual void paintSection(QPainter* painter, QRect const& rect, int const logicalIndex, QHeaderView* headerView, qt::toolkit::MatrixModel::Node* node) override;
+};
+
 class ConnectionMatrixView final : public qt::toolkit::MatrixTreeView
 {
 public:
@@ -111,6 +121,11 @@ private:
 	virtual bool eventFilter(QObject* object, QEvent* event) override;
 
 	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
+
+private:
+	std::unique_ptr<connectionMatrix::ConnectionMatrixModel> _connectionMatrixModel{ nullptr };
+	std::unique_ptr<connectionMatrix::ConnectionMatrixItemDelegate> _connectionMatrixItemDelegate{ nullptr };
+	std::unique_ptr<connectionMatrix::ConnectionMatrixHeaderDelegate> _connectionMatrixHeaderDelegate{ nullptr };
 };
 
 static void drawConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);

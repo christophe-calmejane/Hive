@@ -76,14 +76,26 @@ private:
 	Q_DECLARE_PRIVATE(MatrixModel);
 };
 
+class MatrixHeaderDelegate
+{
+public:
+	virtual void paintSection(QPainter* painter, QRect const& rect, int const logicalIndex, QHeaderView* headerView, qt::toolkit::MatrixModel::Node* node) = 0;
+};
+
 class MatrixTreeView : public QTableView
 {
 	using QTableView::setModel;
+	using QTableView::setVerticalHeader;
+	using QTableView::setHorizontalHeader;
 
 public:
 	MatrixTreeView(QWidget* parent = nullptr);
 
 	void setModel(MatrixModel* model);
+
+	// Does not take ownership of the delegate
+	void setVerticalHeaderDelegate(MatrixHeaderDelegate* delegate);
+	void setHorizontalHeaderDelegate(MatrixHeaderDelegate* delegate);
 };
 
 } // namespace toolkit

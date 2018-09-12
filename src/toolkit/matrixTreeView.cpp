@@ -386,10 +386,14 @@ public:
 		return static_cast<MatrixModel*>(QHeaderView::model());
 	}
 
+	void setDelegate(MatrixHeaderDelegate* delegate)
+	{
+		_delegate = delegate;
+		repaint();
+	}
+
 	virtual void paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const override
 	{
-		painter->setRenderHint(QPainter::Antialiasing);
-
 		auto* m = model();
 		MatrixModel::Node* node{ nullptr };
 
@@ -405,99 +409,13 @@ public:
 		if (!node)
 			return;
 
-		std::function<int(MatrixModel::Node*, int)> countDepth;
-		countDepth = [&countDepth](MatrixModel::Node* node, int const depth)
+		if (!_delegate)
 		{
-			if (node->parent == nullptr)
-				return depth;
-			return countDepth(node->parent, depth + 1);
-		};
-
-		QBrush backgroundBrush{};
-		auto const arrowSize{ 10 };
-		auto const depth = countDepth(node, 0);
-		auto const arrowOffset{ 25 * depth };
-		switch (depth)
-		{
-			case 0:
-				backgroundBrush = QColor{ "#4A148C" };
-				break;
-			case 1:
-				backgroundBrush = QColor{ "#7B1FA2" };
-				break;
-			case 2:
-				backgroundBrush = QColor{ "#BA68C8" };
-				break;
-			default:
-				backgroundBrush = QColor{ "#808080" };
-				break;
+			// TODO, provide default implementation
+			return;
 		}
 
-		auto highlighted{false};
-
-		QPainterPath path;
-		if (orientation() == Qt::Horizontal)
-		{
-			path.moveTo(rect.topLeft());
-			path.lineTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset });
-			path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
-			path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
-			path.lineTo(rect.topRight());
-
-			highlighted = selectionModel()->isColumnSelected(logicalIndex, {});
-		}
-		else
-		{
-			path.moveTo(rect.topLeft());
-			path.lineTo(rect.topRight() - QPoint{ arrowSize + arrowOffset, 0 });
-			path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
-			path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
-			path.lineTo(rect.bottomLeft());
-
-			highlighted = selectionModel()->isRowSelected(logicalIndex, {});
-		}
-
-		if (highlighted)
-		{
-			backgroundBrush = QColor{ "#007ACC" };
-		}
-
-		painter->fillPath(path, backgroundBrush);
-
-		painter->save();
-		painter->translate(rect.topLeft());
-
-		auto r = QRect(0, 0, rect.width(), rect.height());
-
-		if (orientation() == Qt::Horizontal)
-		{
-			r.setWidth(rect.height());
-			r.setHeight(rect.width());
-
-			painter->rotate(-90);
-			painter->translate(-r.width(), 0);
-
-			r.translate(arrowSize + arrowOffset, 0);
-		}
-
-		auto const padding{ 4 };
-		auto textRect = r.adjusted(padding, 0, -(padding + arrowSize + arrowOffset), 0);
-
-		auto const text = m->headerData(logicalIndex, orientation()).toString();
-		auto const elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
-
-		auto const isStreamingWait = m->headerData(logicalIndex, orientation(), Qt::UserRole).toBool();
-		if (isStreamingWait)
-		{
-			painter->setPen(Qt::red);
-		}
-		else
-		{
-			painter->setPen(Qt::white);
-		}
-
-		painter->drawText(textRect, Qt::AlignVCenter, elidedText);
-		painter->restore();
+		_delegate->paintSection(painter, rect, logicalIndex, const_cast<MatrixHeaderView*>(this), node);
 	}
 
 	virtual QSize sizeHint() const override
@@ -519,6 +437,9 @@ public:
 			updateSectionVisibility(i);
 		}
 	}
+
+private:
+	MatrixHeaderDelegate* _delegate{nullptr};
 };
 
 /* ************************************************************ */
@@ -548,6 +469,16 @@ void MatrixTreeView::setModel(MatrixModel* model)
 		connect(model, &MatrixModel::rowsInserted, static_cast<MatrixHeaderView*>(verticalHeader()), &MatrixHeaderView::sectionInserted);
 		connect(model, &MatrixModel::columnsInserted, static_cast<MatrixHeaderView*>(horizontalHeader()), &MatrixHeaderView::sectionInserted);
 	}
+}
+
+void MatrixTreeView::setVerticalHeaderDelegate(MatrixHeaderDelegate* delegate)
+{
+	static_cast<MatrixHeaderView*>(verticalHeader())->setDelegate(delegate);
+}
+
+void MatrixTreeView::setHorizontalHeaderDelegate(MatrixHeaderDelegate* delegate)
+{
+	static_cast<MatrixHeaderView*>(horizontalHeader())->setDelegate(delegate);
 }
 
 } // namespace toolkit

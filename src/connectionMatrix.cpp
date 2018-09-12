@@ -35,6 +35,108 @@
 
 namespace connectionMatrix
 {
+
+void ConnectionMatrixHeaderDelegate::paintSection(QPainter* painter, QRect const& rect, int const logicalIndex, QHeaderView* headerView, qt::toolkit::MatrixModel::Node* node)
+{
+	auto const orientation = headerView->orientation();
+	auto* model = headerView->model();
+
+	painter->save();
+	painter->setRenderHint(QPainter::Antialiasing);
+
+	std::function<int(qt::toolkit::MatrixModel::Node*, int)> countDepth;
+	countDepth = [&countDepth](qt::toolkit::MatrixModel::Node* node, int const depth)
+	{
+		if (node->parent == nullptr)
+			return depth;
+		return countDepth(node->parent, depth + 1);
+	};
+
+	QBrush backgroundBrush{};
+	auto const arrowSize{ 10 };
+	auto const depth = countDepth(node, 0);
+	auto const arrowOffset{ 25 * depth };
+	switch (depth)
+	{
+		case 0:
+			backgroundBrush = QColor{ "#4A148C" };
+			break;
+		case 1:
+			backgroundBrush = QColor{ "#7B1FA2" };
+			break;
+		case 2:
+			backgroundBrush = QColor{ "#BA68C8" };
+			break;
+		default:
+			backgroundBrush = QColor{ "#808080" };
+			break;
+	}
+
+	auto highlighted{false};
+
+	QPainterPath path;
+	if (orientation == Qt::Horizontal)
+	{
+		path.moveTo(rect.topLeft());
+		path.lineTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset });
+		path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
+		path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
+		path.lineTo(rect.topRight());
+
+		highlighted = headerView->selectionModel()->isColumnSelected(logicalIndex, {});
+	}
+	else
+	{
+		path.moveTo(rect.topLeft());
+		path.lineTo(rect.topRight() - QPoint{ arrowSize + arrowOffset, 0 });
+		path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
+		path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
+		path.lineTo(rect.bottomLeft());
+
+		highlighted = headerView->selectionModel()->isRowSelected(logicalIndex, {});
+	}
+
+	if (highlighted)
+	{
+		backgroundBrush = QColor{ "#007ACC" };
+	}
+
+	painter->fillPath(path, backgroundBrush);
+	painter->translate(rect.topLeft());
+
+	auto r = QRect(0, 0, rect.width(), rect.height());
+
+	if (orientation == Qt::Horizontal)
+	{
+		r.setWidth(rect.height());
+		r.setHeight(rect.width());
+
+		painter->rotate(-90);
+		painter->translate(-r.width(), 0);
+
+		r.translate(arrowSize + arrowOffset, 0);
+	}
+
+	auto const padding{ 4 };
+	auto textRect = r.adjusted(padding, 0, -(padding + arrowSize + arrowOffset), 0);
+
+	auto const text = model->headerData(logicalIndex, orientation).toString();
+	auto const elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
+
+	auto const isStreamingWait = model->headerData(logicalIndex, orientation, ConnectionMatrixModel::StreamWaitingRole).toBool();
+	if (isStreamingWait)
+	{
+		painter->setPen(Qt::red);
+	}
+	else
+	{
+		painter->setPen(Qt::white);
+	}
+
+	painter->drawText(textRect, Qt::AlignVCenter, elidedText);
+	painter->restore();
+}
+
 /* ************************************************************ */
 /* ConnectionMatrixModel                                        */
 /* ************************************************************ */
@@ -661,7 +763,7 @@ ConnectionMatrixModel::~ConnectionMatrixModel() {
 QVariant ConnectionMatrixModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
 	// Early return - Optimization
-	if (role != Qt::DisplayRole && role != Qt::UserRole)
+	if (role != Qt::DisplayRole && role <= Qt::UserRole)
 		return MatrixModel::headerData(section, orientation, role);
 
 	Node const* node{ nullptr };
@@ -714,7 +816,7 @@ QVariant ConnectionMatrixModel::headerData(int section, Qt::Orientation orientat
 					}
 					break;
 				}
-				case Qt::UserRole:
+				case StreamWaitingRole:
 				{
 					if (userData.type == UserData::Type::InputStreamNode)
 					{
@@ -1012,18 +1114,29 @@ ConnectionMatrixView::ConnectionMatrixView(QWidget* parent)
 
 	auto* legend = new ConnectionMatrixLegend{ *this };
 
+	_connectionMatrixItemDelegate = std::make_unique<ConnectionMatrixItemDelegate>();
+	setItemDelegate(_connectionMatrixItemDelegate.get());
+
+	_connectionMatrixHeaderDelegate = std::make_unique<ConnectionMatrixHeaderDelegate>();
+
 	// Configure table headers
 	connect(verticalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
 	connect(verticalHeader(), &QHeaderView::customContextMenuRequested, this, &ConnectionMatrixView::onHeaderCustomContextMenuRequested);
 	verticalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	verticalHeader()->setAttribute(Qt::WA_Hover);
 	verticalHeader()->installEventFilter(this);
+	setVerticalHeaderDelegate(_connectionMatrixHeaderDelegate.get());
 
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, legend, &ConnectionMatrixLegend::updateSize);
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &ConnectionMatrixView::onHeaderCustomContextMenuRequested);
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	horizontalHeader()->setAttribute(Qt::WA_Hover);
 	horizontalHeader()->installEventFilter(this);
+	setHorizontalHeaderDelegate(_connectionMatrixHeaderDelegate.get());
+
+	//
+	_connectionMatrixModel = std::make_unique<ConnectionMatrixModel>(this);
+	setModel(_connectionMatrixModel.get());
 
 	//
 	setContextMenuPolicy(Qt::CustomContextMenu);
@@ -1291,6 +1404,9 @@ void ConnectionMatrixView::onHeaderCustomContextMenuRequested(QPoint const& pos)
 
 			startStreamingAction->setEnabled(!isStreamRunning);
 			stopStreamingAction->setEnabled(isStreamRunning);
+
+			// Release the controlled entity before starting a long operation (menu.exec)
+			controlledEntity.reset();
 
 			if (auto* action = menu.exec(header->mapToGlobal(pos)))
 			{

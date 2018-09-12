@@ -68,12 +68,6 @@ MainWindow::MainWindow(QWidget* parent)
 	loadSettings();
 
 	connectSignals();
-
-	_connectionMatrixItemDelegate = std::make_unique<connectionMatrix::ConnectionMatrixItemDelegate>();
-	routingTableView->setItemDelegate(_connectionMatrixItemDelegate.get());
-
-	_connectionMatrixModel = std::make_unique<connectionMatrix::ConnectionMatrixModel>();
-	routingTableView->setModel(_connectionMatrixModel.get());
 }
 
 void MainWindow::currentControllerChanged()
