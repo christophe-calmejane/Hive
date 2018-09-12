@@ -24,7 +24,6 @@
 #include <QLabel>
 #include <memory>
 #include "avdecc/controllerModel.hpp"
-#include "connectionMatrix.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/comboBox.hpp"
 
