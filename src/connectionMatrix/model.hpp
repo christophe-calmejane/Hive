@@ -32,6 +32,11 @@ class ModelPrivate;
 class Model : public QStandardItemModel
 {
 public:
+	enum Role
+	{
+		HeaderTypeRole = Qt::UserRole + 1,
+	};
+
 	Model(QObject* parent = nullptr);
 	virtual ~Model();
 	

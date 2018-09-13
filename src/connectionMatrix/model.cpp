@@ -51,9 +51,14 @@ public:
 				}
 			}
 		}
+		else if (role == Model::HeaderTypeRole)
+		{
+			return 0;
+		}
 
 		return QStandardItem::data(role);
 	}
+
 
 protected:
 	la::avdecc::UniqueIdentifier const _entityID;
@@ -66,6 +71,16 @@ public:
 		: _entityID{entityID}
 		, _streamIndex{streamIndex}
 	{
+	}
+
+	virtual QVariant data(int role) const override
+	{
+		if (role == Model::HeaderTypeRole)
+		{
+			return 1;
+		}
+
+		return QStandardItem::data(role);
 	}
 
 protected:
@@ -117,6 +132,42 @@ public:
 	}
 };
 
+class ConnectionItem : public QStandardItem
+{
+public:
+#if 0
+	ConnectionItem(la::avdecc::UniqueIdentifier const& talkerID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const& listenerID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex)
+		: _talkerID{talkerID}
+		, _talkerStreamIndex{talkerStreamIndex}
+		, _listenerID{listenerID}
+		, _listenerStreamIndex{listenerStreamIndex}
+	{
+	}
+#endif
+
+	virtual QVariant data(int role) const override
+	{
+		if (role == Qt::DisplayRole)
+		{
+			return QString{"%1, %2"}.arg(index().row()).arg(index().column());
+		}
+		else if (role == Qt::BackgroundColorRole)
+		{
+			return QColor{Qt::lightGray};
+		}
+
+		return QStandardItem::data(role);
+	}
+
+protected:
+#if 0
+	la::avdecc::UniqueIdentifier const _talkerID;
+	la::avdecc::entity::model::StreamIndex const _talkerStreamIndex;
+	la::avdecc::UniqueIdentifier const _listenerID;
+	la::avdecc::entity::model::StreamIndex const _listenerStreamIndex;
+#endif
+};
+
 class ModelPrivate : public QObject
 {
 	Q_OBJECT
@@ -138,8 +189,8 @@ public:
 	
 	struct EntityInfo
 	{
-		int section{0};
-		int streamCount{0};
+		std::uint32_t section{0};
+		std::uint32_t streamCount{0};
 	};
 	
 	std::unordered_map<la::avdecc::UniqueIdentifier::value_type, EntityInfo> _talkers;
@@ -160,70 +211,65 @@ public:
 		{
 			auto const& entityNode = controlledEntity->getEntityNode();
 			auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
-			
-			auto const prevRowCount{q_ptr->rowCount()};
-			auto const prevColumnCount{q_ptr->columnCount()};
-			
-			auto newRowCount{prevRowCount};
-			auto newColumnCount{prevColumnCount};
-			
+
+			// Talker header items
+
+			EntityInfo talkerInfo;
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented))
 			{
-				EntityInfo info;
-				info.section = _talkers.size();
-				info.streamCount = configurationNode.streamOutputs.size();
-				_talkers.insert(std::make_pair(entityID.getValue(), info));
-				newRowCount += info.streamCount + 1;
+				talkerInfo.section = q_ptr->rowCount();
+				talkerInfo.streamCount = configurationNode.streamOutputs.size();
+
+				q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), new EntityHeaderItem{entityID});
+
+				for (auto streamIndex = 0u; streamIndex < talkerInfo.streamCount; ++streamIndex)
+				{
+					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), new OutputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
+				}
+
+				_talkers.insert(std::make_pair(entityID, talkerInfo));
 			}
-			
+
+			// Listener header items
+
+			EntityInfo listenerInfo;
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented))
 			{
-				EntityInfo info;
-				info.section = _listeners.size();
-				info.streamCount = configurationNode.streamInputs.size();
-				_listeners.insert(std::make_pair(entityID.getValue(), info));
-				newColumnCount += info.streamCount + 1;
+				listenerInfo.section = q_ptr->columnCount();
+				listenerInfo.streamCount = configurationNode.streamInputs.size();
+
+				q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new EntityHeaderItem{entityID});
+
+				for (auto streamIndex = 0u; streamIndex < listenerInfo.streamCount; ++streamIndex)
+				{
+					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new InputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
+				}
+
+				_listeners.insert(std::make_pair(entityID, listenerInfo));
 			}
 
-			// Update the new table size
-			q_ptr->setRowCount(newRowCount);
-			q_ptr->setColumnCount(newColumnCount);
+			// Connection items
 
-			// Talker
-			for (auto row = prevRowCount; row < newRowCount; ++row)
+			// Add new items for existing rows
+			for (auto row = 0u; row < talkerInfo.section; ++row)
 			{
-				QStandardItem* item{nullptr};
-
-				if (row == prevRowCount)
-				{
-					item = new EntityHeaderItem(entityID);
-				}
-				else
-				{
-					item = new OutputStreamHeaderItem(entityID, row - prevRowCount - 1);
-				}
-
-				q_ptr->setVerticalHeaderItem(row, item);
 			}
 
-			// Listener
-			for (auto column = prevColumnCount; column < newRowCount; ++column)
+			// Add new items for existing columns
+			for (auto column = 0u; column < listenerInfo.section; ++column)
 			{
-				QStandardItem* item{nullptr};
-
-				if (column == prevColumnCount)
-				{
-					item = new EntityHeaderItem(entityID);
-				}
-				else
-				{
-					item = new InputStreamHeaderItem(entityID, column - prevColumnCount - 1);
-				}
-
-				q_ptr->setHorizontalHeaderItem(column, item);
 			}
 
-			emit q_ptr->dataChanged(q_ptr->index(0, 0), q_ptr->index(newRowCount, newColumnCount));
+			// Add new items
+			for (auto subRow = 0u; subRow < talkerInfo.streamCount + 1; ++subRow)
+			{
+				auto const row = talkerInfo.section + subRow;
+				for (auto subColumn = 0u; subColumn < listenerInfo.streamCount + 1; ++subColumn)
+				{
+					auto const column = listenerInfo.section + subColumn;
+					q_ptr->setItem(row, column, new ConnectionItem);
+				}
+			}
 		}
 	}
 	
@@ -238,6 +284,7 @@ public:
 				q_ptr->removeRows(info.streamCount, info.streamCount + 1);
 			}
 		}
+
 		// Listener
 		{
 			auto const it = _listeners.find(entityID.getValue());
