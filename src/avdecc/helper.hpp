@@ -27,6 +27,8 @@
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/logger.hpp>
 
+Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+
 namespace avdecc
 {
 namespace helper

@@ -19,10 +19,6 @@
 
 #pragma once
 
-#ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
-#error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
-#endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
-
 #include <QTableView>
 
 namespace connectionMatrix

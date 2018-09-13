@@ -19,10 +19,6 @@
 
 #pragma once
 
-#ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
-#error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
-#endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
-
 #include <QStandardItemModel>
 
 namespace connectionMatrix
@@ -34,7 +30,8 @@ class Model : public QStandardItemModel
 public:
 	enum Role
 	{
-		HeaderTypeRole = Qt::UserRole + 1,
+		EntityIdRole = Qt::UserRole + 1,
+		HeaderTypeRole,
 	};
 
 	Model(QObject* parent = nullptr);

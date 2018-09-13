@@ -20,18 +20,42 @@
 #include "connectionMatrix/model.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
-#include <QDebug>
+
+#ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
+#error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
+#endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
 
 namespace connectionMatrix
 {
 
-class EntityHeaderItem : public QStandardItem
+class HeaderItem : public QStandardItem
 {
 public:
-	EntityHeaderItem(la::avdecc::UniqueIdentifier const& entityID)
+	HeaderItem(la::avdecc::UniqueIdentifier const& entityID)
 		: _entityID{entityID}
 	{
+		printf("");
 	}
+
+	virtual QVariant data(int role) const override
+	{
+		if (role == Model::EntityIdRole)
+		{
+			return QVariant::fromValue<la::avdecc::UniqueIdentifier>(_entityID);
+		}
+
+		return QStandardItem::data(role);
+	}
+	
+
+protected:
+	la::avdecc::UniqueIdentifier const _entityID;
+};
+
+class EntityHeaderItem : public HeaderItem
+{
+public:
+	using HeaderItem::HeaderItem;
 
 	virtual QVariant data(int role) const override
 	{
@@ -56,19 +80,15 @@ public:
 			return 0;
 		}
 
-		return QStandardItem::data(role);
+		return HeaderItem::data(role);
 	}
-
-
-protected:
-	la::avdecc::UniqueIdentifier const _entityID;
 };
 
-class StreamHeaderItem : public QStandardItem
+class StreamHeaderItem : public HeaderItem
 {
 public:
 	StreamHeaderItem(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex)
-		: _entityID{entityID}
+		: HeaderItem{entityID}
 		, _streamIndex{streamIndex}
 	{
 	}
@@ -84,7 +104,6 @@ public:
 	}
 
 protected:
-	la::avdecc::UniqueIdentifier const _entityID;
 	la::avdecc::entity::model::StreamIndex const _streamIndex;
 };
 
@@ -144,7 +163,6 @@ public:
 	{
 	}
 #endif
-
 	virtual QVariant data(int role) const override
 	{
 		if (role == Qt::DisplayRole)
@@ -186,16 +204,7 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ModelPrivate::entityNameChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::streamNameChanged);
 	}
-	
-	struct EntityInfo
-	{
-		std::uint32_t section{0};
-		std::uint32_t streamCount{0};
-	};
-	
-	std::unordered_map<la::avdecc::UniqueIdentifier::value_type, EntityInfo> _talkers;
-	std::unordered_map<la::avdecc::UniqueIdentifier::value_type, EntityInfo> _listeners;
-	
+
 	// Slots for avdecc::ControllerManager signals
 	
 	Q_SLOT void controllerOffline()
@@ -214,60 +223,25 @@ public:
 
 			// Talker header items
 
-			EntityInfo talkerInfo;
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented))
 			{
-				talkerInfo.section = q_ptr->rowCount();
-				talkerInfo.streamCount = configurationNode.streamOutputs.size();
-
 				q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), new EntityHeaderItem{entityID});
 
-				for (auto streamIndex = 0u; streamIndex < talkerInfo.streamCount; ++streamIndex)
+				for (auto streamIndex = 0u; streamIndex < configurationNode.streamOutputs.size(); ++streamIndex)
 				{
 					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), new OutputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
 				}
-
-				_talkers.insert(std::make_pair(entityID, talkerInfo));
 			}
 
 			// Listener header items
 
-			EntityInfo listenerInfo;
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented))
 			{
-				listenerInfo.section = q_ptr->columnCount();
-				listenerInfo.streamCount = configurationNode.streamInputs.size();
-
 				q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new EntityHeaderItem{entityID});
 
-				for (auto streamIndex = 0u; streamIndex < listenerInfo.streamCount; ++streamIndex)
+				for (auto streamIndex = 0u; streamIndex < configurationNode.streamInputs.size(); ++streamIndex)
 				{
 					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new InputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
-				}
-
-				_listeners.insert(std::make_pair(entityID, listenerInfo));
-			}
-
-			// Connection items
-
-			// Add new items for existing rows
-			for (auto row = 0u; row < talkerInfo.section; ++row)
-			{
-			}
-
-			// Add new items for existing columns
-			for (auto column = 0u; column < listenerInfo.section; ++column)
-			{
-			}
-
-			// Add new items
-			for (auto subRow = 0u; subRow < talkerInfo.streamCount + 1; ++subRow)
-			{
-				auto const row = talkerInfo.section + subRow;
-				for (auto subColumn = 0u; subColumn < listenerInfo.streamCount + 1; ++subColumn)
-				{
-					auto const column = listenerInfo.section + subColumn;
-					q_ptr->setItem(row, column, new ConnectionItem);
 				}
 			}
 		}
@@ -275,25 +249,6 @@ public:
 	
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
-		// Talker
-		{
-			auto const it = _talkers.find(entityID.getValue());
-			if (it != std::end(_talkers))
-			{
-				auto const& info{it->second};
-				q_ptr->removeRows(info.streamCount, info.streamCount + 1);
-			}
-		}
-
-		// Listener
-		{
-			auto const it = _listeners.find(entityID.getValue());
-			if (it != std::end(_listeners))
-			{
-				auto const& info{it->second};
-				q_ptr->removeColumns(info.streamCount, info.streamCount + 1);
-			}
-		}
 	}
 	
 	Q_SLOT void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
@@ -318,6 +273,34 @@ public:
 	
 	Q_SLOT void streamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
 	{
+	}
+
+	//
+
+	QList<int> talkerSections(la::avdecc::UniqueIdentifier const entityID)
+	{
+		QList<int> sections;
+		for (auto row = 0; row < q_ptr->rowCount(); ++row)
+		{
+			if (q_ptr->verticalHeaderItem(row)->data(Model::EntityIdRole).value<la::avdecc::UniqueIdentifier>() == entityID)
+			{
+				sections << row;
+			}
+		}
+		return sections;
+	}
+
+	QList<int> listenerSections(la::avdecc::UniqueIdentifier const entityID)
+	{
+		QList<int> sections;
+		for (auto column = 0; column < q_ptr->columnCount(); ++column)
+		{
+			if (q_ptr->horizontalHeaderItem(column)->data(Model::EntityIdRole).value<la::avdecc::UniqueIdentifier>() == entityID)
+			{
+				sections << column;
+			}
+		}
+		return sections;
 	}
 	
 private:
