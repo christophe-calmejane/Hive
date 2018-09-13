@@ -19,34 +19,104 @@
 
 #include "connectionMatrix/model.hpp"
 #include "avdecc/controllerManager.hpp"
-
+#include "avdecc/helper.hpp"
 #include <QDebug>
 
 namespace connectionMatrix
 {
-	
-class StandardItem : public QStandardItem
+
+class EntityHeaderItem : public QStandardItem
 {
 public:
-	StandardItem()
+	EntityHeaderItem(la::avdecc::UniqueIdentifier const& entityID)
+		: _entityID{entityID}
 	{
-		qDebug() << '+' << this;
 	}
-	~StandardItem()
-	{
-		qDebug() << '-' << this;
-	}
+
 	virtual QVariant data(int role) const override
 	{
-		if (role == Qt::BackgroundColorRole)
+		if (role == Qt::DisplayRole)
 		{
-			return QColor{Qt::red};
+			auto& manager = avdecc::ControllerManager::getInstance();
+			if (auto controlledEntity = manager.getControlledEntity(_entityID))
+			{
+				auto const& entityNode = controlledEntity->getEntityNode();
+				if (entityNode.dynamicModel->entityName.empty())
+				{
+					return avdecc::helper::uniqueIdentifierToString(_entityID);
+				}
+				else
+				{
+					return QString::fromStdString(entityNode.dynamicModel->entityName);
+				}
+			}
 		}
-		
+
 		return QStandardItem::data(role);
 	}
+
+protected:
+	la::avdecc::UniqueIdentifier const _entityID;
 };
-	
+
+class StreamHeaderItem : public QStandardItem
+{
+public:
+	StreamHeaderItem(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex)
+		: _entityID{entityID}
+		, _streamIndex{streamIndex}
+	{
+	}
+
+protected:
+	la::avdecc::UniqueIdentifier const _entityID;
+	la::avdecc::entity::model::StreamIndex const _streamIndex;
+};
+
+class OutputStreamHeaderItem : public StreamHeaderItem
+{
+public:
+	using StreamHeaderItem::StreamHeaderItem;
+
+	virtual QVariant data(int role) const override
+	{
+		if (role == Qt::DisplayRole)
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			if (auto controlledEntity = manager.getControlledEntity(_entityID))
+			{
+				auto const& entityNode = controlledEntity->getEntityNode();
+				auto const& streamNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
+				return avdecc::helper::objectName(controlledEntity.get(), streamNode);
+			}
+		}
+
+		return StreamHeaderItem::data(role);
+	}
+};
+
+class InputStreamHeaderItem : public StreamHeaderItem
+{
+public:
+	using StreamHeaderItem::StreamHeaderItem;
+
+	virtual QVariant data(int role) const override
+	{
+		if (role == Qt::DisplayRole)
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			if (auto controlledEntity = manager.getControlledEntity(_entityID))
+			{
+				auto const& entityNode = controlledEntity->getEntityNode();
+				auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
+				return avdecc::helper::objectName(controlledEntity.get(), streamNode);
+			}
+		}
+
+		return StreamHeaderItem::data(role);
+	}
+};
+
 class ModelPrivate : public QObject
 {
 	Q_OBJECT
@@ -103,7 +173,6 @@ public:
 				info.section = _talkers.size();
 				info.streamCount = configurationNode.streamOutputs.size();
 				_talkers.insert(std::make_pair(entityID.getValue(), info));
-				
 				newRowCount += info.streamCount + 1;
 			}
 			
@@ -113,32 +182,48 @@ public:
 				info.section = _listeners.size();
 				info.streamCount = configurationNode.streamInputs.size();
 				_listeners.insert(std::make_pair(entityID.getValue(), info));
-				
 				newColumnCount += info.streamCount + 1;
 			}
-			
+
+			// Update the new table size
 			q_ptr->setRowCount(newRowCount);
 			q_ptr->setColumnCount(newColumnCount);
 
-			// Add missing column items for each new row
+			// Talker
 			for (auto row = prevRowCount; row < newRowCount; ++row)
 			{
-				for (auto column = 0; column < prevColumnCount; ++column)
+				QStandardItem* item{nullptr};
+
+				if (row == prevRowCount)
 				{
-					q_ptr->setItem(row, column, new StandardItem);
+					item = new EntityHeaderItem(entityID);
 				}
+				else
+				{
+					item = new OutputStreamHeaderItem(entityID, row - prevRowCount - 1);
+				}
+
+				q_ptr->setVerticalHeaderItem(row, item);
 			}
-			
-			for (auto column = prevColumnCount; column < newColumnCount; ++column)
+
+			// Listener
+			for (auto column = prevColumnCount; column < newRowCount; ++column)
 			{
-				for (auto row = 0; row < prevRowCount; ++row)
+				QStandardItem* item{nullptr};
+
+				if (column == prevColumnCount)
 				{
-					q_ptr->setItem(row, column, new StandardItem);
+					item = new EntityHeaderItem(entityID);
 				}
+				else
+				{
+					item = new InputStreamHeaderItem(entityID, column - prevColumnCount - 1);
+				}
+
+				q_ptr->setHorizontalHeaderItem(column, item);
 			}
-			
+
 			emit q_ptr->dataChanged(q_ptr->index(0, 0), q_ptr->index(newRowCount, newColumnCount));
-			
 		}
 	}
 	
