@@ -62,6 +62,8 @@ public:
 		RedundantIndexRole,
 		RedundantStreamOrderRole,
 		
+		StreamWaitingRole,
+		
 		// Connection
 		
 		ConnectionCapabilitiesRole,

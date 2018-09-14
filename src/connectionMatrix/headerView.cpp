@@ -144,8 +144,17 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	auto const text = model()->headerData(logicalIndex, orientation(), Qt::DisplayRole).toString();
 	auto const elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
+	
+	auto const isStreamingWait = model()->headerData(logicalIndex, orientation(), Model::StreamWaitingRole).toBool();
+	if (isStreamingWait)
+	{
+		painter->setPen(Qt::red);
+	}
+	else
+	{
+		painter->setPen(Qt::white);
+	}
 
-	painter->setPen(Qt::white);
 	painter->drawText(textRect, Qt::AlignVCenter, elidedText);
 	painter->restore();
 }

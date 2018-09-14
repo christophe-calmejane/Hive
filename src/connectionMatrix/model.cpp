@@ -99,6 +99,24 @@ public:
 		{
 			return QVariant::fromValue(_redundantStreamOrder);
 		}
+		else if (role == Model::StreamWaitingRole)
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			
+			if (auto controlledEntity = manager.getControlledEntity(_entityID))
+			{
+				auto const& entityNode = controlledEntity->getEntityNode();
+				
+				if (_nodeType == Model::NodeType::OutputStream)
+				{
+					return !controlledEntity->isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, _streamIndex);
+				}
+				else if (_nodeType == Model::NodeType::InputStream)
+				{
+					return !controlledEntity->isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, _streamIndex);
+				}
+			}
+		}
 		else if (role == Qt::DisplayRole)
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
@@ -450,7 +468,7 @@ public:
 			auto const talkerInfo = talkerSectionInfo(entityID);
 			if (talkerInfo.first >= 0)
 			{
-				emit q_ptr->headerDataChanged(Qt::Vertical, talkerInfo.first, talkerInfo.first);
+				emit q_ptr->headerDataChanged(Qt::Vertical, talkerInfo.first + 1 + streamIndex, talkerInfo.first + 1 + streamIndex);
 			}
 		}
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
@@ -459,7 +477,7 @@ public:
 			auto const listenerInfo = listenerSectionInfo(entityID);
 			if (listenerInfo.first >= 0)
 			{
-				emit q_ptr->headerDataChanged(Qt::Horizontal, listenerInfo.first, listenerInfo.first);
+				emit q_ptr->headerDataChanged(Qt::Horizontal, listenerInfo.first + 1 + streamIndex, listenerInfo.first + 1 + streamIndex);
 			}
 		}
 	}
