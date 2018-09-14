@@ -21,6 +21,7 @@
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/headerView.hpp"
 #include "connectionMatrix/itemDelegate.hpp"
+#include "connectionMatrix/legend.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
 
@@ -36,6 +37,7 @@ View::View(QWidget* parent)
 	, _verticalHeaderView{std::make_unique<HeaderView>(Qt::Vertical, this)}
 	, _horizontalHeaderView{std::make_unique<HeaderView>(Qt::Horizontal, this)}
 	, _itemDelegate{std::make_unique<ItemDelegate>()}
+	, _legend{std::make_unique<Legend>(this)}
 {
 	setModel(_model.get());
 	setVerticalHeader(_verticalHeaderView.get());
@@ -56,9 +58,11 @@ View::View(QWidget* parent)
 	
 	verticalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(verticalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
+	connect(verticalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
 	
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
+	connect(horizontalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
 }
 
 void View::mouseMoveEvent(QMouseEvent* event)
@@ -260,12 +264,16 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 					}
 				}
 			}
-			
 		}
 	}
 	catch (...)
 	{
 	}
+}
+	
+void View::onLegendGeometryChanged()
+{
+	_legend->setGeometry(0, 0, verticalHeader()->width(), horizontalHeader()->height());
 }
 
 } // namespace connectionMatrix

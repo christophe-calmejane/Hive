@@ -19,38 +19,30 @@
 
 #pragma once
 
-#include <QTableView>
+#include <QWidget>
+#include <QLayout>
+#include <QPushButton>
 
 namespace connectionMatrix
 {
 
-class Model;
-class HeaderView;
-class ItemDelegate;
-class Legend;
-	
-class View final : public QTableView
+class Legend : public QWidget
 {
-	using QTableView::setModel;
-	using QTableView::setVerticalHeader;
-	using QTableView::setHorizontalHeader;
-	
+	Q_OBJECT
 public:
-	View(QWidget* parent = nullptr);
-	
-protected:
-	virtual void mouseMoveEvent(QMouseEvent* event) override;
-	
-	Q_SLOT void onClicked(QModelIndex const& index);
-	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
-	Q_SLOT void onLegendGeometryChanged();
+	Legend(QWidget* parent = nullptr);
+
+private:
+	virtual void paintEvent(QPaintEvent*) override;
 	
 private:
-	std::unique_ptr<Model> _model;
-	std::unique_ptr<HeaderView> _verticalHeaderView;
-	std::unique_ptr<HeaderView> _horizontalHeaderView;
-	std::unique_ptr<ItemDelegate> _itemDelegate;
-	std::unique_ptr<Legend> _legend;
+	QGridLayout _layout{ this };
+	QWidget _buttonContainer{ this };
+	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
+	QPushButton _button{ "Show Legend", &_buttonContainer };
+	QWidget _horizontalPlaceholder{ this };
+	QWidget _verticalPlaceholder{ this };
 };
+
 
 } // namespace connectionMatrix

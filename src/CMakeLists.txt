@@ -164,6 +164,7 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 set(CONNECTION_MATRIX_HEADER_FILES
 	connectionMatrix/headerView.hpp
 	connectionMatrix/itemDelegate.hpp
+	connectionMatrix/legend.hpp
 	connectionMatrix/model.hpp
 	connectionMatrix/paintHelper.hpp
 	connectionMatrix/view.hpp
@@ -173,6 +174,7 @@ set(CONNECTION_MATRIX_HEADER_FILES
 set(CONNECTION_MATRIX_SOURCE_FILES
 	connectionMatrix/headerView.cpp
 	connectionMatrix/itemDelegate.cpp
+	connectionMatrix/legend.cpp
 	connectionMatrix/model.cpp
 	connectionMatrix/paintHelper.cpp
 	connectionMatrix/view.cpp
