@@ -20,6 +20,8 @@
 #include "connectionMatrix/headerView.hpp"
 #include "connectionMatrix/model.hpp"
 
+#include "avdecc/helper.hpp"
+
 #include <QPainter>
 #include <QMouseEvent>
 
@@ -34,16 +36,18 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	setDefaultSectionSize(20);
 	setAttribute(Qt::WA_Hover);
 	
-	connect(this, &QHeaderView::sectionClicked, this, [this](int const logicalIndex)
-	{
-		// TODO
-	});
+	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
 }
 
 void HeaderView::leaveEvent(QEvent* event)
 {
 	selectionModel()->clearSelection();
 	QHeaderView::leaveEvent(event);
+}
+
+void HeaderView::mouseDoubleClickEvent(QMouseEvent* event)
+{
+	mousePressEvent(event);
 }
 
 void HeaderView::mouseMoveEvent(QMouseEvent* event)
@@ -157,5 +161,29 @@ QSize HeaderView::sizeHint() const
 		return {200, defaultSectionSize()};
 	}
 }
+
+void HeaderView::handleSectionClicked(int logicalIndex)
+{
+	auto const nodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
+	
+	if (nodeType == Model::NodeType::Entity)
+	{
+		auto const sectionEntityID = model()->headerData(logicalIndex, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+		
+		for (auto index = logicalIndex + 1; index < count(); ++index)
+		{
+			auto const entityID = model()->headerData(index, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+			
+			// We've reached another entity?
+			if (entityID != sectionEntityID)
+			{
+				break;
+			}
+			
+			setSectionHidden(index, !isSectionHidden(index));
+		}
+	}
+}
+
 
 } // namespace connectionMatrix

@@ -31,10 +31,13 @@ public:
 	
 private:
 	virtual void leaveEvent(QEvent* event) override;
+	virtual void mouseDoubleClickEvent(QMouseEvent* e) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const override;
 	
 	virtual QSize sizeHint() const override;
+	
+	Q_SLOT void handleSectionClicked(int logicalIndex);
 };
 
 } // namespace connectionMatrix

@@ -114,7 +114,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 
 QSize ItemDelegate::sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	return {20, 20};
+	return {};
 }
 
 } // namespace connectionMatrix
