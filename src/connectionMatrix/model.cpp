@@ -142,16 +142,6 @@ private:
 	std::int32_t _redundantStreamOrder{-1};
 };
 
-bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
-{
-	return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
-}
-
-bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
-{
-	return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
-}
-
 Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem* talkerItem, HeaderItem* listenerItem)
 {
 	auto const talkerEntityID{talkerItem->entityID()};
@@ -246,7 +236,7 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem* talkerIt
 				{
 					auto const* const redundantTalkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(talkerIt->second);
 					auto const* const redundantListenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(listenerIt->second);
-					auto const connected = isStreamConnected(talkerEntityID, redundantTalkerStreamNode, redundantListenerStreamNode);
+					auto const connected = avdecc::helper::isStreamConnected(talkerEntityID, redundantTalkerStreamNode, redundantListenerStreamNode);
 					atLeastOneConnected |= connected;
 					allConnected &= connected;
 					allCompatibleFormat &= computeFormatCompatible(*redundantTalkerStreamNode, *redundantListenerStreamNode);
@@ -307,8 +297,8 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem* talkerIt
 				}
 
 				// Get connected state
-				auto const areConnected = isStreamConnected(talkerEntityID, talkerNode, listenerNode);
-				auto const fastConnecting = isStreamFastConnecting(talkerEntityID, talkerNode, listenerNode);
+				auto const areConnected = avdecc::helper::isStreamConnected(talkerEntityID, talkerNode, listenerNode);
+				auto const fastConnecting = avdecc::helper::isStreamFastConnecting(talkerEntityID, talkerNode, listenerNode);
 				auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
 
 				// Get stream format compatibility
@@ -333,27 +323,11 @@ class ConnectionItem : public QStandardItem
 public:
 	virtual QVariant data(int role) const override
 	{
-		auto* talkerItem = static_cast<HeaderItem*>(model()->verticalHeaderItem(index().row()));
-		auto* listenerItem = static_cast<HeaderItem*>(model()->horizontalHeaderItem(index().column()));
-		
-		if (role == Model::TalkerNodeTypeRole)
+		if (role == Model::ConnectionCapabilitiesRole)
 		{
-			return QVariant::fromValue(talkerItem->nodeType());
-		}
-		else if (role == Model::ListenerNodeTypeRole)
-		{
-			return QVariant::fromValue(listenerItem->nodeType());
-		}
-		if (role == Model::TalkerRedundantStreamOrderRole)
-		{
-			return QVariant::fromValue(talkerItem->redundantStreamOrder());
-		}
-		else if (role == Model::ListenerRedundantStreamOrderRole)
-		{
-			return QVariant::fromValue(listenerItem->redundantStreamOrder());
-		}
-		else if (role == Model::ConnectionCapabilitiesRole)
-		{
+			auto* talkerItem = static_cast<HeaderItem*>(model()->verticalHeaderItem(index().row()));
+			auto* listenerItem = static_cast<HeaderItem*>(model()->horizontalHeaderItem(index().column()));
+			
 			return QVariant::fromValue(computeConnectionCapabilities(talkerItem, listenerItem));
 		}
 		

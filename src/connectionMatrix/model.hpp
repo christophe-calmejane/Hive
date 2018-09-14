@@ -65,16 +65,6 @@ public:
 		// Connection
 		
 		ConnectionCapabilitiesRole,
-		
-		TalkerNodeTypeRole,
-		ListenerNodeTypeRole,
-		
-		#error TODO
-		//TalkerIDRole,
-		//ListenerIDRole,
-		
-		TalkerRedundantStreamOrderRole,
-		ListenerRedundantStreamOrderRole,
 	};
 
 	Model(QObject* parent = nullptr);

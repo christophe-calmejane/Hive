@@ -71,61 +71,66 @@ void View::mouseMoveEvent(QMouseEvent* event)
 
 void View::onClicked(QModelIndex const& index)
 {
-
-#if 0
 	try
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
+		
+		auto const talkerNodeType = model()->headerData(index.row(), Qt::Vertical, Model::NodeTypeRole).value<Model::NodeType>();
+		auto const listenerNodeType = model()->headerData(index.column(), Qt::Horizontal, Model::NodeTypeRole).value<Model::NodeType>();
+		
+		auto const talkerID = model()->headerData(index.row(), Qt::Vertical, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+		auto const listenerID = model()->headerData(index.column(), Qt::Horizontal, Model::NodeTypeRole).value<la::avdecc::UniqueIdentifier>();
 
-		auto const* const model = static_cast<ConnectionMatrixModel const*>(index.model());
-		auto const& talkerNode = model->nodeAtRow(index.row());
-		auto const& listenerNode = model->nodeAtColumn(index.column());
-		auto const& talkerData = talkerNode->userData.value<UserData>();
-		auto const& listenerData = listenerNode->userData.value<UserData>();
-
-		if ((talkerData.type == UserData::Type::OutputStreamNode && listenerData.type == UserData::Type::InputStreamNode)
-				|| (talkerData.type == UserData::Type::RedundantOutputStreamNode && listenerData.type == UserData::Type::RedundantInputStreamNode))
+		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream)
+				|| (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
 		{
-			auto const caps = model->d_ptr->connectionCapabilities(talkerData, listenerData);
+			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
-			if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connectable))
+			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
-				if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connected))
+				auto const talkerStreamIndex = model()->headerData(index.row(), Qt::Vertical, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+				auto const listenerStreamIndex = model()->headerData(index.column(), Qt::Horizontal, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+				
+				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
-					manager.disconnectStream(talkerData.entityID, talkerData.streamIndex, listenerData.entityID, listenerData.streamIndex);
+					manager.disconnectStream(talkerID,talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
 				else
 				{
-					manager.connectStream(talkerData.entityID, talkerData.streamIndex, listenerData.entityID, listenerData.streamIndex);
+					manager.connectStream(talkerID,talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
 			}
 		}
-		else if (talkerData.type == UserData::Type::RedundantOutputNode && listenerData.type == UserData::Type::RedundantInputNode)
+		else if (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
 		{
-			auto const caps = model->d_ptr->connectionCapabilities(talkerData, listenerData);
+			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
 			bool doConnect{ false };
 			bool doDisconnect{ false };
 
-			if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connectable))
+			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
-				if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connected))
+				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 					doDisconnect = true;
 				else
 					doConnect = true;
 			}
 
-			auto talkerEntity = manager.getControlledEntity(talkerData.entityID);
-			auto listenerEntity = manager.getControlledEntity(listenerData.entityID);
+			auto talkerEntity = manager.getControlledEntity(talkerID);
+			auto listenerEntity = manager.getControlledEntity(listenerID);
+			
 			if (talkerEntity && listenerEntity)
 			{
 				auto const& talkerEntityNode = talkerEntity->getEntityNode();
 				auto const& talkerEntityInfo = talkerEntity->getEntity();
 				auto const& listenerEntityNode = listenerEntity->getEntityNode();
 				auto const& listenerEntityInfo = listenerEntity->getEntity();
+				
+				auto const talkerRedundantIndex = model()->headerData(index.row(), Qt::Vertical, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
+				auto const listenerRedundantIndex = model()->headerData(index.column(), Qt::Horizontal, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
 
-				auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerData.redundantIndex);
-				auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerData.redundantIndex);
+				auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerRedundantIndex);
+				auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerRedundantIndex);
 				// TODO: Maybe someday handle the case for more than 2 streams for redundancy
 				AVDECC_ASSERT(talkerRedundantNode.redundantStreams.size() == listenerRedundantNode.redundantStreams.size(), "More than 2 redundant streams in the set");
 				auto talkerIt = talkerRedundantNode.redundantStreams.begin();
@@ -138,14 +143,14 @@ void View::onClicked(QModelIndex const& index)
 				{
 					auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(talkerIt->second);
 					auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(listenerIt->second);
-					auto const areConnected = model->d_ptr->isStreamConnected(talkerData.entityID, talkerStreamNode, listenerStreamNode);
+					auto const areConnected = avdecc::helper::isStreamConnected(talkerID, talkerStreamNode, listenerStreamNode);
 					if (doConnect && !areConnected)
 					{
-						manager.connectStream(talkerData.entityID, talkerStreamNode->descriptorIndex, listenerData.entityID, listenerStreamNode->descriptorIndex);
+						manager.connectStream(talkerID, talkerStreamNode->descriptorIndex, listenerID, listenerStreamNode->descriptorIndex);
 					}
 					else if (doDisconnect && areConnected)
 					{
-						manager.disconnectStream(talkerData.entityID, talkerStreamNode->descriptorIndex, listenerData.entityID, listenerStreamNode->descriptorIndex);
+						manager.disconnectStream(talkerID, talkerStreamNode->descriptorIndex, listenerID, listenerStreamNode->descriptorIndex);
 					}
 					++talkerIt;
 					++listenerIt;
@@ -156,7 +161,6 @@ void View::onClicked(QModelIndex const& index)
 	catch (...)
 	{
 	}
-#endif
 }
 
 void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
