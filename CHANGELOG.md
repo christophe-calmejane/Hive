@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Updated la_avdecc to v2.7.0
 
 ### Fixed
+- [Memory Object length changes not properly notified](https://github.com/christophe-calmejane/Hive/issues/30)
 - [Image/Logo possible invalid size](https://github.com/christophe-calmejane/Hive/issues/29)
 - [Image/Logo background garbage](https://github.com/christophe-calmejane/Hive/issues/26)
 - Connection matrix highlighting issues
