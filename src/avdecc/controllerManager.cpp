@@ -250,6 +250,14 @@ private:
 	{
 		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamPortIndex);
 	}
+	virtual void onOperationProgress(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, float const percentComplete) noexcept override
+	{
+		emit operationProgress(entity->getEntity().getEntityID(), descriptorType, descriptorIndex, operationID, percentComplete);
+	}
+	virtual void onOperationCompleted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, bool const failed) noexcept override
+	{
+		emit operationCompleted(entity->getEntity().getEntityID(), descriptorType, descriptorIndex, operationID, failed);
+	}
 
 	// ControllerManager overrides
 	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
@@ -677,6 +685,78 @@ private:
 		}
 	}
 
+	virtual void startStoreAndRebootMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, StartStoreAndRebootMemoryObjectOperationHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (!handler)
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation);
+			}
+			controller->startStoreAndRebootMemoryObjectOperation(targetEntityID, descriptorIndex, [this, targetEntityID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
+			{
+				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "startStoreAndRebootMemoryObjectOperation: " + la::avdecc::entity::ControllerEntity::statusToString(status));
+				if (handler)
+				{
+					la::avdecc::invokeProtectedHandler(handler, targetEntityID, descriptorIndex, status, operationID);
+				}
+				else
+				{
+					emit endAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation, status);
+				}
+			});
+		}
+	}
+
+	virtual void startUploadMemoryObjectOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, StartUploadMemoryObjectOperationHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (!handler)
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation);
+			}
+			controller->startUploadMemoryObjectOperation(targetEntityID, descriptorIndex, dataLength, [this, targetEntityID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
+			{
+				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "startUploadMemoryObjectOperation: " + la::avdecc::entity::ControllerEntity::statusToString(status));
+				if (handler)
+				{
+					la::avdecc::invokeProtectedHandler(handler, targetEntityID, descriptorIndex, status, operationID);
+				}
+				else
+				{
+					emit endAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation, status);
+				}
+			});
+		}
+	}
+
+	virtual void abortOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, AbortOperationHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (!handler)
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::AbortOperation);
+			}
+			controller->abortOperation(targetEntityID, descriptorType, descriptorIndex, operationID, [this, targetEntityID, descriptorType, operationID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+			{
+				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "abortOperation: " + la::avdecc::entity::ControllerEntity::statusToString(status));
+				if (handler)
+				{
+					la::avdecc::invokeProtectedHandler(handler, targetEntityID, descriptorType, descriptorIndex, operationID, status);
+				}
+				else
+				{
+					emit endAecpCommand(targetEntityID, AecpCommandType::AbortOperation, status);
+				}
+			});
+		}
+	}
+
 	/* Enumeration and Control Protocol (AECP) AA */
 	virtual void readDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, std::uint64_t const length, la::avdecc::controller::Controller::ReadDeviceMemoryHandler const& handler) const noexcept override
 	{
@@ -827,6 +907,12 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Add Audio Mappings";
 		case AecpCommandType::RemoveStreamPortAudioMappings:
 			return "Remove Audio Mappings";
+		case AecpCommandType::StartStoreAndRebootMemoryObjectOperation:
+			return "Store and Reboot Operation";
+		case AecpCommandType::StartUploadMemoryObjectOperation:
+			return "Upload Operation";
+		case AecpCommandType::AbortOperation:
+			return "Abort Operation";
 		default:
 			AVDECC_ASSERT(false, "Unhandled type");
 			return "Unknown";
