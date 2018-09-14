@@ -28,43 +28,104 @@
 namespace connectionMatrix
 {
 
-class StandardHeaderItem : public QStandardItem
+class HeaderItem : public QStandardItem
 {
 public:
+	HeaderItem(Model::NodeType const nodeType, la::avdecc::UniqueIdentifier const& entityID)
+		: _nodeType{nodeType}
+		, _entityID{entityID}
+	{
+	}
+	
+	Model::NodeType nodeType() const
+	{
+		return _nodeType;
+	}
+	
+	la::avdecc::UniqueIdentifier const& entityID() const
+	{
+		return _entityID;
+	}
+	
+	void setStreamIndex(la::avdecc::entity::model::StreamIndex const streamIndex)
+	{
+		_streamIndex = streamIndex;
+	}
+	
+	la::avdecc::entity::model::StreamIndex streamIndex() const
+	{
+		return _streamIndex;
+	}
+	
+	void setRedundantIndex(la::avdecc::controller::model::VirtualIndex const redundantIndex)
+	{
+		_redundantIndex = redundantIndex;
+	}
+	
+	la::avdecc::controller::model::VirtualIndex redundantIndex() const
+	{
+		return _redundantIndex;
+	}
+	
+	void setRedundantStreamOrder(std::int32_t const redundantStreamOrder)
+	{
+		_redundantStreamOrder = redundantStreamOrder;
+	}
+	
+	std::int32_t redundantStreamOrder() const
+	{
+		return _redundantStreamOrder;
+	}
+	
 	virtual QVariant data(int role) const override
 	{
-		if (role == Qt::DisplayRole)
+		if (role == Model::NodeTypeRole)
 		{
-			auto const nodeType = QStandardItem::data(Model::NodeTypeRole).value<Model::NodeType>();
-			auto const entityID = QStandardItem::data(Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
-			
+			return QVariant::fromValue(_nodeType);
+		}
+		else if (role == Model::EntityIDRole)
+		{
+			return QVariant::fromValue(_entityID);
+		}
+		else if (role == Model::StreamIndexRole)
+		{
+			return QVariant::fromValue(_streamIndex);
+		}
+		else if (role == Model::RedundantIndexRole)
+		{
+			return QVariant::fromValue(_redundantIndex);
+		}
+		else if (role == Model::RedundantStreamOrderRole)
+		{
+			return QVariant::fromValue(_redundantStreamOrder);
+		}
+		else if (role == Qt::DisplayRole)
+		{
 			auto& manager = avdecc::ControllerManager::getInstance();
 			
-			if (auto controlledEntity = manager.getControlledEntity(entityID))
+			if (auto controlledEntity = manager.getControlledEntity(_entityID))
 			{
 				auto const& entityNode = controlledEntity->getEntityNode();
 				
-				if (nodeType == Model::NodeType::Entity)
+				if (_nodeType == Model::NodeType::Entity)
 				{
 					if (entityNode.dynamicModel->entityName.empty())
 					{
-						return avdecc::helper::uniqueIdentifierToString(entityID);
+						return avdecc::helper::uniqueIdentifierToString(_entityID);
 					}
 					else
 					{
 						return QString::fromStdString(entityNode.dynamicModel->entityName);
 					}
 				}
-				else if (nodeType == Model::NodeType::InputStream)
+				else if (_nodeType == Model::NodeType::InputStream)
 				{
-					auto const streamIndex = QStandardItem::data(Model::InputStreamIndexRole).toInt();
-					auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+					auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
 					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
 				}
-				else if (nodeType == Model::NodeType::OutputStream)
+				else if (_nodeType == Model::NodeType::OutputStream)
 				{
-					auto const streamIndex = QStandardItem::data(Model::OutputStreamIndexRole).toInt();
-					auto const& streamNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+					auto const& streamNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
 					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
 				}
 			}
@@ -72,29 +133,198 @@ public:
 		
 		return QStandardItem::data(role);
 	}
+	
+private:
+	Model::NodeType const _nodeType;
+	la::avdecc::UniqueIdentifier const _entityID;
+	la::avdecc::entity::model::StreamIndex _streamIndex{static_cast<la::avdecc::entity::model::StreamIndex>(-1)};
+	la::avdecc::controller::model::VirtualIndex _redundantIndex{static_cast<la::avdecc::controller::model::VirtualIndex>(-1)};
+	std::int32_t _redundantStreamOrder{-1};
 };
 
-Model::ConnectionCapabilities computeConnectionCapabilities(la::avdecc::UniqueIdentifier const& talkerID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const& listenerID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex)
+bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
 {
-	if (talkerID == listenerID)
+	return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+}
+
+bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
+{
+	return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+}
+
+Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem* talkerItem, HeaderItem* listenerItem)
+{
+	auto const talkerEntityID{talkerItem->entityID()};
+	auto const listenerEntityID{listenerItem->entityID()};
+	
+	if (talkerEntityID == listenerEntityID)
 	{
 		return Model::ConnectionCapabilities::None;
 	}
-	
+
 	try
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		
-		auto talkerEntity = manager.getControlledEntity(talkerID);
-		auto listenerEntity = manager.getControlledEntity(listenerID);
+		auto talkerEntity = manager.getControlledEntity(talkerEntityID);
+		auto listenerEntity = manager.getControlledEntity(listenerEntityID);
 		
-		return Model::ConnectionCapabilities::Connected;
+		if (talkerEntity && listenerEntity)
+		{
+			auto const talkerNodeType = talkerItem->nodeType();
+			auto const talkerStreamIndex = talkerItem->streamIndex();
+			auto const talkerRedundantIndex = talkerItem->redundantIndex();
+			auto const talkerRedundantStreamOrder = talkerItem->redundantStreamOrder();
+			auto const& talkerEntityNode = talkerEntity->getEntityNode();
+			auto const& talkerEntityInfo = talkerEntity->getEntity();
+			
+			auto const listenerNodeType = listenerItem->nodeType();
+			auto const listenerStreamIndex = listenerItem->streamIndex();
+			auto const listenerRedundantIndex = listenerItem->redundantIndex();
+			auto const listenerRedundantStreamOrder = listenerItem->redundantStreamOrder();
+			auto const& listenerEntityNode = listenerEntity->getEntityNode();
+			auto const& listenerEntityInfo = listenerEntity->getEntity();
+			
+			auto const computeFormatCompatible = [](la::avdecc::controller::model::StreamOutputNode const& talkerNode, la::avdecc::controller::model::StreamInputNode const& listenerNode)
+			{
+				return la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerNode.dynamicModel->currentFormat, talkerNode.dynamicModel->currentFormat);
+			};
+			
+			auto const computeDomainCompatible = [&talkerEntityInfo, &listenerEntityInfo]()
+			{
+				// TODO: Incorrect computation, must be based on the AVBInterface for the stream
+				return listenerEntityInfo.getGptpGrandmasterID() == talkerEntityInfo.getGptpGrandmasterID();
+			};
+			
+			enum class ConnectState
+			{
+				NotConnected = 0,
+				FastConnecting,
+				Connected,
+			};
+			
+			auto const computeCapabilities = [](ConnectState const connectState, bool const areAllConnected, bool const isFormatCompatible, bool const isDomainCompatible)
+			{
+				auto caps{ Model::ConnectionCapabilities::Connectable };
+
+				if (!isDomainCompatible)
+					caps |= Model::ConnectionCapabilities::WrongDomain;
+
+				if (!isFormatCompatible)
+					caps |= Model::ConnectionCapabilities::WrongFormat;
+
+				if (connectState != ConnectState::NotConnected)
+				{
+					if (areAllConnected)
+						caps |= Model::ConnectionCapabilities::Connected;
+					else if (connectState == ConnectState::FastConnecting)
+						caps |= Model::ConnectionCapabilities::FastConnecting;
+					else
+						caps |= Model::ConnectionCapabilities::PartiallyConnected;
+				}
+
+				return caps;
+			};
+
+			// Special case for both redundant nodes
+			if (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
+			{
+				// Check if all redundant streams are connected
+				auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerRedundantIndex);
+				auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerRedundantIndex);
+				// TODO: Maybe someday handle the case for more than 2 streams for redundancy
+				AVDECC_ASSERT(talkerRedundantNode.redundantStreams.size() == listenerRedundantNode.redundantStreams.size(), "More than 2 redundant streams in the set");
+				auto talkerIt = talkerRedundantNode.redundantStreams.begin();
+				auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(talkerIt->second);
+				auto listenerIt = listenerRedundantNode.redundantStreams.begin();
+				auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(listenerIt->second);
+				auto atLeastOneConnected{ false };
+				auto allConnected{ true };
+				auto allCompatibleFormat{ true };
+				auto allDomainCompatible{ true };
+				for (auto idx = 0u; idx < talkerRedundantNode.redundantStreams.size(); ++idx)
+				{
+					auto const* const redundantTalkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(talkerIt->second);
+					auto const* const redundantListenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(listenerIt->second);
+					auto const connected = isStreamConnected(talkerEntityID, redundantTalkerStreamNode, redundantListenerStreamNode);
+					atLeastOneConnected |= connected;
+					allConnected &= connected;
+					allCompatibleFormat &= computeFormatCompatible(*redundantTalkerStreamNode, *redundantListenerStreamNode);
+					allDomainCompatible &= computeDomainCompatible();
+					++talkerIt;
+					++listenerIt;
+				}
+
+				return computeCapabilities(atLeastOneConnected ? ConnectState::Connected : ConnectState::NotConnected, allConnected, allCompatibleFormat, allDomainCompatible);
+			}
+			else if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream)
+							 || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantOutputStream)
+							 || (talkerNodeType ==Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
+							 || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
+			{
+				la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
+				la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
+
+				// If we have the redundant node, use the talker redundant stream associated with the listener redundant stream
+				if (talkerNodeType == Model::NodeType::RedundantOutput)
+				{
+					auto const& redundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerRedundantIndex);
+					if (listenerRedundantStreamOrder >= static_cast<std::int32_t>(redundantNode.redundantStreams.size()))
+						throw la::avdecc::controller::ControlledEntity::Exception(la::avdecc::controller::ControlledEntity::Exception::Type::InvalidDescriptorIndex, "Invalid redundant stream index");
+					std::remove_const<decltype(listenerRedundantStreamOrder)>::type idx{ 0 };
+					auto it = redundantNode.redundantStreams.begin();
+					while (idx != listenerRedundantStreamOrder)
+					{
+						++it;
+						++idx;
+					}
+					talkerNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it->second);
+					AVDECC_ASSERT(talkerNode->isRedundant, "Stream is not redundant");
+				}
+				else
+				{
+					talkerNode = &talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
+				}
+				// If we have the redundant node, use the listener redundant stream associated with the talker redundant stream
+				if (listenerNodeType == Model::NodeType::RedundantInput)
+				{
+					auto const& redundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerRedundantIndex);
+					if (talkerRedundantStreamOrder >= static_cast<std::int32_t>(redundantNode.redundantStreams.size()))
+						throw la::avdecc::controller::ControlledEntity::Exception(la::avdecc::controller::ControlledEntity::Exception::Type::InvalidDescriptorIndex, "Invalid redundant stream index");
+					std::remove_const<decltype(talkerRedundantStreamOrder)>::type idx{ 0 };
+					auto it = redundantNode.redundantStreams.begin();
+					while (idx != talkerRedundantStreamOrder)
+					{
+						++it;
+						++idx;
+					}
+					listenerNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it->second);
+					AVDECC_ASSERT(listenerNode->isRedundant, "Stream is not redundant");
+				}
+				else
+				{
+					listenerNode = &listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
+				}
+
+				// Get connected state
+				auto const areConnected = isStreamConnected(talkerEntityID, talkerNode, listenerNode);
+				auto const fastConnecting = isStreamFastConnecting(talkerEntityID, talkerNode, listenerNode);
+				auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
+
+				// Get stream format compatibility
+				auto const isFormatCompatible = computeFormatCompatible(*talkerNode, *listenerNode);
+
+				// Get domain compatibility
+				auto const isDomainCompatible = computeDomainCompatible();
+
+				return computeCapabilities(connectState, areConnected, isFormatCompatible, isDomainCompatible);
+			}
+		}
 	}
 	catch (...)
 	{
-		// Nope
 	}
-	
+
 	return Model::ConnectionCapabilities::None;
 }
 
@@ -103,18 +333,32 @@ class ConnectionItem : public QStandardItem
 public:
 	virtual QVariant data(int role) const override
 	{
-		if (role == Model::ConnectionCapabilitiesRole)
+		auto* talkerItem = static_cast<HeaderItem*>(model()->verticalHeaderItem(index().row()));
+		auto* listenerItem = static_cast<HeaderItem*>(model()->horizontalHeaderItem(index().column()));
+		
+		if (role == Model::TalkerNodeTypeRole)
 		{
-			auto const talkerID = QStandardItem::data(Model::TalkerIDRole).value<la::avdecc::UniqueIdentifier>();
-			auto const talkerStreamIndex = QStandardItem::data(Model::TalkerStreamIndexRole).toInt();
-			auto const listenerID = QStandardItem::data(Model::ListenerIDRole).value<la::avdecc::UniqueIdentifier>();
-			auto const listenerStreamIndex = QStandardItem::data(Model::ListenerStreamIndexRole).toInt();
-			
-			return QVariant::fromValue(computeConnectionCapabilities(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex));
+			return QVariant::fromValue(talkerItem->nodeType());
 		}
+		else if (role == Model::ListenerNodeTypeRole)
+		{
+			return QVariant::fromValue(listenerItem->nodeType());
+		}
+		if (role == Model::TalkerRedundantStreamOrderRole)
+		{
+			return QVariant::fromValue(talkerItem->redundantStreamOrder());
+		}
+		else if (role == Model::ListenerRedundantStreamOrderRole)
+		{
+			return QVariant::fromValue(listenerItem->redundantStreamOrder());
+		}
+		else if (role == Model::ConnectionCapabilitiesRole)
+		{
+			return QVariant::fromValue(computeConnectionCapabilities(talkerItem, listenerItem));
+		}
+		
 		return QStandardItem::data(role);
 	}
-	
 };
 
 class ModelPrivate : public QObject
@@ -159,37 +403,22 @@ public:
 
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented))
 			{
-				auto* entityItem = new StandardHeaderItem;
-				entityItem->setData(QVariant::fromValue(Model::NodeType::Entity), Model::NodeTypeRole);
-				entityItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
+				auto* entityItem = new HeaderItem(Model::NodeType::Entity, entityID);
 				q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), entityItem);
 				
-				for (auto streamIndex = 0u; streamIndex < configurationNode.streamOutputs.size(); ++streamIndex)
+				for (auto const& output : configurationNode.streamOutputs)
 				{
-					auto* streamItem = new StandardHeaderItem;
-					streamItem->setData(QVariant::fromValue(Model::NodeType::OutputStream), Model::NodeTypeRole);
-					streamItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
-					streamItem->setData(streamIndex, Model::OutputStreamIndexRole);
+					auto* streamItem = new HeaderItem{Model::NodeType::OutputStream, entityID};
+					streamItem->setStreamIndex(output.first);
 					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), streamItem);
 				}
 				
-				// Create new connection cells
+				// Create new connection items
 				for (auto column = 0; column < q_ptr->columnCount(); ++column)
 				{
-					auto* listenerItem = q_ptr->horizontalHeaderItem(column);
-					auto const listenerID = listenerItem->data(Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
-					auto const listenerStreamIndex = listenerItem->data(Model::InputStreamIndexRole).toInt();
-					
 					for (auto row = previousRowCount; row < q_ptr->rowCount(); ++row)
 					{
-						auto const talkerID{entityID};
-						auto const talkerStreamIndex{row - previousRowCount - 1 /* the entity */};
-					
 						auto* connectionItem = new ConnectionItem;
-						connectionItem->setData(QVariant::fromValue(talkerID), Model::TalkerIDRole);
-						connectionItem->setData(talkerStreamIndex, Model::TalkerStreamIndexRole);
-						connectionItem->setData(QVariant::fromValue(listenerID), Model::ListenerIDRole);
-						connectionItem->setData(listenerStreamIndex, Model::ListenerStreamIndexRole);
 						q_ptr->setItem(row, column, connectionItem);
 					}
 				}
@@ -199,37 +428,22 @@ public:
 
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented))
 			{
-				auto* entityItem = new StandardHeaderItem;
-				entityItem->setData(QVariant::fromValue(Model::NodeType::Entity), Model::NodeTypeRole);
-				entityItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
+				auto* entityItem = new HeaderItem{Model::NodeType::Entity, entityID};
 				q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), entityItem);
 				
-				for (auto streamIndex = 0u; streamIndex < configurationNode.streamInputs.size(); ++streamIndex)
+				for (auto const& output : configurationNode.streamInputs)
 				{
-					auto* streamItem = new StandardHeaderItem;
-					streamItem->setData(QVariant::fromValue(Model::NodeType::InputStream), Model::NodeTypeRole);
-					streamItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
-					streamItem->setData(streamIndex, Model::InputStreamIndexRole);
+					auto* streamItem = new HeaderItem{Model::NodeType::InputStream, entityID};
+					streamItem->setStreamIndex(output.first);
 					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), streamItem);
 				}
 				
 				// Create new connection cells
 				for (auto row = 0; row < q_ptr->rowCount(); ++row)
 				{
-					auto* talkerItem = q_ptr->verticalHeaderItem(row);
-					auto const talkerID = talkerItem->data(Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
-					auto const talkerStreamIndex = talkerItem->data(Model::InputStreamIndexRole).toInt();
-					
 					for (auto column = previousColumnCount; column < q_ptr->columnCount(); ++column)
 					{
-						auto const listenerID{entityID};
-						auto const listenerStreamIndex{column - previousRowCount - 1 /* the entity */};
-					
 						auto* connectionItem = new ConnectionItem;
-						connectionItem->setData(QVariant::fromValue(talkerID), Model::TalkerIDRole);
-						connectionItem->setData(talkerStreamIndex, Model::TalkerStreamIndexRole);
-						connectionItem->setData(QVariant::fromValue(listenerID), Model::ListenerIDRole);
-						connectionItem->setData(listenerStreamIndex, Model::ListenerStreamIndexRole);
 						q_ptr->setItem(row, column, connectionItem);
 					}
 				}

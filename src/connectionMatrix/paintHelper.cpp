@@ -17,9 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
-#include <QPainter>
+#include "connectionMatrix/paintHelper.hpp"
 
 namespace connectionMatrix
 {

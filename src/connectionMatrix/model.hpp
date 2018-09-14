@@ -31,7 +31,7 @@ class Model final : public QStandardItemModel
 public:
 	enum class NodeType
 	{
-		Undefined,
+		None,
 		Entity,
 		InputStream,
 		OutputStream,
@@ -54,16 +54,23 @@ public:
 	
 	enum ItemDataRole
 	{
+		// Header
+		
 		NodeTypeRole = Qt::UserRole + 1,
 		EntityIDRole,
-		InputStreamIndexRole,
-		OutputStreamIndexRole,
+		StreamIndexRole,
+		RedundantIndexRole,
+		RedundantStreamOrderRole,
+		
+		// Connection
+		
 		ConnectionCapabilitiesRole,
 		
-		TalkerIDRole,
-		TalkerStreamIndexRole,
-		ListenerIDRole,
-		ListenerStreamIndexRole,
+		TalkerNodeTypeRole,
+		ListenerNodeTypeRole,
+		
+		TalkerRedundantStreamOrderRole,
+		ListenerRedundantStreamOrderRole,
 	};
 
 	Model(QObject* parent = nullptr);

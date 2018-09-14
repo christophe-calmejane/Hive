@@ -35,14 +35,29 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		painter->fillRect(option.rect, option.palette.highlight());
 	}
 	
-	auto const capabilities = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
+	auto const talkerNodeType = index.data(Model::TalkerNodeTypeRole).value<Model::NodeType>();
+	auto const listenerNodeType = index.data(Model::ListenerNodeTypeRole).value<Model::NodeType>();
 	
-	if (capabilities == Model::ConnectionCapabilities::None)
+	if (talkerNodeType == Model::NodeType::Entity || listenerNodeType == Model::NodeType::Entity)
 	{
-		return;
+		drawEntityNoConnection(painter, option.rect);
 	}
 	else
 	{
+		
+		// TODO, create helper roles that computes everything for us ..
+		
+		
+		auto const talkerRedundantStreamOrder = index.data(Model::TalkerRedundantStreamOrderRole).value<std::int32_t>();
+		auto const listenerRedundantStreamOrder = index.data(Model::ListenerRedundantStreamOrderRole).value<std::int32_t>();
+	
+		// If index is a cross of 2 redundant streams, only the diagonal is connectable
+		if (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream && talkerRedundantStreamOrder != listenerRedundantStreamOrder)
+		{
+			return;
+		}
+	
+		auto const capabilities = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 		auto const isRedundant{false};
 		
 		if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::Connected))
