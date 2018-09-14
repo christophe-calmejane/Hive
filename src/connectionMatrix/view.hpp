@@ -40,6 +40,8 @@ public:
 protected:
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	
+	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
+	
 private:
 	std::unique_ptr<Model> _model;
 	std::unique_ptr<HeaderView> _verticalHeaderView;

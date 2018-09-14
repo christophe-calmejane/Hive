@@ -453,30 +453,226 @@ public:
 	
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
+		// Talker
+		auto const talkerInfo = talkerSectionInfo(entityID);
+		if (talkerInfo.first >= 0)
+		{
+			q_ptr->removeRows(talkerInfo.first, talkerInfo.second);
+		}
+	
+		// Listener
+		auto const listenerInfo = listenerSectionInfo(entityID);
+		if (listenerInfo.first >= 0)
+		{
+			q_ptr->removeColumns(listenerInfo.first, listenerInfo.second);
+		}
 	}
 	
 	Q_SLOT void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
 	{
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			// Refresh header for specified talker output stream
+			auto const talkerInfo = talkerSectionInfo(entityID);
+			if (talkerInfo.first >= 0)
+			{
+				emit q_ptr->headerDataChanged(Qt::Vertical, talkerInfo.first, talkerInfo.first);
+			}
+		}
+		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			// Refresh header for specified listener input stream
+			auto const listenerInfo = listenerSectionInfo(entityID);
+			if (listenerInfo.first >= 0)
+			{
+				emit q_ptr->headerDataChanged(Qt::Horizontal, listenerInfo.first, listenerInfo.first);
+			}
+		}
 	}
 	
 	Q_SLOT void streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
 	{
+		auto const entityID = state.listenerStream.entityID;
+		auto const streamIndex = state.listenerStream.streamIndex;
+		
+		auto const listenerInfo = listenerSectionInfo(entityID);
+		if (listenerInfo.first >= 0)
+		{
+			// Refresh whole column for specified listener single stream
+			listenerDataChanged({listenerInfo.first, 0});
+			
+			// Refresh whole column for specified listener redundant stream
+			// TODO
+			
+			// Refresh whole column for specified listener
+			for (auto column = listenerInfo.first; column < listenerInfo.first + listenerInfo.second; ++column)
+			{
+				auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+				if (item->entityID() == entityID && item->streamIndex() == streamIndex)
+				{
+					listenerDataChanged({column, 1});
+					break;
+				}
+			}
+		}
 	}
 	
 	Q_SLOT void streamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 	{
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			// Refresh whole row for specified talker single stream
+			auto const talkerInfo = talkerSectionInfo(entityID);
+			if (talkerInfo.first >= 0)
+			{
+				talkerDataChanged({talkerInfo.first, 0});
+			}
+		}
+		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			// Refresh whole column for specified listener single stream
+			auto const listenerInfo = listenerSectionInfo(entityID);
+			if (listenerInfo.first >= 0)
+			{
+				listenerDataChanged({listenerInfo.first, 0});
+			}
+		}
 	}
 	
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 	{
+		// Refresh whole rows for specified talker
+		auto const talkerInfo = talkerSectionInfo(entityID);
+		if (talkerInfo.first >= 0)
+		{
+			talkerDataChanged(talkerInfo);
+		}
+
+		// Refresh whole columns for specified listener
+		auto const listenerInfo = listenerSectionInfo(entityID);
+		if (listenerInfo.first >= 0)
+		{
+			listenerDataChanged(listenerInfo);
+		}
 	}
 	
 	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID)
 	{
+		auto const talkerInfo = talkerSectionInfo(entityID);
+		if (talkerInfo.first >= 0)
+		{
+			emit q_ptr->headerDataChanged(Qt::Vertical, talkerInfo.first, talkerInfo.first);
+		}
+
+		auto const listenerInfo = listenerSectionInfo(entityID);
+		if (listenerInfo.first >= 0)
+		{
+			emit q_ptr->headerDataChanged(Qt::Horizontal, listenerInfo.first, listenerInfo.first);
+		}
 	}
 	
 	Q_SLOT void streamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
 	{
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			auto const talkerInfo = talkerSectionInfo(entityID);
+			if (talkerInfo.first >= 0)
+			{
+				for (auto row = talkerInfo.first; row < talkerInfo.first + talkerInfo.second; ++row)
+				{
+					auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
+					if (item->entityID() == entityID && item->streamIndex() == streamIndex)
+					{
+						emit q_ptr->headerDataChanged(Qt::Vertical, row, row);
+						break;
+					}
+				}
+			}
+		}
+		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			auto const listenerInfo = listenerSectionInfo(entityID);
+			if (listenerInfo.first >= 0)
+			{
+				for (auto column = listenerInfo.first; column < listenerInfo.first + listenerInfo.second; ++column)
+				{
+					auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+					if (item->entityID() == entityID && item->streamIndex() == streamIndex)
+					{
+						emit q_ptr->headerDataChanged(Qt::Horizontal, column, column);
+						break;
+					}
+				}
+			}
+		}
+	}
+	
+	// Returns the a pair representing the pos of the entity and its "children" count including itself
+	QPair<int, int> talkerSectionInfo(la::avdecc::UniqueIdentifier const& entityID) const
+	{
+		auto pos{-1};
+		auto count{0};
+		
+		for (auto row = 0; row < q_ptr->rowCount(); ++row)
+		{
+			auto* startItem = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
+			if (startItem->entityID() == entityID)
+			{
+				if (!count)
+				{
+					pos = row;
+				}
+				
+				++count;
+			}
+			else if (count)
+			{
+				break;
+			}
+		}
+		
+		return {pos, count};
+	}
+	
+	// Returns the a pair representing the pos of the entity and its "children" count including itself
+	QPair<int, int> listenerSectionInfo(la::avdecc::UniqueIdentifier const& entityID) const
+	{
+		auto pos{-1};
+		auto count{0};
+		
+		for (auto column = 0; column < q_ptr->columnCount(); ++column)
+		{
+			auto* startItem = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+			if (startItem->entityID() == entityID)
+			{
+				if (!count)
+				{
+					pos = column;
+				}
+				
+				++count;
+			}
+			else if (count)
+			{
+				break;
+			}
+		}
+		
+		return {pos, count};
+	}
+	
+	void talkerDataChanged(QPair<int, int> const& talkerInfo)
+	{
+		auto const topLeftIndex = q_ptr->createIndex(talkerInfo.first, 0);
+		auto const bottomRightIndex = q_ptr->createIndex(talkerInfo.first + talkerInfo.second - 1, q_ptr->columnCount());
+		emit q_ptr->dataChanged(topLeftIndex, bottomRightIndex);
+	}
+	
+	void listenerDataChanged(QPair<int, int> const& listenerInfo)
+	{
+		auto const topLeftIndex = q_ptr->createIndex(0, listenerInfo.first);
+		auto const bottomRightIndex = q_ptr->createIndex(q_ptr->rowCount(), listenerInfo.first + listenerInfo.second - 1);
+		emit q_ptr->dataChanged(topLeftIndex, bottomRightIndex);
 	}
 
 private:

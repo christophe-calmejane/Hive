@@ -33,12 +33,12 @@ public:
 	{
 		None,
 		Entity,
-		InputStream,
 		OutputStream,
-		RedundantInput,
+		InputStream,
 		RedundantOutput,
+		RedundantInput,
+		RedundantOutputStream,
 		RedundantInputStream,
-		RedundantOutputStream
 	};
 	
 	enum class ConnectionCapabilities
