@@ -33,6 +33,9 @@ class View final : public QTableView
 public:
 	View(QWidget* parent = nullptr);
 	
+protected:
+	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	
 private:
 	std::unique_ptr<Model> _model;
 };
