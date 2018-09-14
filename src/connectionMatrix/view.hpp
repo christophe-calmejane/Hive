@@ -40,6 +40,7 @@ public:
 protected:
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	
+	Q_SLOT void onClicked(QModelIndex const& index);
 	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
 	
 private:

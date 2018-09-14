@@ -52,6 +52,8 @@ View::View(QWidget* parent)
 	p.setColor(QPalette::Highlight, 0xf3e5f5);
 	setPalette(p);
 	
+	connect(this, &QTableView::clicked, this, &View::onClicked);
+	
 	verticalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(verticalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
 	
@@ -65,6 +67,96 @@ void View::mouseMoveEvent(QMouseEvent* event)
 	selectionModel()->select(index, QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows|QItemSelectionModel::Columns);
 	
 	QTableView::mouseMoveEvent(event);
+}
+
+void View::onClicked(QModelIndex const& index)
+{
+
+#if 0
+	try
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+
+		auto const* const model = static_cast<ConnectionMatrixModel const*>(index.model());
+		auto const& talkerNode = model->nodeAtRow(index.row());
+		auto const& listenerNode = model->nodeAtColumn(index.column());
+		auto const& talkerData = talkerNode->userData.value<UserData>();
+		auto const& listenerData = listenerNode->userData.value<UserData>();
+
+		if ((talkerData.type == UserData::Type::OutputStreamNode && listenerData.type == UserData::Type::InputStreamNode)
+				|| (talkerData.type == UserData::Type::RedundantOutputStreamNode && listenerData.type == UserData::Type::RedundantInputStreamNode))
+		{
+			auto const caps = model->d_ptr->connectionCapabilities(talkerData, listenerData);
+
+			if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connectable))
+			{
+				if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connected))
+				{
+					manager.disconnectStream(talkerData.entityID, talkerData.streamIndex, listenerData.entityID, listenerData.streamIndex);
+				}
+				else
+				{
+					manager.connectStream(talkerData.entityID, talkerData.streamIndex, listenerData.entityID, listenerData.streamIndex);
+				}
+			}
+		}
+		else if (talkerData.type == UserData::Type::RedundantOutputNode && listenerData.type == UserData::Type::RedundantInputNode)
+		{
+			auto const caps = model->d_ptr->connectionCapabilities(talkerData, listenerData);
+
+			bool doConnect{ false };
+			bool doDisconnect{ false };
+
+			if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connectable))
+			{
+				if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connected))
+					doDisconnect = true;
+				else
+					doConnect = true;
+			}
+
+			auto talkerEntity = manager.getControlledEntity(talkerData.entityID);
+			auto listenerEntity = manager.getControlledEntity(listenerData.entityID);
+			if (talkerEntity && listenerEntity)
+			{
+				auto const& talkerEntityNode = talkerEntity->getEntityNode();
+				auto const& talkerEntityInfo = talkerEntity->getEntity();
+				auto const& listenerEntityNode = listenerEntity->getEntityNode();
+				auto const& listenerEntityInfo = listenerEntity->getEntity();
+
+				auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerData.redundantIndex);
+				auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerData.redundantIndex);
+				// TODO: Maybe someday handle the case for more than 2 streams for redundancy
+				AVDECC_ASSERT(talkerRedundantNode.redundantStreams.size() == listenerRedundantNode.redundantStreams.size(), "More than 2 redundant streams in the set");
+				auto talkerIt = talkerRedundantNode.redundantStreams.begin();
+				auto listenerIt = listenerRedundantNode.redundantStreams.begin();
+				auto atLeastOneConnected{ false };
+				auto allConnected{ true };
+				auto allCompatibleFormat{ true };
+				auto allDomainCompatible{ true };
+				for (auto idx = 0u; idx < talkerRedundantNode.redundantStreams.size(); ++idx)
+				{
+					auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(talkerIt->second);
+					auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(listenerIt->second);
+					auto const areConnected = model->d_ptr->isStreamConnected(talkerData.entityID, talkerStreamNode, listenerStreamNode);
+					if (doConnect && !areConnected)
+					{
+						manager.connectStream(talkerData.entityID, talkerStreamNode->descriptorIndex, listenerData.entityID, listenerStreamNode->descriptorIndex);
+					}
+					else if (doDisconnect && areConnected)
+					{
+						manager.disconnectStream(talkerData.entityID, talkerStreamNode->descriptorIndex, listenerData.entityID, listenerStreamNode->descriptorIndex);
+					}
+					++talkerIt;
+					++listenerIt;
+				}
+			}
+		}
+	}
+	catch (...)
+	{
+	}
+#endif
 }
 
 void View::onHeaderCustomContextMenuRequested(QPoint const& pos)

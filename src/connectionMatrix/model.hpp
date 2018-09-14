@@ -69,6 +69,10 @@ public:
 		TalkerNodeTypeRole,
 		ListenerNodeTypeRole,
 		
+		#error TODO
+		//TalkerIDRole,
+		//ListenerIDRole,
+		
 		TalkerRedundantStreamOrderRole,
 		ListenerRedundantStreamOrderRole,
 	};
