@@ -28,10 +28,9 @@ class ModelPrivate;
 class Model : public QStandardItemModel
 {
 public:
-	enum Role
+	enum DataRole
 	{
-		EntityIdRole = Qt::UserRole + 1,
-		HeaderTypeRole,
+		HeaderTypeRole = Qt::UserRole + 1,
 	};
 
 	Model(QObject* parent = nullptr);
