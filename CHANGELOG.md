@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- [SetName for AudioUnit, AvbInterface, ClockSource, MemoryObject, AudioCluster and ClockDomain](https://github.com/christophe-calmejane/Hive/issues/7)
+
 ### Changed
 - Updated la_avdecc to v2.7.0
 

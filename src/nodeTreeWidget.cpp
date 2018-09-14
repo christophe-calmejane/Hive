@@ -254,7 +254,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::None, {}); // SetName not supported yet
+		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::SetAudioUnitName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -328,7 +328,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::None, {}); // SetName not supported yet
+		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::SetAvbInterfaceName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -364,7 +364,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::None, {}); // SetName not supported yet
+		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::SetClockSourceName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -436,7 +436,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::None, {}); // SetName not supported yet
+		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::SetAudioClusterName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -489,7 +489,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::None, {}); // SetName not supported yet
+		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::SetClockDomainName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const* const model = node.staticModel;
@@ -569,7 +569,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::None, {}); // SetName not supported yet
+		createNameItem(controlledEntity, node, avdecc::ControllerManager::AecpCommandType::SetMemoryObjectName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -739,6 +739,18 @@ private:
 					{
 					}
 					break;
+				case avdecc::ControllerManager::AecpCommandType::SetAudioUnitName:
+					try
+					{
+						auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AudioUnitIndex>>(customData);
+						auto const configIndex = std::get<0>(customTuple);
+						auto const audioUnitIndex = std::get<1>(customTuple);
+						avdecc::ControllerManager::getInstance().setAudioUnitName(_controlledEntityID, configIndex, audioUnitIndex, textEntry->text());
+					}
+					catch (...)
+					{
+					}
+					break;
 				case avdecc::ControllerManager::AecpCommandType::SetStreamName:
 					try
 					{
@@ -750,6 +762,66 @@ private:
 							avdecc::ControllerManager::getInstance().setStreamInputName(_controlledEntityID, configIndex, streamIndex, textEntry->text());
 						else if (streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 							avdecc::ControllerManager::getInstance().setStreamOutputName(_controlledEntityID, configIndex, streamIndex, textEntry->text());
+					}
+					catch (...)
+					{
+					}
+					break;
+				case avdecc::ControllerManager::AecpCommandType::SetAvbInterfaceName:
+					try
+					{
+						auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AvbInterfaceIndex>>(customData);
+						auto const configIndex = std::get<0>(customTuple);
+						auto const avbInterfaceIndex = std::get<1>(customTuple);
+						avdecc::ControllerManager::getInstance().setAvbInterfaceName(_controlledEntityID, configIndex, avbInterfaceIndex, textEntry->text());
+					}
+					catch (...)
+					{
+					}
+					break;
+				case avdecc::ControllerManager::AecpCommandType::SetClockSourceName:
+					try
+					{
+						auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockSourceIndex>>(customData);
+						auto const configIndex = std::get<0>(customTuple);
+						auto const clockSourceIndex = std::get<1>(customTuple);
+						avdecc::ControllerManager::getInstance().setClockSourceName(_controlledEntityID, configIndex, clockSourceIndex, textEntry->text());
+					}
+					catch (...)
+					{
+					}
+					break;
+				case avdecc::ControllerManager::AecpCommandType::SetMemoryObjectName:
+					try
+					{
+						auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::MemoryObjectIndex>>(customData);
+						auto const configIndex = std::get<0>(customTuple);
+						auto const memoryObjectIndex = std::get<1>(customTuple);
+						avdecc::ControllerManager::getInstance().setMemoryObjectName(_controlledEntityID, configIndex, memoryObjectIndex, textEntry->text());
+					}
+					catch (...)
+					{
+					}
+					break;
+				case avdecc::ControllerManager::AecpCommandType::SetAudioClusterName:
+					try
+					{
+						auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClusterIndex>>(customData);
+						auto const configIndex = std::get<0>(customTuple);
+						auto const audioClusterIndex = std::get<1>(customTuple);
+						avdecc::ControllerManager::getInstance().setAudioClusterName(_controlledEntityID, configIndex, audioClusterIndex, textEntry->text());
+					}
+					catch (...)
+					{
+					}
+					break;
+				case avdecc::ControllerManager::AecpCommandType::SetClockDomainName:
+					try
+					{
+						auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockDomainIndex>>(customData);
+						auto const configIndex = std::get<0>(customTuple);
+						auto const clockDomainIndex = std::get<1>(customTuple);
+						avdecc::ControllerManager::getInstance().setClockDomainName(_controlledEntityID, configIndex, clockDomainIndex, textEntry->text());
 					}
 					catch (...)
 					{
@@ -795,6 +867,18 @@ private:
 					});
 					break;
 				}
+				case avdecc::ControllerManager::AecpCommandType::SetAudioUnitName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AudioUnitIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const audioUnitIndex = std::get<1>(customTuple);
+					connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioUnitNameChanged, textEntry, [this, textEntry, configIndex, auIndex = audioUnitIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& audioUnitName)
+					{
+						if (entityID == _controlledEntityID && configurationIndex == configIndex && audioUnitIndex == auIndex)
+							textEntry->setText(audioUnitName);
+					});
+					break;
+				}
 				case avdecc::ControllerManager::AecpCommandType::SetStreamName:
 				{
 					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::DescriptorType, la::avdecc::entity::model::StreamIndex>>(customData);
@@ -805,6 +889,66 @@ private:
 					{
 						if (entityID == _controlledEntityID && configurationIndex == configIndex && descriptorType == streamType && streamIndex == strIndex)
 							textEntry->setText(streamName);
+					});
+					break;
+				}
+				case avdecc::ControllerManager::AecpCommandType::SetAvbInterfaceName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AvbInterfaceIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const avbInterfaceIndex = std::get<1>(customTuple);
+					connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceNameChanged, textEntry, [this, textEntry, configIndex, aiIndex = avbInterfaceIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& avbInterfaceName)
+					{
+						if (entityID == _controlledEntityID && configurationIndex == configIndex && avbInterfaceIndex == aiIndex)
+							textEntry->setText(avbInterfaceName);
+					});
+					break;
+				}
+				case avdecc::ControllerManager::AecpCommandType::SetClockSourceName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockSourceIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const clockSourceIndex = std::get<1>(customTuple);
+					connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceNameChanged, textEntry, [this, textEntry, configIndex, csIndex = clockSourceIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& clockSourceName)
+					{
+						if (entityID == _controlledEntityID && configurationIndex == configIndex && clockSourceIndex == csIndex)
+							textEntry->setText(clockSourceName);
+					});
+					break;
+				}
+				case avdecc::ControllerManager::AecpCommandType::SetMemoryObjectName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::MemoryObjectIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const memoryObjectIndex = std::get<1>(customTuple);
+					connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectNameChanged, textEntry, [this, textEntry, configIndex, moIndex = memoryObjectIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& memoryObjectName)
+					{
+						if (entityID == _controlledEntityID && configurationIndex == configIndex && memoryObjectIndex == moIndex)
+							textEntry->setText(memoryObjectName);
+					});
+					break;
+				}
+				case avdecc::ControllerManager::AecpCommandType::SetAudioClusterName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClusterIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const audioClusterIndex = std::get<1>(customTuple);
+					connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioClusterNameChanged, textEntry, [this, textEntry, configIndex, acIndex = audioClusterIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+					{
+						if (entityID == _controlledEntityID && configurationIndex == configIndex && audioClusterIndex == acIndex)
+							textEntry->setText(audioClusterName);
+					});
+					break;
+				}
+				case avdecc::ControllerManager::AecpCommandType::SetClockDomainName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockDomainIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const clockDomainIndex = std::get<1>(customTuple);
+					connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainNameChanged, textEntry, [this, textEntry, configIndex, cdIndex = clockDomainIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& clockDomainName)
+					{
+						if (entityID == _controlledEntityID && configurationIndex == configIndex && clockDomainIndex == cdIndex)
+							textEntry->setText(clockDomainName);
 					});
 					break;
 				}
