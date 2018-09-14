@@ -19,153 +19,26 @@
 
 #include "connectionMatrix/view.hpp"
 #include "connectionMatrix/model.hpp"
+#include "connectionMatrix/headerView.hpp"
+#include "connectionMatrix/itemDelegate.hpp"
 
-#include <QHeaderView>
-#include <QPainter>
 #include <QMouseEvent>
 
 namespace connectionMatrix
 {
 
-class HeaderView : public QHeaderView
-{
-public:
-	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr)
-		: QHeaderView(orientation, parent)
-	{
-		setSectionResizeMode(QHeaderView::Fixed);
-		setSectionsClickable(true);
-		setDefaultSectionSize(20);
-		setAttribute(Qt::WA_Hover);
-	}
-	
-	virtual void leaveEvent(QEvent* event) override
-	{
-		selectionModel()->clearSelection();
-		QHeaderView::leaveEvent(event);
-	}
-	
-	virtual void mouseMoveEvent(QMouseEvent* event) override
-	{
-		if (orientation() == Qt::Horizontal)
-		{
-			auto const column = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
-			selectionModel()->select(model()->index(0, column), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Columns);
-		}
-		else
-		{
-			auto const row = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
-			selectionModel()->select(model()->index(row, 0), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows);
-		}
-	
-		QHeaderView::mouseMoveEvent(event);
-	}
-
-	virtual void paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const override
-	{
-		painter->save();
-		painter->setRenderHint(QPainter::Antialiasing);
-
-		auto const arrowSize{ 10 };
-		auto const headerType = model()->headerData(logicalIndex, orientation(), Model::HeaderTypeRole).toInt();
-		auto const arrowOffset{ 25 * headerType };
-
-		auto isSelected{false};
-
-		QPainterPath path;
-		if (orientation() == Qt::Horizontal)
-		{
-			path.moveTo(rect.topLeft());
-			path.lineTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset });
-			path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
-			path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
-			path.lineTo(rect.topRight());
-			
-			isSelected = selectionModel()->isColumnSelected(logicalIndex, {});
-		}
-		else
-		{
-			path.moveTo(rect.topLeft());
-			path.lineTo(rect.topRight() - QPoint{ arrowSize + arrowOffset, 0 });
-			path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
-			path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
-			path.lineTo(rect.bottomLeft());
-			
-			isSelected = selectionModel()->isRowSelected(logicalIndex, {});
-		}
-
-		QBrush backgroundBrush{};
-		
-		if (isSelected)
-		{
-			backgroundBrush = QColor{ 0x007ACC };
-		}
-		else
-		{
-			switch (headerType)
-			{
-				case 0:
-					backgroundBrush = QColor{ 0x4A148C };
-					break;
-				case 1:
-					backgroundBrush = QColor{ 0x7B1FA2 };
-					break;
-				case 2:
-					backgroundBrush = QColor{ 0xBA68C8 };
-					break;
-				default:
-					backgroundBrush = QColor{ 0x808080 };
-					break;
-				}
-		}
-
-		painter->fillPath(path, backgroundBrush);
-		painter->translate(rect.topLeft());
-
-		auto r = QRect(0, 0, rect.width(), rect.height());
-		if (orientation() == Qt::Horizontal)
-		{
-			r.setWidth(rect.height());
-			r.setHeight(rect.width());
-
-			painter->rotate(-90);
-			painter->translate(-r.width(), 0);
-
-			r.translate(arrowSize + arrowOffset, 0);
-		}
-
-		auto const padding{ 4 };
-		auto textRect = r.adjusted(padding, 0, -(padding + arrowSize + arrowOffset), 0);
-
-		auto const text = model()->headerData(logicalIndex, orientation(), Qt::DisplayRole).toString();
-		auto const elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
-
-		painter->setPen(Qt::white);
-		painter->drawText(textRect, Qt::AlignVCenter, elidedText);
-		painter->restore();
-	}
-
-	virtual QSize sizeHint() const override
-	{
-		if (orientation() == Qt::Horizontal)
-		{
-			return {defaultSectionSize(), 200};
-		}
-		else
-		{
-			return {200, defaultSectionSize()};
-		}
-	}
-};
-
-
 View::View(QWidget* parent)
 	: QTableView{parent}
 	, _model{std::make_unique<Model>()}
+	, _verticalHeaderView{std::make_unique<HeaderView>(Qt::Vertical, this)}
+	, _horizontalHeaderView{std::make_unique<HeaderView>(Qt::Horizontal, this)}
+	, _itemDelegate{std::make_unique<ItemDelegate>()}
 {
 	setModel(_model.get());
-	setVerticalHeader(new HeaderView{Qt::Vertical, this});
-	setHorizontalHeader(new HeaderView{Qt::Horizontal, this});
+	setVerticalHeader(_verticalHeaderView.get());
+	setHorizontalHeader(_horizontalHeaderView.get());
+	setItemDelegate(_itemDelegate.get());
+	
 	setSelectionMode(QAbstractItemView::NoSelection);
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setCornerButtonEnabled(false);

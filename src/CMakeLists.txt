@@ -162,13 +162,19 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 
 # Connection Matriw header files
 set(CONNECTION_MATRIX_HEADER_FILES
+	connectionMatrix/headerView.hpp
+	connectionMatrix/itemDelegate.hpp
 	connectionMatrix/model.hpp
+	connectionMatrix/paintHelper.hpp
 	connectionMatrix/view.hpp
 )
 
 # Connection Matrix source files
 set(CONNECTION_MATRIX_SOURCE_FILES
+	connectionMatrix/headerView.cpp
+	connectionMatrix/itemDelegate.cpp
 	connectionMatrix/model.cpp
+	connectionMatrix/paintHelper.cpp
 	connectionMatrix/view.cpp
 )
 

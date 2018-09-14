@@ -19,32 +19,22 @@
 
 #pragma once
 
-#include <QTableView>
+#include <QHeaderView>
 
 namespace connectionMatrix
 {
 
-class Model;
-class HeaderView;
-class ItemDelegate;
-	
-class View final : public QTableView
+class HeaderView final : public QHeaderView
 {
-	using QTableView::setModel;
-	using QTableView::setVerticalHeader;
-	using QTableView::setHorizontalHeader;
-	
 public:
-	View(QWidget* parent = nullptr);
-	
-protected:
-	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
 	
 private:
-	std::unique_ptr<Model> _model;
-	std::unique_ptr<HeaderView> _verticalHeaderView;
-	std::unique_ptr<HeaderView> _horizontalHeaderView;
-	std::unique_ptr<ItemDelegate> _itemDelegate;
+	virtual void leaveEvent(QEvent* event) override;
+	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	virtual void paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const override;
+	
+	virtual QSize sizeHint() const override;
 };
 
 } // namespace connectionMatrix

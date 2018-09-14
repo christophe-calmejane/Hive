@@ -20,17 +20,50 @@
 #pragma once
 
 #include <QStandardItemModel>
+#include <la/avdecc/utils.hpp>
 
 namespace connectionMatrix
 {
 
 class ModelPrivate;
-class Model : public QStandardItemModel
+class Model final : public QStandardItemModel
 {
 public:
-	enum DataRole
+	enum class NodeType
 	{
-		HeaderTypeRole = Qt::UserRole + 1,
+		Undefined,
+		Entity,
+		InputStream,
+		OutputStream,
+		RedundantInput,
+		RedundantOutput,
+		RedundantInputStream,
+		RedundantOutputStream
+	};
+	
+	enum class ConnectionCapabilities
+	{
+		None = 0,
+		WrongDomain = 1u << 0,
+		WrongFormat = 1u << 1,
+		Connectable = 1u << 2, /**< Stream connectable (might be connected, or not) */
+		Connected = 1u << 3, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
+		FastConnecting = 1u << 4, /**< Stream is fast connecting (Mutually exclusive with Connected and PartiallyConnected) */
+		PartiallyConnected = 1u << 5, /**< Some, but not all of a redundant streams tuple, are connected (Mutually exclusive with Connected and FastConnecting) */
+	};
+	
+	enum ItemDataRole
+	{
+		NodeTypeRole = Qt::UserRole + 1,
+		EntityIDRole,
+		InputStreamIndexRole,
+		OutputStreamIndexRole,
+		ConnectionCapabilitiesRole,
+		
+		TalkerIDRole,
+		TalkerStreamIndexRole,
+		ListenerIDRole,
+		ListenerStreamIndexRole,
 	};
 
 	Model(QObject* parent = nullptr);
@@ -42,3 +75,13 @@ private:
 };
 
 } // namespace connectionMatrix
+
+Q_DECLARE_METATYPE(connectionMatrix::Model::NodeType)
+Q_DECLARE_METATYPE(connectionMatrix::Model::ConnectionCapabilities)
+
+// Define bitfield enum traits for Model::ConnectionCapabilities
+template<>
+struct la::avdecc::enum_traits<connectionMatrix::Model::ConnectionCapabilities>
+{
+	static constexpr bool is_bitfield = true;
+};

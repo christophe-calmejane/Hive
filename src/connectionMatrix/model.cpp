@@ -28,173 +28,93 @@
 namespace connectionMatrix
 {
 
-class HeaderItem : public QStandardItem
+class StandardHeaderItem : public QStandardItem
 {
 public:
-	HeaderItem(la::avdecc::UniqueIdentifier const& entityID)
-		: _entityID{entityID}
-	{
-	}
-
-protected:
-	la::avdecc::UniqueIdentifier const _entityID;
-};
-
-class EntityHeaderItem : public HeaderItem
-{
-public:
-	using HeaderItem::HeaderItem;
-
 	virtual QVariant data(int role) const override
 	{
 		if (role == Qt::DisplayRole)
 		{
+			auto const nodeType = QStandardItem::data(Model::NodeTypeRole).value<Model::NodeType>();
+			auto const entityID = QStandardItem::data(Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+			
 			auto& manager = avdecc::ControllerManager::getInstance();
-			if (auto controlledEntity = manager.getControlledEntity(_entityID))
+			
+			if (auto controlledEntity = manager.getControlledEntity(entityID))
 			{
 				auto const& entityNode = controlledEntity->getEntityNode();
-				if (entityNode.dynamicModel->entityName.empty())
+				
+				if (nodeType == Model::NodeType::Entity)
 				{
-					return avdecc::helper::uniqueIdentifierToString(_entityID);
+					if (entityNode.dynamicModel->entityName.empty())
+					{
+						return avdecc::helper::uniqueIdentifierToString(entityID);
+					}
+					else
+					{
+						return QString::fromStdString(entityNode.dynamicModel->entityName);
+					}
 				}
-				else
+				else if (nodeType == Model::NodeType::InputStream)
 				{
-					return QString::fromStdString(entityNode.dynamicModel->entityName);
+					auto const streamIndex = QStandardItem::data(Model::InputStreamIndexRole).toInt();
+					auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
+				}
+				else if (nodeType == Model::NodeType::OutputStream)
+				{
+					auto const streamIndex = QStandardItem::data(Model::OutputStreamIndexRole).toInt();
+					auto const& streamNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
 				}
 			}
 		}
-		else if (role == Model::HeaderTypeRole)
-		{
-			return 0;
-		}
-
-		return HeaderItem::data(role);
+		
+		return QStandardItem::data(role);
 	}
 };
 
-class StreamHeaderItem : public HeaderItem
+Model::ConnectionCapabilities computeConnectionCapabilities(la::avdecc::UniqueIdentifier const& talkerID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const& listenerID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex)
 {
-public:
-	StreamHeaderItem(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex)
-		: HeaderItem{entityID}
-		, _streamIndex{streamIndex}
+	if (talkerID == listenerID)
 	{
+		return Model::ConnectionCapabilities::None;
 	}
-
-protected:
-	la::avdecc::entity::model::StreamIndex const _streamIndex;
-};
-
-class OutputStreamHeaderItem : public StreamHeaderItem
-{
-public:
-	using StreamHeaderItem::StreamHeaderItem;
-
-	virtual QVariant data(int role) const override
+	
+	try
 	{
-		if (role == Qt::DisplayRole)
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			if (auto controlledEntity = manager.getControlledEntity(_entityID))
-			{
-				auto const& entityNode = controlledEntity->getEntityNode();
-				auto const& streamNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
-				return avdecc::helper::objectName(controlledEntity.get(), streamNode);
-			}
-		}
-		else if (role == Model::HeaderTypeRole)
-		{
-			return 1;
-		}
-
-		return StreamHeaderItem::data(role);
+		auto& manager = avdecc::ControllerManager::getInstance();
+		
+		auto talkerEntity = manager.getControlledEntity(talkerID);
+		auto listenerEntity = manager.getControlledEntity(listenerID);
+		
+		return Model::ConnectionCapabilities::Connected;
 	}
-};
-
-class InputStreamHeaderItem : public StreamHeaderItem
-{
-public:
-	using StreamHeaderItem::StreamHeaderItem;
-
-	virtual QVariant data(int role) const override
+	catch (...)
 	{
-		if (role == Qt::DisplayRole)
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			if (auto controlledEntity = manager.getControlledEntity(_entityID))
-			{
-				auto const& entityNode = controlledEntity->getEntityNode();
-				auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
-				return avdecc::helper::objectName(controlledEntity.get(), streamNode);
-			}
-		}
-		else if (role == Model::HeaderTypeRole)
-		{
-			return 1;
-		}
-
-		return StreamHeaderItem::data(role);
+		// Nope
 	}
-};
-
-class RedundantOutputStreamHeaderItem : public StreamHeaderItem
-{
-public:
-	using StreamHeaderItem::StreamHeaderItem;
-
-	virtual QVariant data(int role) const override
-	{
-		if (role == Qt::DisplayRole)
-		{
-			return "RedundantOutputStream";
-		}
-		else if (role == Model::HeaderTypeRole)
-		{
-			return 2;
-		}
-
-		return StreamHeaderItem::data(role);
-	}
-};
-
-class RedundantInputStreamHeaderItem : public StreamHeaderItem
-{
-public:
-	using StreamHeaderItem::StreamHeaderItem;
-
-	virtual QVariant data(int role) const override
-	{
-		if (role == Qt::DisplayRole)
-		{
-			return "RedundantInputStream";
-		}
-		else if (role == Model::HeaderTypeRole)
-		{
-			return 2;
-		}
-
-		return StreamHeaderItem::data(role);
-	}
-};
+	
+	return Model::ConnectionCapabilities::None;
+}
 
 class ConnectionItem : public QStandardItem
 {
 public:
-	using QStandardItem::QStandardItem;
-	
 	virtual QVariant data(int role) const override
 	{
-		if (role == Qt::DisplayRole)
+		if (role == Model::ConnectionCapabilitiesRole)
 		{
-			return QString{"%1, %2"}.arg(index().row()).arg(index().column());
+			auto const talkerID = QStandardItem::data(Model::TalkerIDRole).value<la::avdecc::UniqueIdentifier>();
+			auto const talkerStreamIndex = QStandardItem::data(Model::TalkerStreamIndexRole).toInt();
+			auto const listenerID = QStandardItem::data(Model::ListenerIDRole).value<la::avdecc::UniqueIdentifier>();
+			auto const listenerStreamIndex = QStandardItem::data(Model::ListenerStreamIndexRole).toInt();
+			
+			return QVariant::fromValue(computeConnectionCapabilities(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex));
 		}
-		else if (role == Qt::BackgroundColorRole)
-		{
-			return QColor{Qt::lightGray};
-		}
-
 		return QStandardItem::data(role);
 	}
+	
 };
 
 class ModelPrivate : public QObject
@@ -231,38 +151,87 @@ public:
 		{
 			auto const& entityNode = controlledEntity->getEntityNode();
 			auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+			
+			auto const previousRowCount{q_ptr->rowCount()};
+			auto const previousColumnCount{q_ptr->columnCount()};
 
-			// Talker header items
+			// Talker
 
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented))
 			{
-				q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), new EntityHeaderItem{entityID});
-
+				auto* entityItem = new StandardHeaderItem;
+				entityItem->setData(QVariant::fromValue(Model::NodeType::Entity), Model::NodeTypeRole);
+				entityItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
+				q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), entityItem);
+				
 				for (auto streamIndex = 0u; streamIndex < configurationNode.streamOutputs.size(); ++streamIndex)
 				{
-					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), new OutputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
+					auto* streamItem = new StandardHeaderItem;
+					streamItem->setData(QVariant::fromValue(Model::NodeType::OutputStream), Model::NodeTypeRole);
+					streamItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
+					streamItem->setData(streamIndex, Model::OutputStreamIndexRole);
+					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), streamItem);
 				}
 				
-				for (auto streamIndex = 0u; streamIndex < configurationNode.redundantStreamInputs.size(); ++streamIndex)
+				// Create new connection cells
+				for (auto column = 0; column < q_ptr->columnCount(); ++column)
 				{
-					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new RedundantInputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
+					auto* listenerItem = q_ptr->horizontalHeaderItem(column);
+					auto const listenerID = listenerItem->data(Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+					auto const listenerStreamIndex = listenerItem->data(Model::InputStreamIndexRole).toInt();
+					
+					for (auto row = previousRowCount; row < q_ptr->rowCount(); ++row)
+					{
+						auto const talkerID{entityID};
+						auto const talkerStreamIndex{row - previousRowCount - 1 /* the entity */};
+					
+						auto* connectionItem = new ConnectionItem;
+						connectionItem->setData(QVariant::fromValue(talkerID), Model::TalkerIDRole);
+						connectionItem->setData(talkerStreamIndex, Model::TalkerStreamIndexRole);
+						connectionItem->setData(QVariant::fromValue(listenerID), Model::ListenerIDRole);
+						connectionItem->setData(listenerStreamIndex, Model::ListenerStreamIndexRole);
+						q_ptr->setItem(row, column, connectionItem);
+					}
 				}
 			}
 
-			// Listener header items
+			// Listener
 
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented))
 			{
-				q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new EntityHeaderItem{entityID});
-
+				auto* entityItem = new StandardHeaderItem;
+				entityItem->setData(QVariant::fromValue(Model::NodeType::Entity), Model::NodeTypeRole);
+				entityItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
+				q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), entityItem);
+				
 				for (auto streamIndex = 0u; streamIndex < configurationNode.streamInputs.size(); ++streamIndex)
 				{
-					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new InputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
+					auto* streamItem = new StandardHeaderItem;
+					streamItem->setData(QVariant::fromValue(Model::NodeType::InputStream), Model::NodeTypeRole);
+					streamItem->setData(QVariant::fromValue(entityID), Model::EntityIDRole);
+					streamItem->setData(streamIndex, Model::InputStreamIndexRole);
+					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), streamItem);
 				}
-
-				for (auto streamIndex = 0u; streamIndex < configurationNode.redundantStreamOutputs.size(); ++streamIndex)
+				
+				// Create new connection cells
+				for (auto row = 0; row < q_ptr->rowCount(); ++row)
 				{
-					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), new RedundantOutputStreamHeaderItem{entityID, static_cast<la::avdecc::entity::model::StreamIndex>(streamIndex)});
+					auto* talkerItem = q_ptr->verticalHeaderItem(row);
+					auto const talkerID = talkerItem->data(Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+					auto const talkerStreamIndex = talkerItem->data(Model::InputStreamIndexRole).toInt();
+					
+					for (auto column = previousColumnCount; column < q_ptr->columnCount(); ++column)
+					{
+						auto const listenerID{entityID};
+						auto const listenerStreamIndex{column - previousRowCount - 1 /* the entity */};
+					
+						auto* connectionItem = new ConnectionItem;
+						connectionItem->setData(QVariant::fromValue(talkerID), Model::TalkerIDRole);
+						connectionItem->setData(talkerStreamIndex, Model::TalkerStreamIndexRole);
+						connectionItem->setData(QVariant::fromValue(listenerID), Model::ListenerIDRole);
+						connectionItem->setData(listenerStreamIndex, Model::ListenerStreamIndexRole);
+						q_ptr->setItem(row, column, connectionItem);
+					}
 				}
 			}
 		}
@@ -297,7 +266,7 @@ public:
 	}
 
 private:
-	Model * const q_ptr{ nullptr };
+	Model* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(Model);
 };
 	
