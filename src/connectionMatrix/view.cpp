@@ -214,7 +214,17 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 	{
 		return;
 	}
-
+	
+	// Highlight this section
+	if (header->orientation() == Qt::Horizontal)
+	{
+		selectionModel()->select(model()->index(0, logicalIndex), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Columns);
+	}
+	else
+	{
+		selectionModel()->select(model()->index(logicalIndex, 0), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows);
+	}
+	
 	try
 	{
 		auto const entityID = model()->headerData(logicalIndex, header->orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();

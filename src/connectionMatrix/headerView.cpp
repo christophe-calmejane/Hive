@@ -41,7 +41,11 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 
 void HeaderView::leaveEvent(QEvent* event)
 {
-	selectionModel()->clearSelection();
+	if (!rect().contains(mapFromGlobal(QCursor::pos())))
+	{
+		selectionModel()->clearSelection();
+	}
+	
 	QHeaderView::leaveEvent(event);
 }
 
