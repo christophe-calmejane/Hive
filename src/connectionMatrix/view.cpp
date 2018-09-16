@@ -91,7 +91,12 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 	{
 		_isTransposed = value.toBool();
 		
+		_itemDelegate->setTransposed(_isTransposed);
 		_legend->setTransposed(_isTransposed);
+		
+		// Force a repaint while there is no model, this fixes a refresh issue when switching between transpose states
+		setModel(nullptr);
+		repaint();
 		
 		if (_isTransposed)
 		{
@@ -101,7 +106,7 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		{
 			setModel(_model.get());
 		}
-		
+
 		repaint();
 	}
 }

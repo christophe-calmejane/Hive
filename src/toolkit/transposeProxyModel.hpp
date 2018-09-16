@@ -35,15 +35,15 @@ public:
 		: QAbstractProxyModel{parent}
 	{
 	}
-
-	Qt::Orientation mapToSource(Qt::Orientation const orientation) const
+	
+	Qt::Orientation mapFromSource(Qt::Orientation orientation) const
 	{
 		return orientation == Qt::Horizontal ? Qt::Vertical : Qt::Horizontal;
 	}
-
-	Qt::Orientation mapFromSource(Qt::Orientation const orientation) const
+	
+	Qt::Orientation mapToSource(Qt::Orientation orientation) const
 	{
-		return mapToSource(orientation);
+		return mapFromSource(orientation); // Just swap
 	}
 
 	virtual QModelIndex mapFromSource(QModelIndex const& sourceIndex) const override
@@ -55,35 +55,30 @@ public:
 	{
 		return sourceModel()->index(proxyIndex.column(), proxyIndex.row());
 	}
-
+	
 	virtual QModelIndex index(int row, int column, QModelIndex const& = {}) const override
 	{
 		return createIndex(row, column);
 	}
-
+	
 	virtual QModelIndex parent(QModelIndex const&) const override
 	{
-		return QModelIndex();
+		return {};
 	}
-
+	
 	virtual int rowCount(QModelIndex const&) const override
 	{
-		return sourceModel()->columnCount();
+		return sourceModel() ? sourceModel()->columnCount() : 0;
 	}
-
+	
 	virtual int columnCount(QModelIndex const&) const override
 	{
-		return sourceModel()->rowCount();
-	}
-
-	virtual QVariant data(QModelIndex const& index, int role) const override
-	{
-		return sourceModel()->data(mapToSource(index), role);
+		return sourceModel() ? sourceModel()->rowCount() : 0;
 	}
 
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role) const override
 	{
-		return sourceModel()->headerData(section, orientation == Qt::Horizontal ? Qt::Vertical : Qt::Horizontal, role);
+		return sourceModel() ? sourceModel()->headerData(section, mapToSource(orientation), role) : QVariant{};
 	}
 
 	void connectToModel(QAbstractItemModel* model)

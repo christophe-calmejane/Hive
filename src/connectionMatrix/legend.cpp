@@ -59,14 +59,6 @@ Legend::Legend(QWidget* parent)
 	_verticalPlaceholder.setFixedWidth(20);
 	
 	// Connect button
-#if 1
-	_button.setCheckable(true);
-	_button.setChecked(settings::SettingsManager::getInstance().getValue(settings::TransposeConnectionMatrix.name).toBool());
-	connect(&_button, &QPushButton::toggled, this, [](bool const checked)
-	{
-		settings::SettingsManager::getInstance().setValue(settings::TransposeConnectionMatrix.name, checked);
-	});
-#else
 	connect(&_button, &QPushButton::clicked, this, [this]()
 	{
 		QDialog dialog;
@@ -138,7 +130,6 @@ Legend::Legend(QWidget* parent)
 		dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "Connection matrix legend");
 		dialog.exec();
 	});
-#endif
 }
 	
 void Legend::setTransposed(bool const isTransposed)

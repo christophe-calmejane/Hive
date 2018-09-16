@@ -23,9 +23,20 @@
 #include "avdecc/helper.hpp"
 
 #include <QPainter>
+#include <algorithm>
 
 namespace connectionMatrix
 {
+
+void ItemDelegate::setTransposed(bool const isTransposed)
+{
+	_isTransposed = isTransposed;
+}
+
+bool ItemDelegate::isTransposed() const
+{
+	return _isTransposed;
+}
 
 void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
@@ -35,8 +46,13 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		painter->fillRect(option.rect, option.palette.highlight());
 	}
 	
-	auto const talkerNodeType = index.model()->headerData(index.row(), Qt::Vertical, Model::NodeTypeRole).value<Model::NodeType>();
-	auto const listenerNodeType = index.model()->headerData(index.column(), Qt::Horizontal, Model::NodeTypeRole).value<Model::NodeType>();
+	auto talkerNodeType = index.model()->headerData(index.row(), Qt::Vertical, Model::NodeTypeRole).value<Model::NodeType>();
+	auto listenerNodeType = index.model()->headerData(index.column(), Qt::Horizontal, Model::NodeTypeRole).value<Model::NodeType>();
+	
+	if (_isTransposed)
+	{
+		std::swap(talkerNodeType, listenerNodeType);
+	}
 	
 	if (talkerNodeType == Model::NodeType::Entity || listenerNodeType == Model::NodeType::Entity)
 	{
@@ -44,10 +60,13 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	}
 	else
 	{
-		// TODO, create helper roles that computes everything for us ..
-
-		auto const talkerRedundantStreamOrder = index.model()->headerData(index.row(), Qt::Vertical, Model::RedundantStreamOrderRole).value<std::int32_t>();
-		auto const listenerRedundantStreamOrder = index.model()->headerData(index.column(), Qt::Horizontal, Model::RedundantStreamOrderRole).value<std::int32_t>();
+		auto talkerRedundantStreamOrder = index.model()->headerData(index.row(), Qt::Vertical, Model::RedundantStreamOrderRole).value<std::int32_t>();
+		auto listenerRedundantStreamOrder = index.model()->headerData(index.column(), Qt::Horizontal, Model::RedundantStreamOrderRole).value<std::int32_t>();
+	
+		if (_isTransposed)
+		{
+			std::swap(talkerRedundantStreamOrder, listenerRedundantStreamOrder);
+		}
 	
 		// If index is a cross of 2 redundant streams, only the diagonal is connectable
 		if (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream && talkerRedundantStreamOrder != listenerRedundantStreamOrder)
@@ -56,7 +75,6 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		}
 	
 		auto const capabilities = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
-		
 		if (capabilities == Model::ConnectionCapabilities::None)
 		{
 			return;
@@ -64,7 +82,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		
 		auto const isRedundant = !((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
 															 || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
-		
+
 		if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::Connected))
 		{
 			if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongDomain))
