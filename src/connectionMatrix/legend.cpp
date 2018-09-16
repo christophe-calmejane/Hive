@@ -107,7 +107,7 @@ Legend::Legend(QWidget* parent)
 		
 		for (auto& drawFunction : drawFunctions)
 		{
-			auto* hlayout = new QHBoxLayout{ &dialog };
+			auto* hlayout = new QHBoxLayout;
 			auto* icon = new IconDrawer{ drawFunction.first };
 			icon->setFixedSize(20, 20);
 			hlayout->addWidget(icon);
