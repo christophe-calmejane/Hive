@@ -39,7 +39,8 @@ View::View(QWidget* parent)
 	, _itemDelegate{std::make_unique<ItemDelegate>()}
 	, _legend{std::make_unique<Legend>(this)}
 {
-	setModel(_model.get());
+	_proxy.connectToModel(_model.get());
+
 	setVerticalHeader(_verticalHeaderView.get());
 	setHorizontalHeader(_horizontalHeaderView.get());
 	setItemDelegate(_itemDelegate.get());
@@ -63,6 +64,17 @@ View::View(QWidget* parent)
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
+	
+	// Configure settings observers
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.registerSettingObserver(settings::TransposeConnectionMatrix.name, this);
+}
+
+View::~View()
+{
+	// Configure settings observers
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.unregisterSettingObserver(settings::TransposeConnectionMatrix.name, this);
 }
 
 void View::mouseMoveEvent(QMouseEvent* event)
@@ -71,6 +83,27 @@ void View::mouseMoveEvent(QMouseEvent* event)
 	selectionModel()->select(index, QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows|QItemSelectionModel::Columns);
 	
 	QTableView::mouseMoveEvent(event);
+}
+
+void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
+{
+	if (name == settings::TransposeConnectionMatrix.name)
+	{
+		_isTransposed = value.toBool();
+		
+		_legend->setTransposed(_isTransposed);
+		
+		if (_isTransposed)
+		{
+			setModel(&_proxy);
+		}
+		else
+		{
+			setModel(_model.get());
+		}
+		
+		repaint();
+	}
 }
 
 void View::onClicked(QModelIndex const& index)
@@ -181,7 +214,7 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 	{
 		auto const entityID = model()->headerData(logicalIndex, header->orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 		auto const streamIndex = model()->headerData(logicalIndex, header->orientation(), Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
-		
+
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
@@ -192,7 +225,7 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 			QString streamName;
 			bool isStreamRunning{false};
 			
-			auto const isInputStreamKind{header->orientation() == Qt::Horizontal};
+			auto const isInputStreamKind{header->orientation() == (_isTransposed ? Qt::Vertical : Qt::Horizontal)};
 			
 			if (isInputStreamKind)
 			{

@@ -68,6 +68,7 @@ set(TOOLKIT_HEADER_FILES
 	toolkit/dynamicHeaderView.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
+	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
 	toolkit/graph/node.hpp

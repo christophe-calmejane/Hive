@@ -31,6 +31,9 @@ class Legend : public QWidget
 	Q_OBJECT
 public:
 	Legend(QWidget* parent = nullptr);
+	
+	void setTransposed(bool const isTransposed);
+	bool isTransposed() const;
 
 private:
 	virtual void paintEvent(QPaintEvent*) override;
@@ -42,6 +45,7 @@ private:
 	QPushButton _button{ "Show Legend", &_buttonContainer };
 	QWidget _horizontalPlaceholder{ this };
 	QWidget _verticalPlaceholder{ this };
+	bool _isTransposed{ false };
 };
 
 

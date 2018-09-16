@@ -25,8 +25,17 @@
 #include <QLabel>
 #include <QPainter>
 
+// TMP
+#include "settingsManager/settings.hpp"
+
 namespace connectionMatrix
 {
+
+QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
+{
+	QStringList headers {{"Talkers", "Listeners"}};
+	return headers.at((static_cast<int>(orientation) + (isTransposed ? 0 : 1)) % 2);
+}
 	
 Legend::Legend(QWidget* parent)
 	: QWidget{parent}
@@ -50,6 +59,14 @@ Legend::Legend(QWidget* parent)
 	_verticalPlaceholder.setFixedWidth(20);
 	
 	// Connect button
+#if 1
+	_button.setCheckable(true);
+	_button.setChecked(settings::SettingsManager::getInstance().getValue(settings::TransposeConnectionMatrix.name).toBool());
+	connect(&_button, &QPushButton::toggled, this, [](bool const checked)
+	{
+		settings::SettingsManager::getInstance().setValue(settings::TransposeConnectionMatrix.name, checked);
+	});
+#else
 	connect(&_button, &QPushButton::clicked, this, [this]()
 	{
 		QDialog dialog;
@@ -121,6 +138,18 @@ Legend::Legend(QWidget* parent)
 		dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "Connection matrix legend");
 		dialog.exec();
 	});
+#endif
+}
+	
+void Legend::setTransposed(bool const isTransposed)
+{
+	_isTransposed = isTransposed;
+	repaint();
+}
+
+bool Legend::isTransposed() const
+{
+	return _isTransposed;
 }
 
 void Legend::paintEvent(QPaintEvent*)
@@ -143,7 +172,7 @@ void Legend::paintEvent(QPaintEvent*)
 		
 		QTextOption options;
 		options.setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
-		painter.drawText(_horizontalPlaceholder.geometry(), "Talkers", options);
+		painter.drawText(_horizontalPlaceholder.geometry(), headerTitle(Qt::Horizontal, _isTransposed), options);
 		
 		painter.restore();
 	}
@@ -164,7 +193,7 @@ void Legend::paintEvent(QPaintEvent*)
 		
 		QTextOption options;
 		options.setAlignment(Qt::AlignCenter | Qt::AlignVCenter);
-		painter.drawText(drawRect, "Listeners", options);
+		painter.drawText(drawRect, headerTitle(Qt::Vertical, _isTransposed), options);
 		
 		painter.restore();
 	}

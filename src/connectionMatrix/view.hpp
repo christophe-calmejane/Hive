@@ -20,6 +20,8 @@
 #pragma once
 
 #include <QTableView>
+#include "settingsManager/settings.hpp"
+#include "toolkit/transposeProxyModel.hpp"
 
 namespace connectionMatrix
 {
@@ -29,7 +31,7 @@ class HeaderView;
 class ItemDelegate;
 class Legend;
 	
-class View final : public QTableView
+class View final : public QTableView, private settings::SettingsManager::Observer
 {
 	using QTableView::setModel;
 	using QTableView::setVerticalHeader;
@@ -37,9 +39,14 @@ class View final : public QTableView
 	
 public:
 	View(QWidget* parent = nullptr);
+	virtual ~View();
 	
 protected:
+	// QTableView overrides
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
+	
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 	
 	Q_SLOT void onClicked(QModelIndex const& index);
 	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
@@ -51,6 +58,9 @@ private:
 	std::unique_ptr<HeaderView> _horizontalHeaderView;
 	std::unique_ptr<ItemDelegate> _itemDelegate;
 	std::unique_ptr<Legend> _legend;
+	
+	qt::toolkit::TransposeProxyModel _proxy;
+	bool _isTransposed{ false };
 };
 
 } // namespace connectionMatrix
