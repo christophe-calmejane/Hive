@@ -160,7 +160,7 @@ private:
 	std::int32_t _redundantStreamOrder{-1};
 };
 
-Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem* talkerItem, HeaderItem* listenerItem)
+Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* talkerItem, HeaderItem const* listenerItem)
 {
 	auto const talkerEntityID{talkerItem->entityID()};
 	auto const listenerEntityID{listenerItem->entityID()};
@@ -339,18 +339,29 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem* talkerIt
 class ConnectionItem : public QStandardItem
 {
 public:
+	virtual void setData(QVariant const& value, int role) override
+	{
+		if (role == Model::ConnectionCapabilitiesRole)
+		{
+			_capabilities = value.value<Model::ConnectionCapabilities>();
+		}
+		else
+		{
+			QStandardItem::setData(value, role);
+		}
+	}
 	virtual QVariant data(int role) const override
 	{
 		if (role == Model::ConnectionCapabilitiesRole)
 		{
-			auto* talkerItem = static_cast<HeaderItem*>(model()->verticalHeaderItem(index().row()));
-			auto* listenerItem = static_cast<HeaderItem*>(model()->horizontalHeaderItem(index().column()));
-			
-			return QVariant::fromValue(computeConnectionCapabilities(talkerItem, listenerItem));
+			return QVariant::fromValue(_capabilities);
 		}
 		
 		return QStandardItem::data(role);
 	}
+	
+private:
+	Model::ConnectionCapabilities _capabilities{Model::ConnectionCapabilities::None};
 };
 
 class ModelPrivate : public QObject
@@ -414,6 +425,12 @@ public:
 						q_ptr->setItem(row, column, connectionItem);
 					}
 				}
+				
+				auto const talkerInfo = talkerSectionInfo(entityID);
+				if (talkerInfo.first >= 0)
+				{
+					talkerDataChanged(talkerInfo);
+				}
 			}
 
 			// Listener
@@ -438,6 +455,12 @@ public:
 						auto* connectionItem = new ConnectionItem;
 						q_ptr->setItem(row, column, connectionItem);
 					}
+				}
+				
+				auto const listenerInfo = listenerSectionInfo(entityID);
+				if (listenerInfo.first >= 0)
+				{
+					listenerDataChanged(listenerInfo);
 				}
 			}
 		}
@@ -655,16 +678,37 @@ public:
 	
 	void talkerDataChanged(QPair<int, int> const& talkerInfo)
 	{
-		auto const topLeftIndex = q_ptr->createIndex(talkerInfo.first, 0);
-		auto const bottomRightIndex = q_ptr->createIndex(talkerInfo.first + talkerInfo.second - 1, q_ptr->columnCount());
-		emit q_ptr->dataChanged(topLeftIndex, bottomRightIndex);
+		auto const topLeft = q_ptr->createIndex(talkerInfo.first, 0);
+		auto const bottomRight = q_ptr->createIndex(talkerInfo.first + talkerInfo.second, q_ptr->columnCount());
+		
+		updateCapabilities(topLeft, bottomRight);
+		
+		emit q_ptr->dataChanged(topLeft, bottomRight);
 	}
 	
 	void listenerDataChanged(QPair<int, int> const& listenerInfo)
 	{
-		auto const topLeftIndex = q_ptr->createIndex(0, listenerInfo.first);
-		auto const bottomRightIndex = q_ptr->createIndex(q_ptr->rowCount(), listenerInfo.first + listenerInfo.second - 1);
-		emit q_ptr->dataChanged(topLeftIndex, bottomRightIndex);
+		auto const topLeft = q_ptr->createIndex(0, listenerInfo.first);
+		auto const bottomRight = q_ptr->createIndex(q_ptr->rowCount(), listenerInfo.first + listenerInfo.second);
+		
+		updateCapabilities(topLeft, bottomRight);
+		
+		emit q_ptr->dataChanged(topLeft, bottomRight);
+	}
+	
+	void updateCapabilities(QModelIndex const& topLeft, QModelIndex const& bottomRight)
+	{
+		for (auto row = topLeft.row(); row < bottomRight.row(); ++row)
+		{
+			auto const* talkerItem = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
+			for (auto column = topLeft.column(); column < bottomRight.column(); ++column)
+			{
+				auto const* listenerItem = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+				auto const capabilities = computeConnectionCapabilities(talkerItem, listenerItem);
+				
+				q_ptr->item(row, column)->setData(QVariant::fromValue(capabilities), Model::ConnectionCapabilitiesRole);
+			}
+		}
 	}
 
 private:
