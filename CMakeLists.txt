@@ -86,7 +86,8 @@ set(ENABLE_AVDECC_STRICT_2018_REDUNDANCY ON CACHE BOOL "Be strict about 'Network
 set(IGNORE_INVALID_CONTROL_DATA_LENGTH ON CACHE BOOL "Allow messages with an invalid advertised 'Control Data Length' field." FORCE)
 set(IGNORE_INVALID_NON_SUCCESS_AEM_RESPONSES ON CACHE BOOL "Allow invalid AEM non-success responses messages." FORCE)
 set(IGNORE_NEITHER_STATIC_NOR_DYNAMIC_MAPPINGS ON CACHE BOOL "Allow Entities not supporting Dynamic Mapping and not adversiting AUDIO_MAP." FORCE)
-set(ALLOW_BIG_AEM_PAYLOADS ON CACHE BOOL "Allow AEM payloads bigger than the allowed 524 bytes." FORCE)
+set(ALLOW_RECV_BIG_AECP_PAYLOADS ON CACHE BOOL "Allow receiving AECP payloads bigger than the allowed 524 bytes." FORCE)
+set(ALLOW_SEND_BIG_AECP_PAYLOADS OFF CACHE BOOL "Allow sending AECP payloads bigger than the allowed 524 bytes." FORCE)
 
 # Include avdecc project
 add_subdirectory(${AVDECC_BASE_FOLDER})

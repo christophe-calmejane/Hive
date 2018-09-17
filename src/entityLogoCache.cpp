@@ -176,7 +176,9 @@ private:
 						)
 				{
 					auto const& dynamicModel{ obj.dynamicModel };
-					manager.readDeviceMemory(entityID, model->startAddress, dynamicModel->length, [this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
+					manager.readDeviceMemory(entityID, model->startAddress, dynamicModel->length, [](la::avdecc::controller::ControlledEntity const* const /*entity*/, float const /*percentComplete*/)
+					{
+					}, [this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
 					{
 						auto image = QImage::fromData(memoryBuffer.data(), memoryBuffer.size());
 

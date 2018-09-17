@@ -758,21 +758,21 @@ private:
 	}
 
 	/* Enumeration and Control Protocol (AECP) AA */
-	virtual void readDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, std::uint64_t const length, la::avdecc::controller::Controller::ReadDeviceMemoryHandler const& handler) const noexcept override
+	virtual void readDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, std::uint64_t const length, la::avdecc::controller::Controller::ReadDeviceMemoryProgressHandler const& progressHandler, la::avdecc::controller::Controller::ReadDeviceMemoryCompletionHandler const& completionHandler) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			controller->readDeviceMemory(targetEntityID, address, length, handler);
+			controller->readDeviceMemory(targetEntityID, address, length, progressHandler, completionHandler);
 		}
 	}
 
-	virtual void writeDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, la::avdecc::controller::Controller::DeviceMemoryBuffer memoryBuffer, la::avdecc::controller::Controller::WriteDeviceMemoryHandler const& handler) const noexcept override
+	virtual void writeDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, la::avdecc::controller::Controller::DeviceMemoryBuffer memoryBuffer, la::avdecc::controller::Controller::WriteDeviceMemoryProgressHandler const& progressHandler, la::avdecc::controller::Controller::WriteDeviceMemoryCompletionHandler const& completionHandler) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			controller->writeDeviceMemory(targetEntityID, address, memoryBuffer, handler);
+			controller->writeDeviceMemory(targetEntityID, address, memoryBuffer, progressHandler, completionHandler);
 		}
 	}
 
