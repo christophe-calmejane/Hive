@@ -445,9 +445,15 @@ public:
 				// Single streams
 				for (auto const& output : configurationNode.streamOutputs)
 				{
-					auto* streamItem = new HeaderItem{Model::NodeType::OutputStream, entityID};
-					streamItem->setStreamIndex(output.first);
-					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), streamItem);
+					auto const& streamIndex{output.first};
+					auto const& streamNode{output.second};
+					
+					if (!streamNode.isRedundant)
+					{
+						auto* streamItem = new HeaderItem{Model::NodeType::OutputStream, entityID};
+						streamItem->setStreamIndex(streamIndex);
+						q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), streamItem);
+					}
 				}
 				
 				// Create new connection items
@@ -502,9 +508,15 @@ public:
 				// Single streams
 				for (auto const& input : configurationNode.streamInputs)
 				{
-					auto* streamItem = new HeaderItem{Model::NodeType::InputStream, entityID};
-					streamItem->setStreamIndex(input.first);
-					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), streamItem);
+					auto const& streamIndex{input.first};
+					auto const& streamNode{input.second};
+					
+					if (!streamNode.isRedundant)
+					{
+						auto* streamItem = new HeaderItem{Model::NodeType::InputStream, entityID};
+						streamItem->setStreamIndex(streamIndex);
+						q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), streamItem);
+					}
 				}
 				
 				// Create new connection cells
