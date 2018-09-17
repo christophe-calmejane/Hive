@@ -49,8 +49,12 @@ protected:
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 	
 	Q_SLOT void onClicked(QModelIndex const& index);
+	Q_SLOT void onCustomContextMenuRequested(QPoint const& pos);
 	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
 	Q_SLOT void onLegendGeometryChanged();
+
+	QVariant talkerData(QModelIndex const& index, int role) const;
+	QVariant listenerData(QModelIndex const& index, int role) const;
 	
 private:
 	std::unique_ptr<Model> _model;

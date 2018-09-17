@@ -56,6 +56,9 @@ View::View(QWidget* parent)
 	setPalette(p);
 	
 	connect(this, &QTableView::clicked, this, &View::onClicked);
+
+	setContextMenuPolicy(Qt::CustomContextMenu);
+	connect(this, &QTableView::customContextMenuRequested, this, &View::onCustomContextMenuRequested);
 	
 	verticalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(verticalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
@@ -116,12 +119,12 @@ void View::onClicked(QModelIndex const& index)
 	try
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
-		
-		auto const talkerNodeType = model()->headerData(index.row(), Qt::Vertical, Model::NodeTypeRole).value<Model::NodeType>();
-		auto const listenerNodeType = model()->headerData(index.column(), Qt::Horizontal, Model::NodeTypeRole).value<Model::NodeType>();
-		
-		auto const talkerID = model()->headerData(index.row(), Qt::Vertical, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
-		auto const listenerID = model()->headerData(index.column(), Qt::Horizontal, Model::NodeTypeRole).value<la::avdecc::UniqueIdentifier>();
+
+		auto talkerNodeType = talkerData(index, Model::NodeTypeRole).value<Model::NodeType>();
+		auto listenerNodeType = listenerData(index, Model::NodeTypeRole).value<Model::NodeType>();
+
+		auto talkerID = talkerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+		auto listenerID = listenerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 
 		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream)
 				|| (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
@@ -130,16 +133,16 @@ void View::onClicked(QModelIndex const& index)
 
 			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
-				auto const talkerStreamIndex = model()->headerData(index.row(), Qt::Vertical, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
-				auto const listenerStreamIndex = model()->headerData(index.column(), Qt::Horizontal, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 				
 				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
-					manager.disconnectStream(talkerID,talkerStreamIndex, listenerID, listenerStreamIndex);
+					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
 				else
 				{
-					manager.connectStream(talkerID,talkerStreamIndex, listenerID, listenerStreamIndex);
+					manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
 			}
 		}
@@ -168,8 +171,8 @@ void View::onClicked(QModelIndex const& index)
 				auto const& listenerEntityNode = listenerEntity->getEntityNode();
 				auto const& listenerEntityInfo = listenerEntity->getEntity();
 				
-				auto const talkerRedundantIndex = model()->headerData(index.row(), Qt::Vertical, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
-				auto const listenerRedundantIndex = model()->headerData(index.column(), Qt::Horizontal, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
+				auto const talkerRedundantIndex = talkerData(index, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
+				auto const listenerRedundantIndex = listenerData(index, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
 
 				auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerRedundantIndex);
 				auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerRedundantIndex);
@@ -198,6 +201,81 @@ void View::onClicked(QModelIndex const& index)
 					++listenerIt;
 				}
 			}
+		}
+	}
+	catch (...)
+	{
+	}
+}
+
+void View::onCustomContextMenuRequested(QPoint const& pos)
+{
+	try
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+
+		auto const index = indexAt(pos);
+		if (!index.isValid())
+		{
+			return;
+		}
+
+		auto talkerNodeType = talkerData(index, Model::NodeTypeRole).value<Model::NodeType>();
+		auto listenerNodeType = listenerData(index, Model::NodeTypeRole).value<Model::NodeType>();
+
+		auto talkerID = talkerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+		auto listenerID = listenerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+
+		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream)
+				|| (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
+		{
+			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
+
+#pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
+			if (caps != Model::ConnectionCapabilities::None && la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::WrongFormat))
+			{
+				QMenu menu;
+
+				auto* matchTalkerAction = menu.addAction("Match formats using Talker");
+				auto* matchListenerAction = menu.addAction("Match formats using Listener");
+				menu.addSeparator();
+				menu.addAction("Cancel");
+
+#pragma message("TODO: setEnabled() based on format compatibility -> If talker can be set from listener, and vice versa.")
+				matchTalkerAction->setEnabled(true);
+				matchListenerAction->setEnabled(true);
+
+				if (auto* action = menu.exec(viewport()->mapToGlobal(pos)))
+				{
+					auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+					auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+
+					if (action == matchTalkerAction)
+					{
+						auto talkerEntity = manager.getControlledEntity(talkerID);
+						if (talkerEntity)
+						{
+							auto const& talkerEntityNode = talkerEntity->getEntityNode();
+							auto const& talkerStreamNode = talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
+							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode.dynamicModel->currentFormat);
+						}
+					}
+					else if (action == matchListenerAction)
+					{
+						auto listenerEntity = manager.getControlledEntity(listenerID);
+						if (listenerEntity)
+						{
+							auto const& listenerEntityNode = listenerEntity->getEntityNode();
+							auto const& listenerStreamNode = listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
+							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode.dynamicModel->currentFormat);
+						}
+					}
+				}
+			}
+		}
+		else if (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
+		{
+			// TODO
 		}
 	}
 	catch (...)
@@ -322,6 +400,30 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 void View::onLegendGeometryChanged()
 {
 	_legend->setGeometry(0, 0, verticalHeader()->width(), horizontalHeader()->height());
+}
+
+QVariant View::talkerData(QModelIndex const& index, int role) const
+{
+	if (_isTransposed)
+	{
+		return model()->headerData(index.column(), Qt::Horizontal, role);
+	}
+	else
+	{
+		return model()->headerData(index.row(), Qt::Vertical, role);
+	}
+}
+
+QVariant View::listenerData(QModelIndex const& index, int role) const
+{
+	if (_isTransposed)
+	{
+		return model()->headerData(index.row(), Qt::Vertical, role);
+	}
+	else
+	{
+		return model()->headerData(index.column(), Qt::Horizontal, role);
+	}
 }
 
 } // namespace connectionMatrix
