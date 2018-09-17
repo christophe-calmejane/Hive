@@ -87,8 +87,15 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			break;
 		case Model::NodeType::InputStream:
 		case Model::NodeType::OutputStream:
+		case Model::NodeType::RedundantInput:
+		case Model::NodeType::RedundantOutput:
 			backgroundBrush = QColor{ 0x7B1FA2 };
 			nodeLevel = 1;
+			break;
+		case Model::NodeType::RedundantInputStream:
+		case Model::NodeType::RedundantOutputStream:
+			backgroundBrush = QColor{ 0xBA68C8 };
+			nodeLevel = 2;
 			break;
 		default:
 			assert(false && "NodeType not handled");
@@ -177,26 +184,57 @@ QSize HeaderView::sizeHint() const
 
 void HeaderView::handleSectionClicked(int logicalIndex)
 {
-	auto const nodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
+	auto const sectionNodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
 	
-	if (nodeType == Model::NodeType::Entity)
+	auto const isValidSubSectionNodeType = [sectionNodeType](Model::NodeType const subSectionNodeType)
+	{
+		switch (sectionNodeType)
+		{
+			case Model::NodeType::Entity:
+				return
+				subSectionNodeType == Model::NodeType::InputStream ||
+				subSectionNodeType == Model::NodeType::OutputStream ||
+				subSectionNodeType == Model::NodeType::RedundantInput ||
+				subSectionNodeType == Model::NodeType::RedundantOutput ||
+				subSectionNodeType == Model::NodeType::RedundantInputStream ||
+				subSectionNodeType == Model::NodeType::RedundantOutputStream;
+			case Model::NodeType::RedundantInput:
+				return subSectionNodeType == Model::NodeType::RedundantInputStream;
+			case Model::NodeType::RedundantOutput:
+				return subSectionNodeType == Model::NodeType::RedundantOutputStream;
+			default:
+				return false;
+		}
+	};
+	
+	auto const checkState = !model()->headerData(logicalIndex, orientation(), Qt::CheckStateRole).toBool();
+	model()->setHeaderData(logicalIndex, orientation(), checkState, Qt::CheckStateRole);
+	
+	if (sectionNodeType == Model::NodeType::Entity || sectionNodeType == Model::NodeType::RedundantInput || sectionNodeType == Model::NodeType::RedundantOutput)
 	{
 		auto const sectionEntityID = model()->headerData(logicalIndex, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 		
 		for (auto index = logicalIndex + 1; index < count(); ++index)
 		{
-			auto const entityID = model()->headerData(index, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+			auto const subSectionNodeType = model()->headerData(index, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
+			auto const subSectionEntityID = model()->headerData(index, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 			
-			// We've reached another entity?
-			if (entityID != sectionEntityID)
+			// We've reached another node type?
+			if (!isValidSubSectionNodeType(subSectionNodeType))
 			{
 				break;
 			}
 			
-			setSectionHidden(index, !isSectionHidden(index));
+			// We've reached another entity?
+			if (sectionEntityID != subSectionEntityID)
+			{
+				break;
+			}
+			
+			model()->setHeaderData(index, orientation(), checkState, Qt::CheckStateRole);
+			setSectionHidden(index, checkState);
 		}
 	}
 }
-
 
 } // namespace connectionMatrix

@@ -136,15 +136,23 @@ public:
 						return QString::fromStdString(entityNode.dynamicModel->entityName);
 					}
 				}
-				else if (_nodeType == Model::NodeType::InputStream)
+				else if (_nodeType == Model::NodeType::InputStream || _nodeType == Model::NodeType::RedundantInputStream)
 				{
 					auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
 					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
 				}
-				else if (_nodeType == Model::NodeType::OutputStream)
+				else if (_nodeType == Model::NodeType::OutputStream || _nodeType == Model::NodeType::RedundantOutputStream)
 				{
 					auto const& streamNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
 					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
+				}
+				else if (_nodeType == Model::NodeType::RedundantInput)
+				{
+					return QString{"Redundant Stream Input %1"}.arg(QString::number(_redundantIndex));
+				}
+				else if (_nodeType == Model::NodeType::RedundantOutput)
+				{
+					return QString{"Redundant Stream Output %1"}.arg(QString::number(_redundantIndex));
 				}
 			}
 		}
@@ -409,6 +417,32 @@ public:
 				auto* entityItem = new HeaderItem(Model::NodeType::Entity, entityID);
 				q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), entityItem);
 				
+				// Redundant streams
+				for (auto const& output : configurationNode.redundantStreamOutputs)
+				{
+					auto const& redundantIndex{output.first};
+					auto const& redundantNode{output.second};
+					
+					auto* redundantItem = new HeaderItem(Model::NodeType::RedundantOutput, entityID);
+					redundantItem->setRedundantIndex(redundantIndex);
+					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), redundantItem);
+
+					std::int32_t redundantStreamOrder{0};
+					for (auto const& streamKV : redundantNode.redundantStreams)
+					{
+						auto const& streamIndex{streamKV.first};
+						
+						auto* redundantStreamItem = new HeaderItem(Model::NodeType::RedundantOutputStream, entityID);
+						redundantStreamItem->setStreamIndex(streamIndex);
+						redundantStreamItem->setRedundantIndex(redundantIndex);
+						redundantStreamItem->setRedundantStreamOrder(redundantStreamOrder);
+						q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), redundantStreamItem);
+						
+						++redundantStreamOrder;
+					}
+				}
+				
+				// Single streams
 				for (auto const& output : configurationNode.streamOutputs)
 				{
 					auto* streamItem = new HeaderItem{Model::NodeType::OutputStream, entityID};
@@ -440,10 +474,36 @@ public:
 				auto* entityItem = new HeaderItem{Model::NodeType::Entity, entityID};
 				q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), entityItem);
 				
-				for (auto const& output : configurationNode.streamInputs)
+				// Redundant streams
+				for (auto const& input : configurationNode.redundantStreamInputs)
+				{
+					auto const& redundantIndex{input.first};
+					auto const& redundantNode{input.second};
+					
+					auto* redundantItem = new HeaderItem(Model::NodeType::RedundantInput, entityID);
+					redundantItem->setRedundantIndex(redundantIndex);
+					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), redundantItem);
+					
+					std::int32_t redundantStreamOrder{0};
+					for (auto const& streamKV : redundantNode.redundantStreams)
+					{
+						auto const& streamIndex{streamKV.first};
+						
+						auto* redundantStreamItem = new HeaderItem(Model::NodeType::RedundantInputStream, entityID);
+						redundantStreamItem->setStreamIndex(streamIndex);
+						redundantStreamItem->setRedundantIndex(redundantIndex);
+						redundantStreamItem->setRedundantStreamOrder(redundantStreamOrder);
+						q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), redundantStreamItem);
+						
+						++redundantStreamOrder;
+					}
+				}
+				
+				// Single streams
+				for (auto const& input : configurationNode.streamInputs)
 				{
 					auto* streamItem = new HeaderItem{Model::NodeType::InputStream, entityID};
-					streamItem->setStreamIndex(output.first);
+					streamItem->setStreamIndex(input.first);
 					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), streamItem);
 				}
 				
