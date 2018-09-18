@@ -50,10 +50,15 @@ private:
 		MemoryObjectAddress,
 		EntityName,
 		OperationID,
-		IsStoreOperation,
+		UpdateState,
 	};
 
-	void scheduleUpload(EntityInfo const& entityInfo);
+	bool areAllDone() const noexcept;
+	void checkAllDone() noexcept;
+	std::tuple<size_t, size_t, size_t> getCounts() const noexcept;
+	void scheduleUpload(EntityInfo const& entityInfo) noexcept;
+	virtual void closeEvent(QCloseEvent* event) override;
+	virtual void reject() override;
 	
 	Q_SLOT void on_startPushButton_clicked();
 	Q_SLOT void on_abortPushButton_clicked();
