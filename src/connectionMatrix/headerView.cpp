@@ -207,7 +207,7 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 		}
 	};
 	
-	auto const checkState = !model()->headerData(logicalIndex, orientation(), Qt::CheckStateRole).toBool();
+	auto const checkState = model()->headerData(logicalIndex, orientation(), Qt::CheckStateRole).toBool();
 	model()->setHeaderData(logicalIndex, orientation(), checkState, Qt::CheckStateRole);
 	
 	if (sectionNodeType == Model::NodeType::Entity || sectionNodeType == Model::NodeType::RedundantInput || sectionNodeType == Model::NodeType::RedundantOutput)
@@ -218,21 +218,21 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 		{
 			auto const subSectionNodeType = model()->headerData(index, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
 			auto const subSectionEntityID = model()->headerData(index, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
-			
+
+			// We've reached another entity?
+			if (sectionEntityID != subSectionEntityID)
+			{
+				break;
+			}
+
 			// We've reached another node type?
 			if (!isValidSubSectionNodeType(subSectionNodeType))
 			{
 				break;
 			}
 			
-			// We've reached another entity?
-			if (sectionEntityID != subSectionEntityID)
-			{
-				break;
-			}
-			
 			model()->setHeaderData(index, orientation(), checkState, Qt::CheckStateRole);
-			setSectionHidden(index, checkState);
+			//setSectionHidden(index, !checkState);
 		}
 	}
 }

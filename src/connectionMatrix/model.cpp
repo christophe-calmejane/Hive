@@ -404,6 +404,11 @@ public:
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
 		{
+			if (!la::avdecc::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			{
+				return;
+			}
+
 			auto const& entityNode = controlledEntity->getEntityNode();
 			auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
 			
@@ -612,7 +617,14 @@ public:
 			auto const talkerInfo = talkerSectionInfo(entityID);
 			if (talkerInfo.first >= 0)
 			{
-				talkerDataChanged({talkerInfo.first, 0});
+				for (auto row = talkerInfo.first; row < talkerInfo.first + talkerInfo.second; ++row)
+				{
+					auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
+					if (item->nodeType() == Model::NodeType::OutputStream && item->streamIndex() == streamIndex)
+					{
+						talkerDataChanged({row, 1});
+					}
+				}
 			}
 		}
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
@@ -621,7 +633,14 @@ public:
 			auto const listenerInfo = listenerSectionInfo(entityID);
 			if (listenerInfo.first >= 0)
 			{
-				listenerDataChanged({listenerInfo.first, 0});
+				for (auto column = listenerInfo.first; column < listenerInfo.first + listenerInfo.second; ++column)
+				{
+					auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+					if (item->nodeType() == Model::NodeType::InputStream && item->streamIndex() == streamIndex)
+					{
+						listenerDataChanged({column, 1});
+					}
+				}
 			}
 		}
 	}
