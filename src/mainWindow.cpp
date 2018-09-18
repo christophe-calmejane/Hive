@@ -44,8 +44,6 @@
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
 
-Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type);
-
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
 	, _controllerModel(new avdecc::ControllerModel(this))
