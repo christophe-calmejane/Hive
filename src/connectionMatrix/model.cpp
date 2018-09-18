@@ -274,9 +274,9 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 				return computeCapabilities(atLeastOneConnected ? ConnectState::Connected : ConnectState::NotConnected, allConnected, allCompatibleFormat, allDomainCompatible);
 			}
 			else if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream)
-							 || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantOutputStream)
-							 || (talkerNodeType ==Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
-							 || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
+							 || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream)
+							 || (talkerNodeType ==Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInputStream)
+							 || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInput))
 			{
 				la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
 				la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
