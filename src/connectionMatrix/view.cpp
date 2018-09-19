@@ -92,6 +92,9 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 {
 	if (name == settings::TransposeConnectionMatrix.name)
 	{
+		auto const verticalSectionState = _verticalHeaderView->saveSectionState();
+		auto const horizontalSectionState = _horizontalHeaderView->saveSectionState();
+
 		_isTransposed = value.toBool();
 		
 		_itemDelegate->setTransposed(_isTransposed);
@@ -109,6 +112,9 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		{
 			setModel(_model.get());
 		}
+
+		_verticalHeaderView->restoreSectionState(horizontalSectionState);
+		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
 		repaint();
 	}

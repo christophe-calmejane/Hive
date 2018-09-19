@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QHeaderView>
+#include <QVector>
 
 namespace connectionMatrix
 {
@@ -27,7 +28,16 @@ namespace connectionMatrix
 class HeaderView final : public QHeaderView
 {
 public:
+	struct SectionState
+	{
+		bool isExpanded{true};
+		bool isVisible{true};
+	};
+
 	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
+
+	QVector<SectionState> saveSectionState() const;
+	void restoreSectionState(QVector<SectionState> const& sectionState);
 	
 private:
 	virtual void leaveEvent(QEvent* event) override;
@@ -36,8 +46,12 @@ private:
 	virtual void paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const override;
 	
 	virtual QSize sizeHint() const override;
-	
+
+	Q_SLOT void handleSectionCountChanged(int oldCount, int newCount);
 	Q_SLOT void handleSectionClicked(int logicalIndex);
+
+private:
+	QVector<SectionState> _sectionState{};
 };
 
 } // namespace connectionMatrix

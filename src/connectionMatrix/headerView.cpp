@@ -35,8 +35,33 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	setSectionsClickable(true);
 	setDefaultSectionSize(20);
 	setAttribute(Qt::WA_Hover);
-	
+
+	connect(this, &QHeaderView::sectionCountChanged, this, &HeaderView::handleSectionCountChanged);
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
+}
+
+QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
+{
+	return _sectionState;
+}
+
+void HeaderView::restoreSectionState(QVector<SectionState> const& state)
+{
+	AVDECC_ASSERT(state.count() == count(), "Invalid state");
+
+	for (auto i = 0; i < state.count(); ++i)
+	{
+		if (state[i].isVisible)
+		{
+			showSection(i);
+		}
+		else
+		{
+			hideSection(i);
+		}
+	}
+
+	_sectionState = state;
 }
 
 void HeaderView::leaveEvent(QEvent* event)
@@ -45,7 +70,7 @@ void HeaderView::leaveEvent(QEvent* event)
 	{
 		selectionModel()->clearSelection();
 	}
-	
+
 	QHeaderView::leaveEvent(event);
 }
 
@@ -74,12 +99,12 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 {
 	painter->save();
 	painter->setRenderHint(QPainter::Antialiasing);
-	
+
 	QBrush backgroundBrush{};
 
 	auto const nodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
 	auto nodeLevel{0};
-	
+
 	switch (nodeType)
 	{
 		case Model::NodeType::Entity:
@@ -104,7 +129,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	}
 
 	auto const arrowSize{ 10 };
-	auto const arrowOffset{ 25 * nodeLevel };
+	auto const arrowOffset{ 20 * nodeLevel };
 
 	auto isSelected{false};
 
@@ -116,7 +141,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
 		path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
 		path.lineTo(rect.topRight());
-		
+
 		isSelected = selectionModel()->isColumnSelected(logicalIndex, {});
 	}
 	else
@@ -126,7 +151,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
 		path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
 		path.lineTo(rect.bottomLeft());
-		
+
 		isSelected = selectionModel()->isRowSelected(logicalIndex, {});
 	}
 
@@ -155,7 +180,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	auto const text = model()->headerData(logicalIndex, orientation(), Qt::DisplayRole).toString();
 	auto const elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
-	
+
 	auto const isStreamingWait = model()->headerData(logicalIndex, orientation(), Model::StreamWaitingRole).toBool();
 	if (isStreamingWait)
 	{
@@ -181,58 +206,67 @@ QSize HeaderView::sizeHint() const
 		return {200, defaultSectionSize()};
 	}
 }
+void HeaderView::handleSectionCountChanged(int oldCount, int newCount)
+{
+	_sectionState.resize(newCount);
+}
 
 void HeaderView::handleSectionClicked(int logicalIndex)
 {
-	auto const sectionNodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
-	
-	auto const isValidSubSectionNodeType = [sectionNodeType](Model::NodeType const subSectionNodeType)
+	auto const parentType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
+
+	auto const isValidSubSectionNodeType = [](Model::NodeType const parentType, Model::NodeType const childType)
 	{
-		switch (sectionNodeType)
+		switch (parentType)
 		{
 			case Model::NodeType::Entity:
 				return
-				subSectionNodeType == Model::NodeType::InputStream ||
-				subSectionNodeType == Model::NodeType::OutputStream ||
-				subSectionNodeType == Model::NodeType::RedundantInput ||
-				subSectionNodeType == Model::NodeType::RedundantOutput ||
-				subSectionNodeType == Model::NodeType::RedundantInputStream ||
-				subSectionNodeType == Model::NodeType::RedundantOutputStream;
+					childType == Model::NodeType::InputStream ||
+					childType == Model::NodeType::OutputStream ||
+					childType == Model::NodeType::RedundantInput ||
+					childType == Model::NodeType::RedundantOutput ||
+					childType == Model::NodeType::RedundantInputStream ||
+					childType == Model::NodeType::RedundantOutputStream;
 			case Model::NodeType::RedundantInput:
-				return subSectionNodeType == Model::NodeType::RedundantInputStream;
+				return childType == Model::NodeType::RedundantInputStream;
 			case Model::NodeType::RedundantOutput:
-				return subSectionNodeType == Model::NodeType::RedundantOutputStream;
+				return childType == Model::NodeType::RedundantOutputStream;
 			default:
 				return false;
 		}
 	};
-	
-	auto const checkState = model()->headerData(logicalIndex, orientation(), Qt::CheckStateRole).toBool();
-	model()->setHeaderData(logicalIndex, orientation(), checkState, Qt::CheckStateRole);
-	
-	if (sectionNodeType == Model::NodeType::Entity || sectionNodeType == Model::NodeType::RedundantInput || sectionNodeType == Model::NodeType::RedundantOutput)
+
+	// Toggle the section expand state
+	auto const isExpanded = !_sectionState[logicalIndex].isExpanded;
+	_sectionState[logicalIndex].isExpanded = isExpanded;
+
+	// Not all types are collapsible
+	if (parentType == Model::NodeType::Entity || parentType == Model::NodeType::RedundantInput || parentType == Model::NodeType::RedundantOutput)
 	{
-		auto const sectionEntityID = model()->headerData(logicalIndex, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
-		
+		auto const parentEntityID = model()->headerData(logicalIndex, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+
 		for (auto index = logicalIndex + 1; index < count(); ++index)
 		{
-			auto const subSectionNodeType = model()->headerData(index, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
-			auto const subSectionEntityID = model()->headerData(index, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+			auto const childType = model()->headerData(index, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
+			auto const childEntityID = model()->headerData(index, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 
-			// We've reached another entity?
-			if (sectionEntityID != subSectionEntityID)
+			// We've reached another entity or an invalid node type?
+			if (parentEntityID != childEntityID || !isValidSubSectionNodeType(parentType, childType))
 			{
 				break;
 			}
 
-			// We've reached another node type?
-			if (!isValidSubSectionNodeType(subSectionNodeType))
+			_sectionState[index].isExpanded = isExpanded;
+			_sectionState[index].isVisible = isExpanded;
+
+			if (isExpanded)
 			{
-				break;
+				showSection(index);
 			}
-			
-			model()->setHeaderData(index, orientation(), checkState, Qt::CheckStateRole);
-			//setSectionHidden(index, !checkState);
+			else
+			{
+				hideSection(index);
+			}
 		}
 	}
 }
