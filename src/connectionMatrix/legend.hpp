@@ -19,27 +19,34 @@
 
 #pragma once
 
-#include <QDialog>
+#include <QWidget>
+#include <QLayout>
+#include <QPushButton>
 
-class SettingsDialogImpl;
-class SettingsDialog : public QDialog
+namespace connectionMatrix
+{
+
+class Legend : public QWidget
 {
 	Q_OBJECT
 public:
-	SettingsDialog(QWidget* parent = nullptr);
-	virtual ~SettingsDialog() noexcept;
-
-	// Deleted compiler auto-generated methods
-	SettingsDialog(SettingsDialog&&) = delete;
-	SettingsDialog(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog&&) = delete;
+	Legend(QWidget* parent = nullptr);
+	
+	void setTransposed(bool const isTransposed);
+	bool isTransposed() const;
 
 private:
-	Q_SLOT void on_automaticPNGDownloadCheckBox_toggled(bool checked);
-	Q_SLOT void on_clearLogoCacheButton_clicked();
-	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
-	Q_SLOT void on_transposeConnectionMatrixCheckBox_toggled(bool checked);
-
-	SettingsDialogImpl* _pImpl{ nullptr };
+	virtual void paintEvent(QPaintEvent*) override;
+	
+private:
+	QGridLayout _layout{ this };
+	QWidget _buttonContainer{ this };
+	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
+	QPushButton _button{ "Show Legend", &_buttonContainer };
+	QWidget _horizontalPlaceholder{ this };
+	QWidget _verticalPlaceholder{ this };
+	bool _isTransposed{ false };
 };
+
+
+} // namespace connectionMatrix

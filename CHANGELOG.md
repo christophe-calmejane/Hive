@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - [SetName for AudioUnit, AvbInterface, ClockSource, MemoryObject, AudioCluster and ClockDomain](https://github.com/christophe-calmejane/Hive/issues/7)
 - Support for firmware update
+- [Option to invert the talkers and listeners in connection matrix](https://github.com/christophe-calmejane/Hive/issues/13)
 
 ### Changed
 - Updated la_avdecc to v2.7.0

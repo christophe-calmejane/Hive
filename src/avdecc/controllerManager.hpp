@@ -23,10 +23,6 @@
 #include <memory>
 #include <QObject>
 
-Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
-Q_DECLARE_METATYPE(la::avdecc::entity::model::DescriptorIndex)
-Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
-
 namespace avdecc
 {
 

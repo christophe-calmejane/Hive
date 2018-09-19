@@ -27,6 +27,8 @@
 #include <algorithm>
 #include <array>
 
+Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+
 enum class ControllerModelColumn
 {
 	EntityLogo,

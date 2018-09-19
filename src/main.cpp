@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
 	settings.registerSetting(settings::LastLaunchedVersion);
 	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
 	settings.registerSetting(settings::AemCacheEnabled);
+	settings.registerSetting(settings::TransposeConnectionMatrix);
 
 	QPixmap logo(":/Logo.png");
 	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);

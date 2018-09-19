@@ -19,27 +19,24 @@
 
 #pragma once
 
-#include <QDialog>
+#include <QAbstractItemDelegate>
 
-class SettingsDialogImpl;
-class SettingsDialog : public QDialog
+namespace connectionMatrix
 {
-	Q_OBJECT
-public:
-	SettingsDialog(QWidget* parent = nullptr);
-	virtual ~SettingsDialog() noexcept;
 
-	// Deleted compiler auto-generated methods
-	SettingsDialog(SettingsDialog&&) = delete;
-	SettingsDialog(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog const&) = delete;
-	SettingsDialog& operator=(SettingsDialog&&) = delete;
+class ItemDelegate final : public QAbstractItemDelegate
+{
+public:
+	void setTransposed(bool const isTransposed);
+	bool isTransposed() const;
+	
+private:
+	virtual void paint(QPainter *painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+	virtual QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 
 private:
-	Q_SLOT void on_automaticPNGDownloadCheckBox_toggled(bool checked);
-	Q_SLOT void on_clearLogoCacheButton_clicked();
-	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
-	Q_SLOT void on_transposeConnectionMatrixCheckBox_toggled(bool checked);
-
-	SettingsDialogImpl* _pImpl{ nullptr };
+	bool _isTransposed{ false };
 };
+
+
+} // namespace connectionMatrix

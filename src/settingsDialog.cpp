@@ -47,6 +47,12 @@ public:
 			QSignalBlocker lock(enableAEMCacheCheckBox);
 			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::AemCacheEnabled.name).toBool());
 		}
+		
+		// Transpose Connection Matrix
+		{
+			QSignalBlocker lock(transposeConnectionMatrixCheckBox);
+			transposeConnectionMatrixCheckBox->setChecked(settings.getValue(settings::TransposeConnectionMatrix.name).toBool());
+		}
 	}
 };
 
@@ -66,7 +72,6 @@ SettingsDialog::~SettingsDialog() noexcept
 void SettingsDialog::on_automaticPNGDownloadCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
-	
 	settings.setValue(settings::AutomaticPNGDownloadEnabled.name, checked);
 }
 
@@ -79,6 +84,12 @@ void SettingsDialog::on_clearLogoCacheButton_clicked()
 void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
-
 	settings.setValue(settings::AemCacheEnabled.name, checked);
 }
+
+void SettingsDialog::on_transposeConnectionMatrixCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::TransposeConnectionMatrix.name, checked);
+}
+

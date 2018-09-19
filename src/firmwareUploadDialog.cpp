@@ -25,6 +25,7 @@ enum class UpdateState
 };
 
 Q_DECLARE_METATYPE(UpdateState)
+Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 class UploadWidget : public QWidget
 {

@@ -65,10 +65,10 @@ endif()
 # Toolkit header files
 set(TOOLKIT_HEADER_FILES
 	toolkit/comboBox.hpp
-	toolkit/matrixTreeView.hpp
 	toolkit/dynamicHeaderView.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
+	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
 	toolkit/graph/node.hpp
@@ -80,7 +80,6 @@ set(TOOLKIT_HEADER_FILES
 # Toolkit source files
 set(TOOLKIT_SOURCE_FILES
 	toolkit/comboBox.cpp
-	toolkit/matrixTreeView.cpp
 	toolkit/dynamicHeaderView.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
@@ -162,6 +161,26 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 	aboutDialog.ui
 )
 
+# Connection Matriw header files
+set(CONNECTION_MATRIX_HEADER_FILES
+	connectionMatrix/headerView.hpp
+	connectionMatrix/itemDelegate.hpp
+	connectionMatrix/legend.hpp
+	connectionMatrix/model.hpp
+	connectionMatrix/paintHelper.hpp
+	connectionMatrix/view.hpp
+)
+
+# Connection Matrix source files
+set(CONNECTION_MATRIX_SOURCE_FILES
+	connectionMatrix/headerView.cpp
+	connectionMatrix/itemDelegate.cpp
+	connectionMatrix/legend.cpp
+	connectionMatrix/model.cpp
+	connectionMatrix/paintHelper.cpp
+	connectionMatrix/view.cpp
+)
+
 # Logger View header files
 set(LOGGER_VIEW_HEADER_FILES
 	loggerView.hpp
@@ -230,8 +249,6 @@ set(MAIN_WINDOW_RESOURCE_FILES
 
 # Common Header files
 set(COMMON_HEADER_FILES
-	connectionMatrix.hpp
-	connectionMatrix.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	entityLogoCache.hpp
@@ -248,7 +265,6 @@ set(COMMON_SOURCE_FILES
 	entityLogoCache.cpp
 	imageItemDelegate.cpp
 	main.cpp
-	connectionMatrix.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
 	nodeTreeWidget.cpp
@@ -270,6 +286,7 @@ source_group("Header Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_W
 source_group("Header Files\\Avdecc Helper" FILES ${AVDECC_HELPER_HEADER_FILES})
 source_group("Header Files\\About Dialog" FILES ${ABOUT_DIALOG_HEADER_FILES})
 source_group("Header Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_HEADER_FILES})
+source_group("Header Files\\Connection Matrix" FILES ${CONNECTION_MATRIX_HEADER_FILES})
 source_group("Header Files\\Logger View" FILES ${LOGGER_VIEW_HEADER_FILES})
 source_group("Header Files\\Settings" FILES ${SETTINGS_HEADER_FILES})
 source_group("Header Files\\Updater" FILES ${UPDATER_HEADER_FILES})
@@ -281,6 +298,7 @@ source_group("Source Files\\Toolkit" FILES ${TOOLKIT_SOURCE_FILES})
 source_group("Source Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES})
 source_group("Source Files\\Avdecc Helper" FILES ${AVDECC_HELPER_SOURCE_FILES})
 source_group("Source Files\\About Dialog" FILES ${ABOUT_DIALOG_SOURCE_FILES})
+source_group("Source Files\\Connection Matrix" FILES ${CONNECTION_MATRIX_SOURCE_FILES})
 source_group("Source Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Logger View" FILES ${LOGGER_VIEW_SOURCE_FILES})
 source_group("Source Files\\Updater" FILES ${UPDATER_SOURCE_FILES})
@@ -301,6 +319,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${NODETREE_DYNAMIC_WIDGETS_HEADER_FILES}
 	${AVDECC_HELPER_HEADER_FILES}
 	${ABOUT_DIALOG_HEADER_FILES}
+	${CONNECTION_MATRIX_HEADER_FILES}
 	${SETTINGS_DIALOG_HEADER_FILES}
 	${LOGGER_VIEW_HEADER_FILES}
 	${SETTINGS_HEADER_FILES}
@@ -313,6 +332,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES}
 	${AVDECC_HELPER_SOURCE_FILES}
 	${ABOUT_DIALOG_SOURCE_FILES}
+	${CONNECTION_MATRIX_SOURCE_FILES}
 	${SETTINGS_DIALOG_SOURCE_FILES}
 	${LOGGER_VIEW_SOURCE_FILES}
 	${SETTINGS_SOURCE_FILES}

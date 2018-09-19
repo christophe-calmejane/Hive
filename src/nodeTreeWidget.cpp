@@ -45,6 +45,8 @@
 
 #include "painterHelper.hpp"
 
+Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+
 class Label : public QWidget
 {
 	Q_OBJECT
