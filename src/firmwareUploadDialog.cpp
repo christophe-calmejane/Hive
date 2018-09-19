@@ -305,13 +305,16 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 
 					// Write the firmware to the MemoryObject
 					auto& manager = avdecc::ControllerManager::getInstance();
-					manager.writeDeviceMemory(entityID, memoryObjectAddress, _firmwareData, [widget, this](la::avdecc::controller::ControlledEntity const* const /*entity*/, float const percentComplete)
+					manager.writeDeviceMemory(entityID, memoryObjectAddress, _firmwareData, [widget, this, item](la::avdecc::controller::ControlledEntity const* const /*entity*/, float const percentComplete)
 					{
 						// Upload progress
 						QMetaObject::invokeMethod(widget, [this, widget, percentComplete]()
 						{
 							widget->setProgress(static_cast<int>(percentComplete));
 						}, Qt::QueuedConnection);
+
+						// Not the cleanest code, we directly access item's data in another thread without locking (should be fine though)
+						return item->data(la::avdecc::to_integral(ItemRole::UpdateState)).value<UpdateState>() == UpdateState::Failed;
 					}, [widget, this, entityName, item, entityID, descriptorIndex](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
 					{
 						// Upload complete
@@ -365,9 +368,6 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 
 void FirmwareUploadDialog::on_abortPushButton_clicked()
 {
-	_ui->startPushButton->setEnabled(true);
-	_ui->abortPushButton->setEnabled(false);
-	
 	auto& manager = avdecc::ControllerManager::getInstance();
 
 	for (auto row = 0; row < _ui->listWidget->count(); ++row)
@@ -381,9 +381,10 @@ void FirmwareUploadDialog::on_abortPushButton_clicked()
 		auto const operationID = item->data(la::avdecc::to_integral(ItemRole::OperationID)).value<la::avdecc::entity::model::OperationID>();
 
 		widget->setText(QString("%1: Aborted").arg(entityName));
+		item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
 		manager.abortOperation(entityID, la::avdecc::entity::model::DescriptorType::MemoryObject, descriptorIndex, operationID, [](la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const /*descriptorType*/, la::avdecc::entity::model::DescriptorIndex const /*descriptorIndex*/, la::avdecc::entity::model::OperationID const /*operationID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
 		{
 		});
-
 	}
+	checkAllDone();
 }
