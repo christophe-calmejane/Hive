@@ -303,9 +303,6 @@ void MainWindow::connectSignals()
 			menu.addSeparator();
 			menu.addAction("Cancel");
 
-			// Release the controlled entity before starting a long operation (menu.exec)
-			controlledEntity.reset();
-
 			if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 			{
 				if (action == acquireAction)
