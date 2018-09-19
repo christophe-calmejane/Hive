@@ -198,6 +198,21 @@ set(UPDATER_SOURCE_FILES
 	updater/updater.cpp
 )
 
+# Firmware Upload Dialog header files
+set(FIRMWARE_UPLOAD_DIALOG_HEADER_FILES
+	firmwareUploadDialog.hpp
+)
+
+# Firmware Upload Dialog source files
+set(FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES
+	firmwareUploadDialog.cpp
+)
+
+# Firmware Upload Dialog resource files
+set(FIRMWARE_UPLOAD_DIALOG_RESOURCE_FILES
+	firmwareUploadDialog.ui
+)
+
 # Main windows header files
 set(MAIN_WINDOW_HEADER_FILES
 	mainWindow.hpp
@@ -248,6 +263,7 @@ source_group("Resource Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_RESOURCE_
 source_group("Resource Files\\Logger View" FILES ${LOGGER_VIEW_RESOURCE_FILES})
 source_group("Resource Files\\Settings" FILES ${SETTINGS_RESOURCE_FILES})
 source_group("Resource Files\\Main Window" FILES ${MAIN_WINDOW_RESOURCE_FILES})
+source_group("Resource Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_RESOURCE_FILES})
 
 source_group("Header Files\\Toolkit" FILES ${TOOLKIT_HEADER_FILES})
 source_group("Header Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_HEADER_FILES})
@@ -259,6 +275,7 @@ source_group("Header Files\\Settings" FILES ${SETTINGS_HEADER_FILES})
 source_group("Header Files\\Updater" FILES ${UPDATER_HEADER_FILES})
 source_group("Header Files\\Main Window" FILES ${MAIN_WINDOW_HEADER_FILES})
 source_group("Header Files" FILES ${COMMON_HEADER_FILES})
+source_group("Header Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_HEADER_FILES})
 
 source_group("Source Files\\Toolkit" FILES ${TOOLKIT_SOURCE_FILES})
 source_group("Source Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES})
@@ -269,6 +286,7 @@ source_group("Source Files\\Logger View" FILES ${LOGGER_VIEW_SOURCE_FILES})
 source_group("Source Files\\Updater" FILES ${UPDATER_SOURCE_FILES})
 source_group("Source Files\\Main Window" FILES ${MAIN_WINDOW_SOURCE_FILES})
 source_group("Source Files" FILES ${COMMON_SOURCE_FILES})
+source_group("Source Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES})
 
 # Executable creation
 target_sources(${PROJECT_NAME} PUBLIC
@@ -277,6 +295,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${SETTINGS_DIALOG_RESOURCE_FILES}
 	${LOGGER_VIEW_RESOURCE_FILES}
 	${MAIN_WINDOW_RESOURCE_FILES}
+	${FIRMWARE_UPLOAD_DIALOG_RESOURCE_FILES}
 
 	${TOOLKIT_HEADER_FILES}
 	${NODETREE_DYNAMIC_WIDGETS_HEADER_FILES}
@@ -288,6 +307,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${UPDATER_HEADER_FILES}
 	${MAIN_WINDOW_HEADER_FILES}
 	${COMMON_HEADER_FILES}
+	${FIRMWARE_UPLOAD_DIALOG_HEADER_FILES}
 
 	${TOOLKIT_SOURCE_FILES}
 	${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES}
@@ -299,6 +319,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${UPDATER_SOURCE_FILES}
 	${MAIN_WINDOW_SOURCE_FILES}
 	${COMMON_SOURCE_FILES}
+	${FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

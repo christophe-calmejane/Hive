@@ -44,8 +44,6 @@
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
 
-Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type);
-
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
 	, _controllerModel(new avdecc::ControllerModel(this))
@@ -304,9 +302,6 @@ void MainWindow::connectSignals()
 			}
 			menu.addSeparator();
 			menu.addAction("Cancel");
-
-			// Release the controlled entity before starting a long operation (menu.exec)
-			controlledEntity.reset();
 
 			if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 			{

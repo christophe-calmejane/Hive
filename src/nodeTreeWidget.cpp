@@ -31,6 +31,7 @@
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
+#include "firmwareUploadDialog.hpp"
 
 #include <vector>
 #include <utility>
@@ -38,6 +39,9 @@
 
 #include <QListWidget>
 #include <QHeaderView>
+#include <QFileDialog>
+#include <QPushButton>
+#include <QMessageBox>
 
 #include "painterHelper.hpp"
 
@@ -584,8 +588,12 @@ private:
 			addTextItem(descriptorItem, "Target descriptor index", model->targetDescriptorIndex);
 			addTextItem(descriptorItem, "Start address", avdecc::helper::toHexQString(model->startAddress, false, true));
 			addTextItem(descriptorItem, "Maximum length", avdecc::helper::toHexQString(model->maximumLength, false, true));
-			
-			addImageItem(descriptorItem, "Preview", model->memoryObjectType);
+
+			// Check and add ImageItem, if this MemoryObject is a supported image type
+			checkAddImageItem(descriptorItem, "Preview", model->memoryObjectType);
+
+			// Check and add FirmwareUpload, if this MemoryObject is a supported firmware type
+			checkAddFirmwareItem(descriptorItem, "Firmware", model->memoryObjectType, node.descriptorIndex, model->startAddress, model->maximumLength);
 		}
 
 		// Dynamic model
@@ -961,7 +969,7 @@ private:
 		}
 	}
 	
-	void addImageItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, la::avdecc::entity::model::MemoryObjectType const memoryObjectType)
+	void checkAddImageItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, la::avdecc::entity::model::MemoryObjectType const memoryObjectType)
 	{
 		auto type = EntityLogoCache::Type::None;
 		switch (memoryObjectType)
@@ -1001,6 +1009,49 @@ private:
 				label->setImage(image);
 			}
 		});
+	}
+
+	void checkAddFirmwareItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, la::avdecc::entity::model::MemoryObjectType const memoryObjectType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const baseAddress, std::uint64_t const maximumLength)
+	{
+		if (memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+		{
+			Q_Q(NodeTreeWidget);
+
+			auto* item = new QTreeWidgetItem(treeWidgetItem);
+			item->setText(0, std::move(itemName));
+
+			auto* uploadButton = new QPushButton("Upload New Firmware");
+			connect(uploadButton, &QPushButton::clicked, [this, descriptorIndex, baseAddress, maximumLength]()
+			{
+				QString fileName = QFileDialog::getOpenFileName(q_ptr, "Choose Firmware File", "", "");
+
+				if (!fileName.isEmpty())
+				{
+					// Open the file
+					QFile file{ fileName };
+					if (!file.open(QIODevice::ReadOnly))
+					{
+						QMessageBox::critical(q_ptr, "", "Failed to load firmware file");
+						return;
+					}
+
+					// Read all data
+					auto data = file.readAll();
+
+					// Check length
+					if (maximumLength != 0 && data.size() > maximumLength)
+					{
+						QMessageBox::critical(q_ptr, "", "firmware image file is too large for this entity");
+						return;
+					}
+
+					// Start firmware upload dialog
+					FirmwareUploadDialog dialog{ { data.constData(), static_cast<size_t>(data.count()) }, QFileInfo(fileName).fileName(), { {_controlledEntityID, descriptorIndex, baseAddress} }, q_ptr };
+					dialog.exec();
+				}
+			});
+			q->setItemWidget(item, 1, uploadButton);
+		}
 	}
 
 private:
