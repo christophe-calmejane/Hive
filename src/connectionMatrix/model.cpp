@@ -649,17 +649,17 @@ public:
 	
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 	{
-		// Refresh whole rows for specified talker
 		auto const talkerInfo = talkerSectionInfo(entityID);
-		if (talkerInfo.first >= 0)
+		if (AVDECC_ASSERT_WITH_RET(talkerInfo.first >= 0, "Entity not found"))
 		{
+			// Refresh whole rows for specified talker
 			talkerDataChanged(talkerInfo);
 		}
 
-		// Refresh whole columns for specified listener
 		auto const listenerInfo = listenerSectionInfo(entityID);
 		if (listenerInfo.first >= 0)
 		{
+			// Refresh whole columns for specified listener
 			listenerDataChanged(listenerInfo);
 		}
 	}
@@ -669,12 +669,14 @@ public:
 		auto const talkerInfo = talkerSectionInfo(entityID);
 		if (talkerInfo.first >= 0)
 		{
+			// Refresh talker header
 			emit q_ptr->headerDataChanged(Qt::Vertical, talkerInfo.first, talkerInfo.first);
 		}
 
 		auto const listenerInfo = listenerSectionInfo(entityID);
 		if (listenerInfo.first >= 0)
 		{
+			// Refresh listener header
 			emit q_ptr->headerDataChanged(Qt::Horizontal, listenerInfo.first, listenerInfo.first);
 		}
 	}
@@ -774,7 +776,7 @@ public:
 		auto const topLeft = q_ptr->createIndex(talkerInfo.first, 0);
 		auto const bottomRight = q_ptr->createIndex(talkerInfo.first + talkerInfo.second, q_ptr->columnCount());
 		
-		updateCapabilities(topLeft, bottomRight);
+		updateConnectionCapabilities(topLeft, bottomRight);
 		
 		emit q_ptr->dataChanged(topLeft, bottomRight);
 	}
@@ -784,12 +786,12 @@ public:
 		auto const topLeft = q_ptr->createIndex(0, listenerInfo.first);
 		auto const bottomRight = q_ptr->createIndex(q_ptr->rowCount(), listenerInfo.first + listenerInfo.second);
 		
-		updateCapabilities(topLeft, bottomRight);
+		updateConnectionCapabilities(topLeft, bottomRight);
 		
 		emit q_ptr->dataChanged(topLeft, bottomRight);
 	}
 	
-	void updateCapabilities(QModelIndex const& topLeft, QModelIndex const& bottomRight)
+	void updateConnectionCapabilities(QModelIndex const& topLeft, QModelIndex const& bottomRight)
 	{
 		for (auto row = topLeft.row(); row < bottomRight.row(); ++row)
 		{
