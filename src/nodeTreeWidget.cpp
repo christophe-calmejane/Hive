@@ -309,7 +309,7 @@ private:
 		}
 
 		// Counters
-		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && !node.dynamicModel->counters.empty())
 		{
 			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
@@ -377,6 +377,7 @@ private:
 		}
 
 		// Counters
+		if (!node.dynamicModel->counters.empty())
 		{
 			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
@@ -582,6 +583,7 @@ private:
 		}
 
 		// Counters
+		if (!node.dynamicModel->counters.empty())
 		{
 			auto* countersItem = new ClockDomainCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
