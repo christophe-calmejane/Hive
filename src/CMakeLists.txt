@@ -181,6 +181,18 @@ set(CONNECTION_MATRIX_SOURCE_FILES
 	connectionMatrix/view.cpp
 )
 
+set(COUNTERS_HEADER_FILES
+	counters/avbInterfaceCountersTreeWidgetItem.hpp
+	counters/clockDomainCountersTreeWidgetItem.hpp
+	counters/streamInputCountersTreeWidgetItem.hpp
+)
+
+set(COUNTERS_SOURCE_FILES
+	counters/avbInterfaceCountersTreeWidgetItem.cpp
+	counters/clockDomainCountersTreeWidgetItem.cpp
+	counters/streamInputCountersTreeWidgetItem.cpp
+)
+
 # Logger View header files
 set(LOGGER_VIEW_HEADER_FILES
 	loggerView.hpp
@@ -293,6 +305,7 @@ source_group("Header Files\\Updater" FILES ${UPDATER_HEADER_FILES})
 source_group("Header Files\\Main Window" FILES ${MAIN_WINDOW_HEADER_FILES})
 source_group("Header Files" FILES ${COMMON_HEADER_FILES})
 source_group("Header Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_HEADER_FILES})
+source_group("Header Files\\Counters" FILES ${COUNTERS_HEADER_FILES})
 
 source_group("Source Files\\Toolkit" FILES ${TOOLKIT_SOURCE_FILES})
 source_group("Source Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES})
@@ -305,6 +318,7 @@ source_group("Source Files\\Updater" FILES ${UPDATER_SOURCE_FILES})
 source_group("Source Files\\Main Window" FILES ${MAIN_WINDOW_SOURCE_FILES})
 source_group("Source Files" FILES ${COMMON_SOURCE_FILES})
 source_group("Source Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES})
+source_group("Source Files\\Counters" FILES ${COUNTERS_SOURCE_FILES})
 
 # Executable creation
 target_sources(${PROJECT_NAME} PUBLIC
@@ -327,6 +341,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${MAIN_WINDOW_HEADER_FILES}
 	${COMMON_HEADER_FILES}
 	${FIRMWARE_UPLOAD_DIALOG_HEADER_FILES}
+	${COUNTERS_HEADER_FILES}
 
 	${TOOLKIT_SOURCE_FILES}
 	${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES}
@@ -340,6 +355,7 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${MAIN_WINDOW_SOURCE_FILES}
 	${COMMON_SOURCE_FILES}
 	${FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES}
+	${COUNTERS_SOURCE_FILES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

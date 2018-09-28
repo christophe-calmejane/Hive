@@ -30,6 +30,9 @@
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
+#include "counters/avbInterfaceCountersTreeWidgetItem.hpp"
+#include "counters/clockDomainCountersTreeWidgetItem.hpp"
+#include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
 #include "firmwareUploadDialog.hpp"
 
@@ -304,6 +307,13 @@ private:
 			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, node.dynamicModel, nullptr, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
+
+		// Counters
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			countersItem->setText(0, "Counters");
+		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
@@ -364,6 +374,12 @@ private:
 		{
 			auto* dynamicItem = new AvbInterfaceDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
+		}
+
+		// Counters
+		{
+			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			countersItem->setText(0, "Counters");
 		}
 	}
 
@@ -563,6 +579,12 @@ private:
 				QSignalBlocker const lg{ sourceComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
 				sourceComboBox->setCurrentIndex(currentSourceComboBoxIndex);
 			}
+		}
+
+		// Counters
+		{
+			auto* countersItem = new ClockDomainCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			countersItem->setText(0, "Counters");
 		}
 	}
 

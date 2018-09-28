@@ -650,7 +650,7 @@ public:
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 	{
 		auto const talkerInfo = talkerSectionInfo(entityID);
-		if (AVDECC_ASSERT_WITH_RET(talkerInfo.first >= 0, "Entity not found"))
+		if (talkerInfo.first >= 0)
 		{
 			// Refresh whole rows for specified talker
 			talkerDataChanged(talkerInfo);
