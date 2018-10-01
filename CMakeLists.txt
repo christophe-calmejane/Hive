@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.10)
 # Using Semantic Versioning (http://semver.org/spec/v2.0.0.html)
 # Project version number x.y.z on main branch, x.y.z.w on dev and task branches
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task)
-set(HIVE_VERSION 1.0.7.6)
+set(HIVE_VERSION 1.0.7.7)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -48,7 +48,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # Find Qt dependencies
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
 
 # Avdecc project location
 if(NOT AVDECC_BASE_FOLDER)
@@ -94,6 +94,24 @@ add_subdirectory(${AVDECC_BASE_FOLDER})
 
 # Include avdecc internal macros
 include(${AVDECC_BASE_FOLDER}/cmake/internals.cmake)
+
+# Override discount options
+set(DISCOUNT_MAKE_INSTALL OFF CACHE BOOL "Disable install rules" FORCE)
+set(DISCOUNT_INSTALL_SAMPLES OFF CACHE BOOL "Disable install samples" FORCE)
+set(DISCOUNT_ONLY_LIBRARY ON CACHE BOOL "Disable all samples" FORCE)
+
+# Include discount project
+add_subdirectory(3rdparty/discount/cmake/)
+
+# Set folder for markdown library targets
+target_compile_options(libmarkdown PRIVATE -DDESTRUCTOR=)
+set_target_properties(libmarkdown PROPERTIES FOLDER "Libraries/Markdown")
+set_target_properties(mktags PROPERTIES FOLDER "Libraries/Markdown")
+
+# Set Folder for FMT library
+if(ENABLE_AVDECC_USE_FMTLIB)
+	set_target_properties(fmt PROPERTIES FOLDER "Libraries")
+endif()
 
 ############ Define some variables
 

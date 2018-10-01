@@ -13,7 +13,7 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 ## Minimum requirements for compilation
 
 - CMake 3.10
-- Qt 5.10.1 (including QtWebEngine)
+- Qt 5.10.1 (including Network)
 - Visual Studio 2017 15.7.0, Xcode 9.2, or any c++17 compliant compiler
 
 ## Compilation
@@ -40,5 +40,5 @@ Hive uses the following 3rd party resources:
 - [L-Acoustics (open source) Avdecc libraries](https://github.com/L-Acoustics/avdecc).
 - [Qt](https://www.qt.io)
 - [Material Icons](https://material.io/icons/)
-- [Marked JS](https://github.com/markedjs/marked)
+- [Discount Markdown](http://www.pell.portland.or.us/~orc/Code/markdown/)
 - [BugTrap](https://github.com/bchavez/BugTrap)
