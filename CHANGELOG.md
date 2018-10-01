@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - [SetName for AudioUnit, AvbInterface, ClockSource, MemoryObject, AudioCluster and ClockDomain](https://github.com/christophe-calmejane/Hive/issues/7)
+- AvbInterface, ClockDomain and StreamInput Counters
 - Support for firmware update
 - [Option to invert the talkers and listeners in connection matrix](https://github.com/christophe-calmejane/Hive/issues/13)
 - [Full ChangeLog accessible from the Help menu](https://github.com/christophe-calmejane/Hive/issues/24)
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Memory Object length changes not properly notified](https://github.com/christophe-calmejane/Hive/issues/30)
 - [Image/Logo possible invalid size](https://github.com/christophe-calmejane/Hive/issues/29)
 - [Image/Logo background garbage](https://github.com/christophe-calmejane/Hive/issues/26)
+- [Acquired state properly initialized](https://github.com/christophe-calmejane/Hive/issues/8)
 - Connection matrix highlighting issues
 - Optimize the code for ConnectionMatrixModel::ConnectionMatrixModelPrivate::refreshHeader
 
