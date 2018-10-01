@@ -20,8 +20,8 @@
 #include "mainWindow.hpp"
 #include <QtWidgets>
 #include <QMessageBox>
-#include <QWebEngineView>
 #include <QFile>
+#include <QTextBrowser>
 
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
@@ -39,6 +39,12 @@
 #include "updater/updater.hpp"
 
 #include <mutex>
+#include <memory>
+
+extern "C"
+{
+#include <mkdio.h>
+}
 
 #define VENDOR_ID 0x001B92
 #define DEVICE_ID 0x80
@@ -421,9 +427,10 @@ void MainWindow::showEvent(QShowEvent* event)
 			// Create dialog popup
 			QDialog dialog{ this };
 			QVBoxLayout layout{ &dialog };
-			QWebEngineView view;
+			QTextBrowser view;
 			layout.addWidget(&view);
 			dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "What's New");
+			dialog.resize(800, 600);
 			QPushButton closeButton{ "Close" };
 			connect(&closeButton, &QPushButton::clicked, &dialog, [&dialog]()
 			{
@@ -432,30 +439,38 @@ void MainWindow::showEvent(QShowEvent* event)
 			layout.addWidget(&closeButton);
 
 			view.setContextMenuPolicy(Qt::NoContextMenu);
+			view.setOpenExternalLinks(true);
 			QFile changelogFile(":/CHANGELOG.md");
 			if (changelogFile.open(QIODevice::ReadOnly))
 			{
 				auto content = QString(changelogFile.readAll());
-				content.replace(QRegExp("[\n\r]"), "\\n");
 
 				auto const startPos = content.indexOf("## [");
 				auto endPos = content.indexOf("## [" + versionString + "]");
 				if (endPos == -1)
 					endPos = content.size();
 				auto const changelog = QStringRef(&content, startPos, endPos - startPos);
-				view.setHtml(STRINGIFY(
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Marked in the browser</title>
-</head>
-<body>
-  <div id="content"></div>
-  <script src="qrc:/marked.min.js"></script>
-  <script>
-    document.getElementById('content').innerHTML =
-      marked) + QByteArray("('") + changelog.toUtf8() + QByteArray("');</script></body></html>"));
+
+				auto buffer = changelog.toUtf8();
+				auto* mmiot = mkd_string(buffer.data(), buffer.size(), 0);
+				if (mmiot == nullptr)
+					return;
+				std::unique_ptr<MMIOT, std::function<void(MMIOT*)>> scopedMmiot{ mmiot, [](MMIOT* ptr)
+					{
+						if (ptr != nullptr)
+							mkd_cleanup(ptr);
+					}
+				};
+
+				if (mkd_compile(mmiot, 0) == 0)
+					return;
+
+				char* docPointer{ nullptr };
+				auto const docLength = mkd_document(mmiot, &docPointer);
+				if (docLength == 0)
+					return;
+
+				view.setHtml(QString::fromUtf8(docPointer, docLength));
 
 				// Run dialog
 				dialog.exec();

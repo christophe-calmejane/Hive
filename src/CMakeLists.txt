@@ -365,7 +365,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 )
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Widgets Qt5::WebEngineWidgets la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 
 # Include directories
 target_include_directories(${PROJECT_NAME}
