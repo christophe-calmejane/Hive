@@ -50,7 +50,7 @@
      <x>0</x>
      <y>0</y>
      <width>1400</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -69,6 +69,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
+    <addaction name="actionChangeLog"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -124,6 +125,11 @@
   <action name="actionSettings">
    <property name="text">
     <string>Settings...</string>
+   </property>
+  </action>
+  <action name="actionChangeLog">
+   <property name="text">
+    <string>Change Log</string>
    </property>
   </action>
  </widget>

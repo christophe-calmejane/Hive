@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [SetName for AudioUnit, AvbInterface, ClockSource, MemoryObject, AudioCluster and ClockDomain](https://github.com/christophe-calmejane/Hive/issues/7)
 - Support for firmware update
 - [Option to invert the talkers and listeners in connection matrix](https://github.com/christophe-calmejane/Hive/issues/13)
+- [Full ChangeLog accessible from the Help menu](https://github.com/christophe-calmejane/Hive/issues/24)
 
 ### Changed
 - Updated la_avdecc to v2.7.0
+- [Using something more lightweight (and faster) than QtWebEngine for ChangeLog](https://github.com/christophe-calmejane/Hive/issues/21)
 
 ### Fixed
 - [Memory Object length changes not properly notified](https://github.com/christophe-calmejane/Hive/issues/30)

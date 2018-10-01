@@ -54,6 +54,7 @@ private:
 	void connectSignals();
 
 private:
+	void showChangeLog(QString const title, QString const versionString);
 	void showEvent(QShowEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
 

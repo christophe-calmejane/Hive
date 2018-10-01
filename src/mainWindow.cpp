@@ -388,6 +388,13 @@ void MainWindow::connectSignals()
 		dialog.exec();
 	});
 	
+	//
+
+	connect(actionChangeLog, &QAction::triggered, this, [this]()
+	{
+		showChangeLog("Change Log", "");
+	});
+
 	// Connect updater signals
 	auto const& updater = Updater::getInstance();
 	connect(&updater, &Updater::newVersionAvailable, this, [](QString version, QString downloadURL)
@@ -403,7 +410,60 @@ void MainWindow::connectSignals()
 	});
 }
 
-#define STRINGIFY(a) #a
+void MainWindow::showChangeLog(QString const title, QString const versionString)
+{
+	// Create dialog popup
+	QDialog dialog{ this };
+	QVBoxLayout layout{ &dialog };
+	QTextBrowser view;
+	layout.addWidget(&view);
+	dialog.setWindowTitle(hive::internals::applicationShortName + " - " + title);
+	dialog.resize(800, 600);
+	QPushButton closeButton{ "Close" };
+	connect(&closeButton, &QPushButton::clicked, &dialog, [&dialog]()
+	{
+		dialog.accept();
+	});
+	layout.addWidget(&closeButton);
+
+	view.setContextMenuPolicy(Qt::NoContextMenu);
+	view.setOpenExternalLinks(true);
+	QFile changelogFile(":/CHANGELOG.md");
+	if (changelogFile.open(QIODevice::ReadOnly))
+	{
+		auto content = QString(changelogFile.readAll());
+
+		auto const startPos = content.indexOf("## [");
+		auto endPos = versionString.isEmpty() ? -1 : content.indexOf("## [" + versionString + "]");
+		if (endPos == -1)
+			endPos = content.size();
+		auto const changelog = QStringRef(&content, startPos, endPos - startPos);
+
+		auto buffer = changelog.toUtf8();
+		auto* mmiot = mkd_string(buffer.data(), buffer.size(), 0);
+		if (mmiot == nullptr)
+			return;
+		std::unique_ptr<MMIOT, std::function<void(MMIOT*)>> scopedMmiot{ mmiot, [](MMIOT* ptr)
+		{
+			if (ptr != nullptr)
+				mkd_cleanup(ptr);
+		}
+		};
+
+		if (mkd_compile(mmiot, 0) == 0)
+			return;
+
+		char* docPointer{ nullptr };
+		auto const docLength = mkd_document(mmiot, &docPointer);
+		if (docLength == 0)
+			return;
+
+		view.setHtml(QString::fromUtf8(docPointer, docLength));
+
+		// Run dialog
+		dialog.exec();
+	}
+}
 
 void MainWindow::showEvent(QShowEvent* event)
 {
@@ -424,57 +484,7 @@ void MainWindow::showEvent(QShowEvent* event)
 		// Postpone the dialog creation
 		QTimer::singleShot(0, [this, versionString = std::move(lastVersion)]()
 		{
-			// Create dialog popup
-			QDialog dialog{ this };
-			QVBoxLayout layout{ &dialog };
-			QTextBrowser view;
-			layout.addWidget(&view);
-			dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "What's New");
-			dialog.resize(800, 600);
-			QPushButton closeButton{ "Close" };
-			connect(&closeButton, &QPushButton::clicked, &dialog, [&dialog]()
-			{
-				dialog.accept();
-			});
-			layout.addWidget(&closeButton);
-
-			view.setContextMenuPolicy(Qt::NoContextMenu);
-			view.setOpenExternalLinks(true);
-			QFile changelogFile(":/CHANGELOG.md");
-			if (changelogFile.open(QIODevice::ReadOnly))
-			{
-				auto content = QString(changelogFile.readAll());
-
-				auto const startPos = content.indexOf("## [");
-				auto endPos = content.indexOf("## [" + versionString + "]");
-				if (endPos == -1)
-					endPos = content.size();
-				auto const changelog = QStringRef(&content, startPos, endPos - startPos);
-
-				auto buffer = changelog.toUtf8();
-				auto* mmiot = mkd_string(buffer.data(), buffer.size(), 0);
-				if (mmiot == nullptr)
-					return;
-				std::unique_ptr<MMIOT, std::function<void(MMIOT*)>> scopedMmiot{ mmiot, [](MMIOT* ptr)
-					{
-						if (ptr != nullptr)
-							mkd_cleanup(ptr);
-					}
-				};
-
-				if (mkd_compile(mmiot, 0) == 0)
-					return;
-
-				char* docPointer{ nullptr };
-				auto const docLength = mkd_document(mmiot, &docPointer);
-				if (docLength == 0)
-					return;
-
-				view.setHtml(QString::fromUtf8(docPointer, docLength));
-
-				// Run dialog
-				dialog.exec();
-			}
+			showChangeLog("What's New", versionString);
 		});
 	});
 }
