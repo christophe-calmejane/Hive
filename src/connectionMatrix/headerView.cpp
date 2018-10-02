@@ -35,10 +35,14 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 {
 	setSectionResizeMode(QHeaderView::Fixed);
 	setSectionsClickable(true);
-	setDefaultSectionSize(20);
+
+	int const size{20};
+	setMaximumSectionSize(size);
+	setMinimumSectionSize(size);
+	setDefaultSectionSize(size);
+
 	setAttribute(Qt::WA_Hover);
 
-	connect(this, &QHeaderView::sectionCountChanged, this, &HeaderView::handleSectionCountChanged);
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
 }
 
@@ -47,23 +51,61 @@ QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
 	return _sectionState;
 }
 
-void HeaderView::restoreSectionState(QVector<SectionState> const& state)
+void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 {
-	AVDECC_ASSERT(state.count() == count(), "Invalid state");
-
-	for (auto i = 0; i < state.count(); ++i)
+	if (AVDECC_ASSERT_WITH_RET(sectionState.count() == count(), "Invalid state"))
 	{
-		if (state[i].isVisible)
+		for (auto section = 0; section < count(); ++section)
 		{
-			showSection(i);
+			if (sectionState[section].isVisible)
+			{
+				showSection(section);
+			}
+			else
+			{
+				hideSection(section);
+			}
+		}
+		
+		_sectionState = sectionState;
+	}
+}
+
+void HeaderView::setModel(QAbstractItemModel* model)
+{
+	if (this->model())
+	{
+		if (orientation() == Qt::Vertical)
+		{
+			disconnect(this->model(), &QAbstractItemModel::rowsInserted, this, &HeaderView::handleSectionInserted);
+			disconnect(this->model(), &QAbstractItemModel::rowsRemoved, this, &HeaderView::handleSectionRemoved);
 		}
 		else
 		{
-			hideSection(i);
+			disconnect(this->model(), &QAbstractItemModel::columnsInserted, this, &HeaderView::handleSectionInserted);
+			disconnect(this->model(), &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
 		}
+		
+		disconnect(this->model(), &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
 	}
-
-	_sectionState = state;
+	
+	QHeaderView::setModel(model);
+	
+	if (model)
+	{
+		if (orientation() == Qt::Vertical)
+		{
+			connect(model, &QAbstractItemModel::rowsInserted, this, &HeaderView::handleSectionInserted);
+			connect(model, &QAbstractItemModel::rowsRemoved, this, &HeaderView::handleSectionRemoved);
+		}
+		else
+		{
+			connect(model, &QAbstractItemModel::columnsInserted, this, &HeaderView::handleSectionInserted);
+			connect(model, &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
+		}
+		
+		connect(this->model(), &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
+	}
 }
 
 void HeaderView::leaveEvent(QEvent* event)
@@ -208,67 +250,77 @@ QSize HeaderView::sizeHint() const
 		return {200, defaultSectionSize()};
 	}
 }
-void HeaderView::handleSectionCountChanged(int oldCount, int newCount)
+
+void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
 {
-	_sectionState.resize(newCount);
+	_sectionState.insert(first, last - first + 1, {});
+}
+
+void HeaderView::handleSectionRemoved(QModelIndex const& parent, int first, int last)
+{
+	_sectionState.remove(first, last - first + 1);
+}
+
+void HeaderView::handleHeaderDataChanged(Qt::Orientation orientation, int first, int last)
+{
+	if (this->orientation() == orientation)
+	{
+		for (auto section = first; section <= last; ++section)
+		{
+			auto& state = _sectionState[section];
+			if (!state.isInitialized)
+			{
+				auto const nodeType = model()->headerData(section, orientation, Model::NodeTypeRole).value<Model::NodeType>();
+				
+				switch (nodeType)
+				{
+				case Model::NodeType::RedundantOutput:
+				case Model::NodeType::RedundantInput:
+					state.isExpanded = false;
+					break;
+				case Model::NodeType::RedundantOutputStream:
+				case Model::NodeType::RedundantInputStream:
+					state.isVisible = false;
+					setSectionHidden(section, true);
+					break;
+				default:
+					break;
+				}
+				
+				state.isInitialized = true;
+			}
+		}
+	}
 }
 
 void HeaderView::handleSectionClicked(int logicalIndex)
 {
-	auto const parentType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
-
-	auto const isValidSubSectionNodeType = [](Model::NodeType const parentType, Model::NodeType const childType)
+	// Check if this node has children?
+	auto const childrenCount = model()->headerData(logicalIndex, orientation(), Model::ChildrenCountRole).value<std::int32_t>();
+	if (childrenCount == -1)
 	{
-		switch (parentType)
-		{
-			case Model::NodeType::Entity:
-				return
-					childType == Model::NodeType::InputStream ||
-					childType == Model::NodeType::OutputStream ||
-					childType == Model::NodeType::RedundantInput ||
-					childType == Model::NodeType::RedundantOutput ||
-					childType == Model::NodeType::RedundantInputStream ||
-					childType == Model::NodeType::RedundantOutputStream;
-			case Model::NodeType::RedundantInput:
-				return childType == Model::NodeType::RedundantInputStream;
-			case Model::NodeType::RedundantOutput:
-				return childType == Model::NodeType::RedundantOutputStream;
-			default:
-				return false;
-		}
-	};
+		return;
+	}
 
 	// Toggle the section expand state
 	auto const isExpanded = !_sectionState[logicalIndex].isExpanded;
 	_sectionState[logicalIndex].isExpanded = isExpanded;
 
-	// Not all types are collapsible
-	if (parentType == Model::NodeType::Entity || parentType == Model::NodeType::RedundantInput || parentType == Model::NodeType::RedundantOutput)
+	// Update children
+	for (auto childIndex = 0; childIndex < childrenCount; ++childIndex)
 	{
-		auto const parentEntityID = model()->headerData(logicalIndex, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
+		auto const index = logicalIndex + 1 + childIndex;
+		
+		_sectionState[index].isExpanded = isExpanded;
+		_sectionState[index].isVisible = isExpanded;
 
-		for (auto index = logicalIndex + 1; index < count(); ++index)
+		if (isExpanded)
 		{
-			auto const childType = model()->headerData(index, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
-			auto const childEntityID = model()->headerData(index, orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
-
-			// We've reached another entity or an invalid node type?
-			if (parentEntityID != childEntityID || !isValidSubSectionNodeType(parentType, childType))
-			{
-				break;
-			}
-
-			_sectionState[index].isExpanded = isExpanded;
-			_sectionState[index].isVisible = isExpanded;
-
-			if (isExpanded)
-			{
-				showSection(index);
-			}
-			else
-			{
-				hideSection(index);
-			}
+			showSection(index);
+		}
+		else
+		{
+			hideSection(index);
 		}
 	}
 }

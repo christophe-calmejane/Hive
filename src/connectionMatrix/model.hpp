@@ -51,22 +51,22 @@ public:
 		FastConnecting = 1u << 4, /**< Stream is fast connecting (Mutually exclusive with Connected and PartiallyConnected) */
 		PartiallyConnected = 1u << 5, /**< Some, but not all of a redundant streams tuple, are connected (Mutually exclusive with Connected and FastConnecting) */
 	};
-	
+
 	enum ItemDataRole
 	{
-		// Header
+		/** Header Data */
+		NodeTypeRole = Qt::UserRole + 1, // Model::NodeType
+		EntityIDRole, // la::avdecc::UniqueIdentifier
+		StreamIndexRole, // la::avdecc::entity::model::StreamIndex
+		RedundantIndexRole, // la::avdecc::controller::model::VirtualIndex
+		RedundantStreamOrderRole, // std::int32_t
+		StreamWaitingRole, // bool
+
+		ParentIndexRole, // std::int32_t, -1 if orphan
+		ChildrenCountRole, // std::int32_t
 		
-		NodeTypeRole = Qt::UserRole + 1,
-		EntityIDRole,
-		StreamIndexRole,
-		RedundantIndexRole,
-		RedundantStreamOrderRole,
-		
-		StreamWaitingRole,
-		
-		// Connection
-		
-		ConnectionCapabilitiesRole,
+		/** Intersection Data */
+		ConnectionCapabilitiesRole, // ConnectionCapabilities
 	};
 
 	Model(QObject* parent = nullptr);

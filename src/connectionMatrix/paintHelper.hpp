@@ -35,5 +35,6 @@ void drawWrongDomainNotConnectedStream(QPainter* painter, QRect const& rect, boo
 void drawWrongFormatNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawPartiallyConnectedRedundantNode(QPainter* painter, QRect const& rect, bool const isRedundant = false);
 void drawEntityNoConnection(QPainter* painter, QRect const& rect);
+void drawNotApplicable(QPainter* painter, QRect const& rect);
 
 } // namespace connectionMatrix

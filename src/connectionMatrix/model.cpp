@@ -33,6 +33,8 @@ namespace connectionMatrix
 class HeaderItem : public QStandardItem
 {
 public:
+	using StreamMap = std::unordered_map<la::avdecc::entity::model::StreamIndex, std::int32_t>;
+	
 	HeaderItem(Model::NodeType const nodeType, la::avdecc::UniqueIdentifier const& entityID)
 		: _nodeType{nodeType}
 		, _entityID{entityID}
@@ -78,6 +80,36 @@ public:
 	{
 		return _redundantStreamOrder;
 	}
+
+	void setParentIndex(std::int32_t const parentIndex)
+	{
+		_parentIndex = parentIndex;
+	}
+
+	std::int32_t parentIndex() const
+	{
+		return _parentIndex;
+	}
+
+	void setChildrenCount(std::int32_t const childrenCount)
+	{
+		_childrenCount = childrenCount;
+	}
+
+	std::int32_t childrenCount() const
+	{
+		return _childrenCount;
+	}
+	
+	void setStreamMap(StreamMap const& streamMap)
+	{
+		_streamMap = streamMap;
+	}
+	
+	StreamMap const& streamMap() const
+	{
+		return _streamMap;
+	}
 	
 	virtual QVariant data(int role) const override
 	{
@@ -118,6 +150,14 @@ public:
 					return !controlledEntity->isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, _streamIndex);
 				}
 			}
+		}
+		else if (role == Model::ParentIndexRole)
+		{
+			return QVariant::fromValue(_parentIndex);
+		}
+		else if (role == Model::ChildrenCountRole)
+		{
+			return QVariant::fromValue(_childrenCount);
 		}
 		else if (role == Qt::DisplayRole)
 		{
@@ -168,6 +208,9 @@ private:
 	la::avdecc::entity::model::StreamIndex _streamIndex{static_cast<la::avdecc::entity::model::StreamIndex>(-1)};
 	la::avdecc::controller::model::VirtualIndex _redundantIndex{static_cast<la::avdecc::controller::model::VirtualIndex>(-1)};
 	std::int32_t _redundantStreamOrder{-1};
+	std::int32_t _parentIndex{-1};
+	std::int32_t _childrenCount{0};
+	StreamMap _streamMap{};
 };
 
 Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* talkerItem, HeaderItem const* listenerItem)
@@ -421,32 +464,53 @@ public:
 
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented))
 			{
+				std::int32_t streamMapIndex{0};
+				HeaderItem::StreamMap streamMap{};
+				
+				std::int32_t const entityItemIndex{q_ptr->rowCount()};
+				std::int32_t entityItemChildrenCount{0};
+
 				auto* entityItem = new HeaderItem(Model::NodeType::Entity, entityID);
-				q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), entityItem);
+				q_ptr->setVerticalHeaderItem(entityItemIndex, entityItem);
 				
 				// Redundant streams
 				for (auto const& output : configurationNode.redundantStreamOutputs)
 				{
+					std::int32_t const redundantItemIndex{q_ptr->rowCount()};
+					std::int32_t redundantItemChildrenCount{0};
+
 					auto const& redundantIndex{output.first};
 					auto const& redundantNode{output.second};
-					
+
 					auto* redundantItem = new HeaderItem(Model::NodeType::RedundantOutput, entityID);
+					redundantItem->setParentIndex(entityItemIndex);
 					redundantItem->setRedundantIndex(redundantIndex);
-					q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), redundantItem);
+					q_ptr->setVerticalHeaderItem(redundantItemIndex, redundantItem);
+
+					++entityItemChildrenCount;
 
 					std::int32_t redundantStreamOrder{0};
 					for (auto const& streamKV : redundantNode.redundantStreams)
 					{
+						std::int32_t const redundantStreamItemIndex{q_ptr->rowCount()};
+
 						auto const& streamIndex{streamKV.first};
+						streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
 						
 						auto* redundantStreamItem = new HeaderItem(Model::NodeType::RedundantOutputStream, entityID);
+						redundantStreamItem->setParentIndex(redundantItemIndex);
 						redundantStreamItem->setStreamIndex(streamIndex);
 						redundantStreamItem->setRedundantIndex(redundantIndex);
 						redundantStreamItem->setRedundantStreamOrder(redundantStreamOrder);
-						q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), redundantStreamItem);
+						q_ptr->setVerticalHeaderItem(redundantStreamItemIndex, redundantStreamItem);
 						
 						++redundantStreamOrder;
+
+						++redundantItemChildrenCount;
+						++entityItemChildrenCount;
 					}
+
+					redundantItem->setChildrenCount(redundantItemChildrenCount);
 				}
 				
 				// Single streams
@@ -457,12 +521,21 @@ public:
 					
 					if (!streamNode.isRedundant)
 					{
+						std::int32_t const streamItemIndex{q_ptr->rowCount()};
+						streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
+
 						auto* streamItem = new HeaderItem{Model::NodeType::OutputStream, entityID};
+						streamItem->setParentIndex(entityItemIndex);
 						streamItem->setStreamIndex(streamIndex);
-						q_ptr->setVerticalHeaderItem(q_ptr->rowCount(), streamItem);
+						q_ptr->setVerticalHeaderItem(streamItemIndex, streamItem);
+
+						++entityItemChildrenCount;
 					}
 				}
-				
+
+				entityItem->setChildrenCount(entityItemChildrenCount);
+				entityItem->setStreamMap(streamMap);
+
 				// Create new connection items
 				for (auto column = 0; column < q_ptr->columnCount(); ++column)
 				{
@@ -472,44 +545,61 @@ public:
 						q_ptr->setItem(row, column, connectionItem);
 					}
 				}
-				
-				auto const talkerInfo = talkerSectionInfo(entityID);
-				if (talkerInfo.first >= 0)
-				{
-					talkerDataChanged(talkerInfo);
-				}
+
+				dataChanged(talkerIndex(entityID), false, true);
 			}
 
 			// Listener
 
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented))
 			{
+				std::int32_t streamMapIndex{0};
+				HeaderItem::StreamMap streamMap{};
+				
+				std::int32_t const entityItemIndex{q_ptr->columnCount()};
+				std::int32_t entityItemChildrenCount{0};
+
 				auto* entityItem = new HeaderItem{Model::NodeType::Entity, entityID};
-				q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), entityItem);
+				q_ptr->setHorizontalHeaderItem(entityItemIndex, entityItem);
 				
 				// Redundant streams
 				for (auto const& input : configurationNode.redundantStreamInputs)
 				{
+					std::int32_t const redundantItemIndex{q_ptr->columnCount()};
+					std::int32_t redundantItemChildrenCount{0};
+
 					auto const& redundantIndex{input.first};
 					auto const& redundantNode{input.second};
-					
+
 					auto* redundantItem = new HeaderItem(Model::NodeType::RedundantInput, entityID);
+					redundantItem->setParentIndex(entityItemIndex);
 					redundantItem->setRedundantIndex(redundantIndex);
-					q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), redundantItem);
-					
+					q_ptr->setHorizontalHeaderItem(redundantItemIndex, redundantItem);
+
+					++entityItemChildrenCount;
+
 					std::int32_t redundantStreamOrder{0};
 					for (auto const& streamKV : redundantNode.redundantStreams)
 					{
+						std::int32_t const redundantStreamItemIndex{q_ptr->columnCount()};
+
 						auto const& streamIndex{streamKV.first};
-						
+						streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
+
 						auto* redundantStreamItem = new HeaderItem(Model::NodeType::RedundantInputStream, entityID);
+						redundantStreamItem->setParentIndex(redundantItemIndex);
 						redundantStreamItem->setStreamIndex(streamIndex);
 						redundantStreamItem->setRedundantIndex(redundantIndex);
 						redundantStreamItem->setRedundantStreamOrder(redundantStreamOrder);
-						q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), redundantStreamItem);
-						
+						q_ptr->setHorizontalHeaderItem(redundantStreamItemIndex, redundantStreamItem);
+
 						++redundantStreamOrder;
+
+						++redundantItemChildrenCount;
+						++entityItemChildrenCount;
 					}
+
+					redundantItem->setChildrenCount(redundantItemChildrenCount);
 				}
 				
 				// Single streams
@@ -520,12 +610,21 @@ public:
 					
 					if (!streamNode.isRedundant)
 					{
+						std::int32_t const streamItemIndex{q_ptr->columnCount()};
+						streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
+
 						auto* streamItem = new HeaderItem{Model::NodeType::InputStream, entityID};
+						streamItem->setParentIndex(entityItemIndex);
 						streamItem->setStreamIndex(streamIndex);
-						q_ptr->setHorizontalHeaderItem(q_ptr->columnCount(), streamItem);
+						q_ptr->setHorizontalHeaderItem(streamItemIndex, streamItem);
+
+						++entityItemChildrenCount;
 					}
 				}
-				
+
+				entityItem->setChildrenCount(entityItemChildrenCount);
+				entityItem->setStreamMap(streamMap);
+
 				// Create new connection cells
 				for (auto row = 0; row < q_ptr->rowCount(); ++row)
 				{
@@ -535,12 +634,8 @@ public:
 						q_ptr->setItem(row, column, connectionItem);
 					}
 				}
-				
-				auto const listenerInfo = listenerSectionInfo(entityID);
-				if (listenerInfo.first >= 0)
-				{
-					listenerDataChanged(listenerInfo);
-				}
+
+				dataChanged(listenerIndex(entityID), false, true);
 			}
 		}
 	}
@@ -548,17 +643,19 @@ public:
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
 		// Talker
-		auto const talkerInfo = talkerSectionInfo(entityID);
-		if (talkerInfo.first >= 0)
+		auto const row = talkerIndex(entityID).row();
+		if (row != -1)
 		{
-			q_ptr->removeRows(talkerInfo.first, talkerInfo.second);
+			auto const childrenCount = q_ptr->headerData(row, Qt::Vertical, Model::ChildrenCountRole).value<std::int32_t>();
+			q_ptr->removeRows(row, childrenCount + 1);
 		}
-	
+
 		// Listener
-		auto const listenerInfo = listenerSectionInfo(entityID);
-		if (listenerInfo.first >= 0)
+		auto const column = listenerIndex(entityID).column();
+		if (column != -1)
 		{
-			q_ptr->removeColumns(listenerInfo.first, listenerInfo.second);
+			auto const childrenCount = q_ptr->headerData(column, Qt::Horizontal, Model::ChildrenCountRole).value<std::int32_t>();
+			q_ptr->removeColumns(column, childrenCount + 1);
 		}
 	}
 	
@@ -567,19 +664,19 @@ public:
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
 			// Refresh header for specified talker output stream
-			auto const talkerInfo = talkerSectionInfo(entityID);
-			if (talkerInfo.first >= 0)
+			auto const index = talkerStreamIndex(entityID, streamIndex).row();
+			if (index != -1)
 			{
-				emit q_ptr->headerDataChanged(Qt::Vertical, talkerInfo.first + 1 + streamIndex, talkerInfo.first + 1 + streamIndex);
+				emit q_ptr->headerDataChanged(Qt::Vertical, index, index);
 			}
 		}
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 		{
 			// Refresh header for specified listener input stream
-			auto const listenerInfo = listenerSectionInfo(entityID);
-			if (listenerInfo.first >= 0)
+			auto const index = listenerStreamIndex(entityID, streamIndex).row();
+			if (index != -1)
 			{
-				emit q_ptr->headerDataChanged(Qt::Horizontal, listenerInfo.first + 1 + streamIndex, listenerInfo.first + 1 + streamIndex);
+				emit q_ptr->headerDataChanged(Qt::Horizontal, index, index);
 			}
 		}
 	}
@@ -588,220 +685,256 @@ public:
 	{
 		auto const entityID = state.listenerStream.entityID;
 		auto const streamIndex = state.listenerStream.streamIndex;
-		
-		auto const listenerInfo = listenerSectionInfo(entityID);
-		if (listenerInfo.first >= 0)
-		{
-			// Refresh whole column for specified listener single stream
-			listenerDataChanged({listenerInfo.first, 0});
-			
-			// Refresh whole column for specified listener redundant stream
-			// TODO
-			
-			// Refresh whole column for specified listener
-			for (auto column = listenerInfo.first; column < listenerInfo.first + listenerInfo.second; ++column)
-			{
-				auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
-				if (item->entityID() == entityID && item->streamIndex() == streamIndex)
-				{
-					listenerDataChanged({column, 1});
-					break;
-				}
-			}
-		}
+
+		// Refresh whole column for specified listener single stream and redundant stream if it exists and the listener itself (no need to refresh the talker)
+		dataChanged(listenerStreamIndex(entityID, streamIndex), true, false);
 	}
 	
 	Q_SLOT void streamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 	{
-		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-		{
-			// Refresh whole row for specified talker single stream
-			auto const talkerInfo = talkerSectionInfo(entityID);
-			if (talkerInfo.first >= 0)
-			{
-				for (auto row = talkerInfo.first; row < talkerInfo.first + talkerInfo.second; ++row)
-				{
-					auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
-					if (item->nodeType() == Model::NodeType::OutputStream && item->streamIndex() == streamIndex)
-					{
-						talkerDataChanged({row, 1});
-					}
-				}
-			}
-		}
-		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
-		{
-			// Refresh whole column for specified listener single stream
-			auto const listenerInfo = listenerSectionInfo(entityID);
-			if (listenerInfo.first >= 0)
-			{
-				for (auto column = listenerInfo.first; column < listenerInfo.first + listenerInfo.second; ++column)
-				{
-					auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
-					if (item->nodeType() == Model::NodeType::InputStream && item->streamIndex() == streamIndex)
-					{
-						listenerDataChanged({column, 1});
-					}
-				}
-			}
-		}
+		dataChanged(talkerStreamIndex(entityID, streamIndex), true, false);
+		dataChanged(listenerStreamIndex(entityID, streamIndex), true, false);
 	}
 	
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 	{
-		auto const talkerInfo = talkerSectionInfo(entityID);
-		if (talkerInfo.first >= 0)
-		{
-			// Refresh whole rows for specified talker
-			talkerDataChanged(talkerInfo);
-		}
-
-		auto const listenerInfo = listenerSectionInfo(entityID);
-		if (listenerInfo.first >= 0)
-		{
-			// Refresh whole columns for specified listener
-			listenerDataChanged(listenerInfo);
-		}
+		dataChanged(talkerIndex(entityID), true, true);
+		dataChanged(listenerIndex(entityID), true, true);
 	}
 	
 	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID)
 	{
-		auto const talkerInfo = talkerSectionInfo(entityID);
-		if (talkerInfo.first >= 0)
-		{
-			// Refresh talker header
-			emit q_ptr->headerDataChanged(Qt::Vertical, talkerInfo.first, talkerInfo.first);
-		}
-
-		auto const listenerInfo = listenerSectionInfo(entityID);
-		if (listenerInfo.first >= 0)
-		{
-			// Refresh listener header
-			emit q_ptr->headerDataChanged(Qt::Horizontal, listenerInfo.first, listenerInfo.first);
-		}
+		headerDataChanged(talkerIndex(entityID), false, false);
+		headerDataChanged(listenerIndex(entityID), false, false);
 	}
 	
 	Q_SLOT void streamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
 	{
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
-			auto const talkerInfo = talkerSectionInfo(entityID);
-			if (talkerInfo.first >= 0)
-			{
-				for (auto row = talkerInfo.first; row < talkerInfo.first + talkerInfo.second; ++row)
-				{
-					auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
-					if (item->entityID() == entityID && item->streamIndex() == streamIndex)
-					{
-						emit q_ptr->headerDataChanged(Qt::Vertical, row, row);
-						break;
-					}
-				}
-			}
+			headerDataChanged(talkerStreamIndex(entityID, streamIndex), true, false);
 		}
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 		{
-			auto const listenerInfo = listenerSectionInfo(entityID);
-			if (listenerInfo.first >= 0)
-			{
-				for (auto column = listenerInfo.first; column < listenerInfo.first + listenerInfo.second; ++column)
-				{
-					auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
-					if (item->entityID() == entityID && item->streamIndex() == streamIndex)
-					{
-						emit q_ptr->headerDataChanged(Qt::Horizontal, column, column);
-						break;
-					}
-				}
-			}
+			headerDataChanged(listenerStreamIndex(entityID, streamIndex), true, false);
 		}
 	}
 	
-	// Returns the a pair representing the pos of the entity and its "children" count including itself
-	QPair<int, int> talkerSectionInfo(la::avdecc::UniqueIdentifier const& entityID) const
+	QModelIndex talkerIndex(la::avdecc::UniqueIdentifier const entityID) const
 	{
-		auto pos{-1};
-		auto count{0};
-		
 		for (auto row = 0; row < q_ptr->rowCount(); ++row)
 		{
-			auto* startItem = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
-			if (startItem->entityID() == entityID)
+			auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
+			if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
 			{
-				if (!count)
-				{
-					pos = row;
-				}
-				
-				++count;
-			}
-			else if (count)
-			{
-				break;
+				return q_ptr->createIndex(row, -1);
 			}
 		}
-		
-		return {pos, count};
+
+		return {};
 	}
-	
-	// Returns the a pair representing the pos of the entity and its "children" count including itself
-	QPair<int, int> listenerSectionInfo(la::avdecc::UniqueIdentifier const& entityID) const
+
+	QModelIndex talkerStreamIndex(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
-		auto pos{-1};
-		auto count{0};
-		
+		for (auto row = 0; row < q_ptr->rowCount(); ++row)
+		{
+			auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
+			if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
+			{
+				auto const& streamMap = item->streamMap();
+				auto const offset = streamMap.at(streamIndex);
+				return q_ptr->createIndex(row + offset, -1);
+			}
+		}
+		return {};
+	}
+
+	QModelIndex listenerIndex(la::avdecc::UniqueIdentifier const entityID) const
+	{
 		for (auto column = 0; column < q_ptr->columnCount(); ++column)
 		{
-			auto* startItem = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
-			if (startItem->entityID() == entityID)
+			// Refresh whole rows for specified talker
+			auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+			if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
 			{
-				if (!count)
-				{
-					pos = column;
-				}
-				
-				++count;
-			}
-			else if (count)
-			{
-				break;
+			// Refresh whole columns for specified listener
+				return q_ptr->createIndex(-1, column);
 			}
 		}
-		
-		return {pos, count};
+
+		return {};
 	}
-	
-	void talkerDataChanged(QPair<int, int> const& talkerInfo)
+
+	QModelIndex listenerStreamIndex(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
-		auto const topLeft = q_ptr->createIndex(talkerInfo.first, 0);
-		auto const bottomRight = q_ptr->createIndex(talkerInfo.first + talkerInfo.second, q_ptr->columnCount());
-		
-		updateConnectionCapabilities(topLeft, bottomRight);
-		
-		emit q_ptr->dataChanged(topLeft, bottomRight);
+		for (auto column = 0; column < q_ptr->columnCount(); ++column)
+		{
+			// Refresh talker header
+			auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+			if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
+			{
+			// Refresh listener header
+				auto const& streamMap = item->streamMap();
+				auto const offset = streamMap.at(streamIndex);
+				return q_ptr->createIndex(-1, column + offset);
+			}
+		}
+
+		return {};
 	}
-	
-	void listenerDataChanged(QPair<int, int> const& listenerInfo)
+
+	void headerDataChanged(QModelIndex const& index, bool const andParents, bool const andChildren)
 	{
-		auto const topLeft = q_ptr->createIndex(0, listenerInfo.first);
-		auto const bottomRight = q_ptr->createIndex(q_ptr->rowCount(), listenerInfo.first + listenerInfo.second);
-		
-		updateConnectionCapabilities(topLeft, bottomRight);
-		
-		emit q_ptr->dataChanged(topLeft, bottomRight);
+		if (index.row() == -1 && index.column() == -1)
+		{
+			// Not found
+			return;
+		}
+
+		if (index.column() == -1)
+		{
+			// Talker
+			auto const section{index.row()};
+
+			emit q_ptr->headerDataChanged(Qt::Vertical, section, section);
+
+			if (andParents)
+			{
+				auto const parentIndex = q_ptr->headerData(section, Qt::Vertical, Model::ParentIndexRole).value<std::int32_t>();
+				if (parentIndex != -1)
+				{
+					headerDataChanged(q_ptr->createIndex(parentIndex, -1), andParents, false);
+				}
+			}
+
+			if (andChildren)
+			{
+				auto const childrenCount = q_ptr->headerData(section, Qt::Vertical, Model::ChildrenCountRole).value<std::int32_t>();
+				for (auto childrenIndex = 0; childrenIndex < childrenCount; ++childrenIndex)
+				{
+					headerDataChanged(q_ptr->createIndex(section + 1 + childrenIndex, -1), false, false);
+				}
+			}
+		}
+		else if (index.row() == -1)
+		{
+			// Listener
+			auto const section{index.column()};
+
+			emit q_ptr->headerDataChanged(Qt::Horizontal, section, section);
+
+			if (andParents)
+			{
+				auto const parentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::ParentIndexRole).value<std::int32_t>();
+				if (parentIndex != -1)
+				{
+					headerDataChanged(q_ptr->createIndex(-1, parentIndex), andParents, false);
+				}
+			}
+
+			if (andChildren)
+			{
+				auto const childrenCount = q_ptr->headerData(section, Qt::Horizontal, Model::ChildrenCountRole).value<std::int32_t>();
+				for (auto childrenIndex = 0; childrenIndex < childrenCount; ++childrenIndex)
+				{
+					headerDataChanged(q_ptr->createIndex(-1, section + 1 + childrenIndex), false, false);
+				}
+			}
+		}
 	}
-	
-	void updateConnectionCapabilities(QModelIndex const& topLeft, QModelIndex const& bottomRight)
+
+	void dataChanged(QModelIndex const& index, bool const andParents, bool const andChildren)
 	{
-		for (auto row = topLeft.row(); row < bottomRight.row(); ++row)
+		if (index.row() == -1 && index.column() == -1)
+		{
+			// Not found
+			return;
+		}
+
+		if (index.column() == -1)
+		{
+			// Talker
+			auto const section{index.row()};
+
+			auto const topLeft = q_ptr->createIndex(section, 0);
+			auto const bottomRight = q_ptr->createIndex(section, q_ptr->columnCount() - 1);
+
+			updateIntersectionCapabilities(topLeft, bottomRight);
+			emit q_ptr->dataChanged(topLeft, bottomRight, { Model::ConnectionCapabilitiesRole });
+
+			if (andParents)
+			{
+				auto const parentIndex = q_ptr->headerData(section, Qt::Vertical, Model::ParentIndexRole).value<std::int32_t>();
+				if (parentIndex != -1)
+				{
+					dataChanged(q_ptr->createIndex(parentIndex, -1), andParents, false);
+				}
+			}
+
+			if (andChildren)
+			{
+				auto const childrenCount = q_ptr->headerData(section, Qt::Vertical, Model::ChildrenCountRole).value<std::int32_t>();
+				auto const firstChildSection = section + 1;
+
+				auto const childrenTopLeft = q_ptr->createIndex(firstChildSection, 0);
+				auto const childrenBottomRight = q_ptr->createIndex(firstChildSection + childrenCount - 1, q_ptr->columnCount() - 1);
+
+				updateIntersectionCapabilities(childrenTopLeft, childrenBottomRight);
+				emit q_ptr->dataChanged(childrenTopLeft, childrenBottomRight, { Model::ConnectionCapabilitiesRole });
+			}
+		}
+		else if (index.row() == -1)
+		{
+			// Listener
+			auto const section{index.column()};
+
+			auto const topLeft = q_ptr->createIndex(0, section);
+			auto const bottomRight = q_ptr->createIndex(q_ptr->rowCount() - 1, section);
+
+			updateIntersectionCapabilities(topLeft, bottomRight);
+			emit q_ptr->dataChanged(topLeft, bottomRight, { Model::ConnectionCapabilitiesRole });
+
+			if (andParents)
+			{
+				auto const parentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::ParentIndexRole).value<std::int32_t>();
+				if (parentIndex != -1)
+				{
+					dataChanged(q_ptr->createIndex(-1, parentIndex), andParents, false);
+				}
+			}
+
+			if (andChildren)
+			{
+				auto const childrenCount = q_ptr->headerData(section, Qt::Horizontal, Model::ChildrenCountRole).value<std::int32_t>();
+				auto const firstChildSection = section + 1;
+
+				auto const childrenTopLeft = q_ptr->createIndex(0, firstChildSection);
+				auto const childrenBottomRight = q_ptr->createIndex(q_ptr->rowCount() - 1, firstChildSection + childrenCount - 1);
+
+				updateIntersectionCapabilities(childrenTopLeft, childrenBottomRight);
+				emit q_ptr->dataChanged(childrenTopLeft, childrenBottomRight, { Model::ConnectionCapabilitiesRole });
+			}
+		}
+	}
+
+	void updateIntersectionCapabilities(QModelIndex const& topLeft, QModelIndex const& bottomRight)
+	{
+		for (auto row = topLeft.row(); row <= bottomRight.row(); ++row)
 		{
 			auto const* talkerItem = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
-			for (auto column = topLeft.column(); column < bottomRight.column(); ++column)
+
+			if (talkerItem)
 			{
-				auto const* listenerItem = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
-				auto const capabilities = computeConnectionCapabilities(talkerItem, listenerItem);
-				
-				q_ptr->item(row, column)->setData(QVariant::fromValue(capabilities), Model::ConnectionCapabilitiesRole);
+				for (auto column = topLeft.column(); column <= bottomRight.column(); ++column)
+				{
+					auto const* listenerItem = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+
+					if (listenerItem)
+					{
+						auto const capabilities = computeConnectionCapabilities(talkerItem, listenerItem);
+						q_ptr->item(row, column)->setData(QVariant::fromValue(capabilities), Model::ConnectionCapabilitiesRole);
+					}
+				}
 			}
 		}
 	}

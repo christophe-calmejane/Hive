@@ -25,6 +25,8 @@
 #include <QPainter>
 #include <algorithm>
 
+Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+
 namespace connectionMatrix
 {
 
@@ -56,7 +58,17 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	
 	if (talkerNodeType == Model::NodeType::Entity || listenerNodeType == Model::NodeType::Entity)
 	{
-		drawEntityNoConnection(painter, option.rect);
+		auto const rowEntityID{index.model()->headerData(index.row(), Qt::Vertical, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>()};
+		auto const columnEntityID{index.model()->headerData(index.column(), Qt::Horizontal, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>()};
+
+		if (rowEntityID == columnEntityID)
+		{
+			drawNotApplicable(painter, option.rect);
+		}
+		else
+		{
+			drawEntityNoConnection(painter, option.rect);
+		}
 	}
 	else
 	{
@@ -77,6 +89,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		auto const capabilities = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 		if (capabilities == Model::ConnectionCapabilities::None)
 		{
+			drawNotApplicable(painter, option.rect);
 			return;
 		}
 		

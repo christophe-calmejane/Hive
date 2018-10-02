@@ -280,5 +280,9 @@ void drawEntityNoConnection(QPainter* painter, QRect const& rect)
 	drawEntitySummaryFigure(painter, rect, QColor("#EEEEEE"));
 }
 
+void drawNotApplicable(QPainter* painter, QRect const& rect)
+{
+	painter->fillRect(rect, QBrush{QColor("#E1E1E1"), Qt::BDiagPattern});
+}
 
 } // namespace connectionMatrix
