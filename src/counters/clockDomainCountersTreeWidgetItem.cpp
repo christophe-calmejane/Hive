@@ -29,6 +29,14 @@ ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc:
 	static std::map<la::avdecc::entity::ClockDomainCounterValidFlag, QString> s_counterNames{
 		{ la::avdecc::entity::ClockDomainCounterValidFlag::Locked, "Locked" },
 		{ la::avdecc::entity::ClockDomainCounterValidFlag::Unlocked, "Unlocked" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific1, "Entity Specific 1" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific2, "Entity Specific 2" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific3, "Entity Specific 3" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific4, "Entity Specific 4" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific5, "Entity Specific 5" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific6, "Entity Specific 6" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific7, "Entity Specific 7" },
+		{ la::avdecc::entity::ClockDomainCounterValidFlag::EntitySpecific8, "Entity Specific 8" },
 	};
 
 	// Create fields

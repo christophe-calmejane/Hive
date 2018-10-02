@@ -33,6 +33,14 @@ AvbInterfaceCountersTreeWidgetItem::AvbInterfaceCountersTreeWidgetItem(la::avdec
 		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::FramesRx, "Frames RX" },
 		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::RxCrcError, "RX CRC Error" },
 		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::GptpGmChanged, "Grandmaster Changed" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific1, "Entity Specific 1" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific2, "Entity Specific 2" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific3, "Entity Specific 3" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific4, "Entity Specific 4" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific5, "Entity Specific 5" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific6, "Entity Specific 6" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific7, "Entity Specific 7" },
+		{ la::avdecc::entity::AvbInterfaceCounterValidFlag::EntitySpecific8, "Entity Specific 8" },
 	};
 
 	// Create fields

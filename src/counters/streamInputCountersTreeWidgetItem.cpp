@@ -42,6 +42,14 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 		{ la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp, "Early Timestamp" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::FramesRx, "Frames RX"},
 		{ la::avdecc::entity::StreamInputCounterValidFlag::FramesTx, "Frames TX"},
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific1, "Entity Specific 1" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific2, "Entity Specific 2" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific3, "Entity Specific 3" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific4, "Entity Specific 4" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific5, "Entity Specific 5" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific6, "Entity Specific 6" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific7, "Entity Specific 7" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific8, "Entity Specific 8" },
 	};
 
 	// Create fields
