@@ -24,11 +24,11 @@
 #endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
 
 #include <la/avdecc/controller/internals/avdeccControlledEntityModel.hpp>
-#if __cpp_lib_any
-#include <any>
-#else // !__cpp_lib_any
+#if defined(ENABLE_AVDECC_CUSTOM_ANY)
 #include <la/avdecc/internals/any.hpp>
-#endif // __cpp_lib_any
+#else // !ENABLE_AVDECC_CUSTOM_ANY
+#include <any>
+#endif // ENABLE_AVDECC_CUSTOM_ANY
 
 #include <QMetaType>
 
