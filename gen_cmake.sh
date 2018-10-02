@@ -284,9 +284,9 @@ else
 	echo "Release version, using offical avdecc"
 fi
 
-# TODO: Search Qt folder to find correct version
-qtVersion="5.10.1"
+qtVersion="5.11.2"
 
+# TODO: Search for this Qt version instead of hardcoding the path
 if isWindows; then
 	qtBasePath="c:/Qt/${qtVersion}"
 	qtArch="msvc2015"
@@ -294,6 +294,14 @@ elif isMac; then
 	qtBasePath="/Applications/Qt/${qtVersion}"
 	qtArch="clang_64"
 fi
+
+# Check specified Qt version is available
+if [ ! -d "${qtBasePath}" ];
+then
+	echo "Cannot find Qt v$qtVersion installation path."
+	exit 1
+fi
+
 if [ $useSources -eq 1 ]; then
 	# Except for WebEngine
 	add_cmake_opt+=("-DQt5WebEngineWidgets_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5WebEngineWidgets")
