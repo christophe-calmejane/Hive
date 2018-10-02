@@ -462,7 +462,7 @@ public:
 
 			// Talker
 
-			if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented))
+			if (la::avdecc::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented) && !configurationNode.streamOutputs.empty())
 			{
 				std::int32_t streamMapIndex{0};
 				HeaderItem::StreamMap streamMap{};
@@ -551,7 +551,7 @@ public:
 
 			// Listener
 
-			if (la::avdecc::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented))
+			if (la::avdecc::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented) && !configurationNode.streamInputs.empty())
 			{
 				std::int32_t streamMapIndex{0};
 				HeaderItem::StreamMap streamMap{};
