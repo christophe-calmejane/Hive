@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Full ChangeLog accessible from the Help menu](https://github.com/christophe-calmejane/Hive/issues/24)
 
 ### Changed
-- Updated la_avdecc to v2.7.0
+- Updated la_avdecc to v2.7.1
 - [Using something more lightweight (and faster) than QtWebEngine for ChangeLog](https://github.com/christophe-calmejane/Hive/issues/21)
 
 ### Fixed
