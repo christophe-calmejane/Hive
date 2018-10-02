@@ -55,7 +55,7 @@ class Label : public QWidget
 	Q_OBJECT
 	static constexpr int size{16};
 	static constexpr int halfSize{size/2};
-	
+
 public:
 	Label(QWidget* parent = nullptr)
 		: QWidget{parent}
@@ -68,7 +68,7 @@ public:
 		oddColor.setAlpha(96);
 
 		_backgroundPixmap.fill(Qt::transparent);
-	
+
 		QPainter painter{&_backgroundPixmap};
 		painter.fillRect(_backgroundPixmap.rect(), evenColor);
 		painter.fillRect(QRect{0, 0, halfSize, halfSize}, oddColor);
@@ -78,17 +78,17 @@ public:
 
 		_layout.addWidget(&_downloadButton);
 	}
-	
+
 	Q_SIGNAL void clicked();
-	
+
 	void setImage(QImage const& image)
 	{
 		_image = image;
 		_downloadButton.setVisible(image.isNull());
 		repaint();
 	}
-	
-protected:	
+
+protected:
 	virtual void paintEvent(QPaintEvent* event) override
 	{
 		if (_image.isNull())
@@ -102,7 +102,7 @@ protected:
 			painterHelper::drawCentered(&painter, rect(), _image);
 		}
 	}
-	
+
 private:
 	QHBoxLayout _layout{this};
 	QPushButton _downloadButton{"Click to Download", this};
@@ -176,19 +176,19 @@ private:
 		{
 			auto* nameItem = new QTreeWidgetItem(q);
 			nameItem->setText(0, "Names");
-			
+
 			addEditableTextItem(nameItem, "Entity Name", avdecc::helper::entityName(*controlledEntity), avdecc::ControllerManager::AecpCommandType::SetEntityName, {});
 			addEditableTextItem(nameItem, "Group Name", avdecc::helper::groupName(*controlledEntity), avdecc::ControllerManager::AecpCommandType::SetEntityGroupName, {});
 		}
-		
+
 		// Static model
 		{
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
-			
+
 			auto const* const staticModel = node.staticModel;
 			auto const* const dynamicModel = node.dynamicModel;
-			
+
 			// Currently, use the getEntity() information, but maybe in the future the controller will have the information in its static/dynamic model
 			{
 				auto const& entity = controlledEntity->getEntity();
@@ -205,7 +205,7 @@ private:
 				addTextItem(descriptorItem, "Listener Sinks", QString::number(entity.getListenerStreamSinks()));
 				addTextItem(descriptorItem, "Controller Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(ctrlCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(ctrlCaps) + QString(")"));
 			}
-			
+
 			addTextItem(descriptorItem, "Vendor Name", controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
 			addTextItem(descriptorItem, "Model Name", controlledEntity->getLocalizedString(staticModel->modelNameString).data());
 			addTextItem(descriptorItem, "Firmware Version", dynamicModel->firmwareVersion.data());
@@ -220,32 +220,32 @@ private:
 #pragma message("TODO: And listen for changes to dynamically update the info")
 			createDiscoveryInfo(controlledEntity->getEntity());
 		}
-		
+
 		// Dynamic model
 		{
 			auto* dynamicItem = new QTreeWidgetItem(q);
 			dynamicItem->setText(0, "Dynamic Info");
-			
+
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
-			
+
 			auto* configurationComboBox = new qt::toolkit::ComboBox;
-			
+
 			for (auto const& it : node.configurations)
 			{
 				configurationComboBox->addItem(QString::number(it.first) + ": " + avdecc::helper::configurationName(controlledEntity, it.second), it.first);
 			}
-			
+
 			auto currentConfigurationComboBoxIndex = configurationComboBox->findData(node.dynamicModel->currentConfiguration);
 			q->setItemWidget(currentConfigurationItem, 1, configurationComboBox);
-			
+
 			// Send changes
 			connect(configurationComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, configurationComboBox, node]()
 			{
 				auto const configurationIndex = configurationComboBox->currentData().value<la::avdecc::entity::model::ConfigurationIndex>();
 				avdecc::ControllerManager::getInstance().setConfiguration(_controlledEntityID, configurationIndex);
 			});
-			
+
 			// Initialize current value
 			{
 				QSignalBlocker const lg{ configurationComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
@@ -476,7 +476,7 @@ private:
 			addTextItem(descriptorItem, "Signal Output", model->signalOutput);
 			addTextItem(descriptorItem, "Path Latency", model->pathLatency);
 			addTextItem(descriptorItem, "Block Latency", model->blockLatency);
-			addTextItem(descriptorItem, "channel Count", model->channelCount);
+			addTextItem(descriptorItem, "Channel Count", model->channelCount);
 			addTextItem(descriptorItem, "Format", avdecc::helper::audioClusterFormatToString(model->format));
 		}
 	}
@@ -525,7 +525,7 @@ private:
 
 			addTextItem(descriptorItem, "Clock Sources count", model->clockSources.size());
 		}
-		
+
 		// Dynamic model
 		{
 			auto* dynamicItem = new QTreeWidgetItem(q);
@@ -533,9 +533,9 @@ private:
 
 			auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
 			currentSourceItem->setText(0, "Current Clock Source");
-			
+
 			auto* sourceComboBox = new qt::toolkit::ComboBox;
-			
+
 			for (auto const sourceIndex : model->clockSources)
 			{
 				try
@@ -548,10 +548,10 @@ private:
 				{
 				}
 			}
-			
+
 			auto const currentSourceComboBoxIndex = sourceComboBox->findData(dynamicModel->clockSourceIndex);
 			q->setItemWidget(currentSourceItem, 1, sourceComboBox);
-			
+
 			// Send changes
 			connect(sourceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, sourceComboBox, node]()
 			{
@@ -559,7 +559,7 @@ private:
 				auto const sourceIndex = sourceComboBox->currentData().value<la::avdecc::entity::model::ClockSourceIndex>();
 				avdecc::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, sourceIndex);
 			});
-			
+
 			// Listen for changes
 			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceChanged, sourceComboBox, [this, streamType = node.descriptorType, domainIndex = node.descriptorIndex, sourceComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const sourceIndex)
 			{
@@ -574,7 +574,7 @@ private:
 					}
 				}
 			});
-			
+
 			// Initialize current value
 			{
 				QSignalBlocker const lg{ sourceComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
@@ -661,7 +661,7 @@ private:
 
 		return accessItem;
 	}
-	
+
 	QTreeWidgetItem* createDiscoveryInfo(la::avdecc::entity::Entity const& entity)
 	{
 		Q_Q(NodeTreeWidget);
@@ -994,7 +994,7 @@ private:
 		{
 		}
 	}
-	
+
 	void checkAddImageItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, la::avdecc::entity::model::MemoryObjectType const memoryObjectType)
 	{
 		auto type = EntityLogoCache::Type::None;
@@ -1009,24 +1009,24 @@ private:
 			default:
 				return;
 		}
-		
+
 		auto const image = EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
 
 		Q_Q(NodeTreeWidget);
-		
+
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, std::move(itemName));
-		
+
 		auto* label = new Label;
 		label->setFixedHeight(96);
 		label->setImage(image);
 		q->setItemWidget(item, 1, label);
-		
+
 		connect(label, &Label::clicked, label, [this, requestedType = type]()
 		{
 			EntityLogoCache::getInstance().getImage(_controlledEntityID, requestedType, true);
 		});
-		
+
 		connect(&EntityLogoCache::getInstance(), &EntityLogoCache::imageChanged, label, [this, label, requestedType = type](const la::avdecc::UniqueIdentifier entityID, const EntityLogoCache::Type type)
 		{
 			if (entityID == _controlledEntityID && type == requestedType)
