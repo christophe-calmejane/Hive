@@ -104,7 +104,7 @@ void HeaderView::setModel(QAbstractItemModel* model)
 			connect(model, &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
 		}
 		
-		connect(this->model(), &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
+		connect(model, &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
 	}
 }
 
