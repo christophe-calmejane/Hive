@@ -54,7 +54,7 @@ inline QString toHexQString(T const v, bool const zeroFilled = false, bool const
 	}
 }
 
-QString protocolInterfaceTypeName(la::avdecc::EndStation::ProtocolInterfaceType const& protocolInterfaceType);
+QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type const& protocolInterfaceType);
 
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
 
@@ -82,6 +82,11 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags);
 QString flagsToString(la::avdecc::entity::PortFlags const flags);
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags);
 
+QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps);
+QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps);
+QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps);
+QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps);
+
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type);
 QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format);
 
@@ -89,6 +94,9 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer);
 QString loggerLevelToString(la::avdecc::logger::Level const& level);
+		
+bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
+bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
 
 } // namespace helper
 } // namespace avdecc

@@ -22,6 +22,8 @@
 
 #include "avdecc/helper.hpp"
 
+Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+
 EntityInspector::EntityInspector(QWidget* parent)
 : QWidget(parent)
 {

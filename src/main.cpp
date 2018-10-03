@@ -24,7 +24,6 @@
 #include <QMessageBox>
 
 #include <QSplashScreen>
-#include <QDebug>
 
 #include <iostream>
 #include <chrono>
@@ -79,7 +78,7 @@ int main(int argc, char *argv[])
 	// Runtime sanity check on Avdecc Library compilation options
 	{
 		auto const options = la::avdecc::getCompileOptions();
-		if (!la::avdecc::hasFlag(options, la::avdecc::CompileOption::EnableRedundancy))
+		if (!options.test(la::avdecc::CompileOption::EnableRedundancy))
 		{
 			QMessageBox::warning(nullptr, "", "Avdecc Library was not compiled with Redundancy feature, which is required by " + hive::internals::applicationShortName);
 			return 0;
@@ -88,7 +87,7 @@ int main(int argc, char *argv[])
 
 	// Runtime sanity check on Avdecc Controller Library compilation options
 	auto const options = la::avdecc::controller::getCompileOptions();
-	if (!la::avdecc::hasFlag(options, la::avdecc::controller::CompileOption::EnableRedundancy))
+	if (!options.test(la::avdecc::controller::CompileOption::EnableRedundancy))
 	{
 		QMessageBox::warning(nullptr, "", "Avdecc Controller Library was not compiled with Redundancy feature, which is required by " + hive::internals::applicationShortName);
 		return 0;
@@ -107,7 +106,9 @@ int main(int argc, char *argv[])
 	// Register settings
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSetting(settings::LastLaunchedVersion);
+	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
 	settings.registerSetting(settings::AemCacheEnabled);
+	settings.registerSetting(settings::TransposeConnectionMatrix);
 
 	QPixmap logo(":/Logo.png");
 	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);

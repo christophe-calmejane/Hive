@@ -52,11 +52,12 @@ fi
 
 outputFolder="./_build"
 cmake_config=""
-add_cmake_opt=""
+add_cmake_opt=()
 outputFolderForced=0
 useVSclang=0
 hasTeamId=0
 doSign=0
+useSources=0
 
 while [ $# -gt 0 ]
 do
@@ -83,6 +84,7 @@ do
 				echo " -release -> Force release configuration (Linux only)"
 			fi
 			echo " -sign -> Sign binaries (Default: No signing)"
+			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources)"
 			exit 3
 			;;
 		-o)
@@ -108,7 +110,7 @@ do
 				echo "ERROR: Missing parameter for -a option, see help (-h)"
 				exit 4
 			fi
-			add_cmake_opt="$add_cmake_opt $1"
+			add_cmake_opt+=("$1")
 			;;
 		-b)
 			shift
@@ -180,7 +182,7 @@ do
 					echo "ERROR: Missing parameter for -id option, see help (-h)"
 					exit 4
 				fi
-				add_cmake_opt="$add_cmake_opt -DLA_TEAM_IDENTIFIER=$1"
+				add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$1")
 				hasTeamId=1
 			else
 				echo "ERROR: -id option is only supported on macOS platform"
@@ -204,8 +206,11 @@ do
 			fi
 			;;
 		-sign)
-			add_cmake_opt="$add_cmake_opt -DENABLE_AVDECC_SIGNING=TRUE"
+			add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
 			doSign=1
+			;;
+		-source)
+			useSources=1
 			;;
 		*)
 			echo "ERROR: Unknown option '$1' (use -h for help)"
@@ -272,24 +277,42 @@ IFS='.' read -a versionSplit <<< "$hiveVersion"
 IFS="$oldIFS"
 
 if [ ${#versionSplit[*]} -eq 4 ]; then
-	add_cmake_opt="$add_cmake_opt -DAVDECC_BASE_FOLDER=3rdparty/avdecc-local"
+	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc-local")
 	echo "Development version, using local avdecc copy"
 else
-	add_cmake_opt="$add_cmake_opt -DAVDECC_BASE_FOLDER=3rdparty/avdecc"
+	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc")
 	echo "Release version, using offical avdecc"
 fi
 
-# TODO: Search Qt folder to find correct version
-qtVersion="5.10.1"
+qtVersion="5.11.2"
 
+# TODO: Search for this Qt version instead of hardcoding the path
 if isWindows; then
-	add_cmake_opt="$add_cmake_opt -DQt5_DIR=c:/Qt/${qtVersion}/msvc2015/lib/cmake/Qt5"
+	qtBasePath="c:/Qt/${qtVersion}"
+	qtArch="msvc2015"
 elif isMac; then
-	add_cmake_opt="$add_cmake_opt -DQt5_DIR=/Applications/Qt/${qtVersion}/clang_64/lib/cmake/Qt5"
+	qtBasePath="/Applications/Qt/${qtVersion}"
+	qtArch="clang_64"
 fi
 
+# Check specified Qt version is available
+if [ ! -d "${qtBasePath}" ];
+then
+	echo "Cannot find Qt v$qtVersion installation path."
+	exit 1
+fi
+
+if [ $useSources -eq 1 ]; then
+	# Except for WebEngine
+	add_cmake_opt+=("-DQt5WebEngineWidgets_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5WebEngineWidgets")
+	# Override qtArch path with Source path
+	qtArch="Src/qtbase"
+	echo "Using Qt source instead of precompiled libraries"
+fi
+add_cmake_opt+=("-DQt5_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5")
+
 echo "Generating cmake project..."
-"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $toolset_option $sdk_option $cmake_opt $add_cmake_opt $cmake_config
+"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}" $cmake_config
 
 echo ""
 echo "All done, generated project lies in ${outputFolder}"

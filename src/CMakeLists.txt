@@ -15,6 +15,15 @@ endif()
 # Declare executable target
 add_executable(${PROJECT_NAME} MACOSX_BUNDLE WIN32 "")
 
+# Setup debug symbols
+setup_symbols(${PROJECT_NAME})
+
+# Set the "DEBUG" define in debug compilation mode
+set_debug_define(${PROJECT_NAME})
+
+# Add a postfix in debug mode
+set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "-d")
+
 # Configure file based on CMakeLists.txt
 configure_file(
 	internals/config.hpp.in
@@ -56,10 +65,10 @@ endif()
 # Toolkit header files
 set(TOOLKIT_HEADER_FILES
 	toolkit/comboBox.hpp
-	toolkit/matrixTreeView.hpp
 	toolkit/dynamicHeaderView.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
+	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
 	toolkit/graph/node.hpp
@@ -71,7 +80,6 @@ set(TOOLKIT_HEADER_FILES
 # Toolkit source files
 set(TOOLKIT_SOURCE_FILES
 	toolkit/comboBox.cpp
-	toolkit/matrixTreeView.cpp
 	toolkit/dynamicHeaderView.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
@@ -110,6 +118,7 @@ set(AVDECC_HELPER_HEADER_FILES
 	avdecc/controllerManager.hpp
 	avdecc/controllerModel.hpp
 	avdecc/helper.hpp
+	avdecc/hiveLogItems.hpp
 	avdecc/loggerModel.hpp
 	avdecc/stringValidator.hpp
 )
@@ -152,6 +161,38 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 	aboutDialog.ui
 )
 
+# Connection Matriw header files
+set(CONNECTION_MATRIX_HEADER_FILES
+	connectionMatrix/headerView.hpp
+	connectionMatrix/itemDelegate.hpp
+	connectionMatrix/legend.hpp
+	connectionMatrix/model.hpp
+	connectionMatrix/paintHelper.hpp
+	connectionMatrix/view.hpp
+)
+
+# Connection Matrix source files
+set(CONNECTION_MATRIX_SOURCE_FILES
+	connectionMatrix/headerView.cpp
+	connectionMatrix/itemDelegate.cpp
+	connectionMatrix/legend.cpp
+	connectionMatrix/model.cpp
+	connectionMatrix/paintHelper.cpp
+	connectionMatrix/view.cpp
+)
+
+set(COUNTERS_HEADER_FILES
+	counters/avbInterfaceCountersTreeWidgetItem.hpp
+	counters/clockDomainCountersTreeWidgetItem.hpp
+	counters/streamInputCountersTreeWidgetItem.hpp
+)
+
+set(COUNTERS_SOURCE_FILES
+	counters/avbInterfaceCountersTreeWidgetItem.cpp
+	counters/clockDomainCountersTreeWidgetItem.cpp
+	counters/streamInputCountersTreeWidgetItem.cpp
+)
+
 # Logger View header files
 set(LOGGER_VIEW_HEADER_FILES
 	loggerView.hpp
@@ -178,6 +219,31 @@ set(SETTINGS_SOURCE_FILES
 	settingsManager/settingsManager.cpp
 )
 
+# Updater header files
+set(UPDATER_HEADER_FILES
+	updater/updater.hpp
+)
+
+# Updater source files
+set(UPDATER_SOURCE_FILES
+	updater/updater.cpp
+)
+
+# Firmware Upload Dialog header files
+set(FIRMWARE_UPLOAD_DIALOG_HEADER_FILES
+	firmwareUploadDialog.hpp
+)
+
+# Firmware Upload Dialog source files
+set(FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES
+	firmwareUploadDialog.cpp
+)
+
+# Firmware Upload Dialog resource files
+set(FIRMWARE_UPLOAD_DIALOG_RESOURCE_FILES
+	firmwareUploadDialog.ui
+)
+
 # Main windows header files
 set(MAIN_WINDOW_HEADER_FILES
 	mainWindow.hpp
@@ -195,24 +261,26 @@ set(MAIN_WINDOW_RESOURCE_FILES
 
 # Common Header files
 set(COMMON_HEADER_FILES
-	acquireStateItemDelegate.hpp
-	connectionMatrix.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
+	entityLogoCache.hpp
+	imageItemDelegate.hpp
 	mappingMatrix.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
+	painterHelper.hpp
 	settingsManager/settingsManager.hpp
 )
 
 # Common source files
 set(COMMON_SOURCE_FILES
-	acquireStateItemDelegate.cpp
+	entityLogoCache.cpp
+	imageItemDelegate.cpp
 	main.cpp
-	connectionMatrix.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
 	nodeTreeWidget.cpp
+	painterHelper.cpp
 	nodeVisitor.cpp
 )
 
@@ -223,25 +291,34 @@ source_group("Resource Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_RESOURCE_
 source_group("Resource Files\\Logger View" FILES ${LOGGER_VIEW_RESOURCE_FILES})
 source_group("Resource Files\\Settings" FILES ${SETTINGS_RESOURCE_FILES})
 source_group("Resource Files\\Main Window" FILES ${MAIN_WINDOW_RESOURCE_FILES})
+source_group("Resource Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_RESOURCE_FILES})
 
 source_group("Header Files\\Toolkit" FILES ${TOOLKIT_HEADER_FILES})
 source_group("Header Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_HEADER_FILES})
 source_group("Header Files\\Avdecc Helper" FILES ${AVDECC_HELPER_HEADER_FILES})
 source_group("Header Files\\About Dialog" FILES ${ABOUT_DIALOG_HEADER_FILES})
 source_group("Header Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_HEADER_FILES})
+source_group("Header Files\\Connection Matrix" FILES ${CONNECTION_MATRIX_HEADER_FILES})
 source_group("Header Files\\Logger View" FILES ${LOGGER_VIEW_HEADER_FILES})
 source_group("Header Files\\Settings" FILES ${SETTINGS_HEADER_FILES})
+source_group("Header Files\\Updater" FILES ${UPDATER_HEADER_FILES})
 source_group("Header Files\\Main Window" FILES ${MAIN_WINDOW_HEADER_FILES})
 source_group("Header Files" FILES ${COMMON_HEADER_FILES})
+source_group("Header Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_HEADER_FILES})
+source_group("Header Files\\Counters" FILES ${COUNTERS_HEADER_FILES})
 
 source_group("Source Files\\Toolkit" FILES ${TOOLKIT_SOURCE_FILES})
 source_group("Source Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES})
 source_group("Source Files\\Avdecc Helper" FILES ${AVDECC_HELPER_SOURCE_FILES})
 source_group("Source Files\\About Dialog" FILES ${ABOUT_DIALOG_SOURCE_FILES})
+source_group("Source Files\\Connection Matrix" FILES ${CONNECTION_MATRIX_SOURCE_FILES})
 source_group("Source Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Logger View" FILES ${LOGGER_VIEW_SOURCE_FILES})
+source_group("Source Files\\Updater" FILES ${UPDATER_SOURCE_FILES})
 source_group("Source Files\\Main Window" FILES ${MAIN_WINDOW_SOURCE_FILES})
 source_group("Source Files" FILES ${COMMON_SOURCE_FILES})
+source_group("Source Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES})
+source_group("Source Files\\Counters" FILES ${COUNTERS_SOURCE_FILES})
 
 # Executable creation
 target_sources(${PROJECT_NAME} PUBLIC
@@ -250,32 +327,35 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${SETTINGS_DIALOG_RESOURCE_FILES}
 	${LOGGER_VIEW_RESOURCE_FILES}
 	${MAIN_WINDOW_RESOURCE_FILES}
+	${FIRMWARE_UPLOAD_DIALOG_RESOURCE_FILES}
 
 	${TOOLKIT_HEADER_FILES}
 	${NODETREE_DYNAMIC_WIDGETS_HEADER_FILES}
 	${AVDECC_HELPER_HEADER_FILES}
 	${ABOUT_DIALOG_HEADER_FILES}
+	${CONNECTION_MATRIX_HEADER_FILES}
 	${SETTINGS_DIALOG_HEADER_FILES}
 	${LOGGER_VIEW_HEADER_FILES}
 	${SETTINGS_HEADER_FILES}
+	${UPDATER_HEADER_FILES}
 	${MAIN_WINDOW_HEADER_FILES}
 	${COMMON_HEADER_FILES}
+	${FIRMWARE_UPLOAD_DIALOG_HEADER_FILES}
+	${COUNTERS_HEADER_FILES}
 
 	${TOOLKIT_SOURCE_FILES}
 	${NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES}
 	${AVDECC_HELPER_SOURCE_FILES}
 	${ABOUT_DIALOG_SOURCE_FILES}
+	${CONNECTION_MATRIX_SOURCE_FILES}
 	${SETTINGS_DIALOG_SOURCE_FILES}
 	${LOGGER_VIEW_SOURCE_FILES}
 	${SETTINGS_SOURCE_FILES}
+	${UPDATER_SOURCE_FILES}
 	${MAIN_WINDOW_SOURCE_FILES}
 	${COMMON_SOURCE_FILES}
-)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
-	CXX_STANDARD 14
-	CXX_STANDARD_REQUIRED ON
-	DEBUG_POSTFIX "-d"
+	${FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES}
+	${COUNTERS_SOURCE_FILES}
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -284,10 +364,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 	AUTORCC ON
 )
 
-set_debug_define(${PROJECT_NAME})
-	
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Widgets Qt5::WebEngineWidgets la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 
 # Include directories
 target_include_directories(${PROJECT_NAME}
@@ -304,7 +382,13 @@ endif()
 
 include(TargetCopyLibraries OPTIONAL RESULT_VARIABLE TargetCopyLibraries_INCLUDED)
 if(TargetCopyLibraries_INCLUDED)
-	target_copy_libraries(${PROJECT_NAME} INSTALL)
+	if(APPLE)
+		# Do not use the INSTALL flag because the function currently do not strip symbols which messes with GateKeeper, let the deployqt do it for us (properly)
+		set(targetCopyFlags "")
+	else()
+		set(targetCopyFlags "INSTALL")
+	endif()
+	target_copy_libraries(${PROJECT_NAME} ${targetCopyFlags})
 endif()
 
 include(TargetQt5Deploy OPTIONAL RESULT_VARIABLE TargetQt5Deploy_INCLUDED)
@@ -312,4 +396,16 @@ if(TargetQt5Deploy_INCLUDED)
 	target_qt5_deploy(${PROJECT_NAME} INSTALL QML_DIR ${PROJECT_ROOT_DIR}/resources/qml)
 endif()
 
+# Install target
 install(TARGETS ${PROJECT_NAME}	RUNTIME DESTINATION bin	BUNDLE DESTINATION .)
+
+# Sign target
+include(TargetSign OPTIONAL RESULT_VARIABLE TargetSign_INCLUDED)
+if(ENABLE_HIVE_SIGNING AND TargetSign_INCLUDED)
+	get_target_property(isBundle ${PROJECT_NAME} MACOSX_BUNDLE)
+	if(isBundle)
+		target_sign(${PROJECT_NAME} ".")
+	else()
+		target_sign(${PROJECT_NAME} "bin")
+	endif()
+endif()

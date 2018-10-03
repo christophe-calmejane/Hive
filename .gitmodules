@@ -1,3 +1,6 @@
 [submodule "3rdparty/avdecc"]
 	path = 3rdparty/avdecc
 	url = https://github.com/L-Acoustics/avdecc.git
+[submodule "3rdparty/discount"]
+	path = 3rdparty/discount
+	url = https://github.com/christophe-calmejane/discount.git

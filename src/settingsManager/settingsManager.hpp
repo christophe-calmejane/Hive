@@ -54,6 +54,8 @@ public:
 	virtual void registerSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
 	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
 	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
+	
+	virtual QString getFilePath() const noexcept = 0;
 
 protected:
 	SettingsManager() = default;

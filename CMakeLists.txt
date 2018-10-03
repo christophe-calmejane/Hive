@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.10)
 # Using Semantic Versioning (http://semver.org/spec/v2.0.0.html)
 # Project version number x.y.z on main branch, x.y.z.w on dev and task branches
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task)
-set(HIVE_VERSION 1.0.3)
+set(HIVE_VERSION 1.0.7)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -22,7 +22,7 @@ option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
 
 project(Hive)
 
-# Using c++14 standard for all targets
+# Using c++17 standard for all targets
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
@@ -48,7 +48,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 # Find Qt dependencies
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
 
 # Avdecc project location
 if(NOT AVDECC_BASE_FOLDER)
@@ -71,12 +71,12 @@ set(BUILD_AVDECC_INTERFACE_VIRTUAL ON CACHE BOOL "Build the virtual protocol int
 # Install options
 set(INSTALL_AVDECC_EXAMPLES OFF CACHE BOOL "Install examples." FORCE)
 set(INSTALL_AVDECC_TESTS OFF CACHE BOOL "Install unit tests." FORCE)
-set(INSTALL_AVDECC_LIB_SHARED_CXX OFF CACHE BOOL "Install C++ shared library." FORCE)
+set(INSTALL_AVDECC_LIB_SHARED_CXX OFF CACHE BOOL "Install C++ shared library." FORCE) # Don't install the libraries, we copy them manually (we want them inside the Bundle on macOS)
 set(INSTALL_AVDECC_LIB_STATIC OFF CACHE BOOL "Install static library." FORCE)
 set(INSTALL_AVDECC_HEADERS OFF CACHE BOOL "Install headers." FORCE)
 set(INSTALL_AVDECC_DOC OFF CACHE BOOL "Install documentation." FORCE)
 # Signing options
-set(ENABLE_AVDECC_SIGNING ${ENABLE_HIVE_SIGNING} CACHE BOOL "Enable binaries signing." FORCE)
+set(ENABLE_AVDECC_SIGNING OFF CACHE BOOL "Enable binaries signing." FORCE) # Don't sign the libraries, we copy them manually (we'll sign everything later)
 # Enable features
 set(ENABLE_AVDECC_FEATURE_REDUNDANCY ON CACHE BOOL "Enable 'Network Redundancy' feature as defined by AVnu Alliance." FORCE)
 # Compatibility options
@@ -86,13 +86,32 @@ set(ENABLE_AVDECC_STRICT_2018_REDUNDANCY ON CACHE BOOL "Be strict about 'Network
 set(IGNORE_INVALID_CONTROL_DATA_LENGTH ON CACHE BOOL "Allow messages with an invalid advertised 'Control Data Length' field." FORCE)
 set(IGNORE_INVALID_NON_SUCCESS_AEM_RESPONSES ON CACHE BOOL "Allow invalid AEM non-success responses messages." FORCE)
 set(IGNORE_NEITHER_STATIC_NOR_DYNAMIC_MAPPINGS ON CACHE BOOL "Allow Entities not supporting Dynamic Mapping and not adversiting AUDIO_MAP." FORCE)
-set(ALLOW_BIG_AEM_PAYLOADS ON CACHE BOOL "Allow AEM payloads bigger than the allowed 524 bytes." FORCE)
+set(ALLOW_RECV_BIG_AECP_PAYLOADS ON CACHE BOOL "Allow receiving AECP payloads bigger than the allowed 524 bytes." FORCE)
+set(ALLOW_SEND_BIG_AECP_PAYLOADS OFF CACHE BOOL "Allow sending AECP payloads bigger than the allowed 524 bytes." FORCE)
 
 # Include avdecc project
 add_subdirectory(${AVDECC_BASE_FOLDER})
 
 # Include avdecc internal macros
 include(${AVDECC_BASE_FOLDER}/cmake/internals.cmake)
+
+# Override discount options
+set(DISCOUNT_MAKE_INSTALL OFF CACHE BOOL "Disable install rules" FORCE)
+set(DISCOUNT_INSTALL_SAMPLES OFF CACHE BOOL "Disable install samples" FORCE)
+set(DISCOUNT_ONLY_LIBRARY ON CACHE BOOL "Disable all samples" FORCE)
+
+# Include discount project
+add_subdirectory(3rdparty/discount/cmake/)
+
+# Set folder for markdown library targets
+target_compile_options(libmarkdown PRIVATE -DDESTRUCTOR=)
+set_target_properties(libmarkdown PROPERTIES FOLDER "Libraries/Markdown")
+set_target_properties(mktags PROPERTIES FOLDER "Libraries/Markdown")
+
+# Set Folder for FMT library
+if(ENABLE_AVDECC_USE_FMTLIB)
+	set_target_properties(fmt PROPERTIES FOLDER "Libraries")
+endif()
 
 ############ Define some variables
 
@@ -101,7 +120,8 @@ set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")
 set(PROJECT_FULL_NAME "${PROJECT_NAME} - Pro Audio Avdecc Controller")
 set(PROJECT_COMPANYNAME "KikiSoft")
 set(PROJECT_AUTHORS "Emilien Vallot, Christophe Calmejane and other contributors")
-set(PROJECT_DOMAINNAME "fr.${PROJECT_COMPANYNAME}")
+set(PROJECT_REVERSE_DOMAINNAME "fr.${PROJECT_COMPANYNAME}")
+set(PROJECT_DOMAINNAME "${PROJECT_COMPANYNAME}.fr")
 set(PROJECT_URL "https://github.com/christophe-calmejane/Hive")
 set(PROJECT_LEGALCOPYRIGHT "(c) ${PROJECT_AUTHORS}")
 set(PROJECT_READABLE_COPYRIGHT "Copyright ${PROJECT_COPYRIGHT_YEAR}, ${PROJECT_AUTHORS}")

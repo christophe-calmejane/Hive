@@ -57,6 +57,25 @@ doCleanup=1
 doSign=0
 gen_cmake_additional_options=()
 
+# First check for .identity file
+if isMac;
+then
+	if [ -f ".identity" ];
+	then
+		identityString="$(< .identity)"
+		# Quick check for identity in keychain
+		security find-identity -v -p codesigning | grep "$identityString" &> /dev/null
+		if [ $? -ne 0 ];
+		then
+			echo "Invalid .identity file content (identity not found in keychain, or not valid for codesigning): $identityString"
+			exit 1
+		fi
+		gen_cmake_additional_options+=("-id")
+		gen_cmake_additional_options+=("$identityString")
+		hasTeamId=1
+	fi
+fi
+
 while [ $# -gt 0 ]
 do
 	case "$1" in
@@ -72,7 +91,7 @@ do
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
 			fi
 			if isMac; then
-				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing."
+				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing (or content of .identity file)."
 			fi
 			echo " -sign -> Sign binaries (Default: No signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
@@ -146,7 +165,7 @@ do
 				fi
 				gen_cmake_additional_options+=("-id")
 				gen_cmake_additional_options+=("$1")
-				add_cmake_opt="$add_cmake_opt -DLA_TEAM_IDENTIFIER=$1"
+				identityString="$1"
 				hasTeamId=1
 			else
 				echo "ERROR: -id option is only supported on macOS platform"
@@ -256,9 +275,17 @@ echo "done"
 
 pushd "${outputFolder}" &> /dev/null
 echo -n "Building project... "
-log=$("$cmake_path" --build . --clean-first --config "${buildConfig}" --target install)
+log=$("$cmake_path" --build . --clean-first --config "${buildConfig}" --target Hive)
 if [ $? -ne 0 ]; then
-	echo "Failed to build project ;("
+	echo "Failed:"
+	echo ""
+	echo $log
+	exit 1
+fi
+# For some reason, for macOS signing to work properly, we need to run deployqt twice, so let's run it now, it will be run again during "package" target
+log=$("$cmake_path" --build . --config "${buildConfig}" --target Hive_deployqt)
+if [ $? -ne 0 ]; then
+	echo "Failed:"
 	echo ""
 	echo $log
 	exit 1
@@ -270,13 +297,27 @@ pushd "${outputFolder}" &> /dev/null
 echo -n "Generating project installer... "
 log=$("$cmake_path" --build . --config "${buildConfig}" --target package)
 if [ $? -ne 0 ]; then
-	echo "Failed to generate installer ;("
+	echo "Failed:"
 	echo ""
 	echo $log
 	exit 1
 fi
 echo "done"
 popd &> /dev/null
+
+which tar &> /dev/null
+if [ $? -eq 0 ]; then
+	symbolsFile="${installerBaseName}-symbols.tgz"
+	echo -n "Archiving symbols... "
+	log=$(tar cvzf "${symbolsFile}" ${outputFolder}/Symbols)
+	if [ $? -ne 0 ]; then
+		echo "Failed to archive symbols ;("
+		echo ""
+		echo $log
+		exit 1
+	fi
+	echo "done"
+fi
 
 #pushd "${outputFolder}" &> /dev/null
 #echo -n "Signing package... "
@@ -296,9 +337,19 @@ if [ ! -f "$installerFile" ]; then
 	doCleanup=0
 	exit 1
 fi
+
+if isMac && [[ hasTeamId -eq 1 && doSign -eq 1 ]];
+then
+	echo "Signing Package"
+	codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}"
+fi
+
 mv "${installerFile}" .
 
 echo ""
 echo "Installer generated: ${fullInstallerName}"
+if [ ! -z "${symbolsFile}" ]; then
+	echo "Symbols generated: ${symbolsFile}"
+fi
 
 exit 0

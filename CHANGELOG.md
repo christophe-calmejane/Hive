@@ -4,6 +4,54 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2018-10-03
+### Added
+- [SetName for AudioUnit, AvbInterface, ClockSource, MemoryObject, AudioCluster and ClockDomain](https://github.com/christophe-calmejane/Hive/issues/7)
+- AvbInterface, ClockDomain and StreamInput Counters
+- Support for firmware update
+- [Option to invert the talkers and listeners in connection matrix](https://github.com/christophe-calmejane/Hive/issues/13)
+- [Full ChangeLog accessible from the Help menu](https://github.com/christophe-calmejane/Hive/issues/24)
+
+### Changed
+- Updated la_avdecc to v2.7.1
+- [Using something more lightweight (and faster) than QtWebEngine for ChangeLog](https://github.com/christophe-calmejane/Hive/issues/21)
+
+### Fixed
+- [Memory Object length changes not properly notified](https://github.com/christophe-calmejane/Hive/issues/30)
+- [Image/Logo possible invalid size](https://github.com/christophe-calmejane/Hive/issues/29)
+- [Image/Logo background garbage](https://github.com/christophe-calmejane/Hive/issues/26)
+- [Acquired state properly initialized](https://github.com/christophe-calmejane/Hive/issues/8)
+- Connection matrix highlighting issues
+- Optimize the code for ConnectionMatrixModel::ConnectionMatrixModelPrivate::refreshHeader
+
+## [1.0.6] - 2018-08-08
+### Added
+- [Display missing basic entity information](https://github.com/christophe-calmejane/Hive/issues/11)
+
+### Removed
+- ["Access" information from all descriptors but Entity](https://github.com/christophe-calmejane/Hive/issues/3)
+
+### Changed
+- CRF StreamFormat reports 0 instead of 1 for the count of channels it has
+
+### Fixed
+- Incorrect StreamOutput channel dynamic mappings
+- Possible crash in avdecc library
+
+## [1.0.5] - 2018-08-06
+### Added
+- [Support for dynamic mappings on StreamOutput](https://github.com/christophe-calmejane/Hive/issues/9)
+
+### Fixed
+- [Crash when changing active configuration](https://github.com/christophe-calmejane/Hive/issues/15)
+- [Incorrect dynamic mappings sent when adding/removing them](https://github.com/christophe-calmejane/Hive/issues/12)
+
+## [1.0.4] - 2018-07-30
+### Added
+- [Display entity's logo image in the entity list](https://github.com/christophe-calmejane/Hive/issues/10)
+- Support for manufacturer and entity images download in Memory Object descriptors
+- Automatic check for new version
+
 ## [1.0.3] - 2018-07-17
 ### Added
 - Support for Memory Object descriptors (Contributed by Florian Harmuth)

@@ -24,7 +24,6 @@
 #include <QLabel>
 #include <memory>
 #include "avdecc/controllerModel.hpp"
-#include "connectionMatrix.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/comboBox.hpp"
 
@@ -55,6 +54,7 @@ private:
 	void connectSignals();
 
 private:
+	void showChangeLog(QString const title, QString const versionString);
 	void showEvent(QShowEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
 
@@ -64,6 +64,4 @@ private:
 	QLabel _controllerEntityIDLabel{this};
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };
-	std::unique_ptr<connectionMatrix::ConnectionMatrixModel> _connectionMatrixModel{ nullptr };
-	std::unique_ptr<connectionMatrix::ConnectionMatrixItemDelegate> _connectionMatrixItemDelegate{ nullptr };
 };

@@ -20,10 +20,11 @@
 #include "mainWindow.hpp"
 #include <QtWidgets>
 #include <QMessageBox>
-#include <QWebEngineView>
 #include <QFile>
+#include <QTextBrowser>
 
 #include "avdecc/helper.hpp"
+#include "avdecc/hiveLogItems.hpp"
 #include "internals/config.hpp"
 
 #include "nodeVisitor.hpp"
@@ -31,16 +32,25 @@
 #include "avdecc/controllerManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
-#include "acquireStateItemDelegate.hpp"
+#include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
+#include "entityLogoCache.hpp"
+
+#include "updater/updater.hpp"
 
 #include <mutex>
+#include <memory>
+
+extern "C"
+{
+#include <mkdio.h>
+}
 
 #define VENDOR_ID 0x001B92
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
 
-Q_DECLARE_METATYPE(la::avdecc::EndStation::ProtocolInterfaceType);
+Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
@@ -64,17 +74,11 @@ MainWindow::MainWindow(QWidget* parent)
 	loadSettings();
 
 	connectSignals();
-
-	_connectionMatrixItemDelegate = std::make_unique<connectionMatrix::ConnectionMatrixItemDelegate>();
-	routingTableView->setItemDelegate(_connectionMatrixItemDelegate.get());
-
-	_connectionMatrixModel = std::make_unique<connectionMatrix::ConnectionMatrixModel>();
-	routingTableView->setModel(_connectionMatrixModel.get());
 }
 
 void MainWindow::currentControllerChanged()
 {
-	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::EndStation::ProtocolInterfaceType>();
+	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceName = _interfaceComboBox.currentData().toString();
 
 	auto& settings = settings::SettingsManager::getInstance();
@@ -127,6 +131,8 @@ void MainWindow::registerMetaTypes()
 	qRegisterMetaType<la::avdecc::logger::Layer>("la::avdecc::logger::Layer");
 	qRegisterMetaType<la::avdecc::logger::Level>("la::avdecc::logger::Level");
 	qRegisterMetaType<std::string>("std::string");
+	
+	qRegisterMetaType<EntityLogoCache::Type>("EntityLogoCache::Type");
 }
 
 void MainWindow::createViewMenu()
@@ -171,43 +177,47 @@ void MainWindow::createMainToolBar()
 void MainWindow::createControllerView()
 {
 	controllerTableView->setModel(_controllerModel);
-	controllerTableView->resizeColumnsToContents();
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
-	controllerTableView->setItemDelegateForColumn(3, new AcquireStateItemDelegate{this});
+	
+	auto* imageItemDelegate{new ImageItemDelegate};
+	controllerTableView->setItemDelegateForColumn(0, imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(4, imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	controllerTableView->setColumnWidth(0, 120);
-	controllerTableView->setColumnWidth(1, 160);
-	controllerTableView->setColumnWidth(2, 120);
-	controllerTableView->setColumnWidth(3, 80);
-	controllerTableView->setColumnWidth(4, 120);
-	controllerTableView->setColumnWidth(5, 80);
-	controllerTableView->setColumnWidth(6, 90);
-	controllerTableView->setColumnWidth(7, 120);
+	int column{0};
+	controllerTableView->setColumnWidth(column++, 40);
+	controllerTableView->setColumnWidth(column++, 160);
+	controllerTableView->setColumnWidth(column++, 180);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 160);
+	controllerTableView->setColumnWidth(column++, 80);
+	controllerTableView->setColumnWidth(column++, 90);
+	controllerTableView->setColumnWidth(column++, 160);
 }
 
 void MainWindow::populateProtocolComboBox()
 {
-	const std::map<la::avdecc::EndStation::ProtocolInterfaceType, QString> protocolInterfaceName
+	const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName
 	{
-		{la::avdecc::EndStation::ProtocolInterfaceType::None, "None"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::PCap, "PCap"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::MacOSNative, "MacOS Native"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::Proxy, "Proxy"},
-		{la::avdecc::EndStation::ProtocolInterfaceType::Virtual, "Virtual"},
+		{la::avdecc::protocol::ProtocolInterface::Type::None, "None"},
+		{la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap"},
+		{la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native"},
+		{la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy"},
+		{la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual"},
 	};
 
-	for (auto const& type : la::avdecc::EndStation::getSupportedProtocolInterfaceTypes())
+	for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
 	{
 #ifndef DEBUG
-		if (type == la::avdecc::EndStation::ProtocolInterfaceType::Virtual)
+		if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
 			continue;
 #endif // !DEBUG
-		_protocolComboBox.addItem(protocolInterfaceName.at(type), QVariant::fromValue<la::avdecc::EndStation::ProtocolInterfaceType>(type));
+		_protocolComboBox.addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
 	}
 }
 
@@ -225,6 +235,8 @@ void MainWindow::populateInterfaceComboBox()
 void MainWindow::loadSettings()
 {
 	auto& settings = settings::SettingsManager::getInstance();
+
+	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());
 
 	_protocolComboBox.setCurrentText(settings.getValue(settings::ProtocolType).toString());
 	_interfaceComboBox.setCurrentText(settings.getValue(settings::InterfaceName).toString());
@@ -262,42 +274,64 @@ void MainWindow::connectSignals()
 		if (controlledEntity)
 		{
 			QMenu menu;
+			auto const& entity = controlledEntity->getEntity();
 
-			QString acquireText;
-			if (controlledEntity->isAcquiredByOther())
-				acquireText = "Try to acquire";
-			else
-				acquireText = "Acquire";
+			auto* acquireAction{ static_cast<QAction*>(nullptr) };
+			auto* releaseAction{ static_cast<QAction*>(nullptr) };
+			auto* inspect{ static_cast<QAction*>(nullptr) };
+			auto* getLogo{ static_cast<QAction*>(nullptr) };
 
-			auto* acquireAction = menu.addAction(acquireText);
-			auto* releaseAction = menu.addAction("Release");
-			menu.addSeparator();
-			auto* inspect = menu.addAction("Inspect");
+			if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			{
+				QString acquireText;
+				auto const isAcquired = controlledEntity->isAcquired();
+				auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
+
+				{
+					if (isAcquiredByOther)
+						acquireText = "Try to acquire";
+					else
+						acquireText = "Acquire";
+					acquireAction = menu.addAction(acquireText);
+					acquireAction->setEnabled(!isAcquired);
+				}
+				{
+					releaseAction = menu.addAction("Release");
+					releaseAction->setEnabled(isAcquired);
+				}
+				menu.addSeparator();
+				{
+					inspect = menu.addAction("Inspect");
+				}
+				{
+					getLogo = menu.addAction("Retrieve Entity Logo");
+					getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
+				}
+			}
 			menu.addSeparator();
 			menu.addAction("Cancel");
 
-			acquireAction->setEnabled(!controlledEntity->isAcquired());
-			releaseAction->setEnabled(controlledEntity->isAcquired());
-
 			if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 			{
-				auto const targetEntityId = controlledEntity->getEntity().getEntityID();
-
 				if (action == acquireAction)
 				{
-					manager.acquireEntity(targetEntityId, false);
+					manager.acquireEntity(entityID, false);
 				}
 				else if (action == releaseAction)
 				{
-					manager.releaseEntity(targetEntityId);
+					manager.releaseEntity(entityID);
 				}
 				else if (action == inspect)
 				{
 					auto* inspector = new EntityInspector;
 					inspector->setAttribute(Qt::WA_DeleteOnClose);
-					inspector->setControlledEntityID(targetEntityId);
+					inspector->setControlledEntityID(entityID);
 					inspector->restoreGeometry(entityInspector->saveGeometry());
 					inspector->show();
+				}
+				else if (action == getLogo)
+				{
+					EntityLogoCache::getInstance().getImage(entityID, EntityLogoCache::Type::Entity, true);
 				}
 			}
 		}
@@ -353,15 +387,92 @@ void MainWindow::connectSignals()
 		AboutDialog dialog{ this };
 		dialog.exec();
 	});
+	
+	//
+
+	connect(actionChangeLog, &QAction::triggered, this, [this]()
+	{
+		showChangeLog("Change Log", "");
+	});
+
+	// Connect updater signals
+	auto const& updater = Updater::getInstance();
+	connect(&updater, &Updater::newVersionAvailable, this, [](QString version, QString downloadURL)
+	{
+		QString message{ "New version (" + version + ") available here " + downloadURL };
+
+		QMessageBox::information(nullptr, "", message);
+		LOG_HIVE_INFO(message);
+	});
+	connect(&updater, &Updater::checkFailed, this, [](QString reason)
+	{
+		LOG_HIVE_WARN("Failed to check for new version: " + reason);
+	});
 }
 
-#define STRINGIFY(a) #a
+void MainWindow::showChangeLog(QString const title, QString const versionString)
+{
+	// Create dialog popup
+	QDialog dialog{ this };
+	QVBoxLayout layout{ &dialog };
+	QTextBrowser view;
+	layout.addWidget(&view);
+	dialog.setWindowTitle(hive::internals::applicationShortName + " - " + title);
+	dialog.resize(800, 600);
+	QPushButton closeButton{ "Close" };
+	connect(&closeButton, &QPushButton::clicked, &dialog, [&dialog]()
+	{
+		dialog.accept();
+	});
+	layout.addWidget(&closeButton);
+
+	view.setContextMenuPolicy(Qt::NoContextMenu);
+	view.setOpenExternalLinks(true);
+	QFile changelogFile(":/CHANGELOG.md");
+	if (changelogFile.open(QIODevice::ReadOnly))
+	{
+		auto content = QString(changelogFile.readAll());
+
+		auto const startPos = content.indexOf("## [");
+		auto endPos = versionString.isEmpty() ? -1 : content.indexOf("## [" + versionString + "]");
+		if (endPos == -1)
+			endPos = content.size();
+		auto const changelog = QStringRef(&content, startPos, endPos - startPos);
+
+		auto buffer = changelog.toUtf8();
+		auto* mmiot = mkd_string(buffer.data(), buffer.size(), 0);
+		if (mmiot == nullptr)
+			return;
+		std::unique_ptr<MMIOT, std::function<void(MMIOT*)>> scopedMmiot{ mmiot, [](MMIOT* ptr)
+		{
+			if (ptr != nullptr)
+				mkd_cleanup(ptr);
+		}
+		};
+
+		if (mkd_compile(mmiot, 0) == 0)
+			return;
+
+		char* docPointer{ nullptr };
+		auto const docLength = mkd_document(mmiot, &docPointer);
+		if (docLength == 0)
+			return;
+
+		view.setHtml(QString::fromUtf8(docPointer, docLength));
+
+		// Run dialog
+		dialog.exec();
+	}
+}
 
 void MainWindow::showEvent(QShowEvent* event)
 {
 	static std::once_flag once;
 	std::call_once(once, [this]()
 	{
+		// Start a new version check
+		Updater::getInstance().checkForNewVersion();
+
 		// Check version change
 		auto& settings = settings::SettingsManager::getInstance();
 		auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
@@ -373,48 +484,7 @@ void MainWindow::showEvent(QShowEvent* event)
 		// Postpone the dialog creation
 		QTimer::singleShot(0, [this, versionString = std::move(lastVersion)]()
 		{
-			// Create dialog popup
-			QDialog dialog{ this };
-			QVBoxLayout layout{ &dialog };
-			QWebEngineView view;
-			layout.addWidget(&view);
-			dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "What's New");
-			QPushButton closeButton{ "Close" };
-			connect(&closeButton, &QPushButton::clicked, &dialog, [&dialog]()
-			{
-				dialog.accept();
-			});
-			layout.addWidget(&closeButton);
-
-			view.setContextMenuPolicy(Qt::NoContextMenu);
-			QFile changelogFile(":/CHANGELOG.md");
-			if (changelogFile.open(QIODevice::ReadOnly))
-			{
-				auto content = QString(changelogFile.readAll());
-				content.replace(QRegExp("[\n\r]"), "\\n");
-
-				auto const startPos = content.indexOf("## [");
-				auto endPos = content.indexOf("## [" + versionString + "]");
-				if (endPos == -1)
-					endPos = content.size();
-				auto const changelog = QStringRef(&content, startPos, endPos - startPos);
-				view.setHtml(STRINGIFY(
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Marked in the browser</title>
-</head>
-<body>
-  <div id="content"></div>
-  <script src="qrc:/marked.min.js"></script>
-  <script>
-    document.getElementById('content').innerHTML =
-      marked) + QByteArray("('") + changelog.toUtf8() + QByteArray("');</script></body></html>"));
-
-				// Run dialog
-				dialog.exec();
-			}
+			showChangeLog("What's New", versionString);
 		});
 	});
 }

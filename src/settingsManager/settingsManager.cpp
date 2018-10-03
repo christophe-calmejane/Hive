@@ -115,6 +115,11 @@ private:
 		}
 	}
 
+	virtual QString getFilePath() const noexcept override
+	{
+		return _settings.fileName();
+	}
+
 	// Private Members
 	QSettings _settings{};
 	std::unordered_map<QString, Subject, QStringHash> _observers{};

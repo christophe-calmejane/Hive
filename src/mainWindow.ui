@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1300</width>
+    <width>1400</width>
     <height>800</height>
    </rect>
   </property>
@@ -39,7 +39,7 @@
        <enum>Qt::Vertical</enum>
       </property>
       <widget class="qt::toolkit::TableView" name="controllerTableView"/>
-      <widget class="connectionMatrix::ConnectionMatrixView" name="routingTableView"/>
+      <widget class="connectionMatrix::View" name="routingTableView"/>
      </widget>
     </item>
    </layout>
@@ -49,7 +49,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1300</width>
+     <width>1400</width>
      <height>21</height>
     </rect>
    </property>
@@ -69,6 +69,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionAbout"/>
+    <addaction name="actionChangeLog"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -126,12 +127,17 @@
     <string>Settings...</string>
    </property>
   </action>
+  <action name="actionChangeLog">
+   <property name="text">
+    <string>Change Log</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>connectionMatrix::ConnectionMatrixView</class>
+   <class>connectionMatrix::View</class>
    <extends>QTableView</extends>
-   <header>connectionMatrix.hpp</header>
+   <header>connectionMatrix/view.hpp</header>
   </customwidget>
   <customwidget>
    <class>LoggerView</class>
