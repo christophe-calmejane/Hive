@@ -20,14 +20,14 @@
 #pragma once
 
 #ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
-#error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
+#	error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
 #endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
 
 #include <la/avdecc/controller/internals/avdeccControlledEntityModel.hpp>
 #if defined(ENABLE_AVDECC_CUSTOM_ANY)
-#include <la/avdecc/internals/any.hpp>
+#	include <la/avdecc/internals/any.hpp>
 #else // !ENABLE_AVDECC_CUSTOM_ANY
-#include <any>
+#	include <any>
 #endif // ENABLE_AVDECC_CUSTOM_ANY
 
 #include <QMetaType>
@@ -52,6 +52,7 @@ public:
 	AnyNode(AnyNode const&) = default;
 	AnyNode& operator=(AnyNode const&) = default;
 	AnyNode& operator=(AnyNode&&) = default;
+
 private:
 	std::any _node{};
 };

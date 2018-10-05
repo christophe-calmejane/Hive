@@ -23,7 +23,6 @@
 
 namespace graph
 {
-
 class InputSocketItem;
 class OutputSocketItem;
 
@@ -50,11 +49,11 @@ private:
 	void propagateChanges();
 
 private:
-	int _id{-1};
+	int _id{ -1 };
 	QString _text{};
 
-	float _width{0.f};
-	float _height{0.f};
+	float _width{ 0.f };
+	float _height{ 0.f };
 
 	QVector<InputSocketItem*> _inputs;
 	QVector<OutputSocketItem*> _outputs;

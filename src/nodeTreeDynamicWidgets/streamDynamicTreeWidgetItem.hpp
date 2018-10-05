@@ -34,7 +34,7 @@
 class StreamDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget *parent = nullptr);
+	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent = nullptr);
 
 private:
 	void updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo);

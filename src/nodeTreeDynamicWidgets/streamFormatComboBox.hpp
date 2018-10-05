@@ -38,5 +38,5 @@ public:
 
 private:
 	StreamFormats _streamFormats{};
-	StreamFormat _previousFormat{0};
+	StreamFormat _previousFormat{ 0 };
 };

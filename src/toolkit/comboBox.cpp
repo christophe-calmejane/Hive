@@ -24,12 +24,11 @@ namespace qt
 {
 namespace toolkit
 {
-
 class ComboBoxPrivate : public QObject
 {
 public:
 	ComboBoxPrivate(ComboBox* q)
-	: q_ptr(q)
+		: q_ptr(q)
 	{
 		q->installEventFilter(this);
 	}
@@ -45,7 +44,7 @@ public:
 	}
 
 protected:
-	ComboBox* const q_ptr{nullptr};
+	ComboBox* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ComboBox);
 };
 

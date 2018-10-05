@@ -38,11 +38,11 @@ private:
 	void createLevelFilterButton();
 
 private:
-	avdecc::LoggerModel _loggerModel{this};
-	QSortFilterProxyModel _layerFilterProxyModel{this};
-	QSortFilterProxyModel _levelFilterProxyModel{this};
-	QSortFilterProxyModel _searchFilterProxyModel{this};
-	qt::toolkit::DynamicHeaderView _dynamicHeaderView{Qt::Horizontal, this};
-	QMenu _layerFilterMenu{this};
-	QMenu _levelFilterMenu{this};
+	avdecc::LoggerModel _loggerModel{ this };
+	QSortFilterProxyModel _layerFilterProxyModel{ this };
+	QSortFilterProxyModel _levelFilterProxyModel{ this };
+	QSortFilterProxyModel _searchFilterProxyModel{ this };
+	qt::toolkit::DynamicHeaderView _dynamicHeaderView{ Qt::Horizontal, this };
+	QMenu _layerFilterMenu{ this };
+	QMenu _levelFilterMenu{ this };
 };

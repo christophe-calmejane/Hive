@@ -33,7 +33,6 @@ struct QStringHash
 
 namespace settings
 {
-
 class SettingsManagerImpl : public SettingsManager
 {
 private:
@@ -53,13 +52,14 @@ private:
 		auto const observersIt = _observers.find(name);
 		if (observersIt != _observers.end())
 		{
-			observersIt->second.notifyObservers<Observer>([dontNotifyObserver, &name, &value](Observer* const obs)
-			{
-				if (obs != dontNotifyObserver)
+			observersIt->second.notifyObservers<Observer>(
+				[dontNotifyObserver, &name, &value](Observer* const obs)
 				{
-					obs->onSettingChanged(name, value);
-				}
-			});
+					if (obs != dontNotifyObserver)
+					{
+						obs->onSettingChanged(name, value);
+					}
+				});
 		}
 	}
 

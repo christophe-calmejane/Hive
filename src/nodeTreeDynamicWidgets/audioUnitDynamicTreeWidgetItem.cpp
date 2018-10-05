@@ -21,7 +21,7 @@
 
 #include <QMenu>
 
-AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::controller::model::AudioUnitNodeStaticModel const* const staticModel, la::avdecc::controller::model::AudioUnitNodeDynamicModel const* const dynamicModel, QTreeWidget *parent)
+AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::controller::model::AudioUnitNodeStaticModel const* const staticModel, la::avdecc::controller::model::AudioUnitNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _audioUnitIndex(audioUnitIndex)
@@ -41,20 +41,22 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 	}
 
 	// Send changes
-	connect(_samplingRate, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this]()
-	{
-		auto const samplingRate = _samplingRate->currentData().value<la::avdecc::entity::model::SamplingRate>();
-		avdecc::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate);
-	});
+	connect(_samplingRate, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+		[this]()
+		{
+			auto const samplingRate = _samplingRate->currentData().value<la::avdecc::entity::model::SamplingRate>();
+			avdecc::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate);
+		});
 
 	// Listen for changes
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioUnitSamplingRateChanged, _samplingRate, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate)
-	{
-		if (entityID == _entityID && audioUnitIndex == _audioUnitIndex)
+	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioUnitSamplingRateChanged, _samplingRate,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate)
 		{
-			updateSamplingRate(samplingRate);
-		}
-	});
+			if (entityID == _entityID && audioUnitIndex == _audioUnitIndex)
+			{
+				updateSamplingRate(samplingRate);
+			}
+		});
 
 	// Update now
 	updateSamplingRate(dynamicModel->currentSamplingRate);

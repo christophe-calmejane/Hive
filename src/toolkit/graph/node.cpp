@@ -26,14 +26,13 @@
 
 namespace graph
 {
-
 float const TITLE_HEIGHT = 20.f;
 float const PADDING = 5.f;
 
 NodeItem::NodeItem(int id, QString const& text, QGraphicsItem* parent)
-: QGraphicsItem(parent)
-, _id(id)
-, _text(text)
+	: QGraphicsItem(parent)
+	, _id(id)
+	, _text(text)
 {
 	setAcceptHoverEvents(true);
 
@@ -73,7 +72,7 @@ OutputSocketItem* NodeItem::outputAt(int index) const
 
 QRectF NodeItem::boundingRect() const
 {
-	return QRectF{0, 0, _width, _height};
+	return QRectF{ 0, 0, _width, _height };
 }
 
 void NodeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
@@ -115,8 +114,8 @@ void NodeItem::updateGeometry()
 
 	// Geometry
 
-	auto maxInputWidth{0};
-	auto maxOutputWidth{0};
+	auto maxInputWidth{ 0 };
+	auto maxOutputWidth{ 0 };
 
 	for (auto const& input : _inputs)
 	{

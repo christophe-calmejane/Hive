@@ -33,16 +33,16 @@
 #include "settingsManager/settings.hpp"
 
 #ifdef DEBUG
-#define SPLASH_DELAY 0
+#	define SPLASH_DELAY 0
 #else // !DEBUG
-#define SPLASH_DELAY 1250
+#	define SPLASH_DELAY 1250
 #endif // DEBUG
 
 // Setup BugTrap on windows (win32 only right now)
 #if defined(Q_OS_WIN32) && defined(HAVE_BUGTRAP)
-#define BUGREPORTER_CATCH_EXCEPTIONS
-#include <Windows.h>
-#include "BugTrap.h"
+#	define BUGREPORTER_CATCH_EXCEPTIONS
+#	include <Windows.h>
+#	include "BugTrap.h"
 void setupBugReporter()
 {
 	BT_InstallSehFilter();
@@ -53,12 +53,10 @@ void setupBugReporter()
 }
 
 #else // Nothing on other OS right now
-void setupBugReporter()
-{
-}
+void setupBugReporter() {}
 #endif
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	// Setup Bug Reporter
 	setupBugReporter();
@@ -97,7 +95,7 @@ int main(int argc, char *argv[])
 	QSharedMemory lock("d2794ee0-ab5e-48a5-9189-78a9e2c40635");
 	if (!lock.create(512, QSharedMemory::ReadWrite))
 	{
-#pragma message("TODO: Read the SM and cast to a processID. Check if that processID is still active and if not, continue.")
+#	pragma message("TODO: Read the SM and cast to a processID. Check if that processID is still active and if not, continue.")
 		QMessageBox::critical(nullptr, {}, "An instance of this application is already running.", QMessageBox::Ok);
 		return 1;
 	}

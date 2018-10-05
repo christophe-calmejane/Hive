@@ -21,7 +21,7 @@
 
 #include <QMenu>
 
-AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, QTreeWidget *parent)
+AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _avbInterfaceIndex(avbInterfaceIndex)
@@ -45,13 +45,14 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		updateAvbInfo(dynamicModel->avbInfo);
 
 		// Listen for AvbInfoChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInfoChanged, this, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInfo const& info)
-		{
-			if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInfoChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInfo const& info)
 			{
-				updateAvbInfo(info);
-			}
-		});
+				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
+				{
+					updateAvbInfo(info);
+				}
+			});
 	}
 }
 

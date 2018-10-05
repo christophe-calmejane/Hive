@@ -35,7 +35,7 @@ public:
 
 		// Initialize settings (blocking signals)
 		auto& settings = settings::SettingsManager::getInstance();
-		
+
 		// Automatic PNG Download
 		{
 			QSignalBlocker lock(automaticPNGDownloadCheckBox);
@@ -47,7 +47,7 @@ public:
 			QSignalBlocker lock(enableAEMCacheCheckBox);
 			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::AemCacheEnabled.name).toBool());
 		}
-		
+
 		// Transpose Connection Matrix
 		{
 			QSignalBlocker lock(transposeConnectionMatrixCheckBox);
@@ -57,7 +57,8 @@ public:
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
-	: QDialog(parent), _pImpl(new SettingsDialogImpl(this))
+	: QDialog(parent)
+	, _pImpl(new SettingsDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " Settings");
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
@@ -77,7 +78,7 @@ void SettingsDialog::on_automaticPNGDownloadCheckBox_toggled(bool checked)
 
 void SettingsDialog::on_clearLogoCacheButton_clicked()
 {
-	auto& logoCache{EntityLogoCache::getInstance()};
+	auto& logoCache{ EntityLogoCache::getInstance() };
 	logoCache.clear();
 }
 
@@ -92,4 +93,3 @@ void SettingsDialog::on_transposeConnectionMatrixCheckBox_toggled(bool checked)
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.setValue(settings::TransposeConnectionMatrix.name, checked);
 }
-

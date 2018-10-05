@@ -24,7 +24,6 @@
 
 namespace graph
 {
-
 class InputSocketItem;
 class OutputSocketItem;
 
@@ -50,15 +49,15 @@ public:
 	void disconnect();
 
 private:
-	virtual void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget *widget) override;
+	virtual void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 	void updatePath();
 
 private:
 	QPointF _start{};
 	QPointF _stop{};
 
-	InputSocketItem* _input{nullptr};
-	OutputSocketItem* _output{nullptr};
+	InputSocketItem* _input{ nullptr };
+	OutputSocketItem* _output{ nullptr };
 };
 
 using ConnectionItems = std::unordered_set<ConnectionItem*>;

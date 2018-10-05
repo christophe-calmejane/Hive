@@ -29,7 +29,6 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
-
 void ItemDelegate::setTransposed(bool const isTransposed)
 {
 	_isTransposed = isTransposed;
@@ -47,19 +46,19 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	{
 		painter->fillRect(option.rect, option.palette.highlight());
 	}
-	
+
 	auto talkerNodeType = index.model()->headerData(index.row(), Qt::Vertical, Model::NodeTypeRole).value<Model::NodeType>();
 	auto listenerNodeType = index.model()->headerData(index.column(), Qt::Horizontal, Model::NodeTypeRole).value<Model::NodeType>();
-	
+
 	if (_isTransposed)
 	{
 		std::swap(talkerNodeType, listenerNodeType);
 	}
-	
+
 	if (talkerNodeType == Model::NodeType::Entity || listenerNodeType == Model::NodeType::Entity)
 	{
-		auto const rowEntityID{index.model()->headerData(index.row(), Qt::Vertical, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>()};
-		auto const columnEntityID{index.model()->headerData(index.column(), Qt::Horizontal, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>()};
+		auto const rowEntityID{ index.model()->headerData(index.row(), Qt::Vertical, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>() };
+		auto const columnEntityID{ index.model()->headerData(index.column(), Qt::Horizontal, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>() };
 
 		if (rowEntityID == columnEntityID)
 		{
@@ -74,27 +73,26 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	{
 		auto talkerRedundantStreamOrder = index.model()->headerData(index.row(), Qt::Vertical, Model::RedundantStreamOrderRole).value<std::int32_t>();
 		auto listenerRedundantStreamOrder = index.model()->headerData(index.column(), Qt::Horizontal, Model::RedundantStreamOrderRole).value<std::int32_t>();
-	
+
 		if (_isTransposed)
 		{
 			std::swap(talkerRedundantStreamOrder, listenerRedundantStreamOrder);
 		}
-	
+
 		// If index is a cross of 2 redundant streams, only the diagonal is connectable
 		if (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream && talkerRedundantStreamOrder != listenerRedundantStreamOrder)
 		{
 			return;
 		}
-	
+
 		auto const capabilities = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 		if (capabilities == Model::ConnectionCapabilities::None)
 		{
 			drawNotApplicable(painter, option.rect);
 			return;
 		}
-		
-		auto const isRedundant = !((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
-															 || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
+
+		auto const isRedundant = !((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
 
 		if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::Connected))
 		{

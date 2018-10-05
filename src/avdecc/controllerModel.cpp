@@ -64,7 +64,7 @@ public:
 private:
 	int entityRow(la::avdecc::UniqueIdentifier const entityID) const;
 	QModelIndex createIndex(la::avdecc::UniqueIdentifier const entityID, ControllerModelColumn column) const;
-	void dataChanged(la::avdecc::UniqueIdentifier const entityID, ControllerModelColumn column, QVector<int> const &roles = {Qt::DisplayRole});
+	void dataChanged(la::avdecc::UniqueIdentifier const entityID, ControllerModelColumn column, QVector<int> const& roles = { Qt::DisplayRole });
 
 	// Slots for avdecc::ControllerManager signals
 	Q_SLOT void controllerOffline();
@@ -75,27 +75,22 @@ private:
 	Q_SLOT void entityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName);
 	Q_SLOT void acquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity);
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);
-	
+
 	//
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
-	
+
 	//
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
 private:
-	ControllerModel * const q_ptr{ nullptr };
+	ControllerModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControllerModel);
 
 	using Entities = std::vector<la::avdecc::UniqueIdentifier>;
 	Entities _entities{};
-	
-	std::array<QImage, 3> _acquireStateImages
-	{
-		{
-			QImage{":/unlocked.png"},
-			QImage{":/locked.png"},
-			QImage{":/locked_by_other.png"}
-		},
+
+	std::array<QImage, 3> _acquireStateImages{
+		{ QImage{ ":/unlocked.png" }, QImage{ ":/locked.png" }, QImage{ ":/locked_by_other.png" } },
 	};
 };
 
@@ -115,10 +110,10 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	connect(&controllerManager, &avdecc::ControllerManager::entityGroupNameChanged, this, &ControllerModelPrivate::entityGroupNameChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::acquireStateChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::gptpChanged);
-	
+
 	auto& logoCache = EntityLogoCache::getInstance();
 	connect(&logoCache, &EntityLogoCache::imageChanged, this, &ControllerModelPrivate::imageChanged);
-	
+
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
 }
@@ -213,15 +208,24 @@ QVariant ControllerModelPrivate::headerData(int section, Qt::Orientation orienta
 		{
 			switch (static_cast<ControllerModelColumn>(section))
 			{
-				case ControllerModelColumn::EntityLogo: return "Logo";
-				case ControllerModelColumn::EntityId: return "Entity ID";
-				case ControllerModelColumn::Name: return "Name";
-				case ControllerModelColumn::Group: return "Group";
-				case ControllerModelColumn::AcquireState: return "Acquire state";
-				case ControllerModelColumn::GrandmasterId: return "Grandmaster ID";
-				case ControllerModelColumn::GptpDomain: return "GPTP domain";
-				case ControllerModelColumn::InterfaceIndex: return "Interface index";
-				case ControllerModelColumn::AssociationId: return "Association ID";
+				case ControllerModelColumn::EntityLogo:
+					return "Logo";
+				case ControllerModelColumn::EntityId:
+					return "Entity ID";
+				case ControllerModelColumn::Name:
+					return "Name";
+				case ControllerModelColumn::Group:
+					return "Group";
+				case ControllerModelColumn::AcquireState:
+					return "Acquire state";
+				case ControllerModelColumn::GrandmasterId:
+					return "Grandmaster ID";
+				case ControllerModelColumn::GptpDomain:
+					return "GPTP domain";
+				case ControllerModelColumn::InterfaceIndex:
+					return "Interface index";
+				case ControllerModelColumn::AssociationId:
+					return "Association ID";
 				default:
 					break;
 			}
@@ -323,7 +327,7 @@ void ControllerModelPrivate::entityGroupNameChanged(la::avdecc::UniqueIdentifier
 
 void ControllerModelPrivate::acquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity)
 {
-	dataChanged(entityID, ControllerModelColumn::AcquireState, {Qt::UserRole});
+	dataChanged(entityID, ControllerModelColumn::AcquireState, { Qt::UserRole });
 }
 
 void ControllerModelPrivate::gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
@@ -336,7 +340,7 @@ void ControllerModelPrivate::imageChanged(la::avdecc::UniqueIdentifier const ent
 {
 	if (type == EntityLogoCache::Type::Entity)
 	{
-		dataChanged(entityID, ControllerModelColumn::EntityLogo, {Qt::UserRole});
+		dataChanged(entityID, ControllerModelColumn::EntityLogo, { Qt::UserRole });
 	}
 }
 
@@ -347,12 +351,12 @@ void ControllerModelPrivate::onSettingChanged(settings::SettingsManager::Setting
 		if (value.toBool())
 		{
 			Q_Q(ControllerModel);
-			auto const column{la::avdecc::to_integral(ControllerModelColumn::EntityLogo)};
-			
-			auto const top{q->createIndex(0, column, nullptr)};
-			auto const bottom{q->createIndex(rowCount(), column, nullptr)};
-			
-			emit q->dataChanged(top, bottom, {Qt::UserRole});
+			auto const column{ la::avdecc::to_integral(ControllerModelColumn::EntityLogo) };
+
+			auto const top{ q->createIndex(0, column, nullptr) };
+			auto const bottom{ q->createIndex(rowCount(), column, nullptr) };
+
+			emit q->dataChanged(top, bottom, { Qt::UserRole });
 		}
 	}
 }

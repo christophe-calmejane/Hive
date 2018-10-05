@@ -25,7 +25,6 @@
 
 namespace graph
 {
-
 enum class ConnectionDragMode
 {
 	Undefined,
@@ -39,7 +38,7 @@ class ConnectionDragEvent
 {
 public:
 	ConnectionItems connections;
-	ConnectionDragMode mode{ConnectionDragMode::Undefined};
+	ConnectionDragMode mode{ ConnectionDragMode::Undefined };
 };
 
 class SocketItem;

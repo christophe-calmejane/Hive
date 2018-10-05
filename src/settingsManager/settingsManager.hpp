@@ -25,11 +25,11 @@
 
 namespace settings
 {
-
 class SettingsManager
 {
 protected:
 	using Subject = la::avdecc::TypedSubject<struct SubjectTag, std::mutex>;
+
 public:
 	using Setting = QString;
 	struct SettingDefault
@@ -54,7 +54,7 @@ public:
 	virtual void registerSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
 	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
 	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
-	
+
 	virtual QString getFilePath() const noexcept = 0;
 
 protected:

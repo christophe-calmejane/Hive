@@ -42,7 +42,7 @@ public:
 	la::avdecc::UniqueIdentifier controlledEntityID(QModelIndex const& index) const;
 
 private:
-	ControllerModelPrivate * const d_ptr{ nullptr };
+	ControllerModelPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(ControllerModel)
 };
 } // namespace avdecc

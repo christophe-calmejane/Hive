@@ -24,7 +24,6 @@
 
 namespace connectionMatrix
 {
-
 class ModelPrivate;
 class Model final : public QStandardItemModel
 {
@@ -40,7 +39,7 @@ public:
 		RedundantOutputStream,
 		RedundantInputStream,
 	};
-	
+
 	enum class ConnectionCapabilities
 	{
 		None = 0,
@@ -64,14 +63,14 @@ public:
 
 		ParentIndexRole, // std::int32_t, -1 if orphan
 		ChildrenCountRole, // std::int32_t
-		
+
 		/** Intersection Data */
 		ConnectionCapabilitiesRole, // ConnectionCapabilities
 	};
 
 	Model(QObject* parent = nullptr);
 	virtual ~Model();
-	
+
 private:
 	ModelPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(Model);

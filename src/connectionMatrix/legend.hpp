@@ -25,19 +25,18 @@
 
 namespace connectionMatrix
 {
-
 class Legend : public QWidget
 {
 	Q_OBJECT
 public:
 	Legend(QWidget* parent = nullptr);
-	
+
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
 
 private:
 	virtual void paintEvent(QPaintEvent*) override;
-	
+
 private:
 	QGridLayout _layout{ this };
 	QWidget _buttonContainer{ this };

@@ -59,9 +59,9 @@ private:
 	void closeEvent(QCloseEvent* event) override;
 
 private:
-	qt::toolkit::ComboBox _protocolComboBox{this};
-	qt::toolkit::ComboBox _interfaceComboBox{this};
-	QLabel _controllerEntityIDLabel{this};
+	qt::toolkit::ComboBox _protocolComboBox{ this };
+	qt::toolkit::ComboBox _interfaceComboBox{ this };
+	QLabel _controllerEntityIDLabel{ this };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };
 };

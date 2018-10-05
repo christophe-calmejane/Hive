@@ -25,12 +25,11 @@ namespace qt
 {
 namespace toolkit
 {
-
 class TextEntryPrivate : public QObject
 {
 public:
 	TextEntryPrivate(TextEntry* q)
-	: q_ptr(q)
+		: q_ptr(q)
 	{
 		q->installEventFilter(this);
 		q->setValidator(&_validator);
@@ -41,7 +40,7 @@ public:
 	{
 		Q_Q(TextEntry);
 
-		auto abort{false};
+		auto abort{ false };
 
 		switch (event->type())
 		{
@@ -84,11 +83,11 @@ public:
 	}
 
 protected:
-	TextEntry* const q_ptr{nullptr};
+	TextEntry* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(TextEntry);
 
 	QString _focusInText{};
-	bool _validated{false};
+	bool _validated{ false };
 
 	avdecc::StringValidator _validator;
 };

@@ -44,7 +44,6 @@ enum LoggerModelColumn
 
 namespace avdecc
 {
-
 class LoggerModelPrivate : public QObject, public la::avdecc::logger::Logger::Observer
 {
 	Q_OBJECT
@@ -78,10 +77,14 @@ public:
 
 			switch (index.column())
 			{
-				case LoggerModelColumn::Timestamp: return entry.timestamp;
-				case LoggerModelColumn::Layer: return avdecc::helper::loggerLayerToString(entry.layer);
-				case LoggerModelColumn::Level: return avdecc::helper::loggerLevelToString(entry.level);
-				case LoggerModelColumn::Message: return entry.message;
+				case LoggerModelColumn::Timestamp:
+					return entry.timestamp;
+				case LoggerModelColumn::Layer:
+					return avdecc::helper::loggerLayerToString(entry.layer);
+				case LoggerModelColumn::Level:
+					return avdecc::helper::loggerLevelToString(entry.level);
+				case LoggerModelColumn::Message:
+					return entry.message;
 				default:
 					break;
 			}
@@ -98,10 +101,14 @@ public:
 			{
 				switch (section)
 				{
-					case LoggerModelColumn::Timestamp: return "Timestamp";
-					case LoggerModelColumn::Layer: return "Layer";
-					case LoggerModelColumn::Level: return "Level";
-					case LoggerModelColumn::Message: return "Message";
+					case LoggerModelColumn::Timestamp:
+						return "Timestamp";
+					case LoggerModelColumn::Layer:
+						return "Layer";
+					case LoggerModelColumn::Level:
+						return "Level";
+					case LoggerModelColumn::Message:
+						return "Message";
 					default:
 						break;
 				}
@@ -145,19 +152,20 @@ public:
 
 	virtual void onLogItem(la::avdecc::logger::Level const level, la::avdecc::logger::LogItem const* const item) noexcept override
 	{
-		QMetaObject::invokeMethod(this, [this, layer = item->getLayer(), level, message = item->getMessage()]()
-		{
-			Q_Q(LoggerModel);
-			auto const count = q->rowCount();
-			q->beginInsertRows({}, count, count);
-			auto const timestamp = QString("%1 - %2").arg(QDate::currentDate().toString(Qt::ISODate), QTime::currentTime().toString(Qt::ISODate));
-			_entries.push_back({ timestamp, layer, level, QString::fromStdString(message) });
-			q->endInsertRows();
-		});
+		QMetaObject::invokeMethod(this,
+			[this, layer = item->getLayer(), level, message = item->getMessage()]()
+			{
+				Q_Q(LoggerModel);
+				auto const count = q->rowCount();
+				q->beginInsertRows({}, count, count);
+				auto const timestamp = QString("%1 - %2").arg(QDate::currentDate().toString(Qt::ISODate), QTime::currentTime().toString(Qt::ISODate));
+				_entries.push_back({ timestamp, layer, level, QString::fromStdString(message) });
+				q->endInsertRows();
+			});
 	}
 
 private:
-	LoggerModel * const q_ptr{ nullptr };
+	LoggerModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(LoggerModel);
 
 	la::avdecc::logger::Logger* _logger{ nullptr };

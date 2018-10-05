@@ -26,7 +26,7 @@
 template<typename NodeType, typename std::enable_if_t<std::is_pointer<NodeType>::value && std::is_base_of<la::avdecc::controller::model::Node, std::remove_pointer_t<NodeType>>::value, int> = 0>
 auto createNodeVisitDispatchFunctor() noexcept
 {
-	return[](NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, std::any const& node)
+	return [](NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, std::any const& node)
 	{
 		try
 		{
