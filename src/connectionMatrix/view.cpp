@@ -32,44 +32,43 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
-
 View::View(QWidget* parent)
-	: QTableView{parent}
-	, _model{std::make_unique<Model>()}
-	, _verticalHeaderView{std::make_unique<HeaderView>(Qt::Vertical, this)}
-	, _horizontalHeaderView{std::make_unique<HeaderView>(Qt::Horizontal, this)}
-	, _itemDelegate{std::make_unique<ItemDelegate>()}
-	, _legend{std::make_unique<Legend>(this)}
+	: QTableView{ parent }
+	, _model{ std::make_unique<Model>() }
+	, _verticalHeaderView{ std::make_unique<HeaderView>(Qt::Vertical, this) }
+	, _horizontalHeaderView{ std::make_unique<HeaderView>(Qt::Horizontal, this) }
+	, _itemDelegate{ std::make_unique<ItemDelegate>() }
+	, _legend{ std::make_unique<Legend>(this) }
 {
 	_proxy.connectToModel(_model.get());
 
 	setVerticalHeader(_verticalHeaderView.get());
 	setHorizontalHeader(_horizontalHeaderView.get());
 	setItemDelegate(_itemDelegate.get());
-	
+
 	setSelectionMode(QAbstractItemView::NoSelection);
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setCornerButtonEnabled(false);
 	setMouseTracking(true);
-	
+
 	// Configure highlight color
 	auto p = palette();
 	p.setColor(QPalette::Highlight, 0xf3e5f5);
 	setPalette(p);
-	
+
 	connect(this, &QTableView::clicked, this, &View::onClicked);
 
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(this, &QTableView::customContextMenuRequested, this, &View::onCustomContextMenuRequested);
-	
+
 	verticalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(verticalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
 	connect(verticalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
-	
+
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
-	
+
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSettingObserver(settings::TransposeConnectionMatrix.name, this);
@@ -85,8 +84,8 @@ View::~View()
 void View::mouseMoveEvent(QMouseEvent* event)
 {
 	auto const index = indexAt(static_cast<QMouseEvent*>(event)->pos());
-	selectionModel()->select(index, QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows|QItemSelectionModel::Columns);
-	
+	selectionModel()->select(index, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows | QItemSelectionModel::Columns);
+
 	QTableView::mouseMoveEvent(event);
 }
 
@@ -98,14 +97,14 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		auto const horizontalSectionState = _horizontalHeaderView->saveSectionState();
 
 		_isTransposed = value.toBool();
-		
+
 		_itemDelegate->setTransposed(_isTransposed);
 		_legend->setTransposed(_isTransposed);
-		
+
 		// Force a repaint while there is no model, this fixes a refresh issue when switching between transpose states
 		setModel(nullptr);
 		repaint();
-		
+
 		if (_isTransposed)
 		{
 			setModel(&_proxy);
@@ -134,8 +133,7 @@ void View::onClicked(QModelIndex const& index)
 		auto talkerID = talkerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 		auto listenerID = listenerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 
-		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream)
-				|| (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
+		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
@@ -143,7 +141,7 @@ void View::onClicked(QModelIndex const& index)
 			{
 				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
-				
+
 				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
 					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
@@ -171,14 +169,14 @@ void View::onClicked(QModelIndex const& index)
 
 			auto talkerEntity = manager.getControlledEntity(talkerID);
 			auto listenerEntity = manager.getControlledEntity(listenerID);
-			
+
 			if (talkerEntity && listenerEntity)
 			{
 				auto const& talkerEntityNode = talkerEntity->getEntityNode();
 				auto const& talkerEntityInfo = talkerEntity->getEntity();
 				auto const& listenerEntityNode = listenerEntity->getEntityNode();
 				auto const& listenerEntityInfo = listenerEntity->getEntity();
-				
+
 				auto const talkerRedundantIndex = talkerData(index, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
 				auto const listenerRedundantIndex = listenerData(index, Model::RedundantIndexRole).value<la::avdecc::controller::model::VirtualIndex>();
 
@@ -234,8 +232,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 		auto talkerID = talkerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 		auto listenerID = listenerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 
-		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream)
-				|| (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
+		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
@@ -294,23 +291,23 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 {
 	auto* header = static_cast<QHeaderView*>(sender());
-	
+
 	auto const logicalIndex = header->logicalIndexAt(pos);
 	if (logicalIndex < 0)
 	{
 		return;
 	}
-	
+
 	// Highlight this section
 	if (header->orientation() == Qt::Horizontal)
 	{
-		selectionModel()->select(model()->index(0, logicalIndex), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Columns);
+		selectionModel()->select(model()->index(0, logicalIndex), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Columns);
 	}
 	else
 	{
-		selectionModel()->select(model()->index(logicalIndex, 0), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows);
+		selectionModel()->select(model()->index(logicalIndex, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 	}
-	
+
 	try
 	{
 		auto const entityID = model()->headerData(logicalIndex, header->orientation(), Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
@@ -321,13 +318,13 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 		if (controlledEntity)
 		{
 			auto const& entityNode = controlledEntity->getEntityNode();
-			la::avdecc::controller::model::StreamNode const* streamNode{nullptr};
-			
+			la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
+
 			QString streamName;
-			bool isStreamRunning{false};
-			
-			auto const isInputStreamKind{header->orientation() == (_isTransposed ? Qt::Vertical : Qt::Horizontal)};
-			
+			bool isStreamRunning{ false };
+
+			auto const isInputStreamKind{ header->orientation() == (_isTransposed ? Qt::Vertical : Qt::Horizontal) };
+
 			if (isInputStreamKind)
 			{
 				auto const& streamInputNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
@@ -342,7 +339,7 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 				isStreamRunning = controlledEntity->isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, streamIndex);
 				streamNode = &streamOutputNode;
 			}
-			
+
 			auto addHeaderAction = [](QMenu& menu, QString const& text)
 			{
 				auto* action = menu.addAction(text);
@@ -352,16 +349,16 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 				action->setEnabled(false);
 				return action;
 			};
-			
+
 			auto addAction = [](QMenu& menu, QString const& text, bool enabled)
 			{
 				auto* action = menu.addAction(text);
 				action->setEnabled(enabled);
 				return action;
 			};
-			
+
 			QMenu menu;
-			
+
 			addHeaderAction(menu, "Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
 			addHeaderAction(menu, "Stream: " + streamName);
 			menu.addSeparator();
@@ -369,7 +366,7 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 			auto* stopStreamingAction = addAction(menu, "Stop Streaming", isStreamRunning);
 			menu.addSeparator();
 			menu.addAction("Cancel");
-			
+
 			if (auto* action = menu.exec(header->mapToGlobal(pos)))
 			{
 				if (action == startStreamingAction)
@@ -401,7 +398,7 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 	{
 	}
 }
-	
+
 void View::onLegendGeometryChanged()
 {
 	_legend->setGeometry(0, 0, verticalHeader()->width(), horizontalHeader()->height());

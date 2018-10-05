@@ -49,8 +49,8 @@ private:
 	void configureWindowTitle();
 
 private:
-	QHBoxLayout _layout{this};
-	QSplitter _splitter{Qt::Vertical, this};
-	ControlledEntityTreeWidget _controlledEntityTreeWiget{this};
-	NodeTreeWidget _nodeTreeWiget{this};
+	QHBoxLayout _layout{ this };
+	QSplitter _splitter{ Qt::Vertical, this };
+	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
+	NodeTreeWidget _nodeTreeWiget{ this };
 };

@@ -29,14 +29,13 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
-
 HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	: QHeaderView(orientation, parent)
 {
 	setSectionResizeMode(QHeaderView::Fixed);
 	setSectionsClickable(true);
 
-	int const size{20};
+	int const size{ 20 };
 	setMaximumSectionSize(size);
 	setMinimumSectionSize(size);
 	setDefaultSectionSize(size);
@@ -66,7 +65,7 @@ void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 				hideSection(section);
 			}
 		}
-		
+
 		_sectionState = sectionState;
 	}
 }
@@ -85,12 +84,12 @@ void HeaderView::setModel(QAbstractItemModel* model)
 			disconnect(this->model(), &QAbstractItemModel::columnsInserted, this, &HeaderView::handleSectionInserted);
 			disconnect(this->model(), &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
 		}
-		
+
 		disconnect(this->model(), &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
 	}
-	
+
 	QHeaderView::setModel(model);
-	
+
 	if (model)
 	{
 		if (orientation() == Qt::Vertical)
@@ -103,7 +102,7 @@ void HeaderView::setModel(QAbstractItemModel* model)
 			connect(model, &QAbstractItemModel::columnsInserted, this, &HeaderView::handleSectionInserted);
 			connect(model, &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
 		}
-		
+
 		connect(model, &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
 	}
 }
@@ -128,12 +127,12 @@ void HeaderView::mouseMoveEvent(QMouseEvent* event)
 	if (orientation() == Qt::Horizontal)
 	{
 		auto const column = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
-		selectionModel()->select(model()->index(0, column), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Columns);
+		selectionModel()->select(model()->index(0, column), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Columns);
 	}
 	else
 	{
 		auto const row = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
-		selectionModel()->select(model()->index(row, 0), QItemSelectionModel::ClearAndSelect|QItemSelectionModel::Rows);
+		selectionModel()->select(model()->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 	}
 
 	QHeaderView::mouseMoveEvent(event);
@@ -147,7 +146,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	QBrush backgroundBrush{};
 
 	auto const nodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
-	auto nodeLevel{0};
+	auto nodeLevel{ 0 };
 
 	switch (nodeType)
 	{
@@ -175,7 +174,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto const arrowSize{ 10 };
 	auto const arrowOffset{ 20 * nodeLevel };
 
-	auto isSelected{false};
+	auto isSelected{ false };
 
 	QPainterPath path;
 	if (orientation() == Qt::Horizontal)
@@ -243,11 +242,11 @@ QSize HeaderView::sizeHint() const
 {
 	if (orientation() == Qt::Horizontal)
 	{
-		return {defaultSectionSize(), 200};
+		return { defaultSectionSize(), 200 };
 	}
 	else
 	{
-		return {200, defaultSectionSize()};
+		return { 200, defaultSectionSize() };
 	}
 }
 
@@ -271,22 +270,22 @@ void HeaderView::handleHeaderDataChanged(Qt::Orientation orientation, int first,
 			if (!state.isInitialized)
 			{
 				auto const nodeType = model()->headerData(section, orientation, Model::NodeTypeRole).value<Model::NodeType>();
-				
+
 				switch (nodeType)
 				{
-				case Model::NodeType::RedundantOutput:
-				case Model::NodeType::RedundantInput:
-					state.isExpanded = false;
-					break;
-				case Model::NodeType::RedundantOutputStream:
-				case Model::NodeType::RedundantInputStream:
-					state.isVisible = false;
-					setSectionHidden(section, true);
-					break;
-				default:
-					break;
+					case Model::NodeType::RedundantOutput:
+					case Model::NodeType::RedundantInput:
+						state.isExpanded = false;
+						break;
+					case Model::NodeType::RedundantOutputStream:
+					case Model::NodeType::RedundantInputStream:
+						state.isVisible = false;
+						setSectionHidden(section, true);
+						break;
+					default:
+						break;
 				}
-				
+
 				state.isInitialized = true;
 			}
 		}
@@ -310,7 +309,7 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 	for (auto childIndex = 0; childIndex < childrenCount; ++childIndex)
 	{
 		auto const index = logicalIndex + 1 + childIndex;
-		
+
 		_sectionState[index].isExpanded = isExpanded;
 		_sectionState[index].isVisible = isExpanded;
 

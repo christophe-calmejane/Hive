@@ -48,23 +48,14 @@ public:
 		}
 
 		// Configure text
-		auto const configuredText = aboutLabel->text()
-			.arg(hive::internals::applicationLongName)
-			.arg(hive::internals::versionString)
-			.arg(hive::internals::buildArchitecture)
-			.arg(hive::internals::buildConfiguration)
-			.arg(la::avdecc::getVersion().c_str())
-			.arg(avdeccOptions.c_str())
-			.arg(la::avdecc::controller::getVersion().c_str())
-			.arg(avdeccControllerOptions.c_str())
-			.arg(hive::internals::authors)
-			.arg(hive::internals::projectURL);
+		auto const configuredText = aboutLabel->text().arg(hive::internals::applicationLongName).arg(hive::internals::versionString).arg(hive::internals::buildArchitecture).arg(hive::internals::buildConfiguration).arg(la::avdecc::getVersion().c_str()).arg(avdeccOptions.c_str()).arg(la::avdecc::controller::getVersion().c_str()).arg(avdeccControllerOptions.c_str()).arg(hive::internals::authors).arg(hive::internals::projectURL);
 		aboutLabel->setText(configuredText);
 	}
 };
 
 AboutDialog::AboutDialog(QWidget* parent)
-	: QDialog(parent), _pImpl(new AboutDialogImpl(this))
+	: QDialog(parent)
+	, _pImpl(new AboutDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " - Version " + QCoreApplication::applicationVersion());
 	layout()->setSizeConstraint(QLayout::SetFixedSize);

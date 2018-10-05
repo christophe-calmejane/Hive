@@ -247,11 +247,12 @@ private:
 		};
 		auto* item = addItem(parent, &node, genName(node.dynamicModel->entityName.data()));
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::entityNameChanged, item, [genName, item](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
-		{
-			auto name = genName(entityName);
-			item->setData(0, Qt::DisplayRole, name);
-		});
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::entityNameChanged, item,
+			[genName, item](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
+			{
+				auto name = genName(entityName);
+				item->setData(0, Qt::DisplayRole, name);
+			});
 
 		Q_Q(ControlledEntityTreeWidget);
 		q->setItemExpanded(item, true);
@@ -265,20 +266,21 @@ private:
 		};
 		auto* item = addItem(parent, &node, genName(avdecc::helper::configurationName(controlledEntity, node)));
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::configurationNameChanged, item, [this, genName, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& /*configurationName*/)
-		{
-			if (entityID == _controlledEntityID && configurationIndex == node.descriptorIndex)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::configurationNameChanged, item,
+			[this, genName, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& /*configurationName*/)
 			{
-				auto& manager = avdecc::ControllerManager::getInstance();
-				auto controlledEntity = manager.getControlledEntity(entityID);
-
-				if (controlledEntity)
+				if (entityID == _controlledEntityID && configurationIndex == node.descriptorIndex)
 				{
-					auto name = genName(avdecc::helper::configurationName(controlledEntity.get(), node));
-					item->setData(0, Qt::DisplayRole, name);
+					auto& manager = avdecc::ControllerManager::getInstance();
+					auto controlledEntity = manager.getControlledEntity(entityID);
+
+					if (controlledEntity)
+					{
+						auto name = genName(avdecc::helper::configurationName(controlledEntity.get(), node));
+						item->setData(0, Qt::DisplayRole, name);
+					}
 				}
-			}
-		});
+			});
 
 		if (node.dynamicModel->isActiveConfiguration)
 		{
@@ -318,10 +320,11 @@ private:
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioUnitNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& /*audioUnitName*/)
-		{
-			updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex);
-		});
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioUnitNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& /*audioUnitName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex);
+			});
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
@@ -332,10 +335,11 @@ private:
 			auto const name = genName(controlledEntity, node);
 			auto* item = addItem(parent, &node, name);
 
-			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
-			{
-				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
-			});
+			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item,
+				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
+				{
+					updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
+				});
 		}
 	}
 
@@ -347,10 +351,11 @@ private:
 			auto const name = genName(controlledEntity, node);
 			auto* item = addItem(parent, &node, name);
 
-			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
-			{
-				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
-			});
+			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item,
+				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
+				{
+					updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
+				});
 		}
 	}
 
@@ -359,10 +364,11 @@ private:
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& /*avbInterfaceName*/)
-		{
-			updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex);
-		});
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& /*avbInterfaceName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex);
+			});
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
@@ -373,10 +379,11 @@ private:
 			auto const name = genName(controlledEntity, node);
 			auto* item = addItem(parent, &node, name);
 
-			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& /*clockSourceName*/)
-			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex);
-			});
+			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceNameChanged, item,
+				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& /*clockSourceName*/)
+				{
+					updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex);
+				});
 		}
 	}
 
@@ -403,10 +410,11 @@ private:
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioClusterNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& /*audioClusterName*/)
-		{
-			updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioCluster, audioClusterIndex);
-		});
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioClusterNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& /*audioClusterName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioCluster, audioClusterIndex);
+			});
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
@@ -420,10 +428,11 @@ private:
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& /*clockDomainName*/)
-		{
-			updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex);
-		});
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& /*clockDomainName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex);
+			});
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
@@ -437,14 +446,15 @@ private:
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectNameChanged, item, [this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& /*memoryObjectName*/)
-		{
-			updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::MemoryObject, memoryObjectIndex);
-		});
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& /*memoryObjectName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::MemoryObject, memoryObjectIndex);
+			});
 	}
 
 private:
-	ControlledEntityTreeWidget * const q_ptr{ nullptr };
+	ControlledEntityTreeWidget* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControlledEntityTreeWidget);
 
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
@@ -464,11 +474,12 @@ ControlledEntityTreeWidget::ControlledEntityTreeWidget(QWidget* parent)
 
 	setContextMenuPolicy(Qt::CustomContextMenu);
 
-	connect(this, &QTreeWidget::customContextMenuRequested, this, [this](QPoint const& pos)
-	{
-		Q_D(ControlledEntityTreeWidget);
-		d->customContextMenuRequested(pos);
-	});
+	connect(this, &QTreeWidget::customContextMenuRequested, this,
+		[this](QPoint const& pos)
+		{
+			Q_D(ControlledEntityTreeWidget);
+			d->customContextMenuRequested(pos);
+		});
 }
 
 ControlledEntityTreeWidget::~ControlledEntityTreeWidget()

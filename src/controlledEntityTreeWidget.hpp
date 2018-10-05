@@ -35,6 +35,6 @@ public:
 	la::avdecc::UniqueIdentifier controlledEntityID() const;
 
 private:
-	ControlledEntityTreeWidgetPrivate * d_ptr{ nullptr };
+	ControlledEntityTreeWidgetPrivate* d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(ControlledEntityTreeWidget)
 };

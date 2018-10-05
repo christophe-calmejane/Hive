@@ -25,7 +25,6 @@ namespace qt
 {
 namespace toolkit
 {
-
 class TextEntryPrivate;
 class TextEntry final : public QLineEdit
 {
@@ -40,7 +39,7 @@ protected:
 	using QLineEdit::setFocusPolicy;
 
 private:
-	TextEntryPrivate* const d_ptr{nullptr};
+	TextEntryPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(TextEntry);
 
 	using QLineEdit::setValidator;

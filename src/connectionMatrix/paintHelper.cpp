@@ -21,7 +21,6 @@
 
 namespace connectionMatrix
 {
-
 static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
 	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
@@ -282,7 +281,7 @@ void drawEntityNoConnection(QPainter* painter, QRect const& rect)
 
 void drawNotApplicable(QPainter* painter, QRect const& rect)
 {
-	painter->fillRect(rect, QBrush{QColor("#E1E1E1"), Qt::BDiagPattern});
+	painter->fillRect(rect, QBrush{ QColor("#E1E1E1"), Qt::BDiagPattern });
 }
 
 } // namespace connectionMatrix

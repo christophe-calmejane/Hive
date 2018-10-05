@@ -25,7 +25,6 @@ namespace qt
 {
 namespace toolkit
 {
-
 class DynamicHeaderView : public QHeaderView
 {
 	Q_OBJECT

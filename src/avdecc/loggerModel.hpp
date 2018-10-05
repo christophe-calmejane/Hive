@@ -42,7 +42,7 @@ public:
 	void save(QString const& filename) const;
 
 private:
-	LoggerModelPrivate * const d_ptr{ nullptr };
+	LoggerModelPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(LoggerModel)
 };
 } // namespace avdecc

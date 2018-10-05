@@ -23,7 +23,6 @@
 
 namespace graph
 {
-
 class SocketItem : public QGraphicsItem
 {
 public:
@@ -47,8 +46,8 @@ protected:
 	virtual void updateGeometry() = 0;
 
 private:
-	int _nodeId{-1};
-	int _index{-1};
+	int _nodeId{ -1 };
+	int _index{ -1 };
 
 	QString _text{};
 	QSize _size{};

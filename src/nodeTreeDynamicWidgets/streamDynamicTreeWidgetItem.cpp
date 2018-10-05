@@ -23,7 +23,7 @@
 
 #include <QMenu>
 
-StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget *parent)
+StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamType(streamType)
@@ -41,24 +41,26 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 	parent->setItemWidget(currentFormatItem, 1, formatComboBox);
 
 	// Send changes
-	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this, [this, formatComboBox](la::avdecc::entity::model::StreamFormat const& streamFormat)
-	{
-		if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
+	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
+		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const& streamFormat)
 		{
-			avdecc::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
-		}
-		else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-		{
-			avdecc::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
-		}
-	});
+			if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
+			{
+				avdecc::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
+			}
+			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+			{
+				avdecc::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
+			}
+		});
 
 	// Listen for changes
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamFormatChanged, formatComboBox, [this, formatComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
-	{
-		if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
-			formatComboBox->setCurrentStreamFormat(streamFormat);
-	});
+	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamFormatChanged, formatComboBox,
+		[this, formatComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
+		{
+			if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
+				formatComboBox->setCurrentStreamFormat(streamFormat);
+		});
 
 	//
 
@@ -92,13 +94,14 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		updateStreamInfo(dynamicModel->streamInfo);
 
 		// Listen for StreamInfoChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInfoChanged, this, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& info)
-		{
-			if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInfoChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& info)
 			{
-				updateStreamInfo(info);
-			}
-		});
+				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
+				{
+					updateStreamInfo(info);
+				}
+			});
 	}
 
 	// StreamInput dynamic info
@@ -112,16 +115,17 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		updateConnectionState(inputDynamicModel->connectionState);
 
 		// Listen for Connection changed signals
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionChanged, this, [this](la::avdecc::controller::model::StreamConnectionState const& state)
-		{
-			auto const listenerID = state.listenerStream.entityID;
-			auto const listenerIndex = state.listenerStream.streamIndex;
-
-			if (listenerID == _entityID && listenerIndex == _streamIndex)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionChanged, this,
+			[this](la::avdecc::controller::model::StreamConnectionState const& state)
 			{
-				updateConnectionState(state);
-			}
-		});
+				auto const listenerID = state.listenerStream.entityID;
+				auto const listenerIndex = state.listenerStream.streamIndex;
+
+				if (listenerID == _entityID && listenerIndex == _streamIndex)
+				{
+					updateConnectionState(state);
+				}
+			});
 	}
 
 	// StreamOutput dynamic info
@@ -138,13 +142,14 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		updateConnections(outputDynamicModel->connections);
 
 		// Listen for Connections changed signal
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionsChanged, this, [this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
-		{
-			if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionsChanged, this,
+			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
 			{
-				updateConnections(connections);
-			}
-		});
+				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
+				{
+					updateConnections(connections);
+				}
+			});
 #pragma message("TODO: When the notification is available")
 	}
 }

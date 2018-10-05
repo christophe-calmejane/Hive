@@ -36,7 +36,7 @@
 class StreamInputCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget *parent = nullptr);
+	StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget* parent = nullptr);
 
 private:
 	void updateCounters(la::avdecc::controller::model::StreamInputCounters const& counters);

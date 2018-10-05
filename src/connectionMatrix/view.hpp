@@ -25,29 +25,28 @@
 
 namespace connectionMatrix
 {
-
 class Model;
 class HeaderView;
 class ItemDelegate;
 class Legend;
-	
+
 class View final : public QTableView, private settings::SettingsManager::Observer
 {
 	using QTableView::setModel;
 	using QTableView::setVerticalHeader;
 	using QTableView::setHorizontalHeader;
-	
+
 public:
 	View(QWidget* parent = nullptr);
 	virtual ~View();
-	
+
 protected:
 	// QTableView overrides
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
-	
+
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
-	
+
 	Q_SLOT void onClicked(QModelIndex const& index);
 	Q_SLOT void onCustomContextMenuRequested(QPoint const& pos);
 	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
@@ -55,14 +54,14 @@ protected:
 
 	QVariant talkerData(QModelIndex const& index, int role) const;
 	QVariant listenerData(QModelIndex const& index, int role) const;
-	
+
 private:
 	std::unique_ptr<Model> _model;
 	std::unique_ptr<HeaderView> _verticalHeaderView;
 	std::unique_ptr<HeaderView> _horizontalHeaderView;
 	std::unique_ptr<ItemDelegate> _itemDelegate;
 	std::unique_ptr<Legend> _legend;
-	
+
 	qt::toolkit::TransposeProxyModel _proxy;
 	bool _isTransposed{ false };
 };

@@ -23,14 +23,13 @@
 
 namespace settings
 {
-
 // Settings with a default initial value
 static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVersion", "1.0.0.0" };
 
 // General settings
 static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
-static SettingsManager::SettingDefault TransposeConnectionMatrix =  { "avdecc/general/transposeConnectionMatrix", false };
-	
+static SettingsManager::SettingDefault TransposeConnectionMatrix = { "avdecc/general/transposeConnectionMatrix", false };
+
 // Controller settings
 static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 

@@ -25,34 +25,36 @@
 #include <QStandardPaths>
 #include <QShortcut>
 
-class AutoScrollBar : public QScrollBar {
+class AutoScrollBar : public QScrollBar
+{
 public:
 	AutoScrollBar(QWidget* parent)
-	: AutoScrollBar(Qt::Vertical, parent)
+		: AutoScrollBar(Qt::Vertical, parent)
 	{
 	}
 
 	AutoScrollBar(Qt::Orientation orientation, QWidget* parent)
-	: QScrollBar(orientation, parent)
+		: QScrollBar(orientation, parent)
 	{
 		_bufferedMaximum = maximum();
 
-		connect(this, &QScrollBar::rangeChanged, this, [this](int, int max)
-		{
-			if (value() == _bufferedMaximum) {
-				setValue(max);
-			}
+		connect(this, &QScrollBar::rangeChanged, this,
+			[this](int, int max)
+			{
+				if (value() == _bufferedMaximum)
+				{
+					setValue(max);
+				}
 
-			_bufferedMaximum = max;
-		});
+				_bufferedMaximum = max;
+			});
 	}
 
 private:
-	int _bufferedMaximum{0};
+	int _bufferedMaximum{ 0 };
 };
 
-const std::vector<la::avdecc::logger::Layer> loggerLayers
-{
+const std::vector<la::avdecc::logger::Layer> loggerLayers{
 	la::avdecc::logger::Layer::Generic,
 	la::avdecc::logger::Layer::Serialization,
 	la::avdecc::logger::Layer::ProtocolInterface,
@@ -63,8 +65,7 @@ const std::vector<la::avdecc::logger::Layer> loggerLayers
 	la::avdecc::logger::Layer::FirstUserLayer,
 };
 
-const std::vector<la::avdecc::logger::Level> loggerLevels
-{
+const std::vector<la::avdecc::logger::Level> loggerLevels{
 	la::avdecc::logger::Level::Trace,
 	la::avdecc::logger::Level::Debug,
 	la::avdecc::logger::Level::Info,
@@ -88,7 +89,7 @@ LoggerView::LoggerView(QWidget* parent)
 	tableView->setModel(&_loggerModel);
 	tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	tableView->setSelectionMode(QAbstractItemView::SingleSelection);
-	tableView->setVerticalScrollBar(new AutoScrollBar{Qt::Vertical, this});
+	tableView->setVerticalScrollBar(new AutoScrollBar{ Qt::Vertical, this });
 
 	_dynamicHeaderView.setHighlightSections(false);
 	_dynamicHeaderView.setStretchLastSection(true);
@@ -106,27 +107,30 @@ LoggerView::LoggerView(QWidget* parent)
 	tableView->setModel(&_searchFilterProxyModel);
 
 	connect(actionClear, &QAction::triggered, &_loggerModel, &avdecc::LoggerModel::clear);
-	connect(actionSave, &QAction::triggered, this, [this]()
-	{
-		auto const filename = QFileDialog::getSaveFileName(this, "Save As..", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
-		_loggerModel.save(filename);
-	});
+	connect(actionSave, &QAction::triggered, this,
+		[this]()
+		{
+			auto const filename = QFileDialog::getSaveFileName(this, "Save As..", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
+			_loggerModel.save(filename);
+		});
 
-	connect(actionSearch, &QAction::triggered, this, [this]()
-	{
-		auto const pattern = searchLineEdit->text();
-		_searchFilterProxyModel.setFilterKeyColumn(3);
-		_searchFilterProxyModel.setFilterRegExp(pattern);
-		_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
-	});
+	connect(actionSearch, &QAction::triggered, this,
+		[this]()
+		{
+			auto const pattern = searchLineEdit->text();
+			_searchFilterProxyModel.setFilterKeyColumn(3);
+			_searchFilterProxyModel.setFilterRegExp(pattern);
+			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
+		});
 
-	auto* searchShortcut = new QShortcut{QKeySequence::Find, this};
-	connect(searchShortcut, &QShortcut::activated, this, [this]()
-	{
-		searchLineEdit->setFocus(Qt::MouseFocusReason);
-	});
+	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	connect(searchShortcut, &QShortcut::activated, this,
+		[this]()
+		{
+			searchLineEdit->setFocus(Qt::MouseFocusReason);
+		});
 
-	auto* saveShortcut = new QShortcut{QKeySequence::Save, this};
+	auto* saveShortcut = new QShortcut{ QKeySequence::Save, this };
 	connect(saveShortcut, &QShortcut::activated, actionSave, &QAction::trigger);
 
 	createLayerFilterButton();
@@ -153,42 +157,43 @@ void LoggerView::createLayerFilterButton()
 
 	layerFilterButton->setMenu(&_layerFilterMenu);
 
-	connect(&_layerFilterMenu, &QMenu::triggered, this, [this](QAction* action)
-	{
-		// All & None are non checkable
-		if (!action->isCheckable())
+	connect(&_layerFilterMenu, &QMenu::triggered, this,
+		[this](QAction* action)
 		{
-			auto const checked = action->text() == "All";
-
-			QSignalBlocker lock(&_layerFilterMenu);
-			for (auto* a : _layerFilterMenu.actions())
+			// All & None are non checkable
+			if (!action->isCheckable())
 			{
-				if (a->isCheckable())
+				auto const checked = action->text() == "All";
+
+				QSignalBlocker lock(&_layerFilterMenu);
+				for (auto* a : _layerFilterMenu.actions())
 				{
-					a->setChecked(checked);
+					if (a->isCheckable())
+					{
+						a->setChecked(checked);
+					}
 				}
 			}
-		}
 
-		QStringList layerList;
-		for (auto* a : _layerFilterMenu.actions())
-		{
-			if (a->isCheckable() && a->isChecked())
+			QStringList layerList;
+			for (auto* a : _layerFilterMenu.actions())
 			{
-				layerList << a->text();
+				if (a->isCheckable() && a->isChecked())
+				{
+					layerList << a->text();
+				}
 			}
-		}
 
-		if (layerList.empty())
-		{
-			// Invalid filter
-			layerList << "---";
-		}
+			if (layerList.empty())
+			{
+				// Invalid filter
+				layerList << "---";
+			}
 
-		// Update the filter
-		_layerFilterProxyModel.setFilterKeyColumn(1);
-		_layerFilterProxyModel.setFilterRegExp(layerList.join('|'));
-	});
+			// Update the filter
+			_layerFilterProxyModel.setFilterKeyColumn(1);
+			_layerFilterProxyModel.setFilterRegExp(layerList.join('|'));
+		});
 }
 
 void LoggerView::createLevelFilterButton()
@@ -206,40 +211,41 @@ void LoggerView::createLevelFilterButton()
 
 	levelFilterButton->setMenu(&_levelFilterMenu);
 
-	connect(&_levelFilterMenu, &QMenu::triggered, this, [this](QAction* action)
-	{
-		// All & None are non checkable
-		if (!action->isCheckable())
+	connect(&_levelFilterMenu, &QMenu::triggered, this,
+		[this](QAction* action)
 		{
-			auto const checked = action->text() == "All";
-
-			QSignalBlocker lock(&_levelFilterMenu);
-			for (auto* a : _levelFilterMenu.actions())
+			// All & None are non checkable
+			if (!action->isCheckable())
 			{
-				if (a->isCheckable())
+				auto const checked = action->text() == "All";
+
+				QSignalBlocker lock(&_levelFilterMenu);
+				for (auto* a : _levelFilterMenu.actions())
 				{
-					a->setChecked(checked);
+					if (a->isCheckable())
+					{
+						a->setChecked(checked);
+					}
 				}
 			}
-		}
 
-		QStringList levelList;
-		for (auto* a : _levelFilterMenu.actions())
-		{
-			if (a->isCheckable() && a->isChecked())
+			QStringList levelList;
+			for (auto* a : _levelFilterMenu.actions())
 			{
-				levelList << a->text();
+				if (a->isCheckable() && a->isChecked())
+				{
+					levelList << a->text();
+				}
 			}
-		}
 
-		if (levelList.empty())
-		{
-			// Invalid filter
-			levelList << "---";
-		}
+			if (levelList.empty())
+			{
+				// Invalid filter
+				levelList << "---";
+			}
 
-		// Update the filter
-		_levelFilterProxyModel.setFilterKeyColumn(2);
-		_levelFilterProxyModel.setFilterRegExp(levelList.join('|'));
-	});
+			// Update the filter
+			_levelFilterProxyModel.setFilterKeyColumn(2);
+			_levelFilterProxyModel.setFilterRegExp(levelList.join('|'));
+		});
 }

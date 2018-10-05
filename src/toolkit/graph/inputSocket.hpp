@@ -23,7 +23,6 @@
 
 namespace graph
 {
-
 class ConnectionItem;
 class InputSocketItem final : public SocketItem
 {
@@ -44,7 +43,7 @@ public:
 	ConnectionItem* connection() const;
 
 private:
-	ConnectionItem* _connection{nullptr};
+	ConnectionItem* _connection{ nullptr };
 };
 
 } // namespace graph

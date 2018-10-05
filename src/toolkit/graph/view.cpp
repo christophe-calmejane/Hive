@@ -27,9 +27,8 @@
 
 namespace graph
 {
-
 GraphicsView::GraphicsView(QWidget* parent)
-: QGraphicsView(parent)
+	: QGraphicsView(parent)
 {
 	setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

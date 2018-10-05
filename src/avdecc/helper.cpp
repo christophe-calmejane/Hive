@@ -439,7 +439,7 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags)
 QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps)
 {
 	QString str;
-	
+
 	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::EfuMode))
 		concatenateFlags(str, "EfuMode");
 	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AddressAccessSupported))
@@ -466,16 +466,16 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps)
 		concatenateFlags(str, "AemAuthenticationRequired");
 	if (la::avdecc::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemPersistentAcquireSupported))
 		concatenateFlags(str, "AemPersistentAcquireSupported");
-	
+
 	if (str.isEmpty())
 		str = "None";
 	return str;
 }
-	
+
 QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps)
 {
 	QString str;
-	
+
 	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::Implemented))
 		concatenateFlags(str, "Implemented");
 	if (la::avdecc::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::OtherSource))
@@ -501,7 +501,7 @@ QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps)
 QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps)
 {
 	QString str;
-	
+
 	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::Implemented))
 		concatenateFlags(str, "Implemented");
 	if (la::avdecc::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::OtherSink))

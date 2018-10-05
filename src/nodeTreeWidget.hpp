@@ -33,6 +33,6 @@ public:
 	void setNode(la::avdecc::UniqueIdentifier const entityID, AnyNode const& node);
 
 private:
-	NodeTreeWidgetPrivate * d_ptr{ nullptr };
+	NodeTreeWidgetPrivate* d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(NodeTreeWidget)
 };

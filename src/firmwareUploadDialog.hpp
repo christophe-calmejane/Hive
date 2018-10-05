@@ -39,9 +39,9 @@ class FirmwareUploadDialog : public QDialog
 
 public:
 	using EntityInfo = std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::DescriptorIndex, std::uint64_t>;
-	explicit FirmwareUploadDialog(la::avdecc::controller::Controller::DeviceMemoryBuffer&& firmwareData, QString const& name, std::vector<EntityInfo> entitiesToUpdate, QWidget *parent = nullptr);
+	explicit FirmwareUploadDialog(la::avdecc::controller::Controller::DeviceMemoryBuffer&& firmwareData, QString const& name, std::vector<EntityInfo> entitiesToUpdate, QWidget* parent = nullptr);
 	~FirmwareUploadDialog();
-	
+
 private:
 	enum class ItemRole
 	{
@@ -59,11 +59,11 @@ private:
 	void scheduleUpload(EntityInfo const& entityInfo) noexcept;
 	virtual void closeEvent(QCloseEvent* event) override;
 	virtual void reject() override;
-	
+
 	Q_SLOT void on_startPushButton_clicked();
 	Q_SLOT void on_abortPushButton_clicked();
 
 private:
-	Ui::FirmwareUploadDialog *_ui{ nullptr };
+	Ui::FirmwareUploadDialog* _ui{ nullptr };
 	la::avdecc::controller::Controller::DeviceMemoryBuffer _firmwareData{};
 };

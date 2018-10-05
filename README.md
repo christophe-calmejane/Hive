@@ -34,6 +34,10 @@ We use [SemVer](http://semver.org/) for versioning.
 
 See the [COPYING](COPYING) and [COPYING.LESSER](COPYING.LESSER) files for details.
 
+## Contributing code
+
+[Please read this file](CONTRIBUTING.md)
+
 ## Third party
 
 Hive uses the following 3rd party resources:

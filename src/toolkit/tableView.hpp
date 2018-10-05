@@ -25,7 +25,6 @@ namespace qt
 {
 namespace toolkit
 {
-
 // Classic table that clears except the selection is cleared by clicking on no item
 class TableView : public QTableView
 {

@@ -48,43 +48,47 @@ StreamConnectionWidget::StreamConnectionWidget(la::avdecc::entity::model::Stream
 	auto const& manager = avdecc::ControllerManager::getInstance();
 
 	// EntityOnline
-	connect(&manager, &avdecc::ControllerManager::entityOnline, this, [this](la::avdecc::UniqueIdentifier const entityID)
-	{
-		if (entityID == _listenerConnection.entityID)
-			updateData();
-	});
+	connect(&manager, &avdecc::ControllerManager::entityOnline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			if (entityID == _listenerConnection.entityID)
+				updateData();
+		});
 
 	// EntityOffline
-	connect(&manager, &avdecc::ControllerManager::entityOffline, this, [this](la::avdecc::UniqueIdentifier const entityID)
-	{
-		if (entityID == _listenerConnection.entityID)
-			updateData();
-	});
+	connect(&manager, &avdecc::ControllerManager::entityOffline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			if (entityID == _listenerConnection.entityID)
+				updateData();
+		});
 
 	// Connect Widget signals
 	// Disconnect button
-	connect(&_disconnectButton, &QPushButton::clicked, this, [this]()
-	{
-		avdecc::ControllerManager::getInstance().disconnectTalkerStream(_talkerConnection.entityID, _talkerConnection.streamIndex, _listenerConnection.entityID, _listenerConnection.streamIndex);
-	});
+	connect(&_disconnectButton, &QPushButton::clicked, this,
+		[this]()
+		{
+			avdecc::ControllerManager::getInstance().disconnectTalkerStream(_talkerConnection.entityID, _talkerConnection.streamIndex, _listenerConnection.entityID, _listenerConnection.streamIndex);
+		});
 	// Row context menu
 #pragma message("TODO: Pas a faire ici mais dans la table complete!!")
 	setContextMenuPolicy(Qt::CustomContextMenu);
-	connect(this, &StreamConnectionWidget::customContextMenuRequested, this, [this](QPoint const& pos)
-	{
-		QMenu menu;
-
-		auto* disconnectAllAction = menu.addAction("Disconnect all ghost connections");
-		menu.addSeparator();
-		menu.addAction("Cancel");
-
-		if (auto* action = menu.exec(mapToGlobal(pos)))
+	connect(this, &StreamConnectionWidget::customContextMenuRequested, this,
+		[this](QPoint const& pos)
 		{
-			if (action == disconnectAllAction)
+			QMenu menu;
+
+			auto* disconnectAllAction = menu.addAction("Disconnect all ghost connections");
+			menu.addSeparator();
+			menu.addAction("Cancel");
+
+			if (auto* action = menu.exec(mapToGlobal(pos)))
 			{
+				if (action == disconnectAllAction)
+				{
+				}
 			}
-		}
-	});
+		});
 }
 
 void StreamConnectionWidget::updateData()
