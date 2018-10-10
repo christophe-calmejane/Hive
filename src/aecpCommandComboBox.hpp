@@ -19,24 +19,24 @@
 
 #pragma once
 
-#include "aecpCommandComboBox.hpp"
-#include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
+#include "toolkit/comboBox.hpp"
+#include "avdecc/controllerManager.hpp"
 
-class StreamFormatComboBox final : public AecpCommandComboBox
+// ComboBox that watches an Aecp command result, restoring the previous index if the command fails
+class AecpCommandComboBoxPrivate;
+class AecpCommandComboBox : public qt::toolkit::ComboBox
 {
 	Q_OBJECT
+
 public:
-	using StreamFormat = la::avdecc::entity::model::StreamFormat;
-	using StreamFormats = std::set<StreamFormat>;
+	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, QWidget* parent = nullptr);
+	~AecpCommandComboBox();
 
-	StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, QWidget* parent = nullptr);
-
-	void setStreamFormats(StreamFormats const& streamFormats);
-	void setCurrentStreamFormat(StreamFormat const& streamFormat);
-
-	Q_SIGNAL void currentFormatChanged(StreamFormat const& streamFormat);
+protected:
+	virtual void showPopup() override;
 
 private:
-	StreamFormats _streamFormats{};
-	StreamFormat _previousFormat{ 0 };
+	AecpCommandComboBoxPrivate* const d_ptr{ nullptr };
+	Q_DECLARE_PRIVATE(AecpCommandComboBox);
 };
+

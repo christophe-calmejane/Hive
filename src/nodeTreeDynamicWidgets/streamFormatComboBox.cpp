@@ -22,8 +22,8 @@
 
 #include <QInputDialog>
 
-StreamFormatComboBox::StreamFormatComboBox(QWidget* parent)
-	: qt::toolkit::ComboBox(parent)
+StreamFormatComboBox::StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, QWidget* parent)
+	: AecpCommandComboBox(entityID, avdecc::ControllerManager::AecpCommandType::SetStreamFormat, parent)
 {
 	// Send changes
 	connect(this, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
