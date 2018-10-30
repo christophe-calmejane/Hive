@@ -4,6 +4,13 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2018-10-30
+### Fixed
+- Possible crash if an entity goes online and offline almost at the same time
+- [Redundant streams out of sync (cannot always connect/disconnect)](https://github.com/christophe-calmejane/Hive/issues/35)
+- [Restoring previous ComboBox value if the command failed (StreamFormat/SamplingRate)](https://github.com/christophe-calmejane/Hive/issues/18)
+- Showing not fully compliant entities
+
 ## [1.0.7] - 2018-10-03
 ### Added
 - [SetName for AudioUnit, AvbInterface, ClockSource, MemoryObject, AudioCluster and ClockDomain](https://github.com/christophe-calmejane/Hive/issues/7)

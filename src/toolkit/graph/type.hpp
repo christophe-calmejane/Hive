@@ -23,7 +23,6 @@
 
 namespace graph
 {
-
 enum ItemType
 {
 	Node = QGraphicsItem::UserType + 1,
@@ -32,9 +31,9 @@ enum ItemType
 	Connection,
 };
 
-const QColor TextColor{"#FFFFFF"};
-const QColor NodeItemColor{"#3C3C3C"};
-const QColor InputSocketColor{"#2196F3"};
-const QColor OutputSocketColor{"#4CAF50"};
+const QColor TextColor{ "#FFFFFF" };
+const QColor NodeItemColor{ "#3C3C3C" };
+const QColor InputSocketColor{ "#2196F3" };
+const QColor OutputSocketColor{ "#4CAF50" };
 
 } // namespace graph

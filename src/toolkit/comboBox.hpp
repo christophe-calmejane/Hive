@@ -25,7 +25,6 @@ namespace qt
 {
 namespace toolkit
 {
-
 class ComboBoxPrivate;
 class ComboBox : public QComboBox
 {
@@ -34,7 +33,7 @@ public:
 	~ComboBox();
 
 private:
-	ComboBoxPrivate* const d_ptr{nullptr};
+	ComboBoxPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(ComboBox);
 };
 

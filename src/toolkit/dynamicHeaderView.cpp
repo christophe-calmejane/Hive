@@ -25,7 +25,6 @@ namespace qt
 {
 namespace toolkit
 {
-
 DynamicHeaderView::DynamicHeaderView(Qt::Orientation orientation, QWidget* parent)
 	: QHeaderView(orientation, parent)
 {

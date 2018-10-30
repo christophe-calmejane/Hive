@@ -25,22 +25,21 @@ namespace qt
 {
 namespace toolkit
 {
-
-class TransposeProxyModel: public QAbstractProxyModel
+class TransposeProxyModel : public QAbstractProxyModel
 {
 	using QAbstractProxyModel::setSourceModel;
 
 public:
 	TransposeProxyModel(QObject* parent = nullptr)
-		: QAbstractProxyModel{parent}
+		: QAbstractProxyModel{ parent }
 	{
 	}
-	
+
 	Qt::Orientation mapFromSource(Qt::Orientation orientation) const
 	{
 		return orientation == Qt::Horizontal ? Qt::Vertical : Qt::Horizontal;
 	}
-	
+
 	Qt::Orientation mapToSource(Qt::Orientation orientation) const
 	{
 		return mapFromSource(orientation); // Just swap
@@ -55,22 +54,22 @@ public:
 	{
 		return sourceModel()->index(proxyIndex.column(), proxyIndex.row());
 	}
-	
+
 	virtual QModelIndex index(int row, int column, QModelIndex const& = {}) const override
 	{
 		return createIndex(row, column);
 	}
-	
+
 	virtual QModelIndex parent(QModelIndex const&) const override
 	{
 		return {};
 	}
-	
+
 	virtual int rowCount(QModelIndex const&) const override
 	{
 		return sourceModel() ? sourceModel()->columnCount() : 0;
 	}
-	
+
 	virtual int columnCount(QModelIndex const&) const override
 	{
 		return sourceModel() ? sourceModel()->rowCount() : 0;
@@ -223,4 +222,3 @@ private:
 
 } // namespace toolkit
 } // namespace qt
-

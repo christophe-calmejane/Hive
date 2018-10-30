@@ -33,7 +33,6 @@
 
 namespace mappingMatrix
 {
-
 struct Node
 {
 	std::string name{};
@@ -143,21 +142,22 @@ public:
 			}
 		}
 
-		connect(this, &graph::GraphicsView::connectionCreated, this, [this](graph::ConnectionItem* connection) {
-			_connections.emplace_back(
-				std::make_pair(connection->output()->nodeId(), connection->output()->index()),
-				std::make_pair(connection->input()->nodeId(), connection->input()->index())
-			);
-		});
-
-		connect(this, &graph::GraphicsView::connectionDeleted, this, [this](graph::ConnectionItem* connection) {
-			_connections.erase(std::remove_if(_connections.begin(), _connections.end(), [connection](Connection const& item)
+		connect(this, &graph::GraphicsView::connectionCreated, this,
+			[this](graph::ConnectionItem* connection)
 			{
-				return
-					(item.first.first == connection->output()->nodeId() && item.first.second == connection->output()->index()) &&
-					(item.second.first == connection->input()->nodeId() && item.second.second == connection->input()->index());
-			}), _connections.end());
-		});
+				_connections.emplace_back(std::make_pair(connection->output()->nodeId(), connection->output()->index()), std::make_pair(connection->input()->nodeId(), connection->input()->index()));
+			});
+
+		connect(this, &graph::GraphicsView::connectionDeleted, this,
+			[this](graph::ConnectionItem* connection)
+			{
+				_connections.erase(std::remove_if(_connections.begin(), _connections.end(),
+														 [connection](Connection const& item)
+														 {
+															 return (item.first.first == connection->output()->nodeId() && item.first.second == connection->output()->index()) && (item.second.first == connection->input()->nodeId() && item.second.second == connection->input()->index());
+														 }),
+					_connections.end());
+			});
 
 		auto const scenePadding{ 80 };
 		_scene.setSceneRect(_scene.sceneRect().adjusted(-scenePadding, -scenePadding, scenePadding, scenePadding));

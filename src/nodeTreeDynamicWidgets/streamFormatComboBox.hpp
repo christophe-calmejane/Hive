@@ -19,17 +19,17 @@
 
 #pragma once
 
-#include "toolkit/comboBox.hpp"
+#include "aecpCommandComboBox.hpp"
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 
-class StreamFormatComboBox final : public qt::toolkit::ComboBox
+class StreamFormatComboBox final : public AecpCommandComboBox
 {
 	Q_OBJECT
 public:
 	using StreamFormat = la::avdecc::entity::model::StreamFormat;
 	using StreamFormats = std::set<StreamFormat>;
 
-	StreamFormatComboBox(QWidget* parent = nullptr);
+	StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, QWidget* parent = nullptr);
 
 	void setStreamFormats(StreamFormats const& streamFormats);
 	void setCurrentStreamFormat(StreamFormat const& streamFormat);
@@ -38,5 +38,5 @@ public:
 
 private:
 	StreamFormats _streamFormats{};
-	StreamFormat _previousFormat{0};
+	StreamFormat _previousFormat{ 0 };
 };

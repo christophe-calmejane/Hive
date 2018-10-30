@@ -24,7 +24,6 @@
 
 namespace graph
 {
-
 class OutputSocketItem final : public SocketItem
 {
 public:

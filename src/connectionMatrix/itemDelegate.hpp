@@ -23,15 +23,14 @@
 
 namespace connectionMatrix
 {
-
 class ItemDelegate final : public QAbstractItemDelegate
 {
 public:
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
-	
+
 private:
-	virtual void paint(QPainter *painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 	virtual QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 
 private:

@@ -24,13 +24,16 @@ namespace qt
 {
 namespace toolkit
 {
-
-void TableView::mousePressEvent(QMouseEvent* event) {
+void TableView::mousePressEvent(QMouseEvent* event)
+{
 #if 1
-	auto const index{indexAt(event->pos())};
-	if (!index.isValid()) {
+	auto const index{ indexAt(event->pos()) };
+	if (!index.isValid())
+	{
 		setCurrentIndex(index);
-	} else {
+	}
+	else
+	{
 		QTableView::mousePressEvent(event);
 	}
 #else

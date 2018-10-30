@@ -24,39 +24,38 @@
 
 namespace connectionMatrix
 {
-
 class HeaderView final : public QHeaderView
 {
 public:
 	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
-	
+
 	struct SectionState
 	{
-		bool isInitialized{false};
-		bool isExpanded{true};
-		bool isVisible{true};
+		bool isInitialized{ false };
+		bool isExpanded{ true };
+		bool isVisible{ true };
 	};
-	
+
 	QVector<SectionState> saveSectionState() const;
 	void restoreSectionState(QVector<SectionState> const& sectionState);
 
 private:
 	virtual void setModel(QAbstractItemModel* model) override;
-	
+
 	virtual void leaveEvent(QEvent* event) override;
 	virtual void mouseDoubleClickEvent(QMouseEvent* e) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const override;
-	
+
 	virtual QSize sizeHint() const override;
 
 	Q_SLOT void handleSectionInserted(QModelIndex const& parent, int first, int last);
 	Q_SLOT void handleSectionRemoved(QModelIndex const& parent, int first, int last);
 	Q_SLOT void handleHeaderDataChanged(Qt::Orientation orientation, int first, int last);
-	
+
 	Q_SLOT void handleSectionClicked(int logicalIndex);
 
-	
+
 	QVector<SectionState> _sectionState;
 };
 

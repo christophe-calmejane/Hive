@@ -19,31 +19,23 @@
 
 #pragma once
 
-#include <QLineEdit>
+#include "toolkit/comboBox.hpp"
+#include "avdecc/controllerManager.hpp"
 
-namespace qt
+// ComboBox that watches an Aecp command result, restoring the previous index if the command fails
+class AecpCommandComboBoxPrivate;
+class AecpCommandComboBox : public qt::toolkit::ComboBox
 {
-namespace toolkit
-{
-class TextEntryPrivate;
-class TextEntry final : public QLineEdit
-{
+	Q_OBJECT
+
 public:
-	TextEntry(QString const& text, QWidget* parent = nullptr);
-	TextEntry(QWidget* parent = nullptr);
-	~TextEntry();
-
-	void setText(QString const& text);
+	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, QWidget* parent = nullptr);
+	~AecpCommandComboBox();
 
 protected:
-	using QLineEdit::setFocusPolicy;
+	virtual void showPopup() override;
 
 private:
-	TextEntryPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(TextEntry);
-
-	using QLineEdit::setValidator;
+	AecpCommandComboBoxPrivate* const d_ptr{ nullptr };
+	Q_DECLARE_PRIVATE(AecpCommandComboBox);
 };
-
-} // namespace toolkit
-} // namespace qt

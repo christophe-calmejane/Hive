@@ -23,7 +23,6 @@
 
 namespace graph
 {
-
 OutputSocketItem::~OutputSocketItem()
 {
 	clearConnections();
@@ -60,7 +59,7 @@ void OutputSocketItem::removeConnection(ConnectionItem* connection)
 
 void OutputSocketItem::clearConnections()
 {
-	auto localConnections{_connections};
+	auto localConnections{ _connections };
 	for (auto& connection : localConnections)
 	{
 		connection->disconnect();

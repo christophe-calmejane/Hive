@@ -23,7 +23,6 @@
 
 namespace graph
 {
-
 InputSocketItem::~InputSocketItem()
 {
 	if (_connection)

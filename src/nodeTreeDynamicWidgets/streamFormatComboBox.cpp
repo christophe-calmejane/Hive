@@ -22,32 +22,33 @@
 
 #include <QInputDialog>
 
-StreamFormatComboBox::StreamFormatComboBox(QWidget* parent)
-	: qt::toolkit::ComboBox(parent)
+StreamFormatComboBox::StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, QWidget* parent)
+	: AecpCommandComboBox(entityID, avdecc::ControllerManager::AecpCommandType::SetStreamFormat, parent)
 {
 	// Send changes
-	connect(this, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-	{
-		auto streamFormat = currentData().value<StreamFormat>();
-		auto streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
-		if (streamFormatInfo->isUpToChannelsCount())
+	connect(this, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+		[this](int index)
 		{
-			bool ok{ false };
-			auto const channelCount = QInputDialog::getInt(this, "Number of channels", "Count", 1, 1, streamFormatInfo->getChannelsCount(), 1, &ok);
-
-			if (ok)
+			auto streamFormat = currentData().value<StreamFormat>();
+			auto streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
+			if (streamFormatInfo->isUpToChannelsCount())
 			{
-				streamFormat = streamFormatInfo->getAdaptedStreamFormat(channelCount);
-			}
-			else
-			{
-				streamFormat = _previousFormat;
-			}
-		}
+				bool ok{ false };
+				auto const channelCount = QInputDialog::getInt(this, "Number of channels", "Count", 1, 1, streamFormatInfo->getChannelsCount(), 1, &ok);
 
-		setCurrentStreamFormat(streamFormat);
-		emit currentFormatChanged(streamFormat);
-	});
+				if (ok)
+				{
+					streamFormat = streamFormatInfo->getAdaptedStreamFormat(channelCount);
+				}
+				else
+				{
+					streamFormat = _previousFormat;
+				}
+			}
+
+			setCurrentStreamFormat(streamFormat);
+			emit currentFormatChanged(streamFormat);
+		});
 }
 
 void StreamFormatComboBox::setStreamFormats(StreamFormats const& streamFormats)

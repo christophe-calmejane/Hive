@@ -26,10 +26,10 @@
 #include <cstdint>
 #include "internals/config.hpp"
 
-static QString BaseUrlPath{"http://www.kikisoft.com/Hive"};
+static QString BaseUrlPath{ "http://www.kikisoft.com/Hive" };
 #if defined(Q_OS_WIN)
 static QString VersionUrlPath{ BaseUrlPath + "/windows/LatestVersion-windows.txt" };
-static QString DownloadUrlPath{ BaseUrlPath + "/windows/"};
+static QString DownloadUrlPath{ BaseUrlPath + "/windows/" };
 #elif defined(Q_OS_MACX)
 static QString VersionUrlPath{ BaseUrlPath + "/macOS/LatestVersion-macOS.txt" };
 static QString DownloadUrlPath{ BaseUrlPath + "/macOS/" };
@@ -41,33 +41,31 @@ static QString DownloadUrlPath{};
 class UpdaterImpl final : public Updater
 {
 public:
-
 	UpdaterImpl() noexcept
 	{
-		connect(&_webCtrl, &QNetworkAccessManager::finished, this, [this](QNetworkReply* const reply)
-		{
-			if (reply->error() == QNetworkReply::NoError)
+		connect(&_webCtrl, &QNetworkAccessManager::finished, this,
+			[this](QNetworkReply* const reply)
 			{
-				auto const newVersionString = QString(reply->readAll());
-				auto const currentVersion = packVersionString(hive::internals::versionString);
-				auto const newVersion = packVersionString(newVersionString);
-				if (newVersion > currentVersion)
+				if (reply->error() == QNetworkReply::NoError)
 				{
-					emit newVersionAvailable(newVersionString, DownloadUrlPath);
+					auto const newVersionString = QString(reply->readAll());
+					auto const currentVersion = packVersionString(hive::internals::versionString);
+					auto const newVersion = packVersionString(newVersionString);
+					if (newVersion > currentVersion)
+					{
+						emit newVersionAvailable(newVersionString, DownloadUrlPath);
+					}
 				}
-			}
-			else
-			{
-				emit checkFailed(reply->errorString());
-			}
-			reply->deleteLater();
-			_checkInProgress = false;
-		});
+				else
+				{
+					emit checkFailed(reply->errorString());
+				}
+				reply->deleteLater();
+				_checkInProgress = false;
+			});
 	}
 
-	~UpdaterImpl() noexcept
-	{
-	}
+	~UpdaterImpl() noexcept {}
 
 private:
 	// Updater overrides
