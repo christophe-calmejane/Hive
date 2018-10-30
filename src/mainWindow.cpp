@@ -35,6 +35,7 @@
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
+#include "deviceDetailsDialog.hpp"
 
 #include "updater/updater.hpp"
 
@@ -264,6 +265,24 @@ void MainWindow::connectSignals()
 			auto& settings = settings::SettingsManager::getInstance();
 			settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 		});
+
+	connect(controllerTableView, &QTableView::doubleClicked, this,
+		[this](QModelIndex const& index)
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto const entityID = _controllerModel->controlledEntityID(index);
+			auto controlledEntity = manager.getControlledEntity(entityID);
+
+			DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+			dialog->setControlledEntityID(entityID);
+			dialog->show();
+			connect(dialog, &DeviceDetailsDialog::finished, this,
+				[this, dialog](int result)
+				{
+					dialog->deleteLater();
+				});
+		});
+
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
@@ -282,6 +301,7 @@ void MainWindow::connectSignals()
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
+				auto* deviceView{ static_cast<QAction*>(nullptr) };
 
 				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
@@ -301,6 +321,13 @@ void MainWindow::connectSignals()
 						releaseAction = menu.addAction("Release");
 						releaseAction->setEnabled(isAcquired);
 					}
+				}
+				menu.addSeparator();
+				{
+					deviceView = menu.addAction("Device Details");
+				}
+				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				{
 					menu.addSeparator();
 					{
 						inspect = menu.addAction("Inspect");
@@ -334,6 +361,17 @@ void MainWindow::connectSignals()
 					else if (action == getLogo)
 					{
 						EntityLogoCache::getInstance().getImage(entityID, EntityLogoCache::Type::Entity, true);
+					}
+					else if (action == deviceView)
+					{
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						dialog->setControlledEntityID(entityID);
+						dialog->show();
+						connect(dialog, &DeviceDetailsDialog::finished, this,
+							[this, dialog](int result)
+							{
+								dialog->deleteLater();
+							});
 					}
 				}
 			}

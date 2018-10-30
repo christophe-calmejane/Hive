@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Device details dialog for easy access to basic device and device channel configuration
+- Support for end-to-end channel connection determination
 
 ## [1.0.7] - 2018-10-03
 ### Added
