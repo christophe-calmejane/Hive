@@ -34,7 +34,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 	la::avdecc::controller::model::StreamNodeDynamicModel const* const dynamicModel = inputDynamicModel ? static_cast<decltype(dynamicModel)>(inputDynamicModel) : static_cast<decltype(dynamicModel)>(outputDynamicModel);
 
-	auto* formatComboBox = new StreamFormatComboBox;
+	auto* formatComboBox = new StreamFormatComboBox{ _entityID };
 	formatComboBox->setStreamFormats(staticModel->formats);
 	formatComboBox->setCurrentStreamFormat(dynamicModel->currentFormat);
 
