@@ -116,6 +116,7 @@ set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 # Avdecc helper header files
 set(AVDECC_HELPER_HEADER_FILES
 	avdecc/controllerManager.hpp
+	avdecc/mediaClockConnectionManager.hpp
 	avdecc/controllerModel.hpp
 	avdecc/helper.hpp
 	avdecc/hiveLogItems.hpp
@@ -126,6 +127,7 @@ set(AVDECC_HELPER_HEADER_FILES
 # Avdecc helper source files
 set(AVDECC_HELPER_SOURCE_FILES
 	avdecc/controllerManager.cpp
+	avdecc/mediaClockConnectionManager.cpp
 	avdecc/controllerModel.cpp
 	avdecc/helper.cpp
 	avdecc/loggerModel.cpp

@@ -22,6 +22,7 @@
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/logger.hpp>
 #include "avdecc/controllerManager.hpp"
+#include "avdecc/mediaClockConnectionManager.hpp"
 #include "entityLogoCache.hpp"
 #include "settingsManager/settings.hpp"
 #include <algorithm>
@@ -40,6 +41,8 @@ enum class ControllerModelColumn
 	GptpDomain,
 	InterfaceIndex,
 	AssociationId,
+	MediaClockMasterId,
+	MediaClockMasterName,
 
 	Count
 };
@@ -76,6 +79,8 @@ private:
 	Q_SLOT void acquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity);
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);
 
+	Q_SLOT void mediaClockConnectionsUpdated();
+
 	//
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
 
@@ -111,6 +116,10 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::acquireStateChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::gptpChanged);
 
+	auto& mediaClockConnectionManager = avdecc::MediaClockConnectionManager::getInstance();
+	connect(&mediaClockConnectionManager, &avdecc::MediaClockConnectionManager::mediaClockConnectionsUpdate, this, &ControllerModelPrivate::mediaClockConnectionsUpdated);
+
+
 	auto& logoCache = EntityLogoCache::getInstance();
 	connect(&logoCache, &EntityLogoCache::imageChanged, this, &ControllerModelPrivate::imageChanged);
 
@@ -138,6 +147,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 {
 	auto const entityID = _entities.at(index.row());
 	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& clockConnectionManager = avdecc::MediaClockConnectionManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
 	if (!controlledEntity)
@@ -165,6 +175,34 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				return entity.getInterfaceIndex();
 			case ControllerModelColumn::AssociationId:
 				return helper::uniqueIdentifierToString(entity.getAssociationID());
+			case ControllerModelColumn::MediaClockMasterId:
+			{
+				avdecc::MediaClockMasterDetectionError error;
+				const la::avdecc::UniqueIdentifier clockMaster = clockConnectionManager.getMediaClockMaster(entityID, error);
+				if (error != avdecc::MediaClockMasterDetectionError::None)
+				{
+					return "Could not be determined.";
+				}
+				else
+				{
+					la::avdecc::controller::ControlledEntity const& clockMasterEntity = *manager.getControlledEntity(clockMaster);
+					return helper::uniqueIdentifierToString(clockMasterEntity.getEntity().getEntityID());
+				}
+			}
+			case ControllerModelColumn::MediaClockMasterName:
+			{
+				avdecc::MediaClockMasterDetectionError error;
+				const la::avdecc::UniqueIdentifier clockMaster = clockConnectionManager.getMediaClockMaster(entityID, error);
+				if (error != avdecc::MediaClockMasterDetectionError::None)
+				{
+					return "Could not be determined.";
+				}
+				else
+				{
+					la::avdecc::controller::ControlledEntity const& clockMasterEntity = *manager.getControlledEntity(clockMaster);
+					return helper::entityName(clockMasterEntity);
+				}
+			}
 			default:
 				break;
 		}
@@ -226,6 +264,10 @@ QVariant ControllerModelPrivate::headerData(int section, Qt::Orientation orienta
 					return "Interface index";
 				case ControllerModelColumn::AssociationId:
 					return "Association ID";
+				case ControllerModelColumn::MediaClockMasterId:
+					return "Media Clock Master ID";
+				case ControllerModelColumn::MediaClockMasterName:
+					return "Media Clock Master Name";
 				default:
 					break;
 			}
@@ -334,6 +376,15 @@ void ControllerModelPrivate::gptpChanged(la::avdecc::UniqueIdentifier const enti
 {
 	dataChanged(entityID, ControllerModelColumn::GrandmasterId);
 	dataChanged(entityID, ControllerModelColumn::GptpDomain);
+}
+
+void ControllerModelPrivate::mediaClockConnectionsUpdated()
+{
+	for (auto const& entityId : _entities)
+	{
+		dataChanged(entityId, ControllerModelColumn::MediaClockMasterId);
+		dataChanged(entityId, ControllerModelColumn::MediaClockMasterName);
+	}
 }
 
 void ControllerModelPrivate::imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type)
