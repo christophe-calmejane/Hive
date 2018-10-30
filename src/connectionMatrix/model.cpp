@@ -20,6 +20,7 @@
 #include "connectionMatrix/model.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
+#include "avdecc/hiveLogItems.hpp"
 
 #ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
 #	error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
@@ -486,6 +487,7 @@ public:
 						q_ptr->setVerticalHeaderItem(redundantItemIndex, redundantItem);
 
 						++entityItemChildrenCount;
+						++streamMapIndex;
 
 						std::int32_t redundantStreamOrder{ 0 };
 						for (auto const& streamKV : redundantNode.redundantStreams)
@@ -575,6 +577,7 @@ public:
 						q_ptr->setHorizontalHeaderItem(redundantItemIndex, redundantItem);
 
 						++entityItemChildrenCount;
+						++streamMapIndex;
 
 						std::int32_t redundantStreamOrder{ 0 };
 						for (auto const& streamKV : redundantNode.redundantStreams)
@@ -693,13 +696,17 @@ public:
 	{
 		auto const entityID = state.listenerStream.entityID;
 		auto const streamIndex = state.listenerStream.streamIndex;
+		auto const index = listenerStreamIndex(entityID, streamIndex);
 
 		// Refresh whole column for specified listener single stream and redundant stream if it exists and the listener itself (no need to refresh the talker)
-		dataChanged(listenerStreamIndex(entityID, streamIndex), true, false);
+		LOG_HIVE_DEBUG(QString("connectionMatrix::Model::streamConnectionChanged: ListenerID=%1 Index=%2 (Row=%3 Column=%4 and parents)").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex).arg(index.row()).arg(index.column()));
+		dataChanged(index, true, false);
 	}
 
 	Q_SLOT void streamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 	{
+		LOG_HIVE_DEBUG(QString("connectionMatrix::Model::streamFormatChanged: EntityID=%1 Index=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+
 		dataChanged(talkerStreamIndex(entityID, streamIndex), true, false);
 		dataChanged(listenerStreamIndex(entityID, streamIndex), true, false);
 	}

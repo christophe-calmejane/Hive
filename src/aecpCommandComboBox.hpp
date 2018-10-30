@@ -39,4 +39,3 @@ private:
 	AecpCommandComboBoxPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(AecpCommandComboBox);
 };
-

@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Possible crash if an entity goes online and offline almost at the same time
+- [Redundant streams out of sync (cannot always connect/disconnect)](https://github.com/christophe-calmejane/Hive/issues/35)
 - [Restoring previous ComboBox value if the command failed (StreamFormat/SamplingRate)](https://github.com/christophe-calmejane/Hive/issues/18)
 
 ## [1.0.7] - 2018-10-03
