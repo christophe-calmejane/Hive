@@ -24,6 +24,7 @@
 #include "connectionMatrix/legend.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
+#include "avdecc/hiveLogItems.hpp"
 
 #include <QMouseEvent>
 #include <QMenu>
@@ -186,10 +187,6 @@ void View::onClicked(QModelIndex const& index)
 				AVDECC_ASSERT(talkerRedundantNode.redundantStreams.size() == listenerRedundantNode.redundantStreams.size(), "More than 2 redundant streams in the set");
 				auto talkerIt = talkerRedundantNode.redundantStreams.begin();
 				auto listenerIt = listenerRedundantNode.redundantStreams.begin();
-				auto atLeastOneConnected{ false };
-				auto allConnected{ true };
-				auto allCompatibleFormat{ true };
-				auto allDomainCompatible{ true };
 				for (auto idx = 0u; idx < talkerRedundantNode.redundantStreams.size(); ++idx)
 				{
 					auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(talkerIt->second);
@@ -203,6 +200,10 @@ void View::onClicked(QModelIndex const& index)
 					{
 						manager.disconnectStream(talkerID, talkerStreamNode->descriptorIndex, listenerID, listenerStreamNode->descriptorIndex);
 					}
+					else
+					{
+						LOG_HIVE_TRACE(QString("connectionMatrix::View::onClicked: Neither connecting nor disconnecting: doConnect=%1 doDisconnect=%2 areConnected=%3").arg(doConnect).arg(doDisconnect).arg(areConnected));
+					}
 					++talkerIt;
 					++listenerIt;
 				}
@@ -211,6 +212,7 @@ void View::onClicked(QModelIndex const& index)
 	}
 	catch (...)
 	{
+		LOG_HIVE_DEBUG(QString("connectionMatrix::View::onClicked: Ignoring click due to an Exception"));
 	}
 }
 

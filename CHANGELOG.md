@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Display entities' media clock master id and name in the entity list
 - Support for media clock master determination
 
+## [1.0.8] - 2018-10-30
+### Fixed
+- Possible crash if an entity goes online and offline almost at the same time
+- [Redundant streams out of sync (cannot always connect/disconnect)](https://github.com/christophe-calmejane/Hive/issues/35)
+- [Restoring previous ComboBox value if the command failed (StreamFormat/SamplingRate)](https://github.com/christophe-calmejane/Hive/issues/18)
+- Showing not fully compliant entities
+
 ## [1.0.7] - 2018-10-03
 ### Added
 - [SetName for AudioUnit, AvbInterface, ClockSource, MemoryObject, AudioCluster and ClockDomain](https://github.com/christophe-calmejane/Hive/issues/7)

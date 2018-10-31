@@ -263,6 +263,7 @@ set(MAIN_WINDOW_RESOURCE_FILES
 
 # Common Header files
 set(COMMON_HEADER_FILES
+	aecpCommandComboBox.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	entityLogoCache.hpp
@@ -276,6 +277,7 @@ set(COMMON_HEADER_FILES
 
 # Common source files
 set(COMMON_SOURCE_FILES
+	aecpCommandComboBox.cpp
 	entityLogoCache.cpp
 	imageItemDelegate.cpp
 	main.cpp
