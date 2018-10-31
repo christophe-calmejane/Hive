@@ -47,6 +47,7 @@ void setupBugReporter()
 {
 	BT_InstallSehFilter();
 
+	BT_SetTerminate();
 	BT_SetSupportEMail("christophe.calmejane@l-acoustics.com");
 	BT_SetFlags(BTF_DETAILEDMODE | BTF_ATTACHREPORT | BTF_SHOWADVANCEDUI | BTF_DESCRIBEERROR);
 	BT_SetSupportServer("localhost", 9999);
