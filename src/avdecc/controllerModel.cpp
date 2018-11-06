@@ -158,13 +158,49 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			case ControllerModelColumn::Group:
 				return helper::groupName(*controlledEntity);
 			case ControllerModelColumn::GrandmasterId:
-				return helper::uniqueIdentifierToString(entity.getGptpGrandmasterID());
+			{
+				// TODO: Do not use begin() but change model to a List
+				try
+				{
+					auto const& interfaceInfo = entity.getInterfacesInformation().begin()->second;
+					auto const val = interfaceInfo.gptpGrandmasterID;
+					return val ? helper::uniqueIdentifierToString(*val) : "Not Set";
+				}
+				catch (...)
+				{
+					return "Err";
+				}
+			}
 			case ControllerModelColumn::GptpDomain:
-				return entity.getGptpDomainNumber();
+			{
+				try
+				{
+					auto const& interfaceInfo = entity.getInterfacesInformation().begin()->second;
+					auto const val = interfaceInfo.gptpDomainNumber;
+					return val ? QString::number(*val) : "Not Set";
+				}
+				catch (...)
+				{
+					return "Err";
+				}
+			}
 			case ControllerModelColumn::InterfaceIndex:
-				return entity.getInterfaceIndex();
+			{
+				try
+				{
+					auto const avbInterfaceIndex = entity.getInterfacesInformation().begin()->first;
+					return avbInterfaceIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex ? "Not Set" : QString::number(avbInterfaceIndex);
+				}
+				catch (...)
+				{
+					return "Err";
+				}
+			}
 			case ControllerModelColumn::AssociationId:
-				return helper::uniqueIdentifierToString(entity.getAssociationID());
+			{
+				auto const val = entity.getAssociationID();
+				return val ? helper::uniqueIdentifierToString(*val) : "Not Set";
+				}
 			default:
 				break;
 		}

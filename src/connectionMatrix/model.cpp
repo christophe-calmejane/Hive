@@ -251,10 +251,21 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 				return la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerNode.dynamicModel->currentFormat, talkerNode.dynamicModel->currentFormat);
 			};
 
-			auto const computeDomainCompatible = [&talkerEntityInfo, &listenerEntityInfo]()
+			auto const computeDomainCompatible = [&talkerEntity, &listenerEntity, &talkerEntityNode, &listenerEntityNode](auto const talkerAvbInterfaceIndex, auto const listenerAvbInterfaceIndex)
 			{
-				// TODO: Incorrect computation, must be based on the AVBInterface for the stream
-				return listenerEntityInfo.getGptpGrandmasterID() == talkerEntityInfo.getGptpGrandmasterID();
+				try
+				{
+					// Get the AvbInterface associated to the streams
+					auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerAvbInterfaceIndex);
+					auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerAvbInterfaceIndex);
+
+					// Check both have the same grandmaster
+					return talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID == listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+				}
+				catch (...)
+				{
+					return false;
+				}
 			};
 
 			enum class ConnectState
@@ -311,7 +322,7 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 					atLeastOneConnected |= connected;
 					allConnected &= connected;
 					allCompatibleFormat &= computeFormatCompatible(*redundantTalkerStreamNode, *redundantListenerStreamNode);
-					allDomainCompatible &= computeDomainCompatible();
+					allDomainCompatible &= computeDomainCompatible(redundantTalkerStreamNode->staticModel->avbInterfaceIndex, redundantListenerStreamNode->staticModel->avbInterfaceIndex);
 					++talkerIt;
 					++listenerIt;
 				}
@@ -373,7 +384,7 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 				auto const isFormatCompatible = computeFormatCompatible(*talkerNode, *listenerNode);
 
 				// Get domain compatibility
-				auto const isDomainCompatible = computeDomainCompatible();
+				auto const isDomainCompatible = computeDomainCompatible(talkerNode->staticModel->avbInterfaceIndex, listenerNode->staticModel->avbInterfaceIndex);
 
 				return computeCapabilities(connectState, areConnected, isFormatCompatible, isDomainCompatible);
 			}
