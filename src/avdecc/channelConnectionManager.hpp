@@ -28,6 +28,7 @@
 
 namespace avdecc
 {
+
 enum class ConnectionStatus
 {
 	None = 0,
@@ -50,7 +51,7 @@ enum class ConnectionStatus
 	*/
 struct ConnectionDetails : QObject
 {
-	QList<std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>> targetClusters;
+	std::vector<std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>> targetClusters;
 	la::avdecc::entity::model::AudioUnitIndex targetAudioUnitIndex = -1;
 	la::avdecc::entity::model::StreamPortIndex targetStreamPortIndex = -1;
 	la::avdecc::entity::model::ClusterIndex targetBaseCluster = -1;
@@ -67,7 +68,7 @@ struct ConnectionDetails : QObject
 struct Connections : QObject
 {
 	la::avdecc::UniqueIdentifier entityId;
-	QMap<la::avdecc::entity::model::StreamIndex, QSharedPointer<ConnectionDetails>> targetStreams;
+	std::map<la::avdecc::entity::model::StreamIndex, std::shared_ptr<ConnectionDetails>> targetStreams;
 	ConnectionStatus streamConnectionStatus = ConnectionStatus::PartiallyConnected;
 };
 
@@ -84,7 +85,7 @@ struct ConnectionInformation
 {
 	// store the information of the source
 	la::avdecc::UniqueIdentifier sourceEntityId = 0;
-	la::avdecc::UniqueIdentifier sourceConfigurationIndex = 0;
+	la::avdecc::entity::model::ConfigurationIndex sourceConfigurationIndex = 0;
 	la::avdecc::entity::model::AudioUnitIndex sourceAudioUnitIndex = 0;
 	la::avdecc::entity::model::StreamPortIndex sourceStreamPortIndex = 0;
 	la::avdecc::entity::model::ClusterIndex sourceClusterIndex = 0;
@@ -92,9 +93,9 @@ struct ConnectionInformation
 	std::uint16_t sourceClusterChannel = 0;
 	bool forward = true; /** This flag indicates the direction of the connections. */
 
-	QList<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
+	std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
 
-	QMap<la::avdecc::UniqueIdentifier, QSharedPointer<Connections>> deviceConnections;
+	std::map<la::avdecc::UniqueIdentifier, std::shared_ptr<Connections>> deviceConnections;
 };
 
 // **************************************************************
@@ -113,7 +114,7 @@ public:
 	static ChannelConnectionManager& getInstance() noexcept;
 
 	/* channel connection management helper functions */
-	virtual const ConnectionInformation getChannelConnections(la::avdecc::UniqueIdentifier const entityId, la::avdecc::UniqueIdentifier const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept = 0;
+	virtual const ConnectionInformation getChannelConnections(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept = 0;
 
 	virtual const ConnectionInformation getChannelConnectionsReverse(la::avdecc::UniqueIdentifier const entityId, la::avdecc::UniqueIdentifier const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept = 0;
 };

@@ -54,6 +54,7 @@ private:
 	bool _applyRequested;
 	int _expectedChanges;
 	int _gottenChanges;
+	bool _hasChangesByUser;
 
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelReceive;
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelTransmit;
@@ -69,6 +70,8 @@ public:
 		setupUi(parent);
 
 		_applyRequested = false;
+		_hasChangesByUser = false;
+		updateButtonStates();
 		_activeConfigurationIndex = std::numeric_limits<la::avdecc::entity::model::DescriptorIndex>::max();
 		_previousConfigurationIndex = std::numeric_limits<la::avdecc::entity::model::DescriptorIndex>::max();
 
@@ -79,22 +82,23 @@ public:
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
 
 		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
-
 		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
-
 		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxConfigurationChanged);
+		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
-
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
+		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
+		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &DeviceDetailsDialogImpl::streamConnectionChanged);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
-		//connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
-		//connect(&manager, &avdecc::ControllerManager::entityGroupNameChanged, this, &DeviceDetailsDialogImpl::entityGroupNameChanged);
+		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
+		connect(&manager, &avdecc::ControllerManager::entityGroupNameChanged, this, &DeviceDetailsDialogImpl::entityGroupNameChanged);
+		connect(&manager, &avdecc::ControllerManager::audioClusterNameChanged, this, &DeviceDetailsDialogImpl::audioClusterNameChanged);
 	}
 
 	/**
@@ -107,33 +111,38 @@ public:
 			return;
 
 		_entityID = entityID;
+		_hasChangesByUser = false;
+		updateButtonStates();
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
-
-		if (!leaveOutGeneralData)
-		{
-			// get the device name into the line edit
-			lineEditDeviceName->setText(avdecc::helper::entityName(*controlledEntity));
-			setModifiedStyleOnWidget(lineEditDeviceName, false);
-
-			// get the group name into the line edit
-			lineEditGroupName->setText(avdecc::helper::groupName(*controlledEntity));
-			setModifiedStyleOnWidget(lineEditGroupName, false);
-
-			_previousConfigurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
-		}
-
-		{
-			const QSignalBlocker blocker(comboBoxConfiguration);
-			comboBoxConfiguration->clear();
-		}
-
 		if (controlledEntity)
 		{
-			// invokes various visit methods.
-			controlledEntity->accept(this);
-			comboBoxConfiguration->setCurrentIndex(_activeConfigurationIndex);
+			if (!leaveOutGeneralData)
+			{
+				// get the device name into the line edit
+				const QSignalBlocker blockerLineEditDeviceName(lineEditDeviceName);
+				lineEditDeviceName->setText(avdecc::helper::entityName(*controlledEntity));
+
+				// get the group name into the line edit
+
+				const QSignalBlocker blockerLineEditGroupName(lineEditGroupName);
+				lineEditGroupName->setText(avdecc::helper::groupName(*controlledEntity));
+
+				_previousConfigurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
+			}
+
+			{
+				const QSignalBlocker blocker(comboBoxConfiguration);
+				comboBoxConfiguration->clear();
+			}
+
+			if (controlledEntity)
+			{
+				// invokes various visit methods.
+				controlledEntity->accept(this);
+				comboBoxConfiguration->setCurrentIndex(_activeConfigurationIndex);
+			}
 		}
 
 		tableViewReceive->resizeColumnsToContents();
@@ -169,6 +178,12 @@ public:
 	*/
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
+		if (parent == nullptr)
+		{
+			return;
+		}
+		la::avdecc::entity::model::DescriptorIndex audioUnitIndex = ((la::avdecc::controller::model::AudioUnitNode const* const)parent)->descriptorIndex;
+
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		for (auto const& inputPair : node.streamPortInputs)
 		{
@@ -176,7 +191,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _activeConfigurationIndex, ((la::avdecc::controller::model::AudioUnitNode const* const)parent)->descriptorIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _activeConfigurationIndex, audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelReceive.addNode(inputAudioCluster.second, channelIndex, connectionInformation);
 				}
@@ -189,7 +204,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _activeConfigurationIndex, ((la::avdecc::controller::model::AudioUnitNode const* const)parent)->descriptorIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _activeConfigurationIndex, audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelTransmit.addNode(outputAudioCluster.second, channelIndex, connectionInformation);
 				}
@@ -266,6 +281,7 @@ public:
 	{
 		if (_entityID == entityID && (!_hasChangesMap.contains(lineEditDeviceName) || !_hasChangesMap[lineEditDeviceName]))
 		{
+			QSignalBlocker blocker(*lineEditDeviceName); // block the changed signal for the below call.
 			lineEditDeviceName->setText(entityName);
 		}
 	}
@@ -279,8 +295,20 @@ public:
 	{
 		if (_entityID == entityID && (!_hasChangesMap.contains(lineEditGroupName) || !_hasChangesMap[lineEditGroupName]))
 		{
+			QSignalBlocker blocker(*lineEditGroupName); // block the changed signal for the below call.
 			lineEditGroupName->setText(entityGroupName);
 		}
+	}
+
+	/**
+	* Invoked whenever the entity group name gets changed in the model.
+	* @param entityID		 The id of the entity that got updated.
+	* @param entityGroupName The new group name.
+	*/
+	Q_SLOT void DeviceDetailsDialogImpl::audioClusterNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+	{
+		_deviceDetailsChannelTableModelReceive.updateAudioClusterName(entityID, configurationIndex, audioClusterIndex, audioClusterName);
+		_deviceDetailsChannelTableModelTransmit.updateAudioClusterName(entityID, configurationIndex, audioClusterIndex, audioClusterName);
 	}
 
 	/**
@@ -302,6 +330,7 @@ public:
 			loadCurrentControlledEntity(_entityID, true);
 		}
 	}
+
 
 	/**
 	* Invoked after a command has been exectued. We use it to detect if all data that was changed has been written.
@@ -337,12 +366,28 @@ public:
 	}
 
 	/**
+	* 
+	* @param entityName The new group name.
+	*/
+	Q_SLOT void DeviceDetailsDialogImpl::streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
+	{
+		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(state.listenerStream.entityID);
+		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(state.listenerStream.entityID);
+
+		tableViewReceive->resizeColumnsToContents();
+		tableViewReceive->resizeRowsToContents();
+		tableViewTransmit->resizeColumnsToContents();
+		tableViewTransmit->resizeRowsToContents();
+	}
+
+	/**
 	* Invoked whenever the entity name gets changed in the view.
 	* @param entityName The new group name.
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::lineEditDeviceNameChanged(QString const& entityName)
 	{
-		this->setModifiedStyleOnWidget(lineEditDeviceName, true);
+		_hasChangesByUser = true;
+		updateButtonStates();
 	}
 
 	/**
@@ -351,7 +396,18 @@ public:
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::lineEditGroupNameChanged(QString const& entityGroupName)
 	{
-		this->setModifiedStyleOnWidget(lineEditGroupName, true);
+		_hasChangesByUser = true;
+		updateButtonStates();
+	}
+
+	/**
+	* Invoked whenever one of tables on the receive and transmit tabs is edited by the user.
+	* @param entityGroupName The new group name.
+	*/
+	Q_SLOT void DeviceDetailsDialogImpl::tableDataChanged()
+	{
+		_hasChangesByUser = true;
+		updateButtonStates();
 	}
 
 	/**
@@ -361,6 +417,8 @@ public:
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::applyChanges()
 	{
+		_hasChangesByUser = false;
+		updateButtonStates();
 		_applyRequested = true;
 		_expectedChanges = 0;
 		_gottenChanges = 0;
@@ -418,6 +476,8 @@ public:
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::revertChanges()
 	{
+		_hasChangesByUser = false;
+		updateButtonStates();
 		_activeConfigurationIndex = -1;
 
 		_deviceDetailsChannelTableModelTransmit.resetChangedData();
@@ -452,6 +512,12 @@ private:
 		{
 			widget->setStyleSheet("");
 		}
+	}
+
+	void updateButtonStates()
+	{
+		pushButtonApplyChanges->setEnabled(_hasChangesByUser);
+		pushButtonRevertChanges->setEnabled(_hasChangesByUser);
 	}
 };
 

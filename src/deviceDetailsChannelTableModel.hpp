@@ -123,6 +123,11 @@ public:
 	QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> getChanges() const;
 	void resetChangedData();
 	void removeAllNodes();
+	void channelConnectionsUpdate(const la::avdecc::UniqueIdentifier &entityId);
+	void updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex,
+		la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const & audioClusterName);
+
+	Q_SIGNAL void dataEdited();
 
 protected:
 	TableRowEntry const& tableDataAtRow(int row) const;

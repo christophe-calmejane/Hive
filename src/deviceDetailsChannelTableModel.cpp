@@ -19,6 +19,8 @@
 
 #include "deviceDetailsChannelTableModel.hpp"
 
+#include "avdecc/channelConnectionManager.hpp"
+
 #include <QCoreApplication>
 #include <QLayout>
 #include <QPainter>
@@ -69,6 +71,9 @@ public:
 	void resetChangedData();
 
 	TableRowEntry const& DeviceDetailsChannelTableModelPrivate::tableDataAtRow(int row) const;
+
+	void channelConnectionsUpdate(const la::avdecc::UniqueIdentifier& entityId);
+	void updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName);
 
 private:
 	DeviceDetailsChannelTableModel* const q_ptr{ nullptr };
@@ -171,6 +176,64 @@ void DeviceDetailsChannelTableModelPrivate::resetChangedData()
 }
 
 /**
+* Updates the channel connection data of an entity and updates the view.
+*/
+void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(const la::avdecc::UniqueIdentifier& entityId)
+{
+	Q_Q(DeviceDetailsChannelTableModel);
+	int row = 0;
+	for (auto& node : _nodes)
+	{
+		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+		if (node.connectionInformation.forward)
+		{
+			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation.sourceEntityId, node.connectionInformation.sourceConfigurationIndex, node.connectionInformation.sourceAudioUnitIndex, node.connectionInformation.sourceStreamPortIndex, node.connectionInformation.sourceClusterIndex, node.connectionInformation.sourceBaseCluster, node.connectionInformation.sourceClusterChannel);
+			QModelIndex begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
+			QModelIndex end = q->index(_nodes.size(), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
+			break;
+		}
+		else
+		{
+			if (node.connectionInformation.sourceEntityId == entityId)
+			{
+				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation.sourceEntityId, node.connectionInformation.sourceConfigurationIndex, node.connectionInformation.sourceAudioUnitIndex, node.connectionInformation.sourceStreamPortIndex, node.connectionInformation.sourceClusterIndex, node.connectionInformation.sourceBaseCluster, node.connectionInformation.sourceClusterChannel);
+				QModelIndex indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
+				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
+				QModelIndex indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
+			}
+		}
+
+		row++;
+	}
+}
+
+/**
+* Update an audio cluster name.
+*/
+void DeviceDetailsChannelTableModelPrivate::updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+{
+	Q_Q(DeviceDetailsChannelTableModel);
+	int row = 0;
+	for (auto& node : _nodes)
+	{
+		if (!_hasChangesMap.contains(node.audioClusterNode.descriptorIndex) || !_hasChangesMap.value(node.audioClusterNode.descriptorIndex)->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
+		{
+			if (entityID == node.connectionInformation.sourceEntityId && configurationIndex == node.connectionInformation.sourceConfigurationIndex && audioClusterIndex == node.audioClusterNode.descriptorIndex)
+			{
+				node.audioClusterNode.dynamicModel->objectName = la::avdecc::entity::model::AvdeccFixedString(audioClusterName.toStdString());
+
+				QModelIndex indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ChannelName), QModelIndex());
+				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
+			}
+		}
+		row++;
+	}
+}
+
+
+/**
 * Gets the row count of the table.
 */
 int DeviceDetailsChannelTableModelPrivate::rowCount() const
@@ -215,9 +278,9 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 			}
 			if (role == Qt::FontRole && hasChanges)
 			{
-				QFont font;
+				/*QFont font;
 				font.setItalic(true);
-				return font;
+				return font;*/
 			}
 			else if (role == Qt::DisplayRole || role == Qt::EditRole)
 			{
@@ -238,23 +301,27 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				int innerRow = 0;
 				QString connectionsFormatted;
 				avdecc::ConnectionInformation info = _nodes.at(index.row()).connectionInformation;
-				for (auto const& connection : info.deviceConnections)
+				for (auto const& connectionKV : info.deviceConnections)
 				{
-					for (auto const& stream : connection->targetStreams)
+					for (auto const& streamKV : connectionKV.second->targetStreams)
 					{
-						for (auto const& cluster : stream->targetClusters)
+						for (auto const& clusterKV : streamKV.second->targetClusters)
 						{
-							auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connection->entityId);
+							auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionKV.second->entityId);
+							if (!controlledEntity)
+							{
+								continue;
+							}
 							auto const& entityNode = controlledEntity->getEntityNode();
 							auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
 							QString clusterName;
 							if (info.forward)
 							{
-								clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(stream->targetAudioUnitIndex).streamPortInputs.at(stream->targetStreamPortIndex).audioClusters.at(cluster.first + stream->targetBaseCluster)));
+								clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(streamKV.second->targetAudioUnitIndex).streamPortInputs.at(streamKV.second->targetStreamPortIndex).audioClusters.at(clusterKV.first + streamKV.second->targetBaseCluster)));
 							}
 							else
 							{
-								clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(stream->targetAudioUnitIndex).streamPortOutputs.at(stream->targetStreamPortIndex).audioClusters.at(cluster.first + stream->targetBaseCluster)));
+								clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(streamKV.second->targetAudioUnitIndex).streamPortOutputs.at(streamKV.second->targetStreamPortIndex).audioClusters.at(clusterKV.first + streamKV.second->targetBaseCluster)));
 							}
 
 							// add new line for every further entry.
@@ -306,6 +373,7 @@ bool DeviceDetailsChannelTableModelPrivate::setData(const QModelIndex& index, co
 						_hasChangesMap.insert(_nodes.at(index.row()).audioClusterNode.descriptorIndex, new QMap<DeviceDetailsChannelTableModelColumn, QVariant>());
 					}
 					_hasChangesMap.value(_nodes.at(index.row()).audioClusterNode.descriptorIndex)->insert(DeviceDetailsChannelTableModelColumn::ChannelName, value.toString());
+					emit q->dataEdited();
 				}
 				else
 				{
@@ -362,7 +430,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::headerData(int section, Qt::Orie
 */
 Qt::ItemFlags DeviceDetailsChannelTableModelPrivate::flags(QModelIndex const& index) const
 {
-	if (index.column() == (int)DeviceDetailsChannelTableModelColumn::ChannelName)
+	if (index.column() == static_cast<int>(DeviceDetailsChannelTableModelColumn::ChannelName))
 	{
 		return Qt::ItemIsEnabled | Qt::ItemIsEditable;
 	}
@@ -494,6 +562,24 @@ void DeviceDetailsChannelTableModel::resetChangedData()
 }
 
 /**
+* Update the displayed data for the channel connection columns.
+*/
+void DeviceDetailsChannelTableModel::channelConnectionsUpdate(const la::avdecc::UniqueIdentifier& entityId)
+{
+	Q_D(DeviceDetailsChannelTableModel);
+	d->channelConnectionsUpdate(entityId);
+}
+
+/**
+* Update an audio cluster name.
+*/
+void DeviceDetailsChannelTableModel::updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+{
+	Q_D(DeviceDetailsChannelTableModel);
+	d->updateAudioClusterName(entityID, configurationIndex, audioClusterIndex, audioClusterName);
+}
+
+/**
 * Clears the table model.
 */
 void DeviceDetailsChannelTableModel::removeAllNodes()
@@ -540,169 +626,82 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 
 	int innerRow = 0;
 	QString connectionsFormatted;
-	for (auto const& connection : tableData.connectionInformation.deviceConnections)
+	for (auto const& connectionKV : tableData.connectionInformation.deviceConnections)
 	{
-		for (auto const& stream : connection->targetStreams)
+		for (auto const& streamKV : connectionKV.second->targetStreams)
 		{
-			for (auto const& cluster : stream->targetClusters)
+			for (auto const& clusterKV : streamKV.second->targetClusters)
 			{
-				auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connection->entityId);
+				auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionKV.second->entityId);
+				if (!controlledEntity)
+				{
+					continue;
+				}
 				auto const& entityNode = controlledEntity->getEntityNode();
-				auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
-				//QString clusterName;
-				//if (connectionInformation.forward) {
-				//	clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(stream->targetAudioUnitIndex).streamPortInputs.at(stream->targetStreamPortIndex).audioClusters
-				//		.at(cluster.first + stream->targetBaseCluster)));
-				//}
-				//else {
-				//	clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(stream->targetAudioUnitIndex).streamPortOutputs.at(stream->targetStreamPortIndex).audioClusters
-				//		.at(cluster.first + stream->targetBaseCluster)));
-				//}
-
-				//// add new line for every further entry.
-				//if (innerRow > 0) {
-				//	connectionsFormatted.append("\n\n");
-				//}
-
-				// format the controller name + cluster name.
-				/*connectionsFormatted.append(avdecc::helper::entityName(*controlledEntity.get())).append(": ").append(clusterName);
-*/
-
-				QRect iconDrawRect(option.rect.left() + (option.rect.width() - circleDiameter) / 2.0f, option.rect.top() + margin + innerRow * (fontPixelHeight * 2), circleDiameter, circleDiameter);
-
-				auto const status = connection->streamConnectionStatus;
-				bool isRedundant = false; // TODO
-
-				if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::Connected))
+				if (entityNode.dynamicModel)
 				{
-					if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+					auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+					
+					QRect iconDrawRect(option.rect.left() + (option.rect.width() - circleDiameter) / 2.0f, option.rect.top() + margin + innerRow * (fontPixelHeight * 2), circleDiameter, circleDiameter);
+
+					auto const status = connectionKV.second->streamConnectionStatus;
+					bool isRedundant = false; // TODO
+
+					if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::Connected))
 					{
-						connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, isRedundant);
+						if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						{
+							connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, isRedundant);
+						}
+						else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						{
+							connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, isRedundant);
+						}
+						else
+						{
+							connectionMatrix::drawConnectedStream(painter, iconDrawRect, isRedundant);
+						}
 					}
-					else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+					else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::FastConnecting))
 					{
-						connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, isRedundant);
+						if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						{
+							connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, isRedundant);
+						}
+						else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						{
+							connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, isRedundant);
+						}
+						else
+						{
+							connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, isRedundant);
+						}
+					}
+					else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::PartiallyConnected))
+					{
+						connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
 					}
 					else
 					{
-						connectionMatrix::drawConnectedStream(painter, iconDrawRect, isRedundant);
+						if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						{
+							connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, isRedundant);
+						}
+						else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						{
+							connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, isRedundant);
+						}
+						else
+						{
+							connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, isRedundant);
+						}
 					}
-				}
-				else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::FastConnecting))
-				{
-					if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
-					{
-						connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, isRedundant);
-					}
-					else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
-					{
-						connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, isRedundant);
-					}
-					else
-					{
-						connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, isRedundant);
-					}
-				}
-				else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::PartiallyConnected))
-				{
-					connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
-				}
-				else
-				{
-					if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
-					{
-						connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, isRedundant);
-					}
-					else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
-					{
-						connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, isRedundant);
-					}
-					else
-					{
-						connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, isRedundant);
-					}
-				}
 
-				//connectionMatrix::drawConnectedStream(painter, iconDrawRect, false);
-
-				innerRow++;
+					innerRow++;
+				}
 			}
 		}
 	}
-
-
-	// TODO: is this allowed: ???
-
-	//// Entity row or column
-	//if (talkerData.type == UserData::Type::EntityNode || listenerData.type == UserData::Type::EntityNode)
-	//{
-	//	drawEntityNoConnection(painter, option.rect);
-	//}
-	//else
-	//{
-	//	// If index is a cross of 2 redundant streams, only the diagonal is connectable
-	//	if (talkerData.type == UserData::Type::RedundantOutputStreamNode && listenerData.type == UserData::Type::RedundantInputStreamNode && talkerData.redundantStreamOrder != listenerData.redundantStreamOrder)
-	//	{
-	//		return;
-	//	}
-	//	auto const caps = model->d_ptr->connectionCapabilities(talkerData, listenerData);
-
-	//	if (caps == ConnectionCapabilities::None)
-	//		return;
-
-	//	auto const isRedundant = !((talkerData.type == UserData::Type::RedundantOutputNode && listenerData.type == UserData::Type::RedundantInputNode)
-	//		|| (talkerData.type == UserData::Type::OutputStreamNode && listenerData.type == UserData::Type::InputStreamNode));
-
-	//	if (la::avdecc::hasFlag(caps, ConnectionCapabilities::Connected))
-	//	{
-	//		if (la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongDomain))
-	//		{
-	//			drawWrongDomainConnectedStream(painter, option.rect, isRedundant);
-	//		}
-	//		else if (la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongFormat))
-	//		{
-	//			drawWrongFormatConnectedStream(painter, option.rect, isRedundant);
-	//		}
-	//		else
-	//		{
-	//			drawConnectedStream(painter, option.rect, isRedundant);
-	//		}
-	//	}
-	//	else if (la::avdecc::hasFlag(caps, ConnectionCapabilities::FastConnecting))
-	//	{
-	//		if (la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongDomain))
-	//		{
-	//			drawWrongDomainFastConnectingStream(painter, option.rect, isRedundant);
-	//		}
-	//		else if (la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongFormat))
-	//		{
-	//			drawWrongFormatFastConnectingStream(painter, option.rect, isRedundant);
-	//		}
-	//		else
-	//		{
-	//			drawFastConnectingStream(painter, option.rect, isRedundant);
-	//		}
-	//	}
-	//	else if (la::avdecc::hasFlag(caps, ConnectionCapabilities::PartiallyConnected))
-	//	{
-	//		drawPartiallyConnectedRedundantNode(painter, option.rect);
-	//	}
-	//	else
-	//	{
-	//		if (la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongDomain))
-	//		{
-	//			drawWrongDomainNotConnectedStream(painter, option.rect, isRedundant);
-	//		}
-	//		else if (la::avdecc::hasFlag(caps, ConnectionCapabilities::WrongFormat))
-	//		{
-	//			drawWrongFormatNotConnectedStream(painter, option.rect, isRedundant);
-	//		}
-	//		else
-	//		{
-	//			drawNotConnectedStream(painter, option.rect, isRedundant);
-	//		}
-	//	}
-	//}
 }
 
 /**
