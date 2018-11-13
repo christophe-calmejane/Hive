@@ -128,6 +128,7 @@ FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::D
 					// Succeeded
 					else
 					{
+						widget->setProgress(static_cast<int>(100)); // Force the progress to 100%, we might not have received a progress even with the final value of 100%
 						widget->setText(QString("%1: Complete").arg(entityName));
 						item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Complete));
 					}
