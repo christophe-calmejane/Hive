@@ -21,6 +21,7 @@
 
 #include <la/avdecc/controller/avdeccController.hpp>
 #include <memory>
+#include <optional>
 #include <QObject>
 #include <QMap>
 #include <QList>
@@ -52,9 +53,9 @@ enum class ConnectionStatus
 struct ConnectionDetails : QObject
 {
 	std::vector<std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>> targetClusters;
-	la::avdecc::entity::model::AudioUnitIndex targetAudioUnitIndex = -1;
-	la::avdecc::entity::model::StreamPortIndex targetStreamPortIndex = -1;
-	la::avdecc::entity::model::ClusterIndex targetBaseCluster = -1;
+	std::optional<la::avdecc::entity::model::AudioUnitIndex> targetAudioUnitIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::StreamPortIndex> targetStreamPortIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::ClusterIndex> targetBaseCluster = std::nullopt;
 };
 
 // **************************************************************
@@ -67,9 +68,9 @@ struct ConnectionDetails : QObject
 	*/
 struct Connections : QObject
 {
-	la::avdecc::UniqueIdentifier entityId;
+	la::avdecc::UniqueIdentifier entityId = la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
 	std::map<la::avdecc::entity::model::StreamIndex, std::shared_ptr<ConnectionDetails>> targetStreams;
-	ConnectionStatus streamConnectionStatus = ConnectionStatus::PartiallyConnected;
+	ConnectionStatus streamConnectionStatus = ConnectionStatus::None;
 };
 
 // **************************************************************
@@ -84,12 +85,12 @@ struct Connections : QObject
 struct ConnectionInformation
 {
 	// store the information of the source
-	la::avdecc::UniqueIdentifier sourceEntityId = 0;
-	la::avdecc::entity::model::ConfigurationIndex sourceConfigurationIndex = 0;
-	la::avdecc::entity::model::AudioUnitIndex sourceAudioUnitIndex = 0;
-	la::avdecc::entity::model::StreamPortIndex sourceStreamPortIndex = 0;
-	la::avdecc::entity::model::ClusterIndex sourceClusterIndex = 0;
-	la::avdecc::entity::model::ClusterIndex sourceBaseCluster = 0;
+	la::avdecc::UniqueIdentifier sourceEntityId = la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
+	std::optional<la::avdecc::entity::model::ConfigurationIndex> sourceConfigurationIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::AudioUnitIndex> sourceAudioUnitIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::StreamPortIndex> sourceStreamPortIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::ClusterIndex> sourceClusterIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::ClusterIndex> sourceBaseCluster = std::nullopt;
 	std::uint16_t sourceClusterChannel = 0;
 	bool forward = true; /** This flag indicates the direction of the connections. */
 

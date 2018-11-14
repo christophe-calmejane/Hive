@@ -48,8 +48,9 @@
 class DeviceDetailsDialogImpl final : private Ui::DeviceDetailsDialog, public QObject, public la::avdecc::controller::model::EntityModelVisitor
 {
 private:
+	::DeviceDetailsDialog* _dialog;
 	la::avdecc::UniqueIdentifier _entityID;
-	la::avdecc::entity::model::DescriptorIndex _activeConfigurationIndex, _previousConfigurationIndex;
+	std::optional<la::avdecc::entity::model::DescriptorIndex> _activeConfigurationIndex = std::nullopt, _previousConfigurationIndex = std::nullopt;
 	QMap<QWidget*, bool> _hasChangesMap;
 	bool _applyRequested;
 	int _expectedChanges;
@@ -68,12 +69,13 @@ public:
 	{
 		// Link UI
 		setupUi(parent);
+		_dialog = parent;
 
 		_applyRequested = false;
 		_hasChangesByUser = false;
 		updateButtonStates();
-		_activeConfigurationIndex = std::numeric_limits<la::avdecc::entity::model::DescriptorIndex>::max();
-		_previousConfigurationIndex = std::numeric_limits<la::avdecc::entity::model::DescriptorIndex>::max();
+		_activeConfigurationIndex = std::nullopt;
+		_previousConfigurationIndex = std::nullopt;
 
 		// setup the table view data models.
 		_deviceDetailsChannelTableModelReceive.registerUiWidget(tableViewReceive);
@@ -118,16 +120,21 @@ public:
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
+
+			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::entityName(*controlledEntity));
+
 			if (!leaveOutGeneralData)
 			{
 				// get the device name into the line edit
 				const QSignalBlocker blockerLineEditDeviceName(lineEditDeviceName);
 				lineEditDeviceName->setText(avdecc::helper::entityName(*controlledEntity));
+				setModifiedStyleOnWidget(lineEditDeviceName, false);
 
 				// get the group name into the line edit
 
 				const QSignalBlocker blockerLineEditGroupName(lineEditGroupName);
 				lineEditGroupName->setText(avdecc::helper::groupName(*controlledEntity));
+				setModifiedStyleOnWidget(lineEditGroupName, false);
 
 				_previousConfigurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 			}
@@ -141,7 +148,7 @@ public:
 			{
 				// invokes various visit methods.
 				controlledEntity->accept(this);
-				comboBoxConfiguration->setCurrentIndex(_activeConfigurationIndex);
+				comboBoxConfiguration->setCurrentIndex(_activeConfigurationIndex.value());
 			}
 		}
 
@@ -166,7 +173,7 @@ public:
 			comboBoxConfiguration->addItem(node.dynamicModel->objectName.data(), node.descriptorIndex);
 
 			// relevant Node:
-			if (node.dynamicModel->isActiveConfiguration && _activeConfigurationIndex == std::numeric_limits<la::avdecc::entity::model::DescriptorIndex>::max())
+			if (node.dynamicModel->isActiveConfiguration && !_activeConfigurationIndex)
 			{
 				_activeConfigurationIndex = node.descriptorIndex;
 			}
@@ -191,7 +198,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _activeConfigurationIndex, audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _activeConfigurationIndex.value(), audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelReceive.addNode(inputAudioCluster.second, channelIndex, connectionInformation);
 				}
@@ -204,7 +211,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _activeConfigurationIndex, audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _activeConfigurationIndex.value(), audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelTransmit.addNode(outputAudioCluster.second, channelIndex, connectionInformation);
 				}
@@ -284,6 +291,9 @@ public:
 			QSignalBlocker blocker(*lineEditDeviceName); // block the changed signal for the below call.
 			lineEditDeviceName->setText(entityName);
 		}
+
+		// update the window title
+		_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + entityName);
 	}
 
 	/**
@@ -328,6 +338,8 @@ public:
 
 			// read out actual data again
 			loadCurrentControlledEntity(_entityID, true);
+			_hasChangesByUser = true;
+			updateButtonStates();
 		}
 	}
 
@@ -386,6 +398,7 @@ public:
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::lineEditDeviceNameChanged(QString const& entityName)
 	{
+		setModifiedStyleOnWidget(lineEditDeviceName, true);
 		_hasChangesByUser = true;
 		updateButtonStates();
 	}
@@ -396,6 +409,7 @@ public:
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::lineEditGroupNameChanged(QString const& entityGroupName)
 	{
+		setModifiedStyleOnWidget(lineEditGroupName, true);
 		_hasChangesByUser = true;
 		updateButtonStates();
 	}
@@ -437,7 +451,7 @@ public:
 
 		if (_previousConfigurationIndex != _activeConfigurationIndex)
 		{
-			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex);
+			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex.value());
 			_expectedChanges++;
 		}
 
@@ -450,7 +464,7 @@ public:
 			{
 				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
 				{
-					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, _activeConfigurationIndex, e, rxChanges->value(f).toString());
+					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, _activeConfigurationIndex.value(), e, rxChanges->value(f).toString());
 					_expectedChanges++;
 				}
 			}
@@ -464,7 +478,7 @@ public:
 			{
 				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
 				{
-					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, _activeConfigurationIndex, e, txChanges->value(f).toString());
+					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, _activeConfigurationIndex.value(), e, txChanges->value(f).toString());
 					_expectedChanges++;
 				}
 			}
@@ -504,14 +518,14 @@ private:
 			_hasChangesMap.insert(widget, false);
 		}
 		_hasChangesMap[widget] = modified;
-		if (modified)
+		/*if (modified)
 		{
 			widget->setStyleSheet("font-style: italic");
 		}
 		else
 		{
 			widget->setStyleSheet("");
-		}
+		}*/
 	}
 
 	void updateButtonStates()
@@ -519,6 +533,8 @@ private:
 		pushButtonApplyChanges->setEnabled(_hasChangesByUser);
 		pushButtonRevertChanges->setEnabled(_hasChangesByUser);
 	}
+
+
 };
 
 /**
@@ -550,8 +566,5 @@ void DeviceDetailsDialog::setControlledEntityID(la::avdecc::UniqueIdentifier con
 	}
 	_controlledEntityID = entityID;
 	_pImpl->loadCurrentControlledEntity(_controlledEntityID, false);
-	auto& manager = avdecc::ControllerManager::getInstance();
-	auto controlledEntity = manager.getControlledEntity(entityID);
-	setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::entityName(*controlledEntity));
 }
 //#include "deviceDetailsDialog.moc"

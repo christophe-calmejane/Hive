@@ -129,21 +129,24 @@ public:
 				{
 					la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
 					la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
-					talkerNode = &talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
-					listenerNode = &listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
+					if (talkerEntityNode.dynamicModel && listenerEntityNode.dynamicModel)
+					{
+						talkerNode = &talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
+						listenerNode = &listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
 
-					// Get connected state
-					auto const areConnected = isStreamConnected(talkerEntityId, talkerNode, listenerNode);
-					auto const fastConnecting = isStreamFastConnecting(talkerEntityId, talkerNode, listenerNode);
-					auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
+						// Get connected state
+						auto const areConnected = isStreamConnected(talkerEntityId, talkerNode, listenerNode);
+						auto const fastConnecting = isStreamFastConnecting(talkerEntityId, talkerNode, listenerNode);
+						auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
 
-					// Get stream format compatibility
-					auto const isFormatCompatible = computeFormatCompatible(*talkerNode, *listenerNode);
+						// Get stream format compatibility
+						auto const isFormatCompatible = computeFormatCompatible(*talkerNode, *listenerNode);
 
-					// Get domain compatibility
-					auto const isDomainCompatible = computeDomainCompatible();
+						// Get domain compatibility
+						auto const isDomainCompatible = computeDomainCompatible();
 
-					return computeCapabilities(connectState, areConnected, isFormatCompatible, isDomainCompatible);
+						return computeCapabilities(connectState, areConnected, isFormatCompatible, isDomainCompatible);
+					}
 				}
 			}
 		}
@@ -249,12 +252,12 @@ public:
 
 				// after getting the connected stream, resolve the underlying channels:
 				auto targetControlledEntity = manager.getControlledEntity(streamConnection.entityID);
-
-				auto const* const targetEntity = targetControlledEntity.get();
-				if (targetEntity == nullptr)
+				if (!targetControlledEntity)
 				{
 					continue;
 				}
+				auto const* const targetEntity = targetControlledEntity.get();
+				
 				auto const& targetEntityNode = targetEntity->getEntityNode();
 				if (targetEntityNode.dynamicModel)
 				{
@@ -277,6 +280,7 @@ public:
 										result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->targetAudioUnitIndex = audioUnit.first;
 										result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->targetBaseCluster = streamPortInput.second.staticModel->baseCluster;
 										result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->targetStreamPortIndex = streamPortInput.first;
+										//result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->isRedundant = ?;
 									}
 								}
 							}
