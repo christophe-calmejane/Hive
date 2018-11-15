@@ -29,7 +29,6 @@
 
 namespace avdecc
 {
-
 enum class ConnectionStatus
 {
 	None = 0,

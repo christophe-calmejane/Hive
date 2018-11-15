@@ -257,7 +257,7 @@ public:
 					continue;
 				}
 				auto const* const targetEntity = targetControlledEntity.get();
-				
+
 				auto const& targetEntityNode = targetEntity->getEntityNode();
 				if (targetEntityNode.dynamicModel)
 				{

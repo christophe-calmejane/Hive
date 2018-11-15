@@ -114,13 +114,13 @@ public:
 
 		_entityID = entityID;
 		_hasChangesByUser = false;
+		_activeConfigurationIndex = std::nullopt;
 		updateButtonStates();
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
-
 			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::entityName(*controlledEntity));
 
 			if (!leaveOutGeneralData)
@@ -168,15 +168,13 @@ public:
 	*/
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
-		{
-			const QSignalBlocker blocker(comboBoxConfiguration);
-			comboBoxConfiguration->addItem(node.dynamicModel->objectName.data(), node.descriptorIndex);
+		const QSignalBlocker blocker(comboBoxConfiguration);
+		comboBoxConfiguration->addItem(node.dynamicModel->objectName.data(), node.descriptorIndex);
 
-			// relevant Node:
-			if (node.dynamicModel->isActiveConfiguration && !_activeConfigurationIndex)
-			{
-				_activeConfigurationIndex = node.descriptorIndex;
-			}
+		// relevant Node:
+		if (node.dynamicModel->isActiveConfiguration && !_activeConfigurationIndex)
+		{
+			_activeConfigurationIndex = node.descriptorIndex;
 		}
 	}
 
@@ -200,7 +198,7 @@ public:
 				{
 					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _activeConfigurationIndex.value(), audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
 
-					_deviceDetailsChannelTableModelReceive.addNode(inputAudioCluster.second, channelIndex, connectionInformation);
+					_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 				}
 			}
 		}
@@ -213,7 +211,7 @@ public:
 				{
 					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _activeConfigurationIndex.value(), audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
 
-					_deviceDetailsChannelTableModelTransmit.addNode(outputAudioCluster.second, channelIndex, connectionInformation);
+					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 				}
 			}
 		}
@@ -329,6 +327,7 @@ public:
 	{
 		if (_activeConfigurationIndex != comboBoxConfiguration->currentData().toInt())
 		{
+			bool init = !_activeConfigurationIndex;
 			_activeConfigurationIndex = comboBoxConfiguration->currentData().toInt();
 
 			_deviceDetailsChannelTableModelTransmit.resetChangedData();
@@ -338,8 +337,12 @@ public:
 
 			// read out actual data again
 			loadCurrentControlledEntity(_entityID, true);
-			_hasChangesByUser = true;
-			updateButtonStates();
+
+			if (!init)
+			{
+				_hasChangesByUser = true;
+				updateButtonStates();
+			}
 		}
 	}
 
@@ -533,8 +536,6 @@ private:
 		pushButtonApplyChanges->setEnabled(_hasChangesByUser);
 		pushButtonRevertChanges->setEnabled(_hasChangesByUser);
 	}
-
-
 };
 
 /**

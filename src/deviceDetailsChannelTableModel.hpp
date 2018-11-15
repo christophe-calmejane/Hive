@@ -59,15 +59,11 @@ struct TableRowEntry
 	/**
 	* Constructor.
 	*/
-	TableRowEntry(la::avdecc::controller::model::AudioClusterNode audioClusterNode, uint16_t audioClusterNodeChannel, avdecc::ConnectionInformation connectionInformation)
+	TableRowEntry(avdecc::ConnectionInformation connectionInformation)
 	{
-		this->audioClusterNode = audioClusterNode;
-		this->audioClusterNodeChannel;
 		this->connectionInformation = connectionInformation;
 	}
 
-	la::avdecc::controller::model::AudioClusterNode audioClusterNode;
-	uint16_t audioClusterNodeChannel;
 	avdecc::ConnectionInformation connectionInformation;
 };
 
@@ -119,13 +115,12 @@ public:
 
 	void registerUiWidget(QTableView* view);
 
-	void addNode(la::avdecc::controller::model::AudioClusterNode const& audioClusterNode, uint16_t audioClusterNodeChannel, avdecc::ConnectionInformation const& connectionInformation);
+	void addNode(avdecc::ConnectionInformation const& connectionInformation);
 	QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> getChanges() const;
 	void resetChangedData();
 	void removeAllNodes();
-	void channelConnectionsUpdate(const la::avdecc::UniqueIdentifier &entityId);
-	void updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex,
-		la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const & audioClusterName);
+	void channelConnectionsUpdate(const la::avdecc::UniqueIdentifier& entityId);
+	void updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName);
 
 	Q_SIGNAL void dataEdited();
 
