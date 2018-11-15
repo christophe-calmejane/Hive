@@ -62,9 +62,6 @@ public:
 	QVariant headerData(int section, Qt::Orientation orientation, int role) const;
 	Qt::ItemFlags flags(QModelIndex const& index) const;
 
-	void registerUiWidget(QTableView* ui);
-	QTableView* getUiWidget() const;
-
 	void addNode(avdecc::ConnectionInformation const& connectionInformation);
 	void removeAllNodes();
 	QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> getChanges() const;
@@ -102,25 +99,6 @@ DeviceDetailsChannelTableModelPrivate::DeviceDetailsChannelTableModelPrivate(Dev
 * Destructor.
 */
 DeviceDetailsChannelTableModelPrivate::~DeviceDetailsChannelTableModelPrivate() {}
-
-/**
-* Adds a node to the table model. Doesn't check for duplicates or correct order.
-* @param audioClusterNode The node to add to this model.
-*/
-QTableView* DeviceDetailsChannelTableModelPrivate::getUiWidget() const
-{
-	return _ui;
-}
-
-/**
-* Adds a node to the table model. Doesn't check for duplicates or correct order.
-* @param audioClusterNode The node to add to this model.
-*/
-void DeviceDetailsChannelTableModelPrivate::registerUiWidget(QTableView* ui)
-{
-	_ui = ui;
-	_ui->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
-}
 
 /**
 * Adds a node to the table model. Doesn't check for duplicates or correct order.
@@ -532,25 +510,6 @@ Qt::ItemFlags DeviceDetailsChannelTableModel::flags(QModelIndex const& index) co
 }
 
 /**
-* Gets the flags of a cell.
-*/
-void DeviceDetailsChannelTableModel::registerUiWidget(QTableView* view)
-{
-	Q_D(DeviceDetailsChannelTableModel);
-	d->registerUiWidget(view);
-}
-
-/**
-* Adds a node to the table.
-* @param audioClusterNode: The audio cluster node to display.
-*/
-QTableView* DeviceDetailsChannelTableModel::getUiWidget() const
-{
-	Q_D(const DeviceDetailsChannelTableModel);
-	return d->getUiWidget();
-}
-
-/**
 * Adds a node to the table.
 * @param audioClusterNode: The audio cluster node to display.
 */
@@ -630,7 +589,7 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
 	auto const& tableData = model->tableDataAtRow(index.row());
 
-	QFontMetrics fm(model->getUiWidget()->fontMetrics());
+	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
 
 	int margin = 2;

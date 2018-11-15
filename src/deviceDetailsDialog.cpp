@@ -78,8 +78,8 @@ public:
 		_previousConfigurationIndex = std::nullopt;
 
 		// setup the table view data models.
-		_deviceDetailsChannelTableModelReceive.registerUiWidget(tableViewReceive);
-		_deviceDetailsChannelTableModelTransmit.registerUiWidget(tableViewTransmit);
+		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
+		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
 		tableViewReceive->setModel(&_deviceDetailsChannelTableModelReceive);
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
 
@@ -187,7 +187,7 @@ public:
 		{
 			return;
 		}
-		la::avdecc::entity::model::DescriptorIndex audioUnitIndex = ((la::avdecc::controller::model::AudioUnitNode const* const)parent)->descriptorIndex;
+		la::avdecc::entity::model::DescriptorIndex audioUnitIndex = node.descriptorIndex;
 
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		for (auto const& inputPair : node.streamPortInputs)

@@ -113,8 +113,6 @@ public:
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
 
-	void registerUiWidget(QTableView* view);
-
 	void addNode(avdecc::ConnectionInformation const& connectionInformation);
 	QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> getChanges() const;
 	void resetChangedData();
@@ -126,7 +124,6 @@ public:
 
 protected:
 	TableRowEntry const& tableDataAtRow(int row) const;
-	QTableView* getUiWidget() const;
 
 private:
 	DeviceDetailsChannelTableModelPrivate* const d_ptr{ nullptr };
