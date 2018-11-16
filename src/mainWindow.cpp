@@ -30,7 +30,7 @@
 #include "nodeVisitor.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "avdecc/controllerManager.hpp"
-#include "avdecc/mediaClockConnectionManager.hpp"
+#include "avdecc/mcDomainManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
 #include "imageItemDelegate.hpp"
@@ -191,25 +191,15 @@ void MainWindow::createControllerView()
 
 	int column{ 0 };
 	controllerTableView->setColumnWidth(column++, 40);
-	controllerTableView->setColumnHidden(column, false);
 	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnHidden(column, false);
 	controllerTableView->setColumnWidth(column++, 180);
-	controllerTableView->setColumnHidden(column, true);
 	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnHidden(column, true);
 	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnHidden(column, true);
 	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnHidden(column, true);
 	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnHidden(column, true);
 	controllerTableView->setColumnWidth(column++, 90);
-	controllerTableView->setColumnHidden(column, true);
 	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnHidden(column, false);
 	controllerTableView->setColumnWidth(column++, 180);
-	controllerTableView->setColumnHidden(column, true);
 	controllerTableView->setColumnWidth(column++, 185);
 }
 
