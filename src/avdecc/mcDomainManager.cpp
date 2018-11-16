@@ -82,17 +82,17 @@ public:
 	Q_SLOT void onStreamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& streamConnectionState)
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
-		auto controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
+		auto const& controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
 		if (controlledEntity)
 		{
 			if (la::avdecc::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 			{
 				try
 				{
-					la::avdecc::controller::model::EntityNode entityModel = controlledEntity->getEntityNode();
+					auto entityModel = controlledEntity->getEntityNode();
 
-					la::avdecc::controller::model::ConfigurationNode const configNode = controlledEntity->getCurrentConfigurationNode();
-					la::avdecc::entity::model::DescriptorIndex activeConfigIndex = configNode.descriptorIndex;
+					auto const configNode = controlledEntity->getCurrentConfigurationNode();
+					auto activeConfigIndex = configNode.descriptorIndex;
 
 					// find out if the stream connection is a clock stream connection:
 					bool isClockStream = false;
@@ -102,7 +102,7 @@ public:
 						for (auto const& streamFormat : streamInput.staticModel->formats)
 						{
 							auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
-							la::avdecc::entity::model::StreamFormatInfo::Type streamType = streamFormatInfo->getType();
+							auto streamType = streamFormatInfo->getType();
 							if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 							{
 								isClockStream = true;
@@ -153,7 +153,7 @@ public:
 			try
 			{
 				auto const configNode = controlledEntity->getCurrentConfigurationNode();
-				la::avdecc::entity::model::DescriptorIndex activeConfigIndex = configNode.descriptorIndex;
+				auto const activeConfigIndex = configNode.descriptorIndex;
 
 				// internal or external?
 				bool clockSourceInternal = false;
@@ -174,7 +174,7 @@ public:
 						else
 						{
 							// find the clock stream:
-							std::optional<la::avdecc::entity::model::StreamIndex> clockStreamIndex = findClockStreamIndex(configNode);
+							auto clockStreamIndex = findClockStreamIndex(configNode);
 							if (clockStreamIndex)
 							{
 								auto* clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, clockStreamIndex.value()).dynamicModel;
@@ -245,7 +245,7 @@ public:
 					associatedDomains.push_back(secondaryMasterIdKV.first);
 					if (secondaryMasterIdKV.second == Error::NoError)
 					{
-						std::optional<DomainIndex> domainIndex = result.findDomainIndexByMasterEntityId(secondaryMasterIdKV.first);
+						auto domainIndex = result.findDomainIndexByMasterEntityId(secondaryMasterIdKV.first);
 						if (!domainIndex)
 						{
 							// domain not created yet
@@ -278,7 +278,7 @@ private:
 			for (auto const& streamFormat : streamInput.staticModel->formats)
 			{
 				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
-				la::avdecc::entity::model::StreamFormatInfo::Type streamType = streamFormatInfo->getType();
+				auto streamType = streamFormatInfo->getType();
 				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 				{
 					return streamInputKV.first;
@@ -409,7 +409,7 @@ void avdecc::mediaClock::MCDomain::setDomainSamplingRate(la::avdecc::entity::mod
 * @param mediaClockMasterId The media clock master id.
 * @return The index of the domain which mc master matches the given id.
 */
-DomainIndex const MCEntityDomainMapping::findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier const mediaClockMasterId) noexcept
+std::optional<DomainIndex> const MCEntityDomainMapping::findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier mediaClockMasterId) noexcept
 {
 	for (auto const& mediaClockDomainKV : _mediaClockDomains)
 	{
@@ -418,7 +418,7 @@ DomainIndex const MCEntityDomainMapping::findDomainIndexByMasterEntityId(la::avd
 			return mediaClockDomainKV.second.domainIndex();
 		}
 	}
-	return -1;
+	return std::nullopt;
 }
 
 /**

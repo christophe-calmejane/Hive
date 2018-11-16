@@ -21,6 +21,7 @@
 
 #include <la/avdecc/controller/avdeccController.hpp>
 #include <memory>
+#include <optional>
 #include <QObject>
 #include <QMap>
 
@@ -68,7 +69,7 @@ protected:
 class MCEntityDomainMapping
 {
 public:
-	const DomainIndex findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier const mediaClockMasterId) noexcept;
+	std::optional<DomainIndex> const findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier mediaClockMasterId) noexcept;
 
 	std::map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>>& entityMediaClockMasterMappings();
 	std::map<DomainIndex, MCDomain>& mediaClockDomains();
