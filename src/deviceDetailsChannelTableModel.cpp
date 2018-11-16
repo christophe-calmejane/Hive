@@ -166,8 +166,8 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 		if (node.connectionInformation.forward)
 		{
 			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation.sourceEntityId, node.connectionInformation.sourceConfigurationIndex.value(), node.connectionInformation.sourceAudioUnitIndex.value(), node.connectionInformation.sourceStreamPortIndex.value(), node.connectionInformation.sourceClusterIndex.value(), node.connectionInformation.sourceBaseCluster.value(), node.connectionInformation.sourceClusterChannel);
-			QModelIndex begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
-			QModelIndex end = q->index(_nodes.size(), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
+			auto end = q->index(_nodes.size(), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
 			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
 			break;
 		}
@@ -176,9 +176,9 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 			if (node.connectionInformation.sourceEntityId == entityId)
 			{
 				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation.sourceEntityId, node.connectionInformation.sourceConfigurationIndex.value(), node.connectionInformation.sourceAudioUnitIndex.value(), node.connectionInformation.sourceStreamPortIndex.value(), node.connectionInformation.sourceClusterIndex.value(), node.connectionInformation.sourceBaseCluster.value(), node.connectionInformation.sourceClusterChannel);
-				QModelIndex indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
+				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
-				QModelIndex indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
 				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
 			}
 		}
@@ -200,7 +200,7 @@ void DeviceDetailsChannelTableModelPrivate::updateAudioClusterName(la::avdecc::U
 		{
 			if (entityID == node.connectionInformation.sourceEntityId && configurationIndex == node.connectionInformation.sourceConfigurationIndex && audioClusterIndex == node.connectionInformation.sourceClusterIndex.value())
 			{
-				QModelIndex indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ChannelName), QModelIndex());
+				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ChannelName), QModelIndex());
 				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
 			}
 		}
@@ -267,10 +267,10 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				else
 				{
 					auto const& connectionInfo = _nodes.at(index.row()).connectionInformation;
-					auto entity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo.sourceEntityId);
-					if (entity)
+					auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo.sourceEntityId);
+					if (controlledEntity)
 					{
-						auto const& audioUnit = entity->getAudioUnitNode(connectionInfo.sourceConfigurationIndex.value(), connectionInfo.sourceAudioUnitIndex.value());
+						auto const& audioUnit = controlledEntity->getAudioUnitNode(connectionInfo.sourceConfigurationIndex.value(), connectionInfo.sourceAudioUnitIndex.value());
 						if (!connectionInfo.forward)
 						{
 							if (connectionInfo.sourceStreamPortIndex && connectionInfo.sourceClusterIndex && connectionInfo.sourceStreamPortIndex < audioUnit.streamPortInputs.size() && connectionInfo.sourceClusterIndex.value() - connectionInfo.sourceBaseCluster.value() < audioUnit.streamPortInputs.at(connectionInfo.sourceStreamPortIndex.value()).audioClusters.size())

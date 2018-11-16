@@ -187,7 +187,7 @@ public:
 		{
 			return;
 		}
-		la::avdecc::entity::model::DescriptorIndex audioUnitIndex = node.descriptorIndex;
+		auto audioUnitIndex = node.descriptorIndex;
 
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		for (auto const& inputPair : node.streamPortInputs)

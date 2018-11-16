@@ -76,8 +76,8 @@ struct Connections : QObject
 // struct ConnectionInformation
 // **************************************************************
 /**
-	* @brief    Resulting data of a call to getChannelConnections
-	*			or ChannelConnectionManager::getChannelConnectionsBackwards.			
+	* @brief    Resulting data of a call to ChannelConnectionManager::getChannelConnections
+	*			or ChannelConnectionManager::getChannelConnectionsReverse.			
 	* [@author  Marius Erlen]
 	* [@date    2018-10-04]
 	*/
