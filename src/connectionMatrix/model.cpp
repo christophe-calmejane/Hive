@@ -34,6 +34,7 @@ class HeaderItem : public QStandardItem
 {
 public:
 	using StreamMap = std::unordered_map<la::avdecc::entity::model::StreamIndex, std::int32_t>;
+	using RelativeParentIndex = std::optional<std::int32_t>;
 
 	HeaderItem(Model::NodeType const nodeType, la::avdecc::UniqueIdentifier const& entityID)
 		: _nodeType{ nodeType }
@@ -81,14 +82,14 @@ public:
 		return _redundantStreamOrder;
 	}
 
-	void setParentIndex(std::int32_t const parentIndex)
+	void setRelativeParentIndex(std::int32_t const relativeParentIndex)
 	{
-		_parentIndex = parentIndex;
+		_relativeParentIndex = relativeParentIndex;
 	}
 
-	std::int32_t parentIndex() const
+	RelativeParentIndex relativeParentIndex() const
 	{
-		return _parentIndex;
+		return _relativeParentIndex;
 	}
 
 	void setChildrenCount(std::int32_t const childrenCount)
@@ -151,9 +152,9 @@ public:
 				}
 			}
 		}
-		else if (role == Model::ParentIndexRole)
+		else if (role == Model::RelativeParentIndexRole)
 		{
-			return QVariant::fromValue(_parentIndex);
+			return QVariant::fromValue(_relativeParentIndex);
 		}
 		else if (role == Model::ChildrenCountRole)
 		{
@@ -208,7 +209,7 @@ private:
 	la::avdecc::entity::model::StreamIndex _streamIndex{ static_cast<la::avdecc::entity::model::StreamIndex>(-1) };
 	la::avdecc::controller::model::VirtualIndex _redundantIndex{ static_cast<la::avdecc::controller::model::VirtualIndex>(-1) };
 	std::int32_t _redundantStreamOrder{ -1 };
-	std::int32_t _parentIndex{ -1 };
+	RelativeParentIndex _relativeParentIndex{ std::nullopt };
 	std::int32_t _childrenCount{ 0 };
 	StreamMap _streamMap{};
 };
@@ -493,7 +494,7 @@ public:
 						auto const& redundantNode{ output.second };
 
 						auto* redundantItem = new HeaderItem(Model::NodeType::RedundantOutput, entityID);
-						redundantItem->setParentIndex(entityItemIndex);
+						redundantItem->setRelativeParentIndex(entityItemIndex - redundantItemIndex);
 						redundantItem->setRedundantIndex(redundantIndex);
 						q_ptr->setVerticalHeaderItem(redundantItemIndex, redundantItem);
 
@@ -509,7 +510,7 @@ public:
 							streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
 
 							auto* redundantStreamItem = new HeaderItem(Model::NodeType::RedundantOutputStream, entityID);
-							redundantStreamItem->setParentIndex(redundantItemIndex);
+							redundantStreamItem->setRelativeParentIndex(redundantItemIndex - redundantStreamItemIndex);
 							redundantStreamItem->setStreamIndex(streamIndex);
 							redundantStreamItem->setRedundantIndex(redundantIndex);
 							redundantStreamItem->setRedundantStreamOrder(redundantStreamOrder);
@@ -536,7 +537,7 @@ public:
 							streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
 
 							auto* streamItem = new HeaderItem{ Model::NodeType::OutputStream, entityID };
-							streamItem->setParentIndex(entityItemIndex);
+							streamItem->setRelativeParentIndex(entityItemIndex - streamItemIndex);
 							streamItem->setStreamIndex(streamIndex);
 							q_ptr->setVerticalHeaderItem(streamItemIndex, streamItem);
 
@@ -583,7 +584,7 @@ public:
 						auto const& redundantNode{ input.second };
 
 						auto* redundantItem = new HeaderItem(Model::NodeType::RedundantInput, entityID);
-						redundantItem->setParentIndex(entityItemIndex);
+						redundantItem->setRelativeParentIndex(entityItemIndex - redundantItemIndex);
 						redundantItem->setRedundantIndex(redundantIndex);
 						q_ptr->setHorizontalHeaderItem(redundantItemIndex, redundantItem);
 
@@ -599,7 +600,7 @@ public:
 							streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
 
 							auto* redundantStreamItem = new HeaderItem(Model::NodeType::RedundantInputStream, entityID);
-							redundantStreamItem->setParentIndex(redundantItemIndex);
+							redundantStreamItem->setRelativeParentIndex(redundantItemIndex - redundantStreamItemIndex);
 							redundantStreamItem->setStreamIndex(streamIndex);
 							redundantStreamItem->setRedundantIndex(redundantIndex);
 							redundantStreamItem->setRedundantStreamOrder(redundantStreamOrder);
@@ -626,7 +627,7 @@ public:
 							streamMap.insert(std::make_pair(streamIndex, ++streamMapIndex));
 
 							auto* streamItem = new HeaderItem{ Model::NodeType::InputStream, entityID };
-							streamItem->setParentIndex(entityItemIndex);
+							streamItem->setRelativeParentIndex(entityItemIndex - streamItemIndex);
 							streamItem->setStreamIndex(streamIndex);
 							q_ptr->setHorizontalHeaderItem(streamItemIndex, streamItem);
 
@@ -826,10 +827,10 @@ public:
 
 			if (andParents)
 			{
-				auto const parentIndex = q_ptr->headerData(section, Qt::Vertical, Model::ParentIndexRole).value<std::int32_t>();
-				if (parentIndex != -1)
+				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Vertical, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
+				if (relativeParentIndex)
 				{
-					headerDataChanged(q_ptr->createIndex(parentIndex, -1), andParents, false);
+					headerDataChanged(q_ptr->createIndex(section + relativeParentIndex.value(), -1), andParents, false);
 				}
 			}
 
@@ -851,10 +852,10 @@ public:
 
 			if (andParents)
 			{
-				auto const parentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::ParentIndexRole).value<std::int32_t>();
-				if (parentIndex != -1)
+				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
+				if (relativeParentIndex)
 				{
-					headerDataChanged(q_ptr->createIndex(-1, parentIndex), andParents, false);
+					headerDataChanged(q_ptr->createIndex(-1, section + relativeParentIndex.value()), andParents, false);
 				}
 			}
 
@@ -890,10 +891,10 @@ public:
 
 			if (andParents)
 			{
-				auto const parentIndex = q_ptr->headerData(section, Qt::Vertical, Model::ParentIndexRole).value<std::int32_t>();
-				if (parentIndex != -1)
+				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Vertical, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
+				if (relativeParentIndex)
 				{
-					dataChanged(q_ptr->createIndex(parentIndex, -1), andParents, false);
+					dataChanged(q_ptr->createIndex(section + relativeParentIndex.value(), -1), andParents, false);
 				}
 			}
 
@@ -922,10 +923,10 @@ public:
 
 			if (andParents)
 			{
-				auto const parentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::ParentIndexRole).value<std::int32_t>();
-				if (parentIndex != -1)
+				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
+				if (relativeParentIndex)
 				{
-					dataChanged(q_ptr->createIndex(-1, parentIndex), andParents, false);
+					dataChanged(q_ptr->createIndex(-1, section + relativeParentIndex.value()), andParents, false);
 				}
 			}
 
@@ -982,5 +983,7 @@ Model::~Model()
 }
 
 } // namespace connectionMatrix
+
+Q_DECLARE_METATYPE(connectionMatrix::HeaderItem::RelativeParentIndex)
 
 #include "model.moc"

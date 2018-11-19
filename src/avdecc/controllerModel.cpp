@@ -200,7 +200,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			{
 				auto const val = entity.getAssociationID();
 				return val ? helper::uniqueIdentifierToString(*val) : "Not Set";
-				}
+			}
 			default:
 				break;
 		}

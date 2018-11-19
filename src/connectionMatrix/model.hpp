@@ -61,7 +61,7 @@ public:
 		RedundantStreamOrderRole, // std::int32_t
 		StreamWaitingRole, // bool
 
-		ParentIndexRole, // std::int32_t, -1 if orphan
+		RelativeParentIndexRole, // std::optional<std::int32_t>, (std::nullopt if orphan)
 		ChildrenCountRole, // std::int32_t
 
 		/** Intersection Data */
