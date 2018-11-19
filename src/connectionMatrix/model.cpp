@@ -696,7 +696,7 @@ public:
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 		{
 			// Refresh header for specified listener input stream
-			auto const index = listenerStreamIndex(entityID, streamIndex).row();
+			auto const index = listenerStreamIndex(entityID, streamIndex).column();
 			if (index != -1)
 			{
 				emit q_ptr->headerDataChanged(Qt::Horizontal, index, index);
