@@ -135,7 +135,7 @@ public:
 	*/
 	virtual std::pair<la::avdecc::UniqueIdentifier, Error> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityID) noexcept
 	{
-		std::set<la::avdecc::UniqueIdentifier> searchedEntityIds;
+		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> searchedEntityIds;
 		auto currentEntityId = entityID;
 		searchedEntityIds.insert(currentEntityId);
 		bool keepSearching = true;
