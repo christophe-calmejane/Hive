@@ -177,10 +177,11 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				return helper::uniqueIdentifierToString(entity.getAssociationID());
 			case ControllerModelColumn::MediaClockMasterId:
 			{
-				auto const clockMaster = clockConnectionManager.getMediaClockMaster(entityID);
-				if (!!(clockMaster.second))
+				auto const clockMaster = clockConnectionManager.findMediaClockMaster(entityID);
+				auto const error = clockMaster.second;
+				if (!!error)
 				{
-					return "Undeterminable";
+					return "Indeterminable";
 				}
 				else
 				{
@@ -189,15 +190,16 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					{
 						return helper::uniqueIdentifierToString(controlledEntity->getEntity().getEntityID());
 					}
-					return "Undeterminable";
+					return "Indeterminable";
 				}
 			}
 			case ControllerModelColumn::MediaClockMasterName:
 			{
-				auto const clockMaster = clockConnectionManager.getMediaClockMaster(entityID);
-				if (!!clockMaster.second)
+				auto const clockMaster = clockConnectionManager.findMediaClockMaster(entityID);
+				auto const error = clockMaster.second;
+				if (!!error)
 				{
-					return "Undeterminable";
+					return "Indeterminable";
 				}
 				else
 				{
@@ -206,7 +208,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					{
 						return helper::entityName(*controlledEntity);
 					}
-					return "Undeterminable";
+					return "Indeterminable";
 				}
 			}
 			default:
