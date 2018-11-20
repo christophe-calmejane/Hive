@@ -55,6 +55,7 @@ View::View(QWidget* parent)
 	// Configure highlight color
 	auto p = palette();
 	p.setColor(QPalette::Highlight, 0xf3e5f5);
+	p.setColor(QPalette::HighlightedText, Qt::black);
 	setPalette(p);
 
 	connect(this, &QTableView::clicked, this, &View::onClicked);
@@ -69,6 +70,12 @@ View::View(QWidget* parent)
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
+
+	connect(_legend.get(), &Legend::filterChanged, this,
+		[this](QString const& filter)
+		{
+			_filterProxy.setFilterRegExp(filter);
+		});
 
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
@@ -108,12 +115,14 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		if (_isTransposed)
 		{
-			setModel(&_proxy);
+			_filterProxy.setSourceModel(&_proxy);
 		}
 		else
 		{
-			setModel(_model.get());
+			_filterProxy.setSourceModel(_model.get());
 		}
+		
+		setModel(&_filterProxy);
 
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);

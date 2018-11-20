@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Display of the current dynamic mappings without having to edit them, in StreamPort descriptor
 - Button to clear all dynamic mappings in StreamPort descriptor
 - Tooltip when the mouse is over a _flags field_ of a descriptor
+- Basic entity filtering in connection matrix
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)

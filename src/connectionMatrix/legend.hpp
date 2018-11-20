@@ -22,6 +22,7 @@
 #include <QWidget>
 #include <QLayout>
 #include <QPushButton>
+#include <QLineEdit>
 
 namespace connectionMatrix
 {
@@ -33,6 +34,9 @@ public:
 
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
+	
+signals:
+	void filterChanged(QString const& filter);
 
 private:
 	virtual void paintEvent(QPaintEvent*) override;
@@ -45,6 +49,7 @@ private:
 	QWidget _horizontalPlaceholder{ this };
 	QWidget _verticalPlaceholder{ this };
 	bool _isTransposed{ false };
+	QLineEdit _searchLineEdit{ this };
 };
 
 
