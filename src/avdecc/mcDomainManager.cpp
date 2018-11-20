@@ -168,7 +168,7 @@ public:
 
 						if (activeClockSourceNode.staticModel && activeClockSourceNode.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::Internal)
 						{
-							return std::make_pair((la::avdecc::UniqueIdentifier)currentEntityId, Error::NoError);
+							return std::make_pair(currentEntityId, Error::NoError);
 						}
 						else
 						{
@@ -297,6 +297,39 @@ private:
 	}
 
 	/**
+	* Checks if the domain mc master of an entity changed. The first index in the vector is the only one that matters.
+	* Other indexes are secondary masters and are not of relevance here.
+	* @param oldEntityDomainMapping The domain indexes of an entity that was determined using createMediaClockDomainModel method at an earlier timepoint.
+	* @param newEntityDomainMapping	The domain indexes of an entity that was determined using createMediaClockDomainModel method at an more recent timepoint.
+	* @param oldMcDomains			The domain index to mc domain data mapping at an earlier timepoint.
+	* @param newMcDomains			The domain index to mc domain data mapping at an more recent timepoint.
+	* @return True if the old entity mc master is different from the new one.
+	*/
+	bool checkMcMasterOfEntityChanged(std::vector<avdecc::mediaClock::DomainIndex> oldEntityDomainMapping, std::vector<avdecc::mediaClock::DomainIndex> newEntityDomainMapping, std::unordered_map<DomainIndex, MCDomain> oldMcDomains, std::unordered_map<DomainIndex, MCDomain> newMcDomains) noexcept
+	{
+		int sizeOldDomainIndexes = oldEntityDomainMapping.size();
+		int sizeNewDomainIndexes = newEntityDomainMapping.size();
+		if (sizeOldDomainIndexes > 0 && sizeNewDomainIndexes > 0)
+		{
+			if (oldMcDomains.count(oldEntityDomainMapping.at(0)) && newMcDomains.count(newEntityDomainMapping.at(0)))
+			{
+				auto const& oldMaster = oldMcDomains.at(oldEntityDomainMapping.at(0)); // the first index is the mc master
+				auto const& newMaster = newMcDomains.at(newEntityDomainMapping.at(0)); // the first index is the mc master
+				if (oldMaster.getMediaClockDomainMaster() != newMaster.getMediaClockDomainMaster())
+				{
+					return true;
+				}
+			}
+		}
+		else if (sizeOldDomainIndexes == 0 && sizeNewDomainIndexes > 0 || sizeOldDomainIndexes > 0 && sizeNewDomainIndexes == 0)
+		{
+			// if one of the lists is empty while the other isn't we have a change on the mc master. (Indeterminable -> ID or vice versa)
+			return true;
+		}
+		return false;
+	}
+
+	/**
 	* Compares the current mc mapping state with the previous one and 
 	* emits the mediaClockConnectionsUpdate to inform the views about changes.
 	*/
@@ -313,24 +346,8 @@ private:
 			auto const oldDomainIndexesIterator = previousMCDomainMapping.getEntityMediaClockMasterMappings().find(entityId);
 			if (oldDomainIndexesIterator != previousMCDomainMapping.getEntityMediaClockMasterMappings().end())
 			{
-				auto const& oldDomainIndexes = oldDomainIndexesIterator->second;
-				int sizeOldDomainIndexes = oldDomainIndexes.size();
-				int sizeNewDomainIndexes = domainIdxs.size();
-				if (sizeOldDomainIndexes > 0 && sizeNewDomainIndexes > 0)
+				if (checkMcMasterOfEntityChanged(oldDomainIndexesIterator->second, entityDomainKV.second, previousMCDomainMapping.getMediaClockDomains(), currentMCDomainMapping.getMediaClockDomains()))
 				{
-					if (previousMCDomainMapping.getMediaClockDomains().count(oldDomainIndexes.at(0)) && currentMCDomainMapping.getMediaClockDomains().count(domainIdxs.at(0)))
-					{
-						auto const& oldMaster = previousMCDomainMapping.getMediaClockDomains().at(oldDomainIndexes.at(0)); // the first index is the mc master
-						auto const& newMaster = currentMCDomainMapping.getMediaClockDomains().at(domainIdxs.at(0)); // the first index is the mc master
-						if (oldMaster.getMediaClockDomainMaster() != newMaster.getMediaClockDomainMaster())
-						{
-							changes.push_back(entityId);
-						}
-					}
-				}
-				else if (sizeOldDomainIndexes == 0 && sizeNewDomainIndexes > 0 || sizeOldDomainIndexes > 0 && sizeNewDomainIndexes == 0)
-				{
-					// if one of the lists is empty while the other isn't we have a change on the mc master. (Indeterminable -> ID or vice versa)
 					changes.push_back(entityId);
 				}
 			}
