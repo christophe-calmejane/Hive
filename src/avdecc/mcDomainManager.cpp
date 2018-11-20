@@ -176,7 +176,7 @@ public:
 							auto clockStreamIndex = findClockStreamIndex(configNode);
 							if (clockStreamIndex)
 							{
-								auto* clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, clockStreamIndex.value()).dynamicModel;
+								auto* clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, *clockStreamIndex).dynamicModel;
 								if (clockStreamDynModel)
 								{
 									auto connectedTalker = clockStreamDynModel->connectionState.talkerStream.entityID;
@@ -237,10 +237,10 @@ public:
 					MCDomain mediaClockDomain;
 					mediaClockDomain.setMediaClockDomainMaster(mcMasterId);
 					domainIndex = result.getMediaClockDomains().size();
-					mediaClockDomain.setDomainIndex(domainIndex.value());
-					result.getMediaClockDomains().emplace(domainIndex.value(), mediaClockDomain);
+					mediaClockDomain.setDomainIndex(*domainIndex);
+					result.getMediaClockDomains().emplace(*domainIndex, mediaClockDomain);
 				}
-				associatedDomains.push_back(domainIndex.value());
+				associatedDomains.push_back(*domainIndex);
 			}
 
 			if (mcMasterId == entityId)
@@ -260,10 +260,10 @@ public:
 							MCDomain mediaClockDomain;
 							mediaClockDomain.setMediaClockDomainMaster(secondaryMasterId);
 							domainIndex = result.getMediaClockDomains().size();
-							mediaClockDomain.setDomainIndex(domainIndex.value());
-							result.getMediaClockDomains().emplace(domainIndex.value(), mediaClockDomain);
+							mediaClockDomain.setDomainIndex(*domainIndex);
+							result.getMediaClockDomains().emplace(*domainIndex, mediaClockDomain);
 						}
-						associatedDomains.push_back(domainIndex.value());
+						associatedDomains.push_back(*domainIndex);
 					}
 				}
 			}
