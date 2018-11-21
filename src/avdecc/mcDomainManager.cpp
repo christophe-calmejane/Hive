@@ -229,7 +229,7 @@ public:
 			auto mcMasterIdKV = findMediaClockMaster(entityId);
 			auto const& mcMasterId = mcMasterIdKV.first;
 			auto const& mcMasterError = mcMasterIdKV.second;
-			if (!!mcMasterError)
+			if (!mcMasterError)
 			{
 				auto domainIndex = result.findDomainIndexByMasterEntityId(mcMasterId);
 				if (!domainIndex)
@@ -251,7 +251,7 @@ public:
 				if (secondaryMasterId) // check if the id is valid
 				{
 					associatedDomains.push_back(secondaryMasterId);
-					if (!!secondaryMasterError)
+					if (!secondaryMasterError)
 					{
 						auto domainIndex = result.findDomainIndexByMasterEntityId(secondaryMasterId);
 						if (!domainIndex)
