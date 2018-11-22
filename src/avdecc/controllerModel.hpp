@@ -29,6 +29,21 @@ class ControllerModel : public QAbstractTableModel
 {
 	Q_OBJECT
 public:
+	enum class Column
+	{
+		EntityLogo,
+		EntityId,
+		Name,
+		Group,
+		AcquireState,
+		GrandmasterId,
+		GptpDomain,
+		InterfaceIndex,
+		AssociationId,
+
+		Count
+	};
+
 	ControllerModel(QObject* parent = nullptr);
 	~ControllerModel();
 

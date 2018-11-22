@@ -188,16 +188,15 @@ void MainWindow::createControllerView()
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	int column{ 0 };
-	controllerTableView->setColumnWidth(column++, 40);
-	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 180);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 90);
-	controllerTableView->setColumnWidth(column++, 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Name), 180);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Group), 80);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
 }
 
 void MainWindow::populateProtocolComboBox()
