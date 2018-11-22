@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Upload firmware progression always set to 100% upon successfull completion
 - Connection matrix refresh issues
 - Possible crash if a toxic entity is on the network
+- [Entity Model Inspector focus lost when a new entity is detected](https://github.com/christophe-calmejane/Hive/issues/19)
 
 ## [1.0.8] - 2018-10-30
 ### Fixed

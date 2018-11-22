@@ -58,11 +58,21 @@ public:
 
 	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const entityID)
 	{
+		if (_controlledEntityID != entityID)
+		{
+			return;
+		}
+
 		loadCurrentControlledEntity();
 	}
 
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
+		if (_controlledEntityID != entityID)
+		{
+			return;
+		}
+
 		_entityExpandedStates.erase(entityID);
 
 		Q_Q(ControlledEntityTreeWidget);
