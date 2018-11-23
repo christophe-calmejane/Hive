@@ -763,16 +763,25 @@ public:
 
 	QModelIndex talkerStreamIndex(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
-		for (auto row = 0; row < q_ptr->rowCount(); ++row)
+		try
 		{
-			auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
-			if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
+			for (auto row = 0; row < q_ptr->rowCount(); ++row)
 			{
-				auto const& streamMap = item->streamMap();
-				auto const offset = streamMap.at(streamIndex);
-				return q_ptr->createIndex(row + offset, -1);
+				auto* item = static_cast<HeaderItem*>(q_ptr->verticalHeaderItem(row));
+				if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
+				{
+					auto const& streamMap = item->streamMap();
+					auto const offset = streamMap.at(streamIndex);
+					return q_ptr->createIndex(row + offset, -1);
+				}
 			}
 		}
+		catch (std::out_of_range const&)
+		{
+			// Something went wrong and .at() throw
+			LOG_HIVE_ERROR(QString("connectionMatrix::Model::talkerStreamIndex: Invalid StreamIndex: TalkerID=%1 Index=%2 RowCount=%3 ").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex).arg(q_ptr->rowCount()));
+		}
+
 		return {};
 	}
 
@@ -794,17 +803,25 @@ public:
 
 	QModelIndex listenerStreamIndex(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
-		for (auto column = 0; column < q_ptr->columnCount(); ++column)
+		try
 		{
-			// Refresh talker header
-			auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
-			if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
+			for (auto column = 0; column < q_ptr->columnCount(); ++column)
 			{
-				// Refresh listener header
-				auto const& streamMap = item->streamMap();
-				auto const offset = streamMap.at(streamIndex);
-				return q_ptr->createIndex(-1, column + offset);
+				// Refresh talker header
+				auto* item = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(column));
+				if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
+				{
+					// Refresh listener header
+					auto const& streamMap = item->streamMap();
+					auto const offset = streamMap.at(streamIndex);
+					return q_ptr->createIndex(-1, column + offset);
+				}
 			}
+		}
+		catch (std::out_of_range const&)
+		{
+			// Something went wrong and .at() throw
+			LOG_HIVE_ERROR(QString("connectionMatrix::Model::listenerStreamIndex: Invalid StreamIndex: ListenerID=%1 Index=%2 ColumnCount=%3 ").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex).arg(q_ptr->columnCount()));
 		}
 
 		return {};

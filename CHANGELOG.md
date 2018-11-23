@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - Upload firmware progression always set to 100% upon successfull completion
-- Connection matrix refresh issues (with a possible crash)
+- Connection matrix refresh issues
+- Possible crash if a toxic entity is on the network
 
 ## [1.0.8] - 2018-10-30
 ### Fixed
