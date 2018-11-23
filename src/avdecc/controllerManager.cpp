@@ -115,7 +115,7 @@ private:
 	}
 
 	// la::avdecc::controller::Controller::Observer overrides
-	// Global notifications
+	// Global controller notifications
 	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/) noexcept override
 	{
 		emit transportError();
@@ -133,10 +133,27 @@ private:
 	{
 		emit entityOffline(entity->getEntity().getEntityID());
 	}
+	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/) noexcept override
+	{
+#pragma message("TODO: Add new signal and listen to it")
+	}
+	virtual void onEntityAssociationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/) noexcept override
+	{
+#pragma message("TODO: Add new signal and listen to it")
+	}
 	virtual void onGptpChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain) noexcept override
 	{
 		auto const& e = entity->getEntity();
 		emit gptpChanged(e.getEntityID(), avbInterfaceIndex, grandMasterID, grandMasterDomain);
+	}
+	// Global entity notifications
+	virtual void onUnsolicitedRegistrationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/, bool const /*isSubscribed*/) noexcept override
+	{
+#pragma message("TODO: Add new signal and listen to it")
+	}
+	virtual void onCompatibilityFlagsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::ControlledEntity::CompatibilityFlags const /*compatibilityFlags*/) noexcept override
+	{
+#pragma message("TODO: Add new signal and listen to it")
 	}
 	// Connection notifications (sniffed ACMP)
 	virtual void onStreamConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::model::StreamConnectionState const& state, bool const /*changedByOther*/) noexcept override

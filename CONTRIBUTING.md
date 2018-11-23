@@ -10,6 +10,7 @@
 - Almost always use _auto_ for variables
 - Prefer _brace initialization_ for variables
 - Prohibit _C-style cast_, using _static_cast_ instead
+- Prohibit _C-style types_ (int, long, char), use _cstdint types_ instead (std::int32_t, std::int8_t)
 - Don't use function parameter to return a value (except for _objects_ in/out, but never for _simple types_), use the return value of the function (use pair/tuple/struct/optional if required)
 - When enumerating a map/unordered_map using a _for loop_, name the iterator loop variable _somethingKV_ (_key/value_)
 - Add the _virtual_ keyword when _overriding_ a _virtual method_
