@@ -30,6 +30,7 @@
 #include "nodeVisitor.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "avdecc/mcDomainManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
 #include "imageItemDelegate.hpp"
@@ -189,14 +190,16 @@ void MainWindow::createControllerView()
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityId), 140);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Name), 180);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Group), 80);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 140);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AssociationId), 140);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), 140);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), 180);
 }
 
 void MainWindow::populateProtocolComboBox()
