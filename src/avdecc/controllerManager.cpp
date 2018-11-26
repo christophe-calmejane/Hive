@@ -983,64 +983,68 @@ private:
 	}
 
 	/* Connection Management Protocol (ACMP) */
-	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
+	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, ConnectStreamHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::ConnectStream);
 			controller->connectStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex },
-				[this, talkerEntityID, listenerEntityID](la::avdecc::controller::ControlledEntity const* const talkerEntity, la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
+				[this, talkerEntityID, listenerEntityID, handler](la::avdecc::controller::ControlledEntity const* const talkerEntity, la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
 				{
-					//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "connectStream: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-					emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::ConnectStream, status);
+					if (handler)
+					{
+						la::avdecc::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+					}
+					else
+					{
+						emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::ConnectStream, status);
+					}
 				});
 		}
 	}
 
-	virtual void disconnectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
+	virtual void disconnectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectStreamHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectStream);
 			controller->disconnectStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex },
-				[this, talkerEntityID, talkerStreamIndex, listenerEntityID](la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
+				[this, talkerEntityID, talkerStreamIndex, listenerEntityID, handler](la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
 				{
-					//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "disconnectStream: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-					emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectStream, status);
+					if (handler)
+					{
+						la::avdecc::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+					}
+					else
+					{
+						emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectStream, status);
+					}
 				});
 		}
 	}
 
-	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
+	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectTalkerStreamHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectTalkerStream);
 			controller->disconnectTalkerStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex },
-				[this, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex](la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
+				[this, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, handler](la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
 				{
-					//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "disconnectTalkerStream: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-					emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectTalkerStream, status);
+					if (handler)
+					{
+						la::avdecc::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+					}
+					else
+					{
+						emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectTalkerStream, status);
+					}
 				});
 		}
 	}
-
-	//virtual void getListenerStreamState(la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
-	//{
-	//	auto controller = getController();
-	//	if (controller)
-	//	{
-	//		emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings);
-	//		controller->removeStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-	//		{
-	//			la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "removeStreamPortOutputAudioMappings: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-	//			emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
-	//		});
-	//	}
-	//}
 
 	// Private methods
 	SharedController getController() noexcept
