@@ -847,7 +847,7 @@ public:
 				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Vertical, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
 				if (relativeParentIndex)
 				{
-					headerDataChanged(q_ptr->createIndex(section + relativeParentIndex.value(), -1), andParents, false);
+					headerDataChanged(q_ptr->createIndex(section + *relativeParentIndex, -1), andParents, false);
 				}
 			}
 
@@ -872,7 +872,7 @@ public:
 				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
 				if (relativeParentIndex)
 				{
-					headerDataChanged(q_ptr->createIndex(-1, section + relativeParentIndex.value()), andParents, false);
+					headerDataChanged(q_ptr->createIndex(-1, section + *relativeParentIndex), andParents, false);
 				}
 			}
 
@@ -911,7 +911,7 @@ public:
 				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Vertical, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
 				if (relativeParentIndex)
 				{
-					dataChanged(q_ptr->createIndex(section + relativeParentIndex.value(), -1), andParents, false);
+					dataChanged(q_ptr->createIndex(section + *relativeParentIndex, -1), andParents, false);
 				}
 			}
 
@@ -943,7 +943,7 @@ public:
 				auto const relativeParentIndex = q_ptr->headerData(section, Qt::Horizontal, Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
 				if (relativeParentIndex)
 				{
-					dataChanged(q_ptr->createIndex(-1, section + relativeParentIndex.value()), andParents, false);
+					dataChanged(q_ptr->createIndex(-1, section + *relativeParentIndex), andParents, false);
 				}
 			}
 
