@@ -30,7 +30,7 @@ namespace avdecc
 {
 namespace mediaClock
 {
-using DomainIndex = std::uint64_t;
+using DomainIndex = std::uint64_t; /** A virtual index attributed to each domain */
 
 enum class McDeterminationError
 {
@@ -53,18 +53,25 @@ enum class McDeterminationError
 class MCDomain
 {
 public:
-	DomainIndex getDomainIndex() const noexcept;
-	void setDomainIndex(DomainIndex domainIndex) noexcept;
-	QString getDisplayName() const noexcept;
-	la::avdecc::UniqueIdentifier getMediaClockDomainMaster() const noexcept;
-	void setMediaClockDomainMaster(la::avdecc::UniqueIdentifier entityId) noexcept;
-	la::avdecc::entity::model::SamplingRate getDomainSamplingRate() const noexcept;
-	void setDomainSamplingRate(la::avdecc::entity::model::SamplingRate samplingRate) noexcept;
+	// Constructors
+	MCDomain(DomainIndex const index, la::avdecc::UniqueIdentifier const mediaClockMaster = la::avdecc::UniqueIdentifier::getUninitializedUniqueIdentifier(), la::avdecc::entity::model::SamplingRate const samplingRate = la::avdecc::entity::model::getNullSamplingRate()) noexcept;
 
-protected:
-	int _domainIndex;
-	la::avdecc::UniqueIdentifier _mcMaster;
-	la::avdecc::entity::model::SamplingRate _domainSamplingRate;
+	// Getters
+	DomainIndex getDomainIndex() const noexcept;
+	la::avdecc::UniqueIdentifier getMediaClockDomainMaster() const noexcept;
+	la::avdecc::entity::model::SamplingRate getDomainSamplingRate() const noexcept;
+
+	// Setters
+	void setMediaClockDomainMaster(la::avdecc::UniqueIdentifier const entityId) noexcept;
+	void setDomainSamplingRate(la::avdecc::entity::model::SamplingRate const samplingRate) noexcept;
+
+	// Other methods
+	QString getDisplayName() const noexcept;
+
+private:
+	DomainIndex _domainIndex{ 0u }; /** Index of the domain */
+	la::avdecc::UniqueIdentifier _mediaClockMasterId{}; /** ID of the clock master for the domain */
+	la::avdecc::entity::model::SamplingRate _samplingRate{ la::avdecc::entity::model::getNullSamplingRate() }; /** Sampling rate for the whole domain */
 };
 
 // **************************************************************
@@ -78,17 +85,23 @@ protected:
 class MCEntityDomainMapping
 {
 public:
+	using Mappings = std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>, la::avdecc::UniqueIdentifier::hash>;
+	using Domains = std::unordered_map<DomainIndex, MCDomain>;
+	using Errors = std::unordered_map<la::avdecc::UniqueIdentifier, McDeterminationError, la::avdecc::UniqueIdentifier::hash>;
+
+	MCEntityDomainMapping() noexcept;
+	MCEntityDomainMapping(Mappings&& mappings, Domains&& domains, Errors&& errors) noexcept;
+
 	std::optional<DomainIndex> const findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier mediaClockMasterId) noexcept;
 
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>, la::avdecc::UniqueIdentifier::hash>& getEntityMediaClockMasterMappings() noexcept;
-	std::unordered_map<la::avdecc::UniqueIdentifier, McDeterminationError, la::avdecc::UniqueIdentifier::hash>& getEntityMcErrors() noexcept;
-	std::unordered_map<DomainIndex, MCDomain>& getMediaClockDomains() noexcept;
+	Mappings const& getEntityMediaClockMasterMappings() const noexcept;
+	Domains const& getMediaClockDomains() const noexcept;
+	Errors const& getEntityMcErrors() const noexcept;
 
-protected:
-protected:
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>, la::avdecc::UniqueIdentifier::hash> _entityMediaClockMasterMappings;
-	std::unordered_map<la::avdecc::UniqueIdentifier, McDeterminationError, la::avdecc::UniqueIdentifier::hash> _entityMcErrors;
-	std::unordered_map<DomainIndex, MCDomain> _mediaClockDomains;
+private:
+	Mappings _entityMediaClockMasterMappings{};
+	Domains _mediaClockDomains{};
+	Errors _entityMcErrors{};
 };
 
 // **************************************************************
@@ -110,15 +123,9 @@ public:
 	/* media clock management helper functions */
 	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
 	virtual MCEntityDomainMapping createMediaClockDomainModel() noexcept = 0;
+
 	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds);
 	Q_SIGNAL void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> entityIds);
-
-protected:
-	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
-
-protected:
-	std::set<la::avdecc::UniqueIdentifier> _entities;
-	MCEntityDomainMapping _currentMCDomainMapping;
 };
 
 constexpr bool operator!(McDeterminationError const error)

@@ -48,6 +48,7 @@ public:
 
 	~MCDomainManagerImpl() noexcept {}
 
+private:
 	/**
 	* Removes all entities from the internal list.
 	*/
@@ -157,7 +158,7 @@ public:
 	* Gets the media clock master for an entity.
 	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined.
 	*/
-	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept
+	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept override
 	{
 		auto hasErrorIterator = _currentMCDomainMapping.getEntityMcErrors().find(entityId);
 		if (hasErrorIterator != _currentMCDomainMapping.getEntityMcErrors().end())
@@ -184,16 +185,36 @@ public:
 		return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), McDeterminationError::UnknownEntity);
 	}
 
+	DomainIndex getOrCreateDomainIndexForClockMasterId(MCEntityDomainMapping::Domains& domains, la::avdecc::UniqueIdentifier const mediaClockMasterId) noexcept
+	{
+		for (auto const& mediaClockDomainKV : domains)
+		{
+			auto const& domain = mediaClockDomainKV.second;
+			if (domain.getMediaClockDomainMaster() == mediaClockMasterId)
+			{
+				return domain.getDomainIndex();
+			}
+		}
+
+		// Not found, create a new domain
+		auto const nextDomainIndex = domains.size();
+		domains.emplace(nextDomainIndex, MCDomain{ nextDomainIndex, mediaClockMasterId });
+
+		return nextDomainIndex;
+	}
+
 	/**
 	* Builds a media clock mapping object from the current state. This mapping contains information about each entities media clock master.
 	* The mappings are grouped by domains. A domain is a virtual construct, which has exactly one media clock master and n entities that get their
 	* clock source from this master.
 	* @return Entity to domain mappings.
 	*/
-	virtual MCEntityDomainMapping createMediaClockDomainModel() noexcept
+	virtual MCEntityDomainMapping createMediaClockDomainModel() noexcept override
 	{
-		MCEntityDomainMapping result;
-		auto& entityMediaClockMasterMappings = result.getEntityMediaClockMasterMappings();
+		auto mappings = MCEntityDomainMapping::Mappings{};
+		auto domains = MCEntityDomainMapping::Domains{};
+		auto errors = MCEntityDomainMapping::Errors{};
+
 		for (auto const& entityId : _entities)
 		{
 			std::vector<avdecc::mediaClock::DomainIndex> associatedDomains;
@@ -202,20 +223,12 @@ public:
 			auto const& mcMasterError = mcMasterIdKV.second;
 			if (!mcMasterError)
 			{
-				auto domainIndex = result.findDomainIndexByMasterEntityId(mcMasterId);
-				if (!domainIndex)
-				{ // domain not created yet
-					MCDomain mediaClockDomain;
-					mediaClockDomain.setMediaClockDomainMaster(mcMasterId);
-					domainIndex = result.getMediaClockDomains().size();
-					mediaClockDomain.setDomainIndex(*domainIndex);
-					result.getMediaClockDomains().emplace(*domainIndex, mediaClockDomain);
-				}
-				associatedDomains.push_back(*domainIndex);
+				auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, mcMasterId);
+				associatedDomains.push_back(domainIndex);
 			}
 			else
 			{
-				result.getEntityMcErrors().emplace(entityId, mcMasterError);
+				errors.emplace(entityId, mcMasterError);
 			}
 
 			if (mcMasterId == entityId)
@@ -227,32 +240,22 @@ public:
 				{
 					if (!secondaryMasterError)
 					{
-						auto domainIndex = result.findDomainIndexByMasterEntityId(secondaryMasterId);
-						if (!domainIndex)
-						{
-							// domain not created yet
-							MCDomain mediaClockDomain;
-							mediaClockDomain.setMediaClockDomainMaster(secondaryMasterId);
-							domainIndex = result.getMediaClockDomains().size();
-							mediaClockDomain.setDomainIndex(*domainIndex);
-							result.getMediaClockDomains().emplace(*domainIndex, mediaClockDomain);
-						}
-						associatedDomains.push_back(*domainIndex);
+						auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, secondaryMasterId);
+						associatedDomains.push_back(domainIndex);
 					}
 				}
 			}
-			entityMediaClockMasterMappings.emplace(entityId, associatedDomains);
+			mappings.emplace(entityId, associatedDomains);
 		}
 
-		return result;
+		return MCEntityDomainMapping{ std::move(mappings), std::move(domains), std::move(errors) };
 	}
 
-protected:
 	/**
 	* Gets the media clock master for an entity.
 	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined.
 	*/
-	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityID) noexcept
+	std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityID) noexcept
 	{
 		auto error = McDeterminationError::UnknownEntity;
 		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> searchedEntityIds;
@@ -362,7 +365,6 @@ protected:
 		return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
 	}
 
-private:
 	/**
 	* Checks if the domain mc master of an entity changed. The first index in the vector is the only one that matters.
 	* Other indexes are secondary masters and are not of relevance here.
@@ -372,10 +374,10 @@ private:
 	* @param newMcDomains			The domain index to mc domain data mapping at an more recent timepoint.
 	* @return True if the old entity mc master is different from the new one.
 	*/
-	bool checkMcMasterOfEntityChanged(std::vector<avdecc::mediaClock::DomainIndex> oldEntityDomainMapping, std::vector<avdecc::mediaClock::DomainIndex> newEntityDomainMapping, std::unordered_map<DomainIndex, MCDomain> oldMcDomains, std::unordered_map<DomainIndex, MCDomain> newMcDomains) noexcept
+	bool checkMcMasterOfEntityChanged(std::vector<avdecc::mediaClock::DomainIndex> const& oldEntityDomainMapping, std::vector<avdecc::mediaClock::DomainIndex> const& newEntityDomainMapping, MCEntityDomainMapping::Domains const& oldMcDomains, MCEntityDomainMapping::Domains const& newMcDomains) noexcept
 	{
-		int sizeOldDomainIndexes = oldEntityDomainMapping.size();
-		int sizeNewDomainIndexes = newEntityDomainMapping.size();
+		auto const sizeOldDomainIndexes = oldEntityDomainMapping.size();
+		auto const sizeNewDomainIndexes = newEntityDomainMapping.size();
 		if (sizeOldDomainIndexes > 0 && sizeNewDomainIndexes > 0)
 		{
 			if (oldMcDomains.count(oldEntityDomainMapping.at(0)) && newMcDomains.count(newEntityDomainMapping.at(0)))
@@ -427,6 +429,10 @@ private:
 		_currentMCDomainMapping = currentMCDomainMapping; // update the model
 		emit mediaClockConnectionsUpdate(changes);
 	}
+
+	// Private members
+	std::set<la::avdecc::UniqueIdentifier> _entities{}; // No lock required, only read/write in the UI thread
+	MCEntityDomainMapping _currentMCDomainMapping{};
 };
 
 /**
@@ -440,6 +446,27 @@ MCDomainManager& MCDomainManager::getInstance() noexcept
 	return s_manager;
 }
 
+MCEntityDomainMapping::MCEntityDomainMapping() noexcept
+{
+	// Nothing to do
+}
+
+MCEntityDomainMapping::MCEntityDomainMapping(Mappings&& mappings, Domains&& domains, Errors&& errors) noexcept
+	: _entityMediaClockMasterMappings(std::move(mappings))
+	, _mediaClockDomains(std::move(domains))
+	, _entityMcErrors(std::move(errors))
+{
+	// Nothing to do
+}
+
+MCDomain::MCDomain(DomainIndex const index, la::avdecc::UniqueIdentifier const mediaClockMaster, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept
+	: _domainIndex(index)
+	, _mediaClockMasterId(mediaClockMaster)
+	, _samplingRate(samplingRate)
+{
+	// Nothing to do
+}
+
 /**
 * Gets the domain index.
 * @return The index of this domain.
@@ -450,21 +477,12 @@ DomainIndex MCDomain::getDomainIndex() const noexcept
 }
 
 /**
-* Sets the domain index.
-* @param domainIndex The index of this domain.
-*/
-void MCDomain::setDomainIndex(DomainIndex domainIndex) noexcept
-{
-	_domainIndex = domainIndex;
-}
-
-/**
 * Creates a name to display in the ui for this domain from the mc master id.
 * @return The name to display.
 */
 QString MCDomain::getDisplayName() const noexcept
 {
-	return QString("Domain ").append(_mcMaster ? helper::uniqueIdentifierToString(_mcMaster) : "-");
+	return QString("Domain ").append(_mediaClockMasterId ? helper::uniqueIdentifierToString(_mediaClockMasterId) : "-");
 }
 
 /**
@@ -473,7 +491,7 @@ QString MCDomain::getDisplayName() const noexcept
 */
 la::avdecc::UniqueIdentifier MCDomain::getMediaClockDomainMaster() const noexcept
 {
-	return _mcMaster;
+	return _mediaClockMasterId;
 }
 
 /**
@@ -482,7 +500,7 @@ la::avdecc::UniqueIdentifier MCDomain::getMediaClockDomainMaster() const noexcep
 */
 void MCDomain::setMediaClockDomainMaster(la::avdecc::UniqueIdentifier entityId) noexcept
 {
-	_mcMaster = entityId;
+	_mediaClockMasterId = entityId;
 }
 
 /**
@@ -491,7 +509,7 @@ void MCDomain::setMediaClockDomainMaster(la::avdecc::UniqueIdentifier entityId) 
 */
 la::avdecc::entity::model::SamplingRate MCDomain::getDomainSamplingRate() const noexcept
 {
-	return _domainSamplingRate;
+	return _samplingRate;
 }
 
 /**
@@ -500,7 +518,7 @@ la::avdecc::entity::model::SamplingRate MCDomain::getDomainSamplingRate() const 
 */
 void MCDomain::setDomainSamplingRate(la::avdecc::entity::model::SamplingRate samplingRate) noexcept
 {
-	_domainSamplingRate = samplingRate;
+	_samplingRate = samplingRate;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -526,27 +544,27 @@ std::optional<DomainIndex> const MCEntityDomainMapping::findDomainIndexByMasterE
 * Gets a reference of the entity to media clock index map.
 * @return Reference of the _entityMediaClockMasterMappings field.
 */
-std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>, la::avdecc::UniqueIdentifier::hash>& MCEntityDomainMapping::getEntityMediaClockMasterMappings() noexcept
+MCEntityDomainMapping::Mappings const& MCEntityDomainMapping::getEntityMediaClockMasterMappings() const noexcept
 {
 	return _entityMediaClockMasterMappings;
-}
-
-/**
-* Gets a reference of the entity to mc determination error map.
-* @return Reference of the _entityMcErrors field.
-*/
-std::unordered_map<la::avdecc::UniqueIdentifier, McDeterminationError, la::avdecc::UniqueIdentifier::hash>& MCEntityDomainMapping::getEntityMcErrors() noexcept
-{
-	return _entityMcErrors;
 }
 
 /**
 * Gets a reference of the media clock domain map.
 * @return Reference of the _mediaClockDomains field.
 */
-std::unordered_map<DomainIndex, MCDomain>& MCEntityDomainMapping::getMediaClockDomains() noexcept
+MCEntityDomainMapping::Domains const& MCEntityDomainMapping::getMediaClockDomains() const noexcept
 {
 	return _mediaClockDomains;
+}
+
+/**
+* Gets a reference of the entity to mc determination error map.
+* @return Reference of the _entityMcErrors field.
+*/
+MCEntityDomainMapping::Errors const& MCEntityDomainMapping::getEntityMcErrors() const noexcept
+{
+	return _entityMcErrors;
 }
 
 } // namespace mediaClock
