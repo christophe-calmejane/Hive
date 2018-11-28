@@ -32,6 +32,15 @@ namespace mediaClock
 {
 using DomainIndex = std::uint64_t;
 
+enum class McDeterminationError
+{
+	NoError,
+	NotSupported,
+	Recursive,
+	StreamNotConnected,
+	ExternalClockSource,
+	UnknownEntity,
+};
 
 // **************************************************************
 // class MCDomain
@@ -72,10 +81,13 @@ public:
 	std::optional<DomainIndex> const findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier mediaClockMasterId) noexcept;
 
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>, la::avdecc::UniqueIdentifier::hash>& getEntityMediaClockMasterMappings() noexcept;
+	std::unordered_map<la::avdecc::UniqueIdentifier, McDeterminationError, la::avdecc::UniqueIdentifier::hash>& getEntityMcErrors() noexcept;
 	std::unordered_map<DomainIndex, MCDomain>& getMediaClockDomains() noexcept;
 
 protected:
+protected:
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>, la::avdecc::UniqueIdentifier::hash> _entityMediaClockMasterMappings;
+	std::unordered_map<la::avdecc::UniqueIdentifier, McDeterminationError, la::avdecc::UniqueIdentifier::hash> _entityMcErrors;
 	std::unordered_map<DomainIndex, MCDomain> _mediaClockDomains;
 };
 
@@ -93,30 +105,25 @@ class MCDomainManager : public QObject
 	Q_OBJECT
 
 public:
-	enum class Error
-	{
-		NoError,
-		NotSupported,
-		Recursive,
-		StreamNotConnected,
-		UnknownEntity,
-	};
-
 	static MCDomainManager& getInstance() noexcept;
 
 	/* media clock management helper functions */
-	virtual std::pair<la::avdecc::UniqueIdentifier, Error> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
+	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
 	virtual MCEntityDomainMapping createMediaClockDomainModel() noexcept = 0;
 	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds);
+	Q_SIGNAL void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> entityIds);
+
+protected:
+	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
 
 protected:
 	std::set<la::avdecc::UniqueIdentifier> _entities;
 	MCEntityDomainMapping _currentMCDomainMapping;
 };
 
-constexpr bool operator!(MCDomainManager::Error const error)
+constexpr bool operator!(McDeterminationError const error)
 {
-	return error == MCDomainManager::Error::NoError;
+	return error == McDeterminationError::NoError;
 }
 
 } // namespace mediaClock

@@ -63,6 +63,7 @@ private:
 
 	// Slots for avdecc::mediaClock::MCDomainManager signals
 	Q_SLOT void mediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const changedEntities);
+	Q_SLOT void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const changedEntities);
 
 	// Slots for EntityLogoCache signals
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
@@ -100,6 +101,7 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	// Connect avdecc::mediaClock::MCDomainManager signals
 	auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
 	connect(&mediaClockConnectionManager, &avdecc::mediaClock::MCDomainManager::mediaClockConnectionsUpdate, this, &ControllerModelPrivate::mediaClockConnectionsUpdated);
+	connect(&mediaClockConnectionManager, &avdecc::mediaClock::MCDomainManager::mcMasterNameChanged, this, &ControllerModelPrivate::mcMasterNameChanged);
 
 	// Connect EntityLogoCache signals
 	auto& logoCache = EntityLogoCache::getInstance();
@@ -196,20 +198,21 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			}
 			case ControllerModel::Column::MediaClockMasterId:
 			{
-#pragma message("TODO: Do not recompute the MCM for this entity here (findMediaClockMaster), instead cache the value in the clockConnectionManager and just call a getMediaClockMaster(entityID) method here")
-				auto const clockMaster = clockConnectionManager.findMediaClockMaster(entityID);
+				auto const clockMaster = clockConnectionManager.getMediaClockMaster(entityID);
 				auto const error = clockMaster.second;
 				if (!!error)
 				{
 					switch (error)
 					{
-						case mediaClock::MCDomainManager::Error::NotSupported:
+						case mediaClock::McDeterminationError::NotSupported:
 							return "Not Supported";
-						case mediaClock::MCDomainManager::Error::Recursive:
+						case mediaClock::McDeterminationError::Recursive:
 							return "Recursive";
-						case mediaClock::MCDomainManager::Error::StreamNotConnected:
+						case mediaClock::McDeterminationError::StreamNotConnected:
 							return "Stream N/C";
-						case mediaClock::MCDomainManager::Error::UnknownEntity:
+						case mediaClock::McDeterminationError::ExternalClockSource:
+							return QString("External (").append(helper::uniqueIdentifierToString(controlledEntity->getEntity().getEntityID())).append(")");
+						case mediaClock::McDeterminationError::UnknownEntity:
 							return "Indeterminable";
 						default:
 							return "Indeterminable";
@@ -233,8 +236,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			}
 			case ControllerModel::Column::MediaClockMasterName:
 			{
-#pragma message("TODO: Do not recompute the MCM for this entity here (findMediaClockMaster), instead cache the value in the clockConnectionManager and just call a getMediaClockMaster(entityID) method here")
-				auto const clockMaster = clockConnectionManager.findMediaClockMaster(entityID);
+				auto const clockMaster = clockConnectionManager.getMediaClockMaster(entityID);
 				auto const error = clockMaster.second;
 				if (!!error)
 				{
@@ -436,6 +438,14 @@ void ControllerModelPrivate::mediaClockConnectionsUpdated(std::vector<la::avdecc
 	for (auto const& entityId : changedEntities)
 	{
 		dataChanged(entityId, ControllerModel::Column::MediaClockMasterId);
+		dataChanged(entityId, ControllerModel::Column::MediaClockMasterName);
+	}
+}
+
+void ControllerModelPrivate::mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const changedEntities)
+{
+	for (auto const& entityId : changedEntities)
+	{
 		dataChanged(entityId, ControllerModel::Column::MediaClockMasterName);
 	}
 }

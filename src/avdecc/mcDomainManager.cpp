@@ -25,9 +25,6 @@
 #include <optional>
 #include <unordered_set>
 
-#pragma message("BUG: Refresh issue when the name of the MCM of an entity changes (not updated)")
-#pragma message("TODO: When receiving an event from the avdecc::ControllerManager, don't just recompute the MCDomainMapping, also cache the MCM (EID and Name) for each entity, so the view can directly query the values")
-
 namespace avdecc
 {
 namespace mediaClock
@@ -46,6 +43,7 @@ public:
 		connect(&manager, &ControllerManager::entityOffline, this, &MCDomainManagerImpl::onEntityOffline);
 		connect(&manager, &ControllerManager::streamConnectionChanged, this, &MCDomainManagerImpl::onStreamConnectionChanged);
 		connect(&manager, &ControllerManager::clockSourceChanged, this, &MCDomainManagerImpl::onClockSourceChanged);
+		connect(&manager, &ControllerManager::entityNameChanged, this, &MCDomainManagerImpl::onEntityNameChanged);
 	}
 
 	~MCDomainManagerImpl() noexcept {}
@@ -133,97 +131,57 @@ public:
 	}
 
 	/**
+	* Handles the change of an entity name and determines if a mc master name is changed therefor.
+	*/
+	Q_SLOT void onEntityNameChanged(la::avdecc::UniqueIdentifier const entityId, QString const& entityName)
+	{
+		std::vector<la::avdecc::UniqueIdentifier> changedEntities;
+		auto domainIndex = _currentMCDomainMapping.findDomainIndexByMasterEntityId(entityId);
+		if (domainIndex)
+		{
+			for (auto const& entityMcMappingKV : _currentMCDomainMapping.getEntityMediaClockMasterMappings())
+			{
+				if (std::find(entityMcMappingKV.second.begin(), entityMcMappingKV.second.end(), *domainIndex) != entityMcMappingKV.second.end())
+				{
+					changedEntities.push_back(entityMcMappingKV.first);
+				}
+			}
+		}
+		if (!changedEntities.empty())
+		{
+			emit mcMasterNameChanged(changedEntities);
+		}
+	}
+
+	/**
 	* Gets the media clock master for an entity.
 	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined.
 	*/
-	virtual std::pair<la::avdecc::UniqueIdentifier, Error> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityID) noexcept
+	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept
 	{
-		auto error = Error::UnknownEntity;
-		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> searchedEntityIds;
-		auto currentEntityId = entityID;
-
-		searchedEntityIds.insert(currentEntityId);
-		bool keepSearching = true;
-		while (keepSearching)
+		auto hasErrorIterator = _currentMCDomainMapping.getEntityMcErrors().find(entityId);
+		if (hasErrorIterator != _currentMCDomainMapping.getEntityMcErrors().end())
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto const& controlledEntity = manager.getControlledEntity(currentEntityId);
-			if (!controlledEntity)
+			return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), hasErrorIterator->second);
+		}
+		else
+		{
+			auto entityMcDomainIterator = _currentMCDomainMapping.getEntityMediaClockMasterMappings().find(entityId);
+			if (entityMcDomainIterator != _currentMCDomainMapping.getEntityMediaClockMasterMappings().end())
 			{
-				keepSearching = false;
-				break;
-			}
-			if (!la::avdecc::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
-			{
-				keepSearching = false;
-				error = Error::NotSupported;
-				break;
-			}
-
-			try
-			{
-				auto const& entityModel = controlledEntity->getEntityNode();
-				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
-				auto const activeConfigIndex = configNode.descriptorIndex;
-
-				// internal or external?
-				bool clockSourceInternal = false;
-
-				for (auto const& clockDomainKV : configNode.clockDomains)
+				auto const& associatedDomains = entityMcDomainIterator->second;
+				if (associatedDomains.size() > 0)
 				{
-					auto const& clockDomain = clockDomainKV.second;
-					if (clockDomain.dynamicModel)
+					auto mediaClockDomainIterator = _currentMCDomainMapping.getMediaClockDomains().find(associatedDomains.at(0));
+					if (mediaClockDomainIterator != _currentMCDomainMapping.getMediaClockDomains().end())
 					{
-						auto clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
-						auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
-
-#pragma message("TODO: Handle ClockSourceType::External type as well. Return Undeterminable or maybe a new Error type (External?) with currentEntityId still being returned, so we can display where the track ends")
-						if (activeClockSourceNode.staticModel && activeClockSourceNode.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::Internal)
-						{
-							return std::make_pair(currentEntityId, Error::NoError);
-						}
-						else
-						{
-#pragma message("TODO: Use activeClockSourceNode.staticModel.clockSourceLocationIndex (be sure to check clockSourceType and clockSourceLocationType) to determine if the input stream is connected or not. If not return Error::StreamNotConnected")
-							// find the clock stream:
-							auto clockStreamIndex = findClockStreamIndex(configNode);
-							if (clockStreamIndex)
-							{
-								auto* clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, *clockStreamIndex).dynamicModel;
-								if (clockStreamDynModel)
-								{
-									auto connectedTalker = clockStreamDynModel->connectionState.talkerStream.entityID;
-									auto connectedTalkerStreamIndex = clockStreamDynModel->connectionState.talkerStream.streamIndex;
-									if (searchedEntityIds.count(connectedTalker))
-									{
-										return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), Error::Recursive);
-									}
-									currentEntityId = connectedTalker;
-									searchedEntityIds.insert(currentEntityId);
-								}
-							}
-							else
-							{
-								keepSearching = false;
-								break;
-							}
-						}
-					}
-					else
-					{
-						keepSearching = false;
-						break;
+						return std::make_pair(mediaClockDomainIterator->second.getMediaClockDomainMaster(), McDeterminationError::NoError);
 					}
 				}
 			}
-			catch (la::avdecc::controller::ControlledEntity::Exception const&)
-			{
-				keepSearching = false;
-				break;
-			}
 		}
 
-		return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
+		return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), McDeterminationError::UnknownEntity);
 	}
 
 	/**
@@ -255,6 +213,10 @@ public:
 				}
 				associatedDomains.push_back(*domainIndex);
 			}
+			else
+			{
+				result.getEntityMcErrors().emplace(entityId, mcMasterError);
+			}
 
 			if (mcMasterId == entityId)
 			{
@@ -263,7 +225,6 @@ public:
 				auto const& secondaryMasterError = secondaryMasterIdKV.second;
 				if (secondaryMasterId) // check if the id is valid
 				{
-					associatedDomains.push_back(secondaryMasterId);
 					if (!secondaryMasterError)
 					{
 						auto domainIndex = result.findDomainIndexByMasterEntityId(secondaryMasterId);
@@ -286,30 +247,122 @@ public:
 		return result;
 	}
 
-private:
+protected:
 	/**
-	* Finds the index of the clock stream.
-	* @return If the clock stream index can not be determined, std::nullopt is returned.
+	* Gets the media clock master for an entity.
+	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined.
 	*/
-	std::optional<la::avdecc::entity::model::StreamIndex> findClockStreamIndex(la::avdecc::controller::model::ConfigurationNode const& configNode) noexcept
+	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> findMediaClockMaster(la::avdecc::UniqueIdentifier const entityID) noexcept
 	{
-		for (auto const& streamInputKV : configNode.streamInputs)
+		auto error = McDeterminationError::UnknownEntity;
+		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> searchedEntityIds;
+		auto currentEntityId = entityID;
+
+		searchedEntityIds.insert(currentEntityId);
+		bool keepSearching = true;
+		while (keepSearching)
 		{
-			auto const& streamInput = streamInputKV.second;
-			if (streamInput.dynamicModel)
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto const& controlledEntity = manager.getControlledEntity(currentEntityId);
+			if (!controlledEntity)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel->currentFormat);
-				auto streamType = streamFormatInfo->getType();
-#pragma message("TODO: Do we actually care if the stream is a CRF? Shouldn't we only check for a valid ClockSource in the ClockDomain?")
-				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
+				keepSearching = false;
+				break;
+			}
+			if (!la::avdecc::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			{
+				keepSearching = false;
+				error = McDeterminationError::NotSupported;
+				break;
+			}
+
+			try
+			{
+				auto const& entityModel = controlledEntity->getEntityNode();
+				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
+				auto const activeConfigIndex = configNode.descriptorIndex;
+
+				// internal or external?
+				bool clockSourceInternal = false;
+
+				for (auto const& clockDomainKV : configNode.clockDomains)
 				{
-					return streamInputKV.first;
+					auto const& clockDomain = clockDomainKV.second;
+					if (clockDomain.dynamicModel)
+					{
+						auto clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
+						auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
+
+						if (!activeClockSourceNode.staticModel)
+						{
+							keepSearching = false;
+							break;
+						}
+						switch (activeClockSourceNode.staticModel->clockSourceType)
+						{
+							case la::avdecc::entity::model::ClockSourceType::Internal:
+								return std::make_pair(currentEntityId, McDeterminationError::NoError);
+							case la::avdecc::entity::model::ClockSourceType::External:
+								return std::make_pair(currentEntityId, McDeterminationError::ExternalClockSource);
+							case la::avdecc::entity::model::ClockSourceType::InputStream:
+								if (activeClockSourceNode.staticModel->clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput)
+								{
+									auto clockStreamIndex = activeClockSourceNode.staticModel->clockSourceLocationIndex;
+									auto* clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, clockStreamIndex).dynamicModel;
+									if (clockStreamDynModel)
+									{
+										auto connectedTalker = clockStreamDynModel->connectionState.talkerStream.entityID;
+										if (!connectedTalker)
+										{
+											error = McDeterminationError::StreamNotConnected;
+											keepSearching = false;
+											break;
+										}
+										auto connectedTalkerStreamIndex = clockStreamDynModel->connectionState.talkerStream.streamIndex;
+										if (searchedEntityIds.count(connectedTalker))
+										{
+											return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), McDeterminationError::Recursive);
+										}
+										currentEntityId = connectedTalker;
+										searchedEntityIds.insert(currentEntityId);
+									}
+									else
+									{
+										error = McDeterminationError::StreamNotConnected;
+										keepSearching = false;
+										break;
+									}
+								}
+								else
+								{
+									keepSearching = false;
+									break;
+								}
+								break;
+							default:
+								error = McDeterminationError::NotSupported;
+								keepSearching = false;
+								break;
+						}
+					}
+					else
+					{
+						keepSearching = false;
+						break;
+					}
 				}
 			}
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
+			{
+				keepSearching = false;
+				break;
+			}
 		}
-		return std::nullopt;
+
+		return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
 	}
 
+private:
 	/**
 	* Checks if the domain mc master of an entity changed. The first index in the vector is the only one that matters.
 	* Other indexes are secondary masters and are not of relevance here.
@@ -476,6 +529,15 @@ std::optional<DomainIndex> const MCEntityDomainMapping::findDomainIndexByMasterE
 std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<DomainIndex>, la::avdecc::UniqueIdentifier::hash>& MCEntityDomainMapping::getEntityMediaClockMasterMappings() noexcept
 {
 	return _entityMediaClockMasterMappings;
+}
+
+/**
+* Gets a reference of the entity to mc determination error map.
+* @return Reference of the _entityMcErrors field.
+*/
+std::unordered_map<la::avdecc::UniqueIdentifier, McDeterminationError, la::avdecc::UniqueIdentifier::hash>& MCEntityDomainMapping::getEntityMcErrors() noexcept
+{
+	return _entityMcErrors;
 }
 
 /**
