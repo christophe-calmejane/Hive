@@ -70,6 +70,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType);
 QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState);
+QString lockStateToString(la::avdecc::controller::model::LockState const& lockState);
 
 QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate);
 QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format);

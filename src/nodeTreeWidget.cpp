@@ -662,6 +662,10 @@ private:
 		acquireStateItem->setText(0, "Acquire State");
 		acquireStateItem->setText(1, avdecc::helper::acquireStateToString(node->acquireState));
 
+		auto* lockStateItem = new QTreeWidgetItem(accessItem);
+		lockStateItem->setText(0, "Lock State");
+		lockStateItem->setText(1, avdecc::helper::lockStateToString(node->lockState));
+
 		return accessItem;
 	}
 
