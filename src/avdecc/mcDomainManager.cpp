@@ -83,6 +83,7 @@ private:
 	*/
 	Q_SLOT void onStreamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& streamConnectionState)
 	{
+		bool affectsMcMaster = false;
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto const& controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
 		if (controlledEntity)
@@ -96,23 +97,34 @@ private:
 					auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 					auto activeConfigIndex = configNode.descriptorIndex;
 
-					// find out if the stream connection is a clock stream connection:
-					bool isClockStream = false;
-					auto const& streamInput = controlledEntity->getStreamInputNode(activeConfigIndex, streamConnectionState.listenerStream.streamIndex);
-					if (streamInput.dynamicModel)
+					// find out if the stream connection is set as clock source:
+					for (auto const& clockDomainKV : configNode.clockDomains)
 					{
-						auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel->currentFormat);
-						auto streamType = streamFormatInfo->getType();
-						if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
+						auto const& clockDomain = clockDomainKV.second;
+						if (clockDomain.dynamicModel)
 						{
-							isClockStream = true;
-						}
-					}
+							auto clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
+							auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
 
-					if (isClockStream)
-					{
-						// potenitally changes every other entity...
-						notifyChanges();
+							if (!activeClockSourceNode.staticModel)
+							{
+								break;
+							}
+							switch (activeClockSourceNode.staticModel->clockSourceType)
+							{
+								case la::avdecc::entity::model::ClockSourceType::Internal:
+									break;
+								case la::avdecc::entity::model::ClockSourceType::External:
+								case la::avdecc::entity::model::ClockSourceType::InputStream:
+								{
+									if (streamConnectionState.listenerStream.streamIndex == activeClockSourceNode.staticModel->clockSourceLocationIndex)
+									{
+										affectsMcMaster = true;
+									}
+									break;
+								}
+							}
+						}
 					}
 				}
 				catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -120,6 +132,12 @@ private:
 					// ignore
 				}
 			}
+		}
+
+		if (affectsMcMaster)
+		{
+			// potenitally changes every other entity...
+			notifyChanges();
 		}
 	}
 
