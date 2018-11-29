@@ -220,6 +220,26 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 	}
 }
 
+QString lockStateToString(la::avdecc::controller::model::LockState const& lockState)
+{
+	switch (lockState)
+	{
+		case la::avdecc::controller::model::LockState::Undefined:
+			return "Undefined";
+		case la::avdecc::controller::model::LockState::NotLocked:
+			return "Not Locked";
+		case la::avdecc::controller::model::LockState::TryLock:
+			return "Try Lock";
+		case la::avdecc::controller::model::LockState::Locked:
+			return "Locked";
+		case la::avdecc::controller::model::LockState::LockedByOther:
+			return "Locked By Other";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return {};
+	}
+}
+
 QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate)
 {
 	switch (samplingRate)

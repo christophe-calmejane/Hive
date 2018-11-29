@@ -6,6 +6,7 @@
   - clang-format version 7.0.0 (with the patch applied: [clang-7.0.0-BraceWrappingBeforeLambdaBody.patch](3rdparty/avdecc/clang-7.0.0-BraceWrappingBeforeLambdaBody.patch))
   - Precompiled clang-format for windows and macOS [can be found here](http://www.kikisoft.com/Hive/clang-format)
 - Always put _const_ to the right of the type
+- Always initialize non static data members (NSDM) except when impossible (when the data member is a reference), using brace initialization
 - Add the _virtual_ keyword when _overriding_ a _virtual method_
 - Always declare function parameters as const (so they cannot be changed inside the function). Except for references, movable objects and pointers that are mutable
 - Prohibit _C-style cast_, using _static_cast_ instead

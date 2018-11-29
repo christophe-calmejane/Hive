@@ -36,6 +36,7 @@ public:
 		Name,
 		Group,
 		AcquireState,
+		LockState,
 		GrandmasterId,
 		GptpDomain,
 		InterfaceIndex,

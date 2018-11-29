@@ -58,6 +58,7 @@ private:
 	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName);
 	Q_SLOT void entityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName);
 	Q_SLOT void acquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity);
+	Q_SLOT void lockStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity);
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);
 
 	// Slots for EntityLogoCache signals
@@ -76,6 +77,9 @@ private:
 	std::array<QImage, 3> _acquireStateImages{
 		{ QImage{ ":/unlocked.png" }, QImage{ ":/locked.png" }, QImage{ ":/locked_by_other.png" } },
 	};
+	std::array<QImage, 3> _lockStateImages{
+		{ QImage{ ":/unlocked.png" }, QImage{ ":/locked.png" }, QImage{ ":/locked_by_other.png" } },
+	};
 };
 
 //////////////////////////////////////
@@ -91,6 +95,7 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::entityNameChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::entityGroupNameChanged, this, &ControllerModelPrivate::entityGroupNameChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::acquireStateChanged);
+	connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, this, &ControllerModelPrivate::lockStateChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::gptpChanged);
 
 	// Connect EntityLogoCache signals
@@ -216,6 +221,18 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				break;
 		}
 	}
+	else if (column == ControllerModel::Column::LockState)
+	{
+		switch (role)
+		{
+			case Qt::UserRole:
+				return _lockStateImages[controlledEntity->isLockedByOther() ? 2 : (controlledEntity->isLocked() ? 1 : 0)];
+			case Qt::ToolTipRole:
+				return controlledEntity->isLockedByOther() ? "Locked by another controller" : (controlledEntity->isLocked() ? "Locked" : "Not locked");
+			default:
+				break;
+		}
+	}
 
 	return {};
 }
@@ -238,6 +255,8 @@ QVariant ControllerModelPrivate::headerData(int section, Qt::Orientation orienta
 					return "Group";
 				case ControllerModel::Column::AcquireState:
 					return "Acquire state";
+				case ControllerModel::Column::LockState:
+					return "Lock state";
 				case ControllerModel::Column::GrandmasterId:
 					return "Grandmaster ID";
 				case ControllerModel::Column::GptpDomain:
@@ -348,6 +367,11 @@ void ControllerModelPrivate::entityGroupNameChanged(la::avdecc::UniqueIdentifier
 void ControllerModelPrivate::acquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity)
 {
 	dataChanged(entityID, ControllerModel::Column::AcquireState, { Qt::UserRole });
+}
+
+void ControllerModelPrivate::lockStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity)
+{
+	dataChanged(entityID, ControllerModel::Column::LockState, { Qt::UserRole });
 }
 
 void ControllerModelPrivate::gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)

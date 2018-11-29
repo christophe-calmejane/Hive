@@ -43,6 +43,7 @@ public:
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
+		qRegisterMetaType<la::avdecc::entity::model::AvdeccFixedString>("la::avdecc::entity::model::AvdeccFixedString");
 		qRegisterMetaType<la::avdecc::entity::model::ConfigurationIndex>("la::avdecc::entity::model::ConfigurationIndex");
 		qRegisterMetaType<la::avdecc::entity::model::DescriptorType>("la::avdecc::entity::model::DescriptorType");
 		qRegisterMetaType<la::avdecc::entity::model::DescriptorIndex>("la::avdecc::entity::model::DescriptorIndex");
@@ -77,6 +78,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::AvbInfo>("la::avdecc::entity::model::AvbInfo");
 		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
 		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
+		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnectionState>("la::avdecc::controller::model::StreamConnectionState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnections>("la::avdecc::controller::model::StreamConnections");
@@ -168,6 +170,10 @@ private:
 	virtual void onAcquireStateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity) noexcept override
 	{
 		emit acquireStateChanged(entity->getEntity().getEntityID(), acquireState, owningEntity);
+	}
+	virtual void onLockStateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity) noexcept override
+	{
+		emit lockStateChanged(entity->getEntity().getEntityID(), lockState, lockingEntity);
 	}
 	virtual void onStreamInputFormatChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
 	{
@@ -389,6 +395,48 @@ private:
 					else
 					{
 						emit endAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity, status);
+					}
+				});
+		}
+	}
+
+	virtual void lockEntity(la::avdecc::UniqueIdentifier const targetEntityID, LockEntityHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::LockEntity);
+			controller->lockEntity(targetEntityID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const lockingEntity) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status, lockingEntity);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::LockEntity, status);
+					}
+				});
+		}
+	}
+
+	virtual void unlockEntity(la::avdecc::UniqueIdentifier const targetEntityID, UnlockEntityHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::UnlockEntity);
+			controller->unlockEntity(targetEntityID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const lockingEntity) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::UnlockEntity, status);
 					}
 				});
 		}
@@ -1084,6 +1132,10 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Acquire Entity";
 		case AecpCommandType::ReleaseEntity:
 			return "Release Entity";
+		case AecpCommandType::LockEntity:
+			return "Lock Entity";
+		case AecpCommandType::UnlockEntity:
+			return "Unlock Entity";
 		case AecpCommandType::SetConfiguration:
 			return "Set Configuration";
 		case AecpCommandType::SetStreamFormat:
