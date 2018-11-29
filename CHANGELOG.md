@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Upload firmware progression always set to 100% upon successfull completion
 - Connection matrix refresh issues
 - Possible crash if a toxic entity is on the network
+- Exclusive Access not refreshed in Entity Descriptor information
 - [Entity Model Inspector focus lost when a new entity is detected](https://github.com/christophe-calmejane/Hive/issues/19)
 - [[macOS] Forcing light mode until full dark mode is supported by Qt](https://github.com/christophe-calmejane/Hive/issues/39)
 
