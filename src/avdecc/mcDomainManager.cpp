@@ -79,11 +79,11 @@ private:
 	}
 
 	/**
-	* Handles the change of a clock source on a stream connection. Checks if the stream was a clock stream and if so emits the mediaClockConnectionsUpdate signal.
+	* Handles the change of a clock source on a stream connection. Checks if the stream is a clock stream and if so emits the mediaClockConnectionsUpdate signal.
 	*/
 	Q_SLOT void onStreamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& streamConnectionState)
 	{
-		bool affectsMcMaster = false;
+		auto affectsMcMaster = false;
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto const& controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
 		if (controlledEntity)
@@ -92,10 +92,8 @@ private:
 			{
 				try
 				{
-					auto entityModel = controlledEntity->getEntityNode();
-
 					auto const& configNode = controlledEntity->getCurrentConfigurationNode();
-					auto activeConfigIndex = configNode.descriptorIndex;
+					auto const activeConfigIndex = configNode.descriptorIndex;
 
 					// find out if the stream connection is set as clock source:
 					for (auto const& clockDomainKV : configNode.clockDomains)
@@ -103,7 +101,7 @@ private:
 						auto const& clockDomain = clockDomainKV.second;
 						if (clockDomain.dynamicModel)
 						{
-							auto clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
+							auto const clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
 							auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
 
 							if (!activeClockSourceNode.staticModel)
@@ -123,6 +121,8 @@ private:
 									}
 									break;
 								}
+								default: // Unsupported ClockSourceType, ignore it
+									break;
 							}
 						}
 					}
@@ -136,7 +136,7 @@ private:
 
 		if (affectsMcMaster)
 		{
-			// potenitally changes every other entity...
+			// potentially changes every other entity...
 			notifyChanges();
 		}
 	}
@@ -422,18 +422,22 @@ private:
 	*/
 	void notifyChanges() noexcept
 	{
-		// potenitally changes every other entity...
+		// potentially changes every other entity...
 		std::vector<la::avdecc::UniqueIdentifier> changes;
 		auto currentMCDomainMapping = createMediaClockDomainModel();
-		auto& previousMCDomainMapping = _currentMCDomainMapping;
+		auto const& currentMCDomains = currentMCDomainMapping.getMediaClockDomains();
+		auto const& previousMCDomainMapping = _currentMCDomainMapping;
+		auto const& previousMCMasterMappings = previousMCDomainMapping.getEntityMediaClockMasterMappings();
+		auto const& previousMCDomains = previousMCDomainMapping.getMediaClockDomains();
+
 		for (auto const& entityDomainKV : currentMCDomainMapping.getEntityMediaClockMasterMappings())
 		{
 			auto const entityId = entityDomainKV.first;
 			auto const& domainIdxs = entityDomainKV.second;
-			auto const oldDomainIndexesIterator = previousMCDomainMapping.getEntityMediaClockMasterMappings().find(entityId);
-			if (oldDomainIndexesIterator != previousMCDomainMapping.getEntityMediaClockMasterMappings().end())
+			auto const oldDomainIndexesIterator = previousMCMasterMappings.find(entityId);
+			if (oldDomainIndexesIterator != previousMCMasterMappings.end())
 			{
-				if (checkMcMasterOfEntityChanged(oldDomainIndexesIterator->second, entityDomainKV.second, previousMCDomainMapping.getMediaClockDomains(), currentMCDomainMapping.getMediaClockDomains()))
+				if (checkMcMasterOfEntityChanged(oldDomainIndexesIterator->second, entityDomainKV.second, previousMCDomains, currentMCDomains))
 				{
 					changes.push_back(entityId);
 				}
@@ -444,8 +448,15 @@ private:
 				changes.push_back(entityId);
 			}
 		}
-		_currentMCDomainMapping = currentMCDomainMapping; // update the model
-		emit mediaClockConnectionsUpdate(changes);
+
+		// Update the model
+		_currentMCDomainMapping = std::move(currentMCDomainMapping);
+
+		// Notify the view
+		if (!changes.empty())
+		{
+			emit mediaClockConnectionsUpdate(changes);
+		}
 	}
 
 	// Private members

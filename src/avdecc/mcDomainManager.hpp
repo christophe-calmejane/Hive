@@ -68,6 +68,12 @@ public:
 	// Other methods
 	QString getDisplayName() const noexcept;
 
+	// Defaulted compiler auto-generated methods
+	MCDomain(MCDomain const&) = default;
+	MCDomain(MCDomain&&) = default;
+	MCDomain& operator=(MCDomain const&) = default;
+	MCDomain& operator=(MCDomain&&) = default;
+
 private:
 	DomainIndex _domainIndex{ 0u }; /** Index of the domain */
 	la::avdecc::UniqueIdentifier _mediaClockMasterId{}; /** ID of the clock master for the domain */
@@ -97,6 +103,12 @@ public:
 	Mappings const& getEntityMediaClockMasterMappings() const noexcept;
 	Domains const& getMediaClockDomains() const noexcept;
 	Errors const& getEntityMcErrors() const noexcept;
+
+	// Defaulted compiler auto-generated methods
+	MCEntityDomainMapping(MCEntityDomainMapping const&) = default;
+	MCEntityDomainMapping(MCEntityDomainMapping&&) = default;
+	MCEntityDomainMapping& operator=(MCEntityDomainMapping const&) = default;
+	MCEntityDomainMapping& operator=(MCEntityDomainMapping&&) = default;
 
 private:
 	Mappings _entityMediaClockMasterMappings{};
