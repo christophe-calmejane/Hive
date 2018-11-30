@@ -29,7 +29,7 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 	auto* currentSamplingRateItem = new QTreeWidgetItem(this);
 	currentSamplingRateItem->setText(0, "Sampling Rate");
 
-	_samplingRate = new qt::toolkit::ComboBox;
+	_samplingRate = new AecpCommandComboBox(entityID, avdecc::ControllerManager::AecpCommandType::SetSamplingRate);
 	parent->setItemWidget(currentSamplingRateItem, 1, _samplingRate);
 
 	for (auto const samplingRate : staticModel->samplingRates)
