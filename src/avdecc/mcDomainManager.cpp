@@ -303,8 +303,11 @@ private:
 				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 				auto const activeConfigIndex = configNode.descriptorIndex;
 
-				// internal or external?
-				bool clockSourceInternal = false;
+				if (configNode.clockDomains.empty())
+				{
+					keepSearching = false;
+					break;
+				}
 
 				for (auto const& clockDomainKV : configNode.clockDomains)
 				{
@@ -429,6 +432,8 @@ private:
 		auto const& previousMCDomainMapping = _currentMCDomainMapping;
 		auto const& previousMCMasterMappings = previousMCDomainMapping.getEntityMediaClockMasterMappings();
 		auto const& previousMCDomains = previousMCDomainMapping.getMediaClockDomains();
+		auto const& previousErrors = previousMCDomainMapping.getEntityMcErrors();
+		auto const& currentErrors = currentMCDomainMapping.getEntityMcErrors();
 
 		for (auto const& entityDomainKV : currentMCDomainMapping.getEntityMediaClockMasterMappings())
 		{
@@ -439,6 +444,13 @@ private:
 			{
 				if (checkMcMasterOfEntityChanged(oldDomainIndexesIterator->second, entityDomainKV.second, previousMCDomains, currentMCDomains))
 				{
+					changes.push_back(entityId);
+				}
+				else if (previousErrors.count(entityId) > 0 && currentErrors.count(entityId) > 0
+					&& previousErrors.at(entityId) != currentErrors.at(entityId)
+					|| previousErrors.count(entityId) != currentErrors.count(entityId))
+				{
+					// if the error type changed add the entity to the changes list as well.
 					changes.push_back(entityId);
 				}
 			}
