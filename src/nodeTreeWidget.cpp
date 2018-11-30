@@ -166,7 +166,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createAccessItem(&node);
+		createAccessItem(controlledEntity);
 
 		Q_Q(NodeTreeWidget);
 
@@ -651,7 +651,7 @@ private:
 		return idItem;
 	}
 
-	QTreeWidgetItem* createAccessItem(la::avdecc::controller::model::EntityModelNode const* node)
+	QTreeWidgetItem* createAccessItem(la::avdecc::controller::ControlledEntity const* const controlledEntity)
 	{
 		Q_Q(NodeTreeWidget);
 
@@ -660,11 +660,26 @@ private:
 
 		auto* acquireStateItem = new QTreeWidgetItem(accessItem);
 		acquireStateItem->setText(0, "Acquire State");
-		acquireStateItem->setText(1, avdecc::helper::acquireStateToString(node->acquireState));
+		acquireStateItem->setText(1, avdecc::helper::acquireStateToString(controlledEntity->getAcquireState()));
 
 		auto* lockStateItem = new QTreeWidgetItem(accessItem);
 		lockStateItem->setText(0, "Lock State");
-		lockStateItem->setText(1, avdecc::helper::lockStateToString(node->lockState));
+		lockStateItem->setText(1, avdecc::helper::lockStateToString(controlledEntity->getLockState()));
+
+		// Listen for changes
+		auto& controllerManager = avdecc::ControllerManager::getInstance();
+		connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, q,
+			[this, acquireStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const /*owningEntity*/)
+			{
+				if (entityID == _controlledEntityID)
+					acquireStateItem->setText(1, avdecc::helper::acquireStateToString(acquireState));
+			});
+		connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, q,
+			[this, lockStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const /*lockingEntity*/)
+			{
+				if (entityID == _controlledEntityID)
+					lockStateItem->setText(1, avdecc::helper::lockStateToString(lockState));
+			});
 
 		return accessItem;
 	}
