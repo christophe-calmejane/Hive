@@ -456,6 +456,19 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags)
 	return str;
 }
 
+QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags)
+{
+	QString str;
+
+	if ((flags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
+		concatenateFlags(str, "Redundancy");
+
+	if (str.isEmpty())
+		str = "None";
+	return str;
+}
+
+
 QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps)
 {
 	QString str;

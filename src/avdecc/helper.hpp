@@ -81,6 +81,7 @@ QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags);
 QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags);
 QString flagsToString(la::avdecc::entity::PortFlags const flags);
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags);
+QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags);
 
 QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps);
 QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps);

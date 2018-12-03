@@ -212,6 +212,19 @@ private:
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
 
+		// Milan Info
+		if (controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto* milanInfoItem = new QTreeWidgetItem(q);
+			milanInfoItem->setText(0, "Milan Info");
+
+			auto const& milanInfo = controlledEntity->getMilanInfo();
+
+			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
+			addTextItem(milanInfoItem, "Features", avdecc::helper::flagsToString(milanInfo.featuresFlags));
+			addTextItem(milanInfoItem, "Certification Version", QString::number(milanInfo.certificationVersion));
+		}
+
 		// Discovery information
 		{
 			createDiscoveryInfo(controlledEntity->getEntity());
