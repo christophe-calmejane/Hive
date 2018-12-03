@@ -171,9 +171,11 @@ void MainWindow::createControllerView()
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
+	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
 	auto* imageItemDelegate{ new ImageItemDelegate };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
@@ -181,6 +183,7 @@ void MainWindow::createControllerView()
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), 50);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Name), 180);
 	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Group), 80);

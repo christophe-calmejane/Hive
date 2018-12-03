@@ -74,6 +74,9 @@ private:
 	using Entities = std::vector<la::avdecc::UniqueIdentifier>;
 	Entities _entities{};
 
+	std::array<QImage, 4> _compatibilityImages{
+		{ QImage{ ":/not_compliant.png" }, QImage{ ":/ieee.png" }, QImage{ ":/milan.png" }, QImage{ ":/toxic.png" } },
+	};
 	std::array<QImage, 3> _acquireStateImages{
 		{ QImage{ ":/unlocked.png" }, QImage{ ":/locked.png" }, QImage{ ":/locked_by_other.png" } },
 	};
@@ -209,6 +212,54 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			}
 		}
 	}
+	else if (column == ControllerModel::Column::Compatibility)
+	{
+		switch (role)
+		{
+			case Qt::UserRole:
+			{
+				auto const flags = controlledEntity->getCompatibilityFlags();
+				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Toxic))
+				{
+					return _compatibilityImages[3];
+				}
+				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+				{
+					return _compatibilityImages[2];
+				}
+				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
+				{
+					return _compatibilityImages[1];
+				}
+				else
+				{
+					return _compatibilityImages[0];
+				}
+			}
+			case Qt::ToolTipRole:
+			{
+				auto const flags = controlledEntity->getCompatibilityFlags();
+				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Toxic))
+				{
+					return "Entity is sending incoherent values that can cause undefined behavior";
+				}
+				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+				{
+					return "MILAN compatible";
+				}
+				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
+				{
+					return "IEEE 1722.1 compatible";
+				}
+				else
+				{
+					return "Not fully IEEE 1722.1 compliant";
+				}
+			}
+			default:
+				break;
+		}
+	}
 	else if (column == ControllerModel::Column::AcquireState)
 	{
 		switch (role)
@@ -247,6 +298,8 @@ QVariant ControllerModelPrivate::headerData(int section, Qt::Orientation orienta
 			{
 				case ControllerModel::Column::EntityLogo:
 					return "Logo";
+				case ControllerModel::Column::Compatibility:
+					return "Compat";
 				case ControllerModel::Column::EntityId:
 					return "Entity ID";
 				case ControllerModel::Column::Name:

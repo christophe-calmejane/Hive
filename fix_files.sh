@@ -118,6 +118,9 @@ if [ $do_line_endings -eq 1 ]; then
 		applyFileAttributes "*.cmake" "a-x"
 		applyFileAttributes "*.md" "a-x"
 		applyFileAttributes "*.patch" "a-x"
+		applyFileAttributes "*.svg" "a-x"
+		applyFileAttributes "*.png" "a-x"
+		applyFileAttributes "*.qrc" "a-x"
 		
 		# Binary files
 		applyFileAttributes "*.sh" "a+x"

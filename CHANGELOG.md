@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Support for Locking/Unlocking an entity
-- Proper detection of Milan compatible devices
+- Detection and display of Milan compatible devices
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)
