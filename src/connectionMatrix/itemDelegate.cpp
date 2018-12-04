@@ -60,13 +60,23 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		auto const rowEntityID{ index.model()->headerData(index.row(), Qt::Vertical, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>() };
 		auto const columnEntityID{ index.model()->headerData(index.column(), Qt::Horizontal, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>() };
 
+		// This is the cross section of the same entity, no connection is possible
 		if (rowEntityID == columnEntityID)
 		{
 			drawNotApplicable(painter, option.rect);
 		}
 		else
 		{
-			drawEntityNoConnection(painter, option.rect);
+			auto const capabilities = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
+
+			if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::Connected))
+			{
+				drawEntityConnection(painter, option.rect);
+			}
+			else
+			{
+				drawEntityNoConnection(painter, option.rect);
+			}
 		}
 	}
 	else
@@ -92,55 +102,99 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 			return;
 		}
 
-		auto const isRedundant = !((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
+		auto const isRedundantSummary = talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput;
+		auto const isRedundantStream = !(isRedundantSummary || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
 
+		// Connected
 		if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::Connected))
 		{
 			if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongDomain))
 			{
-				drawWrongDomainConnectedStream(painter, option.rect, isRedundant);
+				if (isRedundantSummary)
+				{
+					drawErrorConnectedRedundantNode(painter, option.rect);
+				}
+				else
+				{
+					drawWrongDomainConnectedStream(painter, option.rect, isRedundantStream);
+				}
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongFormat))
 			{
-				drawWrongFormatConnectedStream(painter, option.rect, isRedundant);
+				if (isRedundantSummary)
+				{
+					drawErrorConnectedRedundantNode(painter, option.rect);
+				}
+				else
+				{
+					drawWrongFormatConnectedStream(painter, option.rect, isRedundantStream);
+				}
+			}
+			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::InterfaceDown))
+			{
+				// Interface down might not be an error, so don't use drawErrorConnectedRedundantNode even if isRedundantSummary is true
+				drawConnectedInterfaceDownStream(painter, option.rect, isRedundantStream);
 			}
 			else
 			{
-				drawConnectedStream(painter, option.rect, isRedundant);
+				drawConnectedStream(painter, option.rect, isRedundantStream);
 			}
 		}
+		// Fast connecting
 		else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::FastConnecting))
 		{
 			if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongDomain))
 			{
-				drawWrongDomainFastConnectingStream(painter, option.rect, isRedundant);
+				drawWrongDomainFastConnectingStream(painter, option.rect, isRedundantStream);
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongFormat))
 			{
-				drawWrongFormatFastConnectingStream(painter, option.rect, isRedundant);
+				drawWrongFormatFastConnectingStream(painter, option.rect, isRedundantStream);
 			}
 			else
 			{
-				drawFastConnectingStream(painter, option.rect, isRedundant);
+				drawFastConnectingStream(painter, option.rect, isRedundantStream);
 			}
 		}
+		// Partially connected
 		else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::PartiallyConnected))
 		{
+			AVDECC_ASSERT(isRedundantSummary, "This case should only be for Redundant Summary intersection");
 			drawPartiallyConnectedRedundantNode(painter, option.rect);
 		}
+		// Not connected
 		else
 		{
 			if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongDomain))
 			{
-				drawWrongDomainNotConnectedStream(painter, option.rect, isRedundant);
+				if (isRedundantSummary)
+				{
+					drawErrorNotConnectedRedundantNode(painter, option.rect);
+				}
+				else
+				{
+					drawWrongDomainNotConnectedStream(painter, option.rect, isRedundantStream);
+				}
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongFormat))
 			{
-				drawWrongFormatNotConnectedStream(painter, option.rect, isRedundant);
+				if (isRedundantSummary)
+				{
+					drawErrorNotConnectedRedundantNode(painter, option.rect);
+				}
+				else
+				{
+					drawWrongFormatNotConnectedStream(painter, option.rect, isRedundantStream);
+				}
+			}
+			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::InterfaceDown))
+			{
+				// Interface down might not be an error, so don't use drawErrorNotConnectedRedundantNode even if isRedundantSummary is true
+				drawNotConnectedInterfaceDownStream(painter, option.rect, isRedundantStream);
 			}
 			else
 			{
-				drawNotConnectedStream(painter, option.rect, isRedundant);
+				drawNotConnectedStream(painter, option.rect, isRedundantStream);
 			}
 		}
 	}
