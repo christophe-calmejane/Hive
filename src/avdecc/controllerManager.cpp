@@ -76,6 +76,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::OperationID>("la::avdecc::entity::model::OperationID");
 		qRegisterMetaType<la::avdecc::entity::model::StreamInfo>("la::avdecc::entity::model::StreamInfo");
 		qRegisterMetaType<la::avdecc::entity::model::AvbInfo>("la::avdecc::entity::model::AvbInfo");
+		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
 		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
 		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
 		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
@@ -262,6 +263,10 @@ private:
 	virtual void onAvbInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInfo const& info) noexcept override
 	{
 		emit avbInfoChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, info);
+	}
+	virtual void onAsPathChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath) noexcept override
+	{
+		emit asPathChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, asPath);
 	}
 	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters) noexcept override
 	{

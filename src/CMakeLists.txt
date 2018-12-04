@@ -100,6 +100,7 @@ set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.hpp
+	nodeTreeDynamicWidgets/asPathWidget.hpp
 )
 
 # NodeTree Dynamic Widgets source files
@@ -111,6 +112,7 @@ set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.cpp
+	nodeTreeDynamicWidgets/asPathWidget.cpp
 )
 
 # Avdecc helper header files

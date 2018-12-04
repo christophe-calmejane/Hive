@@ -96,6 +96,8 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 QString loggerLayerToString(la::avdecc::logger::Layer const layer);
 QString loggerLevelToString(la::avdecc::logger::Level const& level);
 
+QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
+
 bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
 bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
 

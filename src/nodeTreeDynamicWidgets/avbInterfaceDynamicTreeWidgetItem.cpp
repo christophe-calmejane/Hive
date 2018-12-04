@@ -18,8 +18,14 @@
 */
 
 #include "avbInterfaceDynamicTreeWidgetItem.hpp"
+#include "asPathWidget.hpp"
+#include "avdecc/helper.hpp"
 
-#include <QMenu>
+#include <unordered_map>
+#include <string>
+
+#include <QListWidgetItem>
+#include <QString>
 
 AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
@@ -54,6 +60,29 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 				}
 			});
 	}
+
+	// AsPath
+	{
+		// Create fields
+		auto* item = new QTreeWidgetItem(this);
+		item->setText(0, "As Path");
+		_asPath = new QListWidget;
+		_asPath->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
+		parent->setItemWidget(item, 1, _asPath);
+
+		// Update info right now
+		updateAsPath(dynamicModel->asPath);
+
+		// Listen for AsPathChanged
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::asPathChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath)
+			{
+				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
+				{
+					updateAsPath(asPath);
+				}
+			});
+	}
 }
 
 void AvbInterfaceDynamicTreeWidgetItem::updateAvbInfo(la::avdecc::entity::model::AvbInfo const& avbInfo)
@@ -62,4 +91,18 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAvbInfo(la::avdecc::entity::model:
 	_gptpDomainNumber->setText(1, QString::number(avbInfo.gptpDomainNumber));
 	_propagationDelay->setText(1, QString("%1 nsec").arg(avbInfo.propagationDelay));
 	_flags->setText(1, avdecc::helper::toHexQString(la::avdecc::to_integral(avbInfo.flags), true, true) + QString(" (") + avdecc::helper::flagsToString(avbInfo.flags) + QString(")"));
+}
+
+void AvbInterfaceDynamicTreeWidgetItem::updateAsPath(la::avdecc::entity::model::AsPath const& asPath)
+{
+	_asPath->clear();
+
+	for (auto const& bridgeID : asPath.sequence)
+	{
+		auto* widget = new AsPathWidget{ bridgeID, avdecc::helper::getVendorName(bridgeID) };
+		auto* item = new QListWidgetItem(_asPath);
+		item->setSizeHint(widget->sizeHint());
+
+		_asPath->setItemWidget(item, widget);
+	}
 }
