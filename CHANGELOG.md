@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for Locking/Unlocking an entity
 - Detection and display of Milan compatible devices
 - Display of AS Path in AVB Interface descriptor
+- Display of the AVB Interface link status (when available)
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)
