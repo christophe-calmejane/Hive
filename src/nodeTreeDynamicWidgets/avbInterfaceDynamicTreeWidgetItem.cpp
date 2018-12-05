@@ -27,7 +27,7 @@
 #include <QListWidgetItem>
 #include <QString>
 
-AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
+AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _avbInterfaceIndex(avbInterfaceIndex)
@@ -47,8 +47,12 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		_flags = new QTreeWidgetItem(this);
 		_flags->setText(0, "Flags");
 
+		_linkStatus = new QTreeWidgetItem(this);
+		_linkStatus->setText(0, "Link State");
+
 		// Update info right now
 		updateAvbInfo(dynamicModel->avbInfo);
+		updateLinkStatus(linkStatus);
 
 		// Listen for AvbInfoChanged
 		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInfoChanged, this,
@@ -57,6 +61,15 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
 				{
 					updateAvbInfo(info);
+				}
+			});
+		// Listen for avbInterfaceLinkStatusChanged
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
+			{
+				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
+				{
+					updateLinkStatus(linkStatus);
 				}
 			});
 	}
@@ -91,6 +104,26 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAvbInfo(la::avdecc::entity::model:
 	_gptpDomainNumber->setText(1, QString::number(avbInfo.gptpDomainNumber));
 	_propagationDelay->setText(1, QString("%1 nsec").arg(avbInfo.propagationDelay));
 	_flags->setText(1, avdecc::helper::toHexQString(la::avdecc::to_integral(avbInfo.flags), true, true) + QString(" (") + avdecc::helper::flagsToString(avbInfo.flags) + QString(")"));
+}
+
+void AvbInterfaceDynamicTreeWidgetItem::updateLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
+{
+	switch (linkStatus)
+	{
+		case la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown:
+			_linkStatus->setText(1, "Unknown");
+			break;
+		case la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down:
+			_linkStatus->setText(1, "Down");
+			break;
+		case la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Up:
+			_linkStatus->setText(1, "Up");
+			break;
+		default:
+			_linkStatus->setText(1, "Unknown");
+			AVDECC_ASSERT(false, "Unhandled case");
+			break;
+	}
 }
 
 void AvbInterfaceDynamicTreeWidgetItem::updateAsPath(la::avdecc::entity::model::AsPath const& asPath)
