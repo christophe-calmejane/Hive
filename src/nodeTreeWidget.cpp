@@ -35,6 +35,7 @@
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
 #include "firmwareUploadDialog.hpp"
+#include "aecpCommandComboBox.hpp"
 
 #include <vector>
 #include <utility>
@@ -211,6 +212,19 @@ private:
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
 
+		// Milan Info
+		if (controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto* milanInfoItem = new QTreeWidgetItem(q);
+			milanInfoItem->setText(0, "Milan Info");
+
+			auto const& milanInfo = controlledEntity->getMilanInfo();
+
+			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
+			addTextItem(milanInfoItem, "Features", avdecc::helper::flagsToString(milanInfo.featuresFlags));
+			addTextItem(milanInfoItem, "Certification Version", QString::number(milanInfo.certificationVersion));
+		}
+
 		// Discovery information
 		{
 			createDiscoveryInfo(controlledEntity->getEntity());
@@ -229,7 +243,7 @@ private:
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
 
-			auto* configurationComboBox = new qt::toolkit::ComboBox;
+			auto* configurationComboBox = new AecpCommandComboBox(_controlledEntityID, avdecc::ControllerManager::AecpCommandType::SetConfiguration);
 
 			for (auto const& it : node.configurations)
 			{
@@ -535,7 +549,7 @@ private:
 			auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
 			currentSourceItem->setText(0, "Current Clock Source");
 
-			auto* sourceComboBox = new qt::toolkit::ComboBox;
+			auto* sourceComboBox = new AecpCommandComboBox(_controlledEntityID, avdecc::ControllerManager::AecpCommandType::SetClockSource);
 
 			for (auto const sourceIndex : model->clockSources)
 			{

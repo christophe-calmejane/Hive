@@ -32,6 +32,7 @@ public:
 	enum class Column
 	{
 		EntityLogo,
+		Compatibility,
 		EntityId,
 		Name,
 		Group,
