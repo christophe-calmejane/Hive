@@ -92,6 +92,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		// If index is a cross of 2 redundant streams, only the diagonal is connectable
 		if (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream && talkerRedundantStreamOrder != listenerRedundantStreamOrder)
 		{
+			drawNotApplicable(painter, option.rect);
 			return;
 		}
 
