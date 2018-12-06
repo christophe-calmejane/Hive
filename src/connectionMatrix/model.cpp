@@ -382,8 +382,112 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 			// One non-redundant stream and one redundant node: We want to check if one connection is active or possible (only one should be, a non-redundant device can only be connected with either of the redundant domain pair)
 			else if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::InputStream))
 			{
-				return computeCapabilities(false, ConnectState::FastConnecting, false, false, false);
+				la::avdecc::controller::model::RedundantStreamNode const* redundantStreamNode{ nullptr };
+				la::avdecc::controller::model::StreamNode const* nonRedundantStreamNode{ nullptr };
+				la::avdecc::controller::model::AvbInterfaceNode const* nonRedundantAvbInterfaceNode{ nullptr };
+				la::avdecc::controller::ControlledEntity const* redundantEntity{ nullptr };
+				auto redundantCurrentConfiguration = la::avdecc::entity::model::getInvalidDescriptorIndex();
+
+				// If the talker is the redundant device
+				if (talkerNodeType == Model::NodeType::RedundantOutput)
+				{
+					redundantEntity = talkerEntity.get();
+					redundantCurrentConfiguration = talkerEntityNode.dynamicModel->currentConfiguration;
+					redundantStreamNode = &talkerEntity->getRedundantStreamOutputNode(redundantCurrentConfiguration, talkerRedundantIndex);
+					nonRedundantStreamNode = &listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
+					if (nonRedundantStreamNode->staticModel)
+					{
+						nonRedundantAvbInterfaceNode = &listenerEntity->getAvbInterfaceNode(listenerEntityNode.dynamicModel->currentConfiguration, nonRedundantStreamNode->staticModel->avbInterfaceIndex);
+					}
+				}
+				// It has to be the listener
+				else
+				{
+					redundantEntity = listenerEntity.get();
+					redundantCurrentConfiguration = listenerEntityNode.dynamicModel->currentConfiguration;
+					redundantStreamNode = &listenerEntity->getRedundantStreamInputNode(redundantCurrentConfiguration, listenerRedundantIndex);
+					nonRedundantStreamNode = &talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
+					if (nonRedundantStreamNode->staticModel)
+					{
+						nonRedundantAvbInterfaceNode = &talkerEntity->getAvbInterfaceNode(talkerEntityNode.dynamicModel->currentConfiguration, nonRedundantStreamNode->staticModel->avbInterfaceIndex);
+					}
+				}
+
+				// Try to find if an interface of the redundant device is connected to the same domain that the non-redundant device
+				auto matchingRedundantStreamIndex = la::avdecc::entity::model::StreamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
+				auto nonRedundantGrandmasterID = (nonRedundantAvbInterfaceNode && nonRedundantAvbInterfaceNode->dynamicModel) ? nonRedundantAvbInterfaceNode->dynamicModel->avbInfo.gptpGrandmasterID : la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
+
+				for (auto const& redundantStreamKV : redundantStreamNode->redundantStreams)
+				{
+					auto const* const redundantStreamNode = redundantStreamKV.second;
+
+					if (redundantStreamNode->staticModel)
+					{
+						auto const& redundantAvbInterfaceNode = redundantEntity->getAvbInterfaceNode(redundantCurrentConfiguration, redundantStreamNode->staticModel->avbInterfaceIndex);
+						if (redundantAvbInterfaceNode.dynamicModel && redundantAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID == nonRedundantGrandmasterID)
+						{
+							matchingRedundantStreamIndex = redundantStreamKV.first;
+							break;
+						}
+					}
+				}
+
+				auto areMatchingDomainsConnected = false;
+				auto areMatchingDomainsFastConnecting = false;
+				auto isFormatCompatible = true;
+
+				// Found a matching domain
+				if (matchingRedundantStreamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())
+				{
+					// Get format compatibility and connection state
+					if (talkerNodeType == Model::NodeType::RedundantOutput)
+					{
+						auto const& talkerStreamNode = redundantEntity->getStreamOutputNode(redundantCurrentConfiguration, matchingRedundantStreamIndex);
+
+						areMatchingDomainsConnected = avdecc::helper::isStreamConnected(talkerEntityID, &talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+						areMatchingDomainsFastConnecting = avdecc::helper::isStreamFastConnecting(talkerEntityID, &talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+						isFormatCompatible = computeFormatCompatible(talkerStreamNode, *static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+					}
+					else
+					{
+						auto const& listenerStreamNode = redundantEntity->getStreamInputNode(redundantCurrentConfiguration, matchingRedundantStreamIndex);
+
+						areMatchingDomainsConnected = avdecc::helper::isStreamConnected(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), &listenerStreamNode);
+						areMatchingDomainsFastConnecting = avdecc::helper::isStreamFastConnecting(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), &listenerStreamNode);
+						isFormatCompatible = computeFormatCompatible(*static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), listenerStreamNode);
+					}
+				}
+
+				auto areConnected = areMatchingDomainsConnected;
+				auto fastConnecting = areMatchingDomainsFastConnecting;
+				// Always check for all connection
+				for (auto const& redundantStreamKV : redundantStreamNode->redundantStreams)
+				{
+					if (talkerNodeType == Model::NodeType::RedundantOutput)
+					{
+						auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(redundantStreamKV.second);
+
+						areConnected |= avdecc::helper::isStreamConnected(talkerEntityID, talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+						fastConnecting |= avdecc::helper::isStreamFastConnecting(talkerEntityID, talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+					}
+					else
+					{
+						auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(redundantStreamKV.second);
+
+						areConnected |= avdecc::helper::isStreamConnected(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), listenerStreamNode);
+						fastConnecting |= avdecc::helper::isStreamFastConnecting(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), listenerStreamNode);
+					}
+				}
+
+				// Get connected state
+				auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
+
+				// Set domain as compatible is there is a valid matching domain AND either no connection at all OR matching domain connection
+				auto const isDomainCompatible = (matchingRedundantStreamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex()) && (connectState == ConnectState::NotConnected || areMatchingDomainsConnected || areMatchingDomainsFastConnecting);
+
+				return computeCapabilities(false, connectState, areConnected, isFormatCompatible, isDomainCompatible);
 			}
+
 			// All other cases: There is only one connection possibility
 			else
 			{
@@ -392,6 +496,7 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 				{
 					return Model::ConnectionCapabilities::None;
 				}
+
 				la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
 				la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
 

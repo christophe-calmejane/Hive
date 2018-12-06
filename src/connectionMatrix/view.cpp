@@ -134,7 +134,7 @@ void View::onClicked(QModelIndex const& index)
 		auto talkerID = talkerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 		auto listenerID = listenerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 
-		// Simple Stream or Single Stream of a redundant pair
+		// Simple Stream or Single Stream of a redundant pair: connect the stream
 		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
@@ -155,7 +155,13 @@ void View::onClicked(QModelIndex const& index)
 			}
 		}
 
-		// Both redundant nodes
+		// One redundant node and one redundant stream: connect the only possible stream (diagonal)
+		else if ((talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInputStream))
+		{
+			LOG_HIVE_INFO("TODO: Connect the only possible stream (the one in diagonal)");
+		}
+
+		// Both redundant nodes: connect both streams
 		else if (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
@@ -211,6 +217,34 @@ void View::onClicked(QModelIndex const& index)
 					++listenerIt;
 				}
 			}
+		}
+
+		// One non-redundant stream and one redundant stream: connect the stream
+		else if ((talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
+		{
+			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
+
+			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			{
+				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+
+				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				{
+					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+				}
+				else
+				{
+					manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+				}
+			}
+		}
+
+		// One non-redundant stream and one redundant node: connect the stream
+		else if ((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::RedundantInput))
+		{
+			LOG_HIVE_INFO("TODO: Connect the non-redundant stream to the redundant stream on the same domain.");
+			// Print a warning if no domain matches
 		}
 	}
 	catch (...)
