@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Device details dialog for easy access to basic device and device channel configuration
 - Support for end-to-end channel connection determination
+- Support for Locking/Unlocking an entity
+- Detection and display of Milan compatible devices
+- Display of AS Path in AVB Interface descriptor
+- Display of the AVB Interface link status (when available)
+
+### Changed
+- Icon when an entity is acquired by Hive (changed color from orange to green)
+
+### Fixed
+- Upload firmware progression always set to 100% upon successfull completion
+- Connection matrix refresh issues
+- Possible crash if a toxic entity is on the network
+- Exclusive Access not refreshed in Entity Descriptor information
+- [Entity Model Inspector focus lost when a new entity is detected](https://github.com/christophe-calmejane/Hive/issues/19)
+- [[macOS] Forcing light mode until full dark mode is supported by Qt](https://github.com/christophe-calmejane/Hive/issues/39)
+- [Restoring previous ComboBox value if the command failed (Configuration/SamplingRate/ClockSource)](https://github.com/christophe-calmejane/Hive/issues/18)
 
 ## [1.0.8] - 2018-10-30
 ### Fixed

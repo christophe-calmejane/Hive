@@ -8,5 +8,9 @@
         <file>locked_by_other.png</file>
         <file>save.png</file>
         <file>trash.png</file>
+        <file>milan.png</file>
+        <file>ieee.png</file>
+        <file>not_compliant.png</file>
+        <file>toxic.png</file>
     </qresource>
 </RCC>

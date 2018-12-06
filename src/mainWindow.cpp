@@ -322,7 +322,6 @@ void MainWindow::connectSignals()
 							releaseAction->setEnabled(isAcquired);
 						}
 					}
-					
 				}
 				menu.addSeparator();
 				{
