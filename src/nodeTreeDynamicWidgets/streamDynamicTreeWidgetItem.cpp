@@ -93,6 +93,24 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		_msrpFailureBridgeID = new QTreeWidgetItem(this);
 		_msrpFailureBridgeID->setText(0, "MSRP Failure Bridge ID");
 
+		if (dynamicModel->streamInfo.streamInfoFlagsEx.has_value())
+		{
+			_streamFlagsEx = new QTreeWidgetItem(this);
+			_streamFlagsEx->setText(0, "Stream Flags Ex");
+		}
+
+		if (dynamicModel->streamInfo.probingStatus.has_value())
+		{
+			_probingStatus = new QTreeWidgetItem(this);
+			_probingStatus->setText(0, "Probing Status");
+		}
+
+		if (dynamicModel->streamInfo.acmpStatus.has_value())
+		{
+			_acmpStatus = new QTreeWidgetItem(this);
+			_acmpStatus->setText(0, "Acmp Status");
+		}
+
 		// Update info right now
 		updateStreamInfo(dynamicModel->streamInfo);
 
@@ -163,6 +181,40 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 	_msrpAccumulatedLatency->setText(1, QString::number(streamInfo.msrpAccumulatedLatency));
 	_msrpFailureCode->setText(1, QString::number(streamInfo.msrpFailureCode));
 	_msrpFailureBridgeID->setText(1, avdecc::helper::toHexQString(streamInfo.msrpFailureBridgeID, true, true));
+	// Milan extension information
+	if (_streamFlagsEx)
+	{
+		if (streamInfo.streamInfoFlagsEx.has_value())
+		{
+			_streamFlagsEx->setText(1, avdecc::helper::flagsToString(*streamInfo.streamInfoFlagsEx));
+		}
+		else
+		{
+			_streamFlagsEx->setText(1, "No Value");
+		}
+	}
+	if (_probingStatus)
+	{
+		if (streamInfo.probingStatus.has_value())
+		{
+			_probingStatus->setText(1, avdecc::helper::probingStatusToString(*streamInfo.probingStatus));
+		}
+		else
+		{
+			_probingStatus->setText(1, "No Value");
+		}
+	}
+	if (_acmpStatus)
+	{
+		if (streamInfo.acmpStatus.has_value())
+		{
+			_acmpStatus->setText(1, avdecc::helper::toUpperCamelCase(static_cast<std::string>(*streamInfo.acmpStatus)));
+		}
+		else
+		{
+			_acmpStatus->setText(1, "No Value");
+		}
+	}
 }
 
 void StreamDynamicTreeWidgetItem::updateConnections(la::avdecc::controller::model::StreamConnections const& connections)

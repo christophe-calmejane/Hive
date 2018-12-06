@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Display of the AVB Interface _link status_ (when available)
 - Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
 - Possibility to connect a non-redundant stream to a redundant one (one of the pair)
+- Milan GetStreamInfo extended information
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)

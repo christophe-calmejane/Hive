@@ -19,6 +19,7 @@
 
 #include "helper.hpp"
 #include <la/avdecc/utils.hpp>
+#include <cctype>
 
 namespace avdecc
 {
@@ -112,7 +113,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 	return {};
 }
 
-QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType)
+QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept
 {
 	switch (descriptorType)
 	{
@@ -200,7 +201,7 @@ QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& 
 	}
 }
 
-QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState)
+QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState) noexcept
 {
 	switch (acquireState)
 	{
@@ -220,7 +221,7 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 	}
 }
 
-QString lockStateToString(la::avdecc::controller::model::LockState const& lockState)
+QString lockStateToString(la::avdecc::controller::model::LockState const& lockState) noexcept
 {
 	switch (lockState)
 	{
@@ -240,7 +241,7 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 	}
 }
 
-QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate)
+QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate) noexcept
 {
 	switch (samplingRate)
 	{
@@ -273,7 +274,7 @@ QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::Sampli
 	}
 }
 
-QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format)
+QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format) noexcept
 {
 	QString fmtStr;
 
@@ -354,21 +355,21 @@ QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& 
 	return fmtStr;
 }
 
-QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const& node)
+QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const& node) noexcept
 {
 	auto const* const descriptor = node.staticModel;
 
 	return clockSourceTypeToString(descriptor->clockSourceType) + ", " + descriptorTypeToString(descriptor->clockSourceLocationType) + ":" + QString::number(descriptor->clockSourceLocationIndex);
 }
 
-inline void concatenateFlags(QString& flags, QString const& flag)
+inline void concatenateFlags(QString& flags, QString const& flag) noexcept
 {
 	if (!flags.isEmpty())
 		flags += " | ";
 	flags += flag;
 }
 
-QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags)
+QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcept
 {
 	QString str;
 
@@ -385,7 +386,7 @@ QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags)
 	return str;
 }
 
-QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags)
+QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags) noexcept
 {
 	QString str;
 
@@ -402,7 +403,7 @@ QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags)
 	return str;
 }
 
-QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags)
+QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept
 {
 	QString str;
 
@@ -417,7 +418,7 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags)
 	return str;
 }
 
-QString flagsToString(la::avdecc::entity::PortFlags const flags)
+QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept
 {
 	QString str;
 
@@ -434,7 +435,7 @@ QString flagsToString(la::avdecc::entity::PortFlags const flags)
 	return str;
 }
 
-QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags)
+QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 {
 	QString str;
 
@@ -456,7 +457,19 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags)
 	return str;
 }
 
-QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags)
+QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcept
+{
+	QString str;
+
+	if (la::avdecc::hasFlag(flags, la::avdecc::entity::StreamInfoFlagsEx::Registering))
+		concatenateFlags(str, "Registering");
+
+	if (str.isEmpty())
+		str = "None";
+	return str;
+}
+
+QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags) noexcept
 {
 	QString str;
 
@@ -468,8 +481,25 @@ QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags)
 	return str;
 }
 
+QString probingStatusToString(la::avdecc::entity::model::ProbingStatus const status) noexcept
+{
+	switch (status)
+	{
+		case la::avdecc::entity::model::ProbingStatus::Disabled:
+			return "Disabled";
+		case la::avdecc::entity::model::ProbingStatus::Passive:
+			return "Passive";
+		case la::avdecc::entity::model::ProbingStatus::Active:
+			return "Active";
+		case la::avdecc::entity::model::ProbingStatus::Completed:
+			return "Completed";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
 
-QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps)
+QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) noexcept
 {
 	QString str;
 
@@ -505,7 +535,7 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps)
 	return str;
 }
 
-QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps)
+QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps) noexcept
 {
 	QString str;
 
@@ -531,7 +561,7 @@ QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps)
 	return str;
 }
 
-QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps)
+QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps) noexcept
 {
 	QString str;
 
@@ -557,7 +587,7 @@ QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps
 	return str;
 }
 
-QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps)
+QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps) noexcept
 {
 	QString str;
 
@@ -569,7 +599,7 @@ QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const ca
 	return str;
 }
 
-QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type)
+QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type) noexcept
 {
 	switch (type)
 	{
@@ -587,7 +617,7 @@ QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const
 	return "Unknown";
 }
 
-QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format)
+QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format) noexcept
 {
 	switch (format)
 	{
@@ -605,7 +635,7 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 	}
 }
 
-QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type)
+QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept
 {
 	switch (type)
 	{
@@ -645,7 +675,7 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 	}
 }
 
-QString loggerLayerToString(la::avdecc::logger::Layer const layer)
+QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept
 {
 	switch (layer)
 	{
@@ -671,7 +701,7 @@ QString loggerLayerToString(la::avdecc::logger::Layer const layer)
 	}
 }
 
-QString loggerLevelToString(la::avdecc::logger::Level const& level)
+QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept
 {
 	switch (level)
 	{
@@ -691,6 +721,33 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level)
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";
 	}
+}
+
+QString toUpperCamelCase(std::string const& text) noexcept
+{
+#pragma message("TODO: Use a regex, if possible")
+	auto output = std::string{};
+
+	auto shouldUpperCase = true;
+	for (auto const c : text)
+	{
+		if (c == '_')
+		{
+			output.push_back(' ');
+			shouldUpperCase = true;
+		}
+		else if (shouldUpperCase)
+		{
+			output.push_back(std::toupper(c));
+			shouldUpperCase = false;
+		}
+		else
+		{
+			output.push_back(std::tolower(c));
+		}
+	}
+
+	return QString::fromStdString(output);
 }
 
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept

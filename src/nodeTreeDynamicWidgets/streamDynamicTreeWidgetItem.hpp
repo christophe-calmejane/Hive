@@ -55,6 +55,9 @@ private:
 	QTreeWidgetItem* _msrpAccumulatedLatency{ nullptr };
 	QTreeWidgetItem* _msrpFailureCode{ nullptr };
 	QTreeWidgetItem* _msrpFailureBridgeID{ nullptr };
+	QTreeWidgetItem* _streamFlagsEx{ nullptr };
+	QTreeWidgetItem* _probingStatus{ nullptr };
+	QTreeWidgetItem* _acmpStatus{ nullptr };
 
 	// Connections
 	QListWidget* _connections{ nullptr };
