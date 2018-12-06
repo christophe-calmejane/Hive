@@ -104,7 +104,8 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		}
 
 		auto const isRedundantSummary = talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput;
-		auto const isRedundantStream = !(isRedundantSummary || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
+		// Draw redundant symbol when both nodes are redundant streams, or one is redundant stream and the other is redundant node
+		auto const isRedundantSymbol = (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream) || (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInputStream) || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInput);
 
 		// Connected
 		if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::Connected))
@@ -117,7 +118,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 				}
 				else
 				{
-					drawWrongDomainConnectedStream(painter, option.rect, isRedundantStream);
+					drawWrongDomainConnectedStream(painter, option.rect, isRedundantSymbol);
 				}
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongFormat))
@@ -128,17 +129,17 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 				}
 				else
 				{
-					drawWrongFormatConnectedStream(painter, option.rect, isRedundantStream);
+					drawWrongFormatConnectedStream(painter, option.rect, isRedundantSymbol);
 				}
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::InterfaceDown))
 			{
 				// Interface down might not be an error, so don't use drawErrorConnectedRedundantNode even if isRedundantSummary is true
-				drawConnectedInterfaceDownStream(painter, option.rect, isRedundantStream);
+				drawConnectedInterfaceDownStream(painter, option.rect, isRedundantSymbol);
 			}
 			else
 			{
-				drawConnectedStream(painter, option.rect, isRedundantStream);
+				drawConnectedStream(painter, option.rect, isRedundantSymbol);
 			}
 		}
 		// Fast connecting
@@ -146,15 +147,15 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		{
 			if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongDomain))
 			{
-				drawWrongDomainFastConnectingStream(painter, option.rect, isRedundantStream);
+				drawWrongDomainFastConnectingStream(painter, option.rect, isRedundantSymbol);
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongFormat))
 			{
-				drawWrongFormatFastConnectingStream(painter, option.rect, isRedundantStream);
+				drawWrongFormatFastConnectingStream(painter, option.rect, isRedundantSymbol);
 			}
 			else
 			{
-				drawFastConnectingStream(painter, option.rect, isRedundantStream);
+				drawFastConnectingStream(painter, option.rect, isRedundantSymbol);
 			}
 		}
 		// Partially connected
@@ -174,7 +175,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 				}
 				else
 				{
-					drawWrongDomainNotConnectedStream(painter, option.rect, isRedundantStream);
+					drawWrongDomainNotConnectedStream(painter, option.rect, isRedundantSymbol);
 				}
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::WrongFormat))
@@ -185,17 +186,17 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 				}
 				else
 				{
-					drawWrongFormatNotConnectedStream(painter, option.rect, isRedundantStream);
+					drawWrongFormatNotConnectedStream(painter, option.rect, isRedundantSymbol);
 				}
 			}
 			else if (la::avdecc::hasFlag(capabilities, Model::ConnectionCapabilities::InterfaceDown))
 			{
 				// Interface down might not be an error, so don't use drawErrorNotConnectedRedundantNode even if isRedundantSummary is true
-				drawNotConnectedInterfaceDownStream(painter, option.rect, isRedundantStream);
+				drawNotConnectedInterfaceDownStream(painter, option.rect, isRedundantSymbol);
 			}
 			else
 			{
-				drawNotConnectedStream(painter, option.rect, isRedundantStream);
+				drawNotConnectedStream(painter, option.rect, isRedundantSymbol);
 			}
 		}
 	}
