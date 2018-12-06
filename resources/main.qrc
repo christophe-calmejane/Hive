@@ -11,6 +11,6 @@
         <file>milan.png</file>
         <file>ieee.png</file>
         <file>not_compliant.png</file>
-        <file>toxic.png</file>
+        <file>misbehaving.png</file>
     </qresource>
 </RCC>

@@ -76,7 +76,7 @@ private:
 	Entities _entities{};
 
 	std::array<QImage, 4> _compatibilityImages{
-		{ QImage{ ":/not_compliant.png" }, QImage{ ":/ieee.png" }, QImage{ ":/milan.png" }, QImage{ ":/toxic.png" } },
+		{ QImage{ ":/not_compliant.png" }, QImage{ ":/ieee.png" }, QImage{ ":/milan.png" }, QImage{ ":/misbehaving.png" } },
 	};
 	std::array<QImage, 3> _acquireStateImages{
 		{ QImage{ ":/unlocked.png" }, QImage{ ":/locked.png" }, QImage{ ":/locked_by_other.png" } },
@@ -221,7 +221,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			case Qt::UserRole:
 			{
 				auto const flags = controlledEntity->getCompatibilityFlags();
-				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Toxic))
+				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
 				{
 					return _compatibilityImages[3];
 				}
@@ -241,7 +241,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			case Qt::ToolTipRole:
 			{
 				auto const flags = controlledEntity->getCompatibilityFlags();
-				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Toxic))
+				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
 				{
 					return "Entity is sending incoherent values that can cause undefined behavior";
 				}
