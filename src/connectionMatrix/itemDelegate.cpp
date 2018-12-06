@@ -89,13 +89,6 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 			std::swap(talkerRedundantStreamOrder, listenerRedundantStreamOrder);
 		}
 
-		// If index is a cross of 2 redundant streams, only the diagonal is connectable
-		if (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream && talkerRedundantStreamOrder != listenerRedundantStreamOrder)
-		{
-			drawNotApplicable(painter, option.rect);
-			return;
-		}
-
 		auto const capabilities = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 		if (capabilities == Model::ConnectionCapabilities::None)
 		{

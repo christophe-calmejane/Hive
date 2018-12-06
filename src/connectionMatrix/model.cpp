@@ -344,6 +344,7 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 				// TODO
 				return computeCapabilities(false, ConnectState::NotConnected, false, false, false);
 			}
+
 			// Both redundant nodes: we want to differentiate full redundant connection (both pairs connected) from partial one (only one of the pair connected)
 			else if (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
 			{
@@ -377,6 +378,7 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 
 				return computeCapabilities(atLeastOneInterfaceDown, atLeastOneConnected ? ConnectState::Connected : ConnectState::NotConnected, allConnected, allCompatibleFormat, allDomainCompatible);
 			}
+
 			// One non-redundant stream and one redundant node: We want to check if one connection is active or possible (only one should be, a non-redundant device can only be connected with either of the redundant domain pair)
 			else if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::InputStream))
 			{
@@ -385,6 +387,11 @@ Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* ta
 			// All other cases: There is only one connection possibility
 			else
 			{
+				// If index is a cross of 2 redundant streams, only the diagonal is connectable
+				if (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream && talkerRedundantStreamOrder != listenerRedundantStreamOrder)
+				{
+					return Model::ConnectionCapabilities::None;
+				}
 				la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
 				la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
 
@@ -1047,7 +1054,7 @@ public:
 	   - UpdateConnectable: Update the connectable state of the intersection (should only be called once during first computation, the connectable state never changes)
 		 - UpdateConnected: Update the connected status, or the summary if this is a parent node
 		 - UpdateFormat: Update the matching format status, or the summary if this is a parent node
-		 - UpdateGptp: Update the matching gPTP status, or the summary if this is a parent node
+		 - UpdateGptp: Update the matching gPTP status, or the summary if this is a parent node (WARNING: For intersection of redundant and non-redundant, the complete checks has to be done, since format compatibility is not checked if GM is not the same)
 		 - UpdateLinkStatus: Update the link status, or the summary if this is a parent node
 
 	 - Rename ConnectionCapabilitiesRole to IntersectionCapabilitiesRole (better reflect that it's the intersection, not just the connection: might not be connectable)

@@ -134,6 +134,7 @@ void View::onClicked(QModelIndex const& index)
 		auto talkerID = talkerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 		auto listenerID = listenerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 
+		// Simple Stream or Single Stream of a redundant pair
 		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
@@ -153,6 +154,8 @@ void View::onClicked(QModelIndex const& index)
 				}
 			}
 		}
+
+		// Both redundant nodes
 		else if (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
