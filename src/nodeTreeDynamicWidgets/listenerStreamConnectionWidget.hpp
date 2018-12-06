@@ -28,20 +28,18 @@
 #include <QLabel>
 #include <QHBoxLayout>
 
-class StreamConnectionWidget : public QWidget
+class ListenerStreamConnectionWidget : public QWidget
 {
 public:
-	StreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent = nullptr);
-	void updateData();
+	ListenerStreamConnectionWidget(la::avdecc::controller::model::StreamConnectionState const& state, QWidget* parent = nullptr);
 
 private:
-	la::avdecc::entity::model::StreamIdentification const _talkerConnection{};
-	la::avdecc::entity::model::StreamIdentification const _listenerConnection{};
+	void updateData();
+
+	la::avdecc::controller::model::StreamConnectionState _state{};
 
 	QHBoxLayout _layout{ this };
-
 	QLabel _streamConnectionLabel{ this };
 	QLabel _entityNameLabel{ this };
-
 	QPushButton _disconnectButton{ "block", this };
 };

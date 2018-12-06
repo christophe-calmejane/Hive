@@ -6,10 +6,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Support for Locking/Unlocking an entity
-- Detection and display of Milan compatible devices
-- Display of AS Path in AVB Interface descriptor
-- Display of the AVB Interface link status (when available)
+- Support for _Locking/Unlocking_ an entity
+- Detection and display of _Milan compatible_ devices
+- Display of _AS Path_ in AVB Interface descriptor
+- Display of the AVB Interface _link status_ (when available)
+- Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)

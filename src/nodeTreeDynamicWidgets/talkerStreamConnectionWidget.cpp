@@ -17,11 +17,11 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "streamConnectionWidget.hpp"
+#include "talkerStreamConnectionWidget.hpp"
 
 #include <QMenu>
 
-StreamConnectionWidget::StreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent)
+TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent)
 	: QWidget(parent)
 	, _talkerConnection(std::move(talkerConnection))
 	, _listenerConnection(std::move(listenerConnection))
@@ -73,7 +73,7 @@ StreamConnectionWidget::StreamConnectionWidget(la::avdecc::entity::model::Stream
 	// Row context menu
 #pragma message("TODO: Pas a faire ici mais dans la table complete!!")
 	setContextMenuPolicy(Qt::CustomContextMenu);
-	connect(this, &StreamConnectionWidget::customContextMenuRequested, this,
+	connect(this, &TalkerStreamConnectionWidget::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
 			QMenu menu;
@@ -91,7 +91,7 @@ StreamConnectionWidget::StreamConnectionWidget(la::avdecc::entity::model::Stream
 		});
 }
 
-void StreamConnectionWidget::updateData()
+void TalkerStreamConnectionWidget::updateData()
 {
 	auto& manager = avdecc::ControllerManager::getInstance();
 
