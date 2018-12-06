@@ -70,6 +70,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType);
 QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState);
+QString lockStateToString(la::avdecc::controller::model::LockState const& lockState);
 
 QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate);
 QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format);
@@ -80,6 +81,7 @@ QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags);
 QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags);
 QString flagsToString(la::avdecc::entity::PortFlags const flags);
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags);
+QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags);
 
 QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps);
 QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps);
@@ -93,6 +95,8 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer);
 QString loggerLevelToString(la::avdecc::logger::Level const& level);
+
+QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 
 bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
 bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;

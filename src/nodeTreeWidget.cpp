@@ -35,6 +35,7 @@
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
 #include "firmwareUploadDialog.hpp"
+#include "aecpCommandComboBox.hpp"
 
 #include <vector>
 #include <utility>
@@ -166,7 +167,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createAccessItem(&node);
+		createAccessItem(controlledEntity);
 
 		Q_Q(NodeTreeWidget);
 
@@ -190,18 +191,17 @@ private:
 			// Currently, use the getEntity() information, but maybe in the future the controller will have the information in its static/dynamic model
 			{
 				auto const& entity = controlledEntity->getEntity();
-				auto const entityCaps = entity.getEntityCapabilities();
 				auto const talkerCaps = entity.getTalkerCapabilities();
 				auto const listenerCaps = entity.getListenerCapabilities();
 				auto const ctrlCaps = entity.getControllerCapabilities();
 
 				addTextItem(descriptorItem, "Entity Model ID", avdecc::helper::uniqueIdentifierToString(entity.getEntityModelID()));
-				addTextItem(descriptorItem, "Entity Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(entityCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(entityCaps) + QString(")"));
 				addTextItem(descriptorItem, "Talker Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(talkerCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(talkerCaps) + QString(")"));
-				addTextItem(descriptorItem, "Talker Sources", QString::number(entity.getTalkerStreamSources()));
+				addTextItem(descriptorItem, "Talker Max Sources", QString::number(entity.getTalkerStreamSources()));
 				addTextItem(descriptorItem, "Listener Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(listenerCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(listenerCaps) + QString(")"));
-				addTextItem(descriptorItem, "Listener Sinks", QString::number(entity.getListenerStreamSinks()));
+				addTextItem(descriptorItem, "Listener Max Sinks", QString::number(entity.getListenerStreamSinks()));
 				addTextItem(descriptorItem, "Controller Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(ctrlCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(ctrlCaps) + QString(")"));
+				addTextItem(descriptorItem, "Identify Control Index", entity.getIdentifyControlIndex() ? QString::number(*entity.getIdentifyControlIndex()) : QString("Not Set"));
 			}
 
 			addTextItem(descriptorItem, "Vendor Name", controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
@@ -212,10 +212,21 @@ private:
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
 
+		// Milan Info
+		if (controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto* milanInfoItem = new QTreeWidgetItem(q);
+			milanInfoItem->setText(0, "Milan Info");
+
+			auto const& milanInfo = controlledEntity->getMilanInfo();
+
+			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
+			addTextItem(milanInfoItem, "Features", avdecc::helper::flagsToString(milanInfo.featuresFlags));
+			addTextItem(milanInfoItem, "Certification Version", QString::number(milanInfo.certificationVersion));
+		}
+
 		// Discovery information
 		{
-#pragma message("TODO: Iterate over all discovered interfaces and print each info (when https://github.com/L-Acoustics/avdecc/issues/29 fixed)")
-#pragma message("TODO: And listen for changes to dynamically update the info")
 			createDiscoveryInfo(controlledEntity->getEntity());
 		}
 
@@ -224,10 +235,15 @@ private:
 			auto* dynamicItem = new QTreeWidgetItem(q);
 			dynamicItem->setText(0, "Dynamic Info");
 
+			auto const& entity = controlledEntity->getEntity();
+			auto const entityCaps = entity.getEntityCapabilities();
+			addTextItem(dynamicItem, "Entity Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(entityCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(entityCaps) + QString(")"));
+			addTextItem(dynamicItem, "Association ID", entity.getAssociationID() ? avdecc::helper::uniqueIdentifierToString(*entity.getAssociationID()) : QString("Not Set"));
+
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
 
-			auto* configurationComboBox = new qt::toolkit::ComboBox;
+			auto* configurationComboBox = new AecpCommandComboBox(_controlledEntityID, avdecc::ControllerManager::AecpCommandType::SetConfiguration);
 
 			for (auto const& it : node.configurations)
 			{
@@ -533,7 +549,7 @@ private:
 			auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
 			currentSourceItem->setText(0, "Current Clock Source");
 
-			auto* sourceComboBox = new qt::toolkit::ComboBox;
+			auto* sourceComboBox = new AecpCommandComboBox(_controlledEntityID, avdecc::ControllerManager::AecpCommandType::SetClockSource);
 
 			for (auto const sourceIndex : model->clockSources)
 			{
@@ -649,7 +665,7 @@ private:
 		return idItem;
 	}
 
-	QTreeWidgetItem* createAccessItem(la::avdecc::controller::model::EntityModelNode const* node)
+	QTreeWidgetItem* createAccessItem(la::avdecc::controller::ControlledEntity const* const controlledEntity)
 	{
 		Q_Q(NodeTreeWidget);
 
@@ -658,34 +674,60 @@ private:
 
 		auto* acquireStateItem = new QTreeWidgetItem(accessItem);
 		acquireStateItem->setText(0, "Acquire State");
-		acquireStateItem->setText(1, avdecc::helper::acquireStateToString(node->acquireState));
+		acquireStateItem->setText(1, avdecc::helper::acquireStateToString(controlledEntity->getAcquireState()));
+
+		auto* lockStateItem = new QTreeWidgetItem(accessItem);
+		lockStateItem->setText(0, "Lock State");
+		lockStateItem->setText(1, avdecc::helper::lockStateToString(controlledEntity->getLockState()));
+
+		// Listen for changes
+		auto& controllerManager = avdecc::ControllerManager::getInstance();
+		connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, q,
+			[this, acquireStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const /*owningEntity*/)
+			{
+				if (entityID == _controlledEntityID)
+					acquireStateItem->setText(1, avdecc::helper::acquireStateToString(acquireState));
+			});
+		connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, q,
+			[this, lockStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const /*lockingEntity*/)
+			{
+				if (entityID == _controlledEntityID)
+					lockStateItem->setText(1, avdecc::helper::lockStateToString(lockState));
+			});
 
 		return accessItem;
 	}
 
-	QTreeWidgetItem* createDiscoveryInfo(la::avdecc::entity::Entity const& entity)
+	void createDiscoveryInfo(la::avdecc::entity::Entity const& entity)
 	{
+#pragma message("TODO: And listen for changes to dynamically update the info")
+
 		Q_Q(NodeTreeWidget);
 		auto const entityCaps = entity.getEntityCapabilities();
 
-		auto* discoveryItem = new QTreeWidgetItem(q);
-		if (la::avdecc::hasFlag(entityCaps, la::avdecc::entity::EntityCapabilities::AemInterfaceIndexValid))
+		for (auto const& interfaceInfoKV : entity.getInterfacesInformation())
 		{
-			discoveryItem->setText(0, QString("Interface Index %1").arg(entity.getInterfaceIndex()));
-		}
-		else
-		{
-			discoveryItem->setText(0, QString("Interface (Index Not Set)"));
-		}
+			auto const avbInterfaceIndex = interfaceInfoKV.first;
+			auto const& interfaceInfo = interfaceInfoKV.second;
 
-		addTextItem(discoveryItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(entity.getMacAddress(), true));
-		addTextItem(discoveryItem, "Entity Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(entityCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(entityCaps) + QString(")"));
-		addTextItem(discoveryItem, "Grandmaster ID", avdecc::helper::uniqueIdentifierToString(entity.getGptpGrandmasterID()));
-		addTextItem(discoveryItem, "Grandmaster Domain Number", QString::number(entity.getGptpDomainNumber()));
-		addTextItem(discoveryItem, "Association ID", la::avdecc::hasFlag(entityCaps, la::avdecc::entity::EntityCapabilities::AssociationIDValid) ? avdecc::helper::uniqueIdentifierToString(entity.getAssociationID()) : QString("Not Set"));
-		addTextItem(discoveryItem, "Identify Control Index", la::avdecc::hasFlag(entityCaps, la::avdecc::entity::EntityCapabilities::AemIdentifyControlIndexValid) ? QString::number(entity.getIdentifyControlIndex()) : QString("Not Set"));
+			auto* discoveryItem = new QTreeWidgetItem(q);
+			if (avbInterfaceIndex != la::avdecc::entity::Entity::GlobalAvbInterfaceIndex)
+			{
+				discoveryItem->setText(0, QString("Interface Index %1").arg(avbInterfaceIndex));
+			}
+			else
+			{
+				discoveryItem->setText(0, QString("Global Interface (Index Not Set)"));
+			}
 
-		return discoveryItem;
+			addTextItem(discoveryItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(interfaceInfo.macAddress, true));
+			if (interfaceInfo.gptpGrandmasterID)
+			{
+				addTextItem(discoveryItem, "Grandmaster ID", avdecc::helper::uniqueIdentifierToString(*interfaceInfo.gptpGrandmasterID));
+				addTextItem(discoveryItem, "Grandmaster Domain Number", QString::number(*interfaceInfo.gptpDomainNumber));
+			}
+			addTextItem(discoveryItem, "Valid Time (2sec periods)", QString::number(interfaceInfo.validTime));
+		}
 	}
 
 	template<class NodeType>

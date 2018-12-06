@@ -120,15 +120,6 @@ void MainWindow::currentControlledEntityChanged(QModelIndex const& index)
 void MainWindow::registerMetaTypes()
 {
 	//
-	qRegisterMetaType<la::avdecc::entity::model::StreamIndex>("la::avdecc::entity::model::StreamIndex");
-	qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
-	qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
-	qRegisterMetaType<la::avdecc::entity::model::StreamFormat>("la::avdecc::entity::model::StreamFormat");
-	qRegisterMetaType<la::avdecc::entity::model::StreamPortIndex>("la::avdecc::entity::model::StreamPortIndex");
-	qRegisterMetaType<la::avdecc::entity::model::AvdeccFixedString>("la::avdecc::entity::model::AvdeccFixedString");
-	qRegisterMetaType<la::avdecc::entity::model::ConfigurationIndex>("la::avdecc::entity::model::ConfigurationIndex");
-
-	//
 	qRegisterMetaType<la::avdecc::logger::Layer>("la::avdecc::logger::Layer");
 	qRegisterMetaType<la::avdecc::logger::Level>("la::avdecc::logger::Level");
 	qRegisterMetaType<std::string>("std::string");
@@ -181,24 +172,28 @@ void MainWindow::createControllerView()
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
+	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
 	auto* imageItemDelegate{ new ImageItemDelegate };
-	controllerTableView->setItemDelegateForColumn(0, imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(4, imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	int column{ 0 };
-	controllerTableView->setColumnWidth(column++, 40);
-	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 180);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 90);
-	controllerTableView->setColumnWidth(column++, 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), 50);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Name), 180);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Group), 80);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::LockState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
+	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
 }
 
 void MainWindow::populateProtocolComboBox()
@@ -299,28 +294,35 @@ void MainWindow::connectSignals()
 
 				auto* acquireAction{ static_cast<QAction*>(nullptr) };
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
+				auto* lockAction{ static_cast<QAction*>(nullptr) };
+				auto* unlockAction{ static_cast<QAction*>(nullptr) };
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* deviceView{ static_cast<QAction*>(nullptr) };
 
 				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
-					QString acquireText;
-					auto const isAcquired = controlledEntity->isAcquired();
-					auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
+					// Do not propose Acquire if the device is Milan (not supported)
+					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+					{
+						QString acquireText;
+						auto const isAcquired = controlledEntity->isAcquired();
+						auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
 
-					{
-						if (isAcquiredByOther)
-							acquireText = "Try to acquire";
-						else
-							acquireText = "Acquire";
-						acquireAction = menu.addAction(acquireText);
-						acquireAction->setEnabled(!isAcquired);
+						{
+							if (isAcquiredByOther)
+								acquireText = "Try to acquire";
+							else
+								acquireText = "Acquire";
+							acquireAction = menu.addAction(acquireText);
+							acquireAction->setEnabled(!isAcquired);
+						}
+						{
+							releaseAction = menu.addAction("Release");
+							releaseAction->setEnabled(isAcquired);
+						}
 					}
-					{
-						releaseAction = menu.addAction("Release");
-						releaseAction->setEnabled(isAcquired);
-					}
+					
 				}
 				menu.addSeparator();
 				{
@@ -328,7 +330,29 @@ void MainWindow::connectSignals()
 				}
 				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
+					// Lock
+					{
+						QString lockText;
+						auto const isLocked = controlledEntity->isLocked();
+						auto const isLockedByOther = controlledEntity->isLockedByOther();
+
+						{
+							if (isLockedByOther)
+								lockText = "Try to lock";
+							else
+								lockText = "Lock";
+							lockAction = menu.addAction(lockText);
+							lockAction->setEnabled(!isLocked);
+						}
+						{
+							unlockAction = menu.addAction("Unlock");
+							unlockAction->setEnabled(isLocked);
+						}
+					}
+
 					menu.addSeparator();
+
+					// Inspect, Logo, ...
 					{
 						inspect = menu.addAction("Inspect");
 					}
@@ -337,6 +361,7 @@ void MainWindow::connectSignals()
 						getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
 					}
 				}
+
 				menu.addSeparator();
 				menu.addAction("Cancel");
 
@@ -349,6 +374,14 @@ void MainWindow::connectSignals()
 					else if (action == releaseAction)
 					{
 						manager.releaseEntity(entityID);
+					}
+					else if (action == lockAction)
+					{
+						manager.lockEntity(entityID);
+					}
+					else if (action == unlockAction)
+					{
+						manager.unlockEntity(entityID);
 					}
 					else if (action == inspect)
 					{

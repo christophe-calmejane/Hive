@@ -24,32 +24,19 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
 
-#include <QObject>
-#include <QTreeWidgetItem>
 #include <QPushButton>
 #include <QLabel>
 #include <QHBoxLayout>
-#include <QListWidget>
+#include <QString>
 
-class AvbInterfaceDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
+class AsPathWidget : public QWidget
 {
 public:
-	AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
+	AsPathWidget(la::avdecc::UniqueIdentifier const bridgeID, QString const& vendorName, QWidget* parent = nullptr);
 
 private:
-	void updateAvbInfo(la::avdecc::entity::model::AvbInfo const& avbInfo);
-	void updateAsPath(la::avdecc::entity::model::AsPath const& asPath);
+	QHBoxLayout _layout{ this };
 
-	la::avdecc::UniqueIdentifier const _entityID{};
-	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex{ 0u };
-
-	// AvbInfo
-	QTreeWidgetItem* _gptpGrandmasterID{ nullptr };
-	QTreeWidgetItem* _gptpDomainNumber{ nullptr };
-	QTreeWidgetItem* _propagationDelay{ nullptr };
-	QTreeWidgetItem* _flags{ nullptr };
-	//addTextItem(dynamicItem, "Msrp Mappings", node.avbInfo->mappings);
-
-	// AsPath
-	QListWidget* _asPath{ nullptr };
+	QLabel _bridgeIDLabel{ this };
+	QLabel _vendorNameLabel{ this };
 };

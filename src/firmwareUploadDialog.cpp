@@ -128,6 +128,7 @@ FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::D
 					// Succeeded
 					else
 					{
+						widget->setProgress(static_cast<int>(100)); // Force the progress to 100%, we might not have received a progress even with the final value of 100%
 						widget->setText(QString("%1: Complete").arg(entityName));
 						item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Complete));
 					}
@@ -290,7 +291,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 
 		// Query an OperationID to start the upload
 		manager.startUploadMemoryObjectOperation(entityID, descriptorIndex, _firmwareData.size(),
-			[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
+			[this, item, widget, entityName, descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
 			{
 				// Handle the result of startUploadMemoryObjectOperation
 				QMetaObject::invokeMethod(widget,
@@ -349,11 +350,11 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 												// Query an OperationID to store the firmware and reboot
 												auto& manager = avdecc::ControllerManager::getInstance();
 												manager.startStoreAndRebootMemoryObjectOperation(entityID, descriptorIndex,
-													[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
+													[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
 													{
 														// Handle the result of startStoreAndRebootMemoryObjectOperation
 														QMetaObject::invokeMethod(widget,
-															[this, item, widget, status, entityID, descriptorIndex, operationID, entityName]()
+															[this, item, widget, status, entityID, operationID, entityName]()
 															{
 																// Failed to startStoreAndRebootMemoryObjectOperation
 																if (!status)
@@ -400,7 +401,7 @@ void FirmwareUploadDialog::on_abortPushButton_clicked()
 		widget->setText(QString("%1: Aborted").arg(entityName));
 		item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
 		manager.abortOperation(entityID, la::avdecc::entity::model::DescriptorType::MemoryObject, descriptorIndex, operationID,
-			[](la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const /*descriptorType*/, la::avdecc::entity::model::DescriptorIndex const /*descriptorIndex*/, la::avdecc::entity::model::OperationID const /*operationID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
+			[](la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
 			{
 			});
 	}
