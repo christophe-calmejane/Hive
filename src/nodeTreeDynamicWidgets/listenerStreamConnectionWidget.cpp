@@ -20,12 +20,14 @@
 #include "listenerStreamConnectionWidget.hpp"
 
 #include <QMenu>
+#include <QStyle>
 
 ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::controller::model::StreamConnectionState const& state, QWidget* parent)
 	: QWidget(parent)
 	, _state(state)
 {
-	_layout.setContentsMargins(0, 0, 0, 0);
+	auto const margin = style()->pixelMetric(QStyle::PM_FocusFrameHMargin, 0, this) + 1;
+	_layout.setContentsMargins(margin, 0, margin, 0);
 
 	_layout.addWidget(&_streamConnectionLabel, 1);
 	_layout.addWidget(&_entityNameLabel, 2);
