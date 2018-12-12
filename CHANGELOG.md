@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Display of _AS Path_ in AVB Interface descriptor
 - Display of the AVB Interface _link status_ (when available)
 - Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
+- Possibility to connect a non-redundant stream to a redundant one (one of the pair)
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)
+- Changed the colors in the Connection Matrix (see Legend)
 
 ### Fixed
 - Upload firmware progression always set to 100% upon successfull completion
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Entity Model Inspector focus lost when a new entity is detected](https://github.com/christophe-calmejane/Hive/issues/19)
 - [[macOS] Forcing light mode until full dark mode is supported by Qt](https://github.com/christophe-calmejane/Hive/issues/39)
 - [Restoring previous ComboBox value if the command failed (Configuration/SamplingRate/ClockSource)](https://github.com/christophe-calmejane/Hive/issues/18)
+- Incorrect connection established between 2 redundant streams when clicking on a non-connectable box
 
 ## [1.0.8] - 2018-10-30
 ### Fixed

@@ -43,12 +43,13 @@ public:
 	enum class ConnectionCapabilities
 	{
 		None = 0,
-		WrongDomain = 1u << 0,
-		WrongFormat = 1u << 1,
-		Connectable = 1u << 2, /**< Stream connectable (might be connected, or not) */
-		Connected = 1u << 3, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
-		FastConnecting = 1u << 4, /**< Stream is fast connecting (Mutually exclusive with Connected and PartiallyConnected) */
-		PartiallyConnected = 1u << 5, /**< Some, but not all of a redundant streams tuple, are connected (Mutually exclusive with Connected and FastConnecting) */
+		InterfaceDown = 1u << 0, /**< The AVB interface is down (or at least one for the intersection of 2 RedundantNodes) */
+		WrongDomain = 1u << 1, /**< The AVB domains do not match (connection is possible, but stream reservation will fail) */
+		WrongFormat = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener) */
+		Connectable = 1u << 3, /**< Stream connectable (might be connected, or not) */
+		Connected = 1u << 4, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
+		FastConnecting = 1u << 5, /**< Stream is fast connecting (Mutually exclusive with Connected and PartiallyConnected) */
+		PartiallyConnected = 1u << 6, /**< Some, but not all of a redundant streams tuple, are connected (Mutually exclusive with Connected and FastConnecting) */
 	};
 
 	enum ItemDataRole
