@@ -442,9 +442,13 @@ void MainWindow::connectSignals()
 	connect(&updater, &Updater::newVersionAvailable, this,
 		[](QString version, QString downloadURL)
 		{
-			QString message{ "New version (" + version + ") available here " + downloadURL };
+			QString message{ "New version (" + version + ") available.\nDo you want to open the download page?" };
 
-			QMessageBox::information(nullptr, "", message);
+			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
+			if (result == QMessageBox::StandardButton::Open)
+			{
+				QDesktopServices::openUrl(downloadURL);
+			}
 			LOG_HIVE_INFO(message);
 		});
 	connect(&updater, &Updater::checkFailed, this,
