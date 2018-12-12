@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
 - Possibility to connect a non-redundant stream to a redundant one (one of the pair)
 - Milan GetStreamInfo extended information
+- Detection of devices not supporting _Acquire_ and/or _Lock_ commands
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)

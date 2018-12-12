@@ -18,6 +18,7 @@
 */
 
 #include "helper.hpp"
+#include "controllerManager.hpp"
 #include <la/avdecc/utils.hpp>
 #include <cctype>
 
@@ -201,12 +202,14 @@ QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& 
 	}
 }
 
-QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState) noexcept
+QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState, la::avdecc::UniqueIdentifier const& owningController) noexcept
 {
 	switch (acquireState)
 	{
 		case la::avdecc::controller::model::AcquireState::Undefined:
 			return "Undefined";
+		case la::avdecc::controller::model::AcquireState::NotSupported:
+			return "Not Supported";
 		case la::avdecc::controller::model::AcquireState::NotAcquired:
 			return "Not Acquired";
 		case la::avdecc::controller::model::AcquireState::TryAcquire:
@@ -214,19 +217,34 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 		case la::avdecc::controller::model::AcquireState::Acquired:
 			return "Acquired";
 		case la::avdecc::controller::model::AcquireState::AcquiredByOther:
-			return "Acquired By Other";
+		{
+			auto text = QString{ "Acquired by " };
+			auto& controllerManager = avdecc::ControllerManager::getInstance();
+			auto const& controllerEntity = controllerManager.getControlledEntity(owningController);
+			if (controllerEntity)
+			{
+				text += smartEntityName(*controllerEntity);
+			}
+			else
+			{
+				text += uniqueIdentifierToString(owningController);
+			}
+			return text;
+		}
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return {};
 	}
 }
 
-QString lockStateToString(la::avdecc::controller::model::LockState const& lockState) noexcept
+QString lockStateToString(la::avdecc::controller::model::LockState const& lockState, la::avdecc::UniqueIdentifier const& lockingController) noexcept
 {
 	switch (lockState)
 	{
 		case la::avdecc::controller::model::LockState::Undefined:
 			return "Undefined";
+		case la::avdecc::controller::model::LockState::NotSupported:
+			return "Not Supported";
 		case la::avdecc::controller::model::LockState::NotLocked:
 			return "Not Locked";
 		case la::avdecc::controller::model::LockState::TryLock:
@@ -234,7 +252,20 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 		case la::avdecc::controller::model::LockState::Locked:
 			return "Locked";
 		case la::avdecc::controller::model::LockState::LockedByOther:
-			return "Locked By Other";
+		{
+			auto text = QString{ "Locked by " };
+			auto& controllerManager = avdecc::ControllerManager::getInstance();
+			auto const& controllerEntity = controllerManager.getControlledEntity(lockingController);
+			if (controllerEntity)
+			{
+				text += smartEntityName(*controllerEntity);
+			}
+			else
+			{
+				text += uniqueIdentifierToString(lockingController);
+			}
+			return text;
+		}
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return {};

@@ -679,32 +679,43 @@ private:
 	QTreeWidgetItem* createAccessItem(la::avdecc::controller::ControlledEntity const* const controlledEntity)
 	{
 		Q_Q(NodeTreeWidget);
+		auto& controllerManager = avdecc::ControllerManager::getInstance();
 
 		auto* accessItem = new QTreeWidgetItem(q);
 		accessItem->setText(0, "Exclusive Access");
 
-		auto* acquireStateItem = new QTreeWidgetItem(accessItem);
-		acquireStateItem->setText(0, "Acquire State");
-		acquireStateItem->setText(1, avdecc::helper::acquireStateToString(controlledEntity->getAcquireState()));
-
-		auto* lockStateItem = new QTreeWidgetItem(accessItem);
-		lockStateItem->setText(0, "Lock State");
-		lockStateItem->setText(1, avdecc::helper::lockStateToString(controlledEntity->getLockState()));
-
-		// Listen for changes
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
-		connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, q,
-			[this, acquireStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const /*owningEntity*/)
+		// Acquire State
+		if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto* acquireLabel = addChangingTextItem(accessItem, "Acquire State");
+			auto const updateAcquireLabel = [this, acquireLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity)
 			{
 				if (entityID == _controlledEntityID)
-					acquireStateItem->setText(1, avdecc::helper::acquireStateToString(acquireState));
-			});
-		connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, q,
-			[this, lockStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const /*lockingEntity*/)
+					acquireLabel->setText(avdecc::helper::acquireStateToString(acquireState, owningEntity));
+			};
+
+			// Update text now
+			updateAcquireLabel(_controlledEntityID, controlledEntity->getAcquireState(), controlledEntity->getOwningControllerID());
+
+			// Listen for changes
+			connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, acquireLabel, updateAcquireLabel);
+		}
+
+		// Lock State
+		{
+			auto* lockLabel = addChangingTextItem(accessItem, "Lock State");
+			auto const updateLockLabel = [this, lockLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity)
 			{
 				if (entityID == _controlledEntityID)
-					lockStateItem->setText(1, avdecc::helper::lockStateToString(lockState));
-			});
+					lockLabel->setText(avdecc::helper::lockStateToString(lockState, lockingEntity));
+			};
+
+			// Update text now
+			updateLockLabel(_controlledEntityID, controlledEntity->getLockState(), controlledEntity->getLockingControllerID());
+
+			// Listen for changes
+			connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, lockLabel, updateLockLabel);
+		}
 
 		return accessItem;
 	}
@@ -786,6 +797,20 @@ private:
 	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, unsigned long const& itemValue)
 	{
 		addTextItem(treeWidgetItem, std::move(itemName), QVariant::fromValue(itemValue));
+	}
+
+	/** A changing (readonly) text item */
+	QLabel* addChangingTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName)
+	{
+		Q_Q(NodeTreeWidget);
+
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+
+		auto* label = new QLabel;
+		q->setItemWidget(item, 1, label);
+
+		return label;
 	}
 
 	/** An editable text entry item */
