@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Restoring previous ComboBox value if the command failed (Configuration/SamplingRate/ClockSource)](https://github.com/christophe-calmejane/Hive/issues/18)
 - Incorrect connection established between 2 redundant streams when clicking on a non-connectable box
 - Automatically selecting the Entity descriptor when inspecting a new entity ([for now](https://github.com/christophe-calmejane/Hive/issues/22))
+- Partial deadlock (in background tasks) when editing channel mappings, sometimes leading to the impossibility to apply the mappings
 
 ## [1.0.8] - 2018-10-30
 ### Fixed

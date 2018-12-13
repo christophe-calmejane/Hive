@@ -467,6 +467,9 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 			{
 				mappingMatrix::MappingMatrixDialog dialog(outputs, inputs, connections);
 
+				// Release the controlled entity before starting a long operation (dialog.exec)
+				controlledEntity.reset();
+
 				if (dialog.exec() == QDialog::Accepted)
 				{
 					if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)

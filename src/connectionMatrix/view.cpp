@@ -406,6 +406,9 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 			menu.addSeparator();
 			menu.addAction("Cancel");
 
+			// Release the controlled entity before starting a long operation (menu.exec)
+			controlledEntity.reset();
+
 			if (auto* action = menu.exec(header->mapToGlobal(pos)))
 			{
 				if (action == startStreamingAction)
