@@ -115,12 +115,12 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 			{
 				if (streamIndex == streamNode->descriptorIndex)
 				{
-					// Found the index, nothing to do
+					// Found the index, this is the primary stream (because only primary streams are supposed to be in the streamNodes variable), we need to add this connection
 					break;
 				}
 				else if (streamNode->isRedundant)
 				{
-					// Index not found and we have a redundant stream, check all association if we have it
+					// The stream is a redundant one and not the primary stream, validate the redundant pair index
 					for (auto const redundantIndex : streamNode->staticModel->redundantStreams)
 					{
 						if (streamIndex == redundantIndex)
