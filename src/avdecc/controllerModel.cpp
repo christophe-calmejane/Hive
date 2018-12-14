@@ -83,8 +83,14 @@ private:
 	using Entities = std::vector<la::avdecc::UniqueIdentifier>;
 	Entities _entities{};
 
-	std::array<QImage, 4> _compatibilityImages{
-		{ QImage{ ":/not_compliant.png" }, QImage{ ":/ieee.png" }, QImage{ ":/milan.png" }, QImage{ ":/misbehaving.png" } },
+	std::array<QImage, 5> _compatibilityImages{
+		{
+			QImage{ ":/not_compliant.png" },
+			QImage{ ":/ieee.png" },
+			QImage{ ":/milan.png" },
+			QImage{ ":/misbehaving.png" },
+			QImage{ ":/milan_redundant.png" },
+		},
 	};
 	std::unordered_map<ExclusiveAccessState, QImage> _excusiveAccessStateImages{
 		{ ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
@@ -235,6 +241,17 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				}
 				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 				{
+					try
+					{
+						auto const& milanInfo = controlledEntity->getMilanInfo();
+						if ((milanInfo.featuresFlags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
+						{
+							return _compatibilityImages[4];
+						}
+					}
+					catch (...)
+					{
+					}
 					return _compatibilityImages[2];
 				}
 				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
