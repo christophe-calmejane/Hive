@@ -38,8 +38,11 @@ public:
 
 private:
 	void editMappingsButtonClicked();
+	void clearMappingsButtonClicked();
+	void updateMappings(la::avdecc::entity::model::AudioMappings const& mappings);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamPortType{ la::avdecc::entity::model::DescriptorType::Entity };
 	la::avdecc::entity::model::StreamPortIndex const _streamPortIndex{ 0u };
+	QListWidget* _mappingsList{ nullptr };
 };

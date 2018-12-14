@@ -475,7 +475,8 @@ private:
 		}
 
 		// Dynamic model
-		if (node.staticModel->hasDynamicAudioMap)
+		auto const hasAtLeastOneDynamicInfo = node.staticModel->hasDynamicAudioMap;
+		if (hasAtLeastOneDynamicInfo)
 		{
 			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");

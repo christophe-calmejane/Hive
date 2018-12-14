@@ -109,8 +109,9 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 		auto streamIndex{ mapping.streamIndex };
 
 #ifdef ENABLE_AVDECC_FEATURE_REDUNDANCY
-		// In case of redundancy, we must check the streamIndex in the mapping is the one matching the primary stream (or convert it)
+		// In case of redundancy, we must check the streamIndex in the mapping is the one matching the primary stream
 		{
+			auto shouldIgnoreMapping = false;
 			for (auto const* streamNode : streamNodes)
 			{
 				if (streamIndex == streamNode->descriptorIndex)
@@ -125,12 +126,22 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 					{
 						if (streamIndex == redundantIndex)
 						{
-							// Replace mapping's streamIndex with this stream's index (streamNodes only contains single and primary streams)
-							streamIndex = streamNode->descriptorIndex;
+							// This is the secondary connection for the redundant pair, ignore this mapping
+							shouldIgnoreMapping = true;
 							break;
 						}
 					}
+					if (shouldIgnoreMapping)
+					{
+						break;
+					}
 				}
+			}
+
+			// Found the secondary connection for the redundant pair, ignore this mapping
+			if (shouldIgnoreMapping)
+			{
+				continue;
 			}
 		}
 #endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
@@ -338,10 +349,75 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 	{
 		// Create fields
 		auto* editMappings = new QTreeWidgetItem(this);
-		editMappings->setText(0, "Edit dynamic mapping");
+		editMappings->setText(0, "Edit Dynamic Mappings");
 		auto* editMappingsButton = new QPushButton("Edit");
 		connect(editMappingsButton, &QPushButton::clicked, this, &StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked);
 		parent->setItemWidget(editMappings, 1, editMappingsButton);
+
+		auto* mappingsItem = new QTreeWidgetItem(this);
+		mappingsItem->setText(0, "Dynamic Mappings");
+		_mappingsList = new QListWidget;
+		parent->setItemWidget(mappingsItem, 1, _mappingsList);
+		_mappingsList->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
+		try
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+			if (controlledEntity)
+			{
+				auto& entity = *controlledEntity;
+				auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
+
+				auto const& entityNode = entity.getEntityNode();
+				if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+				{
+					streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+				}
+				else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+				{
+					streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+				}
+				// Update info right now
+				updateMappings(streamPortNode->dynamicModel->dynamicAudioMap);
+			}
+		}
+		catch (...)
+		{
+		}
+
+		auto* clearMappings = new QTreeWidgetItem(this);
+		clearMappings->setText(0, "Clear All Dynamic Mappings");
+		auto* clearMappingsButton = new QPushButton("Clear");
+		connect(clearMappingsButton, &QPushButton::clicked, this, &StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked);
+		parent->setItemWidget(clearMappings, 1, clearMappingsButton);
+
+		// Listen for streamPortAudioMappingsChanged
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamPortAudioMappingsChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
+			{
+				if (entityID == _entityID && descriptorType == _streamPortType && streamPortIndex == _streamPortIndex)
+				{
+					auto& manager = avdecc::ControllerManager::getInstance();
+					auto controlledEntity = manager.getControlledEntity(entityID);
+					if (controlledEntity)
+					{
+						auto& entity = *controlledEntity;
+						auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
+
+						auto const& entityNode = entity.getEntityNode();
+						if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+						{
+							streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+						}
+						else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+						{
+							streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+						}
+						// Update mappings
+						updateMappings(streamPortNode->dynamicModel->dynamicAudioMap);
+					}
+				}
+			});
 
 		// TODO: Listen for entity offline events and close the popup window
 	}
@@ -487,4 +563,49 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 	catch (...)
 	{
 	}
+}
+
+void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
+{
+	// TODO: Avoir access au controller pour faire un acquire de l'entite (sans utiliser les callbacks du ControllerManager, car sinon ca lance une popup globale si le acquire echoue)
+	// Si acquire echoue, alors on indique un message comme quoi il est necessaire de pouvoir acquire l'entite afin de changer le mapping sans etre derange
+	// Si acquire reussi, alors on peut ouvrir la fenetre et faire le mapping
+	// TODO: Plus tard, il faudra faire un Lock, au lieu de Acquire (ou mieux faire une fonction "GetExclusiveToken" qui acquire ou lock en fonction du type d'entite, une fois le token relache et si c'est le dernier, ca release l'entite). Peut etre le mettre dans la lib controller comme ca on gere directement le resend du lock !!
+	try
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(_entityID);
+		if (controlledEntity)
+		{
+			auto& entity = *controlledEntity;
+			auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
+
+			auto const& entityNode = entity.getEntityNode();
+			if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+			{
+				streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, _streamPortIndex);
+				manager.removeStreamPortInputAudioMappings(_entityID, _streamPortIndex, streamPortNode->dynamicModel->dynamicAudioMap);
+			}
+			else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+			{
+				streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, _streamPortIndex);
+				manager.removeStreamPortOutputAudioMappings(_entityID, _streamPortIndex, streamPortNode->dynamicModel->dynamicAudioMap);
+			}
+		}
+	}
+	catch (...)
+	{
+	}
+}
+
+void StreamPortDynamicTreeWidgetItem::updateMappings(la::avdecc::entity::model::AudioMappings const& mappings)
+{
+	_mappingsList->clear();
+
+	for (auto const& mapping : mappings)
+	{
+		_mappingsList->addItem(QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel));
+	}
+
+	_mappingsList->sortItems();
 }
