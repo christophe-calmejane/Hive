@@ -21,6 +21,7 @@
 
 #include <QTreeWidget>
 #include "nodeVisitor.hpp"
+#include "avdecc/helper.hpp"
 
 class NodeTreeWidgetPrivate;
 class NodeTreeWidget : public QTreeWidget
