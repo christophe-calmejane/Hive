@@ -29,10 +29,15 @@ void drawWrongFormatConnectedStream(QPainter* painter, QRect const& rect, bool c
 void drawFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawWrongDomainFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawWrongFormatFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant);
+void drawConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant);
+void drawNotConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawWrongDomainNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawWrongFormatNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);
-void drawPartiallyConnectedRedundantNode(QPainter* painter, QRect const& rect, bool const isRedundant = false);
+void drawErrorNotConnectedRedundantNode(QPainter* painter, QRect const& rect);
+void drawErrorConnectedRedundantNode(QPainter* painter, QRect const& rect);
+void drawPartiallyConnectedRedundantNode(QPainter* painter, QRect const& rect);
+void drawEntityConnection(QPainter* painter, QRect const& rect);
 void drawEntityNoConnection(QPainter* painter, QRect const& rect);
 void drawNotApplicable(QPainter* painter, QRect const& rect);
 

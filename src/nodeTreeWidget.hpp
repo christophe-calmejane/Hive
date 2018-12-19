@@ -36,3 +36,10 @@ private:
 	NodeTreeWidgetPrivate* d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(NodeTreeWidget)
 };
+
+template<typename IntegralValueType, typename = std::enable_if_t<std::is_arithmetic<IntegralValueType>::value>>
+void setFlagsItemText(QTreeWidgetItem* const item, IntegralValueType flagsValue, QString flagsString)
+{
+	item->setText(1, QString("%1 (%2)").arg(avdecc::helper::toHexQString(flagsValue, true, true)).arg(flagsString));
+	item->setData(1, Qt::ToolTipRole, flagsString);
+}

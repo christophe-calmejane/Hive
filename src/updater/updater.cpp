@@ -48,7 +48,7 @@ public:
 			{
 				if (reply->error() == QNetworkReply::NoError)
 				{
-					auto const newVersionString = QString(reply->readAll());
+					auto const newVersionString = QString(reply->readAll()).trimmed();
 					auto const currentVersion = packVersionString(hive::internals::versionString);
 					auto const newVersion = packVersionString(newVersionString);
 					if (newVersion > currentVersion)

@@ -197,11 +197,11 @@ private:
 				auto const ctrlCaps = entity.getControllerCapabilities();
 
 				addTextItem(descriptorItem, "Entity Model ID", avdecc::helper::uniqueIdentifierToString(entity.getEntityModelID()));
-				addTextItem(descriptorItem, "Talker Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(talkerCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(talkerCaps) + QString(")"));
+				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::to_integral(talkerCaps), avdecc::helper::capabilitiesToString(talkerCaps));
 				addTextItem(descriptorItem, "Talker Max Sources", QString::number(entity.getTalkerStreamSources()));
-				addTextItem(descriptorItem, "Listener Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(listenerCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(listenerCaps) + QString(")"));
+				addFlagsItem(descriptorItem, "Listener Capabilities", la::avdecc::to_integral(listenerCaps), avdecc::helper::capabilitiesToString(listenerCaps));
 				addTextItem(descriptorItem, "Listener Max Sinks", QString::number(entity.getListenerStreamSinks()));
-				addTextItem(descriptorItem, "Controller Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(ctrlCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(ctrlCaps) + QString(")"));
+				addFlagsItem(descriptorItem, "Controller Capabilities", la::avdecc::to_integral(ctrlCaps), avdecc::helper::capabilitiesToString(ctrlCaps));
 				addTextItem(descriptorItem, "Identify Control Index", entity.getIdentifyControlIndex() ? QString::number(*entity.getIdentifyControlIndex()) : QString("Not Set"));
 			}
 
@@ -222,7 +222,7 @@ private:
 			auto const& milanInfo = controlledEntity->getMilanInfo();
 
 			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
-			addTextItem(milanInfoItem, "Features", avdecc::helper::flagsToString(milanInfo.featuresFlags));
+			addFlagsItem(milanInfoItem, "Features", milanInfo.featuresFlags.getValue(), avdecc::helper::flagsToString(milanInfo.featuresFlags));
 			addTextItem(milanInfoItem, "Certification Version", QString::number(milanInfo.certificationVersion));
 		}
 
@@ -238,7 +238,7 @@ private:
 
 			auto const& entity = controlledEntity->getEntity();
 			auto const entityCaps = entity.getEntityCapabilities();
-			addTextItem(dynamicItem, "Entity Capabilities", avdecc::helper::toHexQString(la::avdecc::to_integral(entityCaps), true, true) + QString(" (") + avdecc::helper::capabilitiesToString(entityCaps) + QString(")"));
+			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::to_integral(entityCaps), avdecc::helper::capabilitiesToString(entityCaps));
 			addTextItem(dynamicItem, "Association ID", entity.getAssociationID() ? avdecc::helper::uniqueIdentifierToString(*entity.getAssociationID()) : QString("Not Set"));
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
@@ -372,7 +372,7 @@ private:
 			auto const* const model = node.staticModel;
 
 			addTextItem(descriptorItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(model->macAddress, true));
-			addTextItem(descriptorItem, "Flags", avdecc::helper::toHexQString(la::avdecc::to_integral(model->interfaceFlags), true, true) + QString(" (") + avdecc::helper::flagsToString(model->interfaceFlags) + QString(")"));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::to_integral(model->interfaceFlags), avdecc::helper::flagsToString(model->interfaceFlags));
 			addTextItem(descriptorItem, "Clock Identity", avdecc::helper::uniqueIdentifierToString(model->clockIdentity));
 			addTextItem(descriptorItem, "Priority 1", avdecc::helper::toHexQString(model->priority1, true, true));
 			addTextItem(descriptorItem, "Clock Class", avdecc::helper::toHexQString(model->clockClass, true, true));
@@ -426,7 +426,7 @@ private:
 			auto const* const dynamicModel = node.dynamicModel;
 
 			addTextItem(descriptorItem, "Clock Source Type", avdecc::helper::clockSourceTypeToString(model->clockSourceType));
-			addTextItem(descriptorItem, "Flags", avdecc::helper::toHexQString(la::avdecc::to_integral(dynamicModel->clockSourceFlags), true, true) + QString(" (") + avdecc::helper::flagsToString(dynamicModel->clockSourceFlags) + QString(")"));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::to_integral(dynamicModel->clockSourceFlags), avdecc::helper::flagsToString(dynamicModel->clockSourceFlags));
 
 			addTextItem(descriptorItem, "Clock Source Identifier", avdecc::helper::uniqueIdentifierToString(dynamicModel->clockSourceIdentifier));
 			addTextItem(descriptorItem, "Clock Source Location Type", avdecc::helper::descriptorTypeToString(model->clockSourceLocationType));
@@ -470,12 +470,13 @@ private:
 			auto const* const model = node.staticModel;
 
 			addTextItem(descriptorItem, "Clock Domain Index", model->clockDomainIndex);
-			addTextItem(descriptorItem, "Flags", avdecc::helper::toHexQString(la::avdecc::to_integral(model->portFlags), true, true) + QString(" (") + avdecc::helper::flagsToString(model->portFlags) + QString(")"));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::to_integral(model->portFlags), avdecc::helper::flagsToString(model->portFlags));
 			addTextItem(descriptorItem, "Supports Dynamic Mapping", model->hasDynamicAudioMap ? "Yes" : "No");
 		}
 
 		// Dynamic model
-		if (node.staticModel->hasDynamicAudioMap)
+		auto const hasAtLeastOneDynamicInfo = node.staticModel->hasDynamicAudioMap;
+		if (hasAtLeastOneDynamicInfo)
 		{
 			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
@@ -679,32 +680,43 @@ private:
 	QTreeWidgetItem* createAccessItem(la::avdecc::controller::ControlledEntity const* const controlledEntity)
 	{
 		Q_Q(NodeTreeWidget);
+		auto& controllerManager = avdecc::ControllerManager::getInstance();
 
 		auto* accessItem = new QTreeWidgetItem(q);
 		accessItem->setText(0, "Exclusive Access");
 
-		auto* acquireStateItem = new QTreeWidgetItem(accessItem);
-		acquireStateItem->setText(0, "Acquire State");
-		acquireStateItem->setText(1, avdecc::helper::acquireStateToString(controlledEntity->getAcquireState()));
-
-		auto* lockStateItem = new QTreeWidgetItem(accessItem);
-		lockStateItem->setText(0, "Lock State");
-		lockStateItem->setText(1, avdecc::helper::lockStateToString(controlledEntity->getLockState()));
-
-		// Listen for changes
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
-		connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, q,
-			[this, acquireStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const /*owningEntity*/)
+		// Acquire State
+		if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto* acquireLabel = addChangingTextItem(accessItem, "Acquire State");
+			auto const updateAcquireLabel = [this, acquireLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity)
 			{
 				if (entityID == _controlledEntityID)
-					acquireStateItem->setText(1, avdecc::helper::acquireStateToString(acquireState));
-			});
-		connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, q,
-			[this, lockStateItem](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const /*lockingEntity*/)
+					acquireLabel->setText(avdecc::helper::acquireStateToString(acquireState, owningEntity));
+			};
+
+			// Update text now
+			updateAcquireLabel(_controlledEntityID, controlledEntity->getAcquireState(), controlledEntity->getOwningControllerID());
+
+			// Listen for changes
+			connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, acquireLabel, updateAcquireLabel);
+		}
+
+		// Lock State
+		{
+			auto* lockLabel = addChangingTextItem(accessItem, "Lock State");
+			auto const updateLockLabel = [this, lockLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity)
 			{
 				if (entityID == _controlledEntityID)
-					lockStateItem->setText(1, avdecc::helper::lockStateToString(lockState));
-			});
+					lockLabel->setText(avdecc::helper::lockStateToString(lockState, lockingEntity));
+			};
+
+			// Update text now
+			updateLockLabel(_controlledEntityID, controlledEntity->getLockState(), controlledEntity->getLockingControllerID());
+
+			// Listen for changes
+			connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, lockLabel, updateLockLabel);
+		}
 
 		return accessItem;
 	}
@@ -786,6 +798,29 @@ private:
 	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, unsigned long const& itemValue)
 	{
 		addTextItem(treeWidgetItem, std::move(itemName), QVariant::fromValue(itemValue));
+	}
+
+	/** A flags item */
+	template<typename IntegralValueType, typename = std::enable_if_t<std::is_arithmetic<IntegralValueType>::value>>
+	void addFlagsItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, IntegralValueType flagsValue, QString flagsString)
+	{
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+		setFlagsItemText(item, flagsValue, flagsString);
+	}
+
+	/** A changing (readonly) text item */
+	QLabel* addChangingTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName)
+	{
+		Q_Q(NodeTreeWidget);
+
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+
+		auto* label = new QLabel;
+		q->setItemWidget(item, 1, label);
+
+		return label;
 	}
 
 	/** An editable text entry item */

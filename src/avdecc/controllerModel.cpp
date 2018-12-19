@@ -72,17 +72,31 @@ private:
 	ControllerModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControllerModel);
 
+	enum class ExclusiveAccessState
+	{
+		NoAccess = 0,
+		NotSupported = 1,
+		AccessOther = 2,
+		AccessSelf = 3,
+	};
+
 	using Entities = std::vector<la::avdecc::UniqueIdentifier>;
 	Entities _entities{};
 
-	std::array<QImage, 4> _compatibilityImages{
-		{ QImage{ ":/not_compliant.png" }, QImage{ ":/ieee.png" }, QImage{ ":/milan.png" }, QImage{ ":/toxic.png" } },
+	std::array<QImage, 5> _compatibilityImages{
+		{
+			QImage{ ":/not_compliant.png" },
+			QImage{ ":/ieee.png" },
+			QImage{ ":/milan.png" },
+			QImage{ ":/misbehaving.png" },
+			QImage{ ":/milan_redundant.png" },
+		},
 	};
-	std::array<QImage, 3> _acquireStateImages{
-		{ QImage{ ":/unlocked.png" }, QImage{ ":/locked.png" }, QImage{ ":/locked_by_other.png" } },
-	};
-	std::array<QImage, 3> _lockStateImages{
-		{ QImage{ ":/unlocked.png" }, QImage{ ":/locked.png" }, QImage{ ":/locked_by_other.png" } },
+	std::unordered_map<ExclusiveAccessState, QImage> _excusiveAccessStateImages{
+		{ ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
+		{ ExclusiveAccessState::NotSupported, QImage{ ":/lock_not_supported.png" } },
+		{ ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
+		{ ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
 	};
 };
 
@@ -221,12 +235,23 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			case Qt::UserRole:
 			{
 				auto const flags = controlledEntity->getCompatibilityFlags();
-				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Toxic))
+				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
 				{
 					return _compatibilityImages[3];
 				}
 				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 				{
+					try
+					{
+						auto const& milanInfo = controlledEntity->getMilanInfo();
+						if ((milanInfo.featuresFlags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
+						{
+							return _compatibilityImages[4];
+						}
+					}
+					catch (...)
+					{
+					}
 					return _compatibilityImages[2];
 				}
 				else if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
@@ -241,7 +266,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			case Qt::ToolTipRole:
 			{
 				auto const flags = controlledEntity->getCompatibilityFlags();
-				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Toxic))
+				if (flags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
 				{
 					return "Entity is sending incoherent values that can cause undefined behavior";
 				}
@@ -267,9 +292,35 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 		switch (role)
 		{
 			case Qt::UserRole:
-				return _acquireStateImages[controlledEntity->isAcquiredByOther() ? 2 : (controlledEntity->isAcquired() ? 1 : 0)];
+			{
+				auto const acquireState = controlledEntity->getAcquireState();
+				auto state = ExclusiveAccessState::NoAccess;
+				switch (acquireState)
+				{
+					case la::avdecc::controller::model::AcquireState::NotSupported:
+						state = ExclusiveAccessState::NotSupported;
+						break;
+					case la::avdecc::controller::model::AcquireState::Acquired:
+						state = ExclusiveAccessState::AccessSelf;
+						break;
+					case la::avdecc::controller::model::AcquireState::AcquiredByOther:
+						state = ExclusiveAccessState::AccessOther;
+						break;
+					default:
+						break;
+				}
+				try
+				{
+					return _excusiveAccessStateImages.at(state);
+				}
+				catch (std::out_of_range const&)
+				{
+					AVDECC_ASSERT(false, "Image missing");
+					return {};
+				}
+			}
 			case Qt::ToolTipRole:
-				return controlledEntity->isAcquiredByOther() ? "Acquired by another controller" : (controlledEntity->isAcquired() ? "Acquired" : "Not acquired");
+				return avdecc::helper::acquireStateToString(controlledEntity->getAcquireState(), controlledEntity->getOwningControllerID());
 			default:
 				break;
 		}
@@ -279,9 +330,35 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 		switch (role)
 		{
 			case Qt::UserRole:
-				return _lockStateImages[controlledEntity->isLockedByOther() ? 2 : (controlledEntity->isLocked() ? 1 : 0)];
+			{
+				auto const lockState = controlledEntity->getLockState();
+				auto state = ExclusiveAccessState::NoAccess;
+				switch (lockState)
+				{
+					case la::avdecc::controller::model::LockState::NotSupported:
+						state = ExclusiveAccessState::NotSupported;
+						break;
+					case la::avdecc::controller::model::LockState::Locked:
+						state = ExclusiveAccessState::AccessSelf;
+						break;
+					case la::avdecc::controller::model::LockState::LockedByOther:
+						state = ExclusiveAccessState::AccessOther;
+						break;
+					default:
+						break;
+				}
+				try
+				{
+					return _excusiveAccessStateImages.at(state);
+				}
+				catch (std::out_of_range const&)
+				{
+					AVDECC_ASSERT(false, "Image missing");
+					return {};
+				}
+			}
 			case Qt::ToolTipRole:
-				return controlledEntity->isLockedByOther() ? "Locked by another controller" : (controlledEntity->isLocked() ? "Locked" : "Not locked");
+				return avdecc::helper::lockStateToString(controlledEntity->getLockState(), controlledEntity->getLockingControllerID());
 			default:
 				break;
 		}

@@ -68,33 +68,38 @@ QString smartEntityName(la::avdecc::controller::ControlledEntity const& controll
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 
-QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType);
-QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState);
-QString lockStateToString(la::avdecc::controller::model::LockState const& lockState);
+QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept;
+QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState, la::avdecc::UniqueIdentifier const& owningController) noexcept;
+QString lockStateToString(la::avdecc::controller::model::LockState const& lockState, la::avdecc::UniqueIdentifier const& lockingController) noexcept;
 
-QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate);
-QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format);
-QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const& node);
+QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate) noexcept;
+QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format) noexcept;
+QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const& node) noexcept;
 
-QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags);
-QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags);
-QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags);
-QString flagsToString(la::avdecc::entity::PortFlags const flags);
-QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags);
-QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags);
+QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcept;
+QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags) noexcept;
 
-QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps);
-QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps);
-QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps);
-QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps);
+QString probingStatusToString(la::avdecc::entity::model::ProbingStatus const status) noexcept;
 
-QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type);
-QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format);
+QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) noexcept;
+QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps) noexcept;
+QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps) noexcept;
+QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps) noexcept;
 
-QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type);
+QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type) noexcept;
+QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format) noexcept;
 
-QString loggerLayerToString(la::avdecc::logger::Layer const layer);
-QString loggerLevelToString(la::avdecc::logger::Level const& level);
+QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept;
+
+QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
+QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
+
+QString toUpperCamelCase(std::string const& text) noexcept;
 
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 

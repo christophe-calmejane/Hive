@@ -34,8 +34,8 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 
 	for (auto const samplingRate : staticModel->samplingRates)
 	{
-		// TODO: Use a proper helper method (in avdecc) to convert the packed samplingRate to an integer value in Hz
-		// TODO: Add a helper method in Hive to convert Hz to kHz
+#pragma message("TODO : Use a proper helper method(in avdecc) to convert the packed samplingRate to an integer value in Hz")
+#pragma message("TODO: Add a helper method in Hive to convert Hz to kHz")
 		auto const readableSamplingRate = QString("%1 Hz").arg(samplingRate);
 		_samplingRate->addItem(readableSamplingRate, samplingRate);
 	}

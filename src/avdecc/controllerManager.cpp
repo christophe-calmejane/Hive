@@ -293,11 +293,11 @@ private:
 	}
 	virtual void onStreamPortInputAudioMappingsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
 	{
-		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamPortIndex);
+		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortInput, streamPortIndex);
 	}
 	virtual void onStreamPortOutputAudioMappingsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
 	{
-		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamPortIndex);
+		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortOutput, streamPortIndex);
 	}
 	virtual void onOperationProgress(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, float const percentComplete) noexcept override
 	{

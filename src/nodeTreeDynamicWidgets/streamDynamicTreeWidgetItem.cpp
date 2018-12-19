@@ -19,7 +19,7 @@
 
 #include "streamDynamicTreeWidgetItem.hpp"
 #include "streamFormatComboBox.hpp"
-#include "streamConnectionWidget.hpp"
+#include "talkerStreamConnectionWidget.hpp"
 
 #include <QMenu>
 
@@ -29,6 +29,9 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 	, _streamType(streamType)
 	, _streamIndex(streamIndex)
 {
+	auto& manager = avdecc::ControllerManager::getInstance();
+	auto listenerEntity = manager.getControlledEntity(entityID);
+
 	auto* currentFormatItem = new QTreeWidgetItem(this);
 	currentFormatItem->setText(0, "Stream Format");
 
@@ -55,7 +58,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		});
 
 	// Listen for changes
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamFormatChanged, formatComboBox,
+	connect(&manager, &avdecc::ControllerManager::streamFormatChanged, formatComboBox,
 		[this, formatComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 		{
 			if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -90,11 +93,29 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		_msrpFailureBridgeID = new QTreeWidgetItem(this);
 		_msrpFailureBridgeID->setText(0, "MSRP Failure Bridge ID");
 
+		if (dynamicModel->streamInfo.streamInfoFlagsEx.has_value())
+		{
+			_streamFlagsEx = new QTreeWidgetItem(this);
+			_streamFlagsEx->setText(0, "Stream Flags Ex");
+		}
+
+		if (dynamicModel->streamInfo.probingStatus.has_value())
+		{
+			_probingStatus = new QTreeWidgetItem(this);
+			_probingStatus->setText(0, "Probing Status");
+		}
+
+		if (dynamicModel->streamInfo.acmpStatus.has_value())
+		{
+			_acmpStatus = new QTreeWidgetItem(this);
+			_acmpStatus->setText(0, "Acmp Status");
+		}
+
 		// Update info right now
 		updateStreamInfo(dynamicModel->streamInfo);
 
 		// Listen for StreamInfoChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInfoChanged, this,
+		connect(&manager, &avdecc::ControllerManager::streamInfoChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& info)
 			{
 				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -109,48 +130,44 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 	{
 		// Create fields
 		_connectionState = new QTreeWidgetItem(this);
-		_connectionState->setText(0, "Connection State");
-
-		// Update info right now
-		updateConnectionState(inputDynamicModel->connectionState);
-
-		// Listen for Connection changed signals
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionChanged, this,
-			[this](la::avdecc::controller::model::StreamConnectionState const& state)
-			{
-				auto const listenerID = state.listenerStream.entityID;
-				auto const listenerIndex = state.listenerStream.streamIndex;
-
-				if (listenerID == _entityID && listenerIndex == _streamIndex)
-				{
-					updateConnectionState(state);
-				}
-			});
+		if (listenerEntity && listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			_connectionState->setText(0, "Binding State");
+		}
+		else
+		{
+			_connectionState->setText(0, "Connection State");
+		}
+		_connectionStateWidget = new ListenerStreamConnectionWidget(inputDynamicModel->connectionState, parent);
+		parent->setItemWidget(_connectionState, 1, _connectionStateWidget);
 	}
 
 	// StreamOutput dynamic info
 	if (outputDynamicModel)
 	{
-		// Create fields
-		auto* item = new QTreeWidgetItem(this);
-		item->setText(0, "Connections");
-		_connections = new QListWidget;
-		_connections->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
-		parent->setItemWidget(item, 1, _connections);
+		if (!listenerEntity || !listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			// Create fields
+			auto* item = new QTreeWidgetItem(this);
+			item->setText(0, "Connections");
+			_connections = new QListWidget;
+			_connections->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
+			parent->setItemWidget(item, 1, _connections);
 
-		// Update info right now
-		updateConnections(outputDynamicModel->connections);
+			// Update info right now
+			updateConnections(outputDynamicModel->connections);
 
-		// Listen for Connections changed signal
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionsChanged, this,
-			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
-			{
-				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
+			// Listen for Connections changed signal
+			connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this,
+				[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
 				{
-					updateConnections(connections);
-				}
-			});
+					if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
+					{
+						updateConnections(connections);
+					}
+				});
 #pragma message("TODO: When the notification is available")
+		}
 	}
 }
 
@@ -164,6 +181,40 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 	_msrpAccumulatedLatency->setText(1, QString::number(streamInfo.msrpAccumulatedLatency));
 	_msrpFailureCode->setText(1, QString::number(streamInfo.msrpFailureCode));
 	_msrpFailureBridgeID->setText(1, avdecc::helper::toHexQString(streamInfo.msrpFailureBridgeID, true, true));
+	// Milan extension information
+	if (_streamFlagsEx)
+	{
+		if (streamInfo.streamInfoFlagsEx.has_value())
+		{
+			_streamFlagsEx->setText(1, avdecc::helper::flagsToString(*streamInfo.streamInfoFlagsEx));
+		}
+		else
+		{
+			_streamFlagsEx->setText(1, "No Value");
+		}
+	}
+	if (_probingStatus)
+	{
+		if (streamInfo.probingStatus.has_value())
+		{
+			_probingStatus->setText(1, avdecc::helper::probingStatusToString(*streamInfo.probingStatus));
+		}
+		else
+		{
+			_probingStatus->setText(1, "No Value");
+		}
+	}
+	if (_acmpStatus)
+	{
+		if (streamInfo.acmpStatus.has_value())
+		{
+			_acmpStatus->setText(1, avdecc::helper::toUpperCamelCase(static_cast<std::string>(*streamInfo.acmpStatus)));
+		}
+		else
+		{
+			_acmpStatus->setText(1, "No Value");
+		}
+	}
 }
 
 void StreamDynamicTreeWidgetItem::updateConnections(la::avdecc::controller::model::StreamConnections const& connections)
@@ -177,7 +228,7 @@ void StreamDynamicTreeWidgetItem::updateConnections(la::avdecc::controller::mode
 		auto const entityID = connection.entityID;
 		auto const streamIndex = connection.streamIndex;
 
-		auto* widget = new StreamConnectionWidget{ streamConnection, la::avdecc::entity::model::StreamIdentification{ entityID, streamIndex }, _connections };
+		auto* widget = new TalkerStreamConnectionWidget{ streamConnection, la::avdecc::entity::model::StreamIdentification{ entityID, streamIndex }, _connections };
 		auto* item = new QListWidgetItem(_connections);
 		item->setSizeHint(widget->sizeHint());
 
@@ -185,37 +236,4 @@ void StreamDynamicTreeWidgetItem::updateConnections(la::avdecc::controller::mode
 	}
 
 	_connections->sortItems();
-}
-
-void StreamDynamicTreeWidgetItem::updateConnectionState(la::avdecc::controller::model::StreamConnectionState const& connectionState)
-{
-	QString stateText{ "Unknown" };
-
-	auto const getTalkerStreamNameText = [&connectionState]()
-	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto const controlledEntity = manager.getControlledEntity(connectionState.talkerStream.entityID);
-		if (controlledEntity)
-		{
-			return QString("%1:%2").arg(avdecc::helper::smartEntityName(*controlledEntity)).arg(connectionState.talkerStream.streamIndex);
-		}
-		return QString("%1:%2").arg(avdecc::helper::uniqueIdentifierToString(connectionState.talkerStream.entityID)).arg(connectionState.talkerStream.streamIndex);
-	};
-
-	switch (connectionState.state)
-	{
-		case la::avdecc::controller::model::StreamConnectionState::State::NotConnected:
-			stateText = "Not Connected";
-			break;
-		case la::avdecc::controller::model::StreamConnectionState::State::FastConnecting:
-			stateText = "Fast Connecting to " + getTalkerStreamNameText();
-			break;
-		case la::avdecc::controller::model::StreamConnectionState::State::Connected:
-			stateText = "Connected to " + getTalkerStreamNameText();
-			break;
-		default:
-			AVDECC_ASSERT(false, "Unhandled case");
-			break;
-	}
-	_connectionState->setText(1, stateText);
 }

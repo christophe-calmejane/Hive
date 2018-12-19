@@ -1,5 +1,10 @@
 #!/bin/bash
 
+FIX_FILES_VERSION="1.1"
+
+echo "Fix-Files version $FIX_FILES_VERSION"
+echo ""
+
 # Check bash version
 if [[ ${BASH_VERSINFO[0]} < 5 && (${BASH_VERSINFO[0]} < 4 || ${BASH_VERSINFO[1]} < 1) ]]; then
   echo "bash 4.1 or later required"
@@ -22,8 +27,8 @@ do
 			echo "Usage: fix_files.sh [options]"
 			echo " -h -> Display this help"
 			echo " --no-clang-format -> Do not run clang-format on source files (Default: Run clang-format)"
-			echo " --no-line-endings -> Force line endings on source files (Default: Change line-endings)"
-			echo " --no-chmod -> Run chmod on all files to fix executable bit (Default: Run chmod)"
+			echo " --no-line-endings -> Do not force line endings on source files (Default: Change line-endings)"
+			echo " --no-chmod -> Do not run chmod on all files to fix executable bit (Default: Run chmod)"
 			exit 3
 			;;
 		--no-clang-format)
@@ -49,7 +54,7 @@ function applyFormat()
 	local filePattern="$1"
 	
 	echo "Formatting all $filePattern files"
-	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./_*" -exec clang-format -i -style=file {} \;
+	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./externals/*" -not -path "./_*" -exec clang-format -i -style=file {} \;
 }
 
 function applyFileAttributes()
@@ -58,14 +63,14 @@ function applyFileAttributes()
 	local attribs="$2"
 	
 	echo "Setting file attributes for all $filePattern files"
-	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./_*" -exec chmod "$attribs" {} \;
+	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./externals/*" -not -path "./_*" -exec chmod "$attribs" {} \;
 }
 
 function applyLineEndings()
 {
 	local filePattern="$1"
 	
-	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./_*" -exec dos2unix {} \;
+	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./externals/*" -not -path "./_*" -exec dos2unix {} \;
 }
 
 if [ $do_clang_format -eq 1 ]; then
@@ -76,7 +81,7 @@ if [ $do_clang_format -eq 1 ]; then
 			echo "Incorrect clang-format: Version 7.0.0 with WrappingBeforeLambdaBody patch required"
 			exit 1
 		fi
-		applyFormat "*.[ch]pp"
+		applyFormat "*.[chi]pp"
 		applyFormat "*.[ch]"
 		applyFormat "*.mm"
 	else
@@ -88,10 +93,9 @@ fi
 if [ $do_chmod -eq 1 ]; then
 	which dos2unix &> /dev/null
 	if [ $? -eq 0 ]; then
-		applyLineEndings "*.[ch]pp"
+		applyLineEndings "*.[chi]pp"
 		applyLineEndings "*.[ch]"
 		applyLineEndings "*.mm"
-		applyLineEndings "*.ui"
 		applyLineEndings "*.js"
 		applyLineEndings "*.txt"
 		applyLineEndings "*.in"
@@ -106,23 +110,25 @@ fi
 if [ $do_line_endings -eq 1 ]; then
 	which chmod &> /dev/null
 	if [ $? -eq 0 ]; then
-		# Test files
+		# Text/source files (non-executable)
 		chmod a-x .gitignore .gitmodules COPYING COPYING.LESSER
-		applyFileAttributes "*.[ch]pp" "a-x"
+		applyFileAttributes "*.[chi]pp" "a-x"
 		applyFileAttributes "*.[ch]" "a-x"
 		applyFileAttributes "*.mm" "a-x"
-		applyFileAttributes "*.ui" "a-x"
 		applyFileAttributes "*.js" "a-x"
 		applyFileAttributes "*.txt" "a-x"
 		applyFileAttributes "*.in" "a-x"
 		applyFileAttributes "*.cmake" "a-x"
 		applyFileAttributes "*.md" "a-x"
 		applyFileAttributes "*.patch" "a-x"
+		applyFileAttributes "*.ui" "a-x"
+
+		# Other files (non-executable)
 		applyFileAttributes "*.svg" "a-x"
 		applyFileAttributes "*.png" "a-x"
 		applyFileAttributes "*.qrc" "a-x"
 		
-		# Binary files
+		# Binary files (executable)
 		applyFileAttributes "*.sh" "a+x"
 		applyFileAttributes "*.bat" "a+x"
 		applyFileAttributes "*.exe" "a+x"

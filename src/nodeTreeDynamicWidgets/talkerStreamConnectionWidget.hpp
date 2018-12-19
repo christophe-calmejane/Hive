@@ -24,25 +24,24 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
 
-#include <QObject>
-#include <QTreeWidgetItem>
 #include <QPushButton>
 #include <QLabel>
 #include <QHBoxLayout>
-#include <QListWidget>
 
-class StreamPortDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
+class TalkerStreamConnectionWidget : public QWidget
 {
 public:
-	StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::controller::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
+	TalkerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent = nullptr);
+	void updateData();
 
 private:
-	void editMappingsButtonClicked();
-	void clearMappingsButtonClicked();
-	void updateMappings(la::avdecc::entity::model::AudioMappings const& mappings);
+	la::avdecc::entity::model::StreamIdentification const _talkerConnection{};
+	la::avdecc::entity::model::StreamIdentification const _listenerConnection{};
 
-	la::avdecc::UniqueIdentifier const _entityID{};
-	la::avdecc::entity::model::DescriptorType const _streamPortType{ la::avdecc::entity::model::DescriptorType::Entity };
-	la::avdecc::entity::model::StreamPortIndex const _streamPortIndex{ 0u };
-	QListWidget* _mappingsList{ nullptr };
+	QHBoxLayout _layout{ this };
+
+	QLabel _streamConnectionLabel{ this };
+	QLabel _entityNameLabel{ this };
+
+	QPushButton _disconnectButton{ "block", this };
 };

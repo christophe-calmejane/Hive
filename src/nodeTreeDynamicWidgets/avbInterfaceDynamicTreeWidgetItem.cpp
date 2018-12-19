@@ -19,6 +19,7 @@
 
 #include "avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "asPathWidget.hpp"
+#include "nodeTreeWidget.hpp"
 #include "avdecc/helper.hpp"
 
 #include <unordered_map>
@@ -103,7 +104,7 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAvbInfo(la::avdecc::entity::model:
 	_gptpGrandmasterID->setText(1, avdecc::helper::uniqueIdentifierToString(avbInfo.gptpGrandmasterID));
 	_gptpDomainNumber->setText(1, QString::number(avbInfo.gptpDomainNumber));
 	_propagationDelay->setText(1, QString("%1 nsec").arg(avbInfo.propagationDelay));
-	_flags->setText(1, avdecc::helper::toHexQString(la::avdecc::to_integral(avbInfo.flags), true, true) + QString(" (") + avdecc::helper::flagsToString(avbInfo.flags) + QString(")"));
+	setFlagsItemText(_flags, la::avdecc::to_integral(avbInfo.flags), avdecc::helper::flagsToString(avbInfo.flags));
 }
 
 void AvbInterfaceDynamicTreeWidgetItem::updateLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)

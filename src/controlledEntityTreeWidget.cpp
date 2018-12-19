@@ -79,6 +79,19 @@ public:
 		q->clearSelection();
 	}
 
+	void saveSelectedDescriptor()
+	{
+		// TODO
+	}
+
+	void restoreSelectedDescriptor()
+	{
+		Q_Q(ControlledEntityTreeWidget);
+
+		// TODO: Properly restore the previous saved index - Right now always restore the first one
+		q->setCurrentIndex(q->model()->index(0, 0));
+	}
+
 	void saveExpandedState()
 	{
 		// Build expanded state
@@ -141,6 +154,9 @@ public:
 
 		// Restore expanded state for new EntityID
 		restoreExpandedState();
+
+		// Restore selected descriptor for new EntityID
+		restoreSelectedDescriptor();
 	}
 
 	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
@@ -155,6 +171,7 @@ public:
 		if (_controlledEntityID)
 		{
 			saveExpandedState();
+			saveSelectedDescriptor();
 		}
 
 		_controlledEntityID = entityID;

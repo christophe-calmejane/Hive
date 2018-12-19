@@ -24,6 +24,8 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
 
+#include "listenerStreamConnectionWidget.hpp"
+
 #include <QObject>
 #include <QTreeWidgetItem>
 #include <QPushButton>
@@ -39,7 +41,6 @@ public:
 private:
 	void updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo);
 	void updateConnections(la::avdecc::controller::model::StreamConnections const& connections);
-	void updateConnectionState(la::avdecc::controller::model::StreamConnectionState const& connectionState);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamType{ la::avdecc::entity::model::DescriptorType::Entity };
@@ -54,10 +55,14 @@ private:
 	QTreeWidgetItem* _msrpAccumulatedLatency{ nullptr };
 	QTreeWidgetItem* _msrpFailureCode{ nullptr };
 	QTreeWidgetItem* _msrpFailureBridgeID{ nullptr };
+	QTreeWidgetItem* _streamFlagsEx{ nullptr };
+	QTreeWidgetItem* _probingStatus{ nullptr };
+	QTreeWidgetItem* _acmpStatus{ nullptr };
 
 	// Connections
 	QListWidget* _connections{ nullptr };
 
 	// ConnectionState
 	QTreeWidgetItem* _connectionState{ nullptr };
+	ListenerStreamConnectionWidget* _connectionStateWidget{ nullptr };
 };
