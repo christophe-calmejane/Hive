@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FIX_FILES_VERSION="1.1"
+FIX_FILES_VERSION="1.2"
 
 echo "Fix-Files version $FIX_FILES_VERSION"
 echo ""
@@ -11,9 +11,12 @@ if [[ ${BASH_VERSINFO[0]} < 5 && (${BASH_VERSINFO[0]} < 4 || ${BASH_VERSINFO[1]}
   exit 255
 fi
 
-if [ ! -f "./fix_files.sh" ]; then
-  echo "ERROR: Script must be run from its own folder"
-  exit 1
+# currentFolderAbsolute="$(cd "$2"; pwd -P)/"
+
+# Check if a .git file or folder exists (we allow submodules, thus check file and folder), as well as a root cmake file
+if [[ ! -e ".git" || ! -f "CMakeLists.txt" ]]; then
+	echo "ERROR: Must be run from the root folder of your project (where your main CMakeLists.txt file is)"
+	exit 1
 fi
 
 do_clang_format=1
@@ -26,7 +29,7 @@ do
 		-h)
 			echo "Usage: fix_files.sh [options]"
 			echo " -h -> Display this help"
-			echo " --no-clang-format -> Do not run clang-format on source files (Default: Run clang-format)"
+			echo " --no-clang-format -> Do not run clang-format on source files (Default: Run clang-format, but only if .clang-format file found)"
 			echo " --no-line-endings -> Do not force line endings on source files (Default: Change line-endings)"
 			echo " --no-chmod -> Do not run chmod on all files to fix executable bit (Default: Run chmod)"
 			exit 3
@@ -73,7 +76,7 @@ function applyLineEndings()
 	find . -iname "$filePattern" -not -path "./3rdparty/*" -not -path "./externals/*" -not -path "./_*" -exec dos2unix {} \;
 }
 
-if [ $do_clang_format -eq 1 ]; then
+if [[ $do_clang_format -eq 1 && -f ./.clang-format ]]; then
 	which clang-format &> /dev/null
 	if [ $? -eq 0 ]; then
 		cf_version="$(clang-format --version)"
