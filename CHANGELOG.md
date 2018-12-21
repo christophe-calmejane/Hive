@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)
 - Changed the colors in the Connection Matrix (see Legend)
+- Logger configuration menus does not close automatically
 
 ### Fixed
 - Upload firmware progression always set to 100% upon successfull completion
