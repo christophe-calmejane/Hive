@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QTableView>
+#include <QSortFilterProxyModel>
 #include "settingsManager/settings.hpp"
 #include "toolkit/transposeProxyModel.hpp"
 
@@ -29,6 +30,17 @@ class Model;
 class HeaderView;
 class ItemDelegate;
 class Legend;
+
+class Filter : public QSortFilterProxyModel
+{
+protected:
+	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override {
+		return sourceModel()->headerData(sourceRow, Qt::Vertical, Qt::DisplayRole).toString().contains(filterRegExp());
+	}
+	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex &sourceParent) const override {
+		return sourceModel()->headerData(sourceColumn, Qt::Horizontal, Qt::DisplayRole).toString().contains(filterRegExp());
+	}
+};
 
 class View final : public QTableView, private settings::SettingsManager::Observer
 {
@@ -63,6 +75,7 @@ private:
 	std::unique_ptr<Legend> _legend;
 
 	qt::toolkit::TransposeProxyModel _proxy;
+	Filter _filterProxy;
 	bool _isTransposed{ false };
 };
 
