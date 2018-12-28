@@ -364,7 +364,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->getControlledEntity(entityID);
+			return controller->getControlledEntityGuard(entityID);
 		}
 		return {};
 	}
