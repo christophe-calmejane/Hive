@@ -256,7 +256,7 @@ void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int
 	for (auto i = 0; i < first - last + 1; ++i)
 	{
 		auto const section = first + i;
-		
+
 		// Insert new section?
 		if (section <= _sectionState.count())
 		{

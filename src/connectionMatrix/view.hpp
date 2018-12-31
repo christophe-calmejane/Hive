@@ -34,10 +34,12 @@ class Legend;
 class Filter : public QSortFilterProxyModel
 {
 protected:
-	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override {
+	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
+	{
 		return sourceModel()->headerData(sourceRow, Qt::Vertical, Qt::DisplayRole).toString().contains(filterRegExp());
 	}
-	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex &sourceParent) const override {
+	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const override
+	{
 		return sourceModel()->headerData(sourceColumn, Qt::Horizontal, Qt::DisplayRole).toString().contains(filterRegExp());
 	}
 };

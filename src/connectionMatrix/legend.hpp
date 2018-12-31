@@ -34,7 +34,7 @@ public:
 
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
-	
+
 signals:
 	void filterChanged(QString const& filter);
 

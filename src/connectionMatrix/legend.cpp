@@ -127,7 +127,7 @@ Legend::Legend(QWidget* parent)
 			dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "Connection matrix legend");
 			dialog.exec();
 		});
-	
+
 	connect(&_searchLineEdit, &QLineEdit::textChanged, this, &Legend::filterChanged);
 }
 
