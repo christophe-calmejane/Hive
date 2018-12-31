@@ -24,6 +24,7 @@
 
 #include <QPainter>
 #include <QMouseEvent>
+#include <QDebug>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -252,7 +253,27 @@ QSize HeaderView::sizeHint() const
 
 void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
 {
-	_sectionState.insert(first, last - first + 1, {});
+	for (auto i = 0; i < first - last + 1; ++i)
+	{
+		auto const section = first + i;
+
+		// Insert new section?
+		if (section <= _sectionState.count())
+		{
+			_sectionState.push_back({});
+		}
+		else // Restore section state
+		{
+			if (_sectionState[section].isVisible)
+			{
+				showSection(section);
+			}
+			else
+			{
+				hideSection(section);
+			}
+		}
+	}
 }
 
 void HeaderView::handleSectionRemoved(QModelIndex const& parent, int first, int last)

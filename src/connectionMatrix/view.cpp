@@ -121,7 +121,7 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		{
 			_filterProxy.setSourceModel(_model.get());
 		}
-		
+
 		setModel(&_filterProxy);
 
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
