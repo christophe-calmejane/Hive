@@ -28,7 +28,7 @@ namespace settings
 class SettingsManager
 {
 protected:
-	using Subject = la::avdecc::TypedSubject<struct SubjectTag, std::mutex>;
+	using Subject = la::avdecc::utils::TypedSubject<struct SubjectTag, std::mutex>;
 
 public:
 	using Setting = QString;
@@ -38,7 +38,7 @@ public:
 		QVariant initialValue{};
 	};
 
-	class Observer : public la::avdecc::Observer<Subject>
+	class Observer : public la::avdecc::utils::Observer<Subject>
 	{
 	public:
 		virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept = 0;

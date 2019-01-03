@@ -174,25 +174,25 @@ void MainWindow::createControllerView()
 	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
 	auto* imageItemDelegate{ new ImageItemDelegate };
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), 50);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Name), 180);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Group), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::LockState), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), 50);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), 180);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
 }
 
 void MainWindow::populateProtocolComboBox()
@@ -280,7 +280,7 @@ void MainWindow::connectSignals()
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 
-				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
 					// Do not propose Acquire if the device is Milan (not supported)
 					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))

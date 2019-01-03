@@ -148,12 +148,12 @@ void View::onClicked(QModelIndex const& index)
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
 				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
 					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
@@ -178,9 +178,9 @@ void View::onClicked(QModelIndex const& index)
 			bool doConnect{ false };
 			bool doDisconnect{ false };
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 					doDisconnect = true;
 				else
 					doConnect = true;
@@ -233,12 +233,12 @@ void View::onClicked(QModelIndex const& index)
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
 				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
 					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
@@ -285,7 +285,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
 #pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
-			if (caps != Model::ConnectionCapabilities::None && la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::WrongFormat))
+			if (caps != Model::ConnectionCapabilities::None && la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::WrongFormat))
 			{
 				QMenu menu;
 

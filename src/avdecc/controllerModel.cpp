@@ -139,7 +139,7 @@ int ControllerModelPrivate::rowCount() const
 
 int ControllerModelPrivate::columnCount() const
 {
-	return la::avdecc::to_integral(ControllerModel::Column::Count);
+	return la::avdecc::utils::to_integral(ControllerModel::Column::Count);
 }
 
 QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
@@ -218,7 +218,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 		if (role == Qt::UserRole)
 		{
 			auto const& entity = controlledEntity->getEntity();
-			if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 			{
 				auto& settings = settings::SettingsManager::getInstance();
 				auto const& forceDownload{ settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool() };
@@ -433,7 +433,7 @@ int ControllerModelPrivate::entityRow(la::avdecc::UniqueIdentifier const entityI
 QModelIndex ControllerModelPrivate::createIndex(la::avdecc::UniqueIdentifier const entityID, ControllerModel::Column column) const
 {
 	Q_Q(const ControllerModel);
-	return q->createIndex(entityRow(entityID), la::avdecc::to_integral(column));
+	return q->createIndex(entityRow(entityID), la::avdecc::utils::to_integral(column));
 }
 
 void ControllerModelPrivate::dataChanged(la::avdecc::UniqueIdentifier const entityID, ControllerModel::Column column, QVector<int> const& roles)
@@ -532,7 +532,7 @@ void ControllerModelPrivate::onSettingChanged(settings::SettingsManager::Setting
 		if (value.toBool())
 		{
 			Q_Q(ControllerModel);
-			auto const column{ la::avdecc::to_integral(ControllerModel::Column::EntityLogo) };
+			auto const column{ la::avdecc::utils::to_integral(ControllerModel::Column::EntityLogo) };
 
 			auto const top{ q->createIndex(0, column, nullptr) };
 			auto const bottom{ q->createIndex(rowCount(), column, nullptr) };
