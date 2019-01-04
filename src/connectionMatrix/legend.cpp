@@ -37,7 +37,7 @@ Legend::Legend(QWidget* parent)
 	: QWidget{ parent }
 {
 	// Because the legend is child of the
-	_searchLineEdit.setPlaceholderText("Filter");
+	_searchLineEdit.setPlaceholderText("Filter (RegEx)");
 
 	// Layout widgets
 	_layout.addWidget(&_buttonContainer, 0, 0);
