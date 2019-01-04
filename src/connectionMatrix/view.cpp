@@ -55,6 +55,7 @@ View::View(QWidget* parent)
 	// Configure highlight color
 	auto p = palette();
 	p.setColor(QPalette::Highlight, 0xf3e5f5);
+	p.setColor(QPalette::HighlightedText, Qt::black);
 	setPalette(p);
 
 	connect(this, &QTableView::clicked, this, &View::onClicked);
@@ -69,6 +70,12 @@ View::View(QWidget* parent)
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
+
+	connect(_legend.get(), &Legend::filterChanged, this,
+		[this](QString const& filter)
+		{
+			_filterProxy.setFilterRegExp(filter);
+		});
 
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
@@ -108,12 +115,14 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		if (_isTransposed)
 		{
-			setModel(&_proxy);
+			_filterProxy.setSourceModel(&_proxy);
 		}
 		else
 		{
-			setModel(_model.get());
+			_filterProxy.setSourceModel(_model.get());
 		}
+
+		setModel(&_filterProxy);
 
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
@@ -139,12 +148,12 @@ void View::onClicked(QModelIndex const& index)
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
 				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
 					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
@@ -169,9 +178,9 @@ void View::onClicked(QModelIndex const& index)
 			bool doConnect{ false };
 			bool doDisconnect{ false };
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 					doDisconnect = true;
 				else
 					doConnect = true;
@@ -224,12 +233,12 @@ void View::onClicked(QModelIndex const& index)
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
 				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
 					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
@@ -276,7 +285,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
 #pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
-			if (caps != Model::ConnectionCapabilities::None && la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::WrongFormat))
+			if (caps != Model::ConnectionCapabilities::None && la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::WrongFormat))
 			{
 				QMenu menu;
 

@@ -17,10 +17,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Display of the current dynamic mappings without having to edit them, in StreamPort descriptor
 - Button to clear all dynamic mappings in StreamPort descriptor
 - Tooltip when the mouse is over a _flags field_ of a descriptor
+- Basic entity filtering in connection matrix
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)
 - Changed the colors in the Connection Matrix (see Legend)
+- Logger configuration menus does not close automatically
 
 ### Fixed
 - Upload firmware progression always set to 100% upon successfull completion
@@ -33,6 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Incorrect connection established between 2 redundant streams when clicking on a non-connectable box
 - Automatically selecting the Entity descriptor when inspecting a new entity ([for now](https://github.com/christophe-calmejane/Hive/issues/22))
 - Partial deadlock (in background tasks) when editing channel mappings, sometimes leading to the impossibility to apply the mappings
+- Possible crash upon loading after having changed ProtocolInterface and/or NetworkInterface multiple times
 
 ## [1.0.8] - 2018-10-30
 ### Fixed

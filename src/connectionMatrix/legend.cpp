@@ -25,9 +25,6 @@
 #include <QLabel>
 #include <QPainter>
 
-// TMP
-#include "settingsManager/settings.hpp"
-
 namespace connectionMatrix
 {
 QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
@@ -39,9 +36,13 @@ QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
 Legend::Legend(QWidget* parent)
 	: QWidget{ parent }
 {
+	// Because the legend is child of the
+	_searchLineEdit.setPlaceholderText("Filter");
+
 	// Layout widgets
 	_layout.addWidget(&_buttonContainer, 0, 0);
-	_layout.addWidget(&_horizontalPlaceholder, 1, 0);
+	_layout.addWidget(&_searchLineEdit, 1, 0);
+	_layout.addWidget(&_horizontalPlaceholder, 2, 0);
 	_layout.addWidget(&_verticalPlaceholder, 0, 1);
 	_layout.setSpacing(2);
 
@@ -120,16 +121,14 @@ Legend::Legend(QWidget* parent)
 			}
 
 			QPushButton closeButton{ "Close" };
-			connect(&closeButton, &QPushButton::clicked, &dialog,
-				[&dialog]()
-				{
-					dialog.accept();
-				});
+			connect(&closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
 			layout.addWidget(&closeButton);
 
 			dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "Connection matrix legend");
 			dialog.exec();
 		});
+
+	connect(&_searchLineEdit, &QLineEdit::textChanged, this, &Legend::filterChanged);
 }
 
 void Legend::setTransposed(bool const isTransposed)

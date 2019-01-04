@@ -77,7 +77,7 @@ private:
 			{
 				observers.registerObserver(observer);
 				auto const value = _settings.value(name);
-				la::avdecc::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, value);
+				la::avdecc::utils::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, value);
 			}
 			catch (...)
 			{
@@ -109,7 +109,7 @@ private:
 			{
 				if (observersIt->second.isObserverRegistered(observer))
 				{
-					la::avdecc::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, _settings.value(name));
+					la::avdecc::utils::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, _settings.value(name));
 				}
 			}
 		}

@@ -22,9 +22,9 @@
 #include "ui_loggerView.h"
 #include "avdecc/loggerModel.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
+#include "toolkit/tickableMenu.hpp"
 
 #include <QSortFilterProxyModel>
-#include <QMenu>
 
 class LoggerView : public QWidget, private Ui::LoggerView
 {
@@ -43,6 +43,6 @@ private:
 	QSortFilterProxyModel _levelFilterProxyModel{ this };
 	QSortFilterProxyModel _searchFilterProxyModel{ this };
 	qt::toolkit::DynamicHeaderView _dynamicHeaderView{ Qt::Horizontal, this };
-	QMenu _layerFilterMenu{ this };
-	QMenu _levelFilterMenu{ this };
+	qt::toolkit::TickableMenu _layerFilterMenu{ this };
+	qt::toolkit::TickableMenu _levelFilterMenu{ this };
 };

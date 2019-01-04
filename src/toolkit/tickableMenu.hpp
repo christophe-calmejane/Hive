@@ -19,28 +19,21 @@
 
 #pragma once
 
-#include <QTreeWidget>
-#include "nodeVisitor.hpp"
-#include "avdecc/helper.hpp"
+#include <QMenu>
 
-class NodeTreeWidgetPrivate;
-class NodeTreeWidget : public QTreeWidget
+namespace qt
 {
-	Q_OBJECT
+namespace toolkit
+{
+/* TickableMenu do not close the menu after an action has been triggered by a user click */
+class TickableMenu : public QMenu
+{
 public:
-	NodeTreeWidget(QWidget* parent = nullptr);
-	~NodeTreeWidget();
+	using QMenu::QMenu;
 
-	void setNode(la::avdecc::UniqueIdentifier const entityID, AnyNode const& node);
-
-private:
-	NodeTreeWidgetPrivate* d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(NodeTreeWidget)
+protected:
+	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 };
 
-template<typename IntegralValueType, typename = std::enable_if_t<std::is_arithmetic<IntegralValueType>::value>>
-void setFlagsItemText(QTreeWidgetItem* const item, IntegralValueType flagsValue, QString flagsString)
-{
-	item->setText(1, QString("%1 (%2)").arg(avdecc::helper::toHexQString(flagsValue, true, true)).arg(flagsString));
-	item->setData(1, Qt::ToolTipRole, flagsString);
-}
+} // namespace toolkit
+} // namespace qt

@@ -68,6 +68,7 @@ set(TOOLKIT_HEADER_FILES
 	toolkit/dynamicHeaderView.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
+	toolkit/tickableMenu.hpp
 	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
@@ -83,6 +84,7 @@ set(TOOLKIT_SOURCE_FILES
 	toolkit/dynamicHeaderView.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
+	toolkit/tickableMenu.cpp
 	toolkit/graph/connection.cpp
 	toolkit/graph/inputSocket.cpp
 	toolkit/graph/node.cpp

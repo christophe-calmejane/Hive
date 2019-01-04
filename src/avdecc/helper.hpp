@@ -44,7 +44,7 @@ inline QString toHexQString(T const v, bool const zeroFilled = false, bool const
 			stream << std::setfill('0') << std::setw(sizeof(T) * 2);
 		if (upper)
 			stream << std::uppercase;
-		stream << std::hex << la::avdecc::forceNumeric(v);
+		stream << std::hex << la::avdecc::utils::forceNumeric(v);
 		return QString::fromStdString(stream.str());
 	}
 	catch (...)

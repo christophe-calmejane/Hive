@@ -19,38 +19,19 @@
 
 #pragma once
 
-#include <QWidget>
-#include <QLayout>
-#include <QPushButton>
-#include <QLineEdit>
+#include "tickableMenu.hpp"
 
-namespace connectionMatrix
+namespace qt
 {
-class Legend : public QWidget
+namespace toolkit
 {
-	Q_OBJECT
-public:
-	Legend(QWidget* parent = nullptr);
+void TickableMenu::mouseReleaseEvent(QMouseEvent* event)
+{
+	if (auto* action = activeAction())
+	{
+		action->trigger();
+	}
+}
 
-	void setTransposed(bool const isTransposed);
-	bool isTransposed() const;
-
-signals:
-	void filterChanged(QString const& filter);
-
-private:
-	virtual void paintEvent(QPaintEvent*) override;
-
-private:
-	QGridLayout _layout{ this };
-	QWidget _buttonContainer{ this };
-	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
-	QPushButton _button{ "Show Legend", &_buttonContainer };
-	QWidget _horizontalPlaceholder{ this };
-	QWidget _verticalPlaceholder{ this };
-	bool _isTransposed{ false };
-	QLineEdit _searchLineEdit{ this };
-};
-
-
-} // namespace connectionMatrix
+} // namespace toolkit
+} // namespace qt

@@ -364,7 +364,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->getControlledEntity(entityID);
+			return controller->getControlledEntityGuard(entityID);
 		}
 		return {};
 	}
@@ -381,7 +381,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status, owningEntity);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, owningEntity);
 					}
 					else
 					{
@@ -402,7 +402,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -423,7 +423,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status, lockingEntity);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, lockingEntity);
 					}
 					else
 					{
@@ -444,7 +444,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -479,7 +479,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -500,7 +500,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -521,7 +521,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -542,7 +542,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -563,7 +563,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -584,7 +584,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -605,7 +605,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -626,7 +626,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -647,7 +647,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -668,7 +668,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -689,7 +689,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -710,7 +710,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -731,7 +731,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -752,7 +752,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -773,7 +773,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -794,7 +794,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -815,7 +815,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -836,7 +836,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -857,7 +857,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -878,7 +878,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -899,7 +899,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -920,7 +920,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -941,7 +941,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -965,7 +965,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status, operationID);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, operationID);
 					}
 					else
 					{
@@ -989,7 +989,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status, operationID);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, operationID);
 					}
 					else
 					{
@@ -1013,7 +1013,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, targetEntityID, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
 					}
 					else
 					{
@@ -1054,7 +1054,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
 					}
 					else
 					{
@@ -1075,7 +1075,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
 					}
 					else
 					{
@@ -1096,7 +1096,7 @@ private:
 				{
 					if (handler)
 					{
-						la::avdecc::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+						la::avdecc::utils::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
 					}
 					else
 					{

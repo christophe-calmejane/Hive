@@ -84,7 +84,7 @@ Q_DECLARE_METATYPE(connectionMatrix::Model::ConnectionCapabilities)
 
 // Define bitfield enum traits for Model::ConnectionCapabilities
 template<>
-struct la::avdecc::enum_traits<connectionMatrix::Model::ConnectionCapabilities>
+struct la::avdecc::utils::enum_traits<connectionMatrix::Model::ConnectionCapabilities>
 {
 	static constexpr bool is_bitfield = true;
 };
