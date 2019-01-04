@@ -198,7 +198,6 @@ void MainWindow::createControllerView()
 void MainWindow::populateProtocolComboBox()
 {
 	const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName{
-		{ la::avdecc::protocol::ProtocolInterface::Type::None, "None" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },

@@ -30,8 +30,6 @@ QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type 
 {
 	switch (protocolInterfaceType)
 	{
-		case la::avdecc::protocol::ProtocolInterface::Type::None:
-			return "None";
 		case la::avdecc::protocol::ProtocolInterface::Type::PCap:
 			return "PCap";
 		case la::avdecc::protocol::ProtocolInterface::Type::MacOSNative:
