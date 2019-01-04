@@ -54,6 +54,8 @@ private:
 	Q_SLOT void handleHeaderDataChanged(Qt::Orientation orientation, int first, int last);
 	Q_SLOT void handleSectionClicked(int logicalIndex);
 
+	void updateSectionVisibility(int logicalIndex);
+
 	QVector<SectionState> _sectionState;
 };
 

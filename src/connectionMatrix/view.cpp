@@ -33,6 +33,34 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
+
+// We use a custom SortFilterProxy that does not filter anything through the filter, instead it just hides the filtered rows/columns
+class Filter : public QSortFilterProxyModel
+{
+public:
+	Filter(View& view)
+	: _view{view} {
+	}
+
+protected:
+	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
+	{
+		auto const filtered = sourceModel()->headerData(sourceRow, Qt::Vertical, Qt::DisplayRole).toString().contains(filterRegExp());
+		_view.setRowHidden(sourceRow, !filtered);
+		return true;
+	}
+
+	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const override
+	{
+		auto const filtered = sourceModel()->headerData(sourceColumn, Qt::Horizontal, Qt::DisplayRole).toString().contains(filterRegExp());
+		_view.setColumnHidden(sourceColumn, !filtered);
+		return true;
+	}
+
+private:
+	View& _view;
+};
+
 View::View(QWidget* parent)
 	: QTableView{ parent }
 	, _model{ std::make_unique<Model>() }
@@ -40,6 +68,7 @@ View::View(QWidget* parent)
 	, _horizontalHeaderView{ std::make_unique<HeaderView>(Qt::Horizontal, this) }
 	, _itemDelegate{ std::make_unique<ItemDelegate>() }
 	, _legend{ std::make_unique<Legend>(this) }
+	, _filterProxy{ std::make_unique<Filter>(*this) }
 {
 	_proxy.connectToModel(_model.get());
 
@@ -74,7 +103,7 @@ View::View(QWidget* parent)
 	connect(_legend.get(), &Legend::filterChanged, this,
 		[this](QString const& filter)
 		{
-			_filterProxy.setFilterRegExp(filter);
+			_filterProxy->setFilterRegExp(filter);
 		});
 
 	// Configure settings observers
@@ -115,14 +144,14 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		if (_isTransposed)
 		{
-			_filterProxy.setSourceModel(&_proxy);
+			_filterProxy->setSourceModel(&_proxy);
 		}
 		else
 		{
-			_filterProxy.setSourceModel(_model.get());
+			_filterProxy->setSourceModel(_model.get());
 		}
 
-		setModel(&_filterProxy);
+		setModel(_filterProxy.get());
 
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
