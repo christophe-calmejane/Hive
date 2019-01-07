@@ -33,13 +33,13 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
-
 // We use a custom SortFilterProxy that does not filter anything through the filter, instead it just hides the filtered rows/columns
 class Filter : public QSortFilterProxyModel
 {
 public:
 	Filter(View& view)
-	: _view{view} {
+		: _view{ view }
+	{
 	}
 
 protected:

@@ -24,6 +24,7 @@
 #include <QDialog>
 #include <QLabel>
 #include <QPainter>
+#include <QShortcut>
 
 namespace connectionMatrix
 {
@@ -37,17 +38,20 @@ Legend::Legend(QWidget* parent)
 	: QWidget{ parent }
 {
 	// Because the legend is child of the
-	_searchLineEdit.setPlaceholderText("Filter (RegEx)");
+	_searchLineEdit.setPlaceholderText("Entity Filter (RegEx)");
 
 	// Layout widgets
 	_layout.addWidget(&_buttonContainer, 0, 0);
-	_layout.addWidget(&_searchLineEdit, 1, 0);
-	_layout.addWidget(&_horizontalPlaceholder, 2, 0);
+	_layout.addWidget(&_horizontalPlaceholder, 1, 0);
 	_layout.addWidget(&_verticalPlaceholder, 0, 1);
 	_layout.setSpacing(2);
 
 	_buttonContainer.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+	_buttonContainerLayout.setContentsMargins(2, 6, 2, 6);
+	_buttonContainerLayout.addStretch();
 	_buttonContainerLayout.addWidget(&_button);
+	_buttonContainerLayout.addWidget(&_searchLineEdit);
+	_buttonContainerLayout.addStretch();
 
 	_layout.setRowStretch(0, 1);
 	_layout.setRowStretch(1, 0);
@@ -129,6 +133,14 @@ Legend::Legend(QWidget* parent)
 		});
 
 	connect(&_searchLineEdit, &QLineEdit::textChanged, this, &Legend::filterChanged);
+
+	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	connect(searchShortcut, &QShortcut::activated, this,
+		[this]()
+		{
+			_searchLineEdit.setFocus(Qt::MouseFocusReason);
+			_searchLineEdit.selectAll();
+		});
 }
 
 void Legend::setTransposed(bool const isTransposed)
