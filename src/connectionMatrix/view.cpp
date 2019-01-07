@@ -45,15 +45,31 @@ public:
 protected:
 	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
 	{
-		auto const filtered = sourceModel()->headerData(sourceRow, Qt::Vertical, Qt::DisplayRole).toString().contains(filterRegExp());
-		_view.setRowHidden(sourceRow, !filtered);
+		if (sourceModel()->headerData(sourceRow, Qt::Vertical, Model::NodeTypeRole).value<Model::NodeType>() == Model::NodeType::Entity)
+		{
+			auto const matches = sourceModel()->headerData(sourceRow, Qt::Vertical, Qt::DisplayRole).toString().contains(filterRegExp());
+			auto const childrenCount = sourceModel()->headerData(sourceRow, Qt::Vertical, Model::ChildrenCountRole).toInt();
+			for (auto row = sourceRow; row <= sourceRow + childrenCount; row++)
+			{
+				_view.setRowHidden(row, !matches);
+			}
+		}
+
 		return true;
 	}
 
 	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const override
 	{
-		auto const filtered = sourceModel()->headerData(sourceColumn, Qt::Horizontal, Qt::DisplayRole).toString().contains(filterRegExp());
-		_view.setColumnHidden(sourceColumn, !filtered);
+		if (sourceModel()->headerData(sourceColumn, Qt::Horizontal, Model::NodeTypeRole).value<Model::NodeType>() == Model::NodeType::Entity)
+		{
+			auto const matches = sourceModel()->headerData(sourceColumn, Qt::Horizontal, Qt::DisplayRole).toString().contains(filterRegExp());
+			auto const childrenCount = sourceModel()->headerData(sourceColumn, Qt::Horizontal, Model::ChildrenCountRole).toInt();
+			for (auto column = sourceColumn; column <= sourceColumn + childrenCount; column++)
+			{
+				_view.setColumnHidden(column, !matches);
+			}
+		}
+
 		return true;
 	}
 
