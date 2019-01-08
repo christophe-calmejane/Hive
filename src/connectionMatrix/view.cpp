@@ -40,19 +40,54 @@ public:
 	Filter(View& view)
 		: _view{ view }
 	{
+		setFilterRole(Model::FilterRole);
 	}
 
-protected:
+	void updateRow(int sourceRow) const
+	{
+		updateSection(Qt::Vertical, sourceRow);
+	}
+
+	void updateColumn(int sourceColumn) const
+	{
+		updateSection(Qt::Horizontal, sourceColumn);
+	}
+
+private:
+	void updateSection(Qt::Orientation const orientation, int const sourceSection) const
+	{
+		if (!isActive())
+		{
+			return;
+		}
+
+		auto const filterRoleData = sourceModel()->headerData(sourceSection, orientation, Model::FilterRole).toString();
+		auto const matches = filterRoleData.contains(filterRegExp());
+
+		if (orientation == Qt::Vertical)
+		{
+			_view.setRowHidden(sourceSection, !matches);
+		}
+		else
+		{
+			_view.setColumnHidden(sourceSection, !matches);
+		}
+	}
+
 	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
 	{
-		if (sourceModel()->headerData(sourceRow, Qt::Vertical, Model::NodeTypeRole).value<Model::NodeType>() == Model::NodeType::Entity)
+		if (!isActive())
 		{
-			auto const matches = sourceModel()->headerData(sourceRow, Qt::Vertical, Qt::DisplayRole).toString().contains(filterRegExp());
-			auto const childrenCount = sourceModel()->headerData(sourceRow, Qt::Vertical, Model::ChildrenCountRole).toInt();
-			for (auto row = sourceRow; row <= sourceRow + childrenCount; row++)
-			{
-				_view.setRowHidden(row, !matches);
-			}
+			// Nothing to do
+			return true;
+		}
+
+		updateRow(sourceRow);
+
+		// Copied from the behavior of setFilterKeyColumn(-1), so we can filter on columns too
+		for (auto column = 0; column < sourceModel()->columnCount(); ++column)
+		{
+			updateColumn(column);
 		}
 
 		return true;
@@ -60,17 +95,19 @@ protected:
 
 	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const override
 	{
-		if (sourceModel()->headerData(sourceColumn, Qt::Horizontal, Model::NodeTypeRole).value<Model::NodeType>() == Model::NodeType::Entity)
+		if (!isActive())
 		{
-			auto const matches = sourceModel()->headerData(sourceColumn, Qt::Horizontal, Qt::DisplayRole).toString().contains(filterRegExp());
-			auto const childrenCount = sourceModel()->headerData(sourceColumn, Qt::Horizontal, Model::ChildrenCountRole).toInt();
-			for (auto column = sourceColumn; column <= sourceColumn + childrenCount; column++)
-			{
-				_view.setColumnHidden(column, !matches);
-			}
+			// Nothing to do
+			return true;
 		}
 
+		updateColumn(sourceColumn);
 		return true;
+	}
+
+	bool isActive() const
+	{
+		return !filterRegExp().isEmpty();
 	}
 
 private:
@@ -97,11 +134,8 @@ View::View(QWidget* parent)
 	setCornerButtonEnabled(false);
 	setMouseTracking(true);
 
-	// Configure highlight color
-	auto p = palette();
-	p.setColor(QPalette::Highlight, 0xf3e5f5);
-	p.setColor(QPalette::HighlightedText, Qt::black);
-	setPalette(p);
+	// Configure highlight color, we don't use the palette otherwise the legend will inherit from it
+	setStyleSheet("QTableView { selection-background-color: #f3e5f5; }");
 
 	connect(this, &QTableView::clicked, this, &View::onClicked);
 
@@ -168,6 +202,8 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		}
 
 		setModel(_filterProxy.get());
+
+		_filterProxy->invalidate();
 
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);

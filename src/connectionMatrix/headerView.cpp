@@ -24,7 +24,6 @@
 
 #include <QPainter>
 #include <QMouseEvent>
-#include <QDebug>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -97,8 +96,7 @@ void HeaderView::setModel(QAbstractItemModel* model)
 			connect(model, &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
 		}
 
-		connect(model, &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
-
+		connect(model, &QAbstractItemModel::modelReset, this, &HeaderView::handleModelReset);
 		connect(model, &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
 	}
 }
@@ -321,6 +319,11 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 
 		updateSectionVisibility(index);
 	}
+}
+
+void HeaderView::handleModelReset()
+{
+	_sectionState.clear();
 }
 
 void HeaderView::updateSectionVisibility(int const logicalIndex)

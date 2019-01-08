@@ -35,6 +35,8 @@ public:
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
 
+	QString filterText() const;
+
 signals:
 	void filterChanged(QString const& filter);
 

@@ -154,6 +154,11 @@ bool Legend::isTransposed() const
 	return _isTransposed;
 }
 
+QString Legend::filterText() const
+{
+	return _searchLineEdit.text();
+}
+
 void Legend::paintEvent(QPaintEvent*)
 {
 	QPainter painter{ this };
