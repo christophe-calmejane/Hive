@@ -43,6 +43,12 @@ public:
 		setFilterRole(Model::FilterRole);
 	}
 
+	void setTransposed(bool const isTransposed)
+	{
+		_isTransposed = isTransposed;
+		invalidateFilter();
+	}
+
 	void updateRow(int sourceRow) const
 	{
 		updateSection(Qt::Vertical, sourceRow);
@@ -56,32 +62,35 @@ public:
 private:
 	void updateSection(Qt::Orientation const orientation, int const sourceSection) const
 	{
-		if (!isActive())
-		{
-			return;
-		}
-
 		auto const filterRoleData = sourceModel()->headerData(sourceSection, orientation, Model::FilterRole).toString();
 		auto const matches = filterRoleData.contains(filterRegExp());
 
 		if (orientation == Qt::Vertical)
 		{
-			_view.setRowHidden(sourceSection, !matches);
+			if (_isTransposed)
+			{
+				_view.setColumnHidden(sourceSection, !matches);
+			}
+			else
+			{
+				_view.setRowHidden(sourceSection, !matches);
+			}
 		}
 		else
 		{
-			_view.setColumnHidden(sourceSection, !matches);
+			if (_isTransposed)
+			{
+				_view.setRowHidden(sourceSection, !matches);
+			}
+			else
+			{
+				_view.setColumnHidden(sourceSection, !matches);
+			}
 		}
 	}
 
 	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
 	{
-		if (!isActive())
-		{
-			// Nothing to do
-			return true;
-		}
-
 		updateRow(sourceRow);
 
 		// Copied from the behavior of setFilterKeyColumn(-1), so we can filter on columns too
@@ -95,23 +104,13 @@ private:
 
 	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const override
 	{
-		if (!isActive())
-		{
-			// Nothing to do
-			return true;
-		}
-
 		updateColumn(sourceColumn);
 		return true;
 	}
 
-	bool isActive() const
-	{
-		return !filterRegExp().isEmpty();
-	}
-
 private:
 	View& _view;
+	bool _isTransposed{ false };
 };
 
 View::View(QWidget* parent)
@@ -124,6 +123,7 @@ View::View(QWidget* parent)
 	, _filterProxy{ std::make_unique<Filter>(*this) }
 {
 	_proxy.connectToModel(_model.get());
+	_filterProxy->setSourceModel(_model.get());
 
 	setVerticalHeader(_verticalHeaderView.get());
 	setHorizontalHeader(_horizontalHeaderView.get());
@@ -188,27 +188,19 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_itemDelegate->setTransposed(_isTransposed);
 		_legend->setTransposed(_isTransposed);
 
-		// Force a repaint while there is no model, this fixes a refresh issue when switching between transpose states
-		setModel(nullptr);
-		repaint();
-
 		if (_isTransposed)
 		{
-			_filterProxy->setSourceModel(&_proxy);
+			setModel(&_proxy);
 		}
 		else
 		{
-			_filterProxy->setSourceModel(_model.get());
+			setModel(_model.get());
 		}
-
-		setModel(_filterProxy.get());
-
-		_filterProxy->invalidate();
 
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
-		repaint();
+		_filterProxy->setTransposed(_isTransposed);
 	}
 }
 

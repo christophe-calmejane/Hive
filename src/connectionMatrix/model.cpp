@@ -649,8 +649,8 @@ public:
 					QVector<HeaderItem*> headerItems;
 					auto currentRow{ q_ptr->rowCount() };
 
-					std::int32_t const entityItemIndex{ currentRow++ };
-					std::int32_t entityItemChildrenCount{ 0 };
+					auto const entityItemIndex = currentRow++;
+					auto entityItemChildrenCount = std::int32_t{ 0 };
 
 					auto* entityItem = new HeaderItem(Model::NodeType::Entity, entityID);
 					headerItems << entityItem;
@@ -658,7 +658,7 @@ public:
 					// Redundant streams
 					for (auto const& output : configurationNode.redundantStreamOutputs)
 					{
-						std::int32_t const redundantItemIndex{ ++currentRow };
+						std::int32_t const redundantItemIndex{ currentRow++ };
 						std::int32_t redundantItemChildrenCount{ 0 };
 
 						auto const redundantIndex{ output.first };
@@ -675,7 +675,7 @@ public:
 						std::int32_t redundantStreamOrder{ 0 };
 						for (auto const& streamKV : redundantNode.redundantStreams)
 						{
-							std::int32_t const redundantStreamItemIndex{ ++currentRow };
+							std::int32_t const redundantStreamItemIndex{ currentRow++ };
 
 							auto const streamIndex{ streamKV.first };
 							auto const interfaceIndex{ streamKV.second->staticModel->avbInterfaceIndex };
@@ -708,7 +708,7 @@ public:
 
 						if (!streamNode.isRedundant)
 						{
-							std::int32_t const streamItemIndex{ ++currentRow };
+							std::int32_t const streamItemIndex{ currentRow++ };
 							auto const interfaceIndex{ streamNode.staticModel->avbInterfaceIndex };
 							auto const currentOffset{ ++offsetFromEntityNode };
 							streamMap.insert(std::make_pair(streamIndex, currentOffset));
@@ -760,8 +760,8 @@ public:
 					QVector<HeaderItem*> headerItems;
 					auto currentColumn{ q_ptr->columnCount() };
 
-					std::int32_t const entityItemIndex{ currentColumn++ };
-					std::int32_t entityItemChildrenCount{ 0 };
+					auto const entityItemIndex = currentColumn++;
+					auto entityItemChildrenCount = std::int32_t{ 0 };
 
 					auto* entityItem = new HeaderItem{ Model::NodeType::Entity, entityID };
 					headerItems << entityItem;
