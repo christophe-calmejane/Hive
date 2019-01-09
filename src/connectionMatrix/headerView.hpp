@@ -53,6 +53,9 @@ private:
 	Q_SLOT void handleSectionRemoved(QModelIndex const& parent, int first, int last);
 	Q_SLOT void handleHeaderDataChanged(Qt::Orientation orientation, int first, int last);
 	Q_SLOT void handleSectionClicked(int logicalIndex);
+	Q_SLOT void handleModelReset();
+
+	void updateSectionVisibility(int logicalIndex);
 
 	QVector<SectionState> _sectionState;
 };

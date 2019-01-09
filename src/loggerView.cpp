@@ -123,11 +123,12 @@ LoggerView::LoggerView(QWidget* parent)
 			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
 		});
 
-	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	auto* searchShortcut = new QShortcut{ QKeySequence::Replace, this };
 	connect(searchShortcut, &QShortcut::activated, this,
 		[this]()
 		{
 			searchLineEdit->setFocus(Qt::MouseFocusReason);
+			searchLineEdit->selectAll();
 		});
 
 	auto* saveShortcut = new QShortcut{ QKeySequence::Save, this };
