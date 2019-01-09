@@ -123,7 +123,6 @@ View::View(QWidget* parent)
 	, _filterProxy{ std::make_unique<Filter>(*this) }
 {
 	_proxy.connectToModel(_model.get());
-	_filterProxy->setSourceModel(_model.get());
 
 	setVerticalHeader(_verticalHeaderView.get());
 	setHorizontalHeader(_horizontalHeaderView.get());
@@ -201,6 +200,7 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
 		_filterProxy->setTransposed(_isTransposed);
+		_filterProxy->setSourceModel(_model.get());
 	}
 }
 
