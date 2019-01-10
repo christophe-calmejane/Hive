@@ -37,9 +37,9 @@
      inkscape:window-height="1147"
      id="namedview4507"
      showgrid="false"
-     inkscape:zoom="2.8284271"
-     inkscape:cx="-160.64449"
-     inkscape:cy="6.0064342"
+     inkscape:zoom="7.9999999"
+     inkscape:cx="30.676746"
+     inkscape:cy="38.157491"
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
@@ -79,31 +79,34 @@
        id="rect4493" /></g><g
      id="unlocked">
 
+
+
 <text
    xml:space="preserve"
    style="font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#494e93;fill-opacity:1;stroke:none"
-   x="-0.33333421"
-   y="43.947918"
+   x="-0.27083421"
+   y="31.918221"
    id="text827"><tspan
      sodipodi:role="line"
      id="tspan825"
-     x="-0.33333421"
-     y="43.947918"
+     x="-0.27083421"
+     y="31.918221"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:21.33333397px;font-family:Verdana;-inkscape-font-specification:'Verdana Bold';fill:#494e93;fill-opacity:1">Milan</tspan></text>
-
 <text
    id="text822"
-   y="35.947918"
-   x="-0.20833419"
-   style="font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#494e93;fill-opacity:0.40201005;stroke:none;"
+   y="-32.081779"
+   x="-0.27083421"
+   style="font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#494e93;fill-opacity:0.40201009;stroke:none"
    xml:space="preserve"
    inkscape:export-filename="..\text822.png"
    inkscape:export-xdpi="96"
-   inkscape:export-ydpi="96"><tspan
-     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:21.33333397px;font-family:Verdana;-inkscape-font-specification:'Verdana Bold';fill:#494e93;fill-opacity:0.40201005;"
-     y="35.947918"
-     x="-0.20833419"
+   inkscape:export-ydpi="96"
+   transform="scale(1,-1)"><tspan
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:21.33333397px;font-family:Verdana;-inkscape-font-specification:'Verdana Bold';fill:#494e93;fill-opacity:0.40201009"
+     y="-32.081779"
+     x="-0.27083421"
      id="tspan820"
      sodipodi:role="line">Milan</tspan></text>
+
 
 </g></svg>
