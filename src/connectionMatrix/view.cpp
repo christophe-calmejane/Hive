@@ -383,7 +383,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& talkerEntityNode = talkerEntity->getEntityNode();
 							auto const& talkerStreamNode = talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
-							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode.dynamicModel->currentFormat);
+							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode.dynamicModel->streamInfo.streamFormat);
 						}
 					}
 					else if (action == matchListenerAction)
@@ -393,7 +393,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& listenerEntityNode = listenerEntity->getEntityNode();
 							auto const& listenerStreamNode = listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
-							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode.dynamicModel->currentFormat);
+							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode.dynamicModel->streamInfo.streamFormat);
 						}
 					}
 				}
