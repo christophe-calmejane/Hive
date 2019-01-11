@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -28,7 +28,7 @@ namespace settings
 class SettingsManager
 {
 protected:
-	using Subject = la::avdecc::TypedSubject<struct SubjectTag, std::mutex>;
+	using Subject = la::avdecc::utils::TypedSubject<struct SubjectTag, std::mutex>;
 
 public:
 	using Setting = QString;
@@ -38,7 +38,7 @@ public:
 		QVariant initialValue{};
 	};
 
-	class Observer : public la::avdecc::Observer<Subject>
+	class Observer : public la::avdecc::utils::Observer<Subject>
 	{
 	public:
 		virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept = 0;

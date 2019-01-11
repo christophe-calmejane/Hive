@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -19,6 +19,7 @@
 
 #include "avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "asPathWidget.hpp"
+#include "nodeTreeWidget.hpp"
 #include "avdecc/helper.hpp"
 
 #include <unordered_map>
@@ -129,7 +130,7 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAvbInfo(la::avdecc::entity::model:
 	_gptpGrandmasterID->setText(1, avdecc::helper::uniqueIdentifierToString(avbInfo.gptpGrandmasterID));
 	_gptpDomainNumber->setText(1, QString::number(avbInfo.gptpDomainNumber));
 	_propagationDelay->setText(1, QString("%1 nsec").arg(avbInfo.propagationDelay));
-	_flags->setText(1, avdecc::helper::toHexQString(la::avdecc::to_integral(avbInfo.flags), true, true) + QString(" (") + avdecc::helper::flagsToString(avbInfo.flags) + QString(")"));
+	setFlagsItemText(_flags, la::avdecc::utils::to_integral(avbInfo.flags), avdecc::helper::flagsToString(avbInfo.flags));
 }
 
 void AvbInterfaceDynamicTreeWidgetItem::updateLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)

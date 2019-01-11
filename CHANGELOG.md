@@ -6,15 +6,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- Support for _Locking/Unlocking_ an entity
+- Detection and display of _Milan compatible_ devices
 - Device details dialog for easy access to basic device and device channel configuration
 - Support for end-to-end channel connection determination
-- Support for Locking/Unlocking an entity
-- Detection and display of Milan compatible devices
-- Display of AS Path in AVB Interface descriptor
-- Display of the AVB Interface link status (when available)
+- Display of _AS Path_ in AVB Interface descriptor
+- Display of the AVB Interface _link status_ (when available)
+- Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
+- Possibility to connect a non-redundant stream to a redundant one (one of the pair)
+- Milan GetStreamInfo extended information
+- Detection of devices not supporting _Acquire_ and/or _Lock_ commands
+- Display of the current dynamic mappings without having to edit them, in StreamPort descriptor
+- Button to clear all dynamic mappings in StreamPort descriptor
+- Tooltip when the mouse is over a _flags field_ of a descriptor
+- Basic entity filtering in connection matrix
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)
+- Changed the colors in the Connection Matrix (see Legend)
+- Logger configuration menus does not close automatically
 
 ### Fixed
 - Upload firmware progression always set to 100% upon successfull completion
@@ -24,6 +34,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Entity Model Inspector focus lost when a new entity is detected](https://github.com/christophe-calmejane/Hive/issues/19)
 - [[macOS] Forcing light mode until full dark mode is supported by Qt](https://github.com/christophe-calmejane/Hive/issues/39)
 - [Restoring previous ComboBox value if the command failed (Configuration/SamplingRate/ClockSource)](https://github.com/christophe-calmejane/Hive/issues/18)
+- Incorrect connection established between 2 redundant streams when clicking on a non-connectable box
+- Automatically selecting the Entity descriptor when inspecting a new entity ([for now](https://github.com/christophe-calmejane/Hive/issues/22))
+- Partial deadlock (in background tasks) when editing channel mappings, sometimes leading to the impossibility to apply the mappings
+- Possible crash upon loading after having changed ProtocolInterface and/or NetworkInterface multiple times
 
 ## [1.0.8] - 2018-10-30
 ### Fixed

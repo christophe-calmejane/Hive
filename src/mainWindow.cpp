@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -175,31 +175,30 @@ void MainWindow::createControllerView()
 	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
 	auto* imageItemDelegate{ new ImageItemDelegate };
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Compatibility), 50);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Name), 180);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::Group), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::LockState), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
-	controllerTableView->setColumnWidth(la::avdecc::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), 50);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), 180);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
 }
 
 void MainWindow::populateProtocolComboBox()
 {
 	const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName{
-		{ la::avdecc::protocol::ProtocolInterface::Type::None, "None" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
@@ -300,7 +299,7 @@ void MainWindow::connectSignals()
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* deviceView{ static_cast<QAction*>(nullptr) };
 
-				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
 					// Do not propose Acquire if the device is Milan (not supported)
 					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
@@ -363,6 +362,9 @@ void MainWindow::connectSignals()
 
 				menu.addSeparator();
 				menu.addAction("Cancel");
+
+				// Release the controlled entity before starting a long operation (menu.exec)
+				controlledEntity.reset();
 
 				if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 				{
@@ -480,9 +482,13 @@ void MainWindow::connectSignals()
 	connect(&updater, &Updater::newVersionAvailable, this,
 		[](QString version, QString downloadURL)
 		{
-			QString message{ "New version (" + version + ") available here " + downloadURL };
+			QString message{ "New version (" + version + ") available.\nDo you want to open the download page?" };
 
-			QMessageBox::information(nullptr, "", message);
+			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
+			if (result == QMessageBox::StandardButton::Open)
+			{
+				QDesktopServices::openUrl(downloadURL);
+			}
 			LOG_HIVE_INFO(message);
 		});
 	connect(&updater, &Updater::checkFailed, this,

@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -24,6 +24,7 @@
 
 #include <QPainter>
 #include <QMouseEvent>
+#include <QDebug>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -252,7 +253,27 @@ QSize HeaderView::sizeHint() const
 
 void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
 {
-	_sectionState.insert(first, last - first + 1, {});
+	for (auto i = 0; i < first - last + 1; ++i)
+	{
+		auto const section = first + i;
+
+		// Insert new section?
+		if (section <= _sectionState.count())
+		{
+			_sectionState.push_back({});
+		}
+		else // Restore section state
+		{
+			if (_sectionState[section].isVisible)
+			{
+				showSection(section);
+			}
+			else
+			{
+				hideSection(section);
+			}
+		}
+	}
 }
 
 void HeaderView::handleSectionRemoved(QModelIndex const& parent, int first, int last)

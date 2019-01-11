@@ -1,16 +1,18 @@
 <RCC>
-    <qresource prefix="/">
-        <file>MaterialIcons-Regular.ttf</file>
-        <file>Logo.png</file>
-        <file alias="CHANGELOG.md">../CHANGELOG.md</file>
-        <file>locked.png</file>
-        <file>unlocked.png</file>
-        <file>locked_by_other.png</file>
-        <file>save.png</file>
-        <file>trash.png</file>
-        <file>milan.png</file>
-        <file>ieee.png</file>
-        <file>not_compliant.png</file>
-        <file>toxic.png</file>
-    </qresource>
+	<qresource prefix="/">
+		<file>MaterialIcons-Regular.ttf</file>
+		<file>Logo.png</file>
+		<file alias="CHANGELOG.md">../CHANGELOG.md</file>
+		<file>locked.png</file>
+		<file>unlocked.png</file>
+		<file>locked_by_other.png</file>
+		<file>lock_not_supported.png</file>
+		<file>save.png</file>
+		<file>trash.png</file>
+		<file>milan.png</file>
+		<file>milan_redundant.png</file>
+		<file>ieee.png</file>
+		<file>not_compliant.png</file>
+		<file>misbehaving.png</file>
+	</qresource>
 </RCC>

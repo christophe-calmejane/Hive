@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QTableView>
+#include <QSortFilterProxyModel>
 #include "settingsManager/settings.hpp"
 #include "toolkit/transposeProxyModel.hpp"
 
@@ -29,6 +30,19 @@ class Model;
 class HeaderView;
 class ItemDelegate;
 class Legend;
+
+class Filter : public QSortFilterProxyModel
+{
+protected:
+	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
+	{
+		return sourceModel()->headerData(sourceRow, Qt::Vertical, Qt::DisplayRole).toString().contains(filterRegExp());
+	}
+	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const override
+	{
+		return sourceModel()->headerData(sourceColumn, Qt::Horizontal, Qt::DisplayRole).toString().contains(filterRegExp());
+	}
+};
 
 class View final : public QTableView, private settings::SettingsManager::Observer
 {
@@ -63,6 +77,7 @@ private:
 	std::unique_ptr<Legend> _legend;
 
 	qt::toolkit::TransposeProxyModel _proxy;
+	Filter _filterProxy;
 	bool _isTransposed{ false };
 };
 

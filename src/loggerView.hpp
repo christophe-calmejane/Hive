@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -22,9 +22,9 @@
 #include "ui_loggerView.h"
 #include "avdecc/loggerModel.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
+#include "toolkit/tickableMenu.hpp"
 
 #include <QSortFilterProxyModel>
-#include <QMenu>
 
 class LoggerView : public QWidget, private Ui::LoggerView
 {
@@ -43,6 +43,6 @@ private:
 	QSortFilterProxyModel _levelFilterProxyModel{ this };
 	QSortFilterProxyModel _searchFilterProxyModel{ this };
 	qt::toolkit::DynamicHeaderView _dynamicHeaderView{ Qt::Horizontal, this };
-	QMenu _layerFilterMenu{ this };
-	QMenu _levelFilterMenu{ this };
+	qt::toolkit::TickableMenu _layerFilterMenu{ this };
+	qt::toolkit::TickableMenu _levelFilterMenu{ this };
 };

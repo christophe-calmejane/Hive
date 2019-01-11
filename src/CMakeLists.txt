@@ -68,6 +68,7 @@ set(TOOLKIT_HEADER_FILES
 	toolkit/dynamicHeaderView.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
+	toolkit/tickableMenu.hpp
 	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
@@ -83,6 +84,7 @@ set(TOOLKIT_SOURCE_FILES
 	toolkit/dynamicHeaderView.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
+	toolkit/tickableMenu.cpp
 	toolkit/graph/connection.cpp
 	toolkit/graph/inputSocket.cpp
 	toolkit/graph/node.cpp
@@ -96,7 +98,8 @@ set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp
-	nodeTreeDynamicWidgets/streamConnectionWidget.hpp
+	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.hpp
+	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.hpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.hpp
@@ -108,7 +111,8 @@ set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.cpp
-	nodeTreeDynamicWidgets/streamConnectionWidget.cpp
+	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.cpp
+	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.cpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.cpp
