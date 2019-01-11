@@ -123,7 +123,7 @@ public:
 
 // Define bitfield enum traits for ConnectionStatus
 template<>
-struct la::avdecc::enum_traits<avdecc::ConnectionStatus>
+struct la::avdecc::utils::enum_traits<avdecc::ConnectionStatus>
 {
 	static constexpr bool is_bitfield = true;
 };

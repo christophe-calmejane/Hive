@@ -624,13 +624,13 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 					auto const status = connectionKV.second->streamConnectionStatus;
 					bool isRedundant = false; // TODO !((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
 
-					if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::Connected))
+					if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::Connected))
 					{
-						if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
 						{
 							connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, isRedundant);
 						}
-						else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
 						{
 							connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, isRedundant);
 						}
@@ -639,13 +639,13 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 							connectionMatrix::drawConnectedStream(painter, iconDrawRect, isRedundant);
 						}
 					}
-					else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::FastConnecting))
+					else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::FastConnecting))
 					{
-						if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
 						{
 							connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, isRedundant);
 						}
-						else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
 						{
 							connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, isRedundant);
 						}
@@ -654,17 +654,17 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 							connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, isRedundant);
 						}
 					}
-					else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::PartiallyConnected))
+					else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::PartiallyConnected))
 					{
 						connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
 					}
 					else
 					{
-						if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
 						{
 							connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, isRedundant);
 						}
-						else if (la::avdecc::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
 						{
 							connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, isRedundant);
 						}

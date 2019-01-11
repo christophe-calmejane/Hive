@@ -326,7 +326,7 @@ void MainWindow::connectSignals()
 				{
 					deviceView = menu.addAction("Device Details");
 				}
-				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
 					// Lock
 					{
