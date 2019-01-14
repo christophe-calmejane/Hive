@@ -128,7 +128,7 @@ LoggerView::LoggerView(QWidget* parent)
 			// Check if a filter is applied
 			if (!search.isEmpty() || !level.isEmpty() || !layer.isEmpty())
 			{
-				if (QMessageBox::Yes != QMessageBox::question(this, {}, "Apply filters to the output?"))
+				if (QMessageBox::Yes != QMessageBox::question(this, {}, "Apply filters to the saved output?"))
 				{
 					search = {};
 					level = {};
@@ -141,7 +141,7 @@ LoggerView::LoggerView(QWidget* parent)
 			level.setCaseSensitivity(Qt::CaseInsensitive);
 			layer.setCaseSensitivity(Qt::CaseInsensitive);
 
-			auto const filename = QFileDialog::getSaveFileName(this, "Save As..", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
+			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
 
 			_loggerModel.save(filename, { search, level, layer });
 		});
