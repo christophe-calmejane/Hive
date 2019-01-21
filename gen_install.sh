@@ -84,7 +84,7 @@ do
 			echo " -h -> Display this help"
 			echo " -b <cmake path> -> Force cmake binary path (Default: $cmake_path)"
 			echo " -c <cmake generator> -> Force cmake generator (Default: $generator)"
-			echo " -noclean -> Don't remove temp build folder [Default=clean]"
+			echo " -noclean -> Don't remove temp build folder [Default=clean on successful build]"
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
@@ -207,7 +207,7 @@ fi
 # Cleanup routine
 cleanup_main()
 {
-	if [ $doCleanup -eq 1 ]; then
+	if [[ $doCleanup -eq 1 && $1 -eq 0 ]]; then
 		echo -n "Cleaning... "
 		sleep 2
 		rm -rf "${callerFolderPath}${outputFolder}"
