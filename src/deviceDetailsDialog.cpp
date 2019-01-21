@@ -196,7 +196,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _activeConfigurationIndex.value(), audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _previousConfigurationIndex.value(), audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 				}
@@ -209,7 +209,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _activeConfigurationIndex.value(), audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _previousConfigurationIndex.value(), audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 				}
@@ -327,25 +327,12 @@ public:
 	{
 		if (_activeConfigurationIndex != comboBoxConfiguration->currentData().toInt())
 		{
-			bool init = !_activeConfigurationIndex;
 			_activeConfigurationIndex = comboBoxConfiguration->currentData().toInt();
 
-			_deviceDetailsChannelTableModelTransmit.resetChangedData();
-			_deviceDetailsChannelTableModelTransmit.removeAllNodes();
-			_deviceDetailsChannelTableModelReceive.resetChangedData();
-			_deviceDetailsChannelTableModelReceive.removeAllNodes();
-
-			// read out actual data again
-			loadCurrentControlledEntity(_entityID, true);
-
-			if (!init)
-			{
-				_hasChangesByUser = true;
-				updateButtonStates();
-			}
+			_hasChangesByUser = true;
+			updateButtonStates();
 		}
 	}
-
 
 	/**
 	* Invoked after a command has been exectued. We use it to detect if all data that was changed has been written.
@@ -451,13 +438,7 @@ public:
 			avdecc::ControllerManager::getInstance().setEntityGroupName(_entityID, lineEditGroupName->text());
 			_expectedChanges++;
 		}
-
-		if (_previousConfigurationIndex != _activeConfigurationIndex)
-		{
-			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex.value());
-			_expectedChanges++;
-		}
-
+		
 		//iterate over the changes and write them via avdecc
 		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
 		for (auto e : changesReceive.keys())
@@ -486,6 +467,15 @@ public:
 				}
 			}
 		}
+
+		// applying the new configuration shall be done as the last step, as it may change everything displayed.
+		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
+		if (_previousConfigurationIndex != _activeConfigurationIndex)
+		{
+			avdecc::ControllerManager::getInstance().
+			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex.value()); // this needs a handler to make it sequential. 
+			_expectedChanges++;
+		}
 	}
 
 	/**
@@ -495,7 +485,7 @@ public:
 	{
 		_hasChangesByUser = false;
 		updateButtonStates();
-		_activeConfigurationIndex = -1;
+		_activeConfigurationIndex = std::nullopt;
 
 		_deviceDetailsChannelTableModelTransmit.resetChangedData();
 		_deviceDetailsChannelTableModelTransmit.removeAllNodes();
