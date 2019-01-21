@@ -441,10 +441,22 @@ void MainWindow::connectSignals()
 
 	// Connect updater signals
 	auto const& updater = Updater::getInstance();
-	connect(&updater, &Updater::newVersionAvailable, this,
+	connect(&updater, &Updater::newReleaseVersionAvailable, this,
 		[](QString version, QString downloadURL)
 		{
 			QString message{ "New version (" + version + ") available.\nDo you want to open the download page?" };
+
+			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
+			if (result == QMessageBox::StandardButton::Open)
+			{
+				QDesktopServices::openUrl(downloadURL);
+			}
+			LOG_HIVE_INFO(message);
+		});
+	connect(&updater, &Updater::newBetaVersionAvailable, this,
+		[](QString version, QString downloadURL)
+		{
+			QString message{ "New BETA version (" + version + ") available.\nDo you want to open the download page?" };
 
 			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
 			if (result == QMessageBox::StandardButton::Open)
@@ -521,10 +533,7 @@ void MainWindow::showEvent(QShowEvent* event)
 	std::call_once(once,
 		[this]()
 		{
-			// Start a new version check
-			Updater::getInstance().checkForNewVersion();
-
-			// Check version change
+			// Check if this is the first time we launch a new Hive version
 			auto& settings = settings::SettingsManager::getInstance();
 			auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
 			settings.setValue(settings::LastLaunchedVersion.name, hive::internals::versionString);

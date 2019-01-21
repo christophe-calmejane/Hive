@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Basic entity filtering in connection matrix
 - Confirmation dialog when clearing the debug log
 - Possibility to apply log filters to the saved output
+- [Automatic check for new version can now check for BETA releases](https://github.com/christophe-calmejane/Hive/issues/46)
 
 ### Changed
 - Icon when an entity is acquired by Hive (changed color from orange to green)

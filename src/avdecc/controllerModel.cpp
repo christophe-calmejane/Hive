@@ -65,7 +65,7 @@ private:
 	// Slots for EntityLogoCache signals
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
 
-	// Slots for settings::SettingsManager signals
+	// settings::SettingsManager overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
 private:
@@ -121,7 +121,7 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	auto& logoCache = EntityLogoCache::getInstance();
 	connect(&logoCache, &EntityLogoCache::imageChanged, this, &ControllerModelPrivate::imageChanged);
 
-	// Connect settings::SettingsManager signals
+	// Register to settings::SettingsManager
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
 }
