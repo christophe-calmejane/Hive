@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Support for _Locking/Unlocking_ an entity
 - Detection and display of _Milan compatible_ devices
+- Device details dialog for easy access to basic device and device channel configuration
+- Support for end-to-end channel connection determination
 - Display of _AS Path_ in AVB Interface descriptor
 - Display of the AVB Interface _link status_ (when available)
 - Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
