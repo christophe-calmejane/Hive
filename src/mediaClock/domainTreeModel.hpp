@@ -1,0 +1,147 @@
+/*
+* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be usefu_state,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#pragma once
+
+#include <QAbstractItemModel>
+#include <QStyledItemDelegate>
+#include <QTreeView>
+#include <optional>
+#include "avdecc/controllerManager.hpp"
+#include "avdecc/mcDomainManager.hpp"
+
+class DomainTreeModel;
+class DomainTreeModelPrivate;
+
+//**************************************************************
+//enum MediaClockManagementTableModelColumn
+//**************************************************************
+/**
+* @brief	All columns that can be displayed.
+* [@author  Marius Erlen]
+* [@date    2018-10-11]
+*/
+enum class DomainTreeModelColumn
+{
+	Domain,
+	MediaClockMaster
+};
+
+//**************************************************************
+//class MCMasterSelectionDelegate
+//**************************************************************
+/**
+* @brief	Implements a delegate for the mc master column.
+* [@author  Marius Erlen]
+* [@date    2018-10-16]
+*
+* Shows a label and combobox for domains and two labels for entities.
+*/
+class SampleRateDomainDelegate final : public QStyledItemDelegate
+{
+	Q_OBJECT
+
+public:
+	SampleRateDomainDelegate(QTreeView* parent = 0);
+	QWidget* createEditor(QWidget* parent, QStyleOptionViewItem const& option, QModelIndex const& index) const;
+	void setModelData(QWidget* editor, QAbstractItemModel* model, QModelIndex const& index) const;
+	void updateEditorGeometry(QWidget* editor, QStyleOptionViewItem const& option, QModelIndex const& index) const;
+	void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const;
+	QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const;
+
+private:
+	QTreeView* _treeView;
+};
+
+//**************************************************************
+//class MCMasterSelectionDelegate
+//**************************************************************
+/**
+* @brief	Implements a delegate for the mc master column.
+* [@author  Marius Erlen]
+* [@date    2018-10-16]
+*
+* Shows a radio button that is checked if the entity in the row is
+* the mc master.
+*/
+class MCMasterSelectionDelegate final : public QStyledItemDelegate
+{
+	Q_OBJECT
+
+public:
+	MCMasterSelectionDelegate(QTreeView* parent = 0);
+	void updateEditorGeometry(QWidget* editor, QStyleOptionViewItem const& option, QModelIndex const& index) const;
+	void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const;
+	QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const;
+
+private:
+	QTreeView* _treeView;
+};
+
+//**************************************************************
+//class DomainTreeModel
+//**************************************************************
+/**
+* @brief	Implements a tree model for domains and their assigned entities.
+* [@author  Marius Erlen]
+* [@date    2018-10-16]
+*
+* Holds a tree of domains and entities. This model is assembled from a MediaClockDomains object.
+* And can be converted back to by calling createMediaClockMappings.
+*/
+class DomainTreeModel : public QAbstractItemModel
+{
+	Q_OBJECT
+public:
+	DomainTreeModel(QObject* parent = nullptr);
+	~DomainTreeModel();
+
+	QVariant data(QModelIndex const& index, int role) const override;
+	bool setData(QModelIndex const& index, QVariant const& value, int role = Qt::EditRole) override;
+	Qt::ItemFlags flags(QModelIndex const& index) const override;
+	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+	QModelIndex index(int row, int column, QModelIndex const& parent = QModelIndex()) const override;
+	QModelIndex parent(QModelIndex const& index) const override;
+	int rowCount(QModelIndex const& parent = QModelIndex()) const override;
+	int columnCount(QModelIndex const& parent = QModelIndex()) const override;
+
+	bool addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId);
+	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
+	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
+	void removeEntity(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	avdecc::mediaClock::DomainIndex addNewDomain();
+	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);
+	QList<la::avdecc::UniqueIdentifier> removeAllDomains();
+	bool isEntityDoubled(la::avdecc::UniqueIdentifier const& entityId) const;
+
+	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains);
+	avdecc::mediaClock::MCEntityDomainMapping createMediaClockMappings();
+
+	Q_SLOT void handleClick(QModelIndex const& current, QModelIndex const& previous);
+
+	Q_SIGNAL void sampleRateSettingChanged();
+	Q_SIGNAL void mcMasterSelectionChanged();
+	Q_SIGNAL void triggerResizeColumns();
+
+protected:
+private:
+	DomainTreeModelPrivate* const d_ptr{ nullptr };
+	Q_DECLARE_PRIVATE(DomainTreeModel)
+};

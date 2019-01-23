@@ -50,7 +50,7 @@
      <x>0</x>
      <y>0</y>
      <width>1400</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -76,6 +76,7 @@
      <string>Options</string>
     </property>
     <addaction name="actionSettings"/>
+    <addaction name="actionMediaClockManagement"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -130,6 +131,11 @@
   <action name="actionChangeLog">
    <property name="text">
     <string>Change Log</string>
+   </property>
+  </action>
+  <action name="actionMediaClockManagement">
+   <property name="text">
+    <string>Media Clock management...</string>
    </property>
   </action>
  </widget>
