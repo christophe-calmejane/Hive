@@ -83,6 +83,7 @@ public:
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::CompatibilityFlags>("la::avdecc::controller::ControlledEntity::CompatibilityFlags");
 		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
 		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
+		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnectionState>("la::avdecc::controller::model::StreamConnectionState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnections>("la::avdecc::controller::model::StreamConnections");
 		qRegisterMetaType<la::avdecc::controller::model::AvbInterfaceCounters>("la::avdecc::controller::model::AvbInterfaceCounters");
@@ -633,6 +634,27 @@ private:
 						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, status);
 					}
 				});
+		}
+	}
+
+	virtual void setStreamOutputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& streamInfo, SetStreamOutputInfoHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo);
+			controller->setStreamOutputInfo(targetEntityID, streamIndex, streamInfo,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+			{
+				if (handler)
+				{
+					la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+				}
+				else
+				{
+					emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, status);
+				}
+			});
 		}
 	}
 

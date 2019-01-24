@@ -21,6 +21,7 @@
 
 #include <QCoreApplication>
 #include <QLayout>
+#include <QStringListModel>
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
@@ -51,11 +52,12 @@ private:
 	::DeviceDetailsDialog* _dialog;
 	la::avdecc::UniqueIdentifier _entityID;
 	std::optional<la::avdecc::entity::model::DescriptorIndex> _activeConfigurationIndex = std::nullopt, _previousConfigurationIndex = std::nullopt;
+	std::optional<uint32_t> _userSelectedLatency = std::nullopt;
 	QMap<QWidget*, bool> _hasChangesMap;
-	bool _applyRequested;
-	int _expectedChanges;
-	int _gottenChanges;
-	bool _hasChangesByUser;
+	bool _applyRequested = false;
+	int _expectedChanges = 0;
+	int _gottenChanges = 0;
+	bool _hasChangesByUser = false;
 
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelReceive;
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelTransmit;
@@ -71,11 +73,12 @@ public:
 		setupUi(parent);
 		_dialog = parent;
 
-		_applyRequested = false;
-		_hasChangesByUser = false;
 		updateButtonStates();
-		_activeConfigurationIndex = std::nullopt;
-		_previousConfigurationIndex = std::nullopt;
+
+		comboBox_PredefinedPT->addItem("0.25 ms", 250000);
+		comboBox_PredefinedPT->addItem("0.5 ms", 500000);
+		comboBox_PredefinedPT->addItem("1 ms", 1000000);
+		comboBox_PredefinedPT->addItem("2 ms", 2000000);
 
 		// setup the table view data models.
 		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
@@ -86,6 +89,9 @@ public:
 		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
 		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
 		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxConfigurationChanged);
+		connect(comboBox_PredefinedPT, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged);
+		connect(radioButton_PredefinedPT, &QRadioButton::clicked, this, &DeviceDetailsDialogImpl::radioButtonPredefinedPTClicked);
+		
 		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
@@ -149,6 +155,44 @@ public:
 				// invokes various visit methods.
 				controlledEntity->accept(this);
 				comboBoxConfiguration->setCurrentIndex(_activeConfigurationIndex.value());
+
+				// latency tab:
+				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+				std::optional<uint32_t> latency = std::nullopt;
+				for (auto const& streamOutput : configurationNode.streamOutputs)
+				{
+					if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
+					{
+						// unequal values
+						latency = std::nullopt;
+						break;
+					}
+					latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
+				}
+
+				if (latency == std::nullopt)
+				{
+					comboBox_PredefinedPT->setCurrentIndex(0);
+					lineEdit_CustomPT->setText("-");
+					radioButton_CustomPT->setChecked(true);
+				}
+				else
+				{
+					int index = comboBox_PredefinedPT->findData(*latency);
+					if (index != -1)
+					{
+						comboBox_PredefinedPT->setCurrentIndex(index);
+
+						lineEdit_CustomPT->setText("-");
+						radioButton_PredefinedPT->setChecked(true);
+					}
+					else
+					{
+						comboBox_PredefinedPT->setCurrentIndex(0);
+						lineEdit_CustomPT->setText(QString::number((*latency / 1000000.0f)).append(" ms"));
+						radioButton_CustomPT->setChecked(true);
+					}
+				}
 			}
 		}
 
@@ -225,7 +269,9 @@ public:
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	{
+	}
 
 	/**
 	* Ignored.
@@ -405,6 +451,38 @@ public:
 	}
 
 	/**
+	* Invoked whenever the entity group name gets changed in the view.
+	* @param entityGroupName The new group name.
+	*/
+	Q_SLOT void DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged(QString text)
+	{
+		if (_userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
+		{
+			_userSelectedLatency = comboBox_PredefinedPT->currentData().toInt();
+
+			if (radioButton_PredefinedPT->isChecked())
+			{
+				_hasChangesByUser = true;
+				updateButtonStates();
+			}
+		}
+	}
+
+	/**
+	* Invoked whenever the entity group name gets changed in the view.
+	* @param entityGroupName The new group name.
+	*/
+	Q_SLOT void DeviceDetailsDialogImpl::radioButtonPredefinedPTClicked(bool state)
+	{
+		if (state &&_userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
+		{
+			_userSelectedLatency = comboBox_PredefinedPT->currentData().toInt();
+			_hasChangesByUser = true;
+			updateButtonStates();
+		}
+	}
+
+	/**
 	* Invoked whenever one of tables on the receive and transmit tabs is edited by the user.
 	* @param entityGroupName The new group name.
 	*/
@@ -468,11 +546,35 @@ public:
 			}
 		}
 
+		// apply the new stream info (latency)
+		if (_userSelectedLatency)
+		{
+			auto const controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(_entityID);
+			if (controlledEntity)
+			{
+				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+				for (auto const& streamOutput : configurationNode.streamOutputs)
+				{
+					auto streamInfo = streamOutput.second.dynamicModel->streamInfo;
+					if (streamInfo.msrpAccumulatedLatency != *_userSelectedLatency)
+					{
+						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+
+						la::avdecc::entity::model::StreamInfo si;
+						si.msrpAccumulatedLatency = *_userSelectedLatency;
+
+						// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
+						// TODO: needs update of library:
+						avdecc::ControllerManager::getInstance().setStreamOutputInfo(_entityID, streamOutput.first, si);
+					}
+				}
+			}
+		}
+
 		// applying the new configuration shall be done as the last step, as it may change everything displayed.
 		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
 		if (_previousConfigurationIndex != _activeConfigurationIndex)
 		{
-			avdecc::ControllerManager::getInstance().
 			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex.value()); // this needs a handler to make it sequential. 
 			_expectedChanges++;
 		}
