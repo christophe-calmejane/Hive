@@ -35,6 +35,8 @@ public:
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
 
+	QString filterText() const;
+
 signals:
 	void filterChanged(QString const& filter);
 
@@ -46,10 +48,10 @@ private:
 	QWidget _buttonContainer{ this };
 	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
 	QPushButton _button{ "Show Legend", &_buttonContainer };
+	QLineEdit _searchLineEdit{ &_buttonContainer };
 	QWidget _horizontalPlaceholder{ this };
 	QWidget _verticalPlaceholder{ this };
 	bool _isTransposed{ false };
-	QLineEdit _searchLineEdit{ this };
 };
 
 

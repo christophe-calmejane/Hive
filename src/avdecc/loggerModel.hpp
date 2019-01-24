@@ -39,7 +39,15 @@ public:
 	Qt::ItemFlags flags(QModelIndex const& index) const override;
 
 	void clear();
-	void save(QString const& filename) const;
+
+	struct SaveConfiguration
+	{
+		QRegExp search{};
+		QRegExp level{};
+		QRegExp layer{};
+	};
+
+	void save(QString const& filename, SaveConfiguration const& saveConfiguration) const;
 
 private:
 	LoggerModelPrivate* const d_ptr{ nullptr };

@@ -84,7 +84,7 @@ do
 			echo " -h -> Display this help"
 			echo " -b <cmake path> -> Force cmake binary path (Default: $cmake_path)"
 			echo " -c <cmake generator> -> Force cmake generator (Default: $generator)"
-			echo " -noclean -> Don't remove temp build folder [Default=clean]"
+			echo " -noclean -> Don't remove temp build folder [Default=clean on successful build]"
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
@@ -207,7 +207,7 @@ fi
 # Cleanup routine
 cleanup_main()
 {
-	if [ $doCleanup -eq 1 ]; then
+	if [[ $doCleanup -eq 1 && $1 -eq 0 ]]; then
 		echo -n "Cleaning... "
 		sleep 2
 		rm -rf "${callerFolderPath}${outputFolder}"
@@ -223,28 +223,40 @@ trap 'cleanup_main $?' EXIT
 # Cleanup previous build folders, just in case
 rm -rf "${callerFolderPath}${outputFolder}"
 
-hiveVersion=$(grep "HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
-if [[ $hiveVersion == "" ]]; then
+cmakeHiveVersion=$(grep "HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
+if [[ $cmakeHiveVersion == "" ]]; then
 	echo "Cannot detect project version"
 	exit 1
 fi
 
 # Check if we have a release or devel version
 oldIFS="$IFS"
-IFS='.' read -a versionSplit <<< "$hiveVersion"
+IFS='.' read -a versionSplit <<< "$cmakeHiveVersion"
 IFS="$oldIFS"
 
+if [[ ${#versionSplit[*]} -lt 3 || ${#versionSplit[*]} -gt 4 ]]; then
+	echo "Invalid project version (should be in the form x.y.z[.w])"
+	exit 1
+fi
+
+beta_tag=""
 build_tag=""
+is_release=1
+releaseVersion="${versionSplit[0]}.${versionSplit[1]}.${versionSplit[2]}"
 if [ ${#versionSplit[*]} -eq 4 ]; then
 	add_cmake_opt="$add_cmake_opt -DAVDECC_BASE_FOLDER=3rdparty/avdecc-local"
-	build_tag="-$(git rev-parse --short HEAD)"
+	beta_tag="-beta${versionSplit[3]}"
+	build_tag="+$(git rev-parse --short HEAD)"
+	is_release=0
 fi
 
 if isWindows; then
 	installerOSName="win32"
+	latestVersionOSName="windows"
 	installerExtension="exe"
 elif isMac; then
 	installerOSName="Darwin"
+	latestVersionOSName="macOS"
 	installerExtension="dmg"
 else
 	getOS osName
@@ -252,9 +264,9 @@ else
 	exit 1
 fi
 
-installerBaseName="Hive-${hiveVersion}${build_tag}-${installerOSName}"
+installerBaseName="Hive-${releaseVersion}${beta_tag}${build_tag}+${installerOSName}"
 if [ $buildConfigOverride -eq 1 ]; then
-	installerBaseName="${installerBaseName}-${buildConfig}"
+	installerBaseName="${installerBaseName}+${buildConfig}"
 fi
 fullInstallerName="${installerBaseName}.${installerExtension}"
 
@@ -350,6 +362,12 @@ echo ""
 echo "Installer generated: ${fullInstallerName}"
 if [ ! -z "${symbolsFile}" ]; then
 	echo "Symbols generated: ${symbolsFile}"
+fi
+
+if [ $is_release -eq 1 ]; then
+	echo "${cmakeHiveVersion}" > "LatestVersion-${latestVersionOSName}.txt"
+else
+	echo "${cmakeHiveVersion}" > "LatestVersion-beta-${latestVersionOSName}.txt"
 fi
 
 exit 0

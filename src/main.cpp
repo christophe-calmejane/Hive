@@ -102,12 +102,14 @@ int main(int argc, char* argv[])
 	}
 #endif
 
-	// Register settings
+	// Register settings (creating default value if none was saved before)
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSetting(settings::LastLaunchedVersion);
 	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
-	settings.registerSetting(settings::AemCacheEnabled);
 	settings.registerSetting(settings::TransposeConnectionMatrix);
+	settings.registerSetting(settings::AutomaticCheckForUpdates);
+	settings.registerSetting(settings::CheckForBetaVersions);
+	settings.registerSetting(settings::AemCacheEnabled);
 
 	QPixmap logo(":/Logo.png");
 	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);

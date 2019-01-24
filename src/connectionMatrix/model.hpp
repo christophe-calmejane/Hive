@@ -64,6 +64,7 @@ public:
 
 		RelativeParentIndexRole, // std::optional<std::int32_t>, (std::nullopt if orphan)
 		ChildrenCountRole, // std::int32_t
+		FilterRole, // QString proxy to the associated entity's DisplayRole
 
 		/** Intersection Data */
 		ConnectionCapabilitiesRole, // ConnectionCapabilities

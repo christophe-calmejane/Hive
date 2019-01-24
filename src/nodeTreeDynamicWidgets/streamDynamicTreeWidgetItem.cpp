@@ -39,7 +39,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 	auto* formatComboBox = new StreamFormatComboBox{ _entityID };
 	formatComboBox->setStreamFormats(staticModel->formats);
-	formatComboBox->setCurrentStreamFormat(dynamicModel->currentFormat);
+	formatComboBox->setCurrentStreamFormat(dynamicModel->streamInfo.streamFormat);
 
 	parent->setItemWidget(currentFormatItem, 1, formatComboBox);
 
