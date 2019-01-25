@@ -96,9 +96,7 @@ public:
 
 				auto const computeFormatCompatible = [](la::avdecc::controller::model::StreamOutputNode const& talkerNode, la::avdecc::controller::model::StreamInputNode const& listenerNode)
 				{
-					// TODO: listenerNode.dynamicModel->currentFormat
-					// TODO: talkerNode.dynamicModel->currentFormat
-					return la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(la::avdecc::entity::model::StreamFormat(), la::avdecc::entity::model::StreamFormat());
+					return la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(talkerNode.dynamicModel->streamInfo.streamFormat, listenerNode.dynamicModel->streamInfo.streamFormat);
 				};
 				auto const computeDomainCompatible = [&talkerEntity, &listenerEntity, &talkerEntityNode, &listenerEntityNode](auto const talkerAvbInterfaceIndex, auto const listenerAvbInterfaceIndex)
 				{
