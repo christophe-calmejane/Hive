@@ -1184,6 +1184,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Audio Unit Name";
 		case AecpCommandType::SetStreamName:
 			return "Set Stream Name";
+		case AecpCommandType::SetStreamInfo:
+			return "Set Stream Info";
 		case AecpCommandType::SetAvbInterfaceName:
 			return "Set AVB Interface Name";
 		case AecpCommandType::SetClockSourceName:
