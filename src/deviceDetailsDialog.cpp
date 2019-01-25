@@ -456,15 +456,11 @@ public:
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged(QString text)
 	{
-		if (_userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
+		if (radioButton_PredefinedPT->isChecked() && _userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toInt();
-
-			if (radioButton_PredefinedPT->isChecked())
-			{
-				_hasChangesByUser = true;
-				updateButtonStates();
-			}
+			_hasChangesByUser = true;
+			updateButtonStates();
 		}
 	}
 
@@ -474,7 +470,7 @@ public:
 	*/
 	Q_SLOT void DeviceDetailsDialogImpl::radioButtonPredefinedPTClicked(bool state)
 	{
-		if (state &&_userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
+		if (state && _userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toInt();
 			_hasChangesByUser = true;
