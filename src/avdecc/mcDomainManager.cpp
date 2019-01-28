@@ -732,8 +732,7 @@ private:
 
 				for (auto const& clockSource : configNode.clockSources)
 				{
-					if (clockSource.second.staticModel && clockSource.second.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::InputStream && clockSource.second.staticModel->clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput
-						&& isStreamInputOfType(entityId, clockSource.second.staticModel->clockSourceLocationIndex, la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference))
+					if (clockSource.second.staticModel && clockSource.second.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::InputStream && clockSource.second.staticModel->clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput && isStreamInputOfType(entityId, clockSource.second.staticModel->clockSourceLocationIndex, la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference))
 					{
 						avdecc::ControllerManager::SetClockSourceHandler responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 						{
@@ -837,21 +836,22 @@ private:
 				{
 					if (i < inputClockStreamIndexes.size())
 					{
-						tasks.push_back([=](AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
-						{
-							auto& manager = avdecc::ControllerManager::getInstance();
-							if (!doesStreamConnectionExist(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i)))
+						tasks.push_back(
+							[=](AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
 							{
-								avdecc::ControllerManager::ConnectStreamHandler responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+								auto& manager = avdecc::ControllerManager::getInstance();
+								if (!doesStreamConnectionExist(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i)))
 								{
-									// notify SequentialAsyncCommandExecuter that the command completed.
-									parentCommandSet->invokeCommandCompleted(commandIndex, AsyncParallelCommandSet::controlStatusToCommandError(status));
-								};
-								manager.connectStream(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i), responseHandler);
-								return true;
-							}
-							return false;
-						});
+									avdecc::ControllerManager::ConnectStreamHandler responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+									{
+										// notify SequentialAsyncCommandExecuter that the command completed.
+										parentCommandSet->invokeCommandCompleted(commandIndex, AsyncParallelCommandSet::controlStatusToCommandError(status));
+									};
+									manager.connectStream(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i), responseHandler);
+									return true;
+								}
+								return false;
+							});
 					}
 				}
 			}
@@ -883,22 +883,23 @@ private:
 				{
 					if (i < inputClockStreamIndexes.size())
 					{
-						tasks.push_back([=](AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
-						{
-							// can connect the streams
-							if (doesStreamConnectionExist(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i)))
+						tasks.push_back(
+							[=](AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
 							{
-								auto& manager = avdecc::ControllerManager::getInstance();
-								avdecc::ControllerManager::DisconnectStreamHandler responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+								// can connect the streams
+								if (doesStreamConnectionExist(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i)))
 								{
-									// notify SequentialAsyncCommandExecuter that the command completed.
-									parentCommandSet->invokeCommandCompleted(commandIndex, AsyncParallelCommandSet::controlStatusToCommandError(status));
-								};
-								manager.disconnectStream(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i), responseHandler);
-								return true;
-							}
-							return false;
-						});
+									auto& manager = avdecc::ControllerManager::getInstance();
+									avdecc::ControllerManager::DisconnectStreamHandler responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+									{
+										// notify SequentialAsyncCommandExecuter that the command completed.
+										parentCommandSet->invokeCommandCompleted(commandIndex, AsyncParallelCommandSet::controlStatusToCommandError(status));
+									};
+									manager.disconnectStream(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i), responseHandler);
+									return true;
+								}
+								return false;
+							});
 					}
 				}
 			}
@@ -925,7 +926,7 @@ private:
 
 				if (streamInput.dynamicModel)
 				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel->currentFormat);
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel->streamInfo.streamFormat);
 					auto const streamType = streamFormatInfo->getType();
 					if (expectedStreamType == streamType)
 					{
@@ -1042,7 +1043,7 @@ private:
 		{
 			if (streamOutput.second.dynamicModel)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->currentFormat);
+				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamInfo.streamFormat);
 				auto const streamType = streamFormatInfo->getType();
 				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 				{
@@ -1089,7 +1090,7 @@ private:
 		{
 			if (streamInput.second.dynamicModel)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel->currentFormat);
+				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel->streamInfo.streamFormat);
 				auto const streamType = streamFormatInfo->getType();
 				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 				{
@@ -1441,7 +1442,6 @@ private:
 			emit mediaClockConnectionsUpdate(changes);
 		}
 	}
-
 };
 
 /**

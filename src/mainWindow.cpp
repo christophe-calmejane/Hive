@@ -426,10 +426,10 @@ void MainWindow::connectSignals()
 
 	connect(actionMediaClockManagement, &QAction::triggered, this,
 		[this]()
-	{
-		MediaClockManagementDialog dialog{ this };
-		dialog.exec();
-	}); 
+		{
+			MediaClockManagementDialog dialog{ this };
+			dialog.exec();
+		});
 
 	//
 

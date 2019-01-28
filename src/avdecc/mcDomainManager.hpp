@@ -224,7 +224,6 @@ public:
 
 	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds);
 	Q_SIGNAL void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> entityIds);
-
 };
 
 constexpr bool operator!(McDeterminationError const error)
