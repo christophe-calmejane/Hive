@@ -34,6 +34,7 @@ public:
 
 
 	/* Updater signals */
-	Q_SIGNAL void newVersionAvailable(QString version, QString downloadURL);
+	Q_SIGNAL void newReleaseVersionAvailable(QString version, QString downloadURL);
+	Q_SIGNAL void newBetaVersionAvailable(QString version, QString downloadURL);
 	Q_SIGNAL void checkFailed(QString reason);
 };

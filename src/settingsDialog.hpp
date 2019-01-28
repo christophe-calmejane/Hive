@@ -38,8 +38,10 @@ public:
 private:
 	Q_SLOT void on_automaticPNGDownloadCheckBox_toggled(bool checked);
 	Q_SLOT void on_clearLogoCacheButton_clicked();
-	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
 	Q_SLOT void on_transposeConnectionMatrixCheckBox_toggled(bool checked);
+	Q_SLOT void on_automaticCheckForUpdatesCheckBox_toggled(bool checked);
+	Q_SLOT void on_checkForBetaVersionsCheckBox_toggled(bool checked);
+	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
 
 	SettingsDialogImpl* _pImpl{ nullptr };
 };

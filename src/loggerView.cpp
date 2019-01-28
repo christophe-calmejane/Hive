@@ -24,6 +24,7 @@
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QShortcut>
+#include <QMessageBox>
 
 class AutoScrollBar : public QScrollBar
 {
@@ -106,12 +107,43 @@ LoggerView::LoggerView(QWidget* parent)
 	_searchFilterProxyModel.setSourceModel(&_levelFilterProxyModel);
 	tableView->setModel(&_searchFilterProxyModel);
 
-	connect(actionClear, &QAction::triggered, &_loggerModel, &avdecc::LoggerModel::clear);
+	connect(actionClear, &QAction::triggered, this,
+		[this]
+		{
+			if (QMessageBox::Yes == QMessageBox::question(this, {}, "Are you sure you want to clear the log?"))
+			{
+				_loggerModel.clear();
+			}
+		});
+
 	connect(actionSave, &QAction::triggered, this,
 		[this]()
 		{
-			auto const filename = QFileDialog::getSaveFileName(this, "Save As..", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
-			_loggerModel.save(filename);
+			auto applyFilter{ false };
+
+			auto search = QRegExp{ searchLineEdit->text() };
+			auto level = _levelFilterProxyModel.filterRegExp();
+			auto layer = _layerFilterProxyModel.filterRegExp();
+
+			// Check if a filter is applied
+			if (!search.isEmpty() || !level.isEmpty() || !layer.isEmpty())
+			{
+				if (QMessageBox::Yes != QMessageBox::question(this, {}, "Apply filters to the saved output?"))
+				{
+					search = {};
+					level = {};
+					layer = {};
+				}
+			}
+
+			// Make sure all our RegExp are CaseInsensitive
+			search.setCaseSensitivity(Qt::CaseInsensitive);
+			level.setCaseSensitivity(Qt::CaseInsensitive);
+			layer.setCaseSensitivity(Qt::CaseInsensitive);
+
+			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
+
+			_loggerModel.save(filename, { search, level, layer });
 		});
 
 	connect(actionSearch, &QAction::triggered, this,
@@ -123,11 +155,12 @@ LoggerView::LoggerView(QWidget* parent)
 			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
 		});
 
-	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	auto* searchShortcut = new QShortcut{ QKeySequence::Replace, this };
 	connect(searchShortcut, &QShortcut::activated, this,
 		[this]()
 		{
 			searchLineEdit->setFocus(Qt::MouseFocusReason);
+			searchLineEdit->selectAll();
 		});
 
 	auto* saveShortcut = new QShortcut{ QKeySequence::Save, this };
