@@ -180,6 +180,7 @@ void MainWindow::createControllerView()
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
+	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId));
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);

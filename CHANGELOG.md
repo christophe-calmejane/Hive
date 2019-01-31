@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Partial deadlock (in background tasks) when editing channel mappings, sometimes leading to the impossibility to apply the mappings
 - Possible crash upon loading after having changed ProtocolInterface and/or NetworkInterface multiple times
 - _Current Stream Format_ field not properly refreshed
+- EntityID column always displayed (instead of the Logo column)
 
 ## [1.0.8] - 2018-10-30
 ### Fixed
