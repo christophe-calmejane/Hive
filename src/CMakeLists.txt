@@ -406,10 +406,10 @@ if(TargetQt5Deploy_INCLUDED)
 	target_qt5_deploy(${PROJECT_NAME} INSTALL QML_DIR ${PROJECT_ROOT_DIR}/resources/qml)
 endif()
 
-# Install target
-install(TARGETS ${PROJECT_NAME}	RUNTIME DESTINATION bin	BUNDLE DESTINATION .)
-
 # Sign target
 if(ENABLE_HIVE_SIGNING)
 	sign_target(${PROJECT_NAME})
 endif()
+
+# Install target
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin BUNDLE DESTINATION .)

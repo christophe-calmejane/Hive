@@ -247,7 +247,6 @@ build_tag=""
 is_release=1
 releaseVersion="${versionSplit[0]}.${versionSplit[1]}.${versionSplit[2]}"
 if [ ${#versionSplit[*]} -eq 4 ]; then
-	add_cmake_opt="$add_cmake_opt -DAVDECC_BASE_FOLDER=3rdparty/avdecc-local"
 	beta_tag="-beta${versionSplit[3]}"
 	build_tag="+$(git rev-parse --short HEAD)"
 	is_release=0
