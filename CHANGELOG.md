@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
 - Possibility to connect a non-redundant stream to a redundant one (one of the pair)
 - Milan GetStreamInfo extended information
+- Milan StreamOutput counters
 - Detection of devices not supporting _Acquire_ and/or _Lock_ commands
 - Display of the current dynamic mappings without having to edit them, in StreamPort descriptor
 - Button to clear all dynamic mappings in StreamPort descriptor

@@ -34,6 +34,7 @@
 #include "counters/avbInterfaceCountersTreeWidgetItem.hpp"
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
+#include "counters/streamOutputCountersTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
 #include "firmwareUploadDialog.hpp"
 #include "aecpCommandComboBox.hpp"
@@ -354,6 +355,13 @@ private:
 		{
 			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, nullptr, node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
+		}
+
+		// Counters
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && !node.dynamicModel->counters.empty())
+		{
+			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			countersItem->setText(0, "Counters");
 		}
 	}
 

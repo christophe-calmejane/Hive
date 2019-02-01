@@ -191,12 +191,14 @@ set(COUNTERS_HEADER_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.hpp
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
+	counters/streamOutputCountersTreeWidgetItem.hpp
 )
 
 set(COUNTERS_SOURCE_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.cpp
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
+	counters/streamOutputCountersTreeWidgetItem.cpp
 )
 
 # Logger View header files
