@@ -54,7 +54,7 @@ installSubFolder="/Install"
 buildConfig="Release"
 buildConfigOverride=0
 doCleanup=1
-doSign=0
+doSign=1
 gen_cmake_additional_options=()
 
 # First check for .identity file
@@ -93,7 +93,7 @@ do
 			if isMac; then
 				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing (or content of .identity file)."
 			fi
-			echo " -sign -> Sign binaries (Default: No signing)"
+			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
 			exit 3
 			;;
@@ -172,9 +172,8 @@ do
 				exit 4
 			fi
 			;;
-		-sign)
-			gen_cmake_additional_options+=("-sign")
-			doSign=1
+		-no-signing)
+			doSign=0
 			;;
 		-debug)
 			buildConfig="Debug"
@@ -188,11 +187,15 @@ do
 	shift
 done
 
-# Check TeamIdentifier specified is signing enabled on macOS
-if isMac; then
-	if [[ $hasTeamId -eq 0 && $doSign -eq 1 ]]; then
-		echo "ERROR: macOS requires either iTunes TeamIdentifier to be specified using -id option, or -no-signing to disable binary signing"
-		exit 4
+if [ $doSign -eq 1 ]; then
+	gen_cmake_additional_options+=("-sign")
+
+	# Check if TeamIdentifier is specified on macOS
+	if isMac; then
+		if [ $hasTeamId -eq 0 ]; then
+			echo "ERROR: macOS requires either iTunes TeamIdentifier to be specified using -id option, or -no-signing to disable binary signing"
+			exit 4
+		fi
 	fi
 fi
 

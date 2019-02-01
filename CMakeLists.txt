@@ -78,7 +78,7 @@ set(INSTALL_AVDECC_LIB_STATIC OFF CACHE BOOL "Install static library." FORCE)
 set(INSTALL_AVDECC_HEADERS OFF CACHE BOOL "Install headers." FORCE)
 set(INSTALL_AVDECC_DOC OFF CACHE BOOL "Install documentation." FORCE)
 # Signing options
-set(ENABLE_AVDECC_SIGNING OFF CACHE BOOL "Enable binaries signing." FORCE) # Don't sign the libraries, we copy them manually (we'll sign everything later)
+set(ENABLE_AVDECC_SIGNING ${ENABLE_HIVE_SIGNING} CACHE BOOL "Enable binaries signing." FORCE)
 # Enable features
 set(ENABLE_AVDECC_FEATURE_REDUNDANCY ON CACHE BOOL "Enable 'Network Redundancy' feature as defined by AVnu Alliance." FORCE)
 # Compatibility options
