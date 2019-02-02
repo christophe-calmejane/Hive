@@ -406,16 +406,10 @@ if(TargetQt5Deploy_INCLUDED)
 	target_qt5_deploy(${PROJECT_NAME} INSTALL QML_DIR ${PROJECT_ROOT_DIR}/resources/qml)
 endif()
 
-# Install target
-install(TARGETS ${PROJECT_NAME}	RUNTIME DESTINATION bin	BUNDLE DESTINATION .)
-
 # Sign target
-include(TargetSign OPTIONAL RESULT_VARIABLE TargetSign_INCLUDED)
-if(ENABLE_HIVE_SIGNING AND TargetSign_INCLUDED)
-	get_target_property(isBundle ${PROJECT_NAME} MACOSX_BUNDLE)
-	if(isBundle)
-		target_sign(${PROJECT_NAME} ".")
-	else()
-		target_sign(${PROJECT_NAME} "bin")
-	endif()
+if(ENABLE_HIVE_SIGNING)
+	sign_target(${PROJECT_NAME})
 endif()
+
+# Install target
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin BUNDLE DESTINATION .)
