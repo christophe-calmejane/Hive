@@ -859,7 +859,7 @@ public:
 
 					dataChanged(listenerIndex(entityID), false, true);
 				}
-				
+
 				// Simulate an entityNameChanged to trigger a FilterRole data changed (required for the filter)
 				entityNameChanged(entityID);
 			}

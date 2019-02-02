@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Possible crash upon loading after having changed ProtocolInterface and/or NetworkInterface multiple times
 - _Current Stream Format_ field not properly refreshed
 - EntityID column always displayed (instead of the Logo column)
+- [Entity logo scaled to fit](https://github.com/christophe-calmejane/Hive/issues/48)
 
 ## [1.0.8] - 2018-10-30
 ### Fixed
