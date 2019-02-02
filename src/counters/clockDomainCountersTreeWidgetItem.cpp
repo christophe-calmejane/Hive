@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -21,7 +21,7 @@
 
 #include <QMenu>
 
-ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters, QTreeWidget *parent)
+ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _clockDomainIndex(clockDomainIndex)
@@ -51,13 +51,14 @@ ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc:
 	updateCounters(counters);
 
 	// Listen for ClockDomainCountersChanged
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainCountersChanged, this, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters)
-	{
-		if (entityID == _entityID && clockDomainIndex == _clockDomainIndex)
+	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainCountersChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters)
 		{
-			updateCounters(counters);
-		}
-	});
+			if (entityID == _entityID && clockDomainIndex == _clockDomainIndex)
+			{
+				updateCounters(counters);
+			}
+		});
 }
 
 void ClockDomainCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::ClockDomainCounters const& counters)

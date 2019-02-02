@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -26,7 +26,7 @@
 template<typename NodeType, typename std::enable_if_t<std::is_pointer<NodeType>::value && std::is_base_of<la::avdecc::controller::model::Node, std::remove_pointer_t<NodeType>>::value, int> = 0>
 auto createNodeVisitDispatchFunctor() noexcept
 {
-	return[](NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, std::any const& node)
+	return [](NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, std::any const& node)
 	{
 		try
 		{

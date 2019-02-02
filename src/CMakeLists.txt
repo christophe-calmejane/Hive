@@ -68,6 +68,7 @@ set(TOOLKIT_HEADER_FILES
 	toolkit/dynamicHeaderView.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
+	toolkit/tickableMenu.hpp
 	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
@@ -83,6 +84,7 @@ set(TOOLKIT_SOURCE_FILES
 	toolkit/dynamicHeaderView.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
+	toolkit/tickableMenu.cpp
 	toolkit/graph/connection.cpp
 	toolkit/graph/inputSocket.cpp
 	toolkit/graph/node.cpp
@@ -96,10 +98,12 @@ set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp
-	nodeTreeDynamicWidgets/streamConnectionWidget.hpp
+	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.hpp
+	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.hpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.hpp
+	nodeTreeDynamicWidgets/asPathWidget.hpp
 )
 
 # NodeTree Dynamic Widgets source files
@@ -107,10 +111,12 @@ set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.cpp
-	nodeTreeDynamicWidgets/streamConnectionWidget.cpp
+	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.cpp
+	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.cpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.cpp
+	nodeTreeDynamicWidgets/asPathWidget.cpp
 )
 
 # Avdecc helper header files
@@ -185,12 +191,14 @@ set(COUNTERS_HEADER_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.hpp
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
+	counters/streamOutputCountersTreeWidgetItem.hpp
 )
 
 set(COUNTERS_SOURCE_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.cpp
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
+	counters/streamOutputCountersTreeWidgetItem.cpp
 )
 
 # Logger View header files
@@ -261,6 +269,7 @@ set(MAIN_WINDOW_RESOURCE_FILES
 
 # Common Header files
 set(COMMON_HEADER_FILES
+	aecpCommandComboBox.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	entityLogoCache.hpp
@@ -274,6 +283,7 @@ set(COMMON_HEADER_FILES
 
 # Common source files
 set(COMMON_SOURCE_FILES
+	aecpCommandComboBox.cpp
 	entityLogoCache.cpp
 	imageItemDelegate.cpp
 	main.cpp
@@ -396,16 +406,10 @@ if(TargetQt5Deploy_INCLUDED)
 	target_qt5_deploy(${PROJECT_NAME} INSTALL QML_DIR ${PROJECT_ROOT_DIR}/resources/qml)
 endif()
 
-# Install target
-install(TARGETS ${PROJECT_NAME}	RUNTIME DESTINATION bin	BUNDLE DESTINATION .)
-
 # Sign target
-include(TargetSign OPTIONAL RESULT_VARIABLE TargetSign_INCLUDED)
-if(ENABLE_HIVE_SIGNING AND TargetSign_INCLUDED)
-	get_target_property(isBundle ${PROJECT_NAME} MACOSX_BUNDLE)
-	if(isBundle)
-		target_sign(${PROJECT_NAME} ".")
-	else()
-		target_sign(${PROJECT_NAME} "bin")
-	endif()
+if(ENABLE_HIVE_SIGNING)
+	sign_target(${PROJECT_NAME})
 endif()
+
+# Install target
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin BUNDLE DESTINATION .)

@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -21,7 +21,6 @@
 
 namespace connectionMatrix
 {
-
 static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
 	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
@@ -128,38 +127,70 @@ static inline void drawFastConnectingRedundantStreamFigure(QPainter* painter, QR
 	drawNotConnectedRedundantStreamFigure(painter, rect, colorNotConnected); // TODO: Try to draw a lozenge split in 2, like the circle
 }
 
+// QColor(0xF5F5F5); // White-ish
+// QColor(0x4CAF50); // Green
+// QColor(0xFFD600); // Yellow
+// QColor(0xFFF9C4); // Light Yellow
+// QColor(0xC83028); // Red
+// QColor(0xFFCDD2); // Light Red
+// QColor(0xD251F1); // Purple
+// QColor(0xFFC1FF); // Light Purple
+// QColor(0x2196F3); // Blue
+// QColor(0x8EE1FF); // Light Blue
+// QColor(0xF56D0D); // Orange
+
 static inline QColor getConnectedColor()
 {
-	return QColor(0x4CAF50);
+	return QColor(0x4CAF50); // Green
 }
 static inline QColor getConnectedWrongDomainColor()
 {
-	return QColor(0xB71C1C);
+	return QColor(0xC83028); // Red
 }
 
 static inline QColor getConnectedWrongFormatColor()
 {
-	return QColor(0xFFD600);
+	return QColor(0xFFD600); // Yellow
 }
 
 static inline QColor getPartiallyConnectedColor()
 {
-	return QColor(0x2196F3);
+	return QColor(0xF56D0D); // Orange
+}
+
+static inline QColor getConnectedInterfaceDownColor()
+{
+	return QColor(0x2196F3); // Blue
+}
+
+static inline QColor getNotConnectedInterfaceDownColor()
+{
+	return QColor(0x8EE1FF); // Light Blue
 }
 
 static inline QColor getNotConnectedColor()
 {
-	return QColor(0xF5F5F5);
+	return QColor(0xF5F5F5); // White-ish
 }
 
 static inline QColor getNotConnectedWrongDomainColor()
 {
-	return QColor(0xFFCDD2);
+	return QColor(0xFFCDD2); // Light Red
 }
 
 static inline QColor getNotConnectedWrongFormatColor()
 {
-	return QColor(0xFFF9C4);
+	return QColor(0xFFF9C4); // Light Yellow
+}
+
+static inline QColor getNotConnectedAtLeastOneErrorColor()
+{
+	return QColor(0xFFC1FF); // Light Purple
+}
+
+static inline QColor getConnectedAtLeastOneErrorColor()
+{
+	return QColor(0xD251F1); // Purple
 }
 
 void drawConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
@@ -234,6 +265,30 @@ void drawWrongFormatFastConnectingStream(QPainter* painter, QRect const& rect, b
 	}
 }
 
+void drawConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant)
+{
+	if (isRedundant)
+	{
+		drawConnectedRedundantStreamFigure(painter, rect, getConnectedInterfaceDownColor());
+	}
+	else
+	{
+		drawConnectedStreamFigure(painter, rect, getConnectedInterfaceDownColor());
+	}
+}
+
+void drawNotConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant)
+{
+	if (isRedundant)
+	{
+		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedInterfaceDownColor());
+	}
+	else
+	{
+		drawNotConnectedStreamFigure(painter, rect, getNotConnectedInterfaceDownColor());
+	}
+}
+
 void drawNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
 {
 	if (isRedundant)
@@ -270,9 +325,24 @@ void drawWrongFormatNotConnectedStream(QPainter* painter, QRect const& rect, boo
 	}
 }
 
-void drawPartiallyConnectedRedundantNode(QPainter* painter, QRect const& rect, bool const)
+void drawErrorNotConnectedRedundantNode(QPainter* painter, QRect const& rect)
+{
+	drawNotConnectedStreamFigure(painter, rect, getNotConnectedAtLeastOneErrorColor());
+}
+
+void drawErrorConnectedRedundantNode(QPainter* painter, QRect const& rect)
+{
+	drawConnectedStreamFigure(painter, rect, getConnectedAtLeastOneErrorColor());
+}
+
+void drawPartiallyConnectedRedundantNode(QPainter* painter, QRect const& rect)
 {
 	drawConnectedStreamFigure(painter, rect, getPartiallyConnectedColor());
+}
+
+void drawEntityConnection(QPainter* painter, QRect const& rect)
+{
+	drawEntitySummaryFigure(painter, rect, QColor("0x4CAF50"));
 }
 
 void drawEntityNoConnection(QPainter* painter, QRect const& rect)
@@ -282,7 +352,7 @@ void drawEntityNoConnection(QPainter* painter, QRect const& rect)
 
 void drawNotApplicable(QPainter* painter, QRect const& rect)
 {
-	painter->fillRect(rect, QBrush{QColor("#E1E1E1"), Qt::BDiagPattern});
+	painter->fillRect(rect, QBrush{ QColor("#E1E1E1"), Qt::BDiagPattern });
 }
 
 } // namespace connectionMatrix

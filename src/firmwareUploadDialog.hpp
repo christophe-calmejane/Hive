@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -39,9 +39,9 @@ class FirmwareUploadDialog : public QDialog
 
 public:
 	using EntityInfo = std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::DescriptorIndex, std::uint64_t>;
-	explicit FirmwareUploadDialog(la::avdecc::controller::Controller::DeviceMemoryBuffer&& firmwareData, QString const& name, std::vector<EntityInfo> entitiesToUpdate, QWidget *parent = nullptr);
+	explicit FirmwareUploadDialog(la::avdecc::controller::Controller::DeviceMemoryBuffer&& firmwareData, QString const& name, std::vector<EntityInfo> entitiesToUpdate, QWidget* parent = nullptr);
 	~FirmwareUploadDialog();
-	
+
 private:
 	enum class ItemRole
 	{
@@ -59,11 +59,11 @@ private:
 	void scheduleUpload(EntityInfo const& entityInfo) noexcept;
 	virtual void closeEvent(QCloseEvent* event) override;
 	virtual void reject() override;
-	
+
 	Q_SLOT void on_startPushButton_clicked();
 	Q_SLOT void on_abortPushButton_clicked();
 
 private:
-	Ui::FirmwareUploadDialog *_ui{ nullptr };
+	Ui::FirmwareUploadDialog* _ui{ nullptr };
 	la::avdecc::controller::Controller::DeviceMemoryBuffer _firmwareData{};
 };

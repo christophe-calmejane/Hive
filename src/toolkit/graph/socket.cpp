@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -25,7 +25,6 @@
 
 namespace graph
 {
-
 const float PEN_WIDTH = 1.f;
 const float CIRCLE_RADIUS = 6.f;
 const float MIN_WIDTH = 50.f;
@@ -33,10 +32,10 @@ const float MIN_HEIGHT = 15.f;
 const float TEXT_OFFSET = 5.f;
 
 SocketItem::SocketItem(int nodeId, int index, QString const& text, QGraphicsItem* parent)
-: QGraphicsItem(parent)
-, _nodeId(nodeId)
-, _index(index)
-, _text(text)
+	: QGraphicsItem(parent)
+	, _nodeId(nodeId)
+	, _index(index)
+	, _text(text)
 {
 	QFont font;
 	QFontMetrics fm(font);
@@ -94,10 +93,7 @@ QRectF SocketItem::boundingRect() const
 
 bool SocketItem::isOver(QPointF const& pos) const
 {
-	return pos.x() >= -CIRCLE_RADIUS
-		&& pos.x() <= CIRCLE_RADIUS
-		&& pos.y() >= -CIRCLE_RADIUS
-		&& pos.y() <= CIRCLE_RADIUS;
+	return pos.x() >= -CIRCLE_RADIUS && pos.x() <= CIRCLE_RADIUS && pos.y() >= -CIRCLE_RADIUS && pos.y() <= CIRCLE_RADIUS;
 }
 
 void SocketItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
@@ -133,8 +129,8 @@ void SocketItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option
 
 	auto const size = 32767.f;
 
-	int flags{0};
-	QPointF corner{0, 0};
+	int flags{ 0 };
+	QPointF corner{ 0, 0 };
 
 	switch (type())
 	{
@@ -161,7 +157,7 @@ void SocketItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option
 			assert(true && "Invalid item type");
 	}
 
-	QRectF rect(corner, QSizeF{size, size});
+	QRectF rect(corner, QSizeF{ size, size });
 
 	painter->setPen(TextColor);
 	painter->drawText(rect.adjusted(0, -2, 0, -2), flags, _text, nullptr);

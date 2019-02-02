@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -23,7 +23,7 @@
 
 #include <QMenu>
 
-StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget *parent)
+StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamIndex(streamIndex)
@@ -40,8 +40,8 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 		{ la::avdecc::entity::StreamInputCounterValidFlag::UnsupportedFormat, "Unsupported Format" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp, "Late Timestamp" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp, "Early Timestamp" },
-		{ la::avdecc::entity::StreamInputCounterValidFlag::FramesRx, "Frames RX"},
-		{ la::avdecc::entity::StreamInputCounterValidFlag::FramesTx, "Frames TX"},
+		{ la::avdecc::entity::StreamInputCounterValidFlag::FramesRx, "Frames RX" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::FramesTx, "Frames TX" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific1, "Entity Specific 1" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific2, "Entity Specific 2" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::EntitySpecific3, "Entity Specific 3" },
@@ -65,13 +65,14 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	updateCounters(counters);
 
 	// Listen for StreamInputCountersChanged
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInputCountersChanged, this, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters)
-	{
-		if (entityID == _entityID && streamIndex == _streamIndex)
+	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInputCountersChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters)
 		{
-			updateCounters(counters);
-		}
-	});
+			if (entityID == _entityID && streamIndex == _streamIndex)
+			{
+				updateCounters(counters);
+			}
+		});
 }
 
 void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::StreamInputCounters const& counters)

@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -33,32 +33,31 @@
 #include "settingsManager/settings.hpp"
 
 #ifdef DEBUG
-#define SPLASH_DELAY 0
+#	define SPLASH_DELAY 0
 #else // !DEBUG
-#define SPLASH_DELAY 1250
+#	define SPLASH_DELAY 1250
 #endif // DEBUG
 
 // Setup BugTrap on windows (win32 only right now)
 #if defined(Q_OS_WIN32) && defined(HAVE_BUGTRAP)
-#define BUGREPORTER_CATCH_EXCEPTIONS
-#include <Windows.h>
-#include "BugTrap.h"
+#	define BUGREPORTER_CATCH_EXCEPTIONS
+#	include <Windows.h>
+#	include "BugTrap.h"
 void setupBugReporter()
 {
 	BT_InstallSehFilter();
 
+	BT_SetTerminate();
 	BT_SetSupportEMail("christophe.calmejane@l-acoustics.com");
 	BT_SetFlags(BTF_DETAILEDMODE | BTF_ATTACHREPORT | BTF_SHOWADVANCEDUI | BTF_DESCRIBEERROR);
 	BT_SetSupportServer("localhost", 9999);
 }
 
 #else // Nothing on other OS right now
-void setupBugReporter()
-{
-}
+void setupBugReporter() {}
 #endif
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	// Setup Bug Reporter
 	setupBugReporter();
@@ -97,18 +96,20 @@ int main(int argc, char *argv[])
 	QSharedMemory lock("d2794ee0-ab5e-48a5-9189-78a9e2c40635");
 	if (!lock.create(512, QSharedMemory::ReadWrite))
 	{
-#pragma message("TODO: Read the SM and cast to a processID. Check if that processID is still active and if not, continue.")
+#	pragma message("TODO: Read the SM and cast to a processID. Check if that processID is still active and if not, continue.")
 		QMessageBox::critical(nullptr, {}, "An instance of this application is already running.", QMessageBox::Ok);
 		return 1;
 	}
 #endif
 
-	// Register settings
+	// Register settings (creating default value if none was saved before)
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSetting(settings::LastLaunchedVersion);
 	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
-	settings.registerSetting(settings::AemCacheEnabled);
 	settings.registerSetting(settings::TransposeConnectionMatrix);
+	settings.registerSetting(settings::AutomaticCheckForUpdates);
+	settings.registerSetting(settings::CheckForBetaVersions);
+	settings.registerSetting(settings::AemCacheEnabled);
 
 	QPixmap logo(":/Logo.png");
 	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);

@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -20,14 +20,14 @@
 #pragma once
 
 #ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
-#error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
+#	error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
 #endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
 
 #include <la/avdecc/controller/internals/avdeccControlledEntityModel.hpp>
 #if defined(ENABLE_AVDECC_CUSTOM_ANY)
-#include <la/avdecc/internals/any.hpp>
+#	include <la/avdecc/internals/any.hpp>
 #else // !ENABLE_AVDECC_CUSTOM_ANY
-#include <any>
+#	include <any>
 #endif // ENABLE_AVDECC_CUSTOM_ANY
 
 #include <QMetaType>
@@ -52,6 +52,7 @@ public:
 	AnyNode(AnyNode const&) = default;
 	AnyNode& operator=(AnyNode const&) = default;
 	AnyNode& operator=(AnyNode&&) = default;
+
 private:
 	std::any _node{};
 };

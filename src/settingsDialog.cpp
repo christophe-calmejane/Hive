@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -25,7 +25,7 @@
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
 
-class SettingsDialogImpl final : private Ui::SettingsDialog
+class SettingsDialogImpl final : public Ui::SettingsDialog
 {
 public:
 	SettingsDialogImpl(::SettingsDialog* parent)
@@ -35,11 +35,32 @@ public:
 
 		// Initialize settings (blocking signals)
 		auto& settings = settings::SettingsManager::getInstance();
-		
+
 		// Automatic PNG Download
 		{
 			QSignalBlocker lock(automaticPNGDownloadCheckBox);
 			automaticPNGDownloadCheckBox->setChecked(settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool());
+		}
+
+		// Transpose Connection Matrix
+		{
+			QSignalBlocker lock(transposeConnectionMatrixCheckBox);
+			transposeConnectionMatrixCheckBox->setChecked(settings.getValue(settings::TransposeConnectionMatrix.name).toBool());
+		}
+
+		// Automatic Check For Updates
+		{
+			QSignalBlocker lock(automaticCheckForUpdatesCheckBox);
+			automaticCheckForUpdatesCheckBox->setChecked(settings.getValue(settings::AutomaticCheckForUpdates.name).toBool());
+		}
+
+		// Check For Beta Updates
+		{
+			QSignalBlocker lock(checkForBetaVersionsCheckBox);
+			checkForBetaVersionsCheckBox->setChecked(settings.getValue(settings::CheckForBetaVersions.name).toBool());
+			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
+			checkForBetaVersionsLabel->setEnabled(enabled);
+			checkForBetaVersionsCheckBox->setEnabled(enabled);
 		}
 
 		// AEM Cache
@@ -47,17 +68,12 @@ public:
 			QSignalBlocker lock(enableAEMCacheCheckBox);
 			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::AemCacheEnabled.name).toBool());
 		}
-		
-		// Transpose Connection Matrix
-		{
-			QSignalBlocker lock(transposeConnectionMatrixCheckBox);
-			transposeConnectionMatrixCheckBox->setChecked(settings.getValue(settings::TransposeConnectionMatrix.name).toBool());
-		}
 	}
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
-	: QDialog(parent), _pImpl(new SettingsDialogImpl(this))
+	: QDialog(parent)
+	, _pImpl(new SettingsDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " Settings");
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
@@ -77,14 +93,8 @@ void SettingsDialog::on_automaticPNGDownloadCheckBox_toggled(bool checked)
 
 void SettingsDialog::on_clearLogoCacheButton_clicked()
 {
-	auto& logoCache{EntityLogoCache::getInstance()};
+	auto& logoCache{ EntityLogoCache::getInstance() };
 	logoCache.clear();
-}
-
-void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
-{
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::AemCacheEnabled.name, checked);
 }
 
 void SettingsDialog::on_transposeConnectionMatrixCheckBox_toggled(bool checked)
@@ -93,3 +103,23 @@ void SettingsDialog::on_transposeConnectionMatrixCheckBox_toggled(bool checked)
 	settings.setValue(settings::TransposeConnectionMatrix.name, checked);
 }
 
+void SettingsDialog::on_automaticCheckForUpdatesCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::AutomaticCheckForUpdates.name, checked);
+
+	_pImpl->checkForBetaVersionsLabel->setEnabled(checked);
+	_pImpl->checkForBetaVersionsCheckBox->setEnabled(checked);
+}
+
+void SettingsDialog::on_checkForBetaVersionsCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::CheckForBetaVersions.name, checked);
+}
+
+void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::AemCacheEnabled.name, checked);
+}

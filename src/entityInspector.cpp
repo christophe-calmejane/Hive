@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -25,7 +25,7 @@
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 EntityInspector::EntityInspector(QWidget* parent)
-: QWidget(parent)
+	: QWidget(parent)
 {
 	_layout.setContentsMargins(0, 0, 0, 0);
 	_layout.addWidget(&_splitter);
@@ -36,13 +36,14 @@ EntityInspector::EntityInspector(QWidget* parent)
 	_nodeTreeWiget.setColumnCount(2);
 	_nodeTreeWiget.setHeaderLabels({ "", "" });
 
-	connect(_controlledEntityTreeWiget.selectionModel(), &QItemSelectionModel::currentChanged, this, [this](QModelIndex const& index, QModelIndex const&)
-	{
-		auto const entityID = _controlledEntityTreeWiget.controlledEntityID();
-		auto const anyNode = index.data(Qt::UserRole).value<AnyNode>();
+	connect(_controlledEntityTreeWiget.selectionModel(), &QItemSelectionModel::currentChanged, this,
+		[this](QModelIndex const& index, QModelIndex const&)
+		{
+			auto const entityID = _controlledEntityTreeWiget.controlledEntityID();
+			auto const anyNode = index.data(Qt::UserRole).value<AnyNode>();
 
-		_nodeTreeWiget.setNode(entityID, anyNode);
-	});
+			_nodeTreeWiget.setNode(entityID, anyNode);
+		});
 
 	connect(&_splitter, &QSplitter::splitterMoved, this, &EntityInspector::stateChanged);
 	connect(_nodeTreeWiget.header(), &QHeaderView::sectionResized, this, &EntityInspector::stateChanged);
@@ -83,7 +84,7 @@ QByteArray EntityInspector::saveState(int version) const
 bool EntityInspector::restoreState(QByteArray const& state, int version)
 {
 	QMap<int, QByteArray> map;
-	QByteArray data{state};
+	QByteArray data{ state };
 
 	QDataStream stream(&data, QIODevice::ReadOnly);
 	stream >> map;

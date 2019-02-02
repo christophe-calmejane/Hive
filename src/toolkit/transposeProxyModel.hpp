@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+ * Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
  
  * This file is part of Hive.
  
@@ -8,7 +8,7 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  
- * Hive is distributed in the hope that it will be usefu_state,
+ * Hive is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
@@ -25,22 +25,21 @@ namespace qt
 {
 namespace toolkit
 {
-
-class TransposeProxyModel: public QAbstractProxyModel
+class TransposeProxyModel : public QAbstractProxyModel
 {
 	using QAbstractProxyModel::setSourceModel;
 
 public:
 	TransposeProxyModel(QObject* parent = nullptr)
-		: QAbstractProxyModel{parent}
+		: QAbstractProxyModel{ parent }
 	{
 	}
-	
+
 	Qt::Orientation mapFromSource(Qt::Orientation orientation) const
 	{
 		return orientation == Qt::Horizontal ? Qt::Vertical : Qt::Horizontal;
 	}
-	
+
 	Qt::Orientation mapToSource(Qt::Orientation orientation) const
 	{
 		return mapFromSource(orientation); // Just swap
@@ -55,22 +54,22 @@ public:
 	{
 		return sourceModel()->index(proxyIndex.column(), proxyIndex.row());
 	}
-	
+
 	virtual QModelIndex index(int row, int column, QModelIndex const& = {}) const override
 	{
 		return createIndex(row, column);
 	}
-	
+
 	virtual QModelIndex parent(QModelIndex const&) const override
 	{
 		return {};
 	}
-	
+
 	virtual int rowCount(QModelIndex const&) const override
 	{
 		return sourceModel() ? sourceModel()->columnCount() : 0;
 	}
-	
+
 	virtual int columnCount(QModelIndex const&) const override
 	{
 		return sourceModel() ? sourceModel()->rowCount() : 0;
@@ -223,4 +222,3 @@ private:
 
 } // namespace toolkit
 } // namespace qt
-

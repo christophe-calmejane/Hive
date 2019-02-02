@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -19,7 +19,7 @@
 
 #include "memoryObjectDynamicTreeWidgetItem.hpp"
 
-MemoryObjectDynamicTreeWidgetItem::MemoryObjectDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::controller::model::MemoryObjectNodeDynamicModel const* const dynamicModel, QTreeWidget *parent)
+MemoryObjectDynamicTreeWidgetItem::MemoryObjectDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::controller::model::MemoryObjectNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _configurationIndex(configurationIndex)
@@ -35,13 +35,14 @@ MemoryObjectDynamicTreeWidgetItem::MemoryObjectDynamicTreeWidgetItem(la::avdecc:
 		updateMemoryObjectLength(dynamicModel->length);
 
 		// Listen for MemoryObjectLengthChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectLengthChanged, this, [this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length)
-		{
-			if (entityID == _entityID && configurationIndex == _configurationIndex  && memoryObjectIndex == _memoryObjectIndex)
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectLengthChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length)
 			{
-				updateMemoryObjectLength(length);
-			}
-		});
+				if (entityID == _entityID && configurationIndex == _configurationIndex && memoryObjectIndex == _memoryObjectIndex)
+				{
+					updateMemoryObjectLength(length);
+				}
+			});
 	}
 }
 

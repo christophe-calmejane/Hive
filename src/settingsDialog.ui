@@ -126,6 +126,26 @@
       <item row="4" column="1">
        <widget class="QCheckBox" name="transposeConnectionMatrixCheckBox"/>
       </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="automaticCheckForUpdatesLabel">
+        <property name="text">
+         <string>Automatic Check For Updates</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QCheckBox" name="automaticCheckForUpdatesCheckBox"/>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="checkForBetaVersionsLabel">
+        <property name="text">
+         <string>Check For Beta Versions</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QCheckBox" name="checkForBetaVersionsCheckBox"/>
+      </item>
      </layout>
     </widget>
    </item>

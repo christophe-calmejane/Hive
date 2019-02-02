@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -17,11 +17,11 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "streamConnectionWidget.hpp"
+#include "talkerStreamConnectionWidget.hpp"
 
 #include <QMenu>
 
-StreamConnectionWidget::StreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent)
+TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent)
 	: QWidget(parent)
 	, _talkerConnection(std::move(talkerConnection))
 	, _listenerConnection(std::move(listenerConnection))
@@ -48,46 +48,50 @@ StreamConnectionWidget::StreamConnectionWidget(la::avdecc::entity::model::Stream
 	auto const& manager = avdecc::ControllerManager::getInstance();
 
 	// EntityOnline
-	connect(&manager, &avdecc::ControllerManager::entityOnline, this, [this](la::avdecc::UniqueIdentifier const entityID)
-	{
-		if (entityID == _listenerConnection.entityID)
-			updateData();
-	});
+	connect(&manager, &avdecc::ControllerManager::entityOnline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			if (entityID == _listenerConnection.entityID)
+				updateData();
+		});
 
 	// EntityOffline
-	connect(&manager, &avdecc::ControllerManager::entityOffline, this, [this](la::avdecc::UniqueIdentifier const entityID)
-	{
-		if (entityID == _listenerConnection.entityID)
-			updateData();
-	});
+	connect(&manager, &avdecc::ControllerManager::entityOffline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			if (entityID == _listenerConnection.entityID)
+				updateData();
+		});
 
 	// Connect Widget signals
 	// Disconnect button
-	connect(&_disconnectButton, &QPushButton::clicked, this, [this]()
-	{
-		avdecc::ControllerManager::getInstance().disconnectTalkerStream(_talkerConnection.entityID, _talkerConnection.streamIndex, _listenerConnection.entityID, _listenerConnection.streamIndex);
-	});
+	connect(&_disconnectButton, &QPushButton::clicked, this,
+		[this]()
+		{
+			avdecc::ControllerManager::getInstance().disconnectTalkerStream(_talkerConnection.entityID, _talkerConnection.streamIndex, _listenerConnection.entityID, _listenerConnection.streamIndex);
+		});
 	// Row context menu
 #pragma message("TODO: Pas a faire ici mais dans la table complete!!")
 	setContextMenuPolicy(Qt::CustomContextMenu);
-	connect(this, &StreamConnectionWidget::customContextMenuRequested, this, [this](QPoint const& pos)
-	{
-		QMenu menu;
-
-		auto* disconnectAllAction = menu.addAction("Disconnect all ghost connections");
-		menu.addSeparator();
-		menu.addAction("Cancel");
-
-		if (auto* action = menu.exec(mapToGlobal(pos)))
+	connect(this, &TalkerStreamConnectionWidget::customContextMenuRequested, this,
+		[this](QPoint const& pos)
 		{
-			if (action == disconnectAllAction)
+			QMenu menu;
+
+			auto* disconnectAllAction = menu.addAction("Disconnect all ghost connections");
+			menu.addSeparator();
+			menu.addAction("Cancel");
+
+			if (auto* action = menu.exec(mapToGlobal(pos)))
 			{
+				if (action == disconnectAllAction)
+				{
+				}
 			}
-		}
-	});
+		});
 }
 
-void StreamConnectionWidget::updateData()
+void TalkerStreamConnectionWidget::updateData()
 {
 	auto& manager = avdecc::ControllerManager::getInstance();
 

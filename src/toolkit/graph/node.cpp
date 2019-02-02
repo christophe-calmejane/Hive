@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -26,14 +26,13 @@
 
 namespace graph
 {
-
 float const TITLE_HEIGHT = 20.f;
 float const PADDING = 5.f;
 
 NodeItem::NodeItem(int id, QString const& text, QGraphicsItem* parent)
-: QGraphicsItem(parent)
-, _id(id)
-, _text(text)
+	: QGraphicsItem(parent)
+	, _id(id)
+	, _text(text)
 {
 	setAcceptHoverEvents(true);
 
@@ -73,7 +72,7 @@ OutputSocketItem* NodeItem::outputAt(int index) const
 
 QRectF NodeItem::boundingRect() const
 {
-	return QRectF{0, 0, _width, _height};
+	return QRectF{ 0, 0, _width, _height };
 }
 
 void NodeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
@@ -115,8 +114,8 @@ void NodeItem::updateGeometry()
 
 	// Geometry
 
-	auto maxInputWidth{0};
-	auto maxOutputWidth{0};
+	auto maxInputWidth{ 0 };
+	auto maxOutputWidth{ 0 };
 
 	for (auto const& input : _inputs)
 	{

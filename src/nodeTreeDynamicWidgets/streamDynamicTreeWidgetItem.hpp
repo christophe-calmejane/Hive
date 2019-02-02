@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -24,6 +24,8 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
 
+#include "listenerStreamConnectionWidget.hpp"
+
 #include <QObject>
 #include <QTreeWidgetItem>
 #include <QPushButton>
@@ -34,12 +36,11 @@
 class StreamDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget *parent = nullptr);
+	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent = nullptr);
 
 private:
 	void updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo);
 	void updateConnections(la::avdecc::controller::model::StreamConnections const& connections);
-	void updateConnectionState(la::avdecc::controller::model::StreamConnectionState const& connectionState);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamType{ la::avdecc::entity::model::DescriptorType::Entity };
@@ -54,10 +55,14 @@ private:
 	QTreeWidgetItem* _msrpAccumulatedLatency{ nullptr };
 	QTreeWidgetItem* _msrpFailureCode{ nullptr };
 	QTreeWidgetItem* _msrpFailureBridgeID{ nullptr };
+	QTreeWidgetItem* _streamFlagsEx{ nullptr };
+	QTreeWidgetItem* _probingStatus{ nullptr };
+	QTreeWidgetItem* _acmpStatus{ nullptr };
 
 	// Connections
 	QListWidget* _connections{ nullptr };
 
 	// ConnectionState
 	QTreeWidgetItem* _connectionState{ nullptr };
+	ListenerStreamConnectionWidget* _connectionStateWidget{ nullptr };
 };

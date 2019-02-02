@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -27,7 +27,8 @@
 #include <QtGlobal>
 #include <QThread>
 
-inline uint qHash(EntityLogoCache::Type const type, uint seed = 0) {
+inline uint qHash(EntityLogoCache::Type const type, uint seed = 0)
+{
 	return qHash(static_cast<int>(type), seed);
 }
 
@@ -38,7 +39,7 @@ public:
 	{
 		Q_ASSERT_X(QThread::currentThread() == qApp->thread(), "EntityLogoCache", "getImage must be called in the GUI thread.");
 
-		auto const key{makeKey(entityID)};
+		auto const key{ makeKey(entityID) };
 
 		// Check if we have something in the memory cache for this key (entityID-entityModelID)
 		auto imagesIt = _cache.find(key);
@@ -56,11 +57,11 @@ public:
 		QImage image;
 
 		// Try to load from the disk
-		QFileInfo fileInfo{imagePath(entityID, type)};
+		QFileInfo fileInfo{ imagePath(entityID, type) };
 		if (fileInfo.exists())
 		{
 			// Found the image on the disk, add it to the memory cache
-			image = QImage{fileInfo.filePath()};
+			image = QImage{ fileInfo.filePath() };
 			_cache[key][type] = image;
 		}
 		else if (downloadIfNotInCache)
@@ -69,7 +70,7 @@ public:
 			_cache[key][type] = image;
 			downloadImage(entityID, type);
 		}
-		
+
 		return image;
 	}
 
@@ -124,9 +125,9 @@ private:
 				return "Unsupported";
 		}
 	}
-	
+
 	using Key = QPair<quint64, quint64>;
-	
+
 	Key makeKey(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -134,88 +135,87 @@ private:
 		auto const entityModelID = controlledEntity->getEntity().getEntityModelID();
 		return qMakePair(entityID.getValue(), entityModelID.getValue());
 	}
-	
+
 	QString fileName(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept
 	{
-		auto const key{makeKey(entityID)};
-		return QString{typeToString(type) + '-' + avdecc::helper::uniqueIdentifierToString(key.first) + '-' + avdecc::helper::uniqueIdentifierToString(key.second)};
+		auto const key{ makeKey(entityID) };
+		return QString{ typeToString(type) + '-' + avdecc::helper::uniqueIdentifierToString(key.first) + '-' + avdecc::helper::uniqueIdentifierToString(key.second) };
 	}
-	
+
 	QString imageDir() const noexcept
 	{
 		return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + '/' + QCoreApplication::applicationName();
 	}
-	
+
 	QString imagePath(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept
 	{
 		return imageDir() + '/' + fileName(entityID, type) + ".png";
 	}
-	
+
 	void downloadImage(la::avdecc::UniqueIdentifier const entityID, Type const type) noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
-		
+
 		if (!controlledEntity)
 		{
 			return;
 		}
-		
+
 		try
 		{
-			auto const& configurationNode{controlledEntity->getCurrentConfigurationNode()};
-			
+			auto const& configurationNode{ controlledEntity->getCurrentConfigurationNode() };
+
 			for (auto const& it : configurationNode.memoryObjects)
 			{
-				auto const& obj{it.second};
-				auto const& model{obj.staticModel};
-				
-				if (
-						(type == Type::Entity && model->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngEntity) ||
-						(type == Type::Manufacturer && model->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngManufacturer)
-						)
+				auto const& obj{ it.second };
+				auto const& model{ obj.staticModel };
+
+				if ((type == Type::Entity && model->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngEntity) || (type == Type::Manufacturer && model->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngManufacturer))
 				{
 					auto const& dynamicModel{ obj.dynamicModel };
-					manager.readDeviceMemory(entityID, model->startAddress, dynamicModel->length, nullptr, [this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
-					{
-						auto image = QImage::fromData(memoryBuffer.data(), memoryBuffer.size());
-
-						// Be sure to run this code in the UI thread so we don't have to lock the cache
-						QMetaObject::invokeMethod(this, [this, entityID, type, status, image = std::move(image)]()
+					manager.readDeviceMemory(entityID, model->startAddress, dynamicModel->length, nullptr,
+						[this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
 						{
-							auto const key = makeKey(entityID);
-							if (!!status && !image.isNull())
-							{
-								QFileInfo fileInfo{ imagePath(entityID, type) };
+							auto image = QImage::fromData(memoryBuffer.data(), memoryBuffer.size());
 
-								// Make sure this directory exists & save the image to the disk
-								QDir().mkpath(fileInfo.absoluteDir().absolutePath());
-								image.save(fileInfo.filePath());
-
-								// Save the image to the cache
-								_cache[key][type] = image;
-								emit imageChanged(entityID, type);
-							}
-							else
-							{
-								// Error downloading the image, remove the temporary one from the cache
-								auto imagesIt = _cache.find(key);
-								if (imagesIt != _cache.end())
+							// Be sure to run this code in the UI thread so we don't have to lock the cache
+							QMetaObject::invokeMethod(this,
+								[this, entityID, type, status, image = std::move(image)]()
 								{
-									imagesIt->remove(type);
-								}
-							}
+									auto const key = makeKey(entityID);
+									if (!!status && !image.isNull())
+									{
+										QFileInfo fileInfo{ imagePath(entityID, type) };
+
+										// Make sure this directory exists & save the image to the disk
+										QDir().mkpath(fileInfo.absoluteDir().absolutePath());
+										image.save(fileInfo.filePath());
+
+										// Save the image to the cache
+										_cache[key][type] = image;
+										emit imageChanged(entityID, type);
+									}
+									else
+									{
+										// Error downloading the image, remove the temporary one from the cache
+										auto imagesIt = _cache.find(key);
+										if (imagesIt != _cache.end())
+										{
+											imagesIt->remove(type);
+										}
+									}
+								});
 						});
-					});
 				}
 			}
 		}
-		catch(...)
+		catch (...)
 		{
 			AVDECC_ASSERT(false, "Failed to find logo descriptor information in AEM");
 		}
 	}
-	
+
 private:
 	using CacheData = QHash<Type, QImage>;
 	QHash<Key, CacheData> _cache;
@@ -224,6 +224,6 @@ private:
 EntityLogoCache& EntityLogoCache::getInstance() noexcept
 {
 	static EntityLogoCacheImpl s_LogoCache{};
-	
+
 	return s_LogoCache;
 }

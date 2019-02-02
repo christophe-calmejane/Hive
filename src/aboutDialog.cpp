@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -48,23 +48,14 @@ public:
 		}
 
 		// Configure text
-		auto const configuredText = aboutLabel->text()
-			.arg(hive::internals::applicationLongName)
-			.arg(hive::internals::versionString)
-			.arg(hive::internals::buildArchitecture)
-			.arg(hive::internals::buildConfiguration)
-			.arg(la::avdecc::getVersion().c_str())
-			.arg(avdeccOptions.c_str())
-			.arg(la::avdecc::controller::getVersion().c_str())
-			.arg(avdeccControllerOptions.c_str())
-			.arg(hive::internals::authors)
-			.arg(hive::internals::projectURL);
+		auto const configuredText = aboutLabel->text().arg(hive::internals::applicationLongName).arg(hive::internals::versionString).arg(hive::internals::buildArchitecture).arg(hive::internals::buildConfiguration).arg(la::avdecc::getVersion().c_str()).arg(avdeccOptions.c_str()).arg(la::avdecc::controller::getVersion().c_str()).arg(avdeccControllerOptions.c_str()).arg(hive::internals::authors).arg(hive::internals::projectURL);
 		aboutLabel->setText(configuredText);
 	}
 };
 
 AboutDialog::AboutDialog(QWidget* parent)
-	: QDialog(parent), _pImpl(new AboutDialogImpl(this))
+	: QDialog(parent)
+	, _pImpl(new AboutDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " - Version " + QCoreApplication::applicationVersion());
 	layout()->setSizeConstraint(QLayout::SetFixedSize);

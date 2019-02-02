@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -29,15 +29,17 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QHBoxLayout>
+#include <QListWidget>
 
 class AvbInterfaceDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, QTreeWidget *parent = nullptr);
+	AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus, QTreeWidget* parent = nullptr);
 
 private:
 	void updateAvbInfo(la::avdecc::entity::model::AvbInfo const& avbInfo);
-	//void updateAsPath(la::avdecc::entity::model::AsPath const& asPath);
+	void updateLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus);
+	void updateAsPath(la::avdecc::entity::model::AsPath const& asPath);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex{ 0u };
@@ -47,8 +49,9 @@ private:
 	QTreeWidgetItem* _gptpDomainNumber{ nullptr };
 	QTreeWidgetItem* _propagationDelay{ nullptr };
 	QTreeWidgetItem* _flags{ nullptr };
+	QTreeWidgetItem* _linkStatus{ nullptr };
 	//addTextItem(dynamicItem, "Msrp Mappings", node.avbInfo->mappings);
 
 	// AsPath
-	// ...
+	QListWidget* _asPath{ nullptr };
 };

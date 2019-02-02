@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -24,12 +24,11 @@
 #include "settingsManager/settings.hpp"
 
 #if __cpp_lib_experimental_atomic_smart_pointers
-#define HAVE_ATOMIC_SMART_POINTERS
+#	define HAVE_ATOMIC_SMART_POINTERS
 #endif // __cpp_lib_experimental_atomic_smart_pointers
 
 namespace avdecc
 {
-
 class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer, public settings::SettingsManager::Observer
 {
 public:
@@ -44,6 +43,7 @@ public:
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
+		qRegisterMetaType<la::avdecc::entity::model::AvdeccFixedString>("la::avdecc::entity::model::AvdeccFixedString");
 		qRegisterMetaType<la::avdecc::entity::model::ConfigurationIndex>("la::avdecc::entity::model::ConfigurationIndex");
 		qRegisterMetaType<la::avdecc::entity::model::DescriptorType>("la::avdecc::entity::model::DescriptorType");
 		qRegisterMetaType<la::avdecc::entity::model::DescriptorIndex>("la::avdecc::entity::model::DescriptorIndex");
@@ -76,14 +76,19 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::OperationID>("la::avdecc::entity::model::OperationID");
 		qRegisterMetaType<la::avdecc::entity::model::StreamInfo>("la::avdecc::entity::model::StreamInfo");
 		qRegisterMetaType<la::avdecc::entity::model::AvbInfo>("la::avdecc::entity::model::AvbInfo");
-		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
-		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
+		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
+		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
+		qRegisterMetaType<la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>("la::avdecc::controller::ControlledEntity::InterfaceLinkStatus");
+		qRegisterMetaType<la::avdecc::controller::ControlledEntity::CompatibilityFlags>("la::avdecc::controller::ControlledEntity::CompatibilityFlags");
+		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
+		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnectionState>("la::avdecc::controller::model::StreamConnectionState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnections>("la::avdecc::controller::model::StreamConnections");
 		qRegisterMetaType<la::avdecc::controller::model::AvbInterfaceCounters>("la::avdecc::controller::model::AvbInterfaceCounters");
 		qRegisterMetaType<la::avdecc::controller::model::ClockDomainCounters>("la::avdecc::controller::model::ClockDomainCounters");
 		qRegisterMetaType<la::avdecc::controller::model::StreamInputCounters>("la::avdecc::controller::model::StreamInputCounters");
+		qRegisterMetaType<la::avdecc::controller::model::StreamOutputCounters>("la::avdecc::controller::model::StreamOutputCounters");
 
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
@@ -116,7 +121,7 @@ private:
 	}
 
 	// la::avdecc::controller::Controller::Observer overrides
-	// Global notifications
+	// Global controller notifications
 	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/) noexcept override
 	{
 		emit transportError();
@@ -134,10 +139,28 @@ private:
 	{
 		emit entityOffline(entity->getEntity().getEntityID());
 	}
+	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/) noexcept override
+	{
+#pragma message("TODO: Add new signal and listen to it")
+	}
+	virtual void onEntityAssociationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/) noexcept override
+	{
+#pragma message("TODO: Add new signal and listen to it")
+	}
 	virtual void onGptpChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain) noexcept override
 	{
 		auto const& e = entity->getEntity();
 		emit gptpChanged(e.getEntityID(), avbInterfaceIndex, grandMasterID, grandMasterDomain);
+	}
+	// Global entity notifications
+	virtual void onUnsolicitedRegistrationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, bool const /*isSubscribed*/) noexcept override
+	{
+#pragma message("TODO: Listen to the signal")
+		emit unsolicitedRegistrationChanged(entity->getEntity().getEntityID());
+	}
+	virtual void onCompatibilityFlagsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags) noexcept override
+	{
+		emit compatibilityFlagsChanged(entity->getEntity().getEntityID(), compatibilityFlags);
 	}
 	// Connection notifications (sniffed ACMP)
 	virtual void onStreamConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::model::StreamConnectionState const& state, bool const /*changedByOther*/) noexcept override
@@ -146,12 +169,16 @@ private:
 	}
 	virtual void onStreamConnectionsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamConnections const& connections) noexcept override
 	{
-		emit streamConnectionsChanged({entity->getEntity().getEntityID(), streamIndex}, connections);
+		emit streamConnectionsChanged({ entity->getEntity().getEntityID(), streamIndex }, connections);
 	}
 	// Entity model notifications (unsolicited AECP or changes this controller sent)
 	virtual void onAcquireStateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity) noexcept override
 	{
 		emit acquireStateChanged(entity->getEntity().getEntityID(), acquireState, owningEntity);
+	}
+	virtual void onLockStateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity) noexcept override
+	{
+		emit lockStateChanged(entity->getEntity().getEntityID(), lockState, lockingEntity);
 	}
 	virtual void onStreamInputFormatChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
 	{
@@ -241,6 +268,14 @@ private:
 	{
 		emit avbInfoChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, info);
 	}
+	virtual void onAsPathChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath) noexcept override
+	{
+		emit asPathChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, asPath);
+	}
+	virtual void onAvbInterfaceLinkStatusChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus) noexcept override
+	{
+		emit avbInterfaceLinkStatusChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, linkStatus);
+	}
 	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters) noexcept override
 	{
 		emit avbInterfaceCountersChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, counters);
@@ -253,17 +288,21 @@ private:
 	{
 		emit streamInputCountersChanged(entity->getEntity().getEntityID(), streamIndex, counters);
 	}
+	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters) noexcept override
+	{
+		emit streamOutputCountersChanged(entity->getEntity().getEntityID(), streamIndex, counters);
+	}
 	virtual void onMemoryObjectLengthChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length) noexcept override
 	{
 		emit memoryObjectLengthChanged(entity->getEntity().getEntityID(), configurationIndex, memoryObjectIndex, length);
 	}
 	virtual void onStreamPortInputAudioMappingsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
 	{
-		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamPortIndex);
+		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortInput, streamPortIndex);
 	}
 	virtual void onStreamPortOutputAudioMappingsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
 	{
-		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamPortIndex);
+		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortOutput, streamPortIndex);
 	}
 	virtual void onOperationProgress(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, float const percentComplete) noexcept override
 	{
@@ -330,39 +369,95 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->getControlledEntity(entityID);
+			return controller->getControlledEntityGuard(entityID);
 		}
 		return {};
 	}
 
 	/* Enumeration and Control Protocol (AECP) */
-	virtual void acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent) noexcept override
+	virtual void acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent, AcquireEntityHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::AcquireEntity);
-			controller->acquireEntity(targetEntityID, isPersistent, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const owningEntity) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "acquireEntity: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::AcquireEntity, status);
-			});
+			controller->acquireEntity(targetEntityID, isPersistent,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const owningEntity) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, owningEntity);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::AcquireEntity, status);
+					}
+				});
 		}
 	}
 
-	virtual void releaseEntity(la::avdecc::UniqueIdentifier const targetEntityID) noexcept override
+	virtual void releaseEntity(la::avdecc::UniqueIdentifier const targetEntityID, ReleaseEntityHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity);
-			controller->releaseEntity(targetEntityID, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const owningEntity) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "releaseEntity: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity, status);
-			});
+			controller->releaseEntity(targetEntityID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const owningEntity) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity, status);
+					}
+				});
+		}
 	}
-}
+
+	virtual void lockEntity(la::avdecc::UniqueIdentifier const targetEntityID, LockEntityHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::LockEntity);
+			controller->lockEntity(targetEntityID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const lockingEntity) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, lockingEntity);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::LockEntity, status);
+					}
+				});
+		}
+	}
+
+	virtual void unlockEntity(la::avdecc::UniqueIdentifier const targetEntityID, UnlockEntityHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::UnlockEntity);
+			controller->unlockEntity(targetEntityID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const lockingEntity) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::UnlockEntity, status);
+					}
+				});
+		}
+	}
 
 	virtual void setConfiguration(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex) noexcept override
 	{
@@ -370,333 +465,494 @@ private:
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetConfiguration);
-			controller->setConfiguration(targetEntityID, configurationIndex, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setConfiguration: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, status);
-			});
+			controller->setConfiguration(targetEntityID, configurationIndex,
+				[this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					emit endAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, status);
+				});
 		}
 	}
 
-	virtual void setStreamInputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
+	virtual void setStreamInputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, SetStreamInputFormatHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat);
-			controller->setStreamInputFormat(targetEntityID, streamIndex, streamFormat, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setStreamInputFormat: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, status);
-			});
+			controller->setStreamInputFormat(targetEntityID, streamIndex, streamFormat,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, status);
+					}
+				});
 		}
 	}
 
-	virtual void setStreamOutputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
+	virtual void setStreamOutputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, SetStreamOutputFormatHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat);
-			controller->setStreamOutputFormat(targetEntityID, streamIndex, streamFormat, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setStreamOutputFormat: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, status);
-			});
+			controller->setStreamOutputFormat(targetEntityID, streamIndex, streamFormat,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, status);
+					}
+				});
 		}
 	}
 
-	virtual void setEntityName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name) noexcept override
+	virtual void setEntityName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name, SetEntityNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetEntityName);
-			controller->setEntityName(targetEntityID, name.toStdString(), [this, targetEntityID, name](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setEntityName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityName, status);
-			});
+			controller->setEntityName(targetEntityID, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setEntityGroupName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name) noexcept override
+	virtual void setEntityGroupName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name, SetEntityGroupNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetEntityGroupName);
-			controller->setEntityGroupName(targetEntityID, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setEntityGroupName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityGroupName, status);
-			});
+			controller->setEntityGroupName(targetEntityID, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityGroupName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setConfigurationName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& name) noexcept override
+	virtual void setConfigurationName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& name, SetConfigurationNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetConfigurationName);
-			controller->setConfigurationName(targetEntityID, configurationIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setConfigurationName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetConfigurationName, status);
-			});
+			controller->setConfigurationName(targetEntityID, configurationIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetConfigurationName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setAudioUnitName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& name) noexcept override
+	virtual void setAudioUnitName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& name, SetAudioUnitNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAudioUnitName);
-			controller->setAudioUnitName(targetEntityID, configurationIndex, audioUnitIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setAudioUnitName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioUnitName, status);
-			});
+			controller->setAudioUnitName(targetEntityID, configurationIndex, audioUnitIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioUnitName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setStreamInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name) noexcept override
+	virtual void setStreamInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, SetStreamInputNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamName);
-			controller->setStreamInputName(targetEntityID, configurationIndex, streamIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setStreamInputName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, status);
-			});
+			controller->setStreamInputName(targetEntityID, configurationIndex, streamIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setStreamOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name) noexcept override
+	virtual void setStreamOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, SetStreamOutputNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamName);
-			controller->setStreamOutputName(targetEntityID, configurationIndex, streamIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setStreamOutputName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, status);
-			});
+			controller->setStreamOutputName(targetEntityID, configurationIndex, streamIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setAvbInterfaceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& name) noexcept override
+	virtual void setAvbInterfaceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& name, SetAvbInterfaceNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAvbInterfaceName);
-			controller->setAvbInterfaceName(targetEntityID, configurationIndex, avbInterfaceIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setAvbInterfaceName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetAvbInterfaceName, status);
-			});
+			controller->setAvbInterfaceName(targetEntityID, configurationIndex, avbInterfaceIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAvbInterfaceName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setClockSourceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& name) noexcept override
+	virtual void setClockSourceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& name, SetClockSourceNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockSourceName);
-			controller->setClockSourceName(targetEntityID, configurationIndex, clockSourceIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setClockSourceName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSourceName, status);
-			});
+			controller->setClockSourceName(targetEntityID, configurationIndex, clockSourceIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSourceName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setMemoryObjectName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& name) noexcept override
+	virtual void setMemoryObjectName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& name, SetMemoryObjectNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetMemoryObjectName);
-			controller->setMemoryObjectName(targetEntityID, configurationIndex, memoryObjectIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setMemoryObjectName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetMemoryObjectName, status);
-			});
+			controller->setMemoryObjectName(targetEntityID, configurationIndex, memoryObjectIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetMemoryObjectName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setAudioClusterName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& name) noexcept override
+	virtual void setAudioClusterName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& name, SetAudioClusterNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAudioClusterName);
-			controller->setAudioClusterName(targetEntityID, configurationIndex, audioClusterIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setAudioClusterName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioClusterName, status);
-			});
+			controller->setAudioClusterName(targetEntityID, configurationIndex, audioClusterIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioClusterName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setClockDomainName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& name) noexcept override
+	virtual void setClockDomainName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& name, SetClockDomainNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockDomainName);
-			controller->setClockDomainName(targetEntityID, configurationIndex, clockDomainIndex, name.toStdString(), [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setClockDomainName: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetClockDomainName, status);
-			});
+			controller->setClockDomainName(targetEntityID, configurationIndex, clockDomainIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockDomainName, status);
+					}
+				});
 		}
 	}
 
-	virtual void setAudioUnitSamplingRate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept override
+	virtual void setAudioUnitSamplingRate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate, SetAudioUnitSamplingRateHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetSamplingRate);
-			controller->setAudioUnitSamplingRate(targetEntityID, audioUnitIndex, samplingRate, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setAudioUnitSamplingRate: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetSamplingRate, status);
-			});
+			controller->setAudioUnitSamplingRate(targetEntityID, audioUnitIndex, samplingRate,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetSamplingRate, status);
+					}
+				});
 		}
 	}
 
-	virtual void setClockSource(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex) noexcept override
+	virtual void setClockSource(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, SetClockSourceHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockSource);
-			controller->setClockSource(targetEntityID, clockDomainIndex, clockSourceIndex, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "setClockSource: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSource, status);
-			});
+			controller->setClockSource(targetEntityID, clockDomainIndex, clockSourceIndex,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSource, status);
+					}
+				});
 		}
 	}
 
-	virtual void startStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void startStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StartStreamInputHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::StartStream);
-			controller->startStreamInput(targetEntityID, streamIndex, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "startStreamInput: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, status);
-			});
+			controller->startStreamInput(targetEntityID, streamIndex,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, status);
+					}
+				});
 		}
 	}
 
-	virtual void stopStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void stopStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StopStreamInputHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::StopStream);
-			controller->stopStreamInput(targetEntityID, streamIndex, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "stopStreamInput: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, status);
-			});
+			controller->stopStreamInput(targetEntityID, streamIndex,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, status);
+					}
+				});
 		}
 	}
 
-	virtual void startStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void startStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StartStreamOutputHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::StartStream);
-			controller->startStreamOutput(targetEntityID, streamIndex, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "startStreamOutput: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, status);
-			});
+			controller->startStreamOutput(targetEntityID, streamIndex,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, status);
+					}
+				});
 		}
 	}
 
-	virtual void stopStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void stopStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StopStreamOutputHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::StopStream);
-			controller->stopStreamOutput(targetEntityID, streamIndex, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "stopStreamOutput: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, status);
-			});
+			controller->stopStreamOutput(targetEntityID, streamIndex,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, status);
+					}
+				});
 		}
 	}
 
-	virtual void addStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept override
+	virtual void addStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, AddStreamPortInputAudioMappingsHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings);
-			controller->addStreamPortInputAudioMappings(targetEntityID, streamPortIndex, mappings, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "addStreamPortInputAudioMappings: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, status);
-			});
+			controller->addStreamPortInputAudioMappings(targetEntityID, streamPortIndex, mappings,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, status);
+					}
+				});
 		}
 	}
 
-	virtual void addStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept override
+	virtual void addStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, AddStreamPortOutputAudioMappingsHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings);
-			controller->addStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "addStreamPortOutputAudioMappings: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, status);
-			});
+			controller->addStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, status);
+					}
+				});
 		}
 	}
 
-	virtual void removeStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept override
+	virtual void removeStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, RemoveStreamPortInputAudioMappingsHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings);
-			controller->removeStreamPortInputAudioMappings(targetEntityID, streamPortIndex, mappings, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "removeStreamPortInputAudioMappings: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
-			});
+			controller->removeStreamPortInputAudioMappings(targetEntityID, streamPortIndex, mappings,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
+					}
+				});
 		}
 	}
 
-	virtual void removeStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept override
+	virtual void removeStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, RemoveStreamPortOutputAudioMappingsHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings);
-			controller->removeStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "removeStreamPortOutputAudioMappings: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
-			});
+			controller->removeStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
+					}
+				});
 		}
 	}
 
@@ -709,18 +965,18 @@ private:
 			{
 				emit beginAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation);
 			}
-			controller->startStoreAndRebootMemoryObjectOperation(targetEntityID, descriptorIndex, [this, targetEntityID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "startStoreAndRebootMemoryObjectOperation: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				if (handler)
+			controller->startStoreAndRebootMemoryObjectOperation(targetEntityID, descriptorIndex,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
 				{
-					la::avdecc::invokeProtectedHandler(handler, targetEntityID, descriptorIndex, status, operationID);
-				}
-				else
-				{
-					emit endAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation, status);
-				}
-			});
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, operationID);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation, status);
+					}
+				});
 		}
 	}
 
@@ -733,18 +989,18 @@ private:
 			{
 				emit beginAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation);
 			}
-			controller->startUploadMemoryObjectOperation(targetEntityID, descriptorIndex, dataLength, [this, targetEntityID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "startUploadMemoryObjectOperation: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				if (handler)
+			controller->startUploadMemoryObjectOperation(targetEntityID, descriptorIndex, dataLength,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
 				{
-					la::avdecc::invokeProtectedHandler(handler, targetEntityID, descriptorIndex, status, operationID);
-				}
-				else
-				{
-					emit endAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation, status);
-				}
-			});
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status, operationID);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation, status);
+					}
+				});
 		}
 	}
 
@@ -757,18 +1013,18 @@ private:
 			{
 				emit beginAecpCommand(targetEntityID, AecpCommandType::AbortOperation);
 			}
-			controller->abortOperation(targetEntityID, descriptorType, descriptorIndex, operationID, [this, targetEntityID, descriptorType, operationID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "abortOperation: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				if (handler)
+			controller->abortOperation(targetEntityID, descriptorType, descriptorIndex, operationID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
-					la::avdecc::invokeProtectedHandler(handler, targetEntityID, descriptorType, descriptorIndex, operationID, status);
-				}
-				else
-				{
-					emit endAecpCommand(targetEntityID, AecpCommandType::AbortOperation, status);
-				}
-			});
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::AbortOperation, status);
+					}
+				});
 		}
 	}
 
@@ -792,61 +1048,68 @@ private:
 	}
 
 	/* Connection Management Protocol (ACMP) */
-	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
+	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, ConnectStreamHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::ConnectStream);
-			controller->connectStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex }, [this, talkerEntityID, listenerEntityID](la::avdecc::controller::ControlledEntity const* const talkerEntity, la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "connectStream: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::ConnectStream, status);
-			});
+			controller->connectStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex },
+				[this, talkerEntityID, listenerEntityID, handler](la::avdecc::controller::ControlledEntity const* const talkerEntity, la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+					}
+					else
+					{
+						emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::ConnectStream, status);
+					}
+				});
 		}
 	}
 
-	virtual void disconnectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
+	virtual void disconnectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectStreamHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectStream);
-			controller->disconnectStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex }, [this, talkerEntityID, talkerStreamIndex, listenerEntityID](la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "disconnectStream: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectStream, status);
-			});
+			controller->disconnectStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex },
+				[this, talkerEntityID, talkerStreamIndex, listenerEntityID, handler](la::avdecc::controller::ControlledEntity const* const listenerEntity, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+					}
+					else
+					{
+						emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectStream, status);
+					}
+				});
 		}
 	}
 
-	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
+	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectTalkerStreamHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectTalkerStream);
-			controller->disconnectTalkerStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex }, [this, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex](la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
-			{
-				//la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "disconnectTalkerStream: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-				emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectTalkerStream, status);
-			});
+			controller->disconnectTalkerStream({ talkerEntityID, talkerStreamIndex }, { listenerEntityID, listenerStreamIndex },
+				[this, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, handler](la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, status);
+					}
+					else
+					{
+						emit endAcmpCommand(talkerEntityID, talkerStreamIndex, listenerEntityID, listenerStreamIndex, AcmpCommandType::DisconnectTalkerStream, status);
+					}
+				});
 		}
 	}
-
-	//virtual void getListenerStreamState(la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) noexcept override
-	//{
-	//	auto controller = getController();
-	//	if (controller)
-	//	{
-	//		emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings);
-	//		controller->removeStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings, [this, targetEntityID](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-	//		{
-	//			la::avdecc::Logger::getInstance().log(la::avdecc::Logger::Layer::FirstUserLayer, la::avdecc::Logger::Level::Trace, "removeStreamPortOutputAudioMappings: " + la::avdecc::entity::ControllerEntity::statusToString(status));
-	//			emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
-	//		});
-	//	}
-	//}
 
 	// Private methods
 	SharedController getController() noexcept
@@ -886,6 +1149,10 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Acquire Entity";
 		case AecpCommandType::ReleaseEntity:
 			return "Release Entity";
+		case AecpCommandType::LockEntity:
+			return "Lock Entity";
+		case AecpCommandType::UnlockEntity:
+			return "Unlock Entity";
 		case AecpCommandType::SetConfiguration:
 			return "Set Configuration";
 		case AecpCommandType::SetStreamFormat:
