@@ -22,10 +22,12 @@
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/logger.hpp>
 #include "avdecc/controllerManager.hpp"
+#include "counters/countersManager.hpp"
 #include "entityLogoCache.hpp"
 #include "settingsManager/settings.hpp"
 #include <algorithm>
 #include <array>
+#include <QTimer>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -67,10 +69,15 @@ private:
 
 	// settings::SettingsManager overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
+	
+	// Slots for CountersManager
+	Q_SLOT void handleCounterStateChanged(la::avdecc::UniqueIdentifier const entityID);
 
 private:
 	ControllerModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControllerModel);
+	
+	CountersManager _countersManager;
 
 	enum class ExclusiveAccessState
 	{
@@ -98,6 +105,14 @@ private:
 		{ ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
 		{ ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
 	};
+	
+	QTimer _counterBlinkTimer;
+	enum class TimerState : bool
+	{
+		Even,
+		Odd
+	};
+	TimerState _timerState{ TimerState::Even };
 };
 
 //////////////////////////////////////
@@ -124,6 +139,21 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	// Register to settings::SettingsManager
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+	
+	connect(&_countersManager, &CountersManager::counterStateChanged, this, &ControllerModelPrivate::handleCounterStateChanged);
+	connect(&_counterBlinkTimer, &QTimer::timeout, this, [this]()
+	{
+		// Toggle the timer state
+		_timerState = _timerState == TimerState::Even ? TimerState::Odd : TimerState::Even;
+		
+		Q_Q(ControllerModel);
+		
+		auto const topLeft = q->createIndex(0, la::avdecc::utils::to_integral(ControllerModel::Column::EntityId));
+		auto const bottomRight = q->createIndex(rowCount(), la::avdecc::utils::to_integral(ControllerModel::Column::EntityId));
+		
+		emit q->dataChanged(topLeft, bottomRight); // Make it blink
+	});
+	_counterBlinkTimer.start(250);
 }
 
 ControllerModelPrivate::~ControllerModelPrivate()
@@ -211,6 +241,17 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			}
 			default:
 				break;
+		}
+	}
+	else if (column == ControllerModel::Column::EntityId)
+	{
+		if (role == Qt::ForegroundRole)
+		{
+			auto const state = _countersManager.counterState(entityID);
+			if (state == CountersManager::CounterState::Warning)
+			{
+				return QColor{ _timerState == TimerState::Even ? Qt::red : Qt::black };
+			}
 		}
 	}
 	else if (column == ControllerModel::Column::EntityLogo)
@@ -540,6 +581,13 @@ void ControllerModelPrivate::onSettingChanged(settings::SettingsManager::Setting
 			emit q->dataChanged(top, bottom, { Qt::UserRole });
 		}
 	}
+}
+
+void ControllerModelPrivate::handleCounterStateChanged(la::avdecc::UniqueIdentifier const entityID)
+{
+	Q_Q(ControllerModel);
+	auto const index = createIndex(entityID, ControllerModel::Column::EntityId);
+	emit q->dataChanged(index, index); // For now we just want to change the entityID color
 }
 
 ///////////////////////////////////////

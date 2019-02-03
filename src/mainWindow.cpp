@@ -52,6 +52,27 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
+class CustomItemDelegate : public QStyledItemDelegate
+{
+public:
+	using QStyledItemDelegate::QStyledItemDelegate;
+
+protected:
+	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override
+	{
+		auto opt{ option };
+		
+		// Change the palette color only if this items is "blinking"
+		auto const color = index.data(Qt::ForegroundRole).value<QColor>();
+		if (color == Qt::red)
+		{
+			opt.palette.setColor(QPalette::HighlightedText, color);
+		}
+		
+		QStyledItemDelegate::paint(painter, opt, index);
+	}
+};
+
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
 	, _controllerModel(new avdecc::ControllerModel(this))
@@ -173,11 +194,14 @@ void MainWindow::createControllerView()
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
 	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
-	auto* imageItemDelegate{ new ImageItemDelegate };
+	auto* imageItemDelegate{ new ImageItemDelegate{ this } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
+	
+	auto* customItemDelegate{ new CustomItemDelegate{ this } };
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), customItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId));
