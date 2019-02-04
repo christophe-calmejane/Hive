@@ -303,8 +303,6 @@ then
 fi
 
 if [ $useSources -eq 1 ]; then
-	# Except for WebEngine
-	add_cmake_opt+=("-DQt5WebEngineWidgets_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5WebEngineWidgets")
 	# Override qtArch path with Source path
 	qtArch="Src/qtbase"
 	echo "Using Qt source instead of precompiled libraries"
