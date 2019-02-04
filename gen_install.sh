@@ -58,15 +58,12 @@ doSign=1
 gen_cmake_additional_options=()
 
 # First check for .identity file
-if isMac;
-then
-	if [ -f ".identity" ];
-	then
+if isMac; then
+	if [ -f ".identity" ]; then
 		identityString="$(< .identity)"
 		# Quick check for identity in keychain
 		security find-identity -v -p codesigning | grep "$identityString" &> /dev/null
-		if [ $? -ne 0 ];
-		then
+		if [ $? -ne 0 ]; then
 			echo "Invalid .identity file content (identity not found in keychain, or not valid for codesigning): $identityString"
 			exit 1
 		fi
@@ -352,10 +349,14 @@ if [ ! -f "$installerFile" ]; then
 	exit 1
 fi
 
-if isMac && [[ hasTeamId -eq 1 && doSign -eq 1 ]];
-then
+if [ $doSign -eq 1 ]; then
 	echo "Signing Package"
-	codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}"
+	if isMac; then
+		codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}"
+	else
+		signtool sign /a /sm /q /fd sha1 /t http://timestamp.verisign.com/scripts/timstamp.dll "${installerFile}"
+		signtool sign /a /sm /as /q /fd sha256 /tr http://sha256timestamp.ws.symantec.com/sha256/timestamp "${installerFile}"
+	fi
 fi
 
 mv "${installerFile}" .

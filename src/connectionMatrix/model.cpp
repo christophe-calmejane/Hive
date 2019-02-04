@@ -955,7 +955,11 @@ public:
 		auto* listenerItem = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(listener.column()));
 
 		auto const topLeft = q_ptr->createIndex(talker.row(), listener.column());
-		auto const bottomRight = q_ptr->createIndex(talker.row() + talkerItem->childrenCount(), listener.column() + listenerItem->childrenCount());
+
+		auto const talkerChildrenCount = talkerItem ? talkerItem->childrenCount() : 0;
+		auto const listenerChildrenCount = listenerItem ? listenerItem->childrenCount() : 0;
+
+		auto const bottomRight = q_ptr->createIndex(talker.row() + talkerChildrenCount, listener.column() + listenerChildrenCount);
 
 		emit q_ptr->dataChanged(topLeft, bottomRight, { Model::FilterRole });
 	}

@@ -4,6 +4,16 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.0.10] - 2019-02-04
+### Added
+- Windows binary code-signing
+- Version clearly saying _beta_, when it's a beta build
+
+### Fixed
+- [New version popup hidden behind splash-screen](https://github.com/christophe-calmejane/Hive/issues/49)
+- Possible crash when powering-up a device
+- Possible crash when using _macOS native interface_ with a Milan compatible device
+
 ## [1.0.9] - 2019-02-02
 ### Added
 - Support for _Locking/Unlocking_ an entity
