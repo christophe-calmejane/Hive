@@ -530,6 +530,8 @@ void MainWindow::showChangeLog(QString const title, QString const versionString)
 
 void MainWindow::showEvent(QShowEvent* event)
 {
+	QMainWindow::showEvent(event);
+
 	static std::once_flag once;
 	std::call_once(once,
 		[this]()
@@ -537,9 +539,9 @@ void MainWindow::showEvent(QShowEvent* event)
 			// Check if this is the first time we launch a new Hive version
 			auto& settings = settings::SettingsManager::getInstance();
 			auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
-			settings.setValue(settings::LastLaunchedVersion.name, hive::internals::versionString);
+			settings.setValue(settings::LastLaunchedVersion.name, hive::internals::fileVersionString);
 
-			if (lastVersion == hive::internals::versionString)
+			if (lastVersion == hive::internals::fileVersionString)
 				return;
 
 			// Postpone the dialog creation

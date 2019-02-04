@@ -195,7 +195,7 @@ private:
 	{
 		try
 		{
-			auto const currentVersion = Version{ hive::internals::versionString };
+			auto const currentVersion = Version{ hive::internals::fileVersionString };
 			auto const newReleaseVersion = Version{ _newReleaseVersionString };
 			auto const newBetaVersion = Version{ _newBetaVersionString };
 

@@ -115,7 +115,7 @@ if(ENABLE_AVDECC_USE_FMTLIB)
 	set_target_properties(fmt PROPERTIES FOLDER "Libraries")
 endif()
 
-############ Define some variables
+############ Define some variables (most to be removed when reworking cmake files and using setup_project macro)
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
 set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")
