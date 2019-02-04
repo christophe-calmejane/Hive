@@ -68,7 +68,7 @@ private:
 		return _settings.value(name);
 	}
 
-	virtual void registerSettingObserver(Setting const& name, Observer* const observer) noexcept override
+	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification) noexcept override
 	{
 		if (AVDECC_ASSERT_WITH_RET(_settings.contains(name), "registerSettingObserver not allowed for a Setting without initial Value"))
 		{
@@ -76,8 +76,11 @@ private:
 			try
 			{
 				observers.registerObserver(observer);
-				auto const value = _settings.value(name);
-				la::avdecc::utils::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, value);
+				if (triggerFirstNotification)
+				{
+					auto const value = _settings.value(name);
+					la::avdecc::utils::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, value);
+				}
 			}
 			catch (...)
 			{

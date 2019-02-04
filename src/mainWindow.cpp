@@ -536,20 +536,30 @@ void MainWindow::showEvent(QShowEvent* event)
 	std::call_once(once,
 		[this]()
 		{
-			// Check if this is the first time we launch a new Hive version
-			auto& settings = settings::SettingsManager::getInstance();
-			auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
-			settings.setValue(settings::LastLaunchedVersion.name, hive::internals::fileVersionString);
-
-			if (lastVersion == hive::internals::fileVersionString)
-				return;
-
-			// Postpone the dialog creation
-			QTimer::singleShot(0,
-				[this, versionString = std::move(lastVersion)]()
+			// Time to check for new version
+			{
+				auto& updater = Updater::getInstance();
+				if (updater.isAutomaticCheckForNewVersion())
 				{
-					showChangeLog("What's New", versionString);
-				});
+					updater.checkForNewVersion();
+				}
+			}
+			// Check if this is the first time we launch a new Hive version
+			{
+				auto& settings = settings::SettingsManager::getInstance();
+				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
+				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::fileVersionString);
+
+				if (lastVersion == hive::internals::fileVersionString)
+					return;
+
+				// Postpone the dialog creation
+				QTimer::singleShot(0,
+					[this, versionString = std::move(lastVersion)]()
+					{
+						showChangeLog("What's New", versionString);
+					});
+			}
 		});
 }
 
