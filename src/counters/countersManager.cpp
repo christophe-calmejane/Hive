@@ -102,9 +102,12 @@ void CountersManager::handleStreamInputCountersChanged(la::avdecc::UniqueIdentif
 		auto const& flag{ kv.first };
 		auto const& counter{ kv.second };
 		
-		// For now, just update the internal counter and highlight no matter what
 		streamInputCounters[flag] = counter;
-		emit counterStateChanged(entityID);
+
+		if (shouldNotify(flag))
+		{
+			emit counterStateChanged(entityID);
+		}
 	}
 }
 
@@ -116,9 +119,34 @@ void CountersManager::handleStreamOutputCountersChanged(la::avdecc::UniqueIdenti
 		auto const& flag{ kv.first };
 		auto const& counter{ kv.second };
 		
-		// For now, just update the internal counter and highlight no matter what
+		// For now, just update the internal counter and notify no matter what
 		streamOutputCounters[flag] = counter;
-		emit counterStateChanged(entityID);
+
+		if (shouldNotify(flag))
+		{
+			emit counterStateChanged(entityID);
+		}
+	}
+}
+
+bool CountersManager::shouldNotify(la::avdecc::entity::StreamInputCounterValidFlag const flag) const
+{
+	switch (flag)
+	{
+		case la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked:
+		case la::avdecc::entity::StreamInputCounterValidFlag::StreamReset:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool CountersManager::shouldNotify(la::avdecc::entity::StreamOutputCounterValidFlag const flag) const
+{
+	switch (flag)
+	{
+		default:
+			return false;
 	}
 }
 

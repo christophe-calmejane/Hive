@@ -19,12 +19,15 @@ public:
 		Warning,
 	};
 	
-	// Returns a global counter state for the given entity
+	// Returns per entity, a global counters state
 	CounterState counterState(la::avdecc::UniqueIdentifier const entityID) const;
-	
+
+	// Returns per entity / stream / flag the counter state
 	CounterState streamInputCounterState(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) const;
 	CounterState streamOutputCounterState(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamOutputCounterValidFlag const flag) const;
-	
+
+	// Emitted whenever a tracked counter state changes @see shouldNotify
+	// Note this is global to the entity for now, but we should also wrap the stream index and the counter flag as well in order to identify the counter in the trees
 	Q_SIGNAL void counterStateChanged(la::avdecc::UniqueIdentifier const entityID);
 	
 protected:
@@ -32,6 +35,9 @@ protected:
 	Q_SLOT void handleEntityOffline(la::avdecc::UniqueIdentifier const entityID);
 	Q_SLOT void handleStreamInputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters);
 	Q_SLOT void handleStreamOutputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters);
+
+	bool shouldNotify(la::avdecc::entity::StreamInputCounterValidFlag const flag) const;
+	bool shouldNotify(la::avdecc::entity::StreamOutputCounterValidFlag const flag) const;
 	
 private:
 	struct CountersData
