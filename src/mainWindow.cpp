@@ -52,6 +52,7 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
+// This custom delegate allows to keep the Qt::ForegroundRole visible even when a cell is highlighted
 class CustomItemDelegate : public QStyledItemDelegate
 {
 public:
@@ -62,11 +63,10 @@ protected:
 	{
 		auto opt{ option };
 		
-		// Change the palette color only if this items is "blinking"
-		auto const color = index.data(Qt::ForegroundRole).value<QColor>();
-		if (color == Qt::red)
+		auto const data = index.data(Qt::ForegroundRole);
+		if (!data.isNull())
 		{
-			opt.palette.setColor(QPalette::HighlightedText, color);
+			opt.palette.setColor(QPalette::HighlightedText, data.value<QColor>());
 		}
 		
 		QStyledItemDelegate::paint(painter, opt, index);

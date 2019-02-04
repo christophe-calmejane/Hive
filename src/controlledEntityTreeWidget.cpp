@@ -245,6 +245,17 @@ public:
 		return _controlledEntityID;
 	}
 
+	QTreeWidgetItem* findDescriptorItem(la::avdecc::entity::model::DescriptorType const& descriptorType, la::avdecc::entity::model::DescriptorIndex const index) const
+	{
+		Q_Q(const ControlledEntityTreeWidget);
+		QTreeWidgetItemIterator it{ const_cast<ControlledEntityTreeWidget*>(q) };
+		while (*it)
+		{
+			++it;
+		}
+		return nullptr;
+	}
+
 	void customContextMenuRequested(QPoint const& pos)
 	{
 		Q_Q(ControlledEntityTreeWidget);
@@ -598,3 +609,10 @@ la::avdecc::UniqueIdentifier ControlledEntityTreeWidget::controlledEntityID() co
 	Q_D(const ControlledEntityTreeWidget);
 	return d->controlledEntityID();
 }
+
+QTreeWidgetItem* ControlledEntityTreeWidget::findDescriptorItem(la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex) const
+{
+	Q_D(const ControlledEntityTreeWidget);
+	return d->findDescriptorItem(descriptorType, descriptorIndex);
+}
+

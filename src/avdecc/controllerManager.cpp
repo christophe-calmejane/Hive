@@ -100,12 +100,16 @@ public:
 
 	~ControllerManagerImpl() noexcept
 	{
+		// Destroy the controller, we don't want further notifications
+		destroyController();
+
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
 		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
 	}
 
 private:
+
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
@@ -136,11 +140,15 @@ private:
 	// Discovery notifications (ADP)
 	virtual void onEntityOnline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
-		emit entityOnline(entity->getEntity().getEntityID());
+		auto const entityID{ entity->getEntity().getEntityID() };
+		_entityErrorCounterFlags[entityID] = {};
+		emit entityOnline(entityID);
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
-		emit entityOffline(entity->getEntity().getEntityID());
+		auto const entityID{ entity->getEntity().getEntityID() };
+		_entityErrorCounterFlags.erase(entityID);
+		emit entityOffline(entityID);
 	}
 	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/) noexcept override
 	{
@@ -281,19 +289,49 @@ private:
 	}
 	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters) noexcept override
 	{
-		emit avbInterfaceCountersChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, counters);
+		auto const entityID{ entity->getEntity().getEntityID() };
+		emit avbInterfaceCountersChanged(entityID, avbInterfaceIndex, counters);
 	}
 	virtual void onClockDomainCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters) noexcept override
 	{
-		emit clockDomainCountersChanged(entity->getEntity().getEntityID(), clockDomainIndex, counters);
+		auto const entityID{ entity->getEntity().getEntityID() };
+		emit clockDomainCountersChanged(entityID, clockDomainIndex, counters);
 	}
 	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters) noexcept override
 	{
-		emit streamInputCountersChanged(entity->getEntity().getEntityID(), streamIndex, counters);
+		auto const entityID{ entity->getEntity().getEntityID() };
+
+		auto counterErrorFlags = la::avdecc::entity::StreamInputCounterValidFlags{};
+		for (auto const& counterKV : counters)
+		{
+			auto const& flag{ counterKV.first };
+
+			switch (flag)
+			{
+				case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
+				case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
+				case la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch:
+				case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
+				case la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp:
+				case la::avdecc::entity::StreamInputCounterValidFlag::UnsupportedFormat:
+					counterErrorFlags.set(flag);
+					break;
+				default:
+					break;
+			}
+		}
+
+		if (!counterErrorFlags.empty())
+		{
+			emit streamInputErrorCounterChanged(entityID, streamIndex, counterErrorFlags);
+		}
+
+		emit streamInputCountersChanged(entityID, streamIndex, counters);
 	}
 	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters) noexcept override
 	{
-		emit streamOutputCountersChanged(entity->getEntity().getEntityID(), streamIndex, counters);
+		auto const entityID{ entity->getEntity().getEntityID() };
+		emit streamOutputCountersChanged(entityID, streamIndex, counters);
 	}
 	virtual void onMemoryObjectLengthChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length) noexcept override
 	{
@@ -322,17 +360,7 @@ private:
 		// If we have a previous controller, remove it
 		if (_controller)
 		{
-			// First remove the observer so we don't get any new notifications
-			_controller->unregisterObserver(this);
-
-			// And destroy the controller itself
-#if HAVE_ATOMIC_SMART_POINTERS
-			_controller = Controller{ nullptr };
-#else // !HAVE_ATOMIC_SMART_POINTERS
-			std::atomic_store(&_controller, SharedController{ nullptr });
-#endif // HAVE_ATOMIC_SMART_POINTERS
-
-			emit controllerOffline();
+			destroyController();
 		}
 
 		// Create a new controller and store it
@@ -1133,12 +1161,41 @@ private:
 #endif // HAVE_ATOMIC_SMART_POINTERS
 	}
 
+	void destroyController()
+	{
+		if (_controller)
+		{
+			// First remove the observer so we don't get any new notifications
+			_controller->unregisterObserver(this);
+
+			// And destroy the controller itself
+#if HAVE_ATOMIC_SMART_POINTERS
+			_controller = Controller{ nullptr };
+#else // !HAVE_ATOMIC_SMART_POINTERS
+			std::atomic_store(&_controller, SharedController{ nullptr });
+#endif // HAVE_ATOMIC_SMART_POINTERS
+
+			emit controllerOffline();
+		}
+	}
+
 	// Private members
 #if HAVE_ATOMIC_SMART_POINTERS
 	std::atomic_shared_ptr<la::avdecc::controller::Controller> _controller{ nullptr };
 #else // !HAVE_ATOMIC_SMART_POINTERS
 	SharedController _controller{ nullptr };
 #endif // HAVE_ATOMIC_SMART_POINTERS
+
+	struct ErrorCounterFlags
+	{
+		std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::AvbInterfaceCounterValidFlags> avbInterfaceCounterValidFlags;
+		std::unordered_map<la::avdecc::entity::model::ClockDomainIndex,la::avdecc::entity::ClockDomainCounterValidFlags> clockDomainCounterValidFlags;
+		std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::StreamInputCounterValidFlags> streamInputCounterValidFlags;
+		std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::StreamOutputCounterValidFlags> streamOutputCounterValidFlags;
+	};
+
+	// Store per entity error counter flags
+	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterFlags, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterFlags;
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept

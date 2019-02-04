@@ -34,6 +34,8 @@ public:
 	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
 	la::avdecc::UniqueIdentifier controlledEntityID() const;
 
+	QTreeWidgetItem* findDescriptorItem(la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex) const;
+
 private:
 	ControlledEntityTreeWidgetPrivate* d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(ControlledEntityTreeWidget)

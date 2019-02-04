@@ -198,7 +198,6 @@ set(COUNTERS_HEADER_FILES
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
 	counters/streamOutputCountersTreeWidgetItem.hpp
-	counters/countersManager.hpp
 )
 
 set(COUNTERS_SOURCE_FILES
@@ -206,7 +205,6 @@ set(COUNTERS_SOURCE_FILES
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
 	counters/streamOutputCountersTreeWidgetItem.cpp
-	counters/countersManager.cpp
 )
 
 # Logger View header files

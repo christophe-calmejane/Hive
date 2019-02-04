@@ -54,6 +54,8 @@ EntityInspector::EntityInspector(QWidget* parent)
 	connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &EntityInspector::entityOnline);
 	connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &EntityInspector::entityOffline);
 	connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &EntityInspector::entityNameChanged);
+
+	connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &EntityInspector::streamInputErrorCounterChanged);
 }
 
 void EntityInspector::setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
@@ -127,6 +129,10 @@ void EntityInspector::entityNameChanged(la::avdecc::UniqueIdentifier const entit
 	{
 		configureWindowTitle();
 	}
+}
+
+void EntityInspector::streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+{
 }
 
 void EntityInspector::configureWindowTitle()

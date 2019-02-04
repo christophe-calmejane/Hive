@@ -22,7 +22,6 @@
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/logger.hpp>
 #include "avdecc/controllerManager.hpp"
-#include "counters/countersManager.hpp"
 #include "entityLogoCache.hpp"
 #include "settingsManager/settings.hpp"
 #include <algorithm>
@@ -63,6 +62,7 @@ private:
 	Q_SLOT void lockStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity);
 	Q_SLOT void compatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags);
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);
+	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags);
 
 	// Slots for EntityLogoCache signals
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
@@ -70,15 +70,10 @@ private:
 	// settings::SettingsManager overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 	
-	// Slots for CountersManager
-	Q_SLOT void handleCounterStateChanged(la::avdecc::UniqueIdentifier const entityID);
-
 private:
 	ControllerModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControllerModel);
 	
-	CountersManager _countersManager;
-
 	enum class ExclusiveAccessState
 	{
 		NoAccess = 0,
@@ -89,6 +84,9 @@ private:
 
 	using Entities = std::vector<la::avdecc::UniqueIdentifier>;
 	Entities _entities{};
+
+	using EntitiesWithErrorCounter = std::set<la::avdecc::UniqueIdentifier>;
+	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
 
 	std::array<QImage, 5> _compatibilityImages{
 		{
@@ -105,14 +103,6 @@ private:
 		{ ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
 		{ ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
 	};
-	
-	QTimer _counterBlinkTimer;
-	enum class TimerState : bool
-	{
-		Even,
-		Odd
-	};
-	TimerState _timerState{ TimerState::Even };
 };
 
 //////////////////////////////////////
@@ -131,6 +121,7 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, this, &ControllerModelPrivate::lockStateChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ControllerModelPrivate::compatibilityFlagsChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::gptpChanged);
+	connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::streamInputErrorCounterChanged);
 
 	// Connect EntityLogoCache signals
 	auto& logoCache = EntityLogoCache::getInstance();
@@ -139,21 +130,6 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	// Register to settings::SettingsManager
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
-	
-	connect(&_countersManager, &CountersManager::counterStateChanged, this, &ControllerModelPrivate::handleCounterStateChanged);
-	connect(&_counterBlinkTimer, &QTimer::timeout, this, [this]()
-	{
-		// Toggle the timer state
-		_timerState = _timerState == TimerState::Even ? TimerState::Odd : TimerState::Even;
-		
-		Q_Q(ControllerModel);
-		
-		auto const topLeft = q->createIndex(0, la::avdecc::utils::to_integral(ControllerModel::Column::EntityId));
-		auto const bottomRight = q->createIndex(rowCount(), la::avdecc::utils::to_integral(ControllerModel::Column::EntityId));
-		
-		emit q->dataChanged(topLeft, bottomRight); // Make it blink
-	});
-	_counterBlinkTimer.start(250);
 }
 
 ControllerModelPrivate::~ControllerModelPrivate()
@@ -247,10 +223,9 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 	{
 		if (role == Qt::ForegroundRole)
 		{
-			auto const state = _countersManager.counterState(entityID);
-			if (state == CountersManager::CounterState::Warning)
+			if (_entitiesWithErrorCounter.count(entityID))
 			{
-				return QColor{ _timerState == TimerState::Even ? Qt::red : Qt::black };
+				return QColor{ Qt::red };
 			}
 		}
 	}
@@ -558,6 +533,18 @@ void ControllerModelPrivate::gptpChanged(la::avdecc::UniqueIdentifier const enti
 	dataChanged(entityID, ControllerModel::Column::GptpDomain);
 }
 
+void ControllerModelPrivate::streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+{
+	if (!flags.empty())
+	{
+		_entitiesWithErrorCounter.insert(entityID);
+	}
+	else
+	{
+		_entitiesWithErrorCounter.erase(entityID);
+	}
+}
+
 void ControllerModelPrivate::imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type)
 {
 	if (type == EntityLogoCache::Type::Entity)
@@ -581,13 +568,6 @@ void ControllerModelPrivate::onSettingChanged(settings::SettingsManager::Setting
 			emit q->dataChanged(top, bottom, { Qt::UserRole });
 		}
 	}
-}
-
-void ControllerModelPrivate::handleCounterStateChanged(la::avdecc::UniqueIdentifier const entityID)
-{
-	Q_Q(ControllerModel);
-	auto const index = createIndex(entityID, ControllerModel::Column::EntityId);
-	emit q->dataChanged(index, index); // For now we just want to change the entityID color
 }
 
 ///////////////////////////////////////
