@@ -29,7 +29,7 @@ namespace internals
 	const QString applicationShortName{ "@PROJECT_NAME@" };
 	const QString applicationLongName{ "@PROJECT_FULL_NAME@" };
 	const QString versionString{ "@LA_PROJECT_VERSION_STRING@" };
-	const QString fileVersionString{ "@LA_PROJECT_FILEVERSION_STRING@" };
+	const QString cmakeVersionString{ "@LA_PROJECT_CMAKEVERSION_STRING@" };
 	const QString projectURL{ "@PROJECT_URL@" };
 	const QString copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
 	const QString authors{ "@PROJECT_AUTHORS@" };

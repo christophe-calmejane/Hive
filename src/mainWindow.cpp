@@ -548,9 +548,9 @@ void MainWindow::showEvent(QShowEvent* event)
 			{
 				auto& settings = settings::SettingsManager::getInstance();
 				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
-				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::fileVersionString);
+				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
 
-				if (lastVersion == hive::internals::fileVersionString)
+				if (lastVersion == hive::internals::cmakeVersionString)
 					return;
 
 				// Postpone the dialog creation

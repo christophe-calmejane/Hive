@@ -168,7 +168,6 @@ private:
 		}
 		else if (name == settings::CheckForBetaVersions.name)
 		{
-			auto& settings = settings::SettingsManager::getInstance();
 			if (_automaticCheckNewVersion)
 			{
 				checkForNewVersion();
@@ -202,7 +201,7 @@ private:
 	{
 		try
 		{
-			auto const currentVersion = Version{ hive::internals::fileVersionString };
+			auto const currentVersion = Version{ hive::internals::cmakeVersionString };
 			auto const newReleaseVersion = Version{ _newReleaseVersionString };
 			auto const newBetaVersion = Version{ _newBetaVersionString };
 
