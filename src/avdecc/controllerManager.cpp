@@ -96,16 +96,6 @@ public:
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
 		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
-		
-		QTimer::singleShot(1000, [this]()
-		{
-			auto const entityID = la::avdecc::UniqueIdentifier{ 0xA960B639FB148000 };
-			auto const streamIndex = la::avdecc::entity::model::StreamIndex{ 0 };
-			auto const counters = la::avdecc::controller::model::StreamInputCounters{
-				{ la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked, 1 } 
-			};
-			emit streamInputCountersChanged(entityID, streamIndex, counters);
-		});
 	}
 
 	~ControllerManagerImpl() noexcept
