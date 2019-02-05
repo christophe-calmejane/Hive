@@ -20,6 +20,7 @@
 #include "streamDynamicTreeWidgetItem.hpp"
 #include "streamFormatComboBox.hpp"
 #include "talkerStreamConnectionWidget.hpp"
+#include "nodeTreeWidget.hpp"
 
 #include <QMenu>
 
@@ -166,7 +167,6 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 						updateConnections(connections);
 					}
 				});
-#pragma message("TODO: When the notification is available")
 		}
 	}
 }
@@ -174,7 +174,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo)
 {
 	_streamFormat->setText(1, avdecc::helper::toHexQString(streamInfo.streamFormat, true, true));
-	_streamFlags->setText(1, avdecc::helper::flagsToString(streamInfo.streamInfoFlags));
+	setFlagsItemText(_streamFlags, la::avdecc::utils::to_integral(streamInfo.streamInfoFlags), avdecc::helper::flagsToString(streamInfo.streamInfoFlags));
 	_streamDestMac->setText(1, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(streamInfo.streamDestMac, true)));
 	_streamID->setText(1, avdecc::helper::toHexQString(streamInfo.streamID, true, true));
 	_streamVlanID->setText(1, QString::number(streamInfo.streamVlanID));
@@ -186,7 +186,8 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 	{
 		if (streamInfo.streamInfoFlagsEx.has_value())
 		{
-			_streamFlagsEx->setText(1, avdecc::helper::flagsToString(*streamInfo.streamInfoFlagsEx));
+			auto const flagsEx = *streamInfo.streamInfoFlagsEx;
+			setFlagsItemText(_streamFlagsEx, la::avdecc::utils::to_integral(flagsEx), avdecc::helper::flagsToString(flagsEx));
 		}
 		else
 		{
@@ -197,7 +198,8 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 	{
 		if (streamInfo.probingStatus.has_value())
 		{
-			_probingStatus->setText(1, avdecc::helper::probingStatusToString(*streamInfo.probingStatus));
+			auto const probingStatus = *streamInfo.probingStatus;
+			_probingStatus->setText(1, QString("%1 (%2)").arg(avdecc::helper::toHexQString(la::avdecc::utils::to_integral(probingStatus), true, true)).arg(avdecc::helper::probingStatusToString(probingStatus)));
 		}
 		else
 		{
@@ -208,7 +210,8 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 	{
 		if (streamInfo.acmpStatus.has_value())
 		{
-			_acmpStatus->setText(1, avdecc::helper::toUpperCamelCase(static_cast<std::string>(*streamInfo.acmpStatus)));
+			auto const acmpStatus = *streamInfo.acmpStatus;
+			_acmpStatus->setText(1, QString("%1 (%2)").arg(avdecc::helper::toHexQString(acmpStatus.getValue(), true, true)).arg(avdecc::helper::toUpperCamelCase(static_cast<std::string>(acmpStatus))));
 		}
 		else
 		{
