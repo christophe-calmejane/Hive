@@ -440,6 +440,14 @@ void MainWindow::connectSignals()
 			showChangeLog("Change Log", "");
 		});
 
+	//
+
+	connect(actionOpenProjectWebPage, &QAction::triggered, this,
+		[this]()
+		{
+			QDesktopServices::openUrl(hive::internals::projectURL);
+		});
+
 	// Connect updater signals
 	auto const& updater = Updater::getInstance();
 	connect(&updater, &Updater::newReleaseVersionAvailable, this,
