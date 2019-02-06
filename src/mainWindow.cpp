@@ -64,7 +64,7 @@ protected:
 		auto opt{ option };
 		
 		auto const data = index.data(Qt::ForegroundRole);
-		if (!data.isNull())
+		if (data.isValid())
 		{
 			opt.palette.setColor(QPalette::HighlightedText, data.value<QColor>());
 		}

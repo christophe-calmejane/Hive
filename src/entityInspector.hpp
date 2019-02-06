@@ -24,7 +24,6 @@
 #include "controlledEntityTreeWidget.hpp"
 #include "nodeTreeWidget.hpp"
 
-#include "avdecc/controllerManager.hpp"
 
 class EntityInspector : public QWidget
 {
@@ -45,7 +44,6 @@ private:
 	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const entityID);
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID);
 	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& name);
-	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags);
 
 	void configureWindowTitle();
 

@@ -543,6 +543,8 @@ void ControllerModelPrivate::streamInputErrorCounterChanged(la::avdecc::UniqueId
 	{
 		_entitiesWithErrorCounter.erase(entityID);
 	}
+
+	emit dataChanged(entityID, ControllerModel::Column::EntityId);
 }
 
 void ControllerModelPrivate::imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type)

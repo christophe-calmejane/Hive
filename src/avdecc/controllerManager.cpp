@@ -38,6 +38,28 @@ public:
 	using SharedController = std::shared_ptr<la::avdecc::controller::Controller>;
 	using SharedConstController = std::shared_ptr<la::avdecc::controller::Controller const>;
 
+	struct ErrorCounterFlags
+	{
+	public:
+		la::avdecc::entity::StreamInputCounterValidFlags getStreamInputCounterValidFlags(la::avdecc::entity::model::StreamIndex const streamIndex) const
+		{
+			auto const it = _streamInputCounterValidFlags.find(streamIndex);
+			if (it != std::end(_streamInputCounterValidFlags))
+			{
+				return it->second;
+			}
+			return {};
+		}
+
+		void setStreamInputCounterValidFlags(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+		{
+			_streamInputCounterValidFlags[streamIndex] = flags;
+		}
+
+	private:
+		std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::StreamInputCounterValidFlags> _streamInputCounterValidFlags;
+	};
+
 	ControllerManagerImpl() noexcept
 	{
 		qRegisterMetaType<std::uint8_t>("std::uint8_t");
@@ -96,6 +118,18 @@ public:
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
 		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+
+		// DO NOT COMMIT
+		QTimer::singleShot(5000, [this]()
+		{
+			auto const entityID = la::avdecc::UniqueIdentifier{ 0x001B92FFFE01BAF0 };
+			auto const streamIndex = la::avdecc::entity::model::StreamIndex{ 0 };
+			auto const counters = la::avdecc::controller::model::StreamInputCounters{
+				{ la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked, 1 } 
+			};
+			auto controlledEntity = _controller->getControlledEntityGuard(entityID);
+			onStreamInputCountersChanged(nullptr, &(*controlledEntity), streamIndex, counters);
+		});
 	}
 
 	~ControllerManagerImpl() noexcept
@@ -289,19 +323,17 @@ private:
 	}
 	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters) noexcept override
 	{
-		auto const entityID{ entity->getEntity().getEntityID() };
-		emit avbInterfaceCountersChanged(entityID, avbInterfaceIndex, counters);
+		emit avbInterfaceCountersChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, counters);
 	}
 	virtual void onClockDomainCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters) noexcept override
 	{
-		auto const entityID{ entity->getEntity().getEntityID() };
-		emit clockDomainCountersChanged(entityID, clockDomainIndex, counters);
+		emit clockDomainCountersChanged(entity->getEntity().getEntityID(), clockDomainIndex, counters);
 	}
 	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
 
-		auto counterErrorFlags = la::avdecc::entity::StreamInputCounterValidFlags{};
+		auto flags = la::avdecc::entity::StreamInputCounterValidFlags{};
 		for (auto const& counterKV : counters)
 		{
 			auto const& flag{ counterKV.first };
@@ -314,24 +346,24 @@ private:
 				case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
 				case la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp:
 				case la::avdecc::entity::StreamInputCounterValidFlag::UnsupportedFormat:
-					counterErrorFlags.set(flag);
+					flags.set(flag);
 					break;
 				default:
 					break;
 			}
 		}
 
-		if (!counterErrorFlags.empty())
+		if (auto* errorCounterFlags = entityErrorCounterFlags(entityID))
 		{
-			emit streamInputErrorCounterChanged(entityID, streamIndex, counterErrorFlags);
+			errorCounterFlags->setStreamInputCounterValidFlags(streamIndex, flags);
+			emit streamInputErrorCounterChanged(entityID, streamIndex, flags);
 		}
 
 		emit streamInputCountersChanged(entityID, streamIndex, counters);
 	}
 	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters) noexcept override
 	{
-		auto const entityID{ entity->getEntity().getEntityID() };
-		emit streamOutputCountersChanged(entityID, streamIndex, counters);
+		emit streamOutputCountersChanged(entity->getEntity().getEntityID(), streamIndex, counters);
 	}
 	virtual void onMemoryObjectLengthChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length) noexcept override
 	{
@@ -403,6 +435,46 @@ private:
 			return controller->getControlledEntityGuard(entityID);
 		}
 		return {};
+	}
+
+
+	ErrorCounterFlags const* entityErrorCounterFlags(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto const it = _entityErrorCounterFlags.find(entityID);
+		if (it != std::end(_entityErrorCounterFlags))
+		{
+			return &it->second;
+		}
+		return nullptr;
+	}
+
+	ErrorCounterFlags* entityErrorCounterFlags(la::avdecc::UniqueIdentifier const entityID) noexcept
+	{
+		return const_cast<ErrorCounterFlags*>(static_cast<ControllerManagerImpl const*>(this)->entityErrorCounterFlags(entityID));
+	}
+
+	virtual la::avdecc::entity::StreamInputCounterValidFlags getStreamInputErrorCounterFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+	{
+		if (auto* errorCounterFlags = entityErrorCounterFlags(entityID))
+		{
+			return errorCounterFlags->getStreamInputCounterValidFlags(streamIndex);
+		}
+		return {};
+	}
+
+	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept
+	{
+		if (auto* errorCounterFlags = entityErrorCounterFlags(entityID))
+		{
+			auto flags = errorCounterFlags->getStreamInputCounterValidFlags(streamIndex);
+
+			if (flags.test(flag))
+			{
+				flags.reset(flag);
+				errorCounterFlags->setStreamInputCounterValidFlags(streamIndex, flags);
+				emit streamInputErrorCounterChanged(entityID, streamIndex, flags);
+			}
+		}
 	}
 
 	/* Enumeration and Control Protocol (AECP) */
@@ -1185,14 +1257,6 @@ private:
 #else // !HAVE_ATOMIC_SMART_POINTERS
 	SharedController _controller{ nullptr };
 #endif // HAVE_ATOMIC_SMART_POINTERS
-
-	struct ErrorCounterFlags
-	{
-		std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::AvbInterfaceCounterValidFlags> avbInterfaceCounterValidFlags;
-		std::unordered_map<la::avdecc::entity::model::ClockDomainIndex,la::avdecc::entity::ClockDomainCounterValidFlags> clockDomainCounterValidFlags;
-		std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::StreamInputCounterValidFlags> streamInputCounterValidFlags;
-		std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::StreamOutputCounterValidFlags> streamOutputCounterValidFlags;
-	};
 
 	// Store per entity error counter flags
 	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterFlags, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterFlags;

@@ -105,6 +105,7 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ControlledEntityTreeWidgetPrivate::controllerOffline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ControlledEntityTreeWidgetPrivate::entityOnline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ControlledEntityTreeWidgetPrivate::entityOffline);
+		connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::streamInputErrorCounterChanged);
 	}
 
 	Q_SLOT void controllerOffline()
@@ -138,6 +139,19 @@ public:
 
 		Q_Q(ControlledEntityTreeWidget);
 		q->clearSelection();
+	}
+
+	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+	{
+		if (entityID != _controlledEntityID)
+		{
+			return;
+		}
+
+		if (auto* item = findDescriptorItem(la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex))
+		{
+			item->setForeground(0, flags.empty() ? Qt::black : Qt::red);
+		}
 	}
 
 	void saveSelectedDescriptor()
@@ -249,8 +263,20 @@ public:
 	{
 		Q_Q(const ControlledEntityTreeWidget);
 		QTreeWidgetItemIterator it{ const_cast<ControlledEntityTreeWidget*>(q) };
+
+		auto currentIndex{0};
 		while (*it)
 		{
+			auto const* node = find(static_cast<TreeWidgetItem*>(*it));
+			if (node && node->descriptorType == descriptorType)
+			{
+				if (currentIndex == index)
+				{
+					return *it;
+				}
+
+				++currentIndex;
+			}
 			++it;
 		}
 		return nullptr;
@@ -446,7 +472,11 @@ private:
 			auto const name = genName(controlledEntity, node);
 			auto* item = addItem(parent, &node, name);
 
-			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item,
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto const flags = manager.getStreamInputErrorCounterFlags(_controlledEntityID, node.descriptorIndex);
+			item->setForeground(0, flags.empty() ? Qt::black : Qt::red);
+
+			connect(&manager, &avdecc::ControllerManager::streamNameChanged, item,
 				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
 				{
 					updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
@@ -608,11 +638,5 @@ la::avdecc::UniqueIdentifier ControlledEntityTreeWidget::controlledEntityID() co
 {
 	Q_D(const ControlledEntityTreeWidget);
 	return d->controlledEntityID();
-}
-
-QTreeWidgetItem* ControlledEntityTreeWidget::findDescriptorItem(la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex) const
-{
-	Q_D(const ControlledEntityTreeWidget);
-	return d->findDescriptorItem(descriptorType, descriptorIndex);
 }
 

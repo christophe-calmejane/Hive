@@ -20,7 +20,6 @@
 #include "streamInputCountersTreeWidgetItem.hpp"
 
 #include <map>
-
 #include <QMenu>
 
 StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget* parent)
@@ -55,7 +54,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	// Create fields
 	for (auto const nameKV : s_counterNames)
 	{
-		auto* widget = new QTreeWidgetItem(this);
+		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, parent };
 		widget->setText(0, nameKV.second);
 		widget->setHidden(true); // Hide until we get a counter value (so we don't display counters not supported by the entity)
 		_counters[nameKV.first] = widget;
@@ -65,7 +64,8 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	updateCounters(counters);
 
 	// Listen for StreamInputCountersChanged
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInputCountersChanged, this,
+	auto& manager = avdecc::ControllerManager::getInstance();
+	connect(&manager, &avdecc::ControllerManager::streamInputCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)
@@ -73,6 +73,32 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 				updateCounters(counters);
 			}
 		});
+
+	connect(&manager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlags const& flags)
+		{
+			if (entityID == _entityID && streamIndex == _streamIndex)
+			{
+				setStreamInputErrorCounterFlags(flags);
+			}
+		});
+
+	// Initialization
+	setStreamInputErrorCounterFlags(manager.getStreamInputErrorCounterFlags(_entityID, _streamIndex));
+}
+
+void StreamInputCountersTreeWidgetItem::setStreamInputErrorCounterFlags(la::avdecc::entity::StreamInputCounterValidFlags const& flags)
+{
+	for (auto& kv : _counters)
+	{
+		auto const& flag = kv.first;
+		auto* widget = kv.second;
+
+		auto const color = flags.test(flag) ? Qt::red : Qt::black;
+
+		widget->setForeground(0, color);
+		widget->setForeground(1, color);
+	}
 }
 
 void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::StreamInputCounters const& counters)

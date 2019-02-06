@@ -124,6 +124,8 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &NodeTreeWidgetPrivate::controllerOffline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &NodeTreeWidgetPrivate::entityOnline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &NodeTreeWidgetPrivate::entityOffline);
+
+		connect(q_ptr, &NodeTreeWidget::currentItemChanged, this, &NodeTreeWidgetPrivate::currentItemChanged);
 	}
 
 	Q_SLOT void controllerOffline()
@@ -143,6 +145,17 @@ public:
 			Q_Q(NodeTreeWidget);
 			q->setNode(la::avdecc::UniqueIdentifier{}, {});
 			q->clearSelection();
+		}
+	}
+
+	Q_SLOT void currentItemChanged(QTreeWidgetItem* current, QTreeWidgetItem* previous)
+	{
+		if (auto* item = dynamic_cast<StreamInputCounterTreeWidgetItem*>(current))
+		{
+			auto const streamIndex = item->streamIndex();
+			auto const flag = item->counterValidFlag();
+
+			avdecc::ControllerManager::getInstance().clearStreamInputCounterValidFlags(_controlledEntityID, streamIndex, flag);
 		}
 	}
 
