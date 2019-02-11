@@ -31,12 +31,18 @@
 // Base node item
 class NodeItem : public QObject, public QTreeWidgetItem
 {
+	using QObject::parent;
+
 public:
-	NodeItem(la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& name)
-		: _descriptorType{ descriptorType }
-		, _descriptorIndex{ descriptorIndex }
+	enum class Kind
 	{
-		setData(0, Qt::DisplayRole, name);
+		EntityModelNode,
+		VirtualNode,
+	};
+
+	Kind kind() const
+	{
+		return _kind;
 	}
 
 	la::avdecc::entity::model::DescriptorType descriptorType() const
@@ -48,10 +54,43 @@ public:
 	{
 		return _descriptorIndex;
 	}
-	
+
+	void setHasError(bool const hasError)
+	{
+		_hasError = hasError;
+		setForeground(0, _hasError ? Qt::red : Qt::black);
+
+		// Also update the parent node
+		if (auto* parent = static_cast<NodeItem*>(QTreeWidgetItem::parent()))
+		{
+			if (parent->kind() == NodeItem::Kind::VirtualNode)
+			{
+				parent->updateHasError();
+			}
+		}
+	}
+
+	bool hasError() const
+	{
+		return _hasError;
+	}
+
+protected:
+	NodeItem(Kind const kind, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& name)
+		: _kind{ kind }
+		, _descriptorType{ descriptorType }
+		, _descriptorIndex{ descriptorIndex }
+	{
+		setData(0, Qt::DisplayRole, name);
+	}
+
+	virtual void updateHasError() {}
+
 private:
 	la::avdecc::entity::model::DescriptorType const _descriptorType;
 	la::avdecc::entity::model::DescriptorIndex const _descriptorIndex;
+	Kind const _kind;
+	bool _hasError{ false };
 };
 
 // EntityModelNode
@@ -59,7 +98,7 @@ class EntityModelNodeItem : public NodeItem
 {
 public:
 	EntityModelNodeItem(la::avdecc::controller::model::EntityModelNode const* node, QString const& name)
-		: NodeItem{ node->descriptorType, node->descriptorIndex, name }
+		: NodeItem{ Kind::EntityModelNode, node->descriptorType, node->descriptorIndex, name }
 	{
 	}
 };
@@ -76,7 +115,7 @@ public:
 	};
 
 	VirtualNodeItem(la::avdecc::controller::model::VirtualNode const* node, QString const& name)
-		: NodeItem{ node->descriptorType, node->virtualIndex, name }
+		: NodeItem{ Kind::VirtualNode, node->descriptorType, node->virtualIndex, name }
 	{
 	}
 
@@ -91,6 +130,23 @@ public:
 			default:
 				return VirtualDescriptorType::Unknown;
 		}
+	}
+
+protected:
+	virtual void updateHasError() override
+	{
+		auto hasError = false;
+		for (auto i = 0; i < childCount(); ++ i)
+		{
+			auto const* item = static_cast<NodeItem const*>(child(i));
+			if (item && item->hasError())
+			{
+				hasError = true;
+				break;
+			}
+		}
+
+		setHasError(hasError);
 	}
 };
 
@@ -148,9 +204,9 @@ public:
 			return;
 		}
 
-		if (auto* item = findDescriptorItem(la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex))
+		if (auto* item = findEntityModelNodeItem(la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex))
 		{
-			item->setForeground(0, flags.empty() ? Qt::black : Qt::red);
+			item->setHasError(!flags.empty());
 		}
 	}
 
@@ -259,25 +315,24 @@ public:
 		return _controlledEntityID;
 	}
 
-	QTreeWidgetItem* findDescriptorItem(la::avdecc::entity::model::DescriptorType const& descriptorType, la::avdecc::entity::model::DescriptorIndex const index) const
+	NodeItem* findEntityModelNodeItem(la::avdecc::entity::model::DescriptorType const& descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex) const
 	{
-		Q_Q(const ControlledEntityTreeWidget);
-		QTreeWidgetItemIterator it{ const_cast<ControlledEntityTreeWidget*>(q) };
-
-		auto currentIndex{0};
-		while (*it)
+		auto const it = std::find_if(std::begin(_map), std::end(_map), [&descriptorType, &descriptorIndex](auto const& kv)
 		{
-			auto const* node = find(static_cast<TreeWidgetItem*>(*it));
-			if (node && node->descriptorType == descriptorType)
+			auto const* item = kv.second;
+			if (item->kind() == NodeItem::Kind::VirtualNode)
 			{
-				if (currentIndex == index)
-				{
-					return *it;
-				}
-
-				++currentIndex;
+				// Exclude virtual nodes
+				return false;
 			}
-			++it;
+			else
+			{
+				return item->descriptorType() == descriptorType && item->descriptorIndex() == descriptorIndex;
+			}
+		});
+		if (it != std::end(_map))
+		{
+			return it->second;
 		}
 		return nullptr;
 	}
@@ -474,7 +529,7 @@ private:
 
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto const flags = manager.getStreamInputErrorCounterFlags(_controlledEntityID, node.descriptorIndex);
-			item->setForeground(0, flags.empty() ? Qt::black : Qt::red);
+			item->setHasError(!flags.empty());
 
 			connect(&manager, &avdecc::ControllerManager::streamNameChanged, item,
 				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)

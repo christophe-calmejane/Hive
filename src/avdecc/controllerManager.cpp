@@ -35,9 +35,18 @@ public:
 	using SharedController = std::shared_ptr<la::avdecc::controller::Controller>;
 	using SharedConstController = std::shared_ptr<la::avdecc::controller::Controller const>;
 
-	struct ErrorCounterTracker
+	struct ErrorCounterTracker : public la::avdecc::controller::model::EntityModelVisitor
 	{
 	public:
+		ErrorCounterTracker(la::avdecc::controller::ControlledEntity const* const entity = nullptr)
+		{
+			// Initialize counters by visiting the entity
+			if (entity)
+			{
+				entity->accept(this);
+			}
+		}
+
 		la::avdecc::entity::StreamInputCounterValidFlags getStreamInputCounterValidFlags(la::avdecc::entity::model::StreamIndex const streamIndex) const
 		{
 			auto const streamIt = _streamInputCounter.find(streamIndex);
@@ -54,14 +63,17 @@ public:
 		{
 			auto& errorCounter = _streamInputCounter[streamIndex];
 
-			if (errorCounter.counters[flag] != counter)
+			auto hasError{ false };
+
+			if (counter > errorCounter.counters[flag])
 			{
 				errorCounter.flags.set(flag);
-				errorCounter.counters[flag] = counter;
-				return true;
+				hasError = true;
 			}
 
-			return false;
+			errorCounter.counters[flag] = counter;
+
+			return hasError;
 		}
 
 		// Clear the error for a given flag, returns true if the flag has changed, false otherwise
@@ -76,6 +88,20 @@ public:
 			}
 
 			return false;
+		}
+
+		// la::avdecc::controller::model::EntityModelVisitor overrides
+		virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept
+		{
+			for (auto const& counterKV : node.dynamicModel->counters)
+			{
+				auto const& flag = counterKV.first;
+				auto const& counter = counterKV.second;
+
+				// Initialize internal counter value
+				auto& errorCounter = _streamInputCounter[node.descriptorIndex];
+				errorCounter.counters[flag] = counter;
+			}
 		}
 
 	private:
@@ -192,8 +218,7 @@ private:
 	virtual void onEntityOnline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
-		_entityErrorCounterTrackers[entityID] = {};
-		// TODO, initialize all counters
+		_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entity };
 		emit entityOnline(entityID);
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override

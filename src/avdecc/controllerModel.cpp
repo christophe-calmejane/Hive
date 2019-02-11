@@ -85,7 +85,8 @@ private:
 	using Entities = std::vector<la::avdecc::UniqueIdentifier>;
 	Entities _entities{};
 
-	using EntitiesWithErrorCounter = std::set<la::avdecc::UniqueIdentifier>;
+	using StreamsWithErrorCounter = std::set<la::avdecc::entity::model::StreamIndex>;
+	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, StreamsWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
 	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
 
 	std::array<QImage, 5> _compatibilityImages{
@@ -223,9 +224,15 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 	{
 		if (role == Qt::ForegroundRole)
 		{
-			if (_entitiesWithErrorCounter.count(entityID))
+			auto const it = _entitiesWithErrorCounter.find(entityID);
+			if (it != std::end(_entitiesWithErrorCounter))
 			{
-				return QColor{ Qt::red };
+				auto const& streamsWithErrorCounter{ it->second };
+				if (!streamsWithErrorCounter.empty())
+				{
+					// At least one stream contains a counter error
+					return QColor{ Qt::red };
+				}
 			}
 		}
 	}
@@ -537,11 +544,11 @@ void ControllerModelPrivate::streamInputErrorCounterChanged(la::avdecc::UniqueId
 {
 	if (!flags.empty())
 	{
-		_entitiesWithErrorCounter.insert(entityID);
+		_entitiesWithErrorCounter[entityID].insert(descriptorIndex);
 	}
 	else
 	{
-		_entitiesWithErrorCounter.erase(entityID);
+		_entitiesWithErrorCounter[entityID].erase(descriptorIndex);
 	}
 
 	emit dataChanged(entityID, ControllerModel::Column::EntityId);
