@@ -279,6 +279,7 @@ set(COMMON_HEADER_FILES
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	entityLogoCache.hpp
+	highlightForegroundItemDelegate.hpp
 	imageItemDelegate.hpp
 	mappingMatrix.hpp
 	nodeTreeWidget.hpp
@@ -291,6 +292,7 @@ set(COMMON_HEADER_FILES
 set(COMMON_SOURCE_FILES
 	aecpCommandComboBox.cpp
 	entityLogoCache.cpp
+	highlightForegroundItemDelegate.cpp
 	imageItemDelegate.cpp
 	main.cpp
 	controlledEntityTreeWidget.cpp

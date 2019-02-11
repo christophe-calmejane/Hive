@@ -18,6 +18,7 @@
 */
 
 #include "entityInspector.hpp"
+#include "highlightForegroundItemDelegate.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
 
@@ -36,6 +37,9 @@ EntityInspector::EntityInspector(QWidget* parent)
 
 	_nodeTreeWiget.setColumnCount(2);
 	_nodeTreeWiget.setHeaderLabels({ "", "" });
+
+	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ this } };
+	_nodeTreeWiget.setItemDelegate(highlightForegroundItemDelegate);
 
 	connect(_controlledEntityTreeWiget.selectionModel(), &QItemSelectionModel::currentChanged, this,
 		[this](QModelIndex const& index, QModelIndex const&)

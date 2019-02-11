@@ -32,6 +32,7 @@
 #include "avdecc/controllerManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
+#include "highlightForegroundItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
@@ -51,27 +52,6 @@ extern "C"
 #define MODEL_ID 0x00000001
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
-
-// This custom delegate allows to keep the Qt::ForegroundRole visible even when a cell is highlighted
-class CustomItemDelegate : public QStyledItemDelegate
-{
-public:
-	using QStyledItemDelegate::QStyledItemDelegate;
-
-protected:
-	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override
-	{
-		auto opt{ option };
-		
-		auto const data = index.data(Qt::ForegroundRole);
-		if (data.isValid())
-		{
-			opt.palette.setColor(QPalette::HighlightedText, data.value<QColor>());
-		}
-		
-		QStyledItemDelegate::paint(painter, opt, index);
-	}
-};
 
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
@@ -200,8 +180,8 @@ void MainWindow::createControllerView()
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 	
-	auto* customItemDelegate{ new CustomItemDelegate{ this } };
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), customItemDelegate);
+	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ this } };
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), highlightForegroundItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId));
