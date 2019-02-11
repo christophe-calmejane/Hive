@@ -320,6 +320,10 @@ private:
 			static_assert(false, "Invalid base type");
 		}
 
+		// Store the node inside the item
+		auto const anyNode = AnyNode(node);
+		item->setData(0, Qt::UserRole, QVariant::fromValue(anyNode));
+
 		if (auto* parentItem = find(parent))
 		{
 			parentItem->addChild(item);
