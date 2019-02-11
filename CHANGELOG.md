@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Numerical values for _StreamFlags_, _StreamFlagsEx_, _ProbingStatus_ and _AcmpStatus_
 
+### Fixed
+- Milan Certification version properly displayed (as x.y.z.w value)
+
 ## [1.0.10] - 2019-02-04
 ### Added
 - Windows binary code-signing

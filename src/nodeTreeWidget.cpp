@@ -224,7 +224,7 @@ private:
 
 			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 			addFlagsItem(milanInfoItem, "Features", milanInfo.featuresFlags.getValue(), avdecc::helper::flagsToString(milanInfo.featuresFlags));
-			addTextItem(milanInfoItem, "Certification Version", QString::number(milanInfo.certificationVersion));
+			addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
 		}
 
 		// Discovery information

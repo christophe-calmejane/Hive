@@ -96,6 +96,8 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 
 QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept;
 
+QString certificationVersionToString(std::uint32_t const certificationVersion) noexcept;
+
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
 QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
 
