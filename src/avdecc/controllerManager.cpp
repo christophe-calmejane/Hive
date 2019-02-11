@@ -65,6 +65,12 @@ public:
 
 			auto hasError{ false };
 
+			// Detect counter reset (or wrap)
+			if (counter < errorCounter.counters[flag])
+			{
+				errorCounter.counters[flag] = 0;
+			}
+
 			if (counter > errorCounter.counters[flag])
 			{
 				errorCounter.flags.set(flag);
