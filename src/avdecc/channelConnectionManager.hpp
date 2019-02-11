@@ -52,9 +52,12 @@ enum class ConnectionStatus
 struct ConnectionDetails : QObject
 {
 	std::vector<std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>> targetClusters;
+	la::avdecc::entity::model::StreamIndex sourceStreamIndex;
+	uint16_t streamChannel;
 	std::optional<la::avdecc::entity::model::AudioUnitIndex> targetAudioUnitIndex = std::nullopt;
 	std::optional<la::avdecc::entity::model::StreamPortIndex> targetStreamPortIndex = std::nullopt;
 	std::optional<la::avdecc::entity::model::ClusterIndex> targetBaseCluster = std::nullopt;
+	bool isTargetRedundant = false;
 };
 
 // **************************************************************
@@ -69,7 +72,7 @@ struct Connections : QObject
 {
 	la::avdecc::UniqueIdentifier entityId = la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
 	std::map<la::avdecc::entity::model::StreamIndex, std::shared_ptr<ConnectionDetails>> targetStreams;
-	ConnectionStatus streamConnectionStatus = ConnectionStatus::None;
+	bool isSourceRedundant = false;
 };
 
 // **************************************************************
@@ -92,8 +95,6 @@ struct ConnectionInformation
 	std::optional<la::avdecc::entity::model::ClusterIndex> sourceBaseCluster = std::nullopt;
 	std::uint16_t sourceClusterChannel = 0;
 	bool forward = true; /** This flag indicates the direction of the connections. */
-
-	std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
 
 	std::map<la::avdecc::UniqueIdentifier, std::shared_ptr<Connections>> deviceConnections;
 };

@@ -29,149 +29,80 @@ namespace avdecc
 {
 class ChannelConnectionManagerImpl final : public ChannelConnectionManager
 {
+private:
+	// Private members
+	std::set<la::avdecc::UniqueIdentifier> _entities{}; // No lock required, only read/write in the UI thread
+
 public:
 	/**
 		* Constructor.
 		*/
-	ChannelConnectionManagerImpl() noexcept {}
+	ChannelConnectionManagerImpl() noexcept
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		connect(&manager, &ControllerManager::controllerOffline, this, &ChannelConnectionManagerImpl::onControllerOffline);
+		connect(&manager, &ControllerManager::entityOnline, this, &ChannelConnectionManagerImpl::onEntityOnline);
+		connect(&manager, &ControllerManager::entityOffline, this, &ChannelConnectionManagerImpl::onEntityOffline);
+	}
 
 	/**
-		* Destructor.
-		*/
+	* Removes all entities from the internal list.
+	*/
+	Q_SLOT void onControllerOffline()
+	{
+		_entities.clear();
+	}
+
+	/**
+	* Adds the entity to the internal list.
+	*/
+	Q_SLOT void onEntityOnline(la::avdecc::UniqueIdentifier const& entityId)
+	{
+		// add entity to the set
+		_entities.insert(entityId);
+	}
+
+	/**
+	* Removes the entity from the internal list.
+	*/
+	Q_SLOT void onEntityOffline(la::avdecc::UniqueIdentifier const& entityId)
+	{
+		// remove entity from the set
+		_entities.erase(entityId);
+	}
+
+	/**
+	* Destructor.
+	*/
 	~ChannelConnectionManagerImpl() noexcept {}
 
 	/**
-		* Helper function for connectionStatus medthod. Checks if the stream is currently connected.
-		* @param talkerID		The id of the talking entity. 
-		* @param talkerNode		The index of the output node to check.
-		* @param listenerNode	The index of the input node to check.
-		*/
-	bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) const noexcept
+	* Iterates over the list of known entities and returns all connections that originate from the given talker.
+	*/
+	std::vector<la::avdecc::controller::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier talkerEntityId)
 	{
-		if (listenerNode && listenerNode->dynamicModel && talkerNode)
+		std::vector<la::avdecc::controller::model::StreamConnectionState> disconnectedStreams;
+		auto const& manager = avdecc::ControllerManager::getInstance();
+		for (auto const& potentialListenerEntityId : _entities)
 		{
-			return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
-		}
-	}
-
-	/**
-		* Helper function for connectionStatus medthod. Checks if the stream is in fast connect mode.
-		* @param talkerID		The id of the talking entity.
-		* @param talkerNode		The index of the output node to check.
-		* @param listenerNode	The index of the input node to check.
-		*/
-	bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) const noexcept
-	{
-		if (listenerNode && listenerNode->dynamicModel && talkerNode)
-		{
-			return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
-		}
-	}
-
-	/**
-		* Detect the current connection status to be displayed.
-		* @param talkerEntityId				The id of the talking entity.
-		* @param talkerStreamIndex			The index of the output stream to check.
-		* @param talkerStreamRedundant		Flag indicating if the talking stream is redundant.
-		* @param listenerEntityId			The id of the listening entity.
-		* @param listenerStreamIndex		The index of the inout stream to check.
-		* @param listenerStreamRedundant	Flag indicating if the listening stream is redundant.
-		*/
-	ConnectionStatus connectionStatus(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex talkerStreamIndex, bool talkerStreamRedundant, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex listenerStreamIndex, bool listenerStreamRedundant) const noexcept
-	{
-		if (talkerEntityId == listenerEntityId)
-			return ConnectionStatus::None;
-
-		try
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto talkerEntity = manager.getControlledEntity(talkerEntityId);
-			auto listenerEntity = manager.getControlledEntity(listenerEntityId);
-			if (talkerEntity && listenerEntity)
+			auto const controlledEntity = manager.getControlledEntity(potentialListenerEntityId);
+			if (controlledEntity)
 			{
-				auto const& talkerEntityNode = talkerEntity->getEntityNode();
-				auto const& talkerEntityInfo = talkerEntity->getEntity();
-				auto const& listenerEntityNode = listenerEntity->getEntityNode();
-				auto const& listenerEntityInfo = listenerEntity->getEntity();
-
-				auto const computeFormatCompatible = [](la::avdecc::controller::model::StreamOutputNode const& talkerNode, la::avdecc::controller::model::StreamInputNode const& listenerNode)
+				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
+				for (auto const& streamInput : configNode.streamInputs)
 				{
-					return la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(talkerNode.dynamicModel->streamInfo.streamFormat, listenerNode.dynamicModel->streamInfo.streamFormat);
-				};
-				auto const computeDomainCompatible = [&talkerEntity, &listenerEntity, &talkerEntityNode, &listenerEntityNode](auto const talkerAvbInterfaceIndex, auto const listenerAvbInterfaceIndex)
-				{
-					try
+					auto* streamInputDynamicModel = streamInput.second.dynamicModel;
+					if (streamInputDynamicModel)
 					{
-						// Get the AvbInterface associated to the streams
-						auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerAvbInterfaceIndex);
-						auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerAvbInterfaceIndex);
-
-						// Check both have the same grandmaster
-						return talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID == listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-					}
-					catch (...)
-					{
-						return false;
-					}
-				};
-				enum class ConnectState
-				{
-					NotConnected = 0,
-					FastConnecting,
-					Connected,
-				};
-				auto const computeCapabilities = [](ConnectState const connectState, bool const areAllConnected, bool const isFormatCompatible, bool const isDomainCompatible)
-				{
-					auto caps{ ConnectionStatus::Connectable };
-
-					if (!isDomainCompatible)
-						caps |= ConnectionStatus::WrongDomain;
-
-					if (!isFormatCompatible)
-						caps |= ConnectionStatus::WrongFormat;
-
-					if (connectState != ConnectState::NotConnected)
-					{
-						if (areAllConnected)
-							caps |= ConnectionStatus::Connected;
-						else if (connectState == ConnectState::FastConnecting)
-							caps |= ConnectionStatus::FastConnecting;
-						else
-							caps |= ConnectionStatus::PartiallyConnected;
-					}
-
-					return caps;
-				};
-
-				{
-					la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
-					la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
-					if (talkerEntityNode.dynamicModel && listenerEntityNode.dynamicModel)
-					{
-						talkerNode = &talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
-						listenerNode = &listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
-
-						// Get connected state
-						auto const areConnected = isStreamConnected(talkerEntityId, talkerNode, listenerNode);
-						auto const fastConnecting = isStreamFastConnecting(talkerEntityId, talkerNode, listenerNode);
-						auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
-
-						// Get stream format compatibility
-						auto const isFormatCompatible = computeFormatCompatible(*talkerNode, *listenerNode);
-
-						// Get domain compatibility
-						auto const isDomainCompatible = computeDomainCompatible(talkerNode->staticModel->avbInterfaceIndex, listenerNode->staticModel->avbInterfaceIndex);
-
-						return computeCapabilities(connectState, areConnected, isFormatCompatible, isDomainCompatible);
+						if (streamInputDynamicModel->connectionState.talkerStream.entityID == talkerEntityId)
+						{
+							disconnectedStreams.push_back(streamInputDynamicModel->connectionState);
+						}
 					}
 				}
 			}
 		}
-		catch (...)
-		{
-		}
-
-		return ConnectionStatus::None;
+		return disconnectedStreams;
 	}
 
 	/**
@@ -235,69 +166,77 @@ public:
 			return result;
 		}
 
+		std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
 		for (auto const& mapping : mappings)
 		{
 			if (mapping.clusterOffset == clusterIndex - baseCluster && clusterChannel == mapping.clusterChannel)
 			{
-				result.sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
+				sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
 			}
 		}
 
+		auto const& streamConnections = getAllStreamOutputConnections(entityId);
+
 		// find out the connected streams:
-		for (auto const& stream : result.sourceStreams)
+		for (auto const& stream : sourceStreams)
 		{
+			auto sourceStreamIndex = stream.first;
 			auto sourceStreamChannel = stream.second;
-			auto const& streamConnections = controlledEntity->getStreamOutputConnections(stream.first);
+
 			for (auto const& streamConnection : streamConnections)
 			{
-				if (!result.deviceConnections.count(streamConnection.entityID))
+				if (streamConnection.talkerStream.streamIndex == sourceStreamIndex)
 				{
-					auto connections = std::make_shared<Connections>();
-					connections->entityId = streamConnection.entityID;
-					connections->targetStreams.emplace(streamConnection.streamIndex, std::make_shared<ConnectionDetails>());
-					result.deviceConnections.emplace(streamConnection.entityID, connections);
-					result.deviceConnections.at(streamConnection.entityID)->streamConnectionStatus = connectionStatus(entityId, stream.first, false, streamConnection.entityID, streamConnection.streamIndex, false);
-				}
-				else
-				{
-					if (!result.deviceConnections.at(streamConnection.entityID)->targetStreams.count(streamConnection.streamIndex))
+					// after getting the connected stream, resolve the underlying channels:
+					auto targetControlledEntity = manager.getControlledEntity(streamConnection.listenerStream.entityID);
+					if (!targetControlledEntity)
 					{
-						result.deviceConnections.at(streamConnection.entityID)->targetStreams.emplace(streamConnection.streamIndex, std::make_shared<ConnectionDetails>());
+						continue;
 					}
-				}
-
-				// after getting the connected stream, resolve the underlying channels:
-				auto targetControlledEntity = manager.getControlledEntity(streamConnection.entityID);
-				if (!targetControlledEntity)
-				{
-					continue;
-				}
-				auto const& targetEntityNode = targetControlledEntity->getEntityNode();
-				if (targetEntityNode.dynamicModel)
-				{
-					auto const& targetConfigurationNode = targetControlledEntity->getConfigurationNode(targetEntityNode.dynamicModel->currentConfiguration);
-
-					// find correct index of audio unit and stream port index:
-					for (auto const& audioUnitKV : targetConfigurationNode.audioUnits)
+					auto const& targetEntityNode = targetControlledEntity->getEntityNode();
+					if (targetEntityNode.dynamicModel)
 					{
-						for (auto const& streamPortInputKV : audioUnitKV.second.streamPortInputs)
+						auto const& targetConfigurationNode = targetControlledEntity->getConfigurationNode(targetEntityNode.dynamicModel->currentConfiguration);
+
+						// find correct index of audio unit and stream port index:
+						for (auto const& audioUnitKV : targetConfigurationNode.audioUnits)
 						{
-							if (streamPortInputKV.second.dynamicModel)
+							for (auto const& streamPortInputKV : audioUnitKV.second.streamPortInputs)
 							{
-								auto targetMappings = streamPortInputKV.second.dynamicModel->dynamicAudioMap;
-								for (auto const& mapping : targetMappings)
+								if (streamPortInputKV.second.dynamicModel)
 								{
-									// the source stream channel is connected to the corresponding target stream channel.
-									if (mapping.streamIndex == streamConnection.streamIndex && mapping.streamChannel == sourceStreamChannel)
+									auto targetMappings = streamPortInputKV.second.dynamicModel->dynamicAudioMap;
+									for (auto const& mapping : targetMappings)
 									{
-										result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->targetClusters.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
-										result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->targetAudioUnitIndex = audioUnitKV.first;
-										if (streamPortInputKV.second.staticModel)
+										// the source stream channel is connected to the corresponding target stream channel.
+										if (mapping.streamIndex == streamConnection.listenerStream.streamIndex && mapping.streamChannel == sourceStreamChannel)
 										{
-											result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->targetBaseCluster = streamPortInputKV.second.staticModel->baseCluster;
+											if (!result.deviceConnections.count(streamConnection.listenerStream.entityID))
+											{
+												auto connections = std::make_shared<Connections>();
+												connections->entityId = streamConnection.listenerStream.entityID;
+												connections->targetStreams.emplace(streamConnection.listenerStream.streamIndex, std::make_shared<ConnectionDetails>());
+												result.deviceConnections.emplace(streamConnection.listenerStream.entityID, connections);
+											}
+											else
+											{
+												if (!result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.count(streamConnection.listenerStream.streamIndex))
+												{
+													result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.emplace(streamConnection.listenerStream.streamIndex, std::make_shared<ConnectionDetails>());
+												}
+											}
+
+											result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->streamChannel = sourceStreamChannel;
+											result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->sourceStreamIndex = stream.first;
+											result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->targetClusters.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
+											result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->targetAudioUnitIndex = audioUnitKV.first;
+											if (streamPortInputKV.second.staticModel)
+											{
+												result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->targetBaseCluster = streamPortInputKV.second.staticModel->baseCluster;
+											}
+											result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->targetStreamPortIndex = streamPortInputKV.first;
+											result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->isTargetRedundant = targetControlledEntity->getStreamInputNode(targetConfigurationNode.descriptorIndex, mapping.streamIndex).isRedundant;
 										}
-										result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->targetStreamPortIndex = streamPortInputKV.first;
-										//result.deviceConnections.at(streamConnection.entityID)->targetStreams.at(mapping.streamIndex)->isRedundant = ?;
 									}
 								}
 							}
@@ -306,6 +245,7 @@ public:
 				}
 			}
 		}
+
 		return result;
 	}
 
@@ -372,28 +312,23 @@ public:
 			return result;
 		}
 
-		// find all streams this cluster is connected to. (Should only be 1)
+		// find all streams this cluster is connected to. (Should only be 1, but can be multiple on redundant connections)
+		std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
 		for (auto const& mapping : mappings)
 		{
 			if (mapping.clusterOffset == clusterIndex - baseCluster && clusterChannel == mapping.clusterChannel)
 			{
-				result.sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
+				sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
 			}
 		}
 
 		// find out the connected streams:
-		for (auto const& stream : result.sourceStreams)
+		for (auto const& stream : sourceStreams)
 		{
 			if (controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first).dynamicModel)
 			{
 				auto connectedTalker = controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first).dynamicModel->connectionState.talkerStream.entityID;
 				auto connectedTalkerStreamIndex = controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first).dynamicModel->connectionState.talkerStream.streamIndex;
-
-				auto connections = std::make_shared<Connections>();
-				connections->entityId = connectedTalker;
-				connections->targetStreams.emplace(connectedTalkerStreamIndex, std::make_shared<ConnectionDetails>());
-				result.deviceConnections.emplace(connectedTalker, connections);
-				result.deviceConnections.at(connectedTalker)->streamConnectionStatus = connectionStatus(connectedTalker, connectedTalkerStreamIndex, false, entityId, stream.first, false);
 
 				auto sourceStreamChannel = stream.second;
 
@@ -422,6 +357,24 @@ public:
 									// the source stream channel is connected to the corresponding target stream channel.
 									if (mapping.streamIndex == connectedTalkerStreamIndex && mapping.streamChannel == sourceStreamChannel)
 									{
+										if (!result.deviceConnections.count(connectedTalker))
+										{
+											auto connections = std::make_shared<Connections>();
+											connections->entityId = connectedTalker;
+											connections->targetStreams.emplace(connectedTalkerStreamIndex, std::make_shared<ConnectionDetails>());
+											connections->isSourceRedundant = controlledEntity->getStreamInputNode(configurationNode.descriptorIndex, stream.first).isRedundant;
+											result.deviceConnections.emplace(connectedTalker, connections);
+										}
+										else
+										{
+											if (!result.deviceConnections.at(connectedTalker)->targetStreams.count(connectedTalkerStreamIndex))
+											{
+												result.deviceConnections.at(connectedTalker)->targetStreams.emplace(connectedTalkerStreamIndex, std::make_shared<ConnectionDetails>());
+											}
+										}
+
+										result.deviceConnections.at(connectedTalker)->targetStreams.at(mapping.streamIndex)->streamChannel = sourceStreamChannel;
+										result.deviceConnections.at(connectedTalker)->targetStreams.at(mapping.streamIndex)->sourceStreamIndex = stream.first;
 										result.deviceConnections.at(connectedTalker)->targetStreams.at(mapping.streamIndex)->targetClusters.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
 										result.deviceConnections.at(connectedTalker)->targetStreams.at(mapping.streamIndex)->targetAudioUnitIndex = audioUnitKV.first;
 										if (streamPortOutputKV.second.staticModel)
@@ -429,6 +382,7 @@ public:
 											result.deviceConnections.at(connectedTalker)->targetStreams.at(mapping.streamIndex)->targetBaseCluster = streamPortOutputKV.second.staticModel->baseCluster;
 										}
 										result.deviceConnections.at(connectedTalker)->targetStreams.at(mapping.streamIndex)->targetStreamPortIndex = streamPortOutputKV.first;
+										result.deviceConnections.at(connectedTalker)->targetStreams.at(mapping.streamIndex)->isTargetRedundant = targetControlledEntity->getStreamOutputNode(targetConfigurationNode.descriptorIndex, mapping.streamIndex).isRedundant;
 									}
 								}
 							}

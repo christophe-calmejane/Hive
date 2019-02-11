@@ -91,7 +91,7 @@ public:
 		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxConfigurationChanged);
 		connect(comboBox_PredefinedPT, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged);
 		connect(radioButton_PredefinedPT, &QRadioButton::clicked, this, &DeviceDetailsDialogImpl::radioButtonPredefinedPTClicked);
-		
+
 		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
@@ -154,7 +154,10 @@ public:
 			{
 				// invokes various visit methods.
 				controlledEntity->accept(this);
-				comboBoxConfiguration->setCurrentIndex(_activeConfigurationIndex.value());
+				if (_activeConfigurationIndex)
+				{
+					comboBoxConfiguration->setCurrentIndex(*_activeConfigurationIndex);
+				}
 
 				// latency tab:
 				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
@@ -269,9 +272,7 @@ public:
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
-	{
-	}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override {}
 
 	/**
 	* Ignored.
@@ -512,7 +513,7 @@ public:
 			avdecc::ControllerManager::getInstance().setEntityGroupName(_entityID, lineEditGroupName->text());
 			_expectedChanges++;
 		}
-		
+
 		//iterate over the changes and write them via avdecc
 		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
 		for (auto e : changesReceive.keys())
@@ -571,7 +572,7 @@ public:
 		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
 		if (_previousConfigurationIndex != _activeConfigurationIndex)
 		{
-			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex.value()); // this needs a handler to make it sequential. 
+			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex.value()); // this needs a handler to make it sequential.
 			_expectedChanges++;
 		}
 	}

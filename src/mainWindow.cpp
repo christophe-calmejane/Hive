@@ -25,6 +25,7 @@
 
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 #include "internals/config.hpp"
 
 #include "nodeVisitor.hpp"
@@ -75,6 +76,9 @@ MainWindow::MainWindow(QWidget* parent)
 	loadSettings();
 
 	connectSignals();
+
+	// create channel connection manager instance
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 }
 
 void MainWindow::currentControllerChanged()

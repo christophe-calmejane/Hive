@@ -36,6 +36,140 @@
 #include "connectionMatrix/paintHelper.hpp"
 
 
+/**
+* Helper function for connectionStatus medthod. Checks if the stream is currently connected.
+* @param talkerID		The id of the talking entity.
+* @param talkerNode		The index of the output node to check.
+* @param listenerNode	The index of the input node to check.
+*/
+bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
+{
+	if (listenerNode && listenerNode->dynamicModel && talkerNode)
+	{
+		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+	}
+}
+
+/**
+* Helper function for connectionStatus medthod. Checks if the stream is in fast connect mode.
+* @param talkerID		The id of the talking entity.
+* @param talkerNode		The index of the output node to check.
+* @param listenerNode	The index of the input node to check.
+*/
+bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
+{
+	if (listenerNode && listenerNode->dynamicModel && talkerNode)
+	{
+		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+	}
+}
+
+/**
+* Detect the current connection status to be displayed.
+* @param talkerEntityId				The id of the talking entity.
+* @param talkerStreamIndex			The index of the output stream to check.
+* @param talkerStreamRedundant		Flag indicating if the talking stream is redundant.
+* @param listenerEntityId			The id of the listening entity.
+* @param listenerStreamIndex		The index of the inout stream to check.
+* @param listenerStreamRedundant	Flag indicating if the listening stream is redundant.
+*/
+DeviceDetailsChannelTableModel::ConnectionStatus connectionStatus(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex talkerStreamIndex, bool talkerStreamRedundant, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex listenerStreamIndex, bool listenerStreamRedundant) noexcept
+{
+	if (talkerEntityId == listenerEntityId)
+		return DeviceDetailsChannelTableModel::ConnectionStatus::None;
+
+	try
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto talkerEntity = manager.getControlledEntity(talkerEntityId);
+		auto listenerEntity = manager.getControlledEntity(listenerEntityId);
+		if (talkerEntity && listenerEntity)
+		{
+			auto const& talkerEntityNode = talkerEntity->getEntityNode();
+			auto const& talkerEntityInfo = talkerEntity->getEntity();
+			auto const& listenerEntityNode = listenerEntity->getEntityNode();
+			auto const& listenerEntityInfo = listenerEntity->getEntity();
+
+			auto const computeFormatCompatible = [](la::avdecc::controller::model::StreamOutputNode const& talkerNode, la::avdecc::controller::model::StreamInputNode const& listenerNode)
+			{
+				return la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerNode.dynamicModel->currentFormat, talkerNode.dynamicModel->currentFormat);
+			};
+			auto const computeDomainCompatible = [&talkerEntity, &listenerEntity, &talkerEntityNode, &listenerEntityNode](auto const talkerAvbInterfaceIndex, auto const listenerAvbInterfaceIndex)
+			{
+				try
+				{
+					// Get the AvbInterface associated to the streams
+					auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerAvbInterfaceIndex);
+					auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerAvbInterfaceIndex);
+
+					// Check both have the same grandmaster
+					return talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID == listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+				}
+				catch (...)
+				{
+					return false;
+				}
+			};
+			enum class ConnectState
+			{
+				NotConnected = 0,
+				FastConnecting,
+				Connected,
+			};
+			auto const computeCapabilities = [](ConnectState const connectState, bool const areAllConnected, bool const isFormatCompatible, bool const isDomainCompatible)
+			{
+				auto caps{ DeviceDetailsChannelTableModel::ConnectionStatus::Connectable };
+
+				if (!isDomainCompatible)
+					caps |= DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain;
+
+				if (!isFormatCompatible)
+					caps |= DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat;
+
+				if (connectState != ConnectState::NotConnected)
+				{
+					if (areAllConnected)
+						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::Connected;
+					else if (connectState == ConnectState::FastConnecting)
+						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting;
+					else
+						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected;
+				}
+
+				return caps;
+			};
+
+			{
+				la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
+				la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
+				if (talkerEntityNode.dynamicModel && listenerEntityNode.dynamicModel)
+				{
+					talkerNode = &talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
+					listenerNode = &listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
+
+					// Get connected state
+					auto const areConnected = isStreamConnected(talkerEntityId, talkerNode, listenerNode);
+					auto const fastConnecting = isStreamFastConnecting(talkerEntityId, talkerNode, listenerNode);
+					auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
+
+					// Get stream format compatibility
+					auto const isFormatCompatible = computeFormatCompatible(*talkerNode, *listenerNode);
+
+					// Get domain compatibility
+					auto const isDomainCompatible = computeDomainCompatible(talkerNode->staticModel->avbInterfaceIndex, listenerNode->staticModel->avbInterfaceIndex);
+
+					return computeCapabilities(connectState, areConnected, isFormatCompatible, isDomainCompatible);
+				}
+			}
+		}
+	}
+	catch (...)
+	{
+	}
+
+	return DeviceDetailsChannelTableModel::ConnectionStatus::None;
+}
+
 // **************************************************************
 // class DeviceDetailsDialogImpl
 // **************************************************************
@@ -169,7 +303,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 			auto end = q->index(_nodes.size(), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
 			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
-			break;
+			//break;
 		}
 		else
 		{
@@ -621,56 +755,63 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 
 					QRect iconDrawRect(option.rect.left() + (option.rect.width() - circleDiameter) / 2.0f, option.rect.top() + margin + innerRow * (fontPixelHeight * 2), circleDiameter, circleDiameter);
 
-					auto const status = connectionKV.second->streamConnectionStatus;
-					bool isRedundant = false; // TODO !((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream));
+					DeviceDetailsChannelTableModel::ConnectionStatus status;
+					if (tableData.connectionInformation.forward)
+					{
+						status = connectionStatus(tableData.connectionInformation.sourceEntityId, streamKV.second->sourceStreamIndex, connectionKV.second->isSourceRedundant, connectionKV.second->entityId, streamKV.first, streamKV.second->isTargetRedundant);
+					}
+					else
+					{
+						status = connectionStatus(connectionKV.second->entityId, streamKV.first, streamKV.second->isTargetRedundant, tableData.connectionInformation.sourceEntityId, streamKV.second->sourceStreamIndex, connectionKV.second->isSourceRedundant);
+					}
 
-					if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::Connected))
+					if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::Connected))
 					{
-						if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
 						{
-							connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, false);
 						}
-						else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
 						{
-							connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, false);
 						}
 						else
 						{
-							connectionMatrix::drawConnectedStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawConnectedStream(painter, iconDrawRect, false);
 						}
 					}
-					else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::FastConnecting))
+					else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting))
 					{
-						if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
 						{
-							connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, false);
 						}
-						else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
 						{
-							connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, false);
 						}
 						else
 						{
-							connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, false);
 						}
 					}
-					else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::PartiallyConnected))
+					else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected))
 					{
 						connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
 					}
 					else
 					{
-						if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongDomain))
+						if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
 						{
-							connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, false);
 						}
-						else if (la::avdecc::utils::hasFlag(status, avdecc::ConnectionStatus::WrongFormat))
+						else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
 						{
-							connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, false);
 						}
 						else
 						{
-							connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, isRedundant);
+							connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, false);
 						}
 					}
 
