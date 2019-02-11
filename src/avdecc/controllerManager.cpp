@@ -63,23 +63,25 @@ public:
 		{
 			auto& errorCounter = _streamInputCounter[streamIndex];
 
-			auto hasError{ false };
+			auto shouldNotify{ false };
 
 			// Detect counter reset (or wrap)
 			if (counter < errorCounter.counters[flag])
 			{
 				errorCounter.counters[flag] = 0;
+				errorCounter.flags.reset(flag);
+				shouldNotify = true;
 			}
 
 			if (counter > errorCounter.counters[flag])
 			{
 				errorCounter.flags.set(flag);
-				hasError = true;
+				shouldNotify = true;
 			}
 
 			errorCounter.counters[flag] = counter;
 
-			return hasError;
+			return shouldNotify;
 		}
 
 		// Clear the error for a given flag, returns true if the flag has changed, false otherwise
@@ -393,8 +395,8 @@ private:
 
 				switch (flag)
 				{
-					case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
-					case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
+					//case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
+					//case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
 					case la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch:
 					case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
 					case la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp:
