@@ -173,6 +173,7 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 
 # Connection Matriw header files
 set(CONNECTION_MATRIX_HEADER_FILES
+	connectionMatrix/headerItem.hpp
 	connectionMatrix/headerView.hpp
 	connectionMatrix/itemDelegate.hpp
 	connectionMatrix/legend.hpp
@@ -183,6 +184,7 @@ set(CONNECTION_MATRIX_HEADER_FILES
 
 # Connection Matrix source files
 set(CONNECTION_MATRIX_SOURCE_FILES
+	connectionMatrix/headerItem.cpp
 	connectionMatrix/headerView.cpp
 	connectionMatrix/itemDelegate.cpp
 	connectionMatrix/legend.cpp

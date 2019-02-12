@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Milan Certification version properly displayed (as x.y.z.w value)
+- Only flagging as Milan, devices with protocol_version 1
+- Correctly restoring collapsed streams in connection matrix, when expanding an entity
 
 ## [1.0.10] - 2019-02-04
 ### Added
