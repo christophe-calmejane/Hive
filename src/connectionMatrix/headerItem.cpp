@@ -25,7 +25,6 @@ Q_DECLARE_METATYPE(connectionMatrix::HeaderItem::RelativeParentIndex)
 
 namespace connectionMatrix
 {
-
 HeaderItem::HeaderItem(Model::NodeType const nodeType, la::avdecc::UniqueIdentifier const& entityID)
 	: _nodeType{ nodeType }
 	, _entityID{ entityID }

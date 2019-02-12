@@ -25,7 +25,6 @@
 
 namespace connectionMatrix
 {
-	
 class HeaderItem : public QStandardItem
 {
 public:

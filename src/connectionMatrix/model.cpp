@@ -30,7 +30,6 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
-
 Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* talkerItem, HeaderItem const* listenerItem)
 {
 	auto const talkerEntityID{ talkerItem->entityID() };

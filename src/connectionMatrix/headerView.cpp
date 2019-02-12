@@ -308,26 +308,26 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 	// Toggle the section expand state
 	auto const isExpanded = !_sectionState[logicalIndex].isExpanded;
 	_sectionState[logicalIndex].isExpanded = isExpanded;
-	
+
 	// Update children
 	for (auto childIndex = 0; childIndex < childrenCount; ++childIndex)
 	{
 		auto const index = logicalIndex + 1 + childIndex;
 		auto relativeParentIndex = model()->headerData(index, orientation(), Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
-		
+
 		if (relativeParentIndex)
 		{
 			auto subSectionParentIndex = index + *relativeParentIndex;
 			auto subSectionIsVisible = isExpanded;
-			
+
 			if (isExpanded)
 			{
 				// Sub-section is visible only if its parent is expanded
 				subSectionIsVisible = _sectionState[subSectionParentIndex].isExpanded;
 			}
-			
+
 			_sectionState[index].isVisible = subSectionIsVisible;
-			
+
 			updateSectionVisibility(index);
 		}
 	}
