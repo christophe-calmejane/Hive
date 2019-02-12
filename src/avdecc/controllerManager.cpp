@@ -194,7 +194,6 @@ public:
 	}
 
 private:
-
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
@@ -396,7 +395,7 @@ private:
 				switch (flag)
 				{
 					//case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
-					//case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
+					case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
 					case la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch:
 					case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
 					case la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp:

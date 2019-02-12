@@ -37,9 +37,11 @@ class StreamInputCounterTreeWidgetItem : public QTreeWidgetItem
 {
 public:
 	StreamInputCounterTreeWidgetItem(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag flag, QTreeWidget* parent)
-	: QTreeWidgetItem{ parent }
-	, _streamIndex{ streamIndex }
-	, _counterValidFlag{ flag } {}
+		: QTreeWidgetItem{ parent }
+		, _streamIndex{ streamIndex }
+		, _counterValidFlag{ flag }
+	{
+	}
 
 	la::avdecc::entity::model::StreamIndex streamIndex() const
 	{

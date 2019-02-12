@@ -136,7 +136,7 @@ protected:
 	virtual void updateHasError() override
 	{
 		auto hasError = false;
-		for (auto i = 0; i < childCount(); ++ i)
+		for (auto i = 0; i < childCount(); ++i)
 		{
 			auto const* item = static_cast<NodeItem const*>(child(i));
 			if (item && item->hasError())
@@ -317,19 +317,20 @@ public:
 
 	NodeItem* findEntityModelNodeItem(la::avdecc::entity::model::DescriptorType const& descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex) const
 	{
-		auto const it = std::find_if(std::begin(_map), std::end(_map), [&descriptorType, &descriptorIndex](auto const& kv)
-		{
-			auto const* item = kv.second;
-			if (item->kind() == NodeItem::Kind::VirtualNode)
+		auto const it = std::find_if(std::begin(_map), std::end(_map),
+			[&descriptorType, &descriptorIndex](auto const& kv)
 			{
-				// Exclude virtual nodes
-				return false;
-			}
-			else
-			{
-				return item->descriptorType() == descriptorType && item->descriptorIndex() == descriptorIndex;
-			}
-		});
+				auto const* item = kv.second;
+				if (item->kind() == NodeItem::Kind::VirtualNode)
+				{
+					// Exclude virtual nodes
+					return false;
+				}
+				else
+				{
+					return item->descriptorType() == descriptorType && item->descriptorIndex() == descriptorIndex;
+				}
+			});
 		if (it != std::end(_map))
 		{
 			return it->second;
@@ -694,4 +695,3 @@ la::avdecc::UniqueIdentifier ControlledEntityTreeWidget::controlledEntityID() co
 	Q_D(const ControlledEntityTreeWidget);
 	return d->controlledEntityID();
 }
-

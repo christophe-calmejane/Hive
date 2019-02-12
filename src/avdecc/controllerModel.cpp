@@ -69,11 +69,11 @@ private:
 
 	// settings::SettingsManager overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
-	
+
 private:
 	ControllerModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ControllerModel);
-	
+
 	enum class ExclusiveAccessState
 	{
 		NoAccess = 0,
