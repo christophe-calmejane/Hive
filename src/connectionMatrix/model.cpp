@@ -1048,9 +1048,14 @@ public:
 				if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
 				{
 					auto const& interfaceMap = item->interfaceMap();
-					auto const& offsets = interfaceMap.at(avbInterfaceIndex);
+					auto const offsetsIt = interfaceMap.find(avbInterfaceIndex);
+					if (offsetsIt == interfaceMap.end())
+					{
+						// No streams associated with this avbInterfaceIndex
+						return {};
+					}
 					auto indexes = QModelIndexList{};
-					for (auto const offset : offsets)
+					for (auto const offset : offsetsIt->second)
 					{
 						indexes.push_back(q_ptr->createIndex(row + offset, -1));
 					}
@@ -1060,7 +1065,7 @@ public:
 		}
 		catch (std::out_of_range const&)
 		{
-			// Something went wrong and .at() throw
+			// Something went wrong
 			LOG_HIVE_ERROR(QString("connectionMatrix::Model::talkerInterfaceIndex: Invalid AvbInterfaceIndex: TalkerID=%1 Index=%2 RowCount=%3 ").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(avbInterfaceIndex).arg(q_ptr->rowCount()));
 		}
 
@@ -1115,9 +1120,14 @@ public:
 				if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
 				{
 					auto const& interfaceMap = item->interfaceMap();
-					auto const& offsets = interfaceMap.at(avbInterfaceIndex);
+					auto const offsetsIt = interfaceMap.find(avbInterfaceIndex);
+					if (offsetsIt == interfaceMap.end())
+					{
+						// No streams associated with this avbInterfaceIndex
+						return {};
+					}
 					auto indexes = QModelIndexList{};
-					for (auto const offset : offsets)
+					for (auto const offset : offsetsIt->second)
 					{
 						indexes.push_back(q_ptr->createIndex(-1, column + offset));
 					}
@@ -1127,7 +1137,7 @@ public:
 		}
 		catch (std::out_of_range const&)
 		{
-			// Something went wrong and .at() throw
+			// Something went wrong
 			LOG_HIVE_ERROR(QString("connectionMatrix::Model::listenerInterfaceIndex: Invalid AvbInterfaceIndex: ListenerID=%1 Index=%2 ColumnCount=%3 ").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(avbInterfaceIndex).arg(q_ptr->columnCount()));
 		}
 
