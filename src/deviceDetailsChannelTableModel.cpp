@@ -48,6 +48,8 @@ bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::
 	{
 		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
+
+	return false;
 }
 
 /**
@@ -62,6 +64,8 @@ bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avd
 	{
 		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
+
+	return false;
 }
 
 /**
