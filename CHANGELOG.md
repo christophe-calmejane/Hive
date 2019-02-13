@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Numerical values for _StreamFlags_, _StreamFlagsEx_, _ProbingStatus_ and _AcmpStatus_
+- [Highlighting entities that have increments in error counters](https://github.com/christophe-calmejane/Hive/issues/31)
 
 ### Fixed
 - Milan Certification version properly displayed (as x.y.z.w value)

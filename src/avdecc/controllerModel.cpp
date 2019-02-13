@@ -26,6 +26,7 @@
 #include "settingsManager/settings.hpp"
 #include <algorithm>
 #include <array>
+#include <QTimer>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -61,6 +62,7 @@ private:
 	Q_SLOT void lockStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity);
 	Q_SLOT void compatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags);
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);
+	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags);
 
 	// Slots for EntityLogoCache signals
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
@@ -82,6 +84,10 @@ private:
 
 	using Entities = std::vector<la::avdecc::UniqueIdentifier>;
 	Entities _entities{};
+
+	using StreamsWithErrorCounter = std::set<la::avdecc::entity::model::StreamIndex>;
+	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, StreamsWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
+	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
 
 	std::array<QImage, 5> _compatibilityImages{
 		{
@@ -116,6 +122,7 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, this, &ControllerModelPrivate::lockStateChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ControllerModelPrivate::compatibilityFlagsChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::gptpChanged);
+	connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::streamInputErrorCounterChanged);
 
 	// Connect EntityLogoCache signals
 	auto& logoCache = EntityLogoCache::getInstance();
@@ -211,6 +218,22 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 			}
 			default:
 				break;
+		}
+	}
+	else if (column == ControllerModel::Column::EntityId)
+	{
+		if (role == Qt::ForegroundRole)
+		{
+			auto const it = _entitiesWithErrorCounter.find(entityID);
+			if (it != std::end(_entitiesWithErrorCounter))
+			{
+				auto const& streamsWithErrorCounter{ it->second };
+				if (!streamsWithErrorCounter.empty())
+				{
+					// At least one stream contains a counter error
+					return QColor{ Qt::red };
+				}
+			}
 		}
 	}
 	else if (column == ControllerModel::Column::EntityLogo)
@@ -515,6 +538,20 @@ void ControllerModelPrivate::gptpChanged(la::avdecc::UniqueIdentifier const enti
 {
 	dataChanged(entityID, ControllerModel::Column::GrandmasterId);
 	dataChanged(entityID, ControllerModel::Column::GptpDomain);
+}
+
+void ControllerModelPrivate::streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+{
+	if (!flags.empty())
+	{
+		_entitiesWithErrorCounter[entityID].insert(descriptorIndex);
+	}
+	else
+	{
+		_entitiesWithErrorCounter[entityID].erase(descriptorIndex);
+	}
+
+	emit dataChanged(entityID, ControllerModel::Column::EntityId);
 }
 
 void ControllerModelPrivate::imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type)
