@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -29,6 +29,8 @@ static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVers
 // General settings
 static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
 static SettingsManager::SettingDefault TransposeConnectionMatrix = { "avdecc/general/transposeConnectionMatrix", false };
+static SettingsManager::SettingDefault AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
+static SettingsManager::SettingDefault CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
 
 // Controller settings
 static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };

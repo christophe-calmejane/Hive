@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -32,6 +32,7 @@
 #include "avdecc/controllerManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
+#include "highlightForegroundItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
@@ -119,15 +120,6 @@ void MainWindow::currentControlledEntityChanged(QModelIndex const& index)
 void MainWindow::registerMetaTypes()
 {
 	//
-	qRegisterMetaType<la::avdecc::entity::model::StreamIndex>("la::avdecc::entity::model::StreamIndex");
-	qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
-	qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
-	qRegisterMetaType<la::avdecc::entity::model::StreamFormat>("la::avdecc::entity::model::StreamFormat");
-	qRegisterMetaType<la::avdecc::entity::model::StreamPortIndex>("la::avdecc::entity::model::StreamPortIndex");
-	qRegisterMetaType<la::avdecc::entity::model::AvdeccFixedString>("la::avdecc::entity::model::AvdeccFixedString");
-	qRegisterMetaType<la::avdecc::entity::model::ConfigurationIndex>("la::avdecc::entity::model::ConfigurationIndex");
-
-	//
 	qRegisterMetaType<la::avdecc::logger::Layer>("la::avdecc::logger::Layer");
 	qRegisterMetaType<la::avdecc::logger::Level>("la::avdecc::logger::Level");
 	qRegisterMetaType<std::string>("std::string");
@@ -180,30 +172,37 @@ void MainWindow::createControllerView()
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
+	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
-	auto* imageItemDelegate{ new ImageItemDelegate };
-	controllerTableView->setItemDelegateForColumn(0, imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(4, imageItemDelegate);
+	auto* imageItemDelegate{ new ImageItemDelegate{ this } };
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
+
+	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ this } };
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), highlightForegroundItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
+	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId));
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
-	int column{ 0 };
-	controllerTableView->setColumnWidth(column++, 40);
-	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 180);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 160);
-	controllerTableView->setColumnWidth(column++, 80);
-	controllerTableView->setColumnWidth(column++, 90);
-	controllerTableView->setColumnWidth(column++, 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), 50);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), 180);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
 }
 
 void MainWindow::populateProtocolComboBox()
 {
 	const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName{
-		{ la::avdecc::protocol::ProtocolInterface::Type::None, "None" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
 		{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
@@ -280,28 +279,57 @@ void MainWindow::connectSignals()
 
 				auto* acquireAction{ static_cast<QAction*>(nullptr) };
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
+				auto* lockAction{ static_cast<QAction*>(nullptr) };
+				auto* unlockAction{ static_cast<QAction*>(nullptr) };
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
+				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
 
-				if (la::avdecc::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
-					QString acquireText;
-					auto const isAcquired = controlledEntity->isAcquired();
-					auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
+					// Do not propose Acquire if the device is Milan (not supported)
+					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+					{
+						QString acquireText;
+						auto const isAcquired = controlledEntity->isAcquired();
+						auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
 
-					{
-						if (isAcquiredByOther)
-							acquireText = "Try to acquire";
-						else
-							acquireText = "Acquire";
-						acquireAction = menu.addAction(acquireText);
-						acquireAction->setEnabled(!isAcquired);
+						{
+							if (isAcquiredByOther)
+								acquireText = "Try to acquire";
+							else
+								acquireText = "Acquire";
+							acquireAction = menu.addAction(acquireText);
+							acquireAction->setEnabled(!isAcquired);
+						}
+						{
+							releaseAction = menu.addAction("Release");
+							releaseAction->setEnabled(isAcquired);
+						}
 					}
+					// Lock
 					{
-						releaseAction = menu.addAction("Release");
-						releaseAction->setEnabled(isAcquired);
+						QString lockText;
+						auto const isLocked = controlledEntity->isLocked();
+						auto const isLockedByOther = controlledEntity->isLockedByOther();
+
+						{
+							if (isLockedByOther)
+								lockText = "Try to lock";
+							else
+								lockText = "Lock";
+							lockAction = menu.addAction(lockText);
+							lockAction->setEnabled(!isLocked);
+						}
+						{
+							unlockAction = menu.addAction("Unlock");
+							unlockAction->setEnabled(isLocked);
+						}
 					}
+
 					menu.addSeparator();
+
+					// Inspect, Logo, ...
 					{
 						inspect = menu.addAction("Inspect");
 					}
@@ -309,9 +337,16 @@ void MainWindow::connectSignals()
 						getLogo = menu.addAction("Retrieve Entity Logo");
 						getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
 					}
+					{
+						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
+					}
 				}
+
 				menu.addSeparator();
 				menu.addAction("Cancel");
+
+				// Release the controlled entity before starting a long operation (menu.exec)
+				controlledEntity.reset();
 
 				if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
 				{
@@ -322,6 +357,14 @@ void MainWindow::connectSignals()
 					else if (action == releaseAction)
 					{
 						manager.releaseEntity(entityID);
+					}
+					else if (action == lockAction)
+					{
+						manager.lockEntity(entityID);
+					}
+					else if (action == unlockAction)
+					{
+						manager.unlockEntity(entityID);
 					}
 					else if (action == inspect)
 					{
@@ -334,6 +377,10 @@ void MainWindow::connectSignals()
 					else if (action == getLogo)
 					{
 						EntityLogoCache::getInstance().getImage(entityID, EntityLogoCache::Type::Entity, true);
+					}
+					else if (action == clearErrorFlags)
+					{
+						manager.clearAllStreamInputCounterValidFlags(entityID);
 					}
 				}
 			}
@@ -405,14 +452,38 @@ void MainWindow::connectSignals()
 			showChangeLog("Change Log", "");
 		});
 
+	//
+
+	connect(actionOpenProjectWebPage, &QAction::triggered, this,
+		[this]()
+		{
+			QDesktopServices::openUrl(hive::internals::projectURL);
+		});
+
 	// Connect updater signals
 	auto const& updater = Updater::getInstance();
-	connect(&updater, &Updater::newVersionAvailable, this,
+	connect(&updater, &Updater::newReleaseVersionAvailable, this,
 		[](QString version, QString downloadURL)
 		{
-			QString message{ "New version (" + version + ") available here " + downloadURL };
+			QString message{ "New version (" + version + ") available.\nDo you want to open the download page?" };
 
-			QMessageBox::information(nullptr, "", message);
+			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
+			if (result == QMessageBox::StandardButton::Open)
+			{
+				QDesktopServices::openUrl(downloadURL);
+			}
+			LOG_HIVE_INFO(message);
+		});
+	connect(&updater, &Updater::newBetaVersionAvailable, this,
+		[](QString version, QString downloadURL)
+		{
+			QString message{ "New BETA version (" + version + ") available.\nDo you want to open the download page?" };
+
+			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
+			if (result == QMessageBox::StandardButton::Open)
+			{
+				QDesktopServices::openUrl(downloadURL);
+			}
 			LOG_HIVE_INFO(message);
 		});
 	connect(&updater, &Updater::checkFailed, this,
@@ -479,27 +550,36 @@ void MainWindow::showChangeLog(QString const title, QString const versionString)
 
 void MainWindow::showEvent(QShowEvent* event)
 {
+	QMainWindow::showEvent(event);
+
 	static std::once_flag once;
 	std::call_once(once,
 		[this]()
 		{
-			// Start a new version check
-			Updater::getInstance().checkForNewVersion();
-
-			// Check version change
-			auto& settings = settings::SettingsManager::getInstance();
-			auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
-			settings.setValue(settings::LastLaunchedVersion.name, hive::internals::versionString);
-
-			if (lastVersion == hive::internals::versionString)
-				return;
-
-			// Postpone the dialog creation
-			QTimer::singleShot(0,
-				[this, versionString = std::move(lastVersion)]()
+			// Time to check for new version
+			{
+				auto& updater = Updater::getInstance();
+				if (updater.isAutomaticCheckForNewVersion())
 				{
-					showChangeLog("What's New", versionString);
-				});
+					updater.checkForNewVersion();
+				}
+			}
+			// Check if this is the first time we launch a new Hive version
+			{
+				auto& settings = settings::SettingsManager::getInstance();
+				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
+				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
+
+				if (lastVersion == hive::internals::cmakeVersionString)
+					return;
+
+				// Postpone the dialog creation
+				QTimer::singleShot(0,
+					[this, versionString = std::move(lastVersion)]()
+					{
+						showChangeLog("What's New", versionString);
+					});
+			}
 		});
 }
 

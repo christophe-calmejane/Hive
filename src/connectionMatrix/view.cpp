@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -33,6 +33,86 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
+// We use a custom SortFilterProxy that does not filter anything through the filter, instead it just hides the filtered rows/columns
+class Filter : public QSortFilterProxyModel
+{
+public:
+	Filter(View& view)
+		: _view{ view }
+	{
+		setFilterRole(Model::FilterRole);
+	}
+
+	void setTransposed(bool const isTransposed)
+	{
+		_isTransposed = isTransposed;
+		invalidateFilter();
+	}
+
+	void updateRow(int sourceRow) const
+	{
+		updateSection(Qt::Vertical, sourceRow);
+	}
+
+	void updateColumn(int sourceColumn) const
+	{
+		updateSection(Qt::Horizontal, sourceColumn);
+	}
+
+private:
+	void updateSection(Qt::Orientation const orientation, int const sourceSection) const
+	{
+		auto const filterRoleData = sourceModel()->headerData(sourceSection, orientation, Model::FilterRole).toString();
+		auto const matches = filterRoleData.contains(filterRegExp());
+
+		if (orientation == Qt::Vertical)
+		{
+			if (_isTransposed)
+			{
+				_view.setColumnHidden(sourceSection, !matches);
+			}
+			else
+			{
+				_view.setRowHidden(sourceSection, !matches);
+			}
+		}
+		else
+		{
+			if (_isTransposed)
+			{
+				_view.setRowHidden(sourceSection, !matches);
+			}
+			else
+			{
+				_view.setColumnHidden(sourceSection, !matches);
+			}
+		}
+	}
+
+	virtual bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
+	{
+		updateRow(sourceRow);
+
+		// Copied from the behavior of setFilterKeyColumn(-1), so we can filter on columns too
+		for (auto column = 0; column < sourceModel()->columnCount(); ++column)
+		{
+			updateColumn(column);
+		}
+
+		return true;
+	}
+
+	virtual bool filterAcceptsColumn(int sourceColumn, const QModelIndex& sourceParent) const override
+	{
+		updateColumn(sourceColumn);
+		return true;
+	}
+
+private:
+	View& _view;
+	bool _isTransposed{ false };
+};
+
 View::View(QWidget* parent)
 	: QTableView{ parent }
 	, _model{ std::make_unique<Model>() }
@@ -40,6 +120,7 @@ View::View(QWidget* parent)
 	, _horizontalHeaderView{ std::make_unique<HeaderView>(Qt::Horizontal, this) }
 	, _itemDelegate{ std::make_unique<ItemDelegate>() }
 	, _legend{ std::make_unique<Legend>(this) }
+	, _filterProxy{ std::make_unique<Filter>(*this) }
 {
 	_proxy.connectToModel(_model.get());
 
@@ -52,10 +133,8 @@ View::View(QWidget* parent)
 	setCornerButtonEnabled(false);
 	setMouseTracking(true);
 
-	// Configure highlight color
-	auto p = palette();
-	p.setColor(QPalette::Highlight, 0xf3e5f5);
-	setPalette(p);
+	// Configure highlight color, we don't use the palette otherwise the legend will inherit from it
+	setStyleSheet("QTableView { selection-background-color: #f3e5f5; }");
 
 	connect(this, &QTableView::clicked, this, &View::onClicked);
 
@@ -69,6 +148,12 @@ View::View(QWidget* parent)
 	horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, &View::onHeaderCustomContextMenuRequested);
 	connect(horizontalHeader(), &QHeaderView::geometriesChanged, this, &View::onLegendGeometryChanged);
+
+	connect(_legend.get(), &Legend::filterChanged, this,
+		[this](QString const& filter)
+		{
+			_filterProxy->setFilterRegExp(filter);
+		});
 
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
@@ -102,10 +187,6 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_itemDelegate->setTransposed(_isTransposed);
 		_legend->setTransposed(_isTransposed);
 
-		// Force a repaint while there is no model, this fixes a refresh issue when switching between transpose states
-		setModel(nullptr);
-		repaint();
-
 		if (_isTransposed)
 		{
 			setModel(&_proxy);
@@ -118,7 +199,8 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
-		repaint();
+		_filterProxy->setTransposed(_isTransposed);
+		_filterProxy->setSourceModel(_model.get());
 	}
 }
 
@@ -134,16 +216,17 @@ void View::onClicked(QModelIndex const& index)
 		auto talkerID = talkerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 		auto listenerID = listenerData(index, Model::EntityIDRole).value<la::avdecc::UniqueIdentifier>();
 
+		// Simple Stream or Single Stream of a redundant pair: connect the stream
 		if ((talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
 				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
 
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 				{
 					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 				}
@@ -153,6 +236,14 @@ void View::onClicked(QModelIndex const& index)
 				}
 			}
 		}
+
+		// One redundant node and one redundant stream: connect the only possible stream (diagonal)
+		else if ((talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::RedundantInput) || (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInputStream))
+		{
+			LOG_HIVE_INFO("TODO: Connect the only possible stream (the one in diagonal)");
+		}
+
+		// Both redundant nodes: connect both streams
 		else if (talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::RedundantInput)
 		{
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
@@ -160,9 +251,9 @@ void View::onClicked(QModelIndex const& index)
 			bool doConnect{ false };
 			bool doDisconnect{ false };
 
-			if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
 			{
-				if (la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
 					doDisconnect = true;
 				else
 					doConnect = true;
@@ -209,6 +300,34 @@ void View::onClicked(QModelIndex const& index)
 				}
 			}
 		}
+
+		// One non-redundant stream and one redundant stream: connect the stream
+		else if ((talkerNodeType == Model::NodeType::RedundantOutputStream && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::RedundantInputStream))
+		{
+			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
+
+			if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connectable))
+			{
+				auto const talkerStreamIndex = talkerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+				auto const listenerStreamIndex = listenerData(index, Model::StreamIndexRole).value<la::avdecc::entity::model::StreamIndex>();
+
+				if (la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::Connected))
+				{
+					manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+				}
+				else
+				{
+					manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+				}
+			}
+		}
+
+		// One non-redundant stream and one redundant node: connect the stream
+		else if ((talkerNodeType == Model::NodeType::RedundantOutput && listenerNodeType == Model::NodeType::InputStream) || (talkerNodeType == Model::NodeType::OutputStream && listenerNodeType == Model::NodeType::RedundantInput))
+		{
+			LOG_HIVE_INFO("TODO: Connect the non-redundant stream to the redundant stream on the same domain.");
+			// Print a warning if no domain matches
+		}
 	}
 	catch (...)
 	{
@@ -239,7 +358,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 			auto const caps = index.data(Model::ConnectionCapabilitiesRole).value<Model::ConnectionCapabilities>();
 
 #pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
-			if (caps != Model::ConnectionCapabilities::None && la::avdecc::hasFlag(caps, Model::ConnectionCapabilities::WrongFormat))
+			if (caps != Model::ConnectionCapabilities::None && la::avdecc::utils::hasFlag(caps, Model::ConnectionCapabilities::WrongFormat))
 			{
 				QMenu menu;
 
@@ -264,7 +383,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& talkerEntityNode = talkerEntity->getEntityNode();
 							auto const& talkerStreamNode = talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
-							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode.dynamicModel->currentFormat);
+							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode.dynamicModel->streamInfo.streamFormat);
 						}
 					}
 					else if (action == matchListenerAction)
@@ -274,7 +393,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& listenerEntityNode = listenerEntity->getEntityNode();
 							auto const& listenerStreamNode = listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
-							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode.dynamicModel->currentFormat);
+							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode.dynamicModel->streamInfo.streamFormat);
 						}
 					}
 				}
@@ -368,6 +487,9 @@ void View::onHeaderCustomContextMenuRequested(QPoint const& pos)
 			auto* stopStreamingAction = addAction(menu, "Stop Streaming", isStreamRunning);
 			menu.addSeparator();
 			menu.addAction("Cancel");
+
+			// Release the controlled entity before starting a long operation (menu.exec)
+			controlledEntity.reset();
 
 			if (auto* action = menu.exec(header->mapToGlobal(pos)))
 			{

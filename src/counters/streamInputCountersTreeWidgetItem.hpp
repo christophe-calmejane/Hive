@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -33,10 +33,37 @@
 #include <QHBoxLayout>
 #include <QListWidget>
 
+class StreamInputCounterTreeWidgetItem : public QTreeWidgetItem
+{
+public:
+	StreamInputCounterTreeWidgetItem(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag flag, QTreeWidget* parent)
+		: QTreeWidgetItem{ parent }
+		, _streamIndex{ streamIndex }
+		, _counterValidFlag{ flag }
+	{
+	}
+
+	la::avdecc::entity::model::StreamIndex streamIndex() const
+	{
+		return _streamIndex;
+	}
+
+	la::avdecc::entity::StreamInputCounterValidFlag counterValidFlag() const
+	{
+		return _counterValidFlag;
+	}
+
+private:
+	la::avdecc::entity::model::StreamIndex const _streamIndex;
+	la::avdecc::entity::StreamInputCounterValidFlag const _counterValidFlag;
+};
+
 class StreamInputCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
 	StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget* parent = nullptr);
+
+	void setStreamInputErrorCounterFlags(la::avdecc::entity::StreamInputCounterValidFlags const& flags);
 
 private:
 	void updateCounters(la::avdecc::controller::model::StreamInputCounters const& counters);
@@ -45,5 +72,5 @@ private:
 	la::avdecc::entity::model::StreamIndex const _streamIndex{ 0u };
 
 	// Counters
-	std::map<la::avdecc::entity::StreamInputCounterValidFlag, QTreeWidgetItem*> _counters{};
+	std::map<la::avdecc::entity::StreamInputCounterValidFlag, StreamInputCounterTreeWidgetItem*> _counters{};
 };

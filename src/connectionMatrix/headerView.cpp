@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -18,14 +18,14 @@
 */
 
 #include "connectionMatrix/headerView.hpp"
-#include "connectionMatrix/model.hpp"
-
+#include "connectionMatrix/headerItem.hpp"
 #include "avdecc/helper.hpp"
 
 #include <QPainter>
 #include <QMouseEvent>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+Q_DECLARE_METATYPE(connectionMatrix::HeaderItem::RelativeParentIndex)
 
 namespace connectionMatrix
 {
@@ -43,6 +43,17 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	setAttribute(Qt::WA_Hover);
 
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
+
+	// Has our custom filter only hides filtered sections, we can use this has a "sectionVisibilityChanged" signal
+	connect(this, &QHeaderView::sectionResized, this,
+		[this](int logicalIndex, int oldSize, int newSize)
+		{
+			// Means the section is now visible
+			if (oldSize == 0)
+			{
+				updateSectionVisibility(logicalIndex);
+			}
+		});
 }
 
 QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
@@ -54,19 +65,12 @@ void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 {
 	if (AVDECC_ASSERT_WITH_RET(sectionState.count() == count(), "Invalid state"))
 	{
+		_sectionState = sectionState;
+
 		for (auto section = 0; section < count(); ++section)
 		{
-			if (sectionState[section].isVisible)
-			{
-				showSection(section);
-			}
-			else
-			{
-				hideSection(section);
-			}
+			updateSectionVisibility(section);
 		}
-
-		_sectionState = sectionState;
 	}
 }
 
@@ -74,18 +78,7 @@ void HeaderView::setModel(QAbstractItemModel* model)
 {
 	if (this->model())
 	{
-		if (orientation() == Qt::Vertical)
-		{
-			disconnect(this->model(), &QAbstractItemModel::rowsInserted, this, &HeaderView::handleSectionInserted);
-			disconnect(this->model(), &QAbstractItemModel::rowsRemoved, this, &HeaderView::handleSectionRemoved);
-		}
-		else
-		{
-			disconnect(this->model(), &QAbstractItemModel::columnsInserted, this, &HeaderView::handleSectionInserted);
-			disconnect(this->model(), &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
-		}
-
-		disconnect(this->model(), &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
+		disconnect(this->model());
 	}
 
 	QHeaderView::setModel(model);
@@ -103,6 +96,7 @@ void HeaderView::setModel(QAbstractItemModel* model)
 			connect(model, &QAbstractItemModel::columnsRemoved, this, &HeaderView::handleSectionRemoved);
 		}
 
+		connect(model, &QAbstractItemModel::modelReset, this, &HeaderView::handleModelReset);
 		connect(model, &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
 	}
 }
@@ -167,8 +161,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			break;
 		default:
 			assert(false && "NodeType not handled");
-			backgroundBrush = QColor{ 0x808080 };
-			break;
+			return;
 	}
 
 	auto const arrowSize{ 10 };
@@ -252,7 +245,18 @@ QSize HeaderView::sizeHint() const
 
 void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
 {
-	_sectionState.insert(first, last - first + 1, {});
+	for (auto section = first; section <= last; ++section)
+	{
+		// Insert new section?
+		if (section <= _sectionState.count())
+		{
+			_sectionState.push_back({});
+		}
+		else // Restore section state
+		{
+			updateSectionVisibility(section);
+		}
+	}
 }
 
 void HeaderView::handleSectionRemoved(QModelIndex const& parent, int first, int last)
@@ -309,18 +313,40 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 	for (auto childIndex = 0; childIndex < childrenCount; ++childIndex)
 	{
 		auto const index = logicalIndex + 1 + childIndex;
+		auto relativeParentIndex = model()->headerData(index, orientation(), Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
 
-		_sectionState[index].isExpanded = isExpanded;
-		_sectionState[index].isVisible = isExpanded;
+		if (relativeParentIndex)
+		{
+			auto subSectionParentIndex = index + *relativeParentIndex;
+			auto subSectionIsVisible = isExpanded;
 
-		if (isExpanded)
-		{
-			showSection(index);
+			if (isExpanded)
+			{
+				// Sub-section is visible only if its parent is expanded
+				subSectionIsVisible = _sectionState[subSectionParentIndex].isExpanded;
+			}
+
+			_sectionState[index].isVisible = subSectionIsVisible;
+
+			updateSectionVisibility(index);
 		}
-		else
-		{
-			hideSection(index);
-		}
+	}
+}
+
+void HeaderView::handleModelReset()
+{
+	_sectionState.clear();
+}
+
+void HeaderView::updateSectionVisibility(int const logicalIndex)
+{
+	if (_sectionState[logicalIndex].isVisible)
+	{
+		showSection(logicalIndex);
+	}
+	else
+	{
+		hideSection(logicalIndex);
 	}
 }
 

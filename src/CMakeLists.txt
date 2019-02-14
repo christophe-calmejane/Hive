@@ -3,14 +3,18 @@
 # Declare project
 project(${PROJECT_NAME} LANGUAGES C CXX VERSION ${HIVE_VERSION})
 
-# Setup project version, because a release build only has 3 digits
-set(PROJECT_VERSIONMAJ ${PROJECT_VERSION_MAJOR})
-set(PROJECT_VERSIONMIN ${PROJECT_VERSION_MINOR})
-set(PROJECT_VERSIONSUB ${PROJECT_VERSION_PATCH})
-set(PROJECT_VERSIONREV ${PROJECT_VERSION_TWEAK})
-if(NOT PROJECT_VERSIONREV)
-	set(PROJECT_VERSIONREV 0)
+############ Define some variables (most to be removed when reworking cmake files and using setup_project macro)
+if(NOT PROJECT_VERSION_TWEAK)
+	set(PROJECT_VERSION_TWEAK 0)
+	set(LA_PROJECT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+	set(LA_PROJECT_CMAKEVERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+else()
+	set(LA_PROJECT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-beta${PROJECT_VERSION_TWEAK}")
+	set(LA_PROJECT_CMAKEVERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.${PROJECT_VERSION_TWEAK}")
 endif()
+set(LA_PROJECT_PRODUCTVERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+set(LA_PROJECT_FILEVERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.${PROJECT_VERSION_TWEAK}")
+
 
 # Declare executable target
 add_executable(${PROJECT_NAME} MACOSX_BUNDLE WIN32 "")
@@ -68,6 +72,7 @@ set(TOOLKIT_HEADER_FILES
 	toolkit/dynamicHeaderView.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
+	toolkit/tickableMenu.hpp
 	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
@@ -83,6 +88,7 @@ set(TOOLKIT_SOURCE_FILES
 	toolkit/dynamicHeaderView.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
+	toolkit/tickableMenu.cpp
 	toolkit/graph/connection.cpp
 	toolkit/graph/inputSocket.cpp
 	toolkit/graph/node.cpp
@@ -96,10 +102,12 @@ set(NODETREE_DYNAMIC_WIDGETS_HEADER_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp
-	nodeTreeDynamicWidgets/streamConnectionWidget.hpp
+	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.hpp
+	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.hpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.hpp
+	nodeTreeDynamicWidgets/asPathWidget.hpp
 )
 
 # NodeTree Dynamic Widgets source files
@@ -107,10 +115,12 @@ set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.cpp
-	nodeTreeDynamicWidgets/streamConnectionWidget.cpp
+	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.cpp
+	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.cpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamFormatComboBox.cpp
+	nodeTreeDynamicWidgets/asPathWidget.cpp
 )
 
 # Avdecc helper header files
@@ -163,6 +173,7 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 
 # Connection Matriw header files
 set(CONNECTION_MATRIX_HEADER_FILES
+	connectionMatrix/headerItem.hpp
 	connectionMatrix/headerView.hpp
 	connectionMatrix/itemDelegate.hpp
 	connectionMatrix/legend.hpp
@@ -173,6 +184,7 @@ set(CONNECTION_MATRIX_HEADER_FILES
 
 # Connection Matrix source files
 set(CONNECTION_MATRIX_SOURCE_FILES
+	connectionMatrix/headerItem.cpp
 	connectionMatrix/headerView.cpp
 	connectionMatrix/itemDelegate.cpp
 	connectionMatrix/legend.cpp
@@ -185,12 +197,14 @@ set(COUNTERS_HEADER_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.hpp
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
+	counters/streamOutputCountersTreeWidgetItem.hpp
 )
 
 set(COUNTERS_SOURCE_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.cpp
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
+	counters/streamOutputCountersTreeWidgetItem.cpp
 )
 
 # Logger View header files
@@ -265,6 +279,7 @@ set(COMMON_HEADER_FILES
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	entityLogoCache.hpp
+	highlightForegroundItemDelegate.hpp
 	imageItemDelegate.hpp
 	mappingMatrix.hpp
 	nodeTreeWidget.hpp
@@ -277,6 +292,7 @@ set(COMMON_HEADER_FILES
 set(COMMON_SOURCE_FILES
 	aecpCommandComboBox.cpp
 	entityLogoCache.cpp
+	highlightForegroundItemDelegate.cpp
 	imageItemDelegate.cpp
 	main.cpp
 	controlledEntityTreeWidget.cpp
@@ -398,16 +414,10 @@ if(TargetQt5Deploy_INCLUDED)
 	target_qt5_deploy(${PROJECT_NAME} INSTALL QML_DIR ${PROJECT_ROOT_DIR}/resources/qml)
 endif()
 
-# Install target
-install(TARGETS ${PROJECT_NAME}	RUNTIME DESTINATION bin	BUNDLE DESTINATION .)
-
 # Sign target
-include(TargetSign OPTIONAL RESULT_VARIABLE TargetSign_INCLUDED)
-if(ENABLE_HIVE_SIGNING AND TargetSign_INCLUDED)
-	get_target_property(isBundle ${PROJECT_NAME} MACOSX_BUNDLE)
-	if(isBundle)
-		target_sign(${PROJECT_NAME} ".")
-	else()
-		target_sign(${PROJECT_NAME} "bin")
-	endif()
+if(ENABLE_HIVE_SIGNING)
+	sign_target(${PROJECT_NAME})
 endif()
+
+# Install target
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin BUNDLE DESTINATION .)

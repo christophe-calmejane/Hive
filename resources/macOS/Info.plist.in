@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>${PROJECT_NAME}</string>
 	<key>CFBundleGetInfoString</key>
-	<string>${PROJECT_NAME} version ${PROJECT_VERSION} ${PROJECT_READABLE_COPYRIGHT}</string>
+	<string>${PROJECT_NAME} version ${LA_PROJECT_VERSION_STRING} ${PROJECT_READABLE_COPYRIGHT}</string>
 	<key>CFBundleIconFile</key>
 	<string>${MACOSX_BUNDLE_ICON_FILE}</string>
 	<key>CFBundleIdentifier</key>
@@ -15,17 +15,17 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleLongVersionString</key>
-	<string>${PROJECT_VERSION}</string>
+	<string>${LA_PROJECT_VERSION_STRING}</string>
 	<key>CFBundleName</key>
 	<string>${PROJECT_NAME}</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>${PROJECT_VERSION}</string>
+	<string>${LA_PROJECT_PRODUCTVERSION}</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>${PROJECT_VERSION}</string>
+	<string>${LA_PROJECT_VERSION_STRING}</string>
 	<key>CSResourcesFileMapped</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
@@ -33,5 +33,8 @@
 	<key>NSHighResolutionCapable</key>
 	<string>True</string>
 	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.utilities</string></dict>
+	<string>public.app-category.utilities</string>
+	<key>NSRequiresAquaSystemAppearance</key>
+	<true/>
+</dict>
 </plist>

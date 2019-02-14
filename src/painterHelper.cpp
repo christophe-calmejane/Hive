@@ -16,9 +16,7 @@ void drawCentered(QPainter* painter, QRect const& rect, QPixmap const& pixmap)
 
 	auto const devicePixelRatio = painter->device()->devicePixelRatioF();
 
-	auto const shouldScale = pixmap.height() > rect.height() * devicePixelRatio;
-
-	QPixmap scaledPixmap = shouldScale ? pixmap.scaledToHeight(rect.height() * devicePixelRatio, Qt::SmoothTransformation) : pixmap;
+	auto scaledPixmap = pixmap.scaled(rect.width() * devicePixelRatio, rect.height() * devicePixelRatio, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 	scaledPixmap.setDevicePixelRatio(devicePixelRatio);
 
 	auto const x = rect.x() + (rect.width() - scaledPixmap.width() / devicePixelRatio) / 2;

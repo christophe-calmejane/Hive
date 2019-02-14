@@ -94,10 +94,10 @@ FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::D
 				auto* item = _ui->listWidget->item(row);
 				auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
 
-				auto const eID = item->data(la::avdecc::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
-				auto const dIndex = item->data(la::avdecc::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
-				auto const oID = item->data(la::avdecc::to_integral(ItemRole::OperationID)).value<la::avdecc::entity::model::OperationID>();
-				auto const state = item->data(la::avdecc::to_integral(ItemRole::UpdateState)).value<UpdateState>();
+				auto const eID = item->data(la::avdecc::utils::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
+				auto const dIndex = item->data(la::avdecc::utils::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
+				auto const oID = item->data(la::avdecc::utils::to_integral(ItemRole::OperationID)).value<la::avdecc::entity::model::OperationID>();
+				auto const state = item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>();
 				if (state == UpdateState::Storing && entityID == eID && descriptorType == la::avdecc::entity::model::DescriptorType::MemoryObject && descriptorIndex == dIndex && operationID == oID)
 				{
 					widget->setProgress(static_cast<int>(percentComplete));
@@ -112,24 +112,25 @@ FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::D
 				auto* item = _ui->listWidget->item(row);
 				auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
 
-				auto const eID = item->data(la::avdecc::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
-				auto const dIndex = item->data(la::avdecc::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
-				auto const oID = item->data(la::avdecc::to_integral(ItemRole::OperationID)).value<la::avdecc::entity::model::OperationID>();
-				auto const state = item->data(la::avdecc::to_integral(ItemRole::UpdateState)).value<UpdateState>();
+				auto const eID = item->data(la::avdecc::utils::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
+				auto const dIndex = item->data(la::avdecc::utils::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
+				auto const oID = item->data(la::avdecc::utils::to_integral(ItemRole::OperationID)).value<la::avdecc::entity::model::OperationID>();
+				auto const state = item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>();
 				if (state == UpdateState::Storing && entityID == eID && descriptorType == la::avdecc::entity::model::DescriptorType::MemoryObject && descriptorIndex == dIndex && operationID == oID)
 				{
-					auto const entityName = item->data(la::avdecc::to_integral(ItemRole::EntityName)).toString();
+					auto const entityName = item->data(la::avdecc::utils::to_integral(ItemRole::EntityName)).toString();
 					// Failed
 					if (failed)
 					{
 						widget->setText(QString("%1: Failed").arg(entityName));
-						item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
+						item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
 					}
 					// Succeeded
 					else
 					{
+						widget->setProgress(static_cast<int>(100)); // Force the progress to 100%, we might not have received a progress even with the final value of 100%
 						widget->setText(QString("%1: Complete").arg(entityName));
-						item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Complete));
+						item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Complete));
 					}
 					checkAllDone();
 				}
@@ -204,7 +205,7 @@ std::tuple<size_t, size_t, size_t> FirmwareUploadDialog::getCounts() const noexc
 		auto* item = _ui->listWidget->item(row);
 		auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
 
-		auto const state = item->data(la::avdecc::to_integral(ItemRole::UpdateState)).value<UpdateState>();
+		auto const state = item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>();
 		switch (state)
 		{
 			case UpdateState::Waiting:
@@ -233,12 +234,12 @@ void FirmwareUploadDialog::scheduleUpload(EntityInfo const& entityInfo) noexcept
 	if (controlledEntity)
 	{
 		auto const name = avdecc::helper::smartEntityName(*controlledEntity);
-		item->setData(la::avdecc::to_integral(ItemRole::EntityID), QVariant::fromValue(entityID));
-		item->setData(la::avdecc::to_integral(ItemRole::DescriptorIndex), QVariant::fromValue(descriptorIndex));
-		item->setData(la::avdecc::to_integral(ItemRole::MemoryObjectAddress), QVariant::fromValue(memoryObjectAddress));
-		item->setData(la::avdecc::to_integral(ItemRole::EntityName), QVariant::fromValue(name));
-		item->setData(la::avdecc::to_integral(ItemRole::OperationID), QVariant::fromValue(la::avdecc::entity::model::OperationID{ 0u }));
-		item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Waiting));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::EntityID), QVariant::fromValue(entityID));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::DescriptorIndex), QVariant::fromValue(descriptorIndex));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::MemoryObjectAddress), QVariant::fromValue(memoryObjectAddress));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::EntityName), QVariant::fromValue(name));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::OperationID), QVariant::fromValue(la::avdecc::entity::model::OperationID{ 0u }));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Waiting));
 
 		widget->setText(QString("%1: Waiting to start").arg(name));
 		widget->setProgress(0);
@@ -280,17 +281,17 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 		auto* item = _ui->listWidget->item(row);
 		auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
 
-		auto const entityID = item->data(la::avdecc::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
-		auto const descriptorIndex = item->data(la::avdecc::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
-		auto const entityName = item->data(la::avdecc::to_integral(ItemRole::EntityName)).toString();
+		auto const entityID = item->data(la::avdecc::utils::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
+		auto const descriptorIndex = item->data(la::avdecc::utils::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
+		auto const entityName = item->data(la::avdecc::utils::to_integral(ItemRole::EntityName)).toString();
 
 		widget->setText(QString("%1: Uploading").arg(entityName));
 		widget->setProgress(0);
-		item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::StartUpload));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::StartUpload));
 
 		// Query an OperationID to start the upload
 		manager.startUploadMemoryObjectOperation(entityID, descriptorIndex, _firmwareData.size(),
-			[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
+			[this, item, widget, entityName, descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
 			{
 				// Handle the result of startUploadMemoryObjectOperation
 				QMetaObject::invokeMethod(widget,
@@ -300,15 +301,15 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 						if (!status)
 						{
 							widget->setText(QString("%1: Upload failed: %2").arg(entityName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
-							item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
+							item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
 							checkAllDone();
 						}
 						// Succeeded
 						else
 						{
-							auto const memoryObjectAddress = item->data(la::avdecc::to_integral(ItemRole::MemoryObjectAddress)).value<std::uint64_t>();
-							item->setData(la::avdecc::to_integral(ItemRole::OperationID), QVariant::fromValue(operationID));
-							item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Uploading));
+							auto const memoryObjectAddress = item->data(la::avdecc::utils::to_integral(ItemRole::MemoryObjectAddress)).value<std::uint64_t>();
+							item->setData(la::avdecc::utils::to_integral(ItemRole::OperationID), QVariant::fromValue(operationID));
+							item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Uploading));
 
 							// Write the firmware to the MemoryObject
 							auto& manager = avdecc::ControllerManager::getInstance();
@@ -324,7 +325,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 										Qt::QueuedConnection);
 
 									// Not the cleanest code, we directly access item's data in another thread without locking (should be fine though)
-									return item->data(la::avdecc::to_integral(ItemRole::UpdateState)).value<UpdateState>() == UpdateState::Failed;
+									return item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>() == UpdateState::Failed;
 								},
 								[widget, this, entityName, item, entityID, descriptorIndex](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
 								{
@@ -336,7 +337,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 											if (!status)
 											{
 												widget->setText(QString("%1: Upload Failed: %2").arg(entityName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
-												item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
+												item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
 												checkAllDone();
 											}
 											// Succeeded
@@ -344,30 +345,30 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 											{
 												widget->setText(QString("%1: Storing").arg(entityName));
 												widget->setProgress(0);
-												item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::StartStore));
+												item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::StartStore));
 
 												// Query an OperationID to store the firmware and reboot
 												auto& manager = avdecc::ControllerManager::getInstance();
 												manager.startStoreAndRebootMemoryObjectOperation(entityID, descriptorIndex,
-													[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
+													[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
 													{
 														// Handle the result of startStoreAndRebootMemoryObjectOperation
 														QMetaObject::invokeMethod(widget,
-															[this, item, widget, status, entityID, descriptorIndex, operationID, entityName]()
+															[this, item, widget, status, entityID, operationID, entityName]()
 															{
 																// Failed to startStoreAndRebootMemoryObjectOperation
 																if (!status)
 																{
 																	widget->setText(QString("%1: Upload failed: %2").arg(entityName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
-																	item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
+																	item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
 																	checkAllDone();
 																}
 																// Succeeded
 																else
 																{
 																	// Store the OperationID, and wait for operationProgress and operationCompleted QT signals
-																	item->setData(la::avdecc::to_integral(ItemRole::OperationID), QVariant::fromValue(operationID));
-																	item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Storing));
+																	item->setData(la::avdecc::utils::to_integral(ItemRole::OperationID), QVariant::fromValue(operationID));
+																	item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Storing));
 																}
 															},
 															Qt::QueuedConnection);
@@ -392,15 +393,15 @@ void FirmwareUploadDialog::on_abortPushButton_clicked()
 		auto* item = _ui->listWidget->item(row);
 		auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
 
-		auto const entityID = item->data(la::avdecc::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
-		auto const descriptorIndex = item->data(la::avdecc::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
-		auto const entityName = item->data(la::avdecc::to_integral(ItemRole::EntityName)).toString();
-		auto const operationID = item->data(la::avdecc::to_integral(ItemRole::OperationID)).value<la::avdecc::entity::model::OperationID>();
+		auto const entityID = item->data(la::avdecc::utils::to_integral(ItemRole::EntityID)).value<la::avdecc::UniqueIdentifier>();
+		auto const descriptorIndex = item->data(la::avdecc::utils::to_integral(ItemRole::DescriptorIndex)).value<la::avdecc::entity::model::DescriptorIndex>();
+		auto const entityName = item->data(la::avdecc::utils::to_integral(ItemRole::EntityName)).toString();
+		auto const operationID = item->data(la::avdecc::utils::to_integral(ItemRole::OperationID)).value<la::avdecc::entity::model::OperationID>();
 
 		widget->setText(QString("%1: Aborted").arg(entityName));
-		item->setData(la::avdecc::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
+		item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
 		manager.abortOperation(entityID, la::avdecc::entity::model::DescriptorType::MemoryObject, descriptorIndex, operationID,
-			[](la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const /*descriptorType*/, la::avdecc::entity::model::DescriptorIndex const /*descriptorIndex*/, la::avdecc::entity::model::OperationID const /*operationID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
+			[](la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
 			{
 			});
 	}

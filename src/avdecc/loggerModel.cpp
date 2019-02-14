@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -131,7 +131,7 @@ public:
 		q->endResetModel();
 	}
 
-	void save(QString const& filename) const
+	void save(QString const& filename, LoggerModel::SaveConfiguration const& saveConfiguration) const
 	{
 		QFile file(filename);
 		file.open(QIODevice::WriteOnly);
@@ -139,11 +139,28 @@ public:
 
 		for (auto const& entry : _entries)
 		{
+			if (!entry.message.contains(saveConfiguration.search))
+			{
+				continue;
+			}
+
+			auto const level = avdecc::helper::loggerLevelToString(entry.level);
+			if (!level.contains(saveConfiguration.level))
+			{
+				continue;
+			}
+
+			auto const layer = avdecc::helper::loggerLayerToString(entry.layer);
+			if (!layer.contains(saveConfiguration.layer))
+			{
+				continue;
+			}
+
 			QStringList elements;
 
 			elements << entry.timestamp;
-			elements << avdecc::helper::loggerLayerToString(entry.layer);
-			elements << avdecc::helper::loggerLevelToString(entry.level);
+			elements << layer;
+			elements << level;
 			elements << entry.message;
 
 			stream << elements.join("\t") << "\n";
@@ -228,10 +245,10 @@ void LoggerModel::clear()
 	return d->clear();
 }
 
-void LoggerModel::save(QString const& filename) const
+void LoggerModel::save(QString const& filename, SaveConfiguration const& saveConfiguration) const
 {
 	Q_D(const LoggerModel);
-	return d->save(filename);
+	return d->save(filename, saveConfiguration);
 }
 
 } // namespace avdecc
