@@ -34,6 +34,7 @@
 #include "counters/avbInterfaceCountersTreeWidgetItem.hpp"
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
+#include "counters/streamOutputCountersTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
 #include "firmwareUploadDialog.hpp"
 #include "aecpCommandComboBox.hpp"
@@ -123,6 +124,8 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &NodeTreeWidgetPrivate::controllerOffline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &NodeTreeWidgetPrivate::entityOnline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &NodeTreeWidgetPrivate::entityOffline);
+
+		connect(q_ptr, &NodeTreeWidget::itemClicked, this, &NodeTreeWidgetPrivate::itemClicked);
 	}
 
 	Q_SLOT void controllerOffline()
@@ -142,6 +145,17 @@ public:
 			Q_Q(NodeTreeWidget);
 			q->setNode(la::avdecc::UniqueIdentifier{}, {});
 			q->clearSelection();
+		}
+	}
+
+	Q_SLOT void itemClicked(QTreeWidgetItem* item)
+	{
+		if (auto* inputStreamItem = dynamic_cast<StreamInputCounterTreeWidgetItem*>(item))
+		{
+			auto const streamIndex = inputStreamItem->streamIndex();
+			auto const flag = inputStreamItem->counterValidFlag();
+
+			avdecc::ControllerManager::getInstance().clearStreamInputCounterValidFlags(_controlledEntityID, streamIndex, flag);
 		}
 	}
 
@@ -223,7 +237,7 @@ private:
 
 			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 			addFlagsItem(milanInfoItem, "Features", milanInfo.featuresFlags.getValue(), avdecc::helper::flagsToString(milanInfo.featuresFlags));
-			addTextItem(milanInfoItem, "Certification Version", QString::number(milanInfo.certificationVersion));
+			addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
 		}
 
 		// Discovery information
@@ -354,6 +368,13 @@ private:
 		{
 			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, nullptr, node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
+		}
+
+		// Counters
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && !node.dynamicModel->counters.empty())
+		{
+			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			countersItem->setText(0, "Counters");
 		}
 	}
 

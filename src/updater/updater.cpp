@@ -142,8 +142,9 @@ public:
 
 		// Register to settings::SettingsManager
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::AutomaticCheckForUpdates.name, this);
-		settings.registerSettingObserver(settings::CheckForBetaVersions.name, this);
+		settings.registerSettingObserver(settings::AutomaticCheckForUpdates.name, this, false);
+		settings.registerSettingObserver(settings::CheckForBetaVersions.name, this, false);
+		_automaticCheckNewVersion = settings.getValue(settings::AutomaticCheckForUpdates.name).toBool();
 	}
 
 	~UpdaterImpl() noexcept
@@ -159,15 +160,15 @@ private:
 	{
 		if (name == settings::AutomaticCheckForUpdates.name)
 		{
-			if (value.toBool())
+			_automaticCheckNewVersion = value.toBool();
+			if (_automaticCheckNewVersion)
 			{
 				checkForNewVersion();
 			}
 		}
 		else if (name == settings::CheckForBetaVersions.name)
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			if (settings.getValue(settings::AutomaticCheckForUpdates.name).toBool())
+			if (_automaticCheckNewVersion)
 			{
 				checkForNewVersion();
 			}
@@ -190,12 +191,17 @@ private:
 		}
 	}
 
+	virtual bool isAutomaticCheckForNewVersion() const noexcept override
+	{
+		return _automaticCheckNewVersion;
+	}
+
 	// Private methods
 	void compareVersions() noexcept
 	{
 		try
 		{
-			auto const currentVersion = Version{ hive::internals::versionString };
+			auto const currentVersion = Version{ hive::internals::cmakeVersionString };
 			auto const newReleaseVersion = Version{ _newReleaseVersionString };
 			auto const newBetaVersion = Version{ _newBetaVersionString };
 
@@ -222,6 +228,7 @@ private:
 	std::atomic_bool _checkInProgress{ false };
 	QNetworkAccessManager _webCtrlRelease{};
 	QNetworkAccessManager _webCtrlBeta{};
+	bool _automaticCheckNewVersion{ false };
 	bool _checkBetaVersion{ false };
 	QString _newReleaseVersionString{};
 	QString _newBetaVersionString{};

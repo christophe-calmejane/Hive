@@ -54,19 +54,16 @@ installSubFolder="/Install"
 buildConfig="Release"
 buildConfigOverride=0
 doCleanup=1
-doSign=0
+doSign=1
 gen_cmake_additional_options=()
 
 # First check for .identity file
-if isMac;
-then
-	if [ -f ".identity" ];
-	then
+if isMac; then
+	if [ -f ".identity" ]; then
 		identityString="$(< .identity)"
 		# Quick check for identity in keychain
 		security find-identity -v -p codesigning | grep "$identityString" &> /dev/null
-		if [ $? -ne 0 ];
-		then
+		if [ $? -ne 0 ]; then
 			echo "Invalid .identity file content (identity not found in keychain, or not valid for codesigning): $identityString"
 			exit 1
 		fi
@@ -93,7 +90,7 @@ do
 			if isMac; then
 				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing (or content of .identity file)."
 			fi
-			echo " -sign -> Sign binaries (Default: No signing)"
+			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
 			exit 3
 			;;
@@ -172,9 +169,8 @@ do
 				exit 4
 			fi
 			;;
-		-sign)
-			gen_cmake_additional_options+=("-sign")
-			doSign=1
+		-no-signing)
+			doSign=0
 			;;
 		-debug)
 			buildConfig="Debug"
@@ -188,11 +184,15 @@ do
 	shift
 done
 
-# Check TeamIdentifier specified is signing enabled on macOS
-if isMac; then
-	if [[ $hasTeamId -eq 0 && $doSign -eq 1 ]]; then
-		echo "ERROR: macOS requires either iTunes TeamIdentifier to be specified using -id option, or -no-signing to disable binary signing"
-		exit 4
+if [ $doSign -eq 1 ]; then
+	gen_cmake_additional_options+=("-sign")
+
+	# Check if TeamIdentifier is specified on macOS
+	if isMac; then
+		if [ $hasTeamId -eq 0 ]; then
+			echo "ERROR: macOS requires either iTunes TeamIdentifier to be specified using -id option, or -no-signing to disable binary signing"
+			exit 4
+		fi
 	fi
 fi
 
@@ -244,7 +244,6 @@ build_tag=""
 is_release=1
 releaseVersion="${versionSplit[0]}.${versionSplit[1]}.${versionSplit[2]}"
 if [ ${#versionSplit[*]} -eq 4 ]; then
-	add_cmake_opt="$add_cmake_opt -DAVDECC_BASE_FOLDER=3rdparty/avdecc-local"
 	beta_tag="-beta${versionSplit[3]}"
 	build_tag="+$(git rev-parse --short HEAD)"
 	is_release=0
@@ -350,10 +349,14 @@ if [ ! -f "$installerFile" ]; then
 	exit 1
 fi
 
-if isMac && [[ hasTeamId -eq 1 && doSign -eq 1 ]];
-then
+if [ $doSign -eq 1 ]; then
 	echo "Signing Package"
-	codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}"
+	if isMac; then
+		codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}"
+	else
+		signtool sign /a /sm /q /fd sha1 /t http://timestamp.verisign.com/scripts/timstamp.dll "${installerFile}"
+		signtool sign /a /sm /as /q /fd sha256 /tr http://sha256timestamp.ws.symantec.com/sha256/timestamp "${installerFile}"
+	fi
 fi
 
 mv "${installerFile}" .

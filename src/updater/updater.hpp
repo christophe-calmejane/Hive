@@ -29,9 +29,11 @@ class Updater : public QObject
 public:
 	static Updater& getInstance() noexcept;
 
-	/** Gets a ControlledEntity */
+	/** Force a check for new version */
 	virtual void checkForNewVersion() noexcept = 0;
 
+	/** Returns true if the Updater automatically checks for new versions */
+	virtual bool isAutomaticCheckForNewVersion() const noexcept = 0;
 
 	/* Updater signals */
 	Q_SIGNAL void newReleaseVersionAvailable(QString version, QString downloadURL);

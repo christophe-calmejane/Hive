@@ -34,6 +34,7 @@
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
+#include "highlightForegroundItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
@@ -175,13 +176,17 @@ void MainWindow::createControllerView()
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
 	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
-	auto* imageItemDelegate{ new ImageItemDelegate };
+	auto* imageItemDelegate{ new ImageItemDelegate{ this } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
+	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ this } };
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), highlightForegroundItemDelegate);
+
 	_controllerDynamicHeaderView.setHighlightSections(false);
+	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId));
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), 40);
@@ -448,6 +453,14 @@ void MainWindow::connectSignals()
 			showChangeLog("Change Log", "");
 		});
 
+	//
+
+	connect(actionOpenProjectWebPage, &QAction::triggered, this,
+		[this]()
+		{
+			QDesktopServices::openUrl(hive::internals::projectURL);
+		});
+
 	// Connect updater signals
 	auto const& updater = Updater::getInstance();
 	connect(&updater, &Updater::newReleaseVersionAvailable, this,
@@ -538,24 +551,36 @@ void MainWindow::showChangeLog(QString const title, QString const versionString)
 
 void MainWindow::showEvent(QShowEvent* event)
 {
+	QMainWindow::showEvent(event);
+
 	static std::once_flag once;
 	std::call_once(once,
 		[this]()
 		{
-			// Check if this is the first time we launch a new Hive version
-			auto& settings = settings::SettingsManager::getInstance();
-			auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
-			settings.setValue(settings::LastLaunchedVersion.name, hive::internals::versionString);
-
-			if (lastVersion == hive::internals::versionString)
-				return;
-
-			// Postpone the dialog creation
-			QTimer::singleShot(0,
-				[this, versionString = std::move(lastVersion)]()
+			// Time to check for new version
+			{
+				auto& updater = Updater::getInstance();
+				if (updater.isAutomaticCheckForNewVersion())
 				{
-					showChangeLog("What's New", versionString);
-				});
+					updater.checkForNewVersion();
+				}
+			}
+			// Check if this is the first time we launch a new Hive version
+			{
+				auto& settings = settings::SettingsManager::getInstance();
+				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
+				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
+
+				if (lastVersion == hive::internals::cmakeVersionString)
+					return;
+
+				// Postpone the dialog creation
+				QTimer::singleShot(0,
+					[this, versionString = std::move(lastVersion)]()
+					{
+						showChangeLog("What's New", versionString);
+					});
+			}
 		});
 }
 

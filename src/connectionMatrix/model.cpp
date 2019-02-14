@@ -18,7 +18,7 @@
 */
 
 #include "connectionMatrix/model.hpp"
-#include "avdecc/controllerManager.hpp"
+#include "connectionMatrix/headerItem.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 
@@ -30,209 +30,6 @@ Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
 namespace connectionMatrix
 {
-class HeaderItem : public QStandardItem
-{
-public:
-	using StreamMap = std::unordered_map<la::avdecc::entity::model::StreamIndex, std::int32_t>;
-	using InterfaceMap = std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::vector<std::int32_t>>;
-	using RelativeParentIndex = std::optional<std::int32_t>;
-
-	HeaderItem(Model::NodeType const nodeType, la::avdecc::UniqueIdentifier const& entityID)
-		: _nodeType{ nodeType }
-		, _entityID{ entityID }
-	{
-	}
-
-	Model::NodeType nodeType() const
-	{
-		return _nodeType;
-	}
-
-	la::avdecc::UniqueIdentifier const& entityID() const
-	{
-		return _entityID;
-	}
-
-	void setStreamNodeInfo(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
-	{
-		_streamIndex = streamIndex;
-		_avbInterfaceIndex = avbInterfaceIndex;
-	}
-
-	la::avdecc::entity::model::StreamIndex streamIndex() const
-	{
-		return _streamIndex;
-	}
-
-	la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex() const
-	{
-		return _avbInterfaceIndex;
-	}
-
-	void setRedundantIndex(la::avdecc::controller::model::VirtualIndex const redundantIndex)
-	{
-		_redundantIndex = redundantIndex;
-	}
-
-	la::avdecc::controller::model::VirtualIndex redundantIndex() const
-	{
-		return _redundantIndex;
-	}
-
-	void setRedundantStreamOrder(std::int32_t const redundantStreamOrder)
-	{
-		_redundantStreamOrder = redundantStreamOrder;
-	}
-
-	std::int32_t redundantStreamOrder() const
-	{
-		return _redundantStreamOrder;
-	}
-
-	void setRelativeParentIndex(std::int32_t const relativeParentIndex)
-	{
-		_relativeParentIndex = relativeParentIndex;
-	}
-
-	RelativeParentIndex relativeParentIndex() const
-	{
-		return _relativeParentIndex;
-	}
-
-	void setChildrenCount(std::int32_t const childrenCount)
-	{
-		_childrenCount = childrenCount;
-	}
-
-	std::int32_t childrenCount() const
-	{
-		return _childrenCount;
-	}
-
-	void setStreamMap(StreamMap const& streamMap)
-	{
-		_streamMap = streamMap;
-	}
-
-	StreamMap const& streamMap() const
-	{
-		return _streamMap;
-	}
-
-	void setInterfaceMap(InterfaceMap const& interfaceMap)
-	{
-		_interfaceMap = interfaceMap;
-	}
-
-	InterfaceMap const& interfaceMap() const
-	{
-		return _interfaceMap;
-	}
-
-	virtual QVariant data(int role) const override
-	{
-		if (role == Model::NodeTypeRole)
-		{
-			return QVariant::fromValue(_nodeType);
-		}
-		else if (role == Model::EntityIDRole)
-		{
-			return QVariant::fromValue(_entityID);
-		}
-		else if (role == Model::StreamIndexRole)
-		{
-			return QVariant::fromValue(_streamIndex);
-		}
-		else if (role == Model::RedundantIndexRole)
-		{
-			return QVariant::fromValue(_redundantIndex);
-		}
-		else if (role == Model::RedundantStreamOrderRole)
-		{
-			return QVariant::fromValue(_redundantStreamOrder);
-		}
-		else if (role == Model::StreamWaitingRole)
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-
-			if (auto controlledEntity = manager.getControlledEntity(_entityID))
-			{
-				auto const& entityNode = controlledEntity->getEntityNode();
-
-				if (_nodeType == Model::NodeType::OutputStream)
-				{
-					return !controlledEntity->isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, _streamIndex);
-				}
-				else if (_nodeType == Model::NodeType::InputStream)
-				{
-					return !controlledEntity->isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, _streamIndex);
-				}
-			}
-		}
-		else if (role == Model::RelativeParentIndexRole)
-		{
-			return QVariant::fromValue(_relativeParentIndex);
-		}
-		else if (role == Model::ChildrenCountRole)
-		{
-			return QVariant::fromValue(_childrenCount);
-		}
-		else if (role == Qt::DisplayRole || role == Model::FilterRole)
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-
-			if (auto controlledEntity = manager.getControlledEntity(_entityID))
-			{
-				auto const& entityNode = controlledEntity->getEntityNode();
-
-				if (_nodeType == Model::NodeType::Entity || role == Model::FilterRole)
-				{
-					if (entityNode.dynamicModel->entityName.empty())
-					{
-						return avdecc::helper::uniqueIdentifierToString(_entityID);
-					}
-					else
-					{
-						return QString::fromStdString(entityNode.dynamicModel->entityName);
-					}
-				}
-				else if (_nodeType == Model::NodeType::InputStream || _nodeType == Model::NodeType::RedundantInputStream)
-				{
-					auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
-					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
-				}
-				else if (_nodeType == Model::NodeType::OutputStream || _nodeType == Model::NodeType::RedundantOutputStream)
-				{
-					auto const& streamNode = controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, _streamIndex);
-					return avdecc::helper::objectName(controlledEntity.get(), streamNode);
-				}
-				else if (_nodeType == Model::NodeType::RedundantInput)
-				{
-					return QString{ "Redundant Stream Input %1" }.arg(QString::number(_redundantIndex));
-				}
-				else if (_nodeType == Model::NodeType::RedundantOutput)
-				{
-					return QString{ "Redundant Stream Output %1" }.arg(QString::number(_redundantIndex));
-				}
-			}
-		}
-
-		return QStandardItem::data(role);
-	}
-
-private:
-	Model::NodeType const _nodeType;
-	la::avdecc::UniqueIdentifier const _entityID;
-	la::avdecc::entity::model::StreamIndex _streamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
-	la::avdecc::entity::model::AvbInterfaceIndex _avbInterfaceIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
-	la::avdecc::controller::model::VirtualIndex _redundantIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
-	std::int32_t _redundantStreamOrder{ -1 };
-	RelativeParentIndex _relativeParentIndex{ std::nullopt };
-	std::int32_t _childrenCount{ 0 };
-	StreamMap _streamMap{};
-	InterfaceMap _interfaceMap{};
-};
-
 Model::ConnectionCapabilities computeConnectionCapabilities(HeaderItem const* talkerItem, HeaderItem const* listenerItem)
 {
 	auto const talkerEntityID{ talkerItem->entityID() };
@@ -859,6 +656,9 @@ public:
 
 					dataChanged(listenerIndex(entityID), false, true);
 				}
+
+				// Simulate an entityNameChanged to trigger a FilterRole data changed (required for the filter)
+				entityNameChanged(entityID);
 			}
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -952,7 +752,11 @@ public:
 		auto* listenerItem = static_cast<HeaderItem*>(q_ptr->horizontalHeaderItem(listener.column()));
 
 		auto const topLeft = q_ptr->createIndex(talker.row(), listener.column());
-		auto const bottomRight = q_ptr->createIndex(talker.row() + talkerItem->childrenCount(), listener.column() + listenerItem->childrenCount());
+
+		auto const talkerChildrenCount = talkerItem ? talkerItem->childrenCount() : 0;
+		auto const listenerChildrenCount = listenerItem ? listenerItem->childrenCount() : 0;
+
+		auto const bottomRight = q_ptr->createIndex(talker.row() + talkerChildrenCount, listener.column() + listenerChildrenCount);
 
 		emit q_ptr->dataChanged(topLeft, bottomRight, { Model::FilterRole });
 	}
@@ -1041,9 +845,14 @@ public:
 				if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
 				{
 					auto const& interfaceMap = item->interfaceMap();
-					auto const& offsets = interfaceMap.at(avbInterfaceIndex);
+					auto const offsetsIt = interfaceMap.find(avbInterfaceIndex);
+					if (offsetsIt == interfaceMap.end())
+					{
+						// No streams associated with this avbInterfaceIndex
+						return {};
+					}
 					auto indexes = QModelIndexList{};
-					for (auto const offset : offsets)
+					for (auto const offset : offsetsIt->second)
 					{
 						indexes.push_back(q_ptr->createIndex(row + offset, -1));
 					}
@@ -1053,7 +862,7 @@ public:
 		}
 		catch (std::out_of_range const&)
 		{
-			// Something went wrong and .at() throw
+			// Something went wrong
 			LOG_HIVE_ERROR(QString("connectionMatrix::Model::talkerInterfaceIndex: Invalid AvbInterfaceIndex: TalkerID=%1 Index=%2 RowCount=%3 ").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(avbInterfaceIndex).arg(q_ptr->rowCount()));
 		}
 
@@ -1108,9 +917,14 @@ public:
 				if (item->nodeType() == Model::NodeType::Entity && item->entityID() == entityID)
 				{
 					auto const& interfaceMap = item->interfaceMap();
-					auto const& offsets = interfaceMap.at(avbInterfaceIndex);
+					auto const offsetsIt = interfaceMap.find(avbInterfaceIndex);
+					if (offsetsIt == interfaceMap.end())
+					{
+						// No streams associated with this avbInterfaceIndex
+						return {};
+					}
 					auto indexes = QModelIndexList{};
-					for (auto const offset : offsets)
+					for (auto const offset : offsetsIt->second)
 					{
 						indexes.push_back(q_ptr->createIndex(-1, column + offset));
 					}
@@ -1120,7 +934,7 @@ public:
 		}
 		catch (std::out_of_range const&)
 		{
-			// Something went wrong and .at() throw
+			// Something went wrong
 			LOG_HIVE_ERROR(QString("connectionMatrix::Model::listenerInterfaceIndex: Invalid AvbInterfaceIndex: ListenerID=%1 Index=%2 ColumnCount=%3 ").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(avbInterfaceIndex).arg(q_ptr->columnCount()));
 		}
 

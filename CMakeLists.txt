@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.12)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.0.9.12)
+set(HIVE_VERSION 1.0.11.2)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -78,7 +78,7 @@ set(INSTALL_AVDECC_LIB_STATIC OFF CACHE BOOL "Install static library." FORCE)
 set(INSTALL_AVDECC_HEADERS OFF CACHE BOOL "Install headers." FORCE)
 set(INSTALL_AVDECC_DOC OFF CACHE BOOL "Install documentation." FORCE)
 # Signing options
-set(ENABLE_AVDECC_SIGNING OFF CACHE BOOL "Enable binaries signing." FORCE) # Don't sign the libraries, we copy them manually (we'll sign everything later)
+set(ENABLE_AVDECC_SIGNING ${ENABLE_HIVE_SIGNING} CACHE BOOL "Enable binaries signing." FORCE)
 # Enable features
 set(ENABLE_AVDECC_FEATURE_REDUNDANCY ON CACHE BOOL "Enable 'Network Redundancy' feature as defined by AVnu Alliance." FORCE)
 # Compatibility options
@@ -115,7 +115,7 @@ if(ENABLE_AVDECC_USE_FMTLIB)
 	set_target_properties(fmt PROPERTIES FOLDER "Libraries")
 endif()
 
-############ Define some variables
+############ Define some variables (most to be removed when reworking cmake files and using setup_project macro)
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
 set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")

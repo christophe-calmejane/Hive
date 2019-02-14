@@ -3,14 +3,18 @@
 # Declare project
 project(${PROJECT_NAME} LANGUAGES C CXX VERSION ${HIVE_VERSION})
 
-# Setup project version, because a release build only has 3 digits
-set(PROJECT_VERSIONMAJ ${PROJECT_VERSION_MAJOR})
-set(PROJECT_VERSIONMIN ${PROJECT_VERSION_MINOR})
-set(PROJECT_VERSIONSUB ${PROJECT_VERSION_PATCH})
-set(PROJECT_VERSIONREV ${PROJECT_VERSION_TWEAK})
-if(NOT PROJECT_VERSIONREV)
-	set(PROJECT_VERSIONREV 0)
+############ Define some variables (most to be removed when reworking cmake files and using setup_project macro)
+if(NOT PROJECT_VERSION_TWEAK)
+	set(PROJECT_VERSION_TWEAK 0)
+	set(LA_PROJECT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+	set(LA_PROJECT_CMAKEVERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+else()
+	set(LA_PROJECT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-beta${PROJECT_VERSION_TWEAK}")
+	set(LA_PROJECT_CMAKEVERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.${PROJECT_VERSION_TWEAK}")
 endif()
+set(LA_PROJECT_PRODUCTVERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+set(LA_PROJECT_FILEVERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}.${PROJECT_VERSION_TWEAK}")
+
 
 # Declare executable target
 add_executable(${PROJECT_NAME} MACOSX_BUNDLE WIN32 "")
@@ -202,6 +206,7 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 
 # Connection Matriw header files
 set(CONNECTION_MATRIX_HEADER_FILES
+	connectionMatrix/headerItem.hpp
 	connectionMatrix/headerView.hpp
 	connectionMatrix/itemDelegate.hpp
 	connectionMatrix/legend.hpp
@@ -212,6 +217,7 @@ set(CONNECTION_MATRIX_HEADER_FILES
 
 # Connection Matrix source files
 set(CONNECTION_MATRIX_SOURCE_FILES
+	connectionMatrix/headerItem.cpp
 	connectionMatrix/headerView.cpp
 	connectionMatrix/itemDelegate.cpp
 	connectionMatrix/legend.cpp
@@ -224,12 +230,14 @@ set(COUNTERS_HEADER_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.hpp
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
+	counters/streamOutputCountersTreeWidgetItem.hpp
 )
 
 set(COUNTERS_SOURCE_FILES
 	counters/avbInterfaceCountersTreeWidgetItem.cpp
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
+	counters/streamOutputCountersTreeWidgetItem.cpp
 )
 
 # Logger View header files
@@ -304,6 +312,7 @@ set(COMMON_HEADER_FILES
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	entityLogoCache.hpp
+	highlightForegroundItemDelegate.hpp
 	imageItemDelegate.hpp
 	mappingMatrix.hpp
 	nodeTreeWidget.hpp
@@ -316,6 +325,7 @@ set(COMMON_HEADER_FILES
 set(COMMON_SOURCE_FILES
 	aecpCommandComboBox.cpp
 	entityLogoCache.cpp
+	highlightForegroundItemDelegate.cpp
 	imageItemDelegate.cpp
 	main.cpp
 	controlledEntityTreeWidget.cpp
@@ -443,16 +453,10 @@ if(TargetQt5Deploy_INCLUDED)
 	target_qt5_deploy(${PROJECT_NAME} INSTALL QML_DIR ${PROJECT_ROOT_DIR}/resources/qml)
 endif()
 
-# Install target
-install(TARGETS ${PROJECT_NAME}	RUNTIME DESTINATION bin	BUNDLE DESTINATION .)
-
 # Sign target
-include(TargetSign OPTIONAL RESULT_VARIABLE TargetSign_INCLUDED)
-if(ENABLE_HIVE_SIGNING AND TargetSign_INCLUDED)
-	get_target_property(isBundle ${PROJECT_NAME} MACOSX_BUNDLE)
-	if(isBundle)
-		target_sign(${PROJECT_NAME} ".")
-	else()
-		target_sign(${PROJECT_NAME} "bin")
-	endif()
+if(ENABLE_HIVE_SIGNING)
+	sign_target(${PROJECT_NAME})
 endif()
+
+# Install target
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin BUNDLE DESTINATION .)
