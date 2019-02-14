@@ -262,7 +262,7 @@ private:
 	* The searchForAdditionalConnectionsOfMCMaster parameter enables this method to search for secondary mc masters.
 	* Secondary mc masters are defined as - mc masters of entities which are mc masters themself.
 	* This is the special case, where an mc master also has a clock stream connection.
-	* 
+	*
 	* @param entityID The id of the entity to search for the master.
 	* @param searchForAdditionalConnectionsOfMCMaster Should be set to true, if the connected mc master is of interest although the given entity is it's own mc master.
 	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined.
@@ -1009,12 +1009,16 @@ private:
 					auto streamType = streamFormatInfo->getType();
 					if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 					{
-						// the primary is included in the redundantStreams
-						//streamIndexes.push_back(streamOutput.second.primaryStream->descriptorIndex);
+						auto primaryIndex = streamOutput.second.primaryStream->descriptorIndex;
+						streamIndexes.push_back(primaryIndex);
 
 						for (auto const& redundantStream : streamOutput.second.redundantStreams)
 						{
-							streamIndexes.push_back(redundantStream.first);
+							// the primary is included in the redundantStreams
+							if (primaryIndex != redundantStream.first)
+							{
+								streamIndexes.push_back(redundantStream.first);
+							}
 						}
 						return streamIndexes;
 					}
@@ -1058,12 +1062,16 @@ private:
 					auto streamType = streamFormatInfo2->getType();
 					if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 					{
-						// the primary is included in the redundantStreams
-						//streamIndexes.push_back(streamInput.second.primaryStream->descriptorIndex);
+						auto primaryIndex = streamInput.second.primaryStream->descriptorIndex;
+						streamIndexes.push_back(primaryIndex);
 
 						for (auto const& redundantStream : streamInput.second.redundantStreams)
 						{
-							streamIndexes.push_back(redundantStream.first);
+							// the primary is included in the redundantStreams
+							if (primaryIndex != redundantStream.first)
+							{
+								streamIndexes.push_back(redundantStream.first);
+							}
 						}
 						return streamIndexes;
 					}
@@ -1124,9 +1132,7 @@ private:
 	}
 
 	/**
-	* Disconnects all output streams from an entity and returns a list of all streams that were disconnected.
-	* @param entityId The id of the entity to disconnect the streams from.
-	* @return A list of all streams that were disconnected.
+	* Iterates over the list of known entities and returns all connections that originate from the given talker.
 	*/
 	std::vector<la::avdecc::controller::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier talkerEntityId)
 	{
@@ -1486,6 +1492,9 @@ la::avdecc::UniqueIdentifier MCDomain::getMediaClockDomainMaster() const noexcep
 	return _mediaClockMasterId;
 }
 
+/**
+* Sets the domain index of this domain.
+*/
 void MCDomain::setDomainIndex(DomainIndex index) noexcept
 {
 	_domainIndex = index;
