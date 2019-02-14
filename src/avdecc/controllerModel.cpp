@@ -475,6 +475,7 @@ void ControllerModelPrivate::controllerOffline()
 
 	q->beginResetModel();
 	_entities.clear();
+	_entitiesWithErrorCounter.clear();
 	q->endResetModel();
 }
 
@@ -505,6 +506,7 @@ void ControllerModelPrivate::entityOffline(la::avdecc::UniqueIdentifier const en
 
 		emit q->beginRemoveRows({}, row, row);
 		_entities.erase(it);
+		_entitiesWithErrorCounter.erase(entityID);
 		emit q->endRemoveRows();
 	}
 }
