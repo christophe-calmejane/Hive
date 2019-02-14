@@ -18,9 +18,10 @@
 */
 
 #include "entityInspector.hpp"
-#include <QHeaderView>
-
+#include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
+
+#include <QHeaderView>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 

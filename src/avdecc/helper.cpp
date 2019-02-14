@@ -114,90 +114,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept
 {
-	switch (descriptorType)
-	{
-		case la::avdecc::entity::model::DescriptorType::Entity:
-			return "ENTITY";
-		case la::avdecc::entity::model::DescriptorType::Configuration:
-			return "CONFIGURATION";
-		case la::avdecc::entity::model::DescriptorType::AudioUnit:
-			return "AUDIO_UNIT";
-		case la::avdecc::entity::model::DescriptorType::VideoUnit:
-			return "VIDEO_UNIT";
-		case la::avdecc::entity::model::DescriptorType::SensorUnit:
-			return "SENSOR_UNIT";
-		case la::avdecc::entity::model::DescriptorType::StreamInput:
-			return "STREAM_INPUT";
-		case la::avdecc::entity::model::DescriptorType::StreamOutput:
-			return "STREAM_OUTPUT";
-		case la::avdecc::entity::model::DescriptorType::JackInput:
-			return "JACK_INPUT";
-		case la::avdecc::entity::model::DescriptorType::JackOutput:
-			return "JACK_OUTPUT";
-		case la::avdecc::entity::model::DescriptorType::AvbInterface:
-			return "AVB_INTERFACE";
-		case la::avdecc::entity::model::DescriptorType::ClockSource:
-			return "CLOCK_SOURCE";
-		case la::avdecc::entity::model::DescriptorType::MemoryObject:
-			return "MEMORY_OBJECT";
-		case la::avdecc::entity::model::DescriptorType::Locale:
-			return "LOCALE";
-		case la::avdecc::entity::model::DescriptorType::Strings:
-			return "STRINGS";
-		case la::avdecc::entity::model::DescriptorType::StreamPortInput:
-			return "STREAM_PORT_INPUT";
-		case la::avdecc::entity::model::DescriptorType::StreamPortOutput:
-			return "STREAM_PORT_OUTPUT";
-		case la::avdecc::entity::model::DescriptorType::ExternalPortInput:
-			return "EXTRENAL_PORT_INPUT";
-		case la::avdecc::entity::model::DescriptorType::ExternalPortOutput:
-			return "EXTRENAL_PORT_OUTPUT";
-		case la::avdecc::entity::model::DescriptorType::InternalPortInput:
-			return "INTERNAL_PORT_INPUT";
-		case la::avdecc::entity::model::DescriptorType::InternalPortOutput:
-			return "INTERNAL_PORT_OUTPUT";
-		case la::avdecc::entity::model::DescriptorType::AudioCluster:
-			return "AUDIO_CLUSTER";
-		case la::avdecc::entity::model::DescriptorType::VideoCluster:
-			return "VIDEO_CLUSTER";
-		case la::avdecc::entity::model::DescriptorType::SensorCluster:
-			return "SENSOR_CLUSTER";
-		case la::avdecc::entity::model::DescriptorType::AudioMap:
-			return "AUDIO_MAP";
-		case la::avdecc::entity::model::DescriptorType::VideoMap:
-			return "VIDEO_MAP";
-		case la::avdecc::entity::model::DescriptorType::SensorMap:
-			return "SENSOR_MAP";
-		case la::avdecc::entity::model::DescriptorType::Control:
-			return "CONTROL";
-		case la::avdecc::entity::model::DescriptorType::SignalSelector:
-			return "SIGNAL_SELECTOR";
-		case la::avdecc::entity::model::DescriptorType::Mixer:
-			return "MIXER";
-		case la::avdecc::entity::model::DescriptorType::Matrix:
-			return "MATRIX";
-		case la::avdecc::entity::model::DescriptorType::MatrixSignal:
-			return "MATRIX_SIGNAL";
-		case la::avdecc::entity::model::DescriptorType::SignalSplitter:
-			return "SIGNAL_SPLITTER";
-		case la::avdecc::entity::model::DescriptorType::SignalCombiner:
-			return "SIGNAL_COMBINER";
-		case la::avdecc::entity::model::DescriptorType::SignalDemultiplexer:
-			return "SIGNAL_DEMULTIPLEXER";
-		case la::avdecc::entity::model::DescriptorType::SignalMultiplexer:
-			return "SIGNAL_MULTIPLEXER";
-		case la::avdecc::entity::model::DescriptorType::SignalTranscoder:
-			return "SIGNAL_TRANSCODER";
-		case la::avdecc::entity::model::DescriptorType::ClockDomain:
-			return "CLOCK_DOMAIN";
-		case la::avdecc::entity::model::DescriptorType::ControlBlock:
-			return "CONTROL_BLOCK";
-		case la::avdecc::entity::model::DescriptorType::Invalid:
-			return "INVALID";
-		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return {};
-	}
+	return QString::fromStdString(la::avdecc::entity::model::descriptorTypeToString(descriptorType));
 }
 
 QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState, la::avdecc::UniqueIdentifier const& owningController) noexcept
@@ -388,7 +305,7 @@ QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const
 {
 	auto const* const descriptor = node.staticModel;
 
-	return clockSourceTypeToString(descriptor->clockSourceType) + ", " + descriptorTypeToString(descriptor->clockSourceLocationType) + ":" + QString::number(descriptor->clockSourceLocationIndex);
+	return avdecc::helper::clockSourceTypeToString(descriptor->clockSourceType) + ", " + avdecc::helper::descriptorTypeToString(descriptor->clockSourceLocationType) + ":" + QString::number(descriptor->clockSourceLocationIndex);
 }
 
 inline void concatenateFlags(QString& flags, QString const& flag) noexcept
@@ -689,7 +606,7 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 		case la::avdecc::entity::model::MemoryObjectType::PngManufacturer:
 			return "Png Manufacturer";
 		case la::avdecc::entity::model::MemoryObjectType::PngEntity:
-			return "PngEntity";
+			return "Png Entity";
 		case la::avdecc::entity::model::MemoryObjectType::PngGeneric:
 			return "Png Generic";
 		case la::avdecc::entity::model::MemoryObjectType::DaeManufacturer:
@@ -702,6 +619,11 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";
 	}
+}
+
+QString certificationVersionToString(std::uint32_t const certificationVersion) noexcept
+{
+	return QString("%1.%2.%3.%4").arg(certificationVersion >> 24 & 0xFF).arg(certificationVersion >> 16 & 0xFF).arg(certificationVersion >> 8 & 0xFF).arg(certificationVersion & 0xFF);
 }
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept

@@ -70,6 +70,8 @@
     </property>
     <addaction name="actionAbout"/>
     <addaction name="actionChangeLog"/>
+    <addaction name="separator"/>
+    <addaction name="actionOpenProjectWebPage"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -130,6 +132,11 @@
   <action name="actionChangeLog">
    <property name="text">
     <string>Change Log</string>
+   </property>
+  </action>
+  <action name="actionOpenProjectWebPage">
+   <property name="text">
+    <string>Open Project WebPage</string>
    </property>
   </action>
  </widget>

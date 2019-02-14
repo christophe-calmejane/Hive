@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- Numerical values for _StreamFlags_, _StreamFlagsEx_, _ProbingStatus_ and _AcmpStatus_
+- [Highlighting entities that have increments in error counters](https://github.com/christophe-calmejane/Hive/issues/31)
+
+### Fixed
+- Milan Certification version properly displayed (as x.y.z.w value)
+- Only flagging as Milan, devices with protocol_version 1
+- Correctly restoring collapsed streams in connection matrix, when expanding an entity
+
+## [1.0.10] - 2019-02-04
+### Added
+- Windows binary code-signing
+- Version clearly saying _beta_, when it's a beta build
+
+### Fixed
+- [New version popup hidden behind splash-screen](https://github.com/christophe-calmejane/Hive/issues/49)
+- Possible crash when powering-up a device
+- Possible crash when using _macOS native interface_ with a Milan compatible device
+
+## [1.0.9] - 2019-02-02
+### Added
 - Support for _Locking/Unlocking_ an entity
 - Detection and display of _Milan compatible_ devices
 - Device details dialog for easy access to basic device and device channel configuration
@@ -15,6 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
 - Possibility to connect a non-redundant stream to a redundant one (one of the pair)
 - Milan GetStreamInfo extended information
+- Milan StreamOutput counters
 - Detection of devices not supporting _Acquire_ and/or _Lock_ commands
 - Display of the current dynamic mappings without having to edit them, in StreamPort descriptor
 - Button to clear all dynamic mappings in StreamPort descriptor
@@ -42,6 +63,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Partial deadlock (in background tasks) when editing channel mappings, sometimes leading to the impossibility to apply the mappings
 - Possible crash upon loading after having changed ProtocolInterface and/or NetworkInterface multiple times
 - _Current Stream Format_ field not properly refreshed
+- EntityID column always displayed (instead of the Logo column)
+- [Entity logo scaled to fit](https://github.com/christophe-calmejane/Hive/issues/48)
 
 ## [1.0.8] - 2018-10-30
 ### Fixed

@@ -51,7 +51,7 @@ public:
 	virtual void setValue(Setting const& name, QVariant const& value, Observer const* const dontNotifyObserver = nullptr) noexcept = 0;
 	virtual QVariant getValue(Setting const& name) const noexcept = 0;
 
-	virtual void registerSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
+	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification = true) noexcept = 0;
 	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
 	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
 

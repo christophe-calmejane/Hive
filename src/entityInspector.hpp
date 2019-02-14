@@ -24,7 +24,6 @@
 #include "controlledEntityTreeWidget.hpp"
 #include "nodeTreeWidget.hpp"
 
-#include "avdecc/controllerManager.hpp"
 
 class EntityInspector : public QWidget
 {

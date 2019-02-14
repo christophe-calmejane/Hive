@@ -18,14 +18,14 @@
 */
 
 #include "connectionMatrix/headerView.hpp"
-#include "connectionMatrix/model.hpp"
-
+#include "connectionMatrix/headerItem.hpp"
 #include "avdecc/helper.hpp"
 
 #include <QPainter>
 #include <QMouseEvent>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+Q_DECLARE_METATYPE(connectionMatrix::HeaderItem::RelativeParentIndex)
 
 namespace connectionMatrix
 {
@@ -313,11 +313,23 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 	for (auto childIndex = 0; childIndex < childrenCount; ++childIndex)
 	{
 		auto const index = logicalIndex + 1 + childIndex;
+		auto relativeParentIndex = model()->headerData(index, orientation(), Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
 
-		_sectionState[index].isExpanded = isExpanded;
-		_sectionState[index].isVisible = isExpanded;
+		if (relativeParentIndex)
+		{
+			auto subSectionParentIndex = index + *relativeParentIndex;
+			auto subSectionIsVisible = isExpanded;
 
-		updateSectionVisibility(index);
+			if (isExpanded)
+			{
+				// Sub-section is visible only if its parent is expanded
+				subSectionIsVisible = _sectionState[subSectionParentIndex].isExpanded;
+			}
+
+			_sectionState[index].isVisible = subSectionIsVisible;
+
+			updateSectionVisibility(index);
+		}
 	}
 }
 
