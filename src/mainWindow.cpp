@@ -338,7 +338,7 @@ void MainWindow::connectSignals()
 						getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
 					}
 					{
-						clearErrorFlags = menu.addAction("Clear Error Flags");
+						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
 					}
 				}
 

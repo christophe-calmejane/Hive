@@ -68,7 +68,7 @@ public:
 		{
 		public:
 			ClearCounterVisitor(ControllerManager& manager, ErrorCounterTracker& errorCounterTracker)
-				: _manager{ manager}
+				: _manager{ manager }
 				, _errorCounterTracker{ errorCounterTracker }
 			{
 			}
@@ -94,7 +94,7 @@ public:
 
 	public:
 		ErrorCounterTracker()
-			: ErrorCounterTracker{la::avdecc::UniqueIdentifier::getNullUniqueIdentifier()}
+			: ErrorCounterTracker{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() }
 		{
 		}
 
