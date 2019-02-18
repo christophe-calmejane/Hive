@@ -115,7 +115,7 @@ public:
 	};
 
 	VirtualNodeItem(la::avdecc::controller::model::VirtualNode const* node, QString const& name)
-		: NodeItem{ Kind::VirtualNode, node->descriptorType, node->virtualIndex, name }
+		: NodeItem{ Kind::VirtualNode, node->descriptorType, static_cast<la::avdecc::entity::model::DescriptorIndex>(node->virtualIndex), name }
 	{
 	}
 
@@ -410,7 +410,7 @@ private:
 		}
 		else
 		{
-			static_assert(false, "Invalid base type");
+			AVDECC_ASSERT(false, "if constexpr not handled");
 		}
 
 		// Store the node inside the item
