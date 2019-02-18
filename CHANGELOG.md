@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Display entities' media clock master id and name in the entity list
+- Media clock management dialog for easy setup/status access of media clock distribution
+- Support for media clock master determination
+- Support for media clock distribution handling, incl. entity clock source configuration and CRF stream connection establishment
 
 ## [1.0.11] - 2019-02-14
 ### Added
@@ -30,8 +35,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Support for _Locking/Unlocking_ an entity
 - Detection and display of _Milan compatible_ devices
-- Media clock management dialog for easy setup/status access of media clock distribution
-- Support for media clock distribution handling, incl. entity clock source configuration and CRF stream connection establishment
 - Display of _AS Path_ in AVB Interface descriptor
 - Display of the AVB Interface _link status_ (when available)
 - Button to disconnect (unbind) a _ghost talker_ from Stream Input descriptor
@@ -51,10 +54,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Icon when an entity is acquired by Hive (changed color from orange to green)
 - Changed the colors in the Connection Matrix (see Legend)
 - Logger configuration menus does not close automatically
-
-### Added
-- Display entities' media clock master id and name in the entity list
-- Support for media clock master determination
 
 ### Fixed
 - Upload firmware progression always set to 100% upon successfull completion
