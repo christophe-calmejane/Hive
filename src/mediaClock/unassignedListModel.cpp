@@ -85,16 +85,17 @@ void UnassignedListModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MC
 	Q_Q(UnassignedListModel);
 	q->beginResetModel();
 	_entities.clear();
-	q->endResetModel();
 
 	// code for list model
 	for (auto const& entityDomainKV : domains.getEntityMediaClockMasterMappings())
 	{
-		if (entityDomainKV.second.empty())
-		{ // empty means unassigned
+		if (entityDomainKV.second.empty() && !avdecc::mediaClock::MCDomainManager::getInstance().isSingleAudioListener(entityDomainKV.first))
+		{
+			// empty means unassigned 
 			_entities.append(entityDomainKV.first);
 		}
 	}
+	q->endResetModel();
 }
 
 /**
@@ -124,9 +125,12 @@ void UnassignedListModelPrivate::removeEntity(la::avdecc::UniqueIdentifier const
 	Q_Q(UnassignedListModel);
 	int rowIndex = _entities.indexOf(entityId);
 
-	q->beginRemoveRows(QModelIndex(), rowIndex, rowIndex);
-	_entities.removeAt(rowIndex);
-	q->endRemoveRows();
+	if (rowIndex != -1)
+	{
+		q->beginRemoveRows(QModelIndex(), rowIndex, rowIndex);
+		_entities.removeAt(rowIndex);
+		q->endRemoveRows();
+	}
 }
 
 /**
@@ -285,6 +289,5 @@ QList<la::avdecc::UniqueIdentifier> UnassignedListModel::getAllItems() const
 	Q_D(const UnassignedListModel);
 	return d->getAllItems();
 }
-
 
 #include "unassignedListModel.moc"

@@ -105,8 +105,20 @@
                 <height>50</height>
                </size>
               </property>
+              <property name="styleSheet">
+               <string notr="true"/>
+              </property>
               <property name="text">
-               <string>&lt;-</string>
+               <string>arrow_back</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="flat">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -118,8 +130,20 @@
                 <height>50</height>
                </size>
               </property>
+              <property name="styleSheet">
+               <string notr="true"/>
+              </property>
               <property name="text">
-               <string>-&gt;</string>
+               <string>arrow_forward</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="flat">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
@@ -156,7 +180,7 @@
                </sizepolicy>
               </property>
               <property name="selectionMode">
-               <enum>QAbstractItemView::MultiSelection</enum>
+               <enum>QAbstractItemView::ExtendedSelection</enum>
               </property>
              </widget>
             </item>
@@ -252,6 +276,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../resources/main.qrc"/>
+ </resources>
  <connections/>
 </ui>

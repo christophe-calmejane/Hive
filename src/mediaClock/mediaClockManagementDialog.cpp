@@ -21,6 +21,7 @@
 
 #include <QPushButton>
 #include <QMenu>
+#include <QMessageBox>
 
 #include "ui_mediaClockManagementDialog.h"
 #include "internals/config.hpp"
@@ -42,7 +43,7 @@ public:
 	* Fills the models.
 	* Sets up connections to handle ui signals.
 	*/
-	MediaClockManagementDialogImpl(::MediaClockManagementDialog* parent)
+	MediaClockManagementDialogImpl(::MediaClockManagementDialog* parent) : _hasChanges(false)
 	{
 		// Link UI
 		setupUi(parent);
@@ -50,6 +51,11 @@ public:
 		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
 		auto domains = mediaClockManager.createMediaClockDomainModel();
 
+		connect(&mediaClockManager, &avdecc::mediaClock::MCDomainManager::mediaClockConnectionsUpdate, this, &MediaClockManagementDialogImpl::mediaClockConnectionsUpdate);
+		
+		auto& controllerManager = avdecc::ControllerManager::getInstance();
+		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &MediaClockManagementDialogImpl::entityOffline);
+		
 		treeViewMediaClockDomains->setModel(&_domainTreeModel);
 		auto* delegateDomainEntity = new SampleRateDomainDelegate(treeViewMediaClockDomains);
 		treeViewMediaClockDomains->setItemDelegateForColumn(static_cast<int>(DomainTreeModelColumn::Domain), delegateDomainEntity);
@@ -63,6 +69,7 @@ public:
 		connect(treeViewMediaClockDomains->selectionModel(), &QItemSelectionModel::currentColumnChanged, &_domainTreeModel, &DomainTreeModel::handleClick);
 		connect(treeViewMediaClockDomains->selectionModel(), &QItemSelectionModel::currentRowChanged, &_domainTreeModel, &DomainTreeModel::handleClick);
 		_domainTreeModel.setMediaClockDomainModel(domains);
+		expandAllDomains();
 
 		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::Domain);
 		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::MediaClockMaster);
@@ -89,10 +96,25 @@ public:
 		connect(&_domainTreeModel, &DomainTreeModel::mcMasterSelectionChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
 		connect(&_domainTreeModel, &DomainTreeModel::triggerResizeColumns, this, &MediaClockManagementDialogImpl::resizeMCTreeViewColumns);
 
+		treeViewMediaClockDomains->setCurrentIndex(_domainTreeModel.index(-1, -1)); // set selection index to invalid intitally
 		button_AssignToDomain->setEnabled(false);
 		button_RemoveAssignment->setEnabled(false);
 		button_Remove->setEnabled(false);
-		adjustButtonStates(false);
+		adjustButtonStates();
+
+		QFont font("Material Icons");
+		font.setBold(true);
+		font.setStyleStrategy(QFont::PreferQuality);
+		button_Remove->setFont(font);
+		button_Remove->setText("remove");
+
+		button_Add->setFont(font);
+		button_Add->setText("add");
+
+		button_RemoveAssignment->setFont(font);
+		button_RemoveAssignment->setText("arrow_forward");
+		button_AssignToDomain->setFont(font);
+		button_AssignToDomain->setText("arrow_back");
 	}
 
 	/**
@@ -111,7 +133,8 @@ public:
 			}
 		}
 
-		adjustButtonStates(true);
+		_hasChanges = true;
+		adjustButtonStates();
 	}
 
 	/**
@@ -133,7 +156,8 @@ public:
 		}
 		_domainTreeModel.removeEntity(*entityDomainInfo.first, entityDomainInfo.second);
 
-		adjustButtonStates(true);
+		_hasChanges = true;
+		adjustButtonStates();
 	}
 
 	/**
@@ -144,7 +168,8 @@ public:
 	{
 		_domainTreeModel.addNewDomain();
 
-		adjustButtonStates(true);
+		_hasChanges = true;
+		adjustButtonStates();
 	}
 
 	/**
@@ -162,7 +187,8 @@ public:
 			_unassignedListModel.addEntity(entityId);
 		}
 
-		adjustButtonStates(true);
+		_hasChanges = true;
+		adjustButtonStates();
 	}
 
 	/**
@@ -180,7 +206,8 @@ public:
 			_unassignedListModel.addEntity(entityId);
 		}
 
-		adjustButtonStates(true);
+		_hasChanges = true;
+		adjustButtonStates();
 	}
 
 	/**
@@ -189,7 +216,8 @@ public:
 	*/
 	Q_SLOT void button_ApplyChangesClicked()
 	{
-		adjustButtonStates(false);
+		_hasChanges = false;
+		adjustButtonStates();
 
 		auto mediaClockMappings = _domainTreeModel.createMediaClockMappings();
 		auto unassignedEntities = _unassignedListModel.getAllItems();
@@ -209,7 +237,8 @@ public:
 	*/
 	Q_SLOT void button_DiscardChangesClicked()
 	{
-		adjustButtonStates(false);
+		_hasChanges = false;
+		adjustButtonStates();
 
 		// read out again:
 		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
@@ -218,6 +247,7 @@ public:
 		// setup the models:
 		_unassignedListModel.setMediaClockDomainModel(domains);
 		_domainTreeModel.setMediaClockDomainModel(domains);
+		expandAllDomains();
 	}
 
 	/**
@@ -254,7 +284,8 @@ public:
 	*/
 	Q_SLOT void handleDomainTreeDataChanged()
 	{
-		adjustButtonStates(true);
+		_hasChanges = true;
+		adjustButtonStates();
 	}
 
 	/**
@@ -266,14 +297,62 @@ public:
 		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::MediaClockMaster);
 	}
 
+	/*
+	* When an entity goes offline while in the dialog it is removed from the models.
+	*/
+	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier entityId)
+	{
+		_unassignedListModel.removeEntity(entityId);
+		_domainTreeModel.removeEntity(entityId);
+	}
+
+	/*
+	* Whenever the media clock mappings change while this dialog doesn't have unapplied user changes,
+	* the model is updated.
+	*/
+	Q_SLOT void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds)
+	{
+		if (!_hasChanges)
+		{
+			// read out again:
+			auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
+			auto domains = mediaClockManager.createMediaClockDomainModel();
+
+			// setup the models:
+			_unassignedListModel.setMediaClockDomainModel(domains);
+			_domainTreeModel.setMediaClockDomainModel(domains);
+			expandAllDomains();
+		}
+	}
+
+	/**
+	* Gets the has changes state.
+	*/
+	bool hasChanges() const
+	{
+		return _hasChanges;
+	}
+
 	/**
 	* Enables or disables the apply and discard buttons.
 	* @param enabled Set button the given state.
 	*/
-	void adjustButtonStates(bool enabled)
+	void adjustButtonStates()
 	{
-		button_ApplyChanges->setEnabled(enabled);
-		button_DiscardChanges->setEnabled(enabled);
+		button_ApplyChanges->setEnabled(_hasChanges);
+		button_DiscardChanges->setEnabled(_hasChanges);
+	}
+
+	/**
+	* Expands every item in the domain tree view.
+	*/
+	void expandAllDomains()
+	{
+		auto const& indexes = _domainTreeModel.match(_domainTreeModel.index(0, 0), Qt::DisplayRole, "*", -1, Qt::MatchWildcard | Qt::MatchRecursive);
+		for (auto const& index : indexes)
+		{
+			treeViewMediaClockDomains->expand(index);
+		}
 	}
 
 	/**
@@ -305,12 +384,14 @@ public:
 				_unassignedListModel.removeEntity(entityId);
 			}
 		}
-		adjustButtonStates(true);
+		_hasChanges = true;
+		adjustButtonStates();
 	}
 
 private:
 	DomainTreeModel _domainTreeModel;
 	UnassignedListModel _unassignedListModel;
+	bool _hasChanges;
 };
 
 /**
@@ -331,4 +412,17 @@ MediaClockManagementDialog::MediaClockManagementDialog(QWidget* parent)
 MediaClockManagementDialog::~MediaClockManagementDialog() noexcept
 {
 	delete _pImpl;
+}
+
+void MediaClockManagementDialog::reject()
+{
+	QMessageBox::StandardButton resBtn = QMessageBox::Yes;
+	if (_pImpl->hasChanges())
+	{
+		resBtn = (QMessageBox::StandardButton)QMessageBox::question(this, "",
+			"You have unapplied changes that will be discarded. Continue?\n", QMessageBox::Yes, QMessageBox::No);
+	}
+	if (resBtn == QMessageBox::Yes) {
+		QDialog::reject();
+	}
 }

@@ -126,6 +126,7 @@ public:
 	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
 	void removeEntity(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
 	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);
 	QList<la::avdecc::UniqueIdentifier> removeAllDomains();

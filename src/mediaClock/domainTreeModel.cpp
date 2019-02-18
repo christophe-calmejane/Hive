@@ -71,6 +71,7 @@ public:
 	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
 	void removeEntity(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
 	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);
 	QList<la::avdecc::UniqueIdentifier> removeAllDomains();
@@ -310,6 +311,22 @@ void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const&
 		domainItem->domain().setMediaClockDomainMaster(la::avdecc::UniqueIdentifier());
 	}
 	domainItem->reevaluateDomainSampleRate();
+}
+
+/**
+* Removes an entity in the whole tree.
+* @param entityId	 Id of the entity to remove.
+*/
+void DomainTreeModelPrivate::removeEntity(la::avdecc::UniqueIdentifier const& entityId)
+{
+	Q_Q(DomainTreeModel);
+
+	QList<DomainTreeItem*> domainsToRemoveFrom = _rootItem->findDomainsWithEntity(entityId);
+
+	for (auto const& domainToRemoveFrom : domainsToRemoveFrom)
+	{
+		removeEntity(domainToRemoveFrom->domain().getDomainIndex(), entityId);
+	}
 }
 
 /**
@@ -783,6 +800,16 @@ void DomainTreeModel::removeEntity(avdecc::mediaClock::DomainIndex const& domain
 {
 	Q_D(DomainTreeModel);
 	d->removeEntity(domainIndex, entityId);
+}
+
+/**
+* Removes an entity from the tree.
+* @param entityId	 Id of the entity to remove.
+*/
+void DomainTreeModel::removeEntity(la::avdecc::UniqueIdentifier const& entityId)
+{
+	Q_D(DomainTreeModel);
+	d->removeEntity(entityId);
 }
 
 /**

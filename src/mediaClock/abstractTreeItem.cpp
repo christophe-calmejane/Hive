@@ -19,6 +19,7 @@
 
 #include "abstracttreeitem.hpp"
 #include "domaintreeitem.hpp"
+#include "entityTreeItem.hpp"
 
 /**
 * Constructor.
@@ -135,4 +136,24 @@ DomainTreeItem* RootTreeItem::findDomainWithIndex(avdecc::mediaClock::DomainInde
 		}
 	}
 	return nullptr;
+}
+
+QList<DomainTreeItem*> RootTreeItem::findDomainsWithEntity(la::avdecc::UniqueIdentifier entityId)
+{
+	QList<DomainTreeItem*> result;
+	for (auto* item : m_childItems)
+	{
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(item);
+		for (int i = 0; i < domainTreeItem->childCount(); i++)
+		{
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
+			
+			if (entityTreeItem->entityId() == entityId)
+			{
+				result.append(domainTreeItem);
+				break;
+			}
+		}
+	}
+	return result;
 }
