@@ -307,6 +307,7 @@ void MainWindow::connectSignals()
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* deviceView{ static_cast<QAction*>(nullptr) };
+				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
 
 				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
@@ -367,6 +368,9 @@ void MainWindow::connectSignals()
 						getLogo = menu.addAction("Retrieve Entity Logo");
 						getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
 					}
+					{
+						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
+					}
 				}
 
 				menu.addSeparator();
@@ -415,6 +419,10 @@ void MainWindow::connectSignals()
 							{
 								dialog->deleteLater();
 							});
+					}
+					else if (action == clearErrorFlags)
+					{
+						manager.clearAllStreamInputCounterValidFlags(entityID);
 					}
 				}
 			}

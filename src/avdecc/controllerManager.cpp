@@ -35,15 +35,76 @@ public:
 	using SharedController = std::shared_ptr<la::avdecc::controller::Controller>;
 	using SharedConstController = std::shared_ptr<la::avdecc::controller::Controller const>;
 
-	struct ErrorCounterTracker : public la::avdecc::controller::model::EntityModelVisitor
+	class ErrorCounterTracker
 	{
-	public:
-		ErrorCounterTracker(la::avdecc::controller::ControlledEntity const* const entity = nullptr)
+		class InitCounterVisitor : public la::avdecc::controller::model::EntityModelVisitor
 		{
-			// Initialize counters by visiting the entity
-			if (entity)
+		public:
+			InitCounterVisitor(ErrorCounterTracker& errorCounterTracker)
+				: _errorCounterTracker{ errorCounterTracker }
 			{
-				entity->accept(this);
+			}
+
+		protected:
+			// la::avdecc::controller::model::EntityModelVisitor overrides
+			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+			{
+				for (auto const& counterKV : node.dynamicModel->counters)
+				{
+					auto const& flag = counterKV.first;
+					auto const& counter = counterKV.second;
+
+					// Initialize internal counter value
+					auto& errorCounter = _errorCounterTracker._streamInputCounter[node.descriptorIndex];
+					errorCounter.counters[flag] = counter;
+				}
+			}
+
+		private:
+			ErrorCounterTracker& _errorCounterTracker;
+		};
+
+		class ClearCounterVisitor : public la::avdecc::controller::model::EntityModelVisitor
+		{
+		public:
+			ClearCounterVisitor(ControllerManager& manager, ErrorCounterTracker& errorCounterTracker)
+				: _manager{ manager }
+				, _errorCounterTracker{ errorCounterTracker }
+			{
+			}
+
+		protected:
+			// la::avdecc::controller::model::EntityModelVisitor overrides
+			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+			{
+				auto& errorCounter = _errorCounterTracker._streamInputCounter[node.descriptorIndex];
+
+				if (!errorCounter.flags.empty())
+				{
+					errorCounter.flags.clear();
+
+					/*emit*/ _manager.streamInputErrorCounterChanged(entity->getEntity().getEntityID(), node.descriptorIndex, errorCounter.flags);
+				}
+			}
+
+		private:
+			ControllerManager& _manager;
+			ErrorCounterTracker& _errorCounterTracker;
+		};
+
+	public:
+		ErrorCounterTracker()
+			: ErrorCounterTracker{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() }
+		{
+		}
+
+		ErrorCounterTracker(la::avdecc::UniqueIdentifier const& entityID)
+			: _entityID{ entityID }
+		{
+			InitCounterVisitor visitor{ *this };
+			if (auto entity = ControllerManager::getInstance().getControlledEntity(_entityID))
+			{
+				entity->accept(&visitor);
 			}
 		}
 
@@ -98,21 +159,20 @@ public:
 			return false;
 		}
 
-		// la::avdecc::controller::model::EntityModelVisitor overrides
-		virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept
+		// Clear all the error flags for all streams
+		void clearAllStreamInputCounters()
 		{
-			for (auto const& counterKV : node.dynamicModel->counters)
+			auto& manager = ControllerManager::getInstance();
+			ClearCounterVisitor visitor{ manager, *this };
+			if (auto entity = manager.getControlledEntity(_entityID))
 			{
-				auto const& flag = counterKV.first;
-				auto const& counter = counterKV.second;
-
-				// Initialize internal counter value
-				auto& errorCounter = _streamInputCounter[node.descriptorIndex];
-				errorCounter.counters[flag] = counter;
+				entity->accept(&visitor);
 			}
 		}
 
 	private:
+		la::avdecc::UniqueIdentifier _entityID{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() };
+
 		struct ErrorCounter
 		{
 			la::avdecc::entity::StreamInputCounterValidFlags flags; // per flag state 1: error, 0: clear
@@ -226,7 +286,7 @@ private:
 	virtual void onEntityOnline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
-		_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entity };
+		_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
 		emit entityOnline(entityID);
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
@@ -518,7 +578,7 @@ private:
 		return {};
 	}
 
-	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept
+	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept override
 	{
 		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
 		{
@@ -527,6 +587,14 @@ private:
 				auto const flags = errorCounterTracker->getStreamInputCounterValidFlags(streamIndex);
 				emit streamInputErrorCounterChanged(entityID, streamIndex, flags);
 			}
+		}
+	}
+
+	virtual void clearAllStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept override
+	{
+		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		{
+			errorCounterTracker->clearAllStreamInputCounters();
 		}
 	}
 
