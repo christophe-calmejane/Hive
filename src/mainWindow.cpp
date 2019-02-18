@@ -492,6 +492,11 @@ void MainWindow::connectSignals()
 		{
 			LOG_HIVE_WARN("Failed to check for new version: " + reason);
 		});
+
+#ifdef DEBUG
+	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, this };
+	connect(refreshController, &QShortcut::activated, this, &MainWindow::currentControllerChanged);
+#endif
 }
 
 void MainWindow::showChangeLog(QString const title, QString const versionString)
