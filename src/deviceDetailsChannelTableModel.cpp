@@ -246,7 +246,7 @@ void DeviceDetailsChannelTableModelPrivate::addNode(avdecc::ConnectionInformatio
 {
 	Q_Q(DeviceDetailsChannelTableModel);
 
-	q->beginInsertRows(QModelIndex(), _nodes.size(), _nodes.size());
+	q->beginInsertRows(QModelIndex(), static_cast<int>(_nodes.size()), static_cast<int>(_nodes.size()));
 	_nodes.push_back(TableRowEntry(connectionInformation));
 	q->endInsertRows();
 }
@@ -305,7 +305,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 		{
 			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation.sourceEntityId, node.connectionInformation.sourceConfigurationIndex.value(), node.connectionInformation.sourceAudioUnitIndex.value(), node.connectionInformation.sourceStreamPortIndex.value(), node.connectionInformation.sourceClusterIndex.value(), node.connectionInformation.sourceBaseCluster.value(), node.connectionInformation.sourceClusterChannel);
 			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
-			auto end = q->index(_nodes.size(), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+			auto end = q->index(static_cast<int>(_nodes.size()), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
 			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
 			//break;
 		}
