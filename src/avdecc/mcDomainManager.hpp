@@ -64,7 +64,7 @@ public:
 	void append(AsyncCommand command);
 	void append(std::vector<AsyncCommand> commands);
 
-	int parallelCommandCount() const noexcept;
+	size_t parallelCommandCount() const noexcept;
 	void exec() noexcept;
 
 	void invokeCommandCompleted(int commandIndex, CommandExecutionError error) noexcept;

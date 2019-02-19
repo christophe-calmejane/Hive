@@ -397,7 +397,7 @@ private:
 					}
 				}
 			}
-			catch (la::avdecc::controller::ControlledEntity::Exception const& e)
+			catch (la::avdecc::controller::ControlledEntity::Exception)
 			{
 				keepSearching = false;
 				break;
@@ -674,8 +674,8 @@ private:
 	*/
 	bool checkMcMasterOfEntityChanged(std::vector<avdecc::mediaClock::DomainIndex> oldEntityDomainMapping, std::vector<avdecc::mediaClock::DomainIndex> newEntityDomainMapping, std::unordered_map<DomainIndex, MCDomain> oldMcDomains, std::unordered_map<DomainIndex, MCDomain> newMcDomains) noexcept
 	{
-		int const sizeOldDomainIndexes = oldEntityDomainMapping.size();
-		int const sizeNewDomainIndexes = newEntityDomainMapping.size();
+		auto sizeOldDomainIndexes = oldEntityDomainMapping.size();
+		auto sizeNewDomainIndexes = newEntityDomainMapping.size();
 		if (sizeOldDomainIndexes > 0 && sizeNewDomainIndexes > 0)
 		{
 			if (oldMcDomains.count(oldEntityDomainMapping.at(0)) && newMcDomains.count(newEntityDomainMapping.at(0)))
@@ -933,7 +933,7 @@ private:
 					}
 				}
 			}
-			catch (la::avdecc::controller::ControlledEntity::Exception const& e)
+			catch (la::avdecc::controller::ControlledEntity::Exception)
 			{
 			}
 		}
@@ -1681,7 +1681,7 @@ MCEntityDomainMapping::Errors& MCEntityDomainMapping::getEntityMcErrors() noexce
 /**
 * Gets the count of commands.
 */
-int AsyncParallelCommandSet::parallelCommandCount() const noexcept
+size_t AsyncParallelCommandSet::parallelCommandCount() const noexcept
 {
 	return _commands.size();
 }
@@ -1717,7 +1717,7 @@ void AsyncParallelCommandSet::invokeCommandCompleted(int commandIndex, CommandEx
 	{
 		case CommandExecutionError::Timeout:
 			// try again once
-			if (!_commandTimeoutCounter.at(commandIndex) >= 1)
+			if (_commandTimeoutCounter.at(commandIndex) >= 1)
 			{
 				_errorOccured = true;
 				_commandCompletionCounter++;
