@@ -307,7 +307,6 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 			auto end = q->index(static_cast<int>(_nodes.size()), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
 			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
-			//break;
 		}
 		else
 		{
@@ -375,26 +374,12 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 	}
 	switch (column)
 	{
-		/*case DeviceDetailsChannelTableModelColumn::ChannelNumber:
-		if (role == Qt::FontRole) {
-			QFont font;
-			return font;
-		}
-		else if (role == Qt::DisplayRole) {
-			return _nodes.at(index.row()).first.descriptorIndex;
-		}*/
 		case DeviceDetailsChannelTableModelColumn::ChannelName:
 		{
 			bool hasChanges = false;
 			if (_hasChangesMap.contains(_nodes.at(index.row()).connectionInformation.sourceClusterIndex.value()) && _hasChangesMap.value(_nodes.at(index.row()).connectionInformation.sourceClusterIndex.value())->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
 			{
 				hasChanges = true;
-			}
-			if (role == Qt::FontRole && hasChanges)
-			{
-				/*QFont font;
-				font.setItalic(true);
-				return font;*/
 			}
 			else if (role == Qt::DisplayRole || role == Qt::EditRole)
 			{
@@ -487,7 +472,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 		{
 			if (role == Qt::DisplayRole)
 			{
-				//return _nodes.at(index.row()).;
+				// handled inside the delegate
 				return QVariant();
 			}
 		}
