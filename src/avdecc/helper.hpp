@@ -57,9 +57,9 @@ QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type 
 
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
 
-QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node);
+QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept;
 template<class NodeType>
-QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, NodeType const& node)
+QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, NodeType const& node) noexcept
 {
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
