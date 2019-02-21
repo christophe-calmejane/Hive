@@ -137,7 +137,7 @@
   </action>
   <action name="actionMediaClockManagement">
    <property name="text">
-    <string>Media Clock management...</string>
+    <string>Media Clock Management...</string>
    </property>
   </action>
   <action name="actionOpenProjectWebPage">
