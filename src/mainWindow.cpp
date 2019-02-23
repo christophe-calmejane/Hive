@@ -224,7 +224,8 @@ void MainWindow::populateInterfaceComboBox()
 	la::avdecc::networkInterface::enumerateInterfaces(
 		[this](la::avdecc::networkInterface::Interface const& networkInterface)
 		{
-			if (networkInterface.type != la::avdecc::networkInterface::Interface::Type::Loopback && networkInterface.isActive)
+			// Only display Ethernet interfaces
+			if (networkInterface.type == la::avdecc::networkInterface::Interface::Type::Ethernet && networkInterface.isActive)
 			{
 				_interfaceComboBox.addItem(QString::fromStdString(networkInterface.alias), QString::fromStdString(networkInterface.name));
 			}

@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Only displaying _Ethernet_ kind interfaces
+- Displaying the type of ethernet adapter on macOS
 
 ## [1.0.11] - 2019-02-14
 ### Added
