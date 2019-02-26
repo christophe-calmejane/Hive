@@ -22,6 +22,7 @@
 #include <QCoreApplication>
 #include <QLayout>
 #include <QStringListModel>
+#include <QMessageBox>
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
@@ -216,7 +217,7 @@ public:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		const QSignalBlocker blocker(comboBoxConfiguration);
-		comboBoxConfiguration->addItem(node.dynamicModel->objectName.data(), node.descriptorIndex);
+		comboBoxConfiguration->addItem(avdecc::helper::configurationName(controlledEntity, node), node.descriptorIndex);
 
 		// relevant Node:
 		if (node.dynamicModel->isActiveConfiguration && !_activeConfigurationIndex)
@@ -631,7 +632,7 @@ private:
 * Constructor.
 */
 DeviceDetailsDialog::DeviceDetailsDialog(QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 	, _pImpl(new DeviceDetailsDialogImpl(this))
 {
 }
@@ -655,6 +656,11 @@ void DeviceDetailsDialog::setControlledEntityID(la::avdecc::UniqueIdentifier con
 		return;
 	}
 	_controlledEntityID = entityID;
+
+
+	auto& manager = avdecc::ControllerManager::getInstance();
+	auto controlledEntity = manager.getControlledEntity(_controlledEntityID);
+
 	_pImpl->loadCurrentControlledEntity(_controlledEntityID, false);
 }
 //#include "deviceDetailsDialog.moc"

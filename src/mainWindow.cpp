@@ -277,14 +277,18 @@ void MainWindow::connectSignals()
 			auto const entityID = _controllerModel->controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
-			DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
-			dialog->setControlledEntityID(entityID);
-			dialog->show();
-			connect(dialog, &DeviceDetailsDialog::finished, this,
-				[this, dialog](int result)
+			auto const& entity = controlledEntity->getEntity();
+			if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			{
+				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+				dialog->setControlledEntityID(entityID);
+				dialog->show();
+				connect(dialog, &DeviceDetailsDialog::finished, this,
+					[this, dialog](int result)
 				{
 					dialog->deleteLater();
 				});
+			}
 		});
 
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
@@ -333,10 +337,6 @@ void MainWindow::connectSignals()
 						}
 					}
 				}
-				menu.addSeparator();
-				{
-					deviceView = menu.addAction("Device Details");
-				}
 				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
 				{
 					// Lock
@@ -361,7 +361,10 @@ void MainWindow::connectSignals()
 
 					menu.addSeparator();
 
-					// Inspect, Logo, ...
+					// Device Details, Inspect, Logo, ...
+					{
+						deviceView = menu.addAction("Device Details");
+					}
 					{
 						inspect = menu.addAction("Inspect");
 					}
