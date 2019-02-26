@@ -270,6 +270,7 @@ if [[ $hiveVersion == "" ]]; then
 	echo "Cannot detect project version"
 	exit 1
 fi
+hiveVersion="${hiveVersion//[$'\t\r\n']}"
 
 # Check if we have a release or devel version
 oldIFS="$IFS"

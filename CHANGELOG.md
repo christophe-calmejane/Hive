@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Media clock management dialog for easy setup/status access of media clock distribution
 - Support for media clock master determination
 - Support for media clock distribution handling, incl. entity clock source configuration and CRF stream connection establishment
+- Keyboard shortcut to refresh the controller (CTRL-R)
+
+### Changed
+- Only displaying _Ethernet_ kind interfaces
+- Displaying the type of ethernet adapter on macOS
 
 ## [1.0.11] - 2019-02-14
 ### Added
