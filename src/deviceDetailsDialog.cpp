@@ -87,27 +87,27 @@ public:
 		tableViewReceive->setModel(&_deviceDetailsChannelTableModelReceive);
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
 
-		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
-		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
-		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxConfigurationChanged);
-		connect(comboBox_PredefinedPT, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged);
-		connect(radioButton_PredefinedPT, &QRadioButton::clicked, this, &DeviceDetailsDialogImpl::radioButtonPredefinedPTClicked);
+		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &lineEditDeviceNameChanged);
+		connect(lineEditGroupName, &QLineEdit::textChanged, this, &lineEditGroupNameChanged);
+		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &comboBoxConfigurationChanged);
+		connect(comboBox_PredefinedPT, &QComboBox::currentTextChanged, this, &comboBoxPredefinedPTChanged);
+		connect(radioButton_PredefinedPT, &QRadioButton::clicked, this, &radioButtonPredefinedPTClicked);
 
-		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
-		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &tableDataChanged);
+		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &tableDataChanged);
 
-		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
-		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
+		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &applyChanges);
+		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &revertChanges);
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 
-		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
-		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &DeviceDetailsDialogImpl::streamConnectionChanged);
+		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &onEndAecpCommand);
+		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &streamConnectionChanged);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
-		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
-		connect(&manager, &avdecc::ControllerManager::entityGroupNameChanged, this, &DeviceDetailsDialogImpl::entityGroupNameChanged);
-		connect(&manager, &avdecc::ControllerManager::audioClusterNameChanged, this, &DeviceDetailsDialogImpl::audioClusterNameChanged);
+		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &entityNameChanged);
+		connect(&manager, &avdecc::ControllerManager::entityGroupNameChanged, this, &entityGroupNameChanged);
+		connect(&manager, &avdecc::ControllerManager::audioClusterNameChanged, this, &audioClusterNameChanged);
 	}
 
 	/**
@@ -244,7 +244,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, _previousConfigurationIndex.value(), audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 				}
@@ -257,7 +257,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, _previousConfigurationIndex.value(), audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
+					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 				}
@@ -330,7 +330,7 @@ public:
 	* @param entityID   The id of the entity that got updated.
 	* @param entityName The new name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
+	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
 	{
 		if (_entityID == entityID && (!_hasChangesMap.contains(lineEditDeviceName) || !_hasChangesMap[lineEditDeviceName]))
 		{
@@ -347,7 +347,7 @@ public:
 	* @param entityID		 The id of the entity that got updated.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::entityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName)
+	Q_SLOT void entityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName)
 	{
 		if (_entityID == entityID && (!_hasChangesMap.contains(lineEditGroupName) || !_hasChangesMap[lineEditGroupName]))
 		{
@@ -361,7 +361,7 @@ public:
 	* @param entityID		 The id of the entity that got updated.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::audioClusterNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+	Q_SLOT void audioClusterNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
 	{
 		_deviceDetailsChannelTableModelReceive.updateAudioClusterName(entityID, configurationIndex, audioClusterIndex, audioClusterName);
 		_deviceDetailsChannelTableModelTransmit.updateAudioClusterName(entityID, configurationIndex, audioClusterIndex, audioClusterName);
@@ -371,7 +371,7 @@ public:
 	* Invoked whenever a new item is selected in the configuration combo box.
 	* @param text The selected text.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::comboBoxConfigurationChanged(QString text)
+	Q_SLOT void comboBoxConfigurationChanged(QString text)
 	{
 		if (_activeConfigurationIndex != comboBoxConfiguration->currentData().toInt())
 		{
@@ -388,7 +388,7 @@ public:
 	* @param cmdType		The executed command type.
 	* @param commandStatus  The status of the command. 
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const commandStatus)
+	Q_SLOT void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const commandStatus)
 	{
 		// TODO propably show message when a command failed.
 
@@ -416,10 +416,10 @@ public:
 	}
 
 	/**
-	* 
-	* @param entityName The new group name.
+	* Updates the table models on stream connection changes.
+	* @param state The connection state.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
+	Q_SLOT void streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(state.listenerStream.entityID);
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(state.listenerStream.entityID);
@@ -434,7 +434,7 @@ public:
 	* Invoked whenever the entity name gets changed in the view.
 	* @param entityName The new group name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::lineEditDeviceNameChanged(QString const& entityName)
+	Q_SLOT void lineEditDeviceNameChanged(QString const& entityName)
 	{
 		setModifiedStyleOnWidget(lineEditDeviceName, true);
 		_hasChangesByUser = true;
@@ -445,7 +445,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::lineEditGroupNameChanged(QString const& entityGroupName)
+	Q_SLOT void lineEditGroupNameChanged(QString const& entityGroupName)
 	{
 		setModifiedStyleOnWidget(lineEditGroupName, true);
 		_hasChangesByUser = true;
@@ -456,7 +456,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged(QString text)
+	Q_SLOT void comboBoxPredefinedPTChanged(QString text)
 	{
 		if (radioButton_PredefinedPT->isChecked() && _userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
 		{
@@ -470,7 +470,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::radioButtonPredefinedPTClicked(bool state)
+	Q_SLOT void radioButtonPredefinedPTClicked(bool state)
 	{
 		if (state && _userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
 		{
@@ -484,7 +484,7 @@ public:
 	* Invoked whenever one of tables on the receive and transmit tabs is edited by the user.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::tableDataChanged()
+	Q_SLOT void tableDataChanged()
 	{
 		_hasChangesByUser = true;
 		updateButtonStates();
@@ -495,7 +495,7 @@ public:
 	* Writes all data via the avdecc::ControllerManager. The avdecc::ControllerManager::endAecpCommand signal is used
 	* to determine the state of the requested commands.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::applyChanges()
+	Q_SLOT void applyChanges()
 	{
 		_hasChangesByUser = false;
 		updateButtonStates();
@@ -524,7 +524,7 @@ public:
 			{
 				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
 				{
-					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, _activeConfigurationIndex.value(), e, rxChanges->value(f).toString());
+					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, *_activeConfigurationIndex, e, rxChanges->value(f).toString());
 					_expectedChanges++;
 				}
 			}
@@ -538,7 +538,7 @@ public:
 			{
 				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
 				{
-					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, _activeConfigurationIndex.value(), e, txChanges->value(f).toString());
+					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, *_activeConfigurationIndex, e, txChanges->value(f).toString());
 					_expectedChanges++;
 				}
 			}
@@ -573,7 +573,7 @@ public:
 		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
 		if (_previousConfigurationIndex != _activeConfigurationIndex)
 		{
-			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, _activeConfigurationIndex.value()); // this needs a handler to make it sequential.
+			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
 			_expectedChanges++;
 		}
 	}
@@ -611,14 +611,6 @@ private:
 			_hasChangesMap.insert(widget, false);
 		}
 		_hasChangesMap[widget] = modified;
-		/*if (modified)
-		{
-			widget->setStyleSheet("font-style: italic");
-		}
-		else
-		{
-			widget->setStyleSheet("");
-		}*/
 	}
 
 	void updateButtonStates()
