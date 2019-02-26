@@ -177,7 +177,7 @@ void DomainTreeItem::setDefaultMcMaster()
 	for (int i = 0; i < childCount(); i++)
 	{
 		auto* entity = static_cast<EntityTreeItem*>(childAt(i));
-		if (!entity->isEntitySingleAudioStreamListener())
+		if (entity->isMediaClockDomainManageableEntity())
 		{
 			domain().setMediaClockDomainMaster(entity->entityId());
 

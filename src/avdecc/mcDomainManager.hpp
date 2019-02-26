@@ -220,7 +220,7 @@ public:
 	virtual MCEntityDomainMapping createMediaClockDomainModel() noexcept = 0;
 	virtual void applyMediaClockDomainModel(MCEntityDomainMapping const& domains) noexcept = 0;
 	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier entityId) noexcept = 0;
-	virtual bool isSingleAudioListener(la::avdecc::UniqueIdentifier const& entityId) noexcept = 0;
+	virtual bool isMediaClockDomainManageable(la::avdecc::UniqueIdentifier const& entityId) noexcept = 0;
 
 	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds);
 	Q_SIGNAL void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> entityIds);

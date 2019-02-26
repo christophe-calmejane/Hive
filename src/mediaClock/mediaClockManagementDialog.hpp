@@ -44,7 +44,7 @@ public:
 	MediaClockManagementDialog& operator=(MediaClockManagementDialog const&) = delete;
 	MediaClockManagementDialog& operator=(MediaClockManagementDialog&&) = delete;
 
-	void reject();
+	void reject() override;
 
 private:
 	MediaClockManagementDialogImpl* _pImpl{ nullptr };

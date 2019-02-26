@@ -89,9 +89,9 @@ void UnassignedListModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MC
 	// code for list model
 	for (auto const& entityDomainKV : domains.getEntityMediaClockMasterMappings())
 	{
-		if (entityDomainKV.second.empty() && !avdecc::mediaClock::MCDomainManager::getInstance().isSingleAudioListener(entityDomainKV.first))
+		if (entityDomainKV.second.empty() && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainKV.first))
 		{
-			// empty means unassigned 
+			// empty means unassigned with the exception of entities that cannot be managed by MCMD in the first place
 			_entities.append(entityDomainKV.first);
 		}
 	}
@@ -178,7 +178,7 @@ QVariant UnassignedListModelPrivate::data(QModelIndex const& index, int role) co
 		return QVariant();
 
 	auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(_entities.at(index.row()));
-	return avdecc::helper::entityName(*controlledEntity);
+	return avdecc::helper::smartEntityName(*controlledEntity);
 }
 
 /**

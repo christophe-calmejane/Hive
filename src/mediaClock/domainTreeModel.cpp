@@ -296,7 +296,7 @@ void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const&
 	bool mcMasterEnabledEntitiesFound = false;
 	for (int i = 0; i < domainItem->childCount(); i++)
 	{
-		if (!static_cast<EntityTreeItem*>(domainItem->childAt(i))->isEntitySingleAudioStreamListener())
+		if (static_cast<EntityTreeItem*>(domainItem->childAt(i))->isMediaClockDomainManageableEntity())
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainItem->child(0));
 			domainItem->domain().setMediaClockDomainMaster(entityTreeItem->entityId());
@@ -362,7 +362,7 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeSelectedDomain
 	for (int i = 0; i < domainTreeItem->childCount(); i++)
 	{
 		auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
-		if (!entityTreeItem->isEntitySingleAudioStreamListener()) // via audio stream connected entities are not shown in the unassigned list.
+		if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
 		{
 			entities.append(entityTreeItem->entityId());
 		}
@@ -397,7 +397,7 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeAllDomains()
 		for (int j = 0; j < _rootItem->childAt(i)->childCount(); j++)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(_rootItem->childAt(i)->childAt(j));
-			if (!entityTreeItem->isEntitySingleAudioStreamListener()) // via audio stream connected entities are not shown in the unassigned list.
+			if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
 			{
 				entities.append(entityTreeItem->entityId());
 			}
@@ -449,9 +449,9 @@ void DomainTreeModelPrivate::handleClick(QModelIndex const& current, QModelIndex
 		if (entityTreeItem != nullptr)
 		{
 			auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
-			bool isEntitySingleAudioStreamListener = entityTreeItem->isEntitySingleAudioStreamListener();
+			bool isMediaClockDomainManageableEntity = entityTreeItem->isMediaClockDomainManageableEntity();
 			bool entityIsMCMaster = entityTreeItem->entityId() == parentDomainTreeItem->domain().getMediaClockDomainMaster();
-			if (!entityIsMCMaster && !isEntitySingleAudioStreamListener)
+			if (!entityIsMCMaster && isMediaClockDomainManageableEntity)
 			{
 				parentDomainTreeItem->domain().setMediaClockDomainMaster(entityTreeItem->entityId());
 				auto parentIndex = index(parentDomainTreeItem->row(), static_cast<int>(DomainTreeModelColumn::MediaClockMaster), QModelIndex());
@@ -559,9 +559,9 @@ QVariant DomainTreeModelPrivate::headerData(int section, Qt::Orientation orienta
 			switch (static_cast<DomainTreeModelColumn>(section))
 			{
 				case DomainTreeModelColumn::Domain:
-					return "";
+					return "Domains";
 				case DomainTreeModelColumn::MediaClockMaster:
-					return "MC Master";
+					return "Master";
 				default:
 					break;
 			}
@@ -1087,11 +1087,11 @@ void MCMasterSelectionDelegate::paint(QPainter* painter, QStyleOptionViewItem co
 		auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
 
 		bool entityIsMCMaster = entityTreeItem->entityId() == parentDomainTreeItem->domain().getMediaClockDomainMaster();
-		bool isEntitySingleAudioStreamListener = entityTreeItem->isEntitySingleAudioStreamListener();
+		bool isMediaClockDomainManageableEntity = entityTreeItem->isMediaClockDomainManageableEntity();
 
 		QRadioButton editor;
 		editor.setChecked(entityIsMCMaster);
-		editor.setEnabled(!isEntitySingleAudioStreamListener);
+		editor.setEnabled(isMediaClockDomainManageableEntity);
 		QPalette pal;
 		pal.setColor(QPalette::Background, Qt::transparent);
 		editor.setPalette(pal);

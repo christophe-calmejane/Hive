@@ -47,7 +47,7 @@ QString EntityTreeItem::entityName() const
 	auto const controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(m_entityID);
 	if (controlledEntity)
 	{
-		return avdecc::helper::entityName(*controlledEntity);
+		return avdecc::helper::smartEntityName(*controlledEntity);
 	}
 	return "";
 }
@@ -88,9 +88,10 @@ bool EntityTreeItem::isGPTPInSync() const
 }
 
 /**
-* Returns true if the entity is a single audio stream listener.
+* Returns true if the entity is managable in terms of media clocking setup.
+* The call is simply forwarded to the respective method in MCDomainManager.
 */
-bool EntityTreeItem::isEntitySingleAudioStreamListener() const
+bool EntityTreeItem::isMediaClockDomainManageableEntity() const
 {
-	return avdecc::mediaClock::MCDomainManager::getInstance().isSingleAudioListener(m_entityID);
+	return avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(m_entityID);
 }

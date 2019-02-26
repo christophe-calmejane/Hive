@@ -24,6 +24,7 @@
 #include <atomic>
 #include <optional>
 #include <unordered_set>
+
 namespace avdecc
 {
 namespace mediaClock
@@ -430,6 +431,12 @@ private:
 
 		for (auto const& entityId : _entities)
 		{
+			if (!isMediaClockDomainManagementCompatible(entityId))
+			{
+				// filter out the entities that do have aem support
+				continue;
+			}
+
 			std::vector<avdecc::mediaClock::DomainIndex> associatedDomains;
 
 			// get mc master if there is one.
@@ -644,9 +651,14 @@ private:
 	}
 
 	/**
-	* Checks if an entity is a "single audio stream listener". This implies that this entity gets it's clocking from the audio stream.
+	* Checks if an entity can not only be detected to belong to a mc domain,
+	* but can be actively handled as well (= be connected to a MC domain
+	* through stream connections, clock source modification, etc.).
+	* E.g. a device that only receives a single audio stream and gets its mediaclocking through this,
+	* it cannot be integrated into a MC domain by MCMD. Furthermore if a device has no AEM, it cannot
+	* be regarded in the first place.
 	*/
-	bool isSingleAudioListener(la::avdecc::UniqueIdentifier const& entityId) noexcept
+	bool isMediaClockDomainManagementCompatible(la::avdecc::UniqueIdentifier const& entityId) noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto const& controlledEntity = manager.getControlledEntity(entityId);
@@ -654,12 +666,48 @@ private:
 		{
 			return false;
 		}
+
+		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		{
+			// no AEM support means not managable
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	* Checks if an entity can not only be detected to belong to a mc domain,
+	* but can be actively handled as well (= be connected to a MC domain
+	* through stream connections, clock source modification, etc.).
+	* E.g. a device that only receives a single audio stream and gets its mediaclocking through this,
+	* it cannot be integrated into a MC domain by MCMD. Furthermore if a device has no AEM, it cannot
+	* be regarded in the first place.
+	*/
+	bool isMediaClockDomainManageable(la::avdecc::UniqueIdentifier const& entityId) noexcept
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto const& controlledEntity = manager.getControlledEntity(entityId);
+		if (!controlledEntity)
+		{
+			return false;
+		}
+
+		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		{
+			// no AEM support means not managable in the first place
+			return false;
+		}
+
 		auto const& activeConfiguration{ controlledEntity->getCurrentConfigurationNode() };
 		auto configuredClockSourceStreamIndex = getActiveInputClockStreamIndex(entityId);
 		if (configuredClockSourceStreamIndex)
 		{
-			return activeConfiguration.streamInputs.size() == 1 && activeConfiguration.streamInputs.count(*configuredClockSourceStreamIndex);
+			auto hasSingleInputStream = (activeConfiguration.streamInputs.size() == 1);
+			auto usesStreamInputAsClock = (activeConfiguration.streamInputs.count(*configuredClockSourceStreamIndex));
+			return !hasSingleInputStream || !usesStreamInputAsClock;
 		}
+
 		return false;
 	}
 
@@ -830,7 +878,7 @@ private:
 			if (!outputClockStreamIndexes.empty() && !inputClockStreamIndexes.empty())
 			{
 				// disconnect every connection (also redundant) that are used for clocking
-				for (int i = 0; i < outputClockStreamIndexes.size(); i++)
+				for (size_t i = 0; i < outputClockStreamIndexes.size(); i++)
 				{
 					if (i < inputClockStreamIndexes.size())
 					{
@@ -877,7 +925,7 @@ private:
 			if (!outputClockStreamIndexes.empty() && !inputClockStreamIndexes.empty())
 			{
 				// disconnect every connection (also redundant) that are used for clocking
-				for (int i = 0; i < outputClockStreamIndexes.size(); i++)
+				for (size_t i = 0; i < outputClockStreamIndexes.size(); i++)
 				{
 					if (i < inputClockStreamIndexes.size())
 					{
@@ -1743,7 +1791,7 @@ void AsyncParallelCommandSet::invokeCommandCompleted(int commandIndex, CommandEx
 			break;
 	}
 
-	if (_commandCompletionCounter >= _commands.size())
+	if (_commandCompletionCounter >= static_cast<int>(_commands.size()))
 	{
 		emit commandSetCompleted(_errorOccured);
 	}
@@ -1779,7 +1827,7 @@ void SequentialAsyncCommandExecuter::setCommandChain(std::vector<AsyncParallelCo
 */
 void SequentialAsyncCommandExecuter::start()
 {
-	if (_currentCommand < _commands.size())
+	if (_currentCommand < static_cast<int>(_commands.size()))
 	{
 		connect(_commands.at(_currentCommand), &AsyncParallelCommandSet::commandSetCompleted, this,
 			[this](bool error)

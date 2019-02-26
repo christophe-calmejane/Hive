@@ -43,7 +43,7 @@ public:
 	std::optional<QPair<la::avdecc::entity::model::SamplingRate, QString>> sampleRate() const;
 	bool isGPTPInSync() const;
 
-	bool isEntitySingleAudioStreamListener() const;
+	bool isMediaClockDomainManageableEntity() const;
 
 private:
 	la::avdecc::UniqueIdentifier m_entityID;

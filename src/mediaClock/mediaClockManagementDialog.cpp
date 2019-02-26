@@ -43,7 +43,8 @@ public:
 	* Fills the models.
 	* Sets up connections to handle ui signals.
 	*/
-	MediaClockManagementDialogImpl(::MediaClockManagementDialog* parent) : _hasChanges(false)
+	MediaClockManagementDialogImpl(::MediaClockManagementDialog* parent)
+		: _hasChanges(false)
 	{
 		// Link UI
 		setupUi(parent);
@@ -52,10 +53,10 @@ public:
 		auto domains = mediaClockManager.createMediaClockDomainModel();
 
 		connect(&mediaClockManager, &avdecc::mediaClock::MCDomainManager::mediaClockConnectionsUpdate, this, &MediaClockManagementDialogImpl::mediaClockConnectionsUpdate);
-		
+
 		auto& controllerManager = avdecc::ControllerManager::getInstance();
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &MediaClockManagementDialogImpl::entityOffline);
-		
+
 		treeViewMediaClockDomains->setModel(&_domainTreeModel);
 		auto* delegateDomainEntity = new SampleRateDomainDelegate(treeViewMediaClockDomains);
 		treeViewMediaClockDomains->setItemDelegateForColumn(static_cast<int>(DomainTreeModelColumn::Domain), delegateDomainEntity);
@@ -149,9 +150,10 @@ public:
 			// no entity selected.
 			return;
 		}
-		if (!avdecc::mediaClock::MCDomainManager::getInstance().isSingleAudioListener(entityDomainInfo.second))
+		if (avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainInfo.second))
 		{
-			// the entity is not added to the unassigned list if it doesn't have a clock source stream port.
+			// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.
+			// If an entity cannot be added to a domain, the user should not be presented with it and then confused why he cannot use it.
 			_unassignedListModel.addEntity(entityDomainInfo.second);
 		}
 		_domainTreeModel.removeEntity(*entityDomainInfo.first, entityDomainInfo.second);
@@ -398,7 +400,7 @@ private:
 * Constructor.
 */
 MediaClockManagementDialog::MediaClockManagementDialog(QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 	, _pImpl(new MediaClockManagementDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " Media Clock Management");
@@ -414,15 +416,19 @@ MediaClockManagementDialog::~MediaClockManagementDialog() noexcept
 	delete _pImpl;
 }
 
+/**
+* Overloaded method from QDialog that handles local MCMD changes that have not been applied
+* by querying the user if he is certain about closing the dialog, discarding his changes.
+*/
 void MediaClockManagementDialog::reject()
 {
 	QMessageBox::StandardButton resBtn = QMessageBox::Yes;
 	if (_pImpl->hasChanges())
 	{
-		resBtn = (QMessageBox::StandardButton)QMessageBox::question(this, "",
-			"You have unapplied changes that will be discarded. Continue?\n", QMessageBox::Yes, QMessageBox::No);
+		resBtn = (QMessageBox::StandardButton)QMessageBox::question(this, "", "You have unapplied changes that will be discarded. Continue?\n", QMessageBox::Yes, QMessageBox::No);
 	}
-	if (resBtn == QMessageBox::Yes) {
+	if (resBtn == QMessageBox::Yes)
+	{
 		QDialog::reject();
 	}
 }

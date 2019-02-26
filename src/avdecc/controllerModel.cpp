@@ -69,7 +69,7 @@ private:
 	// Slots for avdecc::mediaClock::MCDomainManager signals
 	Q_SLOT void mediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const changedEntities);
 	Q_SLOT void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const changedEntities);
-
+	
 	// Slots for EntityLogoCache signals
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
 

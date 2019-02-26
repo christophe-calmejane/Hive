@@ -147,7 +147,7 @@ QList<DomainTreeItem*> RootTreeItem::findDomainsWithEntity(la::avdecc::UniqueIde
 		for (int i = 0; i < domainTreeItem->childCount(); i++)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
-			
+
 			if (entityTreeItem->entityId() == entityId)
 			{
 				result.append(domainTreeItem);
