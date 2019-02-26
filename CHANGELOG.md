@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Device details dialog for easy access to basic device and device channel configuration
 - Support for end-to-end channel connection determination
+- Keyboard shortcut to refresh the controller (CTRL-R)
+
+### Changed
+- Only displaying _Ethernet_ kind interfaces
+- Displaying the type of ethernet adapter on macOS
 
 ## [1.0.11] - 2019-02-14
 ### Added

@@ -49,7 +49,7 @@ QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 	return toHexQString(identifier.getValue(), true, true);
 }
 
-QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node)
+QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
 {
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.descriptorIndex, node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
