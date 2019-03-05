@@ -178,6 +178,9 @@ QVariant UnassignedListModelPrivate::data(QModelIndex const& index, int role) co
 		return QVariant();
 
 	auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(_entities.at(index.row()));
+	if (!controlledEntity)
+		return QVariant();
+	
 	return avdecc::helper::smartEntityName(*controlledEntity);
 }
 
