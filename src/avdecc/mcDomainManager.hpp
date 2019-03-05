@@ -31,6 +31,28 @@ namespace avdecc
 {
 namespace mediaClock
 {
+enum class CommandExecutionError
+{
+	NoError,
+	LockedByOther,
+	AcquiredByOther,
+	EntityError,
+	CommandFailure,
+	NetworkIssue,
+	Timeout,
+	NoMediaClockOutputAvailable,
+	NoMediaClockInputAvailable,
+};
+
+struct CommandErrorInfo
+{
+	CommandExecutionError errorType;
+	std::optional<avdecc::ControllerManager::AcmpCommandType> commandTypeAcmp = std::nullopt;
+	std::optional<avdecc::ControllerManager::AecpCommandType> commandTypeAecp = std::nullopt;
+};
+
+using CommandExecutionErrors = std::unordered_multimap<la::avdecc::UniqueIdentifier, CommandErrorInfo, la::avdecc::UniqueIdentifier::hash>;
+
 // **************************************************************
 // class AsyncParallelCommandSet
 // **************************************************************
@@ -46,12 +68,6 @@ class AsyncParallelCommandSet : public QObject
 
 public:
 	using AsyncCommand = std::function<bool(AsyncParallelCommandSet* parentCommandSet, int commandIndex)>;
-	enum class CommandExecutionError
-	{
-		NoError,
-		Timeout,
-		CommandFailure,
-	};
 
 	static CommandExecutionError controlStatusToCommandError(la::avdecc::entity::ControllerEntity::ControlStatus status);
 	static CommandExecutionError aemCommandStatusToCommandError(la::avdecc::entity::ControllerEntity::AemCommandStatus status);
@@ -64,18 +80,21 @@ public:
 	void append(AsyncCommand command);
 	void append(std::vector<AsyncCommand> commands);
 
+	void addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error, avdecc::ControllerManager::AcmpCommandType commandType);
+	void addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error, avdecc::ControllerManager::AecpCommandType commandType);
+	void addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error);
+
 	size_t parallelCommandCount() const noexcept;
 	void exec() noexcept;
 
-	void invokeCommandCompleted(int commandIndex, CommandExecutionError error) noexcept;
+	void invokeCommandCompleted(int commandIndex, bool error) noexcept;
 
-	// TODO: make this a qobject and use pointers...
-	Q_SIGNAL void commandSetCompleted(bool error); // emitted after all commands in this command set were executed.
+	Q_SIGNAL void commandSetCompleted(CommandExecutionErrors errors); // emitted after all commands in this command set were executed.
 
 private:
+	CommandExecutionErrors _errors;
 	std::vector<AsyncCommand> _commands;
 	int _commandCompletionCounter = 0;
-	std::unordered_map<int, int> _commandTimeoutCounter;
 	bool _errorOccured = false;
 };
 
@@ -104,12 +123,15 @@ public:
 
 	void start();
 
-	Q_SIGNAL void completed(bool error);
+	Q_SIGNAL void progressUpdate(int completedCommands, int totalCommands);
+	Q_SIGNAL void completed(CommandExecutionErrors errors);
 
 private:
+	CommandExecutionErrors _errors;
 	std::vector<AsyncParallelCommandSet*> _commands;
-	int _currentCommand = 0;
-	bool _errorOccuredDuringChain = false;
+	int _currentCommandSet = 0;
+	int _totalCommandCount; // includes parallel sub commands
+	int _completedCommandCount; // includes parallel sub commands
 };
 
 using DomainIndex = std::uint64_t; /** A virtual index attributed to each domain */
@@ -199,6 +221,11 @@ private:
 	Errors _entityMcErrors{};
 };
 
+struct ApplyInfo
+{
+	CommandExecutionErrors entityApplyErrors;
+};
+
 // **************************************************************
 // class MCDomainManager
 // **************************************************************
@@ -224,12 +251,17 @@ public:
 
 	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds);
 	Q_SIGNAL void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> entityIds);
+
+	Q_SIGNAL void applyMediaClockDomainModelProgressUpdate(int progressPercentage);
+	Q_SIGNAL void applyMediaClockDomainModelFinished(ApplyInfo);
 };
 
 constexpr bool operator!(McDeterminationError const error)
 {
 	return error == McDeterminationError::NoError;
 }
+
+Q_DECLARE_METATYPE(CommandExecutionErrors)
 
 } // namespace mediaClock
 } // namespace avdecc

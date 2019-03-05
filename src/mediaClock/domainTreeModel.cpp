@@ -23,7 +23,6 @@
 #include <QPainter>
 #include <QLabel>
 #include <QRadioButton>
-#include <QDebug>
 #include <QStandardItemModel>
 
 #include "mediaClock/domainTreeModel.hpp"

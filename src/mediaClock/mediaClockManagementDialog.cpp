@@ -22,6 +22,7 @@
 #include <QPushButton>
 #include <QMenu>
 #include <QMessageBox>
+#include <QProgressDialog>
 
 #include "ui_mediaClockManagementDialog.h"
 #include "internals/config.hpp"
@@ -29,6 +30,7 @@
 #include <la/avdecc/controller/avdeccController.hpp>
 #include "settingsManager/settings.hpp"
 #include "avdecc/mcDomainManager.hpp"
+#include "avdecc/helper.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
 #include "mediaClock/domainTreeModel.hpp"
 #include "mediaClock/unassignedListModel.hpp"
@@ -53,6 +55,9 @@ public:
 		auto domains = mediaClockManager.createMediaClockDomainModel();
 
 		connect(&mediaClockManager, &avdecc::mediaClock::MCDomainManager::mediaClockConnectionsUpdate, this, &MediaClockManagementDialogImpl::mediaClockConnectionsUpdate);
+		connect(&mediaClockManager, &avdecc::mediaClock::MCDomainManager::applyMediaClockDomainModelFinished, this, &MediaClockManagementDialogImpl::applyMediaClockDomainModelFinished);
+		connect(&mediaClockManager, &avdecc::mediaClock::MCDomainManager::applyMediaClockDomainModelProgressUpdate, this, &MediaClockManagementDialogImpl::applyMediaClockDomainModelProgressUpdate);
+
 
 		auto& controllerManager = avdecc::ControllerManager::getInstance();
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &MediaClockManagementDialogImpl::entityOffline);
@@ -228,7 +233,10 @@ public:
 			mediaClockMappings.getEntityMediaClockMasterMappings().emplace(unassignedEntity, std::vector<avdecc::mediaClock::DomainIndex>());
 		}
 
-
+		_progressDialog = new QProgressDialog("Executing commands...", "Abort apply", 0, 100, qobject_cast<QWidget*>(this));
+		_progressDialog->setMinimumWidth(350);
+		_progressDialog->setWindowModality(Qt::WindowModal);
+		_progressDialog->setMinimumDuration(500);
 		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
 		mediaClockManager.applyMediaClockDomainModel(mediaClockMappings);
 	}
@@ -242,14 +250,7 @@ public:
 		_hasChanges = false;
 		adjustButtonStates();
 
-		// read out again:
-		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
-		auto domains = mediaClockManager.createMediaClockDomainModel();
-
-		// setup the models:
-		_unassignedListModel.setMediaClockDomainModel(domains);
-		_domainTreeModel.setMediaClockDomainModel(domains);
-		expandAllDomains();
+		refreshModels();
 	}
 
 	/**
@@ -316,15 +317,114 @@ public:
 	{
 		if (!_hasChanges)
 		{
-			// read out again:
-			auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
-			auto domains = mediaClockManager.createMediaClockDomainModel();
-
-			// setup the models:
-			_unassignedListModel.setMediaClockDomainModel(domains);
-			_domainTreeModel.setMediaClockDomainModel(domains);
-			expandAllDomains();
+			refreshModels();
 		}
+	}
+
+	/*
+	* Update the progress dialog.
+	*/
+	Q_SLOT void applyMediaClockDomainModelProgressUpdate(int progress)
+	{
+		_progressDialog->setValue(progress);
+	}
+
+	/*
+	* Display any error that occurs
+	*/
+	Q_SLOT void applyMediaClockDomainModelFinished(avdecc::mediaClock::ApplyInfo applyInfo)
+	{
+		_progressDialog->setValue(100);
+		_progressDialog->close();
+		refreshModels();
+
+		for (auto it = applyInfo.entityApplyErrors.begin(), end = applyInfo.entityApplyErrors.end(); it != end; it = applyInfo.entityApplyErrors.upper_bound(it->first))
+		{
+			auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+			auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+			if (controlledEntity)
+			{
+				entityName = avdecc::helper::smartEntityName(*controlledEntity);
+			}
+			auto errorsForEntity = applyInfo.entityApplyErrors.equal_range(it->first);
+			QString errors;
+
+			for (auto i = errorsForEntity.first; i != errorsForEntity.second; ++i)
+			{
+				errors += "-";
+				if (i->second.commandTypeAcmp)
+				{
+					switch (*i->second.commandTypeAcmp)
+					{
+						case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+							errors += "Connecting stream failed. ";
+							break;
+						case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+							errors += "Disconnecting stream failed. ";
+							break;
+						case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+							errors += "Disconnecting talker stream failed. ";
+							break;
+					}
+				}
+				else if (i->second.commandTypeAecp)
+				{
+					switch (*i->second.commandTypeAecp)
+					{
+						case avdecc::ControllerManager::AecpCommandType::SetClockSource:
+							errors += "Setting the clock source failed. ";
+							break;
+						case avdecc::ControllerManager::AecpCommandType::SetSamplingRate:
+							errors += "Setting the sampling rate failed. ";
+							break;
+					}
+				}
+				switch (i->second.errorType)
+				{
+					case avdecc::mediaClock::CommandExecutionError::LockedByOther:
+						errors += "Entity is locked.";
+						break;
+					case avdecc::mediaClock::CommandExecutionError::AcquiredByOther:
+						errors += "Entity is aquired by an other controller.";
+						break;
+					case avdecc::mediaClock::CommandExecutionError::Timeout:
+						errors += "Command timed out. Entity might be offline.";
+						break;
+					case avdecc::mediaClock::CommandExecutionError::EntityError:
+						errors += "Entity error. Operation might not be supported.";
+						break;
+					case avdecc::mediaClock::CommandExecutionError::NetworkIssue:
+						errors += "Network error.";
+						break;
+					case avdecc::mediaClock::CommandExecutionError::CommandFailure:
+						errors += "Command failure.";
+						break;
+					case avdecc::mediaClock::CommandExecutionError::NoMediaClockInputAvailable:
+						errors += "Device does not have any compatible media clock inputs.";
+						break;
+					case avdecc::mediaClock::CommandExecutionError::NoMediaClockOutputAvailable:
+						errors += "Device does not have any compatible media clock outputs.";
+						break;
+					default:
+						errors += "Unknwon error.";
+						break;
+				}
+				errors += "\n";
+			}
+			QMessageBox::information(qobject_cast<QWidget*>(this), "Error while applying", QString("Error(s) occured on %1 while applying the configuration:\n\n%2").arg(entityName).arg(errors));
+		}
+	}
+
+	void refreshModels()
+	{
+		// read out again:
+		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
+		auto domains = mediaClockManager.createMediaClockDomainModel();
+
+		// setup the models:
+		_unassignedListModel.setMediaClockDomainModel(domains);
+		_domainTreeModel.setMediaClockDomainModel(domains);
+		expandAllDomains();
 	}
 
 	/**
@@ -394,6 +494,8 @@ private:
 	DomainTreeModel _domainTreeModel;
 	UnassignedListModel _unassignedListModel;
 	bool _hasChanges;
+
+	QProgressDialog* _progressDialog;
 };
 
 /**
