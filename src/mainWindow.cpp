@@ -146,6 +146,8 @@ void MainWindow::createMainToolBar()
 	interfaceLabel->setMinimumWidth(50);
 	_interfaceComboBox.setMinimumWidth(100);
 
+	_refreshControllerButton.setToolTip("Reload Controller");
+
 	auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
 	controllerEntityIDLabel->setMinimumWidth(50);
 	_controllerEntityIDLabel.setMinimumWidth(100);
@@ -159,6 +161,10 @@ void MainWindow::createMainToolBar()
 
 	mainToolBar->addWidget(interfaceLabel);
 	mainToolBar->addWidget(&_interfaceComboBox);
+
+	mainToolBar->addSeparator();
+
+	mainToolBar->addWidget(&_refreshControllerButton);
 
 	mainToolBar->addSeparator();
 
@@ -256,6 +262,7 @@ void MainWindow::connectSignals()
 {
 	connect(&_protocolComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
+	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
