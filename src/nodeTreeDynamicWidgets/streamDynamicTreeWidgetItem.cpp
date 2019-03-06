@@ -152,7 +152,6 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 			auto* item = new QTreeWidgetItem(this);
 			item->setText(0, "Connections");
 			_connections = new QListWidget;
-			_connections->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
 			parent->setItemWidget(item, 1, _connections);
 
 			// Update info right now

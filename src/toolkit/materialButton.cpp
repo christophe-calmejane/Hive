@@ -17,18 +17,25 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "tickableMenu.hpp"
+#include "materialButton.hpp"
 
 namespace qt
 {
 namespace toolkit
 {
-void TickableMenu::mouseReleaseEvent(QMouseEvent* event)
+MaterialButton::MaterialButton(QWidget* parent)
+	: MaterialButton{ QString::null, parent }
 {
-	if (auto* action = activeAction())
-	{
-		action->trigger();
-	}
+}
+
+MaterialButton::MaterialButton(QString const& icon, QWidget* parent)
+	: QPushButton{ icon, parent }
+{
+	QFont font{ "Material Icons" };
+	font.setStyleStrategy(QFont::PreferQuality);
+	setFont(font);
+
+	setFlat(true);
 }
 
 } // namespace toolkit

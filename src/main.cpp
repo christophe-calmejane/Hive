@@ -22,7 +22,7 @@
 
 #include <QSharedMemory>
 #include <QMessageBox>
-
+#include <QFile>
 #include <QSplashScreen>
 
 #include <iostream>
@@ -72,7 +72,18 @@ int main(int argc, char* argv[])
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
 
+	// We want to propagate style sheet styles to all widgets
+	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+
+	// Create the Qt Application
 	QApplication app(argc, argv);
+
+	// Load and apply the stylesheet
+	QFile styleFile{ ":/style.qss" };
+	if (styleFile.open(QFile::ReadOnly))
+	{
+		app.setStyleSheet(styleFile.readAll());
+	}
 
 	// Runtime sanity check on Avdecc Library compilation options
 	{

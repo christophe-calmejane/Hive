@@ -133,9 +133,6 @@ View::View(QWidget* parent)
 	setCornerButtonEnabled(false);
 	setMouseTracking(true);
 
-	// Configure highlight color, we don't use the palette otherwise the legend will inherit from it
-	setStyleSheet("QTableView { selection-background-color: #f3e5f5; }");
-
 	connect(this, &QTableView::clicked, this, &View::onClicked);
 
 	setContextMenuPolicy(Qt::CustomContextMenu);

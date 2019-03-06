@@ -23,6 +23,11 @@
 #include <QFile>
 #include <QTextBrowser>
 
+#ifdef DEBUG
+#	include <QFileInfo>
+#	include <QDir>
+#endif
+
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "internals/config.hpp"
@@ -164,6 +169,11 @@ void MainWindow::createMainToolBar()
 
 	mainToolBar->addWidget(controllerEntityIDLabel);
 	mainToolBar->addWidget(&_controllerEntityIDLabel);
+	
+#ifdef Q_OS_MAC
+	// See https://bugreports.qt.io/browse/QTBUG-13635
+	mainToolBar->setStyleSheet("QToolBar QLabel { padding-bottom: 5; }");
+#endif
 }
 
 void MainWindow::createControllerView()
@@ -495,6 +505,21 @@ void MainWindow::connectSignals()
 
 	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, this };
 	connect(refreshController, &QShortcut::activated, this, &MainWindow::currentControllerChanged);
+
+#ifdef DEBUG
+	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, this };
+	connect(reloadStyleSheet, &QShortcut::activated, this,
+		[]()
+		{
+			// Load and apply the stylesheet
+			QFile styleFile{ QString{ RESOURCES_ROOT_DIR } + "/style.qss" };
+			if (styleFile.open(QFile::ReadOnly))
+			{
+				qApp->setStyleSheet(styleFile.readAll());
+				LOG_HIVE_DEBUG("StyleSheet reloaded");
+			}
+		});
+#endif
 }
 
 void MainWindow::showChangeLog(QString const title, QString const versionString)

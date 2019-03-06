@@ -134,9 +134,6 @@ void HeaderView::mouseMoveEvent(QMouseEvent* event)
 
 void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const
 {
-	painter->save();
-	painter->setRenderHint(QPainter::Antialiasing);
-
 	QBrush backgroundBrush{};
 
 	auto const nodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
@@ -195,6 +192,9 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	{
 		backgroundBrush = QColor{ 0x007ACC };
 	}
+
+	painter->save();
+	painter->setRenderHint(QPainter::Antialiasing);
 
 	painter->fillPath(path, backgroundBrush);
 	painter->translate(rect.topLeft());
