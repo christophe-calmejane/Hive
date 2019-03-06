@@ -23,7 +23,7 @@
 #include <QObject>
 #include <functional>
 #include <la/avdecc/controller/avdeccController.hpp>
-#include <la/avdecc/internals/streamFormat.hpp>
+#include <la/avdecc/internals/streamFormatInfo.hpp>
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/logger.hpp>
 
