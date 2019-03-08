@@ -205,7 +205,7 @@ public:
 	QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> getChanges() const;
 	void resetChangedData();
 
-	TableRowEntry const& DeviceDetailsChannelTableModelPrivate::tableDataAtRow(int row) const;
+	TableRowEntry const& tableDataAtRow(int row) const;
 
 	void channelConnectionsUpdate(la::avdecc::UniqueIdentifier const& entityId);
 	void updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName);
@@ -494,6 +494,7 @@ bool DeviceDetailsChannelTableModelPrivate::setData(QModelIndex const& index, QV
 		switch (column)
 		{
 			case DeviceDetailsChannelTableModelColumn::ChannelName:
+            {
 				auto const& sourceClusterIndex = _nodes.at(index.row()).connectionInformation.sourceClusterIndex;
 				if (!_hasChangesMap.contains(*sourceClusterIndex))
 				{
@@ -502,6 +503,7 @@ bool DeviceDetailsChannelTableModelPrivate::setData(QModelIndex const& index, QV
 				_hasChangesMap.value(*sourceClusterIndex)->insert(DeviceDetailsChannelTableModelColumn::ChannelName, value.toString());
 				emit q->dataEdited();
 				break;
+            }
 			default:
 				break;
 		}

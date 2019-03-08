@@ -87,27 +87,27 @@ public:
 		tableViewReceive->setModel(&_deviceDetailsChannelTableModelReceive);
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
 
-		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &lineEditDeviceNameChanged);
-		connect(lineEditGroupName, &QLineEdit::textChanged, this, &lineEditGroupNameChanged);
-		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &comboBoxConfigurationChanged);
-		connect(comboBox_PredefinedPT, &QComboBox::currentTextChanged, this, &comboBoxPredefinedPTChanged);
-		connect(radioButton_PredefinedPT, &QRadioButton::clicked, this, &radioButtonPredefinedPTClicked);
+        connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
+		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
+		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxConfigurationChanged);
+		connect(comboBox_PredefinedPT, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged);
+		connect(radioButton_PredefinedPT, &QRadioButton::clicked, this, &DeviceDetailsDialogImpl::radioButtonPredefinedPTClicked);
 
-		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &tableDataChanged);
-		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &tableDataChanged);
+		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
-		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &applyChanges);
-		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &revertChanges);
+		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
+		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 
-		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &onEndAecpCommand);
-		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &streamConnectionChanged);
+		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
+		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &DeviceDetailsDialogImpl::streamConnectionChanged);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
-		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &entityNameChanged);
-		connect(&manager, &avdecc::ControllerManager::entityGroupNameChanged, this, &entityGroupNameChanged);
-		connect(&manager, &avdecc::ControllerManager::audioClusterNameChanged, this, &audioClusterNameChanged);
+		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
+		connect(&manager, &avdecc::ControllerManager::entityGroupNameChanged, this, &DeviceDetailsDialogImpl::entityGroupNameChanged);
+		connect(&manager, &avdecc::ControllerManager::audioClusterNameChanged, this, &DeviceDetailsDialogImpl::audioClusterNameChanged);
 	}
 
 	/**
@@ -581,7 +581,7 @@ public:
 	/**
 	* Invoked when the cancel button is clicked. Reverts all changes in the dialog.
 	*/
-	Q_SLOT void DeviceDetailsDialogImpl::revertChanges()
+	Q_SLOT void revertChanges()
 	{
 		_hasChangesByUser = false;
 		updateButtonStates();
