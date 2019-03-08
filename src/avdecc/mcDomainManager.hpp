@@ -261,7 +261,7 @@ constexpr bool operator!(McDeterminationError const error)
 	return error == McDeterminationError::NoError;
 }
 
-Q_DECLARE_METATYPE(CommandExecutionErrors)
-
 } // namespace mediaClock
 } // namespace avdecc
+
+Q_DECLARE_METATYPE(avdecc::mediaClock::CommandExecutionErrors)

@@ -23,6 +23,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <unordered_set>
 
 #include "ui_mediaClockManagementDialog.h"
 #include "internals/config.hpp"
@@ -338,8 +339,18 @@ public:
 		_progressDialog->close();
 		refreshModels();
 
-		for (auto it = applyInfo.entityApplyErrors.begin(), end = applyInfo.entityApplyErrors.end(); it != end; it = applyInfo.entityApplyErrors.upper_bound(it->first))
+
+		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> iteratedEntityIds;
+		for (auto it = applyInfo.entityApplyErrors.begin(), end = applyInfo.entityApplyErrors.end(); it != end; it++) // upper_bound not supported on mac (to iterate over unique keys)
 		{
+			if (iteratedEntityIds.find(it->first) == iteratedEntityIds.end())
+			{
+				iteratedEntityIds.insert(it->first);
+			}
+			else
+			{
+				continue; // entity already displayed.
+			}
 			auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
 			auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
 			if (controlledEntity)
