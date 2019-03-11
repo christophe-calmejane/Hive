@@ -400,6 +400,8 @@ private:
 	{
 		NodeItem* item = nullptr;
 
+		static_assert(std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, T> || std::is_base_of_v<la::avdecc::controller::model::VirtualNode, T>, "Invalid base type");
+
 		if constexpr (std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, T>)
 		{
 			item = new EntityModelNodeItem{ static_cast<la::avdecc::controller::model::EntityModelNode const*>(node), name };
@@ -407,10 +409,6 @@ private:
 		else if constexpr (std::is_base_of_v<la::avdecc::controller::model::VirtualNode, T>)
 		{
 			item = new VirtualNodeItem{ static_cast<la::avdecc::controller::model::VirtualNode const*>(node), name };
-		}
-		else
-		{
-			static_assert(false, "Invalid base type");
 		}
 
 		// Store the node inside the item
