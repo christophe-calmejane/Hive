@@ -339,7 +339,6 @@ public:
 		_progressDialog->close();
 		refreshModels();
 
-
 		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> iteratedEntityIds;
 		for (auto it = applyInfo.entityApplyErrors.begin(), end = applyInfo.entityApplyErrors.end(); it != end; it++) // upper_bound not supported on mac (to iterate over unique keys)
 		{

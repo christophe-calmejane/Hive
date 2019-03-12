@@ -263,5 +263,3 @@ constexpr bool operator!(McDeterminationError const error)
 
 } // namespace mediaClock
 } // namespace avdecc
-
-Q_DECLARE_METATYPE(avdecc::mediaClock::CommandExecutionErrors)

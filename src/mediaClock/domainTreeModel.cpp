@@ -878,7 +878,7 @@ QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionVie
 		auto const& selectedSampleRate = domainTreeItem->domainSamplingRate();
 		if (sampleRates.size() < 2)
 		{
-			return new QWidget();
+			return nullptr;
 		}
 		auto* editor = new DomainTreeDomainEditDelegate(parent);
 		for (const auto& sampleRate : sampleRates)
@@ -926,11 +926,6 @@ QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionVie
 			});
 
 		return editor;
-	}
-
-	if (entityTreeItem != nullptr)
-	{
-		return new QWidget(); // entities shall not be editable
 	}
 	return nullptr;
 }

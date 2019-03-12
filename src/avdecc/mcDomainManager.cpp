@@ -64,7 +64,7 @@ public:
 		connect(&manager, &ControllerManager::clockSourceChanged, this, &MCDomainManagerImpl::onClockSourceChanged);
 		connect(&manager, &ControllerManager::entityNameChanged, this, &MCDomainManagerImpl::onEntityNameChanged);
 
-		qRegisterMetaType<CommandExecutionErrors>();
+		qRegisterMetaType<CommandExecutionErrors>("CommandExecutionErrors");
 
 		connect(&_sequentialAcmpCommandExecuter, &SequentialAsyncCommandExecuter::completed, this,
 			[this](CommandExecutionErrors errors)
