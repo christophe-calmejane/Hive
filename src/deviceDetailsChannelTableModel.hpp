@@ -81,6 +81,28 @@ class ConnectionStateItemDelegate final : public QAbstractItemDelegate
 	Q_OBJECT
 
 public:
+	static const int Margin = 6;
+
+private:
+	// QAbstractItemDelegate overrides
+	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+	virtual QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+};
+
+//**************************************************************
+//class ConnectionStateItemDelegate
+//**************************************************************
+/**
+* @brief	Implements a delegate to display a connection state icon
+*			inside the table.
+* [@author  Marius Erlen]
+* [@date    2018-03-08]
+*/
+class ConnectionInfoItemDelegate final : public QAbstractItemDelegate
+{
+	Q_OBJECT
+
+public:
 private:
 	// QAbstractItemDelegate overrides
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
@@ -141,8 +163,10 @@ private:
 	Q_DECLARE_PRIVATE(DeviceDetailsChannelTableModel)
 
 	friend class ConnectionStateItemDelegate;
+	friend class ConnectionInfoItemDelegate;
 };
 
+Q_DECLARE_METATYPE(DeviceDetailsChannelTableModel::ConnectionStatus)
 
 // Define bitfield enum traits for ConnectionStatus
 template<>

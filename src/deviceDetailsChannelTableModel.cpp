@@ -369,7 +369,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 	auto const column = static_cast<DeviceDetailsChannelTableModelColumn>(index.column());
 	if (role == Qt::TextAlignmentRole)
 	{
-		return Qt::AlignTop;
+		return Qt::AlignAbsolute;
 	}
 	switch (column)
 	{
@@ -381,7 +381,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 			{
 				hasChanges = true;
 			}
-			else if (role == Qt::DisplayRole || role == Qt::EditRole)
+			if (role == Qt::DisplayRole || role == Qt::EditRole)
 			{
 				if (hasChanges)
 				{
@@ -423,10 +423,10 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 		{
 			if (role == Qt::DisplayRole)
 			{
+				QVariantList connectionLines;
 				int innerRow = 0;
-				QString connectionsFormatted;
-				auto const& info = _nodes.at(index.row()).connectionInformation;
-				for (auto const& connectionKV : info.deviceConnections)
+				auto const& connectionInfo = _nodes.at(index.row()).connectionInformation;
+				for (auto const& connectionKV : connectionInfo.deviceConnections)
 				{
 					for (auto const& streamKV : connectionKV.second->targetStreams)
 					{
@@ -442,7 +442,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							{
 								auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
 								QString clusterName;
-								if (info.forward)
+								if (connectionInfo.forward)
 								{
 									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(*streamKV.second->targetAudioUnitIndex).streamPortInputs.at(*streamKV.second->targetStreamPortIndex).audioClusters.at(clusterKV.first + *streamKV.second->targetBaseCluster)));
 								}
@@ -451,28 +451,120 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(*streamKV.second->targetAudioUnitIndex).streamPortOutputs.at(*streamKV.second->targetStreamPortIndex).audioClusters.at(clusterKV.first + *streamKV.second->targetBaseCluster)));
 								}
 
-								// add new line for every further entry.
-								if (innerRow > 0)
+								if (connectionKV.second->isSourceRedundant && streamKV.second->isTargetRedundant)
 								{
-									connectionsFormatted.append("\n\n");
-								}
+									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Prim)"));
 
-								// format the cluster name + controller name.
-								connectionsFormatted.append(clusterName.append(": ").append(avdecc::helper::entityName(*controlledEntity.get())));
+									auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantConnections;
+									if (connectionInfo.forward)
+									{
+										redundantConnections = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionKV.second->entityId, streamKV.second->sourceStreamIndex);
+									}
+									else
+									{
+										redundantConnections = channelConnectionManager.getRedundantStreamInputsForPrimary(connectionKV.second->entityId, streamKV.second->sourceStreamIndex);
+									}
+									for (auto const& redundantConnectionKV : redundantConnections)
+									{
+										if (redundantConnectionKV.second->descriptorIndex == streamKV.second->sourceStreamIndex)
+										{
+											continue; // skip primary
+										}
+										innerRow++;
+										connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Sec)"));
+									}
+								}
+								else
+								{
+									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())));
+								}
 							}
 							innerRow++;
 						}
 					}
 				}
-				return connectionsFormatted;
+				return connectionLines;
 			}
 		}
 		case DeviceDetailsChannelTableModelColumn::ConnectionStatus:
 		{
 			if (role == Qt::DisplayRole)
 			{
-				// handled inside the delegate
-				return QVariant();
+				QVariantList connectionStates;
+				auto const& connectionInfo = _nodes.at(index.row()).connectionInformation;
+				for (auto const& connectionKV : connectionInfo.deviceConnections)
+				{
+					for (auto const& streamKV : connectionKV.second->targetStreams)
+					{
+						for (auto const& clusterKV : streamKV.second->targetClusters)
+						{
+							auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionKV.second->entityId);
+							if (!controlledEntity)
+							{
+								continue;
+							}
+							auto const& entityNode = controlledEntity->getEntityNode();
+							if (entityNode.dynamicModel)
+							{
+								auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+
+								DeviceDetailsChannelTableModel::ConnectionStatus status;
+								if (connectionInfo.forward)
+								{
+									status = connectionStatus(connectionInfo.sourceEntityId, streamKV.second->sourceStreamIndex, connectionKV.second->isSourceRedundant, connectionKV.second->entityId, streamKV.first, streamKV.second->isTargetRedundant);
+								}
+								else
+								{
+									status = connectionStatus(connectionKV.second->entityId, streamKV.first, streamKV.second->isTargetRedundant, connectionInfo.sourceEntityId, streamKV.second->sourceStreamIndex, connectionKV.second->isSourceRedundant);
+								}
+
+								connectionStates.append(QVariant::fromValue(status));
+								if (connectionKV.second->isSourceRedundant && streamKV.second->isTargetRedundant)
+								{
+									auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
+									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantInputs;
+									if (connectionInfo.forward)
+									{
+										redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionInfo.sourceEntityId, streamKV.second->sourceStreamIndex);
+										redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connectionKV.second->entityId, streamKV.first);
+									}
+									else
+									{
+										redundantOutputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connectionInfo.sourceEntityId, streamKV.second->sourceStreamIndex);
+										redundantInputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionKV.second->entityId, streamKV.first);
+									}
+									auto itOutputs = redundantOutputs.begin();
+									auto itInputs = redundantInputs.begin();
+
+									if (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
+									{
+										// skip primary
+										itOutputs++;
+										itInputs++;
+									}
+									while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
+									{
+										if (connectionInfo.forward)
+										{
+											status = connectionStatus(connectionInfo.sourceEntityId, itOutputs->first, connectionKV.second->isSourceRedundant, connectionKV.second->entityId, itInputs->first, streamKV.second->isTargetRedundant);
+										}
+										else
+										{
+											status = connectionStatus(connectionKV.second->entityId, itInputs->first, streamKV.second->isTargetRedundant, connectionInfo.sourceEntityId, itOutputs->first, connectionKV.second->isSourceRedundant);
+										}
+										connectionStates.append(QVariant::fromValue(status));
+
+										itOutputs++;
+										itInputs++;
+									}
+								}
+							}
+						}
+					}
+				}
+				return connectionStates;
 			}
 		}
 		default:
@@ -494,7 +586,7 @@ bool DeviceDetailsChannelTableModelPrivate::setData(QModelIndex const& index, QV
 		switch (column)
 		{
 			case DeviceDetailsChannelTableModelColumn::ChannelName:
-            {
+			{
 				auto const& sourceClusterIndex = _nodes.at(index.row()).connectionInformation.sourceClusterIndex;
 				if (!_hasChangesMap.contains(*sourceClusterIndex))
 				{
@@ -503,7 +595,7 @@ bool DeviceDetailsChannelTableModelPrivate::setData(QModelIndex const& index, QV
 				_hasChangesMap.value(*sourceClusterIndex)->insert(DeviceDetailsChannelTableModelColumn::ChannelName, value.toString());
 				emit q->dataEdited();
 				break;
-            }
+			}
 			default:
 				break;
 		}
@@ -701,6 +793,61 @@ TableRowEntry const& DeviceDetailsChannelTableModel::tableDataAtRow(int row) con
 	return d->tableDataAtRow(row);
 }
 
+
+void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status, QPainter* painter, QRect iconDrawRect)
+{
+	if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::Connected))
+	{
+		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
+		{
+			connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, false);
+		}
+		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
+		{
+			connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, false);
+		}
+		else
+		{
+			connectionMatrix::drawConnectedStream(painter, iconDrawRect, false);
+		}
+	}
+	else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting))
+	{
+		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
+		{
+			connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, false);
+		}
+		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
+		{
+			connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, false);
+		}
+		else
+		{
+			connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, false);
+		}
+	}
+	else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected))
+	{
+		connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
+	}
+	else
+	{
+		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
+		{
+			connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, false);
+		}
+		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
+		{
+			connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, false);
+		}
+		else
+		{
+			connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, false);
+		}
+	}
+}
+
+
 /* ************************************************************ */
 /* ConnectionStateItemDelegate                                  */
 /* ************************************************************ */
@@ -712,12 +859,12 @@ TableRowEntry const& DeviceDetailsChannelTableModel::tableDataAtRow(int row) con
 void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto const& tableData = model->tableDataAtRow(index.row());
+	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
 
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
+	int innerRow = 0;
 
-	int margin = 2;
 	int circleDiameter = fontPixelHeight;
 
 	auto const backgroundColor = index.data(Qt::BackgroundRole);
@@ -726,90 +873,15 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 		painter->fillRect(option.rect, backgroundColor.value<QColor>());
 	}
 
-	int innerRow = 0;
-	QString connectionsFormatted;
-	for (auto const& connectionKV : tableData.connectionInformation.deviceConnections)
+	int margin = ConnectionStateItemDelegate::Margin;
+	for (auto const& connection : modelData)
 	{
-		for (auto const& streamKV : connectionKV.second->targetStreams)
-		{
-			for (auto const& clusterKV : streamKV.second->targetClusters)
-			{
-				auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionKV.second->entityId);
-				if (!controlledEntity)
-				{
-					continue;
-				}
-				auto const& entityNode = controlledEntity->getEntityNode();
-				if (entityNode.dynamicModel)
-				{
-					auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+		DeviceDetailsChannelTableModel::ConnectionStatus status = connection.value<DeviceDetailsChannelTableModel::ConnectionStatus>();
 
-					QRect iconDrawRect(option.rect.left() + (option.rect.width() - circleDiameter) / 2.0f, option.rect.top() + margin + innerRow * (fontPixelHeight * 2), circleDiameter, circleDiameter);
+		QRect iconDrawRect(option.rect.left() + (option.rect.width() - circleDiameter) / 2.0f, option.rect.top() + margin + innerRow * (fontPixelHeight + margin), circleDiameter, circleDiameter);
+		drawConnectionState(status, painter, iconDrawRect);
 
-					DeviceDetailsChannelTableModel::ConnectionStatus status;
-					if (tableData.connectionInformation.forward)
-					{
-						status = connectionStatus(tableData.connectionInformation.sourceEntityId, streamKV.second->sourceStreamIndex, connectionKV.second->isSourceRedundant, connectionKV.second->entityId, streamKV.first, streamKV.second->isTargetRedundant);
-					}
-					else
-					{
-						status = connectionStatus(connectionKV.second->entityId, streamKV.first, streamKV.second->isTargetRedundant, tableData.connectionInformation.sourceEntityId, streamKV.second->sourceStreamIndex, connectionKV.second->isSourceRedundant);
-					}
-
-					if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::Connected))
-					{
-						if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
-						{
-							connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, false);
-						}
-						else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
-						{
-							connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, false);
-						}
-						else
-						{
-							connectionMatrix::drawConnectedStream(painter, iconDrawRect, false);
-						}
-					}
-					else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting))
-					{
-						if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
-						{
-							connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, false);
-						}
-						else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
-						{
-							connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, false);
-						}
-						else
-						{
-							connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, false);
-						}
-					}
-					else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected))
-					{
-						connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
-					}
-					else
-					{
-						if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
-						{
-							connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, false);
-						}
-						else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
-						{
-							connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, false);
-						}
-						else
-						{
-							connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, false);
-						}
-					}
-
-					innerRow++;
-				}
-			}
-		}
+		innerRow++;
 	}
 }
 
@@ -821,5 +893,62 @@ QSize ConnectionStateItemDelegate::sizeHint(QStyleOptionViewItem const& option, 
 {
 	return QSize();
 }
+
+/* ************************************************************ */
+/* ConnectionInfoItemDelegate                                  */
+/* ************************************************************ */
+
+/**
+* QAbstractItemDelegate paint implentation.
+* Paints the connection names with certain spacing.
+*/
+void ConnectionInfoItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
+{
+	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
+	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+
+	QFontMetrics fm(option.fontMetrics);
+	int fontPixelHeight = fm.height();
+	int innerRow = 0;
+
+	auto const backgroundColor = index.data(Qt::BackgroundRole);
+	if (!backgroundColor.isNull())
+	{
+		painter->fillRect(option.rect, backgroundColor.value<QColor>());
+	}
+
+	int margin = ConnectionStateItemDelegate::Margin;
+	for (auto const& connection : modelData)
+	{
+		QString line = connection.toString();
+
+		QRect textDrawRect(option.rect.left() + margin / 2, option.rect.top() + margin + innerRow * (fontPixelHeight + margin), option.rect.width(), fontPixelHeight);
+		painter->drawText(textDrawRect, line);
+
+		innerRow++;
+	}
+}
+
+/**
+* QAbstractItemDelegate sizeHint implentation.
+* @return Default size.
+*/
+QSize ConnectionInfoItemDelegate::sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const
+{
+	QFontMetrics fm(option.fontMetrics);
+	int fontPixelHeight = fm.height();
+	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
+	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+
+	int margin = 6;
+	int totalHeight = margin;
+	auto const& tableData = model->tableDataAtRow(index.row());
+	for (auto const& line : modelData)
+	{
+		totalHeight += fontPixelHeight + margin;
+	}
+	return QSize(350, totalHeight);
+}
+
 
 #include "deviceDetailsChannelTableModel.moc"

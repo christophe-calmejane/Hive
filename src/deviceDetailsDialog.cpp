@@ -84,10 +84,21 @@ public:
 		// setup the table view data models.
 		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
 		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
+		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
+		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
+		tableViewReceive->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+		tableViewTransmit->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+
 		tableViewReceive->setModel(&_deviceDetailsChannelTableModelReceive);
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
 
-        connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
+		// disable row resize
+		QHeaderView* verticalHeaderReceive = tableViewReceive->verticalHeader();
+		verticalHeaderReceive->setSectionResizeMode(QHeaderView::Fixed);
+		QHeaderView* verticalHeaderTransmit = tableViewTransmit->verticalHeader();
+		verticalHeaderTransmit->setSectionResizeMode(QHeaderView::Fixed);
+
+		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
 		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
 		connect(comboBoxConfiguration, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxConfigurationChanged);
 		connect(comboBox_PredefinedPT, &QComboBox::currentTextChanged, this, &DeviceDetailsDialogImpl::comboBoxPredefinedPTChanged);
@@ -103,6 +114,8 @@ public:
 
 		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
 		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &DeviceDetailsDialogImpl::streamConnectionChanged);
+		connect(&manager, &avdecc::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
+		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
 		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
@@ -244,7 +257,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
+					auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, inputPair.first, inputAudioCluster.first, inputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 				}
@@ -257,7 +270,7 @@ public:
 			{
 				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioCluster.second.staticModel->channelCount; channelIndex++)
 				{
-					const avdecc::ConnectionInformation connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
+					auto const connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, outputPair.first, outputAudioCluster.first, outputPair.second.staticModel->baseCluster, channelIndex);
 
 					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 				}
@@ -430,6 +443,32 @@ public:
 		tableViewTransmit->resizeRowsToContents();
 	}
 
+	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
+	{
+		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
+
+		tableViewReceive->resizeColumnsToContents();
+		tableViewReceive->resizeRowsToContents();
+		tableViewTransmit->resizeColumnsToContents();
+		tableViewTransmit->resizeRowsToContents();
+	}
+
+	/**
+	* Updates the table models on stream connection changes.
+	* @param state The connection state.
+	*/
+	Q_SLOT void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
+	{
+		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
+
+		tableViewReceive->resizeColumnsToContents();
+		tableViewReceive->resizeRowsToContents();
+		tableViewTransmit->resizeColumnsToContents();
+		tableViewTransmit->resizeRowsToContents();
+	}
+
 	/**
 	* Invoked whenever the entity name gets changed in the view.
 	* @param entityName The new group name.
@@ -503,15 +542,17 @@ public:
 		_expectedChanges = 0;
 		_gottenChanges = 0;
 
+		auto& manager = avdecc::ControllerManager::getInstance();
+
 		// set all data
 		if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
 		{
-			avdecc::ControllerManager::getInstance().setEntityName(_entityID, lineEditDeviceName->text());
+			manager.setEntityName(_entityID, lineEditDeviceName->text());
 			_expectedChanges++;
 		}
 		if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
 		{
-			avdecc::ControllerManager::getInstance().setEntityGroupName(_entityID, lineEditGroupName->text());
+			manager.setEntityGroupName(_entityID, lineEditGroupName->text());
 			_expectedChanges++;
 		}
 
@@ -524,7 +565,7 @@ public:
 			{
 				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
 				{
-					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, *_activeConfigurationIndex, e, rxChanges->value(f).toString());
+					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, rxChanges->value(f).toString());
 					_expectedChanges++;
 				}
 			}
@@ -538,7 +579,7 @@ public:
 			{
 				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
 				{
-					avdecc::ControllerManager::getInstance().setAudioClusterName(_entityID, *_activeConfigurationIndex, e, txChanges->value(f).toString());
+					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, txChanges->value(f).toString());
 					_expectedChanges++;
 				}
 			}
@@ -547,7 +588,7 @@ public:
 		// apply the new stream info (latency)
 		if (_userSelectedLatency)
 		{
-			auto const controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(_entityID);
+			auto const controlledEntity = manager.getControlledEntity(_entityID);
 			if (controlledEntity)
 			{
 				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
@@ -563,7 +604,7 @@ public:
 
 						// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
 						// TODO: needs update of library:
-						avdecc::ControllerManager::getInstance().setStreamOutputInfo(_entityID, streamOutput.first, si);
+						manager.setStreamOutputInfo(_entityID, streamOutput.first, si);
 					}
 				}
 			}
@@ -573,7 +614,7 @@ public:
 		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
 		if (_previousConfigurationIndex != _activeConfigurationIndex)
 		{
-			avdecc::ControllerManager::getInstance().setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
+			manager.setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
 			_expectedChanges++;
 		}
 	}
@@ -648,7 +689,6 @@ void DeviceDetailsDialog::setControlledEntityID(la::avdecc::UniqueIdentifier con
 		return;
 	}
 	_controlledEntityID = entityID;
-
 
 	auto& manager = avdecc::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(_controlledEntityID);

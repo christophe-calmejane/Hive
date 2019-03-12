@@ -873,16 +873,16 @@ private:
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo);
 			controller->setStreamOutputInfo(targetEntityID, streamIndex, streamInfo,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
-			{
-				if (handler)
 				{
-					la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
-				}
-				else
-				{
-					emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, status);
-				}
-			});
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, status);
+					}
+				});
 		}
 	}
 

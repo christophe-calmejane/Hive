@@ -120,7 +120,7 @@ public:
 		* @param clusterChannel		The channel offset inside the cluster.
 		* @return The results stored in a struct.
 		*/
-	virtual const ConnectionInformation getChannelConnections(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
+	virtual ConnectionInformation getChannelConnections(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
 	{
 		ConnectionInformation result;
 		result.sourceEntityId = entityId;
@@ -208,6 +208,20 @@ public:
 						{
 							auto const& targetConfigurationNode = targetControlledEntity->getConfigurationNode(targetEntityNode.dynamicModel->currentConfiguration);
 
+							std::set<la::avdecc::entity::model::StreamIndex> relevantStreamIndexes;
+							for (auto const& redundantStreamOutput : targetConfigurationNode.redundantStreamInputs)
+							{
+								relevantStreamIndexes.insert(redundantStreamOutput.second.primaryStream->descriptorIndex);
+							}
+							for (auto const& streamOutput : targetConfigurationNode.streamInputs)
+							{
+								if (!streamOutput.second.isRedundant)
+								{
+									relevantStreamIndexes.insert(streamOutput.first);
+								}
+							}
+
+
 							// find correct index of audio unit and stream port index:
 							for (auto const& audioUnitKV : targetConfigurationNode.audioUnits)
 							{
@@ -218,6 +232,11 @@ public:
 										auto targetMappings = streamPortInputKV.second.dynamicModel->dynamicAudioMap;
 										for (auto const& mapping : targetMappings)
 										{
+											if (relevantStreamIndexes.find(mapping.streamIndex) == relevantStreamIndexes.end())
+											{
+												continue;
+											}
+
 											// the source stream channel is connected to the corresponding target stream channel.
 											if (mapping.streamIndex == streamConnection.listenerStream.streamIndex && mapping.streamChannel == sourceStreamChannel)
 											{
@@ -226,6 +245,7 @@ public:
 													auto connections = std::make_shared<Connections>();
 													connections->entityId = streamConnection.listenerStream.entityID;
 													connections->targetStreams.emplace(streamConnection.listenerStream.streamIndex, std::make_shared<ConnectionDetails>());
+													connections->isSourceRedundant = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, stream.first).isRedundant;
 													result.deviceConnections.emplace(streamConnection.listenerStream.entityID, connections);
 												}
 												else
@@ -237,7 +257,7 @@ public:
 												}
 
 												result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->streamChannel = sourceStreamChannel;
-												result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->sourceStreamIndex = stream.first;
+												result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->sourceStreamIndex = sourceStreamIndex;
 												result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->targetClusters.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
 												result.deviceConnections.at(streamConnection.listenerStream.entityID)->targetStreams.at(mapping.streamIndex)->targetAudioUnitIndex = audioUnitKV.first;
 												if (streamPortInputKV.second.staticModel)
@@ -276,7 +296,7 @@ public:
 		* @param clusterChannel		The channel offset inside the cluster.
 		* @return The results stored in a struct.
 		*/
-	virtual const ConnectionInformation getChannelConnectionsReverse(la::avdecc::UniqueIdentifier const entityId, la::avdecc::UniqueIdentifier const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
+	virtual ConnectionInformation getChannelConnectionsReverse(la::avdecc::UniqueIdentifier const entityId, la::avdecc::UniqueIdentifier const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
 	{
 		ConnectionInformation result;
 		result.sourceEntityId = entityId;
@@ -373,6 +393,19 @@ public:
 					{
 						auto const& targetConfigurationNode = targetControlledEntity->getConfigurationNode(targetEntityNode.dynamicModel->currentConfiguration);
 
+						std::set<la::avdecc::entity::model::StreamIndex> relevantStreamIndexes;
+						for (auto const& redundantStreamOutput : targetConfigurationNode.redundantStreamOutputs)
+						{
+							relevantStreamIndexes.insert(redundantStreamOutput.second.primaryStream->descriptorIndex);
+						}
+						for (auto const& streamOutput : targetConfigurationNode.streamOutputs)
+						{
+							if (!streamOutput.second.isRedundant)
+							{
+								relevantStreamIndexes.insert(streamOutput.first);
+							}
+						}
+
 						// find correct index of audio unit and stream port index:
 						for (auto const& audioUnitKV : targetConfigurationNode.audioUnits)
 						{
@@ -383,6 +416,11 @@ public:
 									auto targetMappings = streamPortOutputKV.second.dynamicModel->dynamicAudioMap;
 									for (auto const& mapping : targetMappings)
 									{
+										if (relevantStreamIndexes.find(mapping.streamIndex) == relevantStreamIndexes.end())
+										{
+											continue;
+										}
+
 										// the source stream channel is connected to the corresponding target stream channel.
 										if (mapping.streamIndex == connectedTalkerStreamIndex && mapping.streamChannel == sourceStreamChannel)
 										{
@@ -428,6 +466,80 @@ public:
 		}
 
 		return result;
+	}
+
+	/**
+	* Gets all redundant stream outputs of a primary stream output if there are any.
+	*/
+	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamOutputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex primaryStreamIndex) const noexcept
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(entityId);
+
+		if (!controlledEntity)
+		{
+			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		}
+		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		{
+			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		}
+
+		la::avdecc::controller::model::ConfigurationNode configurationNode;
+		try
+		{
+			configurationNode = controlledEntity->getCurrentConfigurationNode();
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
+		{
+			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		}
+
+		for (auto const& redundantStreamOutput : configurationNode.redundantStreamOutputs)
+		{
+			if (redundantStreamOutput.second.primaryStream->descriptorIndex == primaryStreamIndex)
+			{
+				return redundantStreamOutput.second.redundantStreams;
+			}
+		}
+		return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+	}
+
+	/**
+	* Gets all redundant stream inputs of a primary stream input if there are any.
+	*/
+	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamInputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex primaryStreamIndex) const noexcept
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(entityId);
+
+		if (!controlledEntity)
+		{
+			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		}
+		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		{
+			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		}
+
+		la::avdecc::controller::model::ConfigurationNode configurationNode;
+		try
+		{
+			configurationNode = controlledEntity->getCurrentConfigurationNode();
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
+		{
+			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		}
+
+		for (auto const& redundantStreamInput : configurationNode.redundantStreamInputs)
+		{
+			if (redundantStreamInput.second.primaryStream->descriptorIndex == primaryStreamIndex)
+			{
+				return redundantStreamInput.second.redundantStreams;
+			}
+		}
+		return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
 	}
 
 private:

@@ -285,9 +285,9 @@ void MainWindow::connectSignals()
 				dialog->show();
 				connect(dialog, &DeviceDetailsDialog::finished, this,
 					[this, dialog](int result)
-				{
-					dialog->deleteLater();
-				});
+					{
+						dialog->deleteLater();
+					});
 			}
 		});
 
