@@ -383,7 +383,9 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& talkerEntityNode = talkerEntity->getEntityNode();
 							auto const& talkerStreamNode = talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
-							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode.dynamicModel->streamInfo.streamFormat);
+							auto const talkerFormat = talkerStreamNode.dynamicModel->streamInfo.streamFormat;
+							talkerEntity.reset(); // Release the controlled entity before calling the controller
+							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerFormat);
 						}
 					}
 					else if (action == matchListenerAction)
@@ -393,7 +395,9 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& listenerEntityNode = listenerEntity->getEntityNode();
 							auto const& listenerStreamNode = listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
-							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode.dynamicModel->streamInfo.streamFormat);
+							auto const listenerFormat = listenerStreamNode.dynamicModel->streamInfo.streamFormat;
+							listenerEntity.reset(); // Release the controlled entity before calling the controller
+							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerFormat);
 						}
 					}
 				}
