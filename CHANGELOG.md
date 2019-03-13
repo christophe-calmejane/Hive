@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Only displaying _Ethernet_ kind interfaces
 - Displaying the type of ethernet adapter on macOS
 
+### Fixed
+- Possible deadlock when trying to match stream formats
+
 ## [1.0.11] - 2019-02-14
 ### Added
 - Numerical values for _StreamFlags_, _StreamFlagsEx_, _ProbingStatus_ and _AcmpStatus_
