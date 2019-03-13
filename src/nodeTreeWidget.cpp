@@ -211,11 +211,11 @@ private:
 				auto const ctrlCaps = entity.getControllerCapabilities();
 
 				addTextItem(descriptorItem, "Entity Model ID", avdecc::helper::uniqueIdentifierToString(entity.getEntityModelID()));
-				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::to_integral(talkerCaps), avdecc::helper::capabilitiesToString(talkerCaps));
+				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::forceNumeric(talkerCaps.value()), avdecc::helper::capabilitiesToString(talkerCaps));
 				addTextItem(descriptorItem, "Talker Max Sources", QString::number(entity.getTalkerStreamSources()));
-				addFlagsItem(descriptorItem, "Listener Capabilities", la::avdecc::utils::to_integral(listenerCaps), avdecc::helper::capabilitiesToString(listenerCaps));
+				addFlagsItem(descriptorItem, "Listener Capabilities", la::avdecc::utils::forceNumeric(listenerCaps.value()), avdecc::helper::capabilitiesToString(listenerCaps));
 				addTextItem(descriptorItem, "Listener Max Sinks", QString::number(entity.getListenerStreamSinks()));
-				addFlagsItem(descriptorItem, "Controller Capabilities", la::avdecc::utils::to_integral(ctrlCaps), avdecc::helper::capabilitiesToString(ctrlCaps));
+				addFlagsItem(descriptorItem, "Controller Capabilities", la::avdecc::utils::forceNumeric(ctrlCaps.value()), avdecc::helper::capabilitiesToString(ctrlCaps));
 				addTextItem(descriptorItem, "Identify Control Index", entity.getIdentifyControlIndex() ? QString::number(*entity.getIdentifyControlIndex()) : QString("Not Set"));
 			}
 
@@ -252,7 +252,7 @@ private:
 
 			auto const& entity = controlledEntity->getEntity();
 			auto const entityCaps = entity.getEntityCapabilities();
-			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::to_integral(entityCaps), avdecc::helper::capabilitiesToString(entityCaps));
+			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::forceNumeric(entityCaps.value()), avdecc::helper::capabilitiesToString(entityCaps));
 			addTextItem(dynamicItem, "Association ID", entity.getAssociationID() ? avdecc::helper::uniqueIdentifierToString(*entity.getAssociationID()) : QString("Not Set"));
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
@@ -393,7 +393,7 @@ private:
 			auto const* const model = node.staticModel;
 
 			addTextItem(descriptorItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(model->macAddress, true));
-			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::to_integral(model->interfaceFlags), avdecc::helper::flagsToString(model->interfaceFlags));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->interfaceFlags.value()), avdecc::helper::flagsToString(model->interfaceFlags));
 			addTextItem(descriptorItem, "Clock Identity", avdecc::helper::uniqueIdentifierToString(model->clockIdentity));
 			addTextItem(descriptorItem, "Priority 1", avdecc::helper::toHexQString(model->priority1, true, true));
 			addTextItem(descriptorItem, "Clock Class", avdecc::helper::toHexQString(model->clockClass, true, true));
@@ -447,7 +447,7 @@ private:
 			auto const* const dynamicModel = node.dynamicModel;
 
 			addTextItem(descriptorItem, "Clock Source Type", avdecc::helper::clockSourceTypeToString(model->clockSourceType));
-			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::to_integral(dynamicModel->clockSourceFlags), avdecc::helper::flagsToString(dynamicModel->clockSourceFlags));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(dynamicModel->clockSourceFlags.value()), avdecc::helper::flagsToString(dynamicModel->clockSourceFlags));
 
 			addTextItem(descriptorItem, "Clock Source Identifier", avdecc::helper::uniqueIdentifierToString(dynamicModel->clockSourceIdentifier));
 			addTextItem(descriptorItem, "Clock Source Location Type", avdecc::helper::descriptorTypeToString(model->clockSourceLocationType));
@@ -491,7 +491,7 @@ private:
 			auto const* const model = node.staticModel;
 
 			addTextItem(descriptorItem, "Clock Domain Index", model->clockDomainIndex);
-			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::to_integral(model->portFlags), avdecc::helper::flagsToString(model->portFlags));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->portFlags.value()), avdecc::helper::flagsToString(model->portFlags));
 			addTextItem(descriptorItem, "Supports Dynamic Mapping", model->hasDynamicAudioMap ? "Yes" : "No");
 		}
 
