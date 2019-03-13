@@ -375,46 +375,49 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 	{
 		case DeviceDetailsChannelTableModelColumn::ChannelName:
 		{
-			bool hasChanges = false;
 			auto const& connectionInfo = _nodes.at(index.row()).connectionInformation;
-			if (_hasChangesMap.contains(*connectionInfo.sourceClusterIndex) && _hasChangesMap.value(*connectionInfo.sourceClusterIndex)->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
-			{
-				hasChanges = true;
-			}
 			if (role == Qt::DisplayRole || role == Qt::EditRole)
 			{
-				if (hasChanges)
+				if (_hasChangesMap.contains(*connectionInfo.sourceClusterIndex) && _hasChangesMap.value(*connectionInfo.sourceClusterIndex)->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
 				{
 					return _hasChangesMap.value(*connectionInfo.sourceClusterIndex)->value(DeviceDetailsChannelTableModelColumn::ChannelName);
 				}
 				else
 				{
-					auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo.sourceEntityId);
-					if (controlledEntity)
+					try
 					{
-						auto const& audioUnit = controlledEntity->getAudioUnitNode(*connectionInfo.sourceConfigurationIndex, *connectionInfo.sourceAudioUnitIndex);
-						if (!connectionInfo.forward)
+						auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo.sourceEntityId);
+						if (controlledEntity)
 						{
-							if (connectionInfo.sourceStreamPortIndex && connectionInfo.sourceClusterIndex && connectionInfo.sourceStreamPortIndex < audioUnit.streamPortInputs.size() && *connectionInfo.sourceClusterIndex - *connectionInfo.sourceBaseCluster < audioUnit.streamPortInputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.size())
+							auto const& audioUnit = controlledEntity->getAudioUnitNode(*connectionInfo.sourceConfigurationIndex, *connectionInfo.sourceAudioUnitIndex);
+							if (!connectionInfo.forward)
 							{
-								auto const& audioCluster = audioUnit.streamPortInputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.at(*connectionInfo.sourceClusterIndex);
-								if (audioCluster.dynamicModel)
+								if (connectionInfo.sourceStreamPortIndex && connectionInfo.sourceClusterIndex && connectionInfo.sourceStreamPortIndex < audioUnit.streamPortInputs.size() && *connectionInfo.sourceClusterIndex - *connectionInfo.sourceBaseCluster < audioUnit.streamPortInputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.size())
 								{
-									return audioCluster.dynamicModel->objectName.data();
+									auto const& audioCluster = audioUnit.streamPortInputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.at(*connectionInfo.sourceClusterIndex);
+									if (audioCluster.dynamicModel)
+									{
+										return audioCluster.dynamicModel->objectName.data();
+									}
+								}
+							}
+							else
+							{
+								if (connectionInfo.sourceStreamPortIndex && connectionInfo.sourceClusterIndex && connectionInfo.sourceStreamPortIndex < audioUnit.streamPortOutputs.size() && *connectionInfo.sourceClusterIndex - *connectionInfo.sourceBaseCluster < audioUnit.streamPortOutputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.size())
+								{
+									auto const& audioCluster = audioUnit.streamPortOutputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.at(*connectionInfo.sourceClusterIndex);
+									if (audioCluster.dynamicModel)
+									{
+										return audioCluster.dynamicModel->objectName.data();
+									}
 								}
 							}
 						}
-						else
-						{
-							if (connectionInfo.sourceStreamPortIndex && connectionInfo.sourceClusterIndex && connectionInfo.sourceStreamPortIndex < audioUnit.streamPortOutputs.size() && *connectionInfo.sourceClusterIndex - *connectionInfo.sourceBaseCluster < audioUnit.streamPortOutputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.size())
-							{
-								auto const& audioCluster = audioUnit.streamPortOutputs.at(*connectionInfo.sourceStreamPortIndex).audioClusters.at(*connectionInfo.sourceClusterIndex);
-								if (audioCluster.dynamicModel)
-								{
-									return audioCluster.dynamicModel->objectName.data();
-								}
-							}
-						}
+					}
+					catch (...)
+					{
+						// in case something went wrong/was invalid we cannot provide a valid name string
+						break;
 					}
 				}
 			}
