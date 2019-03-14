@@ -21,6 +21,8 @@
 
 #include <QMenu>
 
+Q_DECLARE_METATYPE(la::avdecc::entity::model::SamplingRate)
+
 AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::controller::model::AudioUnitNodeStaticModel const* const staticModel, la::avdecc::controller::model::AudioUnitNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
@@ -34,10 +36,9 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 
 	for (auto const samplingRate : staticModel->samplingRates)
 	{
-#pragma message("TODO : Use a proper helper method(in avdecc) to convert the packed samplingRate to an integer value in Hz")
-#pragma message("TODO: Add a helper method in Hive to convert Hz to kHz")
-		auto const readableSamplingRate = QString("%1 Hz").arg(samplingRate);
-		_samplingRate->addItem(readableSamplingRate, samplingRate);
+#pragma message("TODO: Add a helper method in Hive to convert the returned double value to human readable kHz")
+		auto const readableSamplingRate = QString("%1 Hz").arg(samplingRate.getNominalSampleRate());
+		_samplingRate->addItem(readableSamplingRate, QVariant::fromValue(samplingRate));
 	}
 
 	// Send changes
@@ -65,6 +66,6 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 void AudioUnitDynamicTreeWidgetItem::updateSamplingRate(la::avdecc::entity::model::SamplingRate const samplingRate)
 {
 	QSignalBlocker const lg{ _samplingRate }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-	auto const index = _samplingRate->findData(samplingRate);
+	auto const index = _samplingRate->findData(QVariant::fromValue(samplingRate));
 	_samplingRate->setCurrentIndex(index);
 }

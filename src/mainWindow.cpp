@@ -314,7 +314,7 @@ void MainWindow::connectSignals()
 				auto* deviceView{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
 
-				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					// Do not propose Acquire if the device is Milan (not supported)
 					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))

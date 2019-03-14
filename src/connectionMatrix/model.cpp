@@ -424,7 +424,7 @@ public:
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
 			{
-				if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					return;
 				}
@@ -437,7 +437,7 @@ public:
 
 				// Talker
 
-				if (la::avdecc::utils::hasFlag(controlledEntity->getEntity().getTalkerCapabilities(), la::avdecc::entity::TalkerCapabilities::Implemented) && !configurationNode.streamOutputs.empty())
+				if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
 				{
 					std::int32_t offsetFromEntityNode{ 0 };
 					HeaderItem::StreamMap streamMap{};
@@ -548,7 +548,7 @@ public:
 
 				// Listener
 
-				if (la::avdecc::utils::hasFlag(controlledEntity->getEntity().getListenerCapabilities(), la::avdecc::entity::ListenerCapabilities::Implemented) && !configurationNode.streamInputs.empty())
+				if (controlledEntity->getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty())
 				{
 					std::int32_t offsetFromEntityNode{ 0 };
 					HeaderItem::StreamMap streamMap{};
