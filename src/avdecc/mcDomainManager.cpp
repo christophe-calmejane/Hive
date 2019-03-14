@@ -20,7 +20,7 @@
 #include "mcDomainManager.hpp"
 #include "controllerManager.hpp"
 #include "helper.hpp"
-#include <la/avdecc/internals/streamFormat.hpp>
+#include <la/avdecc/internals/streamFormatInfo.hpp>
 #include <atomic>
 #include <optional>
 #include <unordered_set>
@@ -123,7 +123,7 @@ private:
 		auto const& controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
 		if (controlledEntity)
 		{
-			if (la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				try
 				{
@@ -303,7 +303,7 @@ private:
 				keepSearching = false;
 				break;
 			}
-			if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				keepSearching = false;
 				error = McDeterminationError::NotSupported;
@@ -508,7 +508,7 @@ private:
 			}
 			if (sampleRates.size() > 1 || sampleRates.size() == 0)
 			{
-				domainKV.second.setDomainSamplingRate(la::avdecc::entity::model::getNullSamplingRate());
+				domainKV.second.setDomainSamplingRate(la::avdecc::entity::model::SamplingRate::getNullSamplingRate());
 			}
 			else
 			{
@@ -678,7 +678,7 @@ private:
 			return false;
 		}
 
-		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			// no AEM support means not managable
 			return false;
@@ -704,7 +704,7 @@ private:
 			return false;
 		}
 
-		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			// no AEM support means not managable in the first place
 			return false;
@@ -791,7 +791,7 @@ private:
 			auto controlledEntity = manager.getControlledEntity(entityId);
 			if (controlledEntity)
 			{
-				if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					return false;
 				}
@@ -838,7 +838,7 @@ private:
 			auto controlledEntity = manager.getControlledEntity(entityId);
 			if (controlledEntity)
 			{
-				if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					return false;
 				}
@@ -886,7 +886,7 @@ private:
 			auto const controlledEntity = manager.getControlledEntity(entityId);
 			if (controlledEntity)
 			{
-				if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					return false;
 				}
@@ -1110,7 +1110,7 @@ private:
 		auto controlledEntity = manager.getControlledEntity(entityId);
 		if (controlledEntity)
 		{
-			if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				return false;
 			}
@@ -1171,7 +1171,7 @@ private:
 		auto controlledEntity = manager.getControlledEntity(entityId);
 		if (controlledEntity)
 		{
-			if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				return std::nullopt;
 			}
@@ -1343,7 +1343,7 @@ private:
 			auto const controlledEntity = manager.getControlledEntity(potentialListenerEntityId);
 			if (controlledEntity)
 			{
-				if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					continue;
 				}
@@ -1381,7 +1381,7 @@ private:
 		auto const controlledEntity = manager.getControlledEntity(targetEntityId);
 		if (controlledEntity)
 		{
-			if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				return streamsToDisconnect;
 			}
@@ -1546,7 +1546,7 @@ private:
 		auto const controlledEntity = manager.getControlledEntity(entityId);
 		if (controlledEntity)
 		{
-			if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				return commands;
 			}

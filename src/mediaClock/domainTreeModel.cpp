@@ -536,7 +536,7 @@ bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& v
 		{
 			if (domainTreeItem->domainSamplingRate().first != value.toInt())
 			{
-				domainTreeItem->setDomainSamplingRate(value.toInt());
+				domainTreeItem->setDomainSamplingRate(la::avdecc::entity::model::SamplingRate(value.toInt()));
 				emit q->sampleRateSettingChanged();
 				return true;
 			}
@@ -885,7 +885,7 @@ QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionVie
 		{
 			if (sampleRate.first)
 			{
-				editor->getComboBox()->addItem(sampleRate.second, *sampleRate.first);
+				editor->getComboBox()->addItem(sampleRate.second, sampleRate.first->getValue());
 			}
 			else
 			{
@@ -894,7 +894,7 @@ QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionVie
 		}
 		if (selectedSampleRate.first)
 		{
-			editor->getComboBox()->setCurrentIndex(editor->getComboBox()->findData(*selectedSampleRate.first));
+			editor->getComboBox()->setCurrentIndex(editor->getComboBox()->findData(selectedSampleRate.first->getValue()));
 		}
 
 		if (!sampleRates.at(0).first)
@@ -983,11 +983,11 @@ void SampleRateDomainDelegate::paint(QPainter* painter, QStyleOptionViewItem con
 		editor.getLabel()->setText(elidedText);
 		for (auto const& sampleRate : sampleRates)
 		{
-			editor.getComboBox()->addItem(sampleRate.second, *sampleRate.first);
+			editor.getComboBox()->addItem(sampleRate.second, sampleRate.first->getValue());
 		}
 		if (selectedSampleRate.first)
 		{
-			editor.getComboBox()->setCurrentIndex(editor.getComboBox()->findData(*selectedSampleRate.first));
+			editor.getComboBox()->setCurrentIndex(editor.getComboBox()->findData(selectedSampleRate.first->getValue()));
 		}
 		if (sampleRates.size() < 2)
 		{

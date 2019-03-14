@@ -142,7 +142,7 @@ void DomainTreeItem::reevaluateDomainSampleRate()
 			if (referenceSampleRate && entitySampleRate && (*entitySampleRate).first != (*referenceSampleRate).first)
 			{
 				referenceSampleRate = std::nullopt;
-				m_itemData.setDomainSamplingRate(la::avdecc::entity::model::getNullSamplingRate());
+				m_itemData.setDomainSamplingRate(la::avdecc::entity::model::SamplingRate::getNullSamplingRate());
 				return;
 			}
 		}

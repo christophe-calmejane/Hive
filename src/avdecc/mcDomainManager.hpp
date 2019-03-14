@@ -158,7 +158,7 @@ class MCDomain
 {
 public:
 	// Constructors
-	MCDomain(DomainIndex const index, la::avdecc::UniqueIdentifier const mediaClockMaster = la::avdecc::UniqueIdentifier::getUninitializedUniqueIdentifier(), la::avdecc::entity::model::SamplingRate const samplingRate = la::avdecc::entity::model::getNullSamplingRate()) noexcept;
+	MCDomain(DomainIndex const index, la::avdecc::UniqueIdentifier const mediaClockMaster = la::avdecc::UniqueIdentifier::getUninitializedUniqueIdentifier(), la::avdecc::entity::model::SamplingRate const samplingRate = la::avdecc::entity::model::SamplingRate::getNullSamplingRate()) noexcept;
 
 	// Getters
 	DomainIndex getDomainIndex() const noexcept;
@@ -182,7 +182,7 @@ public:
 private:
 	DomainIndex _domainIndex{ 0u }; /** Index of the domain */
 	la::avdecc::UniqueIdentifier _mediaClockMasterId{}; /** ID of the clock master for the domain */
-	la::avdecc::entity::model::SamplingRate _samplingRate{ la::avdecc::entity::model::getNullSamplingRate() }; /** Sampling rate for the whole domain */
+	la::avdecc::entity::model::SamplingRate _samplingRate{ la::avdecc::entity::model::SamplingRate::getNullSamplingRate() }; /** Sampling rate for the whole domain */
 };
 
 // **************************************************************
