@@ -278,7 +278,7 @@ void MainWindow::connectSignals()
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			auto const& entity = controlledEntity->getEntity();
-			if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
 				dialog->setControlledEntityID(entityID);
@@ -337,7 +337,7 @@ void MainWindow::connectSignals()
 						}
 					}
 				}
-				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					// Lock
 					{

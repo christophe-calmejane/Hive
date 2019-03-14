@@ -88,7 +88,7 @@ public:
 			auto const controlledEntity = manager.getControlledEntity(potentialListenerEntityId);
 			if (controlledEntity)
 			{
-				if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					continue;
 				}
@@ -141,7 +141,7 @@ public:
 		{
 			return result;
 		}
-		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			return result;
 		}
@@ -319,7 +319,7 @@ public:
 			return result;
 		}
 
-		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			return result;
 		}
@@ -383,7 +383,7 @@ public:
 						continue;
 					}
 
-					if (!la::avdecc::utils::hasFlag(targetControlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+					if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 					{
 						continue;
 					}
@@ -480,7 +480,7 @@ public:
 		{
 			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
 		}
-		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
 		}
@@ -517,7 +517,7 @@ public:
 		{
 			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
 		}
-		if (!la::avdecc::utils::hasFlag(controlledEntity->getEntity().getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
 		}
