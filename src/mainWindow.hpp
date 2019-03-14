@@ -26,6 +26,7 @@
 #include "avdecc/controllerModel.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/comboBox.hpp"
+#include "toolkit/materialButton.hpp"
 
 class DynamicHeaderView;
 
@@ -61,6 +62,7 @@ private:
 private:
 	qt::toolkit::ComboBox _protocolComboBox{ this };
 	qt::toolkit::ComboBox _interfaceComboBox{ this };
+	qt::toolkit::MaterialButton _refreshControllerButton{ "refresh", this };
 	QLabel _controllerEntityIDLabel{ this };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };
