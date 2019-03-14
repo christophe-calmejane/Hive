@@ -314,7 +314,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 		if (role == Qt::UserRole)
 		{
 			auto const& entity = controlledEntity->getEntity();
-			if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+			if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				auto& settings = settings::SettingsManager::getInstance();
 				auto const& forceDownload{ settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool() };

@@ -173,8 +173,8 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo)
 {
-	_streamFormat->setText(1, avdecc::helper::toHexQString(streamInfo.streamFormat, true, true));
-	setFlagsItemText(_streamFlags, la::avdecc::utils::to_integral(streamInfo.streamInfoFlags), avdecc::helper::flagsToString(streamInfo.streamInfoFlags));
+	_streamFormat->setText(1, avdecc::helper::toHexQString(streamInfo.streamFormat.getValue(), true, true));
+	setFlagsItemText(_streamFlags, la::avdecc::utils::forceNumeric(streamInfo.streamInfoFlags.value()), avdecc::helper::flagsToString(streamInfo.streamInfoFlags));
 	_streamDestMac->setText(1, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(streamInfo.streamDestMac, true)));
 	_streamID->setText(1, avdecc::helper::toHexQString(streamInfo.streamID, true, true));
 	_streamVlanID->setText(1, QString::number(streamInfo.streamVlanID));
@@ -187,7 +187,7 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 		if (streamInfo.streamInfoFlagsEx.has_value())
 		{
 			auto const flagsEx = *streamInfo.streamInfoFlagsEx;
-			setFlagsItemText(_streamFlagsEx, la::avdecc::utils::to_integral(flagsEx), avdecc::helper::flagsToString(flagsEx));
+			setFlagsItemText(_streamFlagsEx, la::avdecc::utils::forceNumeric(flagsEx.value()), avdecc::helper::flagsToString(flagsEx));
 		}
 		else
 		{
