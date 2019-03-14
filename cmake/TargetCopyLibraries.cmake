@@ -44,8 +44,6 @@ function(target_copy_library TARGET_NAME LIBRARY_TARGET_NAME)
 					DESTINATION lib)
 			endif()
 		endif()
-	else()
-		message(FATAL_ERROR "Unsupported platform")
 	endif()
 endfunction()
 

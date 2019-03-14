@@ -294,12 +294,32 @@ if isWindows; then
 elif isMac; then
 	qtBasePath="/Applications/Qt/${qtVersion}"
 	qtArch="clang_64"
+elif isLinux; then
+	if [ "x${QT_BASE_PATH}" == "x" ]; then
+		echo "QT_BASE_PATH env variable should be defined to the root folder of Qt installation (where MaintenanceTool resides)"
+		exit 1
+	fi
+	if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
+		echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
+		exit 1
+	fi
+	qtBasePath="${QT_BASE_PATH}/${qtVersion}"
+	qtArch="gcc_64"
+else
+	echo "Unsupported platform"
+	exit 1
 fi
 
 # Check specified Qt version is available
 if [ ! -d "${qtBasePath}" ];
 then
 	echo "Cannot find Qt v$qtVersion installation path."
+	exit 1
+fi
+
+# Check specified Qt arch is available
+if [ ! -d "${qtBasePath}/${qtArch}" ]; then
+	echo "Cannot find Qt arch '${qtArch}' for Qt v${qtVersion}"
 	exit 1
 fi
 
