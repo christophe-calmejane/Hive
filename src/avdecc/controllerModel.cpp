@@ -165,7 +165,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 	auto const entityID = _entities.at(index.row());
 	auto& manager = avdecc::ControllerManager::getInstance();
 	auto& clockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
-	auto controlledEntity = manager.getControlledEntity(entityID);
+	auto const controlledEntity = manager.getControlledEntity(entityID);
 
 	if (!controlledEntity)
 		return {};
@@ -243,7 +243,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 						case mediaClock::McDeterminationError::StreamNotConnected:
 							return "Stream N/C";
 						case mediaClock::McDeterminationError::ExternalClockSource:
-							return QString("External (").append(helper::uniqueIdentifierToString(controlledEntity->getEntity().getEntityID())).append(")");
+							return QString("External (").append(helper::uniqueIdentifierToString(entityID)).append(")");
 						case mediaClock::McDeterminationError::UnknownEntity:
 							return "Indeterminable";
 						default:
