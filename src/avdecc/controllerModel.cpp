@@ -281,10 +281,12 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					{
 						return "";
 					}
-					auto controlledEntity = manager.getControlledEntity(clockMaster.first);
-					if (controlledEntity)
+					auto const clockMasterEntity = manager.getControlledEntity(clockMaster.first);
+					// Check if entity is offline
+					if (clockMasterEntity)
 					{
-						return helper::entityName(*controlledEntity);
+						// If the entity has no name, we don't want to display its entityID
+						return helper::entityName(*clockMasterEntity);
 					}
 					// Entity offline
 					return "";
