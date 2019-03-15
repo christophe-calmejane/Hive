@@ -257,13 +257,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					{
 						return "Self";
 					}
-					auto controlledEntity = manager.getControlledEntity(clockMaster.first);
-					if (controlledEntity)
-					{
-						return helper::uniqueIdentifierToString(controlledEntity->getEntity().getEntityID());
-					}
-					// Entity offline
-					return "Unknown";
+					return helper::uniqueIdentifierToString(clockMaster.first);
 				}
 			}
 			case ControllerModel::Column::MediaClockMasterName:
