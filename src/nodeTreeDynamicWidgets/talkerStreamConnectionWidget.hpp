@@ -28,8 +28,11 @@
 #include <QLabel>
 #include <QHBoxLayout>
 
+#include <toolkit/materialButton.hpp>
+
 class TalkerStreamConnectionWidget : public QWidget
 {
+	Q_OBJECT
 public:
 	TalkerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent = nullptr);
 	void updateData();
@@ -43,5 +46,5 @@ private:
 	QLabel _streamConnectionLabel{ this };
 	QLabel _entityNameLabel{ this };
 
-	QPushButton _disconnectButton{ "block", this };
+	qt::toolkit::MaterialButton _disconnectButton{ "block", this };
 };

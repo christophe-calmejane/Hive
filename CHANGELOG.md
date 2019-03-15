@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Device details dialog for easy access to basic device and device channel configuration
 - Support for end-to-end channel connection determination
 - Keyboard shortcut to refresh the controller (CTRL-R)
+- Button to refresh the controller (next to the Interface selection dropdown)
 
 ### Changed
 - Only displaying _Ethernet_ kind interfaces
