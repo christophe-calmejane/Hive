@@ -34,9 +34,16 @@ configure_file(
 	${CMAKE_CURRENT_BINARY_DIR}/internals/config.hpp
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCES_ROOT_DIR="${PROJECT_ROOT_DIR}/resources")
+
+# Process Qt resources
+qt5_add_resources(
+	RCC_RESOURCES
+	${PROJECT_ROOT_DIR}/resources/main.qrc)
+
 # Resource files
 set(RESOURCE_FILES
-	${PROJECT_ROOT_DIR}/resources/main.qrc
+	${RCC_RESOURCES}
 	${CMAKE_CURRENT_BINARY_DIR}/internals/config.hpp
 )
 
@@ -70,6 +77,7 @@ endif()
 set(TOOLKIT_HEADER_FILES
 	toolkit/comboBox.hpp
 	toolkit/dynamicHeaderView.hpp
+	toolkit/materialButton.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
 	toolkit/tickableMenu.hpp
@@ -86,6 +94,7 @@ set(TOOLKIT_HEADER_FILES
 set(TOOLKIT_SOURCE_FILES
 	toolkit/comboBox.cpp
 	toolkit/dynamicHeaderView.cpp
+	toolkit/materialButton.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
 	toolkit/tickableMenu.cpp

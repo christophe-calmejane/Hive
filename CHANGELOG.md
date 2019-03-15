@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for media clock master determination
 - Support for media clock distribution handling, incl. entity clock source configuration and CRF stream connection establishment
 - Keyboard shortcut to refresh the controller (CTRL-R)
+- Button to refresh the controller (next to the Interface selection dropdown)
 
 ### Changed
 - Only displaying _Ethernet_ kind interfaces

@@ -81,7 +81,6 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		auto* item = new QTreeWidgetItem(this);
 		item->setText(0, "As Path");
 		_asPath = new QListWidget;
-		_asPath->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
 		parent->setItemWidget(item, 1, _asPath);
 
 		// Update info right now

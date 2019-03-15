@@ -548,7 +548,6 @@ private:
 			auto* listWidget = new QListWidget;
 
 			q->setItemWidget(mappingsIndexItem, 1, listWidget);
-			listWidget->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
 
 			for (auto const& mapping : model->mappings)
 			{

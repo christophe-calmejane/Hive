@@ -20,6 +20,7 @@
 #include "talkerStreamConnectionWidget.hpp"
 
 #include <QMenu>
+#include <QStyle>
 
 TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification talkerConnection, la::avdecc::entity::model::StreamIdentification listenerConnection, QWidget* parent)
 	: QWidget(parent)
@@ -34,13 +35,8 @@ TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::m
 
 	_streamConnectionLabel.setText(avdecc::helper::uniqueIdentifierToString(_listenerConnection.entityID) + ":" + QString::number(_listenerConnection.streamIndex));
 
-	QFont font("Material Icons");
-	font.setBold(true);
-	font.setStyleStrategy(QFont::PreferQuality);
-	_disconnectButton.setFont(font);
-
-	_disconnectButton.setFlat(true);
-	_disconnectButton.setStyleSheet(".QPushButton { color: #f44336; border: none; } .QPushButton:disabled { color: gray; } .QPushButton:pressed { color: black; }");
+	_entityNameLabel.setObjectName("EntityNameLabel");
+	_disconnectButton.setObjectName("DisconnectButton");
 
 	updateData();
 
@@ -96,14 +92,12 @@ void TalkerStreamConnectionWidget::updateData()
 	auto& manager = avdecc::ControllerManager::getInstance();
 
 	QString onlineStatus{ "Offline" };
-	QString statusColor{ "color: grey;" };
 	bool isGhost{ true };
 
 	auto controlledEntity = manager.getControlledEntity(_listenerConnection.entityID);
 	if (controlledEntity)
 	{
 		onlineStatus = avdecc::helper::smartEntityName(*controlledEntity);
-		statusColor = "color: #4CAF50; font-weight: bold;";
 
 		try
 		{
@@ -127,6 +121,8 @@ void TalkerStreamConnectionWidget::updateData()
 	}
 
 	_entityNameLabel.setText(onlineStatus);
-	_entityNameLabel.setStyleSheet(QString(".QLabel { %1}").arg(statusColor));
+	_entityNameLabel.setProperty("isOnline", !isGhost);
+	style()->unpolish(&_entityNameLabel);
+	style()->polish(&_entityNameLabel);
 	_disconnectButton.setEnabled(isGhost);
 }

@@ -90,54 +90,22 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="clearButton">
-       <property name="maximumSize">
-        <size>
-         <width>24</width>
-         <height>24</height>
-        </size>
-       </property>
+      <widget class="qt::toolkit::MaterialButton" name="clearButton">
        <property name="toolTip">
         <string>Clear</string>
        </property>
        <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources/main.qrc">
-         <normaloff>:/trash.png</normaloff>:/trash.png</iconset>
-       </property>
-       <property name="flat">
-        <bool>true</bool>
-       </property>
-       <property name="tool" stdset="0">
-        <bool>true</bool>
+        <string>delete_forever</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="saveButton">
-       <property name="maximumSize">
-        <size>
-         <width>24</width>
-         <height>24</height>
-        </size>
-       </property>
+      <widget class="qt::toolkit::MaterialButton" name="saveButton">
        <property name="toolTip">
         <string>Save</string>
        </property>
        <property name="text">
-        <string/>
-       </property>
-       <property name="icon">
-        <iconset resource="../resources/main.qrc">
-         <normaloff>:/save.png</normaloff>:/save.png</iconset>
-       </property>
-       <property name="flat">
-        <bool>true</bool>
-       </property>
-       <property name="tool" stdset="0">
-        <bool>true</bool>
+        <string>save</string>
        </property>
       </widget>
      </item>
@@ -167,6 +135,13 @@
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>qt::toolkit::MaterialButton</class>
+   <extends>QPushButton</extends>
+   <header location="global">toolkit/materialButton.hpp</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../resources/main.qrc"/>
  </resources>
