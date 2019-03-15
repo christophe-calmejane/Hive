@@ -14,7 +14,7 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 
 - CMake 3.12
 - Qt 5.12.0
-- Visual Studio 2017 15.9, Xcode 10, gcc 8.2.1
+- Visual Studio 2017 15.9 (using platform toolset v141, Windows SDK 8.1), Xcode 10, gcc 8.2.1
 
 ## Compilation
 
