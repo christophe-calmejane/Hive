@@ -67,8 +67,8 @@ private:
 	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags);
 
 	// Slots for avdecc::mediaClock::MCDomainManager signals
-	Q_SLOT void mediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const changedEntities);
-	Q_SLOT void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const changedEntities);
+	Q_SLOT void mediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const& changedEntities);
+	Q_SLOT void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const& changedEntities);
 
 	// Slots for EntityLogoCache signals
 	Q_SLOT void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
@@ -130,6 +130,7 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::gptpChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::streamInputErrorCounterChanged);
 
+	// Connect avdecc::mediaClock::MCDomainManager signals
 	auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
 	connect(&mediaClockConnectionManager, &avdecc::mediaClock::MCDomainManager::mediaClockConnectionsUpdate, this, &ControllerModelPrivate::mediaClockConnectionsUpdated);
 	connect(&mediaClockConnectionManager, &avdecc::mediaClock::MCDomainManager::mcMasterNameChanged, this, &ControllerModelPrivate::mcMasterNameChanged);
@@ -619,7 +620,7 @@ void ControllerModelPrivate::gptpChanged(la::avdecc::UniqueIdentifier const enti
 	dataChanged(entityID, ControllerModel::Column::GptpDomain);
 }
 
-void ControllerModelPrivate::mediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const changedEntities)
+void ControllerModelPrivate::mediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const& changedEntities)
 {
 	for (auto const& entityId : changedEntities)
 	{
@@ -628,7 +629,7 @@ void ControllerModelPrivate::mediaClockConnectionsUpdated(std::vector<la::avdecc
 	}
 }
 
-void ControllerModelPrivate::mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const changedEntities)
+void ControllerModelPrivate::mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const& changedEntities)
 {
 	for (auto const& entityId : changedEntities)
 	{

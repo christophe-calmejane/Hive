@@ -314,7 +314,7 @@ public:
 	* Whenever the media clock mappings change while this dialog doesn't have unapplied user changes,
 	* the model is updated.
 	*/
-	Q_SLOT void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds)
+	Q_SLOT void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds)
 	{
 		if (!_hasChanges)
 		{

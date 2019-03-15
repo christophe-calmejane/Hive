@@ -249,8 +249,8 @@ public:
 	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier entityId) noexcept = 0;
 	virtual bool isMediaClockDomainManageable(la::avdecc::UniqueIdentifier const& entityId) noexcept = 0;
 
-	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> entityIds);
-	Q_SIGNAL void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> entityIds);
+	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds);
+	Q_SIGNAL void mcMasterNameChanged(std::vector<la::avdecc::UniqueIdentifier> const& entityIds);
 
 	Q_SIGNAL void applyMediaClockDomainModelProgressUpdate(int progressPercentage);
 	Q_SIGNAL void applyMediaClockDomainModelFinished(ApplyInfo);
