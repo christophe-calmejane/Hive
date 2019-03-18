@@ -326,9 +326,9 @@ void MainWindow::connectSignals()
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
 				auto* lockAction{ static_cast<QAction*>(nullptr) };
 				auto* unlockAction{ static_cast<QAction*>(nullptr) };
+				auto* deviceView{ static_cast<QAction*>(nullptr) };
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
-				auto* deviceView{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
 
 				if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
@@ -353,9 +353,6 @@ void MainWindow::connectSignals()
 							releaseAction->setEnabled(isAcquired);
 						}
 					}
-				}
-				if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
-				{
 					// Lock
 					{
 						QString lockText;
@@ -380,10 +377,10 @@ void MainWindow::connectSignals()
 
 					// Device Details, Inspect, Logo, ...
 					{
-						deviceView = menu.addAction("Device Details");
+						deviceView = menu.addAction("Device Details...");
 					}
 					{
-						inspect = menu.addAction("Inspect");
+						inspect = menu.addAction("Inspect Entity Model...");
 					}
 					{
 						getLogo = menu.addAction("Retrieve Entity Logo");
@@ -418,6 +415,17 @@ void MainWindow::connectSignals()
 					{
 						manager.unlockEntity(entityID);
 					}
+					else if (action == deviceView)
+					{
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						dialog->setControlledEntityID(entityID);
+						dialog->show();
+						connect(dialog, &DeviceDetailsDialog::finished, this,
+							[this, dialog](int result)
+							{
+								dialog->deleteLater();
+							});
+					}
 					else if (action == inspect)
 					{
 						auto* inspector = new EntityInspector;
@@ -429,17 +437,6 @@ void MainWindow::connectSignals()
 					else if (action == getLogo)
 					{
 						EntityLogoCache::getInstance().getImage(entityID, EntityLogoCache::Type::Entity, true);
-					}
-					else if (action == deviceView)
-					{
-						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
-						dialog->setControlledEntityID(entityID);
-						dialog->show();
-						connect(dialog, &DeviceDetailsDialog::finished, this,
-							[this, dialog](int result)
-							{
-								dialog->deleteLater();
-							});
 					}
 					else if (action == clearErrorFlags)
 					{
