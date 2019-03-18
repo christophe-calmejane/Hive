@@ -35,8 +35,10 @@
 #include "nodeVisitor.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "avdecc/mcDomainManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
+#include "mediaClock/mediaClockManagementDialog.hpp"
 #include "highlightForegroundItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
@@ -450,6 +452,13 @@ void MainWindow::connectSignals()
 		[this]()
 		{
 			SettingsDialog dialog{ this };
+			dialog.exec();
+		});
+
+	connect(actionMediaClockManagement, &QAction::triggered, this,
+		[this]()
+		{
+			MediaClockManagementDialog dialog{ this };
 			dialog.exec();
 		});
 
