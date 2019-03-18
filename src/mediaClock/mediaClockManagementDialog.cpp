@@ -156,7 +156,10 @@ public:
 			// no entity selected.
 			return;
 		}
-		if (avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainInfo.second))
+		// check if this entity occurs on other places in the tree.
+
+
+		if (!_domainTreeModel.isEntityDoubled(entityDomainInfo.second) && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainInfo.second))
 		{
 			// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.
 			// If an entity cannot be added to a domain, the user should not be presented with it and then confused why he cannot use it.

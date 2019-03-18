@@ -300,6 +300,7 @@ private:
 			auto const& controlledEntity = manager.getControlledEntity(currentEntityId);
 			if (!controlledEntity)
 			{
+				error = McDeterminationError::AnyEntityInChainOffline;
 				keepSearching = false;
 				break;
 			}
@@ -587,7 +588,7 @@ private:
 		{
 			if (!(entityKV.second.empty() && oldDomainModel.getEntityMediaClockMasterMappings().find(entityKV.first)->second.empty()))
 			{
-				// check if they are different (by checking if they contain the same entries):
+				// check if they are different (by checking if the mc master is the same):
 				for (auto domainIndexOld : oldDomainModel.getEntityMediaClockMasterMappings().find(entityKV.first)->second)
 				{
 					bool removed = true;
@@ -600,12 +601,24 @@ private:
 						}
 					}
 
-					// check if it's not the in the same domain anymore and also isn't it's own mc master.
-					if (removed && entityKV.first != oldDomainModel.getMediaClockDomains().find(domainIndexOld)->second.getMediaClockDomainMaster())
+					if (removed)
 					{
-						// no longer existant, remove mc stream connection
-						auto commands = removeClockStreamConnection(oldDomainModel.getMediaClockDomains().find(domainIndexOld)->second.getMediaClockDomainMaster(), entityKV.first);
-						commandsRemoveOldMappingConnections->append(commands);
+						if (entityKV.first != oldDomainModel.getMediaClockDomains().find(domainIndexOld)->second.getMediaClockDomainMaster())
+						{
+							// no longer existant, remove mc stream connection
+							auto commands = removeClockStreamConnection(oldDomainModel.getMediaClockDomains().find(domainIndexOld)->second.getMediaClockDomainMaster(), entityKV.first);
+							commandsRemoveOldMappingConnections->append(commands);
+						}
+						else
+						{
+							if (newDomainModel.getEntityMediaClockMasterMappings().find(entityKV.first)->second.size() == 1 && oldDomainModel.getEntityMediaClockMasterMappings().find(entityKV.first)->second.size() > 1)
+							{
+								// the entity is the mc master of the domain
+								// set it's clock source to internal
+								auto command = setEntityClockToCRFInputStream(entityKV.first, 0);
+								commandsRemoveOldMappingConnections->append(command);
+							}
+						}
 					}
 				}
 
@@ -639,9 +652,12 @@ private:
 				{
 					if (newDomainModel.getMediaClockDomains().find(domainIndexNew)->second.getMediaClockDomainMaster() != entityKV.first)
 					{
-						// set the clock source to crf input stream for clock domain at index 0
-						auto commandToExternal = setEntityClockToCRFInputStream(entityKV.first, 0);
-						commandsSetupNewMappingConnections->append(commandToExternal);
+						if (newDomainModel.getEntityMediaClockMasterMappings().find(entityKV.first)->second.size() == 1)
+						{
+							// set the clock source to crf input stream for clock domain at index 0
+							auto commandToExternal = setEntityClockToCRFInputStream(entityKV.first, 0);
+							commandsSetupNewMappingConnections->append(commandToExternal);
+						}
 
 						// the entity is not the mc master
 						// create a clock channel connection.

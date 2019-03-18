@@ -143,6 +143,7 @@ enum class McDeterminationError
 	Recursive,
 	StreamNotConnected,
 	ExternalClockSource,
+	AnyEntityInChainOffline,
 	UnknownEntity,
 };
 

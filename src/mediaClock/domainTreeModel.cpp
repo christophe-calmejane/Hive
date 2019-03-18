@@ -162,6 +162,7 @@ avdecc::mediaClock::MCEntityDomainMapping DomainTreeModelPrivate::createMediaClo
 				{
 					domains.push_back(domain);
 				}
+				mediaClockDomains.getEntityMediaClockMasterMappings().erase(entityTreeItem->entityId());
 			}
 			domains.push_back(domainTreeItem->domain().getDomainIndex());
 			mediaClockDomains.getEntityMediaClockMasterMappings().emplace(entityTreeItem->entityId(), domains);
