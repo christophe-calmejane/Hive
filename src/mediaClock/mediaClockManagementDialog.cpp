@@ -156,7 +156,10 @@ public:
 			// no entity selected.
 			return;
 		}
-		if (avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainInfo.second))
+		// check if this entity occurs on other places in the tree.
+		
+
+		if (!_domainTreeModel.isEntityDoubled(entityDomainInfo.second) && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainInfo.second))
 		{
 			// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.
 			// If an entity cannot be added to a domain, the user should not be presented with it and then confused why he cannot use it.
@@ -366,58 +369,58 @@ public:
 				{
 					switch (*i->second.commandTypeAcmp)
 					{
-						case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
-							errors += "Connecting stream failed. ";
-							break;
-						case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
-							errors += "Disconnecting stream failed. ";
-							break;
-						case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
-							errors += "Disconnecting talker stream failed. ";
-							break;
+					case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+						errors += "Connecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+						errors += "Disconnecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+						errors += "Disconnecting talker stream failed. ";
+						break;
 					}
 				}
 				else if (i->second.commandTypeAecp)
 				{
 					switch (*i->second.commandTypeAecp)
 					{
-						case avdecc::ControllerManager::AecpCommandType::SetClockSource:
-							errors += "Setting the clock source failed. ";
-							break;
-						case avdecc::ControllerManager::AecpCommandType::SetSamplingRate:
-							errors += "Setting the sampling rate failed. ";
-							break;
+					case avdecc::ControllerManager::AecpCommandType::SetClockSource:
+						errors += "Setting the clock source failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::SetSamplingRate:
+						errors += "Setting the sampling rate failed. ";
+						break;
 					}
 				}
 				switch (i->second.errorType)
 				{
-					case avdecc::mediaClock::CommandExecutionError::LockedByOther:
-						errors += "Entity is locked.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::AcquiredByOther:
-						errors += "Entity is aquired by an other controller.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::Timeout:
-						errors += "Command timed out. Entity might be offline.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::EntityError:
-						errors += "Entity error. Operation might not be supported.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::NetworkIssue:
-						errors += "Network error.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::CommandFailure:
-						errors += "Command failure.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::NoMediaClockInputAvailable:
-						errors += "Device does not have any compatible media clock inputs.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::NoMediaClockOutputAvailable:
-						errors += "Device does not have any compatible media clock outputs.";
-						break;
-					default:
-						errors += "Unknwon error.";
-						break;
+				case avdecc::mediaClock::CommandExecutionError::LockedByOther:
+					errors += "Entity is locked.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::AcquiredByOther:
+					errors += "Entity is aquired by an other controller.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::Timeout:
+					errors += "Command timed out. Entity might be offline.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::EntityError:
+					errors += "Entity error. Operation might not be supported.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::NetworkIssue:
+					errors += "Network error.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::CommandFailure:
+					errors += "Command failure.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::NoMediaClockInputAvailable:
+					errors += "Device does not have any compatible media clock inputs.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::NoMediaClockOutputAvailable:
+					errors += "Device does not have any compatible media clock outputs.";
+					break;
+				default:
+					errors += "Unknwon error.";
+					break;
 				}
 				errors += "\n";
 			}

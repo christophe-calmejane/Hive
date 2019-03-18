@@ -243,7 +243,9 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 						case mediaClock::McDeterminationError::StreamNotConnected:
 							return "Stream N/C";
 						case mediaClock::McDeterminationError::ExternalClockSource:
-							return QString("External (").append(helper::uniqueIdentifierToString(entityID)).append(")");
+							return QString("External on ").append(helper::uniqueIdentifierToString(clockMaster.first));
+						case mediaClock::McDeterminationError::AnyEntityInChainOffline: 
+							return "Talker Offline";
 						case mediaClock::McDeterminationError::UnknownEntity:
 							return "Indeterminable";
 						default:
