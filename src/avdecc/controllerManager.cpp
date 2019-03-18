@@ -738,6 +738,27 @@ private:
 		}
 	}
 
+	virtual void setStreamOutputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& streamInfo, SetStreamOutputInfoHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo);
+			controller->setStreamOutputInfo(targetEntityID, streamIndex, streamInfo,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, status);
+					}
+				});
+		}
+	}
+
 	virtual void setEntityName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name, SetEntityNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
@@ -1411,6 +1432,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Audio Unit Name";
 		case AecpCommandType::SetStreamName:
 			return "Set Stream Name";
+		case AecpCommandType::SetStreamInfo:
+			return "Set Stream Info";
 		case AecpCommandType::SetAvbInterfaceName:
 			return "Set AVB Interface Name";
 		case AecpCommandType::SetClockSourceName:

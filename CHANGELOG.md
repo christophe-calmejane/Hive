@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Media clock management dialog for easy setup/status access of media clock distribution
 - Support for media clock master determination
 - Support for media clock distribution handling, incl. entity clock source configuration and CRF stream connection establishment
+- Device details dialog for easy access to basic device and device channel configuration
+- Support for end-to-end channel connection determination
 - Keyboard shortcut to refresh the controller (CTRL-R)
 - Button to refresh the controller (next to the Interface selection dropdown)
 

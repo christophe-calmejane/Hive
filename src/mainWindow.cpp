@@ -30,6 +30,7 @@
 
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 #include "internals/config.hpp"
 
 #include "nodeVisitor.hpp"
@@ -43,6 +44,7 @@
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
+#include "deviceDetailsDialog.hpp"
 
 #include "updater/updater.hpp"
 
@@ -82,6 +84,9 @@ MainWindow::MainWindow(QWidget* parent)
 	loadSettings();
 
 	connectSignals();
+
+	// create channel connection manager instance
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 }
 
 void MainWindow::currentControllerChanged()
@@ -283,6 +288,28 @@ void MainWindow::connectSignals()
 			auto& settings = settings::SettingsManager::getInstance();
 			settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 		});
+
+	connect(controllerTableView, &QTableView::doubleClicked, this,
+		[this](QModelIndex const& index)
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto const entityID = _controllerModel->controlledEntityID(index);
+			auto controlledEntity = manager.getControlledEntity(entityID);
+
+			auto const& entity = controlledEntity->getEntity();
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			{
+				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+				dialog->setControlledEntityID(entityID);
+				dialog->show();
+				connect(dialog, &DeviceDetailsDialog::finished, this,
+					[this, dialog](int result)
+					{
+						dialog->deleteLater();
+					});
+			}
+		});
+
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
@@ -301,6 +328,7 @@ void MainWindow::connectSignals()
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
 				auto* lockAction{ static_cast<QAction*>(nullptr) };
 				auto* unlockAction{ static_cast<QAction*>(nullptr) };
+				auto* deviceView{ static_cast<QAction*>(nullptr) };
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
@@ -349,9 +377,12 @@ void MainWindow::connectSignals()
 
 					menu.addSeparator();
 
-					// Inspect, Logo, ...
+					// Device Details, Inspect, Logo, ...
 					{
-						inspect = menu.addAction("Inspect");
+						deviceView = menu.addAction("Device Details...");
+					}
+					{
+						inspect = menu.addAction("Inspect Entity Model...");
 					}
 					{
 						getLogo = menu.addAction("Retrieve Entity Logo");
@@ -385,6 +416,17 @@ void MainWindow::connectSignals()
 					else if (action == unlockAction)
 					{
 						manager.unlockEntity(entityID);
+					}
+					else if (action == deviceView)
+					{
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						dialog->setControlledEntityID(entityID);
+						dialog->show();
+						connect(dialog, &DeviceDetailsDialog::finished, this,
+							[this, dialog](int result)
+							{
+								dialog->deleteLater();
+							});
 					}
 					else if (action == inspect)
 					{
