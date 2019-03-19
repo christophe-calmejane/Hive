@@ -245,8 +245,11 @@ public:
 
 	~ControllerManagerImpl() noexcept
 	{
-		// Destroy the controller, we don't want further notifications
-		destroyController();
+		// The controller should already have been destroyed by now, but just in case, clean it we don't want further notifications
+		if (!AVDECC_ASSERT_WITH_RET(!_controller, "Controller should have been destroyed before the singleton destructor is called"))
+		{
+			destroyController();
+		}
 
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
@@ -529,6 +532,24 @@ private:
 			// Trigger setting observers
 			auto& settings = settings::SettingsManager::getInstance();
 			settings.triggerSettingObserver(settings::AemCacheEnabled.name, this);
+		}
+	}
+
+	virtual void destroyController() noexcept override
+	{
+		if (_controller)
+		{
+			// First remove the observer so we don't get any new notifications
+			_controller->unregisterObserver(this);
+
+			// And destroy the controller itself
+#if HAVE_ATOMIC_SMART_POINTERS
+			_controller = Controller{ nullptr };
+#else // !HAVE_ATOMIC_SMART_POINTERS
+			std::atomic_store(&_controller, SharedController{ nullptr });
+#endif // HAVE_ATOMIC_SMART_POINTERS
+
+			emit controllerOffline();
 		}
 	}
 
@@ -1351,24 +1372,6 @@ private:
 #else // !HAVE_ATOMIC_SMART_POINTERS
 		return std::atomic_load(&_controller);
 #endif // HAVE_ATOMIC_SMART_POINTERS
-	}
-
-	void destroyController()
-	{
-		if (_controller)
-		{
-			// First remove the observer so we don't get any new notifications
-			_controller->unregisterObserver(this);
-
-			// And destroy the controller itself
-#if HAVE_ATOMIC_SMART_POINTERS
-			_controller = Controller{ nullptr };
-#else // !HAVE_ATOMIC_SMART_POINTERS
-			std::atomic_store(&_controller, SharedController{ nullptr });
-#endif // HAVE_ATOMIC_SMART_POINTERS
-
-			emit controllerOffline();
-		}
 	}
 
 	// Private members
