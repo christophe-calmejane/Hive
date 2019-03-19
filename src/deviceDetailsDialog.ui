@@ -75,14 +75,14 @@
               </font>
              </property>
              <property name="text">
-              <string>Device names</string>
+              <string>Device Names</string>
              </property>
             </widget>
            </item>
            <item row="1" column="0">
             <widget class="QLabel" name="label">
              <property name="text">
-              <string>Device name</string>
+              <string>Device Name</string>
              </property>
             </widget>
            </item>
@@ -101,7 +101,7 @@
              <property name="minimumSize">
               <size>
                <width>160</width>
-               <height>0</height>
+               <height>20</height>
               </size>
              </property>
             </widget>
@@ -109,61 +109,85 @@
            <item row="2" column="0">
             <widget class="QLabel" name="label_2">
              <property name="text">
-              <string>Group name</string>
+              <string>Group Name</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="0">
+           <item row="5" column="0">
             <widget class="QLabel" name="labelVendorName">
              <property name="text">
               <string>Vendor Name</string>
              </property>
             </widget>
            </item>
-           <item row="4" column="1">
-            <widget class="QLabel" name="labelVendorNameValue">
-             <property name="text">
-              <string>TextLabel</string>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="labelModelName">
-             <property name="text">
-              <string>Model Name</string>
-             </property>
-            </widget>
-           </item>
            <item row="5" column="1">
-            <widget class="QLabel" name="labelModelNameValue">
+            <widget class="QLabel" name="labelVendorNameValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
              <property name="text">
               <string>TextLabel</string>
              </property>
             </widget>
            </item>
            <item row="6" column="0">
-            <widget class="QLabel" name="labelFirmwareVersion">
+            <widget class="QLabel" name="labelModelName">
              <property name="text">
-              <string>Firmware Version</string>
+              <string>Model Name</string>
              </property>
             </widget>
            </item>
            <item row="6" column="1">
-            <widget class="QLabel" name="labelFirmwareVersionValue">
+            <widget class="QLabel" name="labelModelNameValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
              <property name="text">
               <string>TextLabel</string>
              </property>
             </widget>
            </item>
            <item row="7" column="0">
+            <widget class="QLabel" name="labelFirmwareVersion">
+             <property name="text">
+              <string>Firmware Version</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QLabel" name="labelFirmwareVersionValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="0">
             <widget class="QLabel" name="labelSerialNumber">
              <property name="text">
               <string>Serial Number</string>
              </property>
             </widget>
            </item>
-           <item row="7" column="1">
+           <item row="8" column="1">
             <widget class="QLabel" name="labelSerialNumberValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
              <property name="text">
               <string>TextLabel</string>
              </property>
@@ -174,13 +198,36 @@
              <property name="orientation">
               <enum>Qt::Vertical</enum>
              </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
              <property name="sizeHint" stdset="0">
               <size>
                <width>20</width>
-               <height>10</height>
+               <height>14</height>
               </size>
              </property>
             </spacer>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="labelEntityId">
+             <property name="text">
+              <string>Entity ID</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="labelEntityIdValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
@@ -189,10 +236,13 @@
            <property name="orientation">
             <enum>Qt::Vertical</enum>
            </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>40</height>
+             <height>46</height>
             </size>
            </property>
           </spacer>
@@ -211,7 +261,7 @@
               </font>
              </property>
              <property name="text">
-              <string>Device configuration</string>
+              <string>Device Configuration</string>
              </property>
             </widget>
            </item>

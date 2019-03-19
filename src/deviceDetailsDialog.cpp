@@ -160,6 +160,8 @@ public:
 				auto const* const staticModel = entityNode.staticModel;
 				auto const* const dynamicModel = entityNode.dynamicModel;
 
+				labelEntityIdValue->setText(avdecc::helper::toHexQString(entityID.getValue(), true, true));
+
 				if (staticModel)
 				{
 					labelVendorNameValue->setText(controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
