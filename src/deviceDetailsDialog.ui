@@ -63,6 +63,9 @@
          </item>
          <item>
           <layout class="QFormLayout" name="formLayout">
+           <property name="horizontalSpacing">
+            <number>20</number>
+           </property>
            <item row="0" column="0">
             <widget class="QLabel" name="label_4">
              <property name="font">
@@ -93,13 +96,6 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_2">
-             <property name="text">
-              <string>Group name</string>
-             </property>
-            </widget>
-           </item>
            <item row="2" column="1">
             <widget class="QLineEdit" name="lineEditGroupName">
              <property name="minimumSize">
@@ -109,6 +105,82 @@
               </size>
              </property>
             </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Group name</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="labelVendorName">
+             <property name="text">
+              <string>Vendor Name</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="labelVendorNameValue">
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="labelModelName">
+             <property name="text">
+              <string>Model Name</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLabel" name="labelModelNameValue">
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="labelFirmwareVersion">
+             <property name="text">
+              <string>Firmware Version</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QLabel" name="labelFirmwareVersionValue">
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="labelSerialNumber">
+             <property name="text">
+              <string>Serial Number</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QLabel" name="labelSerialNumberValue">
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <spacer name="verticalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>10</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>
@@ -127,6 +199,9 @@
          </item>
          <item>
           <layout class="QFormLayout" name="formLayout_2">
+           <property name="horizontalSpacing">
+            <number>10</number>
+           </property>
            <item row="0" column="0">
             <widget class="QLabel" name="label_5">
              <property name="font">
@@ -232,6 +307,9 @@
           <layout class="QFormLayout" name="formLayout_3">
            <item row="1" column="1">
             <widget class="QLineEdit" name="lineEdit_CustomPT">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="minimumSize">
               <size>
                <width>160</width>
