@@ -158,7 +158,6 @@ public:
 		}
 		// check if this entity occurs on other places in the tree.
 
-
 		if (!_domainTreeModel.isEntityDoubled(entityDomainInfo.second) && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainInfo.second))
 		{
 			// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.

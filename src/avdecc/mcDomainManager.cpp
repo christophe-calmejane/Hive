@@ -307,7 +307,7 @@ private:
 			if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				keepSearching = false;
-				error = McDeterminationError::NotSupported;
+				error = McDeterminationError::NotSupportedNoAem;
 				break;
 			}
 
@@ -317,9 +317,16 @@ private:
 				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 				auto const activeConfigIndex = configNode.descriptorIndex;
 
-				if (configNode.clockDomains.size() != 1) // for now, we only support devices that have exactly 1 clock domain.
+				if (configNode.clockDomains.size() > 1) // for now, we only support devices that have exactly 1 clock domain.
 				{
 					keepSearching = false;
+					error = McDeterminationError::NotSupportedMultipleClockDomains;
+					break;
+				}
+				else if (configNode.clockDomains.size() == 0)
+				{
+					keepSearching = false;
+					error = McDeterminationError::NotSupportedNoClockDomains;
 					break;
 				}
 
@@ -351,7 +358,7 @@ private:
 							case la::avdecc::entity::model::ClockSourceType::InputStream:
 								break;
 							default:
-								error = McDeterminationError::NotSupported;
+								error = McDeterminationError::NotSupportedClockSourceType;
 								keepSearching = false;
 								return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
 						}
