@@ -321,6 +321,7 @@ public:
 		if (!_hasChanges)
 		{
 			refreshModels();
+			resizeMCTreeViewColumns();
 		}
 	}
 
@@ -437,6 +438,7 @@ public:
 		_unassignedListModel.setMediaClockDomainModel(domains);
 		_domainTreeModel.setMediaClockDomainModel(domains);
 		expandAllDomains();
+		resizeMCTreeViewColumns();
 	}
 
 	/**
