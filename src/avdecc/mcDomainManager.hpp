@@ -139,7 +139,10 @@ using DomainIndex = std::uint64_t; /** A virtual index attributed to each domain
 enum class McDeterminationError
 {
 	NoError,
-	NotSupported,
+	NotSupportedNoAem,
+	NotSupportedMultipleClockDomains,
+	NotSupportedNoClockDomains,
+	NotSupportedClockSourceType,
 	Recursive,
 	StreamNotConnected,
 	ExternalClockSource,

@@ -236,8 +236,13 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				{
 					switch (error)
 					{
-						case mediaClock::McDeterminationError::NotSupported:
-							return "Not Supported";
+						case mediaClock::McDeterminationError::NotSupportedClockSourceType:
+							return "Unsupported Clock Source";
+						case mediaClock::McDeterminationError::NotSupportedNoAem:
+							return "Unsupported Entity";
+						case mediaClock::McDeterminationError::NotSupportedMultipleClockDomains:
+						case mediaClock::McDeterminationError::NotSupportedNoClockDomains:
+							return "Unsupported CLOCK_DOMAIN count";
 						case mediaClock::McDeterminationError::Recursive:
 							return "Recursive";
 						case mediaClock::McDeterminationError::StreamNotConnected:
