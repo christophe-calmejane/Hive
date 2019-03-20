@@ -186,6 +186,8 @@ public:
 	Q_SIGNAL void entityOffline(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void unsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void compatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags);
+	Q_SIGNAL void identificationStarted(la::avdecc::UniqueIdentifier const entityID);
+	Q_SIGNAL void identificationStopped(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);
 	Q_SIGNAL void acquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity);
 	Q_SIGNAL void lockStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity);
