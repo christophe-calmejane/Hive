@@ -261,7 +261,7 @@ public:
 	*/
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
-		if(!controlledEntity)
+		if (!controlledEntity)
 		{
 			return;
 		}
