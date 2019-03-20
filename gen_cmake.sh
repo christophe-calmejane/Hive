@@ -291,6 +291,11 @@ if [ ! -z "${toolset}" ]; then
 	fi
 fi
 
+sdk_option=""
+if [ ! -z "${platformSdk}" ]; then
+	sdk_option="-DCMAKE_SYSTEM_VERSION=$platformSdk"
+fi
+
 hiveVersion=$(grep "HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
 if [[ $hiveVersion == "" ]]; then
 	echo "Cannot detect project version"
