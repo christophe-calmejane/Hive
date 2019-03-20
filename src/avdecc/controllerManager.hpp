@@ -114,6 +114,9 @@ public:
 	*/
 	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) = 0;
 
+	/** Destroys the currently stored instance of the controller. */
+	virtual void destroyController() noexcept = 0;
+
 	/** Gets the controller's EID */
 	virtual la::avdecc::UniqueIdentifier getControllerEID() const noexcept = 0;
 
