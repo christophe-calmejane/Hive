@@ -138,9 +138,19 @@ public:
 		updateButtonStates();
 
 		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
+			la::avdecc::controller::model::ConfigurationNode configurationNode;
+			try
+			{
+				configurationNode = controlledEntity->getCurrentConfigurationNode();
+			}
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
+			{
+				return;
+			}
 			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::entityName(*controlledEntity));
 
 			if (!leaveOutGeneralData)
@@ -173,7 +183,7 @@ public:
 					labelSerialNumberValue->setText(dynamicModel->serialNumber.data());
 				}
 
-				_previousConfigurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
+				_previousConfigurationIndex = configurationNode.descriptorIndex;
 			}
 
 			{
@@ -190,50 +200,58 @@ public:
 					comboBoxConfiguration->setCurrentIndex(*_activeConfigurationIndex);
 				}
 
-				// latency tab:
-				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-				std::optional<uint32_t> latency = std::nullopt;
-				for (auto const& streamOutput : configurationNode.streamOutputs)
+				auto pureListener = (!configurationNode.streamInputs.empty() && configurationNode.streamOutputs.empty());
+				if (pureListener)
 				{
-					if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
-					{
-						// unequal values
-						latency = std::nullopt;
-						break;
-					}
-					latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
-				}
-
-				if (latency == std::nullopt)
-				{
-					comboBox_PredefinedPT->setCurrentIndex(0);
-					lineEdit_CustomPT->setText("-");
-					radioButton_CustomPT->setChecked(true);
+					// remove latency tab
+					tabWidget->removeTab(1);
 				}
 				else
 				{
-					int index = comboBox_PredefinedPT->findData(*latency);
-					if (index != -1)
+					// latency tab data
+					std::optional<uint32_t> latency = std::nullopt;
+					for (auto const& streamOutput : configurationNode.streamOutputs)
 					{
-						comboBox_PredefinedPT->setCurrentIndex(index);
+						if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
+						{
+							// unequal values
+							latency = std::nullopt;
+							break;
+						}
+						latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
+					}
 
+					if (latency == std::nullopt)
+					{
+						comboBox_PredefinedPT->setCurrentIndex(0);
 						lineEdit_CustomPT->setText("-");
-						radioButton_PredefinedPT->setChecked(true);
+						radioButton_CustomPT->setChecked(true);
 					}
 					else
 					{
-						comboBox_PredefinedPT->setCurrentIndex(0);
-						lineEdit_CustomPT->setText(QString::number((*latency / 1000000.0f)).append(" ms"));
-						radioButton_CustomPT->setChecked(true);
+						int index = comboBox_PredefinedPT->findData(*latency);
+						if (index != -1)
+						{
+							comboBox_PredefinedPT->setCurrentIndex(index);
+
+							lineEdit_CustomPT->setText("-");
+							radioButton_PredefinedPT->setChecked(true);
+						}
+						else
+						{
+							comboBox_PredefinedPT->setCurrentIndex(0);
+							lineEdit_CustomPT->setText(QString::number((*latency / 1000000.0f)).append(" ms"));
+							radioButton_CustomPT->setChecked(true);
+						}
 					}
 				}
 			}
-		}
 
-		tableViewReceive->resizeColumnsToContents();
-		tableViewReceive->resizeRowsToContents();
-		tableViewTransmit->resizeColumnsToContents();
-		tableViewTransmit->resizeRowsToContents();
+			tableViewReceive->resizeColumnsToContents();
+			tableViewReceive->resizeRowsToContents();
+			tableViewTransmit->resizeColumnsToContents();
+			tableViewTransmit->resizeRowsToContents();
+		}
 	}
 
 	/**
@@ -273,11 +291,11 @@ public:
 			auto supportsDynamicMapping = streamPortInputKV.second.staticModel->hasDynamicAudioMap;
 			if (supportsDynamicMapping)
 			{
-				for (auto const& inputAudioCluster : streamPortInputKV.second.audioClusters)
+				for (auto const& inputAudioClusterKV : streamPortInputKV.second.audioClusters)
 				{
-					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioCluster.second.staticModel->channelCount; channelIndex++)
+					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortInputKV.first, inputAudioCluster.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
+						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortInputKV.first, inputAudioClusterKV.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
 
 						_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 					}
@@ -290,11 +308,11 @@ public:
 			auto supportsDynamicMapping = streamPortOutputKV.second.staticModel->hasDynamicAudioMap;
 			if (supportsDynamicMapping)
 			{
-				for (auto const& outputAudioCluster : streamPortOutputKV.second.audioClusters)
+				for (auto const& outputAudioClusterKV : streamPortOutputKV.second.audioClusters)
 				{
-					for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioCluster.second.staticModel->channelCount; channelIndex++)
+					for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortOutputKV.first, outputAudioCluster.first, streamPortOutputKV.second.staticModel->baseCluster, channelIndex);
+						auto const connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortOutputKV.first, outputAudioClusterKV.first, streamPortOutputKV.second.staticModel->baseCluster, channelIndex);
 
 						_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 					}
