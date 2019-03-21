@@ -317,13 +317,14 @@ private:
 				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 				auto const activeConfigIndex = configNode.descriptorIndex;
 
-				if (configNode.clockDomains.size() > 1) // for now, we only support devices that have exactly 1 clock domain.
+				// for now, we only support devices that have exactly 1 clock domain.
+				if (configNode.clockDomains.size() > 1)
 				{
 					keepSearching = false;
 					error = McDeterminationError::NotSupportedMultipleClockDomains;
 					break;
 				}
-				else if (configNode.clockDomains.size() == 0)
+				else if (configNode.clockDomains.empty())
 				{
 					keepSearching = false;
 					error = McDeterminationError::NotSupportedNoClockDomains;
