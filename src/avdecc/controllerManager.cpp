@@ -320,6 +320,14 @@ private:
 	{
 		emit compatibilityFlagsChanged(entity->getEntity().getEntityID(), compatibilityFlags);
 	}
+	virtual void onIdentificationStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
+	{
+		emit identificationStarted(entity->getEntity().getEntityID());
+	}
+	virtual void onIdentificationStopped(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
+	{
+		emit identificationStopped(entity->getEntity().getEntityID());
+	}
 	// Connection notifications (sniffed ACMP)
 	virtual void onStreamConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::model::StreamConnectionState const& state, bool const /*changedByOther*/) noexcept override
 	{

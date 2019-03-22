@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for end-to-end channel connection determination
 - Keyboard shortcut to refresh the controller (CTRL-R)
 - Button to refresh the controller (next to the Interface selection dropdown)
+- Entity Identify notifications (from entity to controller)
 
 ### Changed
 - Only displaying _Ethernet_ kind interfaces
