@@ -27,6 +27,10 @@
 #include <algorithm>
 #include <array>
 #include <QTimer>
+#include <QFont>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -56,6 +60,8 @@ private:
 	Q_SLOT void controllerOffline();
 	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const entityID);
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID);
+	Q_SLOT void identificationStarted(la::avdecc::UniqueIdentifier const entityID);
+	Q_SLOT void identificationStopped(la::avdecc::UniqueIdentifier const entityID);
 	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName);
 	Q_SLOT void entityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName);
 	Q_SLOT void acquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity);
@@ -88,6 +94,7 @@ private:
 	using StreamsWithErrorCounter = std::set<la::avdecc::entity::model::StreamIndex>;
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, StreamsWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
 	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
+	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _identifingEntities;
 
 	std::array<QImage, 5> _compatibilityImages{
 		{
@@ -116,6 +123,8 @@ ControllerModelPrivate::ControllerModelPrivate(ControllerModel* model)
 	connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ControllerModelPrivate::controllerOffline);
 	connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ControllerModelPrivate::entityOnline);
 	connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ControllerModelPrivate::entityOffline);
+	connect(&controllerManager, &avdecc::ControllerManager::identificationStarted, this, &ControllerModelPrivate::identificationStarted);
+	connect(&controllerManager, &avdecc::ControllerManager::identificationStopped, this, &ControllerModelPrivate::identificationStopped);
 	connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::entityNameChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::entityGroupNameChanged, this, &ControllerModelPrivate::entityGroupNameChanged);
 	connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::acquireStateChanged);
@@ -234,6 +243,12 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					return QColor{ Qt::red };
 				}
 			}
+		}
+		else if (role == Qt::FontRole)
+		{
+			auto font = QFont{};
+			font.setBold(_identifingEntities.count(entityID) > 0);
+			return font;
 		}
 	}
 	else if (column == ControllerModel::Column::EntityLogo)
@@ -476,6 +491,7 @@ void ControllerModelPrivate::controllerOffline()
 	q->beginResetModel();
 	_entities.clear();
 	_entitiesWithErrorCounter.clear();
+	_identifingEntities.clear();
 	q->endResetModel();
 }
 
@@ -507,8 +523,21 @@ void ControllerModelPrivate::entityOffline(la::avdecc::UniqueIdentifier const en
 		emit q->beginRemoveRows({}, row, row);
 		_entities.erase(it);
 		_entitiesWithErrorCounter.erase(entityID);
+		_identifingEntities.erase(entityID);
 		emit q->endRemoveRows();
 	}
+}
+
+void ControllerModelPrivate::identificationStarted(la::avdecc::UniqueIdentifier const entityID)
+{
+	_identifingEntities.insert(entityID);
+	dataChanged(entityID, ControllerModel::Column::EntityId, { Qt::FontRole });
+}
+
+void ControllerModelPrivate::identificationStopped(la::avdecc::UniqueIdentifier const entityID)
+{
+	_identifingEntities.erase(entityID);
+	dataChanged(entityID, ControllerModel::Column::EntityId, { Qt::FontRole });
 }
 
 void ControllerModelPrivate::entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
