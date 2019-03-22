@@ -142,8 +142,10 @@ LoggerView::LoggerView(QWidget* parent)
 			layer.setCaseSensitivity(Qt::CaseInsensitive);
 
 			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
-
-			_loggerModel.save(filename, { search, level, layer });
+			if (!filename.isEmpty())
+			{
+				_loggerModel.save(filename, { search, level, layer });
+			}
 		});
 
 	connect(actionSearch, &QAction::triggered, this,
