@@ -111,11 +111,12 @@ public:
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
 		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
 		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
-		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &DeviceDetailsDialogImpl::streamConnectionChanged);
 		connect(&manager, &avdecc::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
 		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
+		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &DeviceDetailsDialogImpl::listenerChannelConnectionsUpdate);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
 		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
@@ -472,13 +473,13 @@ public:
 	}
 
 	/**
-	* Updates the table models on stream connection changes.
-	* @param state The connection state.
+	* Updates the table models on changes.
+	* @param channels  All channels of the devices that have changed (listener side only)
 	*/
-	Q_SLOT void streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
+	Q_SLOT void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::SourceChannelIdentification>> channels)
 	{
-		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(state.listenerStream.entityID);
-		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(state.listenerStream.entityID);
+		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(channels);
+		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(channels);
 
 		tableViewReceive->resizeColumnsToContents();
 		tableViewReceive->resizeRowsToContents();
