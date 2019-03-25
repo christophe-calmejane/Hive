@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Possible deadlock when trying to match stream formats
 - [Random crash during application exit](https://github.com/christophe-calmejane/Hive/issues/56)
+- StreamInput counters not properly displayed (as sub-nodes of the Counter node)
 
 ## [1.0.11] - 2019-02-14
 ### Added
