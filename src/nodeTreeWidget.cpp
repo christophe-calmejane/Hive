@@ -475,6 +475,30 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StringsNode const& node) noexcept override
 	{
 		createIdItem(&node);
+
+		Q_Q(NodeTreeWidget);
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			auto const* const model = node.staticModel;
+
+			if (model)
+			{
+				auto idx = 0u;
+				for (auto const& str : model->strings)
+				{
+					addTextItem(descriptorItem, QString("String %1").arg(idx), str.str());
+					++idx;
+				}
+			}
+			else
+			{
+				addTextItem(descriptorItem, ("Not retrieved from entity"), "");
+			}
+		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
