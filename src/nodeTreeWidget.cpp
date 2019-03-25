@@ -233,7 +233,7 @@ private:
 			auto* milanInfoItem = new QTreeWidgetItem(q);
 			milanInfoItem->setText(0, "Milan Info");
 
-			auto const& milanInfo = controlledEntity->getMilanInfo();
+			auto const milanInfo = *controlledEntity->getMilanInfo();
 
 			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 			addFlagsItem(milanInfoItem, "Features", milanInfo.featuresFlags.getValue(), avdecc::helper::flagsToString(milanInfo.featuresFlags));
