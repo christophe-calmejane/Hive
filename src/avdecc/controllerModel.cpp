@@ -247,6 +247,8 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 							return "Recursive";
 						case mediaClock::McDeterminationError::StreamNotConnected:
 							return "Stream N/C";
+						case mediaClock::McDeterminationError::ParentStreamNotConnected:
+							return "Parent Stream N/C";
 						case mediaClock::McDeterminationError::ExternalClockSource:
 							return QString("External on ").append(helper::uniqueIdentifierToString(clockMaster.first));
 						case mediaClock::McDeterminationError::AnyEntityInChainOffline:
