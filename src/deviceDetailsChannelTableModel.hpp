@@ -59,12 +59,12 @@ struct TableRowEntry
 	/**
 	* Constructor.
 	*/
-	TableRowEntry(avdecc::ConnectionInformation connectionInformation)
+	TableRowEntry(std::shared_ptr<avdecc::TargetConnectionInformations> connectionInformation)
 	{
 		this->connectionInformation = connectionInformation;
 	}
 
-	avdecc::ConnectionInformation connectionInformation;
+	std::shared_ptr<avdecc::TargetConnectionInformations> connectionInformation;
 };
 
 //**************************************************************
@@ -146,11 +146,12 @@ public:
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
 
-	void addNode(avdecc::ConnectionInformation const& connectionInformation);
+	void addNode(std::shared_ptr<avdecc::TargetConnectionInformations> const& connectionInformation);
 	QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> getChanges() const;
 	void resetChangedData();
 	void removeAllNodes();
 	void channelConnectionsUpdate(const la::avdecc::UniqueIdentifier& entityId);
+	void channelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::SourceChannelIdentification>> channels);
 	void updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName);
 
 	Q_SIGNAL void dataEdited();

@@ -111,11 +111,13 @@ public:
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
 		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
+		connect(&manager, &avdecc::ControllerManager::entityOffline, this, &DeviceDetailsDialogImpl::entityOffline);
 		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
-		connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this, &DeviceDetailsDialogImpl::streamConnectionChanged);
 		connect(&manager, &avdecc::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
 		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
+		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &DeviceDetailsDialogImpl::listenerChannelConnectionsUpdate);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
 		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
@@ -138,9 +140,19 @@ public:
 		updateButtonStates();
 
 		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
+			la::avdecc::controller::model::ConfigurationNode configurationNode;
+			try
+			{
+				configurationNode = controlledEntity->getCurrentConfigurationNode();
+			}
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
+			{
+				return;
+			}
 			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::entityName(*controlledEntity));
 
 			if (!leaveOutGeneralData)
@@ -173,7 +185,7 @@ public:
 					labelSerialNumberValue->setText(dynamicModel->serialNumber.data());
 				}
 
-				_previousConfigurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
+				_previousConfigurationIndex = configurationNode.descriptorIndex;
 			}
 
 			{
@@ -190,50 +202,58 @@ public:
 					comboBoxConfiguration->setCurrentIndex(*_activeConfigurationIndex);
 				}
 
-				// latency tab:
-				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-				std::optional<uint32_t> latency = std::nullopt;
-				for (auto const& streamOutput : configurationNode.streamOutputs)
+				auto pureListener = (!configurationNode.streamInputs.empty() && configurationNode.streamOutputs.empty());
+				if (pureListener)
 				{
-					if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
-					{
-						// unequal values
-						latency = std::nullopt;
-						break;
-					}
-					latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
-				}
-
-				if (latency == std::nullopt)
-				{
-					comboBox_PredefinedPT->setCurrentIndex(0);
-					lineEdit_CustomPT->setText("-");
-					radioButton_CustomPT->setChecked(true);
+					// remove latency tab
+					tabWidget->removeTab(1);
 				}
 				else
 				{
-					int index = comboBox_PredefinedPT->findData(*latency);
-					if (index != -1)
+					// latency tab data
+					std::optional<uint32_t> latency = std::nullopt;
+					for (auto const& streamOutput : configurationNode.streamOutputs)
 					{
-						comboBox_PredefinedPT->setCurrentIndex(index);
+						if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
+						{
+							// unequal values
+							latency = std::nullopt;
+							break;
+						}
+						latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
+					}
 
+					if (latency == std::nullopt)
+					{
+						comboBox_PredefinedPT->setCurrentIndex(0);
 						lineEdit_CustomPT->setText("-");
-						radioButton_PredefinedPT->setChecked(true);
+						radioButton_CustomPT->setChecked(true);
 					}
 					else
 					{
-						comboBox_PredefinedPT->setCurrentIndex(0);
-						lineEdit_CustomPT->setText(QString::number((*latency / 1000000.0f)).append(" ms"));
-						radioButton_CustomPT->setChecked(true);
+						int index = comboBox_PredefinedPT->findData(*latency);
+						if (index != -1)
+						{
+							comboBox_PredefinedPT->setCurrentIndex(index);
+
+							lineEdit_CustomPT->setText("-");
+							radioButton_PredefinedPT->setChecked(true);
+						}
+						else
+						{
+							comboBox_PredefinedPT->setCurrentIndex(0);
+							lineEdit_CustomPT->setText(QString::number((*latency / 1000000.0f)).append(" ms"));
+							radioButton_CustomPT->setChecked(true);
+						}
 					}
 				}
 			}
-		}
 
-		tableViewReceive->resizeColumnsToContents();
-		tableViewReceive->resizeRowsToContents();
-		tableViewTransmit->resizeColumnsToContents();
-		tableViewTransmit->resizeRowsToContents();
+			tableViewReceive->resizeColumnsToContents();
+			tableViewReceive->resizeRowsToContents();
+			tableViewTransmit->resizeColumnsToContents();
+			tableViewTransmit->resizeRowsToContents();
+		}
 	}
 
 	/**
@@ -273,11 +293,11 @@ public:
 			auto supportsDynamicMapping = streamPortInputKV.second.staticModel->hasDynamicAudioMap;
 			if (supportsDynamicMapping)
 			{
-				for (auto const& inputAudioCluster : streamPortInputKV.second.audioClusters)
+				for (auto const& inputAudioClusterKV : streamPortInputKV.second.audioClusters)
 				{
-					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioCluster.second.staticModel->channelCount; channelIndex++)
+					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortInputKV.first, inputAudioCluster.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
+						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortInputKV.first, inputAudioClusterKV.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
 
 						_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 					}
@@ -290,11 +310,11 @@ public:
 			auto supportsDynamicMapping = streamPortOutputKV.second.staticModel->hasDynamicAudioMap;
 			if (supportsDynamicMapping)
 			{
-				for (auto const& outputAudioCluster : streamPortOutputKV.second.audioClusters)
+				for (auto const& outputAudioClusterKV : streamPortOutputKV.second.audioClusters)
 				{
-					for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioCluster.second.staticModel->channelCount; channelIndex++)
+					for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortOutputKV.first, outputAudioCluster.first, streamPortOutputKV.second.staticModel->baseCluster, channelIndex);
+						auto const connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortOutputKV.first, outputAudioClusterKV.first, streamPortOutputKV.second.staticModel->baseCluster, channelIndex);
 
 						_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 					}
@@ -421,6 +441,18 @@ public:
 	}
 
 	/**
+	* If the displayed entity goes offline, this dialog is closed automatically.
+	*/
+	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
+	{
+		if (_entityID == entityID)
+		{
+			// close this dialog
+			_dialog->close();
+		}
+	}
+
+	/**
 	* Invoked after a command has been exectued. We use it to detect if all data that was changed has been written.
 	* @param entityID		The id of the entity the command was executed on.
 	* @param cmdType		The executed command type.
@@ -454,13 +486,13 @@ public:
 	}
 
 	/**
-	* Updates the table models on stream connection changes.
-	* @param state The connection state.
+	* Updates the table models on changes.
+	* @param channels  All channels of the devices that have changed (listener side only)
 	*/
-	Q_SLOT void streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
+	Q_SLOT void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::SourceChannelIdentification>> channels)
 	{
-		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(state.listenerStream.entityID);
-		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(state.listenerStream.entityID);
+		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(channels);
+		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(channels);
 
 		tableViewReceive->resizeColumnsToContents();
 		tableViewReceive->resizeRowsToContents();
