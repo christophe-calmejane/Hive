@@ -113,6 +113,7 @@ public:
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
+		connect(&manager, &avdecc::ControllerManager::entityOffline, this, &DeviceDetailsDialogImpl::entityOffline);
 		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
 		connect(&manager, &avdecc::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
 		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
@@ -436,6 +437,18 @@ public:
 
 			_hasChangesByUser = true;
 			updateButtonStates();
+		}
+	}
+
+	/**
+	* If the displayed entity goes offline, this dialog is closed automatically.
+	*/
+	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
+	{
+		if (_entityID == entityID)
+		{
+			// close this dialog
+			_dialog->close();
 		}
 	}
 
