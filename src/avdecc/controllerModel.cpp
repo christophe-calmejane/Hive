@@ -360,7 +360,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				{
 					try
 					{
-						auto const& milanInfo = controlledEntity->getMilanInfo();
+						auto const milanInfo = *controlledEntity->getMilanInfo();
 						if ((milanInfo.featuresFlags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
 						{
 							return _compatibilityImages[4];

@@ -54,7 +54,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	// Create fields
 	for (auto const nameKV : s_counterNames)
 	{
-		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, parent };
+		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, this };
 		widget->setText(0, nameKV.second);
 		widget->setHidden(true); // Hide until we get a counter value (so we don't display counters not supported by the entity)
 		_counters[nameKV.first] = widget;

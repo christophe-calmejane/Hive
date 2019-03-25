@@ -581,6 +581,25 @@ private:
 		return {};
 	}
 
+	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath) const noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString());
+		}
+		return { la::avdecc::controller::Controller::SerializationError::InternalError, "Controller offline" };
+	}
+
+	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath) const noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString());
+		}
+		return { la::avdecc::controller::Controller::SerializationError::InternalError, "Controller offline" };
+	}
 
 	ErrorCounterTracker const* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{

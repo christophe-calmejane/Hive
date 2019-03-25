@@ -125,6 +125,12 @@ public:
 	/** Gets a ControlledEntity */
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 
+	/** Serialize all known ControlledEntities */
+	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath) const noexcept = 0;
+
+	/** Serialize a ControlledEntity */
+	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath) const noexcept = 0;
+
 	/** Counter error flags */
 	virtual la::avdecc::entity::StreamInputCounterValidFlags getStreamInputErrorCounterFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 

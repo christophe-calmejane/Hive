@@ -22,6 +22,7 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QTextBrowser>
+#include <QDateTime>
 
 #ifdef DEBUG
 #	include <QFileInfo>
@@ -332,6 +333,7 @@ void MainWindow::connectSignals()
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
+				auto* dumpEntity{ static_cast<QAction*>(nullptr) };
 
 				if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
@@ -394,6 +396,15 @@ void MainWindow::connectSignals()
 				}
 
 				menu.addSeparator();
+
+				// Dump Entity
+				{
+					dumpEntity = menu.addAction("Export Entity...");
+				}
+
+				menu.addSeparator();
+
+				// Cancel
 				menu.addAction("Cancel");
 
 				// Release the controlled entity before starting a long operation (menu.exec)
@@ -444,6 +455,22 @@ void MainWindow::connectSignals()
 					{
 						manager.clearAllStreamInputCounterValidFlags(entityID);
 					}
+					else if (action == dumpEntity)
+					{
+						auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/Entity_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)), "*.json");
+						if (!filename.isEmpty())
+						{
+							auto const [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename);
+							if (!error)
+							{
+								QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
+							}
+							else
+							{
+								QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+							}
+						}
+					}
 				}
 			}
 		});
@@ -485,6 +512,27 @@ void MainWindow::connectSignals()
 			if (status != la::avdecc::entity::ControllerEntity::ControlStatus::Success)
 			{
 				QMessageBox::warning(this, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+			}
+		});
+
+	//
+
+	connect(actionExportFullNetworkState, &QAction::triggered, this,
+		[this]()
+		{
+			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/FullDump_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "*.json");
+			if (!filename.isEmpty())
+			{
+				auto& manager = avdecc::ControllerManager::getInstance();
+				auto const [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename);
+				if (!error)
+				{
+					QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
+				}
+				else
+				{
+					QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+				}
 			}
 		});
 

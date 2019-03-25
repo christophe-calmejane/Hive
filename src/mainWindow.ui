@@ -57,6 +57,14 @@
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="menuExport">
+     <property name="title">
+      <string>Export</string>
+     </property>
+     <addaction name="actionExportFullNetworkState"/>
+    </widget>
+    <addaction name="menuExport"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -143,6 +151,11 @@
   <action name="actionOpenProjectWebPage">
    <property name="text">
     <string>Open Project WebPage</string>
+   </property>
+  </action>
+  <action name="actionExportFullNetworkState">
+   <property name="text">
+    <string>Full Network State...</string>
    </property>
   </action>
  </widget>
