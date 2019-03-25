@@ -88,16 +88,81 @@ public:
 	*/
 	Q_SLOT void onStreamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& streamConnectionState)
 	{
+		// check if it is a redundant (secondary) stream, if so stop processing. (redundancy is handled inside the determineChannelConnectionsReverse method)
+		if (!isInputStreamPrimaryOrNonRedundant(streamConnectionState.listenerStream))
+		{
+			return;
+		}
+
 		if (_listenerChannelMappings.find(streamConnectionState.listenerStream.entityID) != _listenerChannelMappings.end())
 		{
 			std::set<std::pair<la::avdecc::UniqueIdentifier, SourceChannelIdentification>> listenerChannelsToUpdate;
 			std::set<std::pair<la::avdecc::UniqueIdentifier, SourceChannelIdentification>> updatedListenerChannels;
 			auto connectionInfo = _listenerChannelMappings.at(streamConnectionState.listenerStream.entityID);
-			for (auto const& mappingKV : connectionInfo->channelMappings)
+
+			// if a stream was disconnected, only update the entries that have a connection currently
+			// and if the stream was connected, only update the entries that have no connections yet.
+			if (streamConnectionState.state == la::avdecc::controller::model::StreamConnectionState::State::NotConnected)
 			{
-				// this propably needs a refresh
-				auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
-				listenerChannelsToUpdate.insert(channel);
+				for (auto const& mappingKV : connectionInfo->channelMappings)
+				{
+					if (!mappingKV.second->targets.empty())
+					{
+						for (auto const& target : mappingKV.second->targets)
+						{
+							if (target->sourceStreamIndex == streamConnectionState.listenerStream.streamIndex && target->targetStreamIndex == streamConnectionState.talkerStream.streamIndex)
+							{
+								// this needs a refresh
+								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+								listenerChannelsToUpdate.insert(channel);
+								break;
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				for (auto const& mappingKV : connectionInfo->channelMappings)
+				{
+					if (mappingKV.second->targets.empty())
+					{
+						la::avdecc::entity::model::AudioMappings mappings;
+						try
+						{
+							auto& manager = avdecc::ControllerManager::getInstance();
+							auto controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
+							if (controlledEntity)
+							{
+								auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
+								auto const& audioUnitIndex = *mappingKV.second->sourceClusterChannelInfo.sourceAudioUnitIndex;
+								auto const& streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.sourceStreamPortIndex;
+								if (configNode.audioUnits.size() > audioUnitIndex && configNode.audioUnits.at(audioUnitIndex).streamPortOutputs.size() > streamPortIndex)
+								{
+									auto streamPortInputDynamicModel = configNode.audioUnits.at(audioUnitIndex).streamPortInputs.at(streamPortIndex).dynamicModel;
+									if (streamPortInputDynamicModel)
+									{
+										mappings = streamPortInputDynamicModel->dynamicAudioMap;
+									}
+								}
+							}
+						}
+						catch (la::avdecc::controller::ControlledEntity::Exception const&)
+						{
+						}
+
+						for (auto const& mapping : mappings)
+						{
+							if (*mappingKV.second->sourceClusterChannelInfo.sourceClusterIndex + *mappingKV.second->sourceClusterChannelInfo.sourceBaseCluster == mapping.clusterOffset && *mappingKV.second->sourceClusterChannelInfo.sourceClusterChannel == mapping.clusterChannel && mapping.streamIndex == streamConnectionState.listenerStream.streamIndex)
+							{
+								// this propably needs a refresh
+								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+								listenerChannelsToUpdate.insert(channel);
+								break;
+							}
+						}
+					}
+				}
 			}
 
 			for (auto const& listenerChannelToUpdate : listenerChannelsToUpdate)
@@ -206,6 +271,68 @@ public:
 		{
 			emit listenerChannelConnectionsUpdate(updatedListenerChannels);
 		}
+	}
+
+
+	/**
+	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
+	* Assumes the that the given StreamIdentification is valid.
+	*/
+	bool isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification streamIdentification)
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
+		if (controlledEntity)
+		{
+			auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
+			auto const& streamInputNode = configNode.streamInputs.at(streamIdentification.streamIndex);
+			if (!streamInputNode.isRedundant)
+			{
+				return true;
+			}
+			else
+			{
+				for (auto const& redundantStreamInput : configNode.redundantStreamInputs)
+				{
+					if (redundantStreamInput.second.primaryStream->descriptorIndex == streamIdentification.streamIndex)
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
+	* Assumes the that the given StreamIdentification is valid.
+	*/
+	bool isOutputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification streamIdentification)
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
+		if (controlledEntity)
+		{
+			auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
+			auto const& streamInputNode = configNode.streamInputs.at(streamIdentification.streamIndex);
+			if (!streamInputNode.isRedundant)
+			{
+				return true;
+			}
+			else
+			{
+				for (auto const& redundantStreamInput : configNode.redundantStreamInputs)
+				{
+					if (redundantStreamInput.second.primaryStream->descriptorIndex == streamIdentification.streamIndex)
+					{
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**
