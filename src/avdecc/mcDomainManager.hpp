@@ -145,6 +145,7 @@ enum class McDeterminationError
 	NotSupportedClockSourceType,
 	Recursive,
 	StreamNotConnected,
+	ParentStreamNotConnected,
 	ExternalClockSource,
 	AnyEntityInChainOffline,
 	UnknownEntity,
