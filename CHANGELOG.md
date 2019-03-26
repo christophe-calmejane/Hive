@@ -6,12 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Display entities' media clock master id and name in the entity list
-- Media clock management dialog for easy setup/status access of media clock distribution
-- Support for media clock master determination
-- Support for media clock distribution handling, incl. entity clock source configuration and CRF stream connection establishment
-- Device details dialog for easy access to basic device and device channel configuration
-- Support for end-to-end channel connection determination
+- _Device Details Dialog_ for basic device configuration and information
+- _Media Clock Master ID_ and _Media Clock Master Name_ columns in entity list
+- _Media Clock Management Dialog_ for simple media clock distribution setup
 - Keyboard shortcut to refresh the controller (CTRL-R)
 - Button to refresh the controller (next to the Interface selection dropdown)
 - Entity Identify notifications (from entity to controller)
