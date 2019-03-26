@@ -297,7 +297,7 @@ public:
 				{
 					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortInputKV.first, inputAudioClusterKV.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
+						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, la::avdecc::UniqueIdentifier{*_previousConfigurationIndex}, audioUnitIndex, streamPortInputKV.first, inputAudioClusterKV.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
 
 						_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 					}

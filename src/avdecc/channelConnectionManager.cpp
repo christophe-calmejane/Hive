@@ -181,7 +181,7 @@ public:
 			for (auto const& listenerChannelToUpdate : listenerChannelsToUpdate)
 			{
 				auto const& sourceInfo = listenerChannelToUpdate.second;
-				auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdate.first, *sourceInfo.sourceConfigurationIndex, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
+				auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdate.first, la::avdecc::UniqueIdentifier{*sourceInfo.sourceConfigurationIndex}, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
 				auto oldListenerChannelConnections = connectionInfo->channelMappings.at(sourceInfo);
 				if (newListenerChannelConnections != oldListenerChannelConnections)
 				{
@@ -270,7 +270,7 @@ public:
 
 			auto connectionInfo = _listenerChannelMappings.at(listenerChannelToUpdateKV.first);
 
-			auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdateKV.first, *sourceInfo.sourceConfigurationIndex, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
+			auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdateKV.first, la::avdecc::UniqueIdentifier{*sourceInfo.sourceConfigurationIndex}, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
 			auto oldListenerChannelConnections = connectionInfo->channelMappings.at(sourceInfo);
 
 			if (!newListenerChannelConnections->isEqualTo(*oldListenerChannelConnections))
