@@ -31,6 +31,7 @@
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
+#include "counters/entityCountersTreeWidgetItem.hpp"
 #include "counters/avbInterfaceCountersTreeWidgetItem.hpp"
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
@@ -281,6 +282,13 @@ private:
 				QSignalBlocker const lg{ configurationComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
 				configurationComboBox->setCurrentIndex(currentConfigurationComboBoxIndex);
 			}
+		}
+
+		// Counters
+		if (!node.dynamicModel->counters.empty())
+		{
+			auto* countersItem = new EntityCountersTreeWidgetItem(_controlledEntityID, node.dynamicModel->counters, q);
+			countersItem->setText(0, "Counters");
 		}
 	}
 

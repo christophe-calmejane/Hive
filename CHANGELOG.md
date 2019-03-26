@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Entity Identify notifications (from entity to controller)
 - Entity and Full Network export as readable json
 - Strings descriptor displayed
+- Entity descriptor counters
 
 ### Changed
 - Only displaying _Ethernet_ kind interfaces

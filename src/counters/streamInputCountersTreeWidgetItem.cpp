@@ -30,7 +30,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	static std::map<la::avdecc::entity::StreamInputCounterValidFlag, QString> s_counterNames{
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked, "Media Locked" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked, "Media Unlocked" },
-		{ la::avdecc::entity::StreamInputCounterValidFlag::StreamReset, "Stream Reset" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted, "Stream Interrupted" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch, "Seq Num Mismatch" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaReset, "Media Reset" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::TimestampUncertain, "Timestamp Uncertain" },

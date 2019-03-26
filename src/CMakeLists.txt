@@ -203,6 +203,7 @@ set(CONNECTION_MATRIX_SOURCE_FILES
 )
 
 set(COUNTERS_HEADER_FILES
+	counters/entityCountersTreeWidgetItem.hpp
 	counters/avbInterfaceCountersTreeWidgetItem.hpp
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
@@ -210,6 +211,7 @@ set(COUNTERS_HEADER_FILES
 )
 
 set(COUNTERS_SOURCE_FILES
+	counters/entityCountersTreeWidgetItem.cpp
 	counters/avbInterfaceCountersTreeWidgetItem.cpp
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
