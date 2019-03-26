@@ -122,7 +122,7 @@ DeviceDetailsChannelTableModel::ConnectionStatus connectionStatus(la::avdecc::Un
 			};
 			auto const computeCapabilities = [](ConnectState const connectState, bool const areAllConnected, bool const isFormatCompatible, bool const isDomainCompatible)
 			{
-				auto caps{ DeviceDetailsChannelTableModel::ConnectionStatus::Connectable };
+				auto caps{ DeviceDetailsChannelTableModel::ConnectionStatus::None };
 
 				if (!isDomainCompatible)
 					caps |= DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain;
@@ -136,8 +136,6 @@ DeviceDetailsChannelTableModel::ConnectionStatus connectionStatus(la::avdecc::Un
 						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::Connected;
 					else if (connectState == ConnectState::FastConnecting)
 						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting;
-					else
-						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected;
 				}
 
 				return caps;
@@ -871,10 +869,6 @@ void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status
 			connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, false);
 		}
 	}
-	else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected))
-	{
-		connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
-	}
 	else
 	{
 		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
@@ -884,10 +878,6 @@ void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status
 		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
 		{
 			connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, false);
-		}
-		else
-		{
-			connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, false);
 		}
 	}
 }

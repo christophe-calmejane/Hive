@@ -133,10 +133,8 @@ public:
 		None = 0,
 		WrongDomain = 1u << 0,
 		WrongFormat = 1u << 1,
-		Connectable = 1u << 2, /**< Stream connectable (might be connected, or not) */
-		Connected = 1u << 3, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
-		FastConnecting = 1u << 4, /**< Stream is fast connecting (Mutually exclusive with Connected and PartiallyConnected) */
-		PartiallyConnected = 1u << 5, /**< Some, but not all of a redundant streams tuple, are connected (Mutually exclusive with Connected and FastConnecting) */
+		Connected = 1u << 2, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
+		FastConnecting = 1u << 3, /**< Stream is fast connecting (Mutually exclusive with Connected) */
 	};
 
 	virtual int rowCount(QModelIndex const& parent = QModelIndex()) const override;
