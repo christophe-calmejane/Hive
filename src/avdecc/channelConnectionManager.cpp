@@ -106,23 +106,36 @@ public:
 			{
 				for (auto const& mappingKV : connectionInfo->channelMappings)
 				{
-					if (!mappingKV.second->targets.empty())
+					for (auto const& target : mappingKV.second->targets)
 					{
-						for (auto const& target : mappingKV.second->targets)
+						if (target->sourceStreamIndex == streamConnectionState.listenerStream.streamIndex && target->targetStreamIndex == streamConnectionState.talkerStream.streamIndex)
 						{
-							if (target->sourceStreamIndex == streamConnectionState.listenerStream.streamIndex && target->targetStreamIndex == streamConnectionState.talkerStream.streamIndex)
-							{
-								// this needs a refresh
-								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
-								listenerChannelsToUpdate.insert(channel);
-								break;
-							}
+							// this needs a refresh
+							auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+							listenerChannelsToUpdate.insert(channel);
+							break;
 						}
 					}
 				}
 			}
 			else
 			{
+				// if the new connection overwrites an existing one (implicit disconnect), this has to be handled here too:
+				for (auto const& mappingKV : connectionInfo->channelMappings)
+				{
+					for (auto const& target : mappingKV.second->targets)
+					{
+						if ((target->targetStreamIndex != streamConnectionState.talkerStream.streamIndex || target->targetEntityId != streamConnectionState.talkerStream.entityID) && target->sourceStreamIndex == streamConnectionState.listenerStream.streamIndex)
+						{
+							// this needs a refresh
+							auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+							listenerChannelsToUpdate.insert(channel);
+							break;
+						}
+					}
+				}
+
+				// handle changes from the new connetion
 				for (auto const& mappingKV : connectionInfo->channelMappings)
 				{
 					if (mappingKV.second->targets.empty())
