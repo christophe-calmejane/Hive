@@ -493,23 +493,34 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Prim)"));
 
 								auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantConnections;
+								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
+								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantInputs;
 								if (connectionInfo->sourceClusterChannelInfo.forward)
 								{
-									redundantConnections = channelConnectionManager.getRedundantStreamOutputsForPrimary(targetEntityId, connection->sourceStreamIndex);
+									redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
+									redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
 								}
 								else
 								{
-									redundantConnections = channelConnectionManager.getRedundantStreamInputsForPrimary(targetEntityId, connection->sourceStreamIndex);
+									redundantOutputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
+									redundantInputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
 								}
-								for (auto const& redundantConnectionKV : redundantConnections)
+								auto itOutputs = redundantOutputs.begin();
+								auto itInputs = redundantInputs.begin();
+
+								if (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 								{
-									if (redundantConnectionKV.second->descriptorIndex == connection->sourceStreamIndex)
-									{
-										continue; // skip primary
-									}
-									innerRow++;
+									// skip primary
+									itOutputs++;
+									itInputs++;
+								}
+
+								while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
+								{
 									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Sec)"));
+
+									itOutputs++;
+									itInputs++;
 								}
 							}
 							else
@@ -894,7 +905,7 @@ void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status
 void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+	auto modelData = model->data(index).toList(); // data returns a list of DeviceDetailsChannelTableModel::ConnectionStatus to decide which connection icon to render.
 
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
@@ -929,7 +940,7 @@ QSize ConnectionStateItemDelegate::sizeHint(QStyleOptionViewItem const& option, 
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+	auto modelData = model->data(index).toList();
 
 	int margin = ConnectionStateItemDelegate::Margin;
 	int totalHeight = margin;
@@ -952,7 +963,7 @@ QSize ConnectionStateItemDelegate::sizeHint(QStyleOptionViewItem const& option, 
 void ConnectionInfoItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info
 
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
@@ -985,7 +996,7 @@ QSize ConnectionInfoItemDelegate::sizeHint(QStyleOptionViewItem const& option, Q
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+	auto modelData = model->data(index).toList();
 
 	int margin = ConnectionStateItemDelegate::Margin;
 	int totalHeight = margin;
