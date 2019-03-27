@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for media clock distribution handling, incl. entity clock source configuration and CRF stream connection establishment
 - Keyboard shortcut to refresh the controller (CTRL-R)
 - Button to refresh the controller (next to the Interface selection dropdown)
+- Entity Identify notifications (from entity to controller)
+- Entity and Full Network export as readable json
+- Strings descriptor displayed
+- Entity descriptor counters
 
 ### Changed
 - Only displaying _Ethernet_ kind interfaces
@@ -20,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Possible deadlock when trying to match stream formats
 - [Random crash during application exit](https://github.com/christophe-calmejane/Hive/issues/56)
+- StreamInput counters not properly displayed (as sub-nodes of the Counter node)
 
 ## [1.0.11] - 2019-02-14
 ### Added

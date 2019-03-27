@@ -31,6 +31,7 @@
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
+#include "counters/entityCountersTreeWidgetItem.hpp"
 #include "counters/avbInterfaceCountersTreeWidgetItem.hpp"
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
@@ -233,7 +234,7 @@ private:
 			auto* milanInfoItem = new QTreeWidgetItem(q);
 			milanInfoItem->setText(0, "Milan Info");
 
-			auto const& milanInfo = controlledEntity->getMilanInfo();
+			auto const milanInfo = *controlledEntity->getMilanInfo();
 
 			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 			addFlagsItem(milanInfoItem, "Features", milanInfo.featuresFlags.getValue(), avdecc::helper::flagsToString(milanInfo.featuresFlags));
@@ -281,6 +282,13 @@ private:
 				QSignalBlocker const lg{ configurationComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
 				configurationComboBox->setCurrentIndex(currentConfigurationComboBoxIndex);
 			}
+		}
+
+		// Counters
+		if (!node.dynamicModel->counters.empty())
+		{
+			auto* countersItem = new EntityCountersTreeWidgetItem(_controlledEntityID, node.dynamicModel->counters, q);
+			countersItem->setText(0, "Counters");
 		}
 	}
 
@@ -475,6 +483,30 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StringsNode const& node) noexcept override
 	{
 		createIdItem(&node);
+
+		Q_Q(NodeTreeWidget);
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			auto const* const model = node.staticModel;
+
+			if (model)
+			{
+				auto idx = 0u;
+				for (auto const& str : model->strings)
+				{
+					addTextItem(descriptorItem, QString("String %1").arg(idx), str.str());
+					++idx;
+				}
+			}
+			else
+			{
+				addTextItem(descriptorItem, ("Not retrieved from entity"), "");
+			}
+		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
