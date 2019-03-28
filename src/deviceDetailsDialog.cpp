@@ -205,24 +205,28 @@ public:
 				}
 
 				auto pureListener = (!configurationNode.streamInputs.empty() && configurationNode.streamOutputs.empty());
-				if (pureListener)
+				auto pureTalker = (configurationNode.streamInputs.empty() && !configurationNode.streamOutputs.empty());
+				
+				auto tabCnt = tabWidget->count();
+				for (auto i=0; i<tabCnt; ++i)
 				{
-					auto tabCnt = tabWidget->count();
-					for (auto i=0; i<tabCnt; ++i)
-					{
-						QWidget* w = tabWidget->widget(i);
-						if (!w)
-							continue;
+					QWidget* w = tabWidget->widget(i);
+					if (!w)
+						continue;
 
-						if (w->objectName() == "tabLatency" || w->objectName() == "tabTransmit")
-						{
-							tabWidget->removeTab(i);
-							i--;
-						}
+					if (pureListener && (w->objectName() == "tabLatency" || w->objectName() == "tabTransmit"))
+					{
+						tabWidget->removeTab(i);
+						i--;
 					}
-						
+					else if (pureTalker && w->objectName() == "tabReceive")
+					{
+						tabWidget->removeTab(i);
+						i--;
+					}
 				}
-				else
+					
+				if (!pureListener)
 				{
 					loadLatencyData();
 				}
