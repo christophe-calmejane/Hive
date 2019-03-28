@@ -207,8 +207,20 @@ public:
 				auto pureListener = (!configurationNode.streamInputs.empty() && configurationNode.streamOutputs.empty());
 				if (pureListener)
 				{
-					// remove latency tab
-					tabWidget->removeTab(1);
+					auto tabCnt = tabWidget->count();
+					for (auto i=0; i<tabCnt; ++i)
+					{
+						QWidget* w = tabWidget->widget(i);
+						if (!w)
+							continue;
+
+						if (w->objectName() == "tabLatency" || w->objectName() == "tabTransmit")
+						{
+							tabWidget->removeTab(i);
+							i--;
+						}
+					}
+						
 				}
 				else
 				{
