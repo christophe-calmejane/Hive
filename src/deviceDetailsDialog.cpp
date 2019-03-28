@@ -117,6 +117,9 @@ public:
 		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
 		connect(&manager, &avdecc::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
 		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
+		connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this, &DeviceDetailsDialogImpl::streamConnectionsChanged);
+		connect(&manager, &avdecc::ControllerManager::streamPortAudioMappingsChanged, this, &DeviceDetailsDialogImpl::streamPortAudioMappingsChanged);
+		connect(&manager, &avdecc::ControllerManager::streamInfoChanged, this, &DeviceDetailsDialogImpl::streamInfoChanged);
 		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &DeviceDetailsDialogImpl::listenerChannelConnectionsUpdate);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
@@ -173,7 +176,6 @@ public:
 				auto const* const dynamicModel = entityNode.dynamicModel;
 
 				labelEntityIdValue->setText(avdecc::helper::toHexQString(entityID.getValue(), true, true));
-
 				if (staticModel)
 				{
 					labelVendorNameValue->setText(controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
@@ -210,42 +212,7 @@ public:
 				}
 				else
 				{
-					// latency tab data
-					std::optional<uint32_t> latency = std::nullopt;
-					for (auto const& streamOutput : configurationNode.streamOutputs)
-					{
-						if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
-						{
-							// unequal values
-							latency = std::nullopt;
-							break;
-						}
-						latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
-					}
-
-					if (latency == std::nullopt)
-					{
-						comboBox_PredefinedPT->setCurrentIndex(0);
-						lineEdit_CustomPT->setText("-");
-						radioButton_CustomPT->setChecked(true);
-					}
-					else
-					{
-						int index = comboBox_PredefinedPT->findData(*latency);
-						if (index != -1)
-						{
-							comboBox_PredefinedPT->setCurrentIndex(index);
-
-							lineEdit_CustomPT->setText("-");
-							radioButton_PredefinedPT->setChecked(true);
-						}
-						else
-						{
-							comboBox_PredefinedPT->setCurrentIndex(0);
-							lineEdit_CustomPT->setText(QString::number((*latency / 1000000.0f)).append(" ms"));
-							radioButton_CustomPT->setChecked(true);
-						}
-					}
+					loadLatencyData();
 				}
 			}
 
@@ -297,7 +264,7 @@ public:
 				{
 					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, la::avdecc::UniqueIdentifier{*_previousConfigurationIndex}, audioUnitIndex, streamPortInputKV.first, inputAudioClusterKV.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
+						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortInputKV.first, inputAudioClusterKV.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
 
 						_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 					}
@@ -486,13 +453,12 @@ public:
 	}
 
 	/**
-	* Updates the table models on changes.
+	* Updates the receive table model on changes.
 	* @param channels  All channels of the devices that have changed (listener side only)
 	*/
 	Q_SLOT void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::SourceChannelIdentification>> channels)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(channels);
-		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(channels);
 
 		tableViewReceive->resizeColumnsToContents();
 		tableViewReceive->resizeRowsToContents();
@@ -500,6 +466,9 @@ public:
 		tableViewTransmit->resizeRowsToContents();
 	}
 
+	/**
+	* Updates the table models on changes.
+	*/
 	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
@@ -513,7 +482,6 @@ public:
 
 	/**
 	* Updates the table models on stream connection changes.
-	* @param state The connection state.
 	*/
 	Q_SLOT void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
 	{
@@ -527,8 +495,48 @@ public:
 	}
 
 	/**
+	* Updates the latency tab data.
+	*/
+	Q_SLOT void streamInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const streamInfo)
+	{
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			// update latency tab.
+			loadLatencyData();
+		}
+	}
+
+	/**
+	* Updates the transmit table model on audio mapping changes.
+	*/
+	Q_SLOT void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
+	{
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::ExternalPortOutput)
+		{
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
+
+			tableViewReceive->resizeColumnsToContents();
+			tableViewReceive->resizeRowsToContents();
+			tableViewTransmit->resizeColumnsToContents();
+			tableViewTransmit->resizeRowsToContents();
+		}
+	}
+
+	/**
+	* Updates the transmit table models on stream connection changes.
+	*/
+	Q_SLOT void streamConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& streamIdentification, la::avdecc::controller::model::StreamConnections const&)
+	{
+		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(streamIdentification.entityID);
+
+		tableViewReceive->resizeColumnsToContents();
+		tableViewReceive->resizeRowsToContents();
+		tableViewTransmit->resizeColumnsToContents();
+		tableViewTransmit->resizeRowsToContents();
+	}
+
+	/**
 	* Invoked whenever the entity name gets changed in the view.
-	* @param entityName The new group name.
 	*/
 	Q_SLOT void lineEditDeviceNameChanged(QString const& entityName)
 	{
@@ -715,6 +723,60 @@ private:
 	{
 		pushButtonApplyChanges->setEnabled(_hasChangesByUser);
 		pushButtonRevertChanges->setEnabled(_hasChangesByUser);
+	}
+
+	void loadLatencyData()
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(_entityID);
+		if (controlledEntity)
+		{
+			la::avdecc::controller::model::ConfigurationNode configurationNode;
+			try
+			{
+				configurationNode = controlledEntity->getCurrentConfigurationNode();
+			}
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
+			{
+				return;
+			}
+			// latency tab data
+			std::optional<uint32_t> latency = std::nullopt;
+			for (auto const& streamOutput : configurationNode.streamOutputs)
+			{
+				if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
+				{
+					// unequal values
+					latency = std::nullopt;
+					break;
+				}
+				latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
+			}
+
+			if (latency == std::nullopt)
+			{
+				comboBox_PredefinedPT->setCurrentIndex(0);
+				lineEdit_CustomPT->setText("-");
+				radioButton_CustomPT->setChecked(true);
+			}
+			else
+			{
+				int index = comboBox_PredefinedPT->findData(*latency);
+				if (index != -1)
+				{
+					comboBox_PredefinedPT->setCurrentIndex(index);
+
+					lineEdit_CustomPT->setText("-");
+					radioButton_PredefinedPT->setChecked(true);
+				}
+				else
+				{
+					comboBox_PredefinedPT->setCurrentIndex(0);
+					lineEdit_CustomPT->setText(QString::number((*latency / 1000000.0f)).append(" ms"));
+					radioButton_CustomPT->setChecked(true);
+				}
+			}
+		}
 	}
 };
 
