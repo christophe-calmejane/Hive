@@ -511,7 +511,7 @@ public:
 	*/
 	Q_SLOT void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
 	{
-		if (descriptorType == la::avdecc::entity::model::DescriptorType::ExternalPortOutput)
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 		{
 			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
 
