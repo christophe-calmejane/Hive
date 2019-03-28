@@ -42,6 +42,8 @@ public:
 		GptpDomain,
 		InterfaceIndex,
 		AssociationId,
+		MediaClockMasterId,
+		MediaClockMasterName,
 
 		Count
 	};

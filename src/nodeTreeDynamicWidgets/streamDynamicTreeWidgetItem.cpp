@@ -146,27 +146,24 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 	// StreamOutput dynamic info
 	if (outputDynamicModel)
 	{
-		if (!listenerEntity || !listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
-		{
-			// Create fields
-			auto* item = new QTreeWidgetItem(this);
-			item->setText(0, "Connections");
-			_connections = new QListWidget;
-			parent->setItemWidget(item, 1, _connections);
+		// Create fields
+		auto* item = new QTreeWidgetItem(this);
+		item->setText(0, "Connections");
+		_connections = new QListWidget;
+		parent->setItemWidget(item, 1, _connections);
 
-			// Update info right now
-			updateConnections(outputDynamicModel->connections);
+		// Update info right now
+		updateConnections(outputDynamicModel->connections);
 
-			// Listen for Connections changed signal
-			connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this,
-				[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
+		// Listen for Connections changed signal
+		connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this,
+			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
+			{
+				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
 				{
-					if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
-					{
-						updateConnections(connections);
-					}
-				});
-		}
+					updateConnections(connections);
+				}
+			});
 	}
 }
 
