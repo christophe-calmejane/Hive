@@ -106,23 +106,36 @@ public:
 			{
 				for (auto const& mappingKV : connectionInfo->channelMappings)
 				{
-					if (!mappingKV.second->targets.empty())
+					for (auto const& target : mappingKV.second->targets)
 					{
-						for (auto const& target : mappingKV.second->targets)
+						if (target->sourceStreamIndex == streamConnectionState.listenerStream.streamIndex && target->targetStreamIndex == streamConnectionState.talkerStream.streamIndex)
 						{
-							if (target->sourceStreamIndex == streamConnectionState.listenerStream.streamIndex && target->targetStreamIndex == streamConnectionState.talkerStream.streamIndex)
-							{
-								// this needs a refresh
-								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
-								listenerChannelsToUpdate.insert(channel);
-								break;
-							}
+							// this needs a refresh
+							auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+							listenerChannelsToUpdate.insert(channel);
+							break;
 						}
 					}
 				}
 			}
 			else
 			{
+				// if the new connection overwrites an existing one (implicit disconnect), this has to be handled here too:
+				for (auto const& mappingKV : connectionInfo->channelMappings)
+				{
+					for (auto const& target : mappingKV.second->targets)
+					{
+						if ((target->targetStreamIndex != streamConnectionState.talkerStream.streamIndex || target->targetEntityId != streamConnectionState.talkerStream.entityID) && target->sourceStreamIndex == streamConnectionState.listenerStream.streamIndex)
+						{
+							// this needs a refresh
+							auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+							listenerChannelsToUpdate.insert(channel);
+							break;
+						}
+					}
+				}
+
+				// handle changes from the new connetion
 				for (auto const& mappingKV : connectionInfo->channelMappings)
 				{
 					if (mappingKV.second->targets.empty())
@@ -168,7 +181,7 @@ public:
 			for (auto const& listenerChannelToUpdate : listenerChannelsToUpdate)
 			{
 				auto const& sourceInfo = listenerChannelToUpdate.second;
-				auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdate.first, *sourceInfo.sourceConfigurationIndex, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
+				auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdate.first, la::avdecc::UniqueIdentifier{ *sourceInfo.sourceConfigurationIndex }, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
 				auto oldListenerChannelConnections = connectionInfo->channelMappings.at(sourceInfo);
 				if (newListenerChannelConnections != oldListenerChannelConnections)
 				{
@@ -257,7 +270,7 @@ public:
 
 			auto connectionInfo = _listenerChannelMappings.at(listenerChannelToUpdateKV.first);
 
-			auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdateKV.first, *sourceInfo.sourceConfigurationIndex, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
+			auto newListenerChannelConnections = determineChannelConnectionsReverse(listenerChannelToUpdateKV.first, la::avdecc::UniqueIdentifier{ *sourceInfo.sourceConfigurationIndex }, *sourceInfo.sourceAudioUnitIndex, *sourceInfo.sourceStreamPortIndex, *sourceInfo.sourceClusterIndex, *sourceInfo.sourceBaseCluster, *sourceInfo.sourceClusterChannel);
 			auto oldListenerChannelConnections = connectionInfo->channelMappings.at(sourceInfo);
 
 			if (!newListenerChannelConnections->isEqualTo(*oldListenerChannelConnections))
@@ -530,7 +543,7 @@ public:
 		return result;
 	}
 
-	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnectionsReverse(la::avdecc::UniqueIdentifier entityId, la::avdecc::UniqueIdentifier const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
+	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnectionsReverse(la::avdecc::UniqueIdentifier entityId, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
 	{
 		bool entityAlreadyInMap = false;
 		SourceChannelIdentification sourceChannelIdentification;
@@ -576,7 +589,7 @@ public:
 	* @param clusterChannel		The channel offset inside the cluster.
 	* @return The results stored in a struct.
 	*/
-	virtual std::shared_ptr<TargetConnectionInformations> determineChannelConnectionsReverse(la::avdecc::UniqueIdentifier const entityId, la::avdecc::UniqueIdentifier const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) const noexcept
+	virtual std::shared_ptr<TargetConnectionInformations> determineChannelConnectionsReverse(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) const noexcept
 	{
 		SourceChannelIdentification sourceChannelIdentification;
 		sourceChannelIdentification.sourceConfigurationIndex = configurationIndex; // can be removed in the other functions as well

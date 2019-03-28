@@ -122,7 +122,7 @@ DeviceDetailsChannelTableModel::ConnectionStatus connectionStatus(la::avdecc::Un
 			};
 			auto const computeCapabilities = [](ConnectState const connectState, bool const areAllConnected, bool const isFormatCompatible, bool const isDomainCompatible)
 			{
-				auto caps{ DeviceDetailsChannelTableModel::ConnectionStatus::Connectable };
+				auto caps{ DeviceDetailsChannelTableModel::ConnectionStatus::None };
 
 				if (!isDomainCompatible)
 					caps |= DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain;
@@ -136,8 +136,6 @@ DeviceDetailsChannelTableModel::ConnectionStatus connectionStatus(la::avdecc::Un
 						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::Connected;
 					else if (connectState == ConnectState::FastConnecting)
 						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting;
-					else
-						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected;
 				}
 
 				return caps;
@@ -313,7 +311,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 		{
 			if (node.connectionInformation->sourceEntityId == entityId)
 			{
-				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo.sourceConfigurationIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceAudioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceStreamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceBaseCluster, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterChannel);
+				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, la::avdecc::UniqueIdentifier{ *node.connectionInformation->sourceClusterChannelInfo.sourceConfigurationIndex }, *node.connectionInformation->sourceClusterChannelInfo.sourceAudioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceStreamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceBaseCluster, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterChannel);
 				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
 				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
@@ -349,7 +347,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(std::set<st
 		{
 			if (channels.find(std::make_pair(node.connectionInformation->sourceEntityId, node.connectionInformation->sourceClusterChannelInfo)) != channels.end())
 			{
-				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo.sourceConfigurationIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceAudioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceStreamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceBaseCluster, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterChannel);
+				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, la::avdecc::UniqueIdentifier{ *node.connectionInformation->sourceClusterChannelInfo.sourceConfigurationIndex }, *node.connectionInformation->sourceClusterChannelInfo.sourceAudioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceStreamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterIndex, *node.connectionInformation->sourceClusterChannelInfo.sourceBaseCluster, *node.connectionInformation->sourceClusterChannelInfo.sourceClusterChannel);
 				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
 				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
@@ -495,23 +493,34 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Prim)"));
 
 								auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantConnections;
+								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
+								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantInputs;
 								if (connectionInfo->sourceClusterChannelInfo.forward)
 								{
-									redundantConnections = channelConnectionManager.getRedundantStreamOutputsForPrimary(targetEntityId, connection->sourceStreamIndex);
+									redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
+									redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
 								}
 								else
 								{
-									redundantConnections = channelConnectionManager.getRedundantStreamInputsForPrimary(targetEntityId, connection->sourceStreamIndex);
+									redundantOutputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
+									redundantInputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
 								}
-								for (auto const& redundantConnectionKV : redundantConnections)
+								auto itOutputs = redundantOutputs.begin();
+								auto itInputs = redundantInputs.begin();
+
+								if (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 								{
-									if (redundantConnectionKV.second->descriptorIndex == connection->sourceStreamIndex)
-									{
-										continue; // skip primary
-									}
-									innerRow++;
+									// skip primary
+									itOutputs++;
+									itInputs++;
+								}
+
+								while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
+								{
 									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Sec)"));
+
+									itOutputs++;
+									itInputs++;
 								}
 							}
 							else
@@ -871,10 +880,6 @@ void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status
 			connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, false);
 		}
 	}
-	else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::PartiallyConnected))
-	{
-		connectionMatrix::drawPartiallyConnectedRedundantNode(painter, iconDrawRect);
-	}
 	else
 	{
 		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
@@ -884,10 +889,6 @@ void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status
 		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
 		{
 			connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, false);
-		}
-		else
-		{
-			connectionMatrix::drawNotConnectedStream(painter, iconDrawRect, false);
 		}
 	}
 }
@@ -904,7 +905,7 @@ void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status
 void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+	auto modelData = model->data(index).toList(); // data returns a list of DeviceDetailsChannelTableModel::ConnectionStatus to decide which connection icon to render.
 
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
@@ -936,7 +937,19 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 */
 QSize ConnectionStateItemDelegate::sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	return QSize();
+	QFontMetrics fm(option.fontMetrics);
+	int fontPixelHeight = fm.height();
+	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
+	auto modelData = model->data(index).toList();
+
+	int margin = ConnectionStateItemDelegate::Margin;
+	int totalHeight = margin;
+	auto const& tableData = model->tableDataAtRow(index.row());
+	for (auto const& line : modelData)
+	{
+		totalHeight += fontPixelHeight + margin;
+	}
+	return QSize(40, totalHeight);
 }
 
 /* ************************************************************ */
@@ -950,7 +963,7 @@ QSize ConnectionStateItemDelegate::sizeHint(QStyleOptionViewItem const& option, 
 void ConnectionInfoItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info
 
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
@@ -983,9 +996,9 @@ QSize ConnectionInfoItemDelegate::sizeHint(QStyleOptionViewItem const& option, Q
 	QFontMetrics fm(option.fontMetrics);
 	int fontPixelHeight = fm.height();
 	auto const* const model = static_cast<DeviceDetailsChannelTableModel const*>(index.model());
-	auto modelData = model->data(index).toList(); // data returns a string list to display for connection info and a DeviceDetailsChannelTableModel::ConnectionStatus list for connection state column
+	auto modelData = model->data(index).toList();
 
-	int margin = 6;
+	int margin = ConnectionStateItemDelegate::Margin;
 	int totalHeight = margin;
 	auto const& tableData = model->tableDataAtRow(index.row());
 	for (auto const& line : modelData)
