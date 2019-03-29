@@ -436,12 +436,10 @@ public:
 		la::avdecc::entity::model::AudioMappings mappings;
 		try
 		{
-			if (configurationNode.audioUnits.size() > audioUnitIndex && configurationNode.audioUnits.at(audioUnitIndex).streamPortOutputs.size() > streamPortIndex)
+			auto const& streamPortOutputDynamicModel = configurationNode.audioUnits.at(audioUnitIndex).streamPortOutputs.at(streamPortIndex).dynamicModel;
+			if (streamPortOutputDynamicModel)
 			{
-				if (configurationNode.audioUnits.at(audioUnitIndex).streamPortOutputs.at(streamPortIndex).dynamicModel)
-				{
-					mappings = configurationNode.audioUnits.at(audioUnitIndex).streamPortOutputs.at(streamPortIndex).dynamicModel->dynamicAudioMap;
-				}
+				mappings = streamPortOutputDynamicModel->dynamicAudioMap;
 			}
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -504,7 +502,7 @@ public:
 							{
 								if (streamPortInputKV.second.dynamicModel)
 								{
-									auto targetMappings = streamPortInputKV.second.dynamicModel->dynamicAudioMap;
+									auto const& targetMappings = streamPortInputKV.second.dynamicModel->dynamicAudioMap;
 									for (auto const& mapping : targetMappings)
 									{
 										if (relevantStreamIndexes.find(mapping.streamIndex) == relevantStreamIndexes.end())
@@ -635,13 +633,10 @@ public:
 		la::avdecc::entity::model::AudioMappings mappings;
 		try
 		{
-			if (configurationNode.audioUnits.size() > audioUnitIndex && configurationNode.audioUnits.at(audioUnitIndex).streamPortOutputs.size() > streamPortIndex)
+			auto const& streamPortDynamicInput = configurationNode.audioUnits.at(audioUnitIndex).streamPortInputs.at(streamPortIndex).dynamicModel;
+			if (streamPortDynamicInput)
 			{
-				if (configurationNode.audioUnits.at(audioUnitIndex).streamPortInputs.at(streamPortIndex).dynamicModel)
-				{
-					mappings = configurationNode.audioUnits.at(audioUnitIndex).streamPortInputs.at(streamPortIndex).dynamicModel->dynamicAudioMap;
-					//mappings = configurationNode.audioUnits.at(audioUnitIndex).streamPortInputs.at(streamPortIndex).staticModel->has;
-				}
+				mappings = streamPortDynamicInput->dynamicAudioMap;
 			}
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -663,10 +658,11 @@ public:
 		// find out the connected streams:
 		for (auto const& stream : sourceStreams)
 		{
-			if (controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first).dynamicModel)
+			auto const& streamInputDynamicModel = controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first).dynamicModel;
+			if (streamInputDynamicModel)
 			{
-				auto connectedTalker = controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first).dynamicModel->connectionState.talkerStream.entityID;
-				auto connectedTalkerStreamIndex = controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first).dynamicModel->connectionState.talkerStream.streamIndex;
+				auto connectedTalker = streamInputDynamicModel->connectionState.talkerStream.entityID;
+				auto connectedTalkerStreamIndex = streamInputDynamicModel->connectionState.talkerStream.streamIndex;
 
 
 				auto sourceStreamChannel = stream.second;
@@ -708,7 +704,7 @@ public:
 						{
 							if (streamPortOutputKV.second.dynamicModel)
 							{
-								auto targetMappings = streamPortOutputKV.second.dynamicModel->dynamicAudioMap;
+								auto const& targetMappings = streamPortOutputKV.second.dynamicModel->dynamicAudioMap;
 								for (auto const& mapping : targetMappings)
 								{
 									if (relevantStreamIndexes.find(mapping.streamIndex) == relevantStreamIndexes.end())
