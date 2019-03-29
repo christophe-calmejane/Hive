@@ -23,14 +23,15 @@
 #include <QLayout>
 #include <QPushButton>
 #include <QLineEdit>
+#include "toolkit/materialButton.hpp"
 
 namespace connectionMatrix
 {
-class Legend : public QWidget
+class CornerWidget : public QWidget
 {
 	Q_OBJECT
 public:
-	Legend(QWidget* parent = nullptr);
+	CornerWidget(QWidget* parent = nullptr);
 
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
@@ -39,6 +40,12 @@ public:
 
 signals:
 	void filterChanged(QString const& filter);
+
+	void horizontalExpandClicked();
+	void horizontalCollapseClicked();
+
+	void verticalExpandClicked();
+	void verticalCollapseClicked();
 
 private:
 	virtual void paintEvent(QPaintEvent*) override;
@@ -49,8 +56,17 @@ private:
 	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
 	QPushButton _button{ "Show Legend", &_buttonContainer };
 	QLineEdit _searchLineEdit{ &_buttonContainer };
+
+	QHBoxLayout _horizontalLayout;
+	qt::toolkit::MaterialButton _horizontalExpandButton{"expand_more"};
 	QWidget _horizontalPlaceholder{ this };
+	qt::toolkit::MaterialButton _horizontalCollapseButton{"expand_less"};
+
+	QVBoxLayout _verticalLayout;
+	qt::toolkit::MaterialButton _verticalCollapseButton{"chevron_left"};
 	QWidget _verticalPlaceholder{ this };
+	qt::toolkit::MaterialButton _verticalExpandButton{"chevron_right"};
+
 	bool _isTransposed{ false };
 };
 

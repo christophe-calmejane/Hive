@@ -17,7 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "connectionMatrix/legend.hpp"
+#include "connectionMatrix/cornerWidget.hpp"
 #include "connectionMatrix/paintHelper.hpp"
 #include "internals/config.hpp"
 
@@ -28,22 +28,37 @@
 
 namespace connectionMatrix
 {
+
 QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
 {
 	QStringList headers{ { "Talkers", "Listeners" } };
 	return headers.at((static_cast<int>(orientation) + (isTransposed ? 0 : 1)) % 2);
 }
 
-Legend::Legend(QWidget* parent)
+CornerWidget::CornerWidget(QWidget* parent)
 	: QWidget{ parent }
 {
 	// Because the legend is child of the
 	_searchLineEdit.setPlaceholderText("Entity Filter (RegEx)");
 
+	_horizontalExpandButton.setToolTip("Expand");
+	_horizontalCollapseButton.setToolTip("Collapse");
+
+	_verticalCollapseButton.setToolTip("Collapse");
+	_verticalExpandButton.setToolTip("Expand");
+
+	_horizontalLayout.addWidget(&_horizontalExpandButton);
+	_horizontalLayout.addWidget(&_horizontalCollapseButton);
+	_horizontalLayout.addWidget(&_horizontalPlaceholder, 1);
+
+	_verticalLayout.addWidget(&_verticalPlaceholder, 1);
+	_verticalLayout.addWidget(&_verticalCollapseButton);
+	_verticalLayout.addWidget(&_verticalExpandButton);
+
 	// Layout widgets
 	_layout.addWidget(&_buttonContainer, 0, 0);
-	_layout.addWidget(&_horizontalPlaceholder, 1, 0);
-	_layout.addWidget(&_verticalPlaceholder, 0, 1);
+	_layout.addLayout(&_horizontalLayout, 1, 0);
+	_layout.addLayout(&_verticalLayout, 0, 1);
 	_layout.setSpacing(2);
 
 	_buttonContainer.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
@@ -132,7 +147,13 @@ Legend::Legend(QWidget* parent)
 			dialog.exec();
 		});
 
-	connect(&_searchLineEdit, &QLineEdit::textChanged, this, &Legend::filterChanged);
+	connect(&_searchLineEdit, &QLineEdit::textChanged, this, &CornerWidget::filterChanged);
+
+	connect(&_horizontalExpandButton, &QPushButton::clicked, this, &CornerWidget::verticalExpandClicked);
+	connect(&_horizontalCollapseButton, &QPushButton::clicked, this, &CornerWidget::verticalCollapseClicked);
+
+	connect(&_verticalExpandButton, &QPushButton::clicked, this, &CornerWidget::horizontalExpandClicked);
+	connect(&_verticalCollapseButton, &QPushButton::clicked, this, &CornerWidget::horizontalCollapseClicked);
 
 	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
 	connect(searchShortcut, &QShortcut::activated, this,
@@ -143,29 +164,29 @@ Legend::Legend(QWidget* parent)
 		});
 }
 
-void Legend::setTransposed(bool const isTransposed)
+void CornerWidget::setTransposed(bool const isTransposed)
 {
 	_isTransposed = isTransposed;
 	repaint();
 }
 
-bool Legend::isTransposed() const
+bool CornerWidget::isTransposed() const
 {
 	return _isTransposed;
 }
 
-QString Legend::filterText() const
+QString CornerWidget::filterText() const
 {
 	return _searchLineEdit.text();
 }
 
-void Legend::paintEvent(QPaintEvent*)
+void CornerWidget::paintEvent(QPaintEvent*)
 {
 	QPainter painter{ this };
 
 	// Whole section
 	{
-		painter.fillRect(geometry(), QColor("#F5F5F5"));
+		painter.fillRect(geometry(), 0xf5f5f5);
 	}
 
 	// Horizontal section

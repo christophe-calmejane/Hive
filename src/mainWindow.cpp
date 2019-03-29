@@ -100,7 +100,7 @@ void MainWindow::currentControllerChanged()
 	{
 		// Create a new Controller
 		auto& manager = avdecc::ControllerManager::getInstance();
-		manager.createController(protocolType, interfaceID, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		manager.createController(protocolType, interfaceName, 0x0004, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)

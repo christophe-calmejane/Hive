@@ -23,6 +23,12 @@
 
 namespace connectionMatrix
 {
+
+void drawNothing(QPainter* painter, QRect const& rect);
+void drawSquare(QPainter* painter, QRect const& rect);
+void drawLozenge(QPainter* painter, QRect const& rect);
+void drawCircle(QPainter* painter, QRect const& rect);
+
 void drawConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawWrongDomainConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);
 void drawWrongFormatConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant);

@@ -26,7 +26,6 @@
 #include "settingsManager/settings.hpp"
 #include <algorithm>
 #include <array>
-#include <QTimer>
 #include <QFont>
 #include <set>
 #include <unordered_map>

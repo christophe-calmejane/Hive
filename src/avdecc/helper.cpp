@@ -112,6 +112,46 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 	return {};
 }
 
+QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+{
+	try
+	{
+		auto const& entityNode = controlledEntity.getEntityNode();
+		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		return objectName(&controlledEntity, streamNode);
+	}
+	catch (la::avdecc::controller::ControlledEntity::Exception const&)
+	{
+		// Ignore exception
+	}
+	catch (...)
+	{
+		// Uncaught exception
+		AVDECC_ASSERT(false, "Uncaught exception");
+	}
+	return {};
+}
+
+QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+{
+	try
+	{
+		auto const& entityNode = controlledEntity.getEntityNode();
+		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		return objectName(&controlledEntity, streamNode);
+	}
+	catch (la::avdecc::controller::ControlledEntity::Exception const&)
+	{
+		// Ignore exception
+	}
+	catch (...)
+	{
+		// Uncaught exception
+		AVDECC_ASSERT(false, "Uncaught exception");
+	}
+	return {};
+}
+
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept
 {
 	return QString::fromStdString(la::avdecc::entity::model::descriptorTypeToString(descriptorType));
@@ -776,6 +816,18 @@ bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::
 bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
 {
 	return (listenerNode->dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+}
+
+bool isOutputStreamRunning(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+{
+	auto const& entityNode = controlledEntity.getEntityNode();
+	return controlledEntity.isStreamOutputRunning(entityNode.dynamicModel->currentConfiguration, streamIndex);
+}
+
+bool isInputStreamRunning(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+{
+	auto const& entityNode = controlledEntity.getEntityNode();
+	return controlledEntity.isStreamInputRunning(entityNode.dynamicModel->currentConfiguration, streamIndex);
 }
 
 } // namespace helper

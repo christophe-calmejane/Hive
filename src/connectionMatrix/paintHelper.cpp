@@ -21,30 +21,40 @@
 
 namespace connectionMatrix
 {
-static inline void drawCircle(QPainter* painter, QRect const& rect)
+
+void drawNothing(QPainter* painter, QRect const& rect)
 {
-	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
+	painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
 }
 
-static inline void drawLozenge(QPainter* painter, QRect const& rect)
+void drawSquare(QPainter* painter, QRect const& rect)
 {
+	painter->drawRect(rect.adjusted(3, 3, -3, -3));
+}
+
+void drawLozenge(QPainter* painter, QRect const& rect)
+{
+	painter->save();
+
 	auto r = rect.adjusted(4, 4, -4, -4);
 	painter->translate(r.center());
 	r.moveCenter({});
 	painter->rotate(45.0);
 	painter->drawRect(r);
+
+	painter->restore();
 }
 
-static inline void drawSquare(QPainter* painter, QRect const& rect)
+void drawCircle(QPainter* painter, QRect const& rect)
 {
-	painter->drawRect(rect.adjusted(3, 3, -3, -3));
+	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
 }
+
+/////
 
 static inline void drawEntitySummaryFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
 
 	painter->setPen(QPen(QColor("#9E9E9E"), 1));
 	painter->setBrush(color);
@@ -57,8 +67,6 @@ static inline void drawConnectedStreamFigure(QPainter* painter, QRect const& rec
 {
 	painter->save();
 
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
 	painter->setPen(QPen(Qt::black, 2));
 	painter->setBrush(color);
 	drawCircle(painter, rect);
@@ -69,8 +77,6 @@ static inline void drawConnectedStreamFigure(QPainter* painter, QRect const& rec
 static inline void drawNotConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
 
 	painter->setPen(QPen(QColor("#9E9E9E"), 2));
 	painter->setBrush(color);
@@ -85,8 +91,6 @@ static inline void drawFastConnectingStreamFigure(QPainter* painter, QRect const
 
 	painter->save();
 
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
 	painter->setPen(QPen(QColor("#9E9E9E"), 2));
 	painter->setBrush(colorConnected);
 	painter->drawPie(rect.adjusted(3, 3, -3, -3), startAngle * 16, 180 * 16);
@@ -100,8 +104,6 @@ static inline void drawConnectedRedundantStreamFigure(QPainter* painter, QRect c
 {
 	painter->save();
 
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
 	painter->setPen(QPen(Qt::black, 1));
 	painter->setBrush(color);
 	drawLozenge(painter, rect);
@@ -112,8 +114,6 @@ static inline void drawConnectedRedundantStreamFigure(QPainter* painter, QRect c
 static inline void drawNotConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
 
 	painter->setPen(QPen(QColor("#9E9E9E"), 1));
 	painter->setBrush(color);
@@ -352,7 +352,7 @@ void drawEntityNoConnection(QPainter* painter, QRect const& rect)
 
 void drawNotApplicable(QPainter* painter, QRect const& rect)
 {
-	painter->fillRect(rect, QBrush{ QColor("#E1E1E1"), Qt::BDiagPattern });
+	drawNothing(painter, rect);
 }
 
 } // namespace connectionMatrix
