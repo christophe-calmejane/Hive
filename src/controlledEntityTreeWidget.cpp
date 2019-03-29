@@ -186,12 +186,13 @@ public:
 
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
+		// Always remove saved state
+		_entityExpandedStates.erase(entityID);
+
 		if (_controlledEntityID != entityID)
 		{
 			return;
 		}
-
-		_entityExpandedStates.erase(entityID);
 
 		Q_Q(ControlledEntityTreeWidget);
 		q->clearSelection();
