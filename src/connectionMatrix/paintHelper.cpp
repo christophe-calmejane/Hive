@@ -52,7 +52,7 @@ void drawCircle(QPainter* painter, QRect const& rect)
 
 /////
 
-static inline void drawEntitySummaryFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawEntitySummaryFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
 
@@ -63,7 +63,7 @@ static inline void drawEntitySummaryFigure(QPainter* painter, QRect const& rect,
 	painter->restore();
 }
 
-static inline void drawConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
 
@@ -74,7 +74,7 @@ static inline void drawConnectedStreamFigure(QPainter* painter, QRect const& rec
 	painter->restore();
 }
 
-static inline void drawNotConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawNotConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
 
@@ -85,7 +85,7 @@ static inline void drawNotConnectedStreamFigure(QPainter* painter, QRect const& 
 	painter->restore();
 }
 
-static inline void drawFastConnectingStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
+void drawFastConnectingStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
 {
 	constexpr auto startAngle = 90;
 
@@ -100,7 +100,7 @@ static inline void drawFastConnectingStreamFigure(QPainter* painter, QRect const
 	painter->restore();
 }
 
-static inline void drawConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
 
@@ -111,7 +111,7 @@ static inline void drawConnectedRedundantStreamFigure(QPainter* painter, QRect c
 	painter->restore();
 }
 
-static inline void drawNotConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawNotConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
 {
 	painter->save();
 
@@ -122,7 +122,7 @@ static inline void drawNotConnectedRedundantStreamFigure(QPainter* painter, QRec
 	painter->restore();
 }
 
-static inline void drawFastConnectingRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
+void drawFastConnectingRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
 {
 	drawNotConnectedRedundantStreamFigure(painter, rect, colorNotConnected); // TODO: Try to draw a lozenge split in 2, like the circle
 }

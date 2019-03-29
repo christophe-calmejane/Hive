@@ -22,7 +22,7 @@
 #include <QAbstractTableModel>
 #include <la/avdecc/utils.hpp>
 
-#define ENABLE_CONNECTION_MATRIX_DEBUG 1
+#define ENABLE_CONNECTION_MATRIX_DEBUG 0
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #include <QDebug>
@@ -68,16 +68,16 @@ public:
 		enum class Capability
 		{
 			InterfaceDown = 1u << 0,
-			Connectable = 1u << 1,
+			Connectable = 1u << 1, // Static
 			Connected = 1u << 2,
 			Locked = 1u << 3,
 			SameFormat = 1u << 4,
 			SameDomain = 1u << 5,
 			FastConnecting = 1u << 6,
 
-			/*HasCompatibleFormat = 1u << 7, // Static
+			HasCompatibleFormat = 1u << 7, // Static
 			HasTalkerCompatibleFormat = 1u << 8,
-			HasListenerCompatibleFormat = 1u << 9,*/
+			HasListenerCompatibleFormat = 1u << 9,
 		};
 		using Capabilities = la::avdecc::utils::EnumBitfield<Capability>;
 

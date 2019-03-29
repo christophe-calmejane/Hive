@@ -79,21 +79,31 @@ CornerWidget::CornerWidget(QWidget* parent)
 
 	// Connect button
 	connect(&_button, &QPushButton::clicked, this,
-		[this]()
+		[]()
 		{
 			QDialog dialog;
 			QVBoxLayout layout{ &dialog };
 
 			using DrawFunctionType = std::function<void(QPainter*, QRect const&)>;
-			auto const separatorDrawFunction = [](QPainter*, QRect const&)
-			{
-			};
-
+			
 			std::vector<std::pair<DrawFunctionType, QString>> drawFunctions{
-				{ static_cast<DrawFunctionType>(nullptr), "Shapes:" }, { static_cast<DrawFunctionType>(std::bind(&drawEntityNoConnection, std::placeholders::_1, std::placeholders::_2)), "Entity connection summary (Not working yet)" }, { static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connection status for a Simple or Redundant stream" }, { static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, true)), "Connection status for the individual stream of a Redundant Stream Pair" }, { static_cast<DrawFunctionType>(nullptr), "" }, { static_cast<DrawFunctionType>(nullptr), "Connection status color code:" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable without detectable error" }, { static_cast<DrawFunctionType>(std::bind(&drawWrongDomainNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but incompatible AVB domain" }, { static_cast<DrawFunctionType>(std::bind(&drawWrongFormatNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but incompatible stream format" }, { static_cast<DrawFunctionType>(std::bind(&drawNotConnectedInterfaceDownStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but at least one Network Interface is down" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawErrorNotConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Connectable Redundant Stream Pair but at least one error detected" }, { static_cast<DrawFunctionType>(std::bind(&drawConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected and no detectable error found" }, { static_cast<DrawFunctionType>(std::bind(&drawWrongDomainConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but incompatible AVB domain" }, { static_cast<DrawFunctionType>(std::bind(&drawWrongFormatConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but incompatible stream format" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawConnectedInterfaceDownStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but Network Interface is down" }, { static_cast<DrawFunctionType>(std::bind(&drawPartiallyConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Partially connected Redundant Stream Pair" }, { static_cast<DrawFunctionType>(std::bind(&drawErrorConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Redundant Stream Pair connected but at least one error detected" },
+				{ static_cast<DrawFunctionType>(nullptr), "Shapes:" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawEntityNoConnection, std::placeholders::_1, std::placeholders::_2)),"Entity connection summary (Not working yet)" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connection status for a Simple or Redundant stream" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, true)), "Connection status for the individual stream of a Redundant Stream Pair" },
+				{ static_cast<DrawFunctionType>(nullptr), "" },
+				{ static_cast<DrawFunctionType>(nullptr), "Connection status color code:" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable without detectable error" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawWrongDomainNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but incompatible AVB domain" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawWrongFormatNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but incompatible stream format" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedInterfaceDownStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but at least one Network Interface is down" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawErrorNotConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Connectable Redundant Stream Pair but at least one error detected" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected and no detectable error found" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawWrongDomainConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but incompatible AVB domain" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawWrongFormatConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but incompatible stream format" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawConnectedInterfaceDownStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but Network Interface is down" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawPartiallyConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Partially connected Redundant Stream Pair" },
+				{ static_cast<DrawFunctionType>(std::bind(&drawErrorConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Redundant Stream Pair connected but at least one error detected" },
 				//{ static_cast<DrawFunctionType>(std::bind(&drawFastConnectingStream, std::placeholders::_1, std::placeholders::_2, false)), "Listener trying to fast connect" },
 				//{ static_cast<DrawFunctionType>(std::bind(&drawWrongDomainFastConnectingStream, std::placeholders::_1, std::placeholders::_2, false)), "Listener trying to fast connect (incompatible AVB domain)" },
 				//{ static_cast<DrawFunctionType>(std::bind(&drawWrongFormatFastConnectingStream, std::placeholders::_1, std::placeholders::_2, false)), "Listener trying to fast connect (incompatible stream format)" },

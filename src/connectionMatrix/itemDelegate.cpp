@@ -32,7 +32,7 @@ namespace connectionMatrix
 
 void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	// Somethimes when the model is being transposed with hidden rows/columns items are asked to be drawn
+	// Sometimes when the model is transposed with hidden rows/columns, hidden items are asked to be drawn
 	// This fixes the issue by filtering invalid parameters
 	if (!option.rect.isValid())
 	{
@@ -58,9 +58,9 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	}
 #endif
 
-	auto const& data = static_cast<Model const*>(index.model())->intersectionData(index);
-	
-	switch (data.type)
+	auto const& intersectionData = static_cast<Model const*>(index.model())->intersectionData(index);
+
+	switch (intersectionData.type)
 	{
 		case Model::IntersectionData::Type::Entity_Entity:
 		case Model::IntersectionData::Type::Entity_Redundant:
@@ -71,12 +71,34 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		case Model::IntersectionData::Type::Redundant_Redundant:
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
+			drawLozenge(painter, option.rect);
+			break;
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
-			drawCircle(painter, option.rect);
+			if (intersectionData.capabilities.test(Model::IntersectionData::Capability::Connected))
+			{
+				if (intersectionData.capabilities.test(Model::IntersectionData::Capability::SameDomain))
+				{
+					if (intersectionData.capabilities.test(Model::IntersectionData::Capability::SameFormat))
+					{
+						drawConnectedStream(painter, option.rect, false);
+					}
+					else
+					{
+						drawWrongFormatConnectedStream(painter, option.rect, false);
+					}
+				}
+				else
+				{
+					drawWrongDomainConnectedStream(painter, option.rect, false);
+				}
+			}
+			else
+			{
+				drawNotConnectedStream(painter, option.rect, false);
+			}
 			break;
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
-			drawLozenge(painter, option.rect);
 			break;
 		default:
 			drawNothing(painter, option.rect);
@@ -99,7 +121,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		{ Model::IntersectionData::Type::SingleStream_SingleStream, qt::toolkit::materialPalette::Name::LightGreen },
 	};
 
-	auto color = qt::toolkit::materialPalette::color(debugColor.at(data.type), qt::toolkit::materialPalette::Shade::Shade500);
+	auto color = qt::toolkit::materialPalette::color(debugColor.at(intersectionData.type), qt::toolkit::materialPalette::Shade::Shade500);
 	color.setAlphaF(0.5f);
 	painter->fillRect(option.rect, color);
 #endif

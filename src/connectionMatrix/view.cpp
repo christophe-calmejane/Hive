@@ -108,11 +108,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 		if (data.capabilities.test(Model::IntersectionData::Capability::Connectable))
 		{
-			manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
-		}
-		else
-		{
-			manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+			if (data.capabilities.test(Model::IntersectionData::Capability::Connected))
+			{
+				manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+			}
+			else
+			{
+				manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+			}
 		}
 	}
 		break;
