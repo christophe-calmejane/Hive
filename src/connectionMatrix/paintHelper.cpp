@@ -18,21 +18,24 @@
 */
 
 #include "connectionMatrix/paintHelper.hpp"
+#include <QPainter>
 
 namespace connectionMatrix
 {
+namespace paintHelper
+{
 
-void drawNothing(QPainter* painter, QRect const& rect)
+static inline void drawNothing(QPainter* painter, QRect const& rect)
 {
 	painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
 }
 
-void drawSquare(QPainter* painter, QRect const& rect)
+static inline void drawSquare(QPainter* painter, QRect const& rect)
 {
 	painter->drawRect(rect.adjusted(3, 3, -3, -3));
 }
 
-void drawLozenge(QPainter* painter, QRect const& rect)
+static inline void drawLozenge(QPainter* painter, QRect const& rect)
 {
 	painter->save();
 
@@ -45,314 +48,34 @@ void drawLozenge(QPainter* painter, QRect const& rect)
 	painter->restore();
 }
 
-void drawCircle(QPainter* painter, QRect const& rect)
+static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
 	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
 }
 
-/////
-
-void drawEntitySummaryFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawEntityConnectionSummary(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities)
 {
 	painter->save();
-
-	painter->setPen(QPen(QColor("#9E9E9E"), 1));
-	painter->setBrush(color);
+	painter->setRenderHint(QPainter::Antialiasing);
 	drawSquare(painter, rect);
-
 	painter->restore();
 }
 
-void drawConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawStreamConnectionStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities)
 {
 	painter->save();
-
-	painter->setPen(QPen(Qt::black, 2));
-	painter->setBrush(color);
+	painter->setRenderHint(QPainter::Antialiasing);
 	drawCircle(painter, rect);
-
 	painter->restore();
 }
 
-void drawNotConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+void drawIndividualRedundantStreamStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities)
 {
 	painter->save();
-
-	painter->setPen(QPen(QColor("#9E9E9E"), 2));
-	painter->setBrush(color);
-	drawCircle(painter, rect);
-
-	painter->restore();
-}
-
-void drawFastConnectingStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
-{
-	constexpr auto startAngle = 90;
-
-	painter->save();
-
-	painter->setPen(QPen(QColor("#9E9E9E"), 2));
-	painter->setBrush(colorConnected);
-	painter->drawPie(rect.adjusted(3, 3, -3, -3), startAngle * 16, 180 * 16);
-	painter->setBrush(colorNotConnected);
-	painter->drawPie(rect.adjusted(3, 3, -3, -3), (startAngle + 180) * 16, 180 * 16);
-
-	painter->restore();
-}
-
-void drawConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
-{
-	painter->save();
-
-	painter->setPen(QPen(Qt::black, 1));
-	painter->setBrush(color);
+	painter->setRenderHint(QPainter::Antialiasing);
 	drawLozenge(painter, rect);
-
 	painter->restore();
 }
 
-void drawNotConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
-{
-	painter->save();
-
-	painter->setPen(QPen(QColor("#9E9E9E"), 1));
-	painter->setBrush(color);
-	drawLozenge(painter, rect);
-
-	painter->restore();
-}
-
-void drawFastConnectingRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
-{
-	drawNotConnectedRedundantStreamFigure(painter, rect, colorNotConnected); // TODO: Try to draw a lozenge split in 2, like the circle
-}
-
-// QColor(0xF5F5F5); // White-ish
-// QColor(0x4CAF50); // Green
-// QColor(0xFFD600); // Yellow
-// QColor(0xFFF9C4); // Light Yellow
-// QColor(0xC83028); // Red
-// QColor(0xFFCDD2); // Light Red
-// QColor(0xD251F1); // Purple
-// QColor(0xFFC1FF); // Light Purple
-// QColor(0x2196F3); // Blue
-// QColor(0x8EE1FF); // Light Blue
-// QColor(0xF56D0D); // Orange
-
-static inline QColor getConnectedColor()
-{
-	return QColor(0x4CAF50); // Green
-}
-static inline QColor getConnectedWrongDomainColor()
-{
-	return QColor(0xC83028); // Red
-}
-
-static inline QColor getConnectedWrongFormatColor()
-{
-	return QColor(0xFFD600); // Yellow
-}
-
-static inline QColor getPartiallyConnectedColor()
-{
-	return QColor(0xF56D0D); // Orange
-}
-
-static inline QColor getConnectedInterfaceDownColor()
-{
-	return QColor(0x2196F3); // Blue
-}
-
-static inline QColor getNotConnectedInterfaceDownColor()
-{
-	return QColor(0x8EE1FF); // Light Blue
-}
-
-static inline QColor getNotConnectedColor()
-{
-	return QColor(0xF5F5F5); // White-ish
-}
-
-static inline QColor getNotConnectedWrongDomainColor()
-{
-	return QColor(0xFFCDD2); // Light Red
-}
-
-static inline QColor getNotConnectedWrongFormatColor()
-{
-	return QColor(0xFFF9C4); // Light Yellow
-}
-
-static inline QColor getNotConnectedAtLeastOneErrorColor()
-{
-	return QColor(0xFFC1FF); // Light Purple
-}
-
-static inline QColor getConnectedAtLeastOneErrorColor()
-{
-	return QColor(0xD251F1); // Purple
-}
-
-void drawConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedColor());
-	}
-	else
-	{
-		drawConnectedStreamFigure(painter, rect, getConnectedColor());
-	}
-}
-
-void drawWrongDomainConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedWrongDomainColor());
-	}
-	else
-	{
-		drawConnectedStreamFigure(painter, rect, getConnectedWrongDomainColor());
-	}
-}
-
-void drawWrongFormatConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedWrongFormatColor());
-	}
-	else
-	{
-		drawConnectedStreamFigure(painter, rect, getConnectedWrongFormatColor());
-	}
-}
-
-void drawFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawFastConnectingRedundantStreamFigure(painter, rect, getConnectedColor(), getNotConnectedColor());
-	}
-	else
-	{
-		drawFastConnectingStreamFigure(painter, rect, getConnectedColor(), getNotConnectedColor());
-	}
-}
-
-void drawWrongDomainFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawFastConnectingRedundantStreamFigure(painter, rect, getConnectedWrongDomainColor(), getNotConnectedWrongDomainColor());
-	}
-	else
-	{
-		drawFastConnectingStreamFigure(painter, rect, getConnectedWrongDomainColor(), getNotConnectedWrongDomainColor());
-	}
-}
-
-void drawWrongFormatFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawFastConnectingRedundantStreamFigure(painter, rect, getConnectedWrongFormatColor(), getNotConnectedWrongFormatColor());
-	}
-	else
-	{
-		drawFastConnectingStreamFigure(painter, rect, getConnectedWrongFormatColor(), getNotConnectedWrongFormatColor());
-	}
-}
-
-void drawConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedInterfaceDownColor());
-	}
-	else
-	{
-		drawConnectedStreamFigure(painter, rect, getConnectedInterfaceDownColor());
-	}
-}
-
-void drawNotConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedInterfaceDownColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedInterfaceDownColor());
-	}
-}
-
-void drawNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedColor());
-	}
-}
-
-void drawWrongDomainNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedWrongDomainColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedWrongDomainColor());
-	}
-}
-
-void drawWrongFormatNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedWrongFormatColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedWrongFormatColor());
-	}
-}
-
-void drawErrorNotConnectedRedundantNode(QPainter* painter, QRect const& rect)
-{
-	drawNotConnectedStreamFigure(painter, rect, getNotConnectedAtLeastOneErrorColor());
-}
-
-void drawErrorConnectedRedundantNode(QPainter* painter, QRect const& rect)
-{
-	drawConnectedStreamFigure(painter, rect, getConnectedAtLeastOneErrorColor());
-}
-
-void drawPartiallyConnectedRedundantNode(QPainter* painter, QRect const& rect)
-{
-	drawConnectedStreamFigure(painter, rect, getPartiallyConnectedColor());
-}
-
-void drawEntityConnection(QPainter* painter, QRect const& rect)
-{
-	drawEntitySummaryFigure(painter, rect, QColor("0x4CAF50"));
-}
-
-void drawEntityNoConnection(QPainter* painter, QRect const& rect)
-{
-	drawEntitySummaryFigure(painter, rect, QColor("#EEEEEE"));
-}
-
-void drawNotApplicable(QPainter* painter, QRect const& rect)
-{
-	drawNothing(painter, rect);
-}
-
+} // namespace paintHelper
 } // namespace connectionMatrix

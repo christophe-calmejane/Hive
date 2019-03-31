@@ -22,6 +22,8 @@
 #include "connectionMatrix/node.hpp"
 #include "connectionMatrix/paintHelper.hpp"
 
+#include <QPainter>
+
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #include "toolkit/materialPalette.hpp"
 #include <unordered_map>
@@ -66,42 +68,22 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		case Model::IntersectionData::Type::Entity_Redundant:
 		case Model::IntersectionData::Type::Entity_SingleStream:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
-			drawSquare(painter, option.rect);
+			paintHelper::drawEntityConnectionSummary(painter, option.rect, intersectionData.capabilities);
 			break;
 		case Model::IntersectionData::Type::Redundant_Redundant:
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
-			drawLozenge(painter, option.rect);
+			paintHelper::drawIndividualRedundantStreamStatus(painter, option.rect, intersectionData.capabilities);
 			break;
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
-			if (intersectionData.capabilities.test(Model::IntersectionData::Capability::Connected))
-			{
-				if (intersectionData.capabilities.test(Model::IntersectionData::Capability::SameDomain))
-				{
-					if (intersectionData.capabilities.test(Model::IntersectionData::Capability::SameFormat))
-					{
-						drawConnectedStream(painter, option.rect, false);
-					}
-					else
-					{
-						drawWrongFormatConnectedStream(painter, option.rect, false);
-					}
-				}
-				else
-				{
-					drawWrongDomainConnectedStream(painter, option.rect, false);
-				}
-			}
-			else
-			{
-				drawNotConnectedStream(painter, option.rect, false);
-			}
+			paintHelper::drawStreamConnectionStatus(painter, option.rect, intersectionData.capabilities);
 			break;
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 			break;
+		case Model::IntersectionData::Type::None:
 		default:
-			drawNothing(painter, option.rect);
+			painter->fillRect(option.rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
 			break;
 	}
 

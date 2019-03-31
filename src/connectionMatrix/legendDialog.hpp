@@ -19,18 +19,21 @@
 
 #pragma once
 
-#include "connectionMatrix/model.hpp"
-
-class QPainter;
+#include <QDialog>
+#include <QLayout>
+#include <QPushButton>
 
 namespace connectionMatrix
 {
-namespace paintHelper
+class LegendDialog : public QDialog
 {
+	Q_OBJECT
+public:
+	LegendDialog(QWidget* parent = nullptr);
+	
+private:
+	QVBoxLayout _layout{this};
+	QPushButton _closeButton{"Close", this};
+};
 
-void drawEntityConnectionSummary(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities);
-void drawStreamConnectionStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities);
-void drawIndividualRedundantStreamStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities);
-
-} // namespace paintHelper
 } // namespace connectionMatrix

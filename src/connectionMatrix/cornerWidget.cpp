@@ -18,13 +18,9 @@
 */
 
 #include "connectionMatrix/cornerWidget.hpp"
-#include "connectionMatrix/paintHelper.hpp"
-#include "internals/config.hpp"
-
-#include <QDialog>
-#include <QLabel>
-#include <QPainter>
+#include "connectionMatrix/legendDialog.hpp"
 #include <QShortcut>
+#include <QPainter>
 
 namespace connectionMatrix
 {
@@ -81,79 +77,7 @@ CornerWidget::CornerWidget(QWidget* parent)
 	connect(&_button, &QPushButton::clicked, this,
 		[]()
 		{
-			QDialog dialog;
-			QVBoxLayout layout{ &dialog };
-
-			using DrawFunctionType = std::function<void(QPainter*, QRect const&)>;
-			
-			std::vector<std::pair<DrawFunctionType, QString>> drawFunctions{
-				{ static_cast<DrawFunctionType>(nullptr), "Shapes:" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawEntityNoConnection, std::placeholders::_1, std::placeholders::_2)),"Entity connection summary (Not working yet)" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connection status for a Simple or Redundant stream" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, true)), "Connection status for the individual stream of a Redundant Stream Pair" },
-				{ static_cast<DrawFunctionType>(nullptr), "" },
-				{ static_cast<DrawFunctionType>(nullptr), "Connection status color code:" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable without detectable error" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawWrongDomainNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but incompatible AVB domain" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawWrongFormatNotConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but incompatible stream format" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawNotConnectedInterfaceDownStream, std::placeholders::_1, std::placeholders::_2, false)), "Connectable but at least one Network Interface is down" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawErrorNotConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Connectable Redundant Stream Pair but at least one error detected" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected and no detectable error found" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawWrongDomainConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but incompatible AVB domain" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawWrongFormatConnectedStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but incompatible stream format" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawConnectedInterfaceDownStream, std::placeholders::_1, std::placeholders::_2, false)), "Connected but Network Interface is down" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawPartiallyConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Partially connected Redundant Stream Pair" },
-				{ static_cast<DrawFunctionType>(std::bind(&drawErrorConnectedRedundantNode, std::placeholders::_1, std::placeholders::_2)), "Redundant Stream Pair connected but at least one error detected" },
-				//{ static_cast<DrawFunctionType>(std::bind(&drawFastConnectingStream, std::placeholders::_1, std::placeholders::_2, false)), "Listener trying to fast connect" },
-				//{ static_cast<DrawFunctionType>(std::bind(&drawWrongDomainFastConnectingStream, std::placeholders::_1, std::placeholders::_2, false)), "Listener trying to fast connect (incompatible AVB domain)" },
-				//{ static_cast<DrawFunctionType>(std::bind(&drawWrongFormatFastConnectingStream, std::placeholders::_1, std::placeholders::_2, false)), "Listener trying to fast connect (incompatible stream format)" },
-			};
-
-			class IconDrawer : public QWidget
-			{
-			public:
-				IconDrawer(DrawFunctionType const& func)
-					: _drawFunction(func)
-				{
-				}
-
-			private:
-				virtual void paintEvent(QPaintEvent*) override
-				{
-					QPainter painter{ this };
-					_drawFunction(&painter, rect());
-				}
-
-				DrawFunctionType const& _drawFunction;
-			};
-
-			for (auto& drawFunction : drawFunctions)
-			{
-				auto* hlayout = new QHBoxLayout;
-				auto const& iconDrawFunction = drawFunction.first;
-				if (iconDrawFunction)
-				{
-					auto* icon = new IconDrawer{ iconDrawFunction };
-					icon->setFixedSize(20, 20);
-					hlayout->addWidget(icon);
-				}
-				auto* label = new QLabel{ drawFunction.second };
-				auto font = label->font();
-				if (!iconDrawFunction)
-				{
-					font.setBold(true);
-				}
-				font.setStyleStrategy(QFont::PreferAntialias);
-				label->setFont(font);
-				hlayout->addWidget(label);
-				layout.addLayout(hlayout);
-			}
-
-			QPushButton closeButton{ "Close" };
-			connect(&closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
-			layout.addWidget(&closeButton);
-
-			dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "Connection matrix legend");
+			LegendDialog dialog;
 			dialog.exec();
 		});
 
