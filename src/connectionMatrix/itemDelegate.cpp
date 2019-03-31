@@ -66,20 +66,20 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	{
 		case Model::IntersectionData::Type::Entity_Entity:
 		case Model::IntersectionData::Type::Entity_Redundant:
-		case Model::IntersectionData::Type::Entity_SingleStream:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
+		case Model::IntersectionData::Type::Entity_SingleStream:
 			paintHelper::drawEntityConnectionSummary(painter, option.rect, intersectionData.capabilities);
-			break;
-		case Model::IntersectionData::Type::Redundant_Redundant:
-		case Model::IntersectionData::Type::Redundant_SingleStream:
-		case Model::IntersectionData::Type::RedundantStream_SingleStream:
-			paintHelper::drawIndividualRedundantStreamStatus(painter, option.rect, intersectionData.capabilities);
-			break;
-		case Model::IntersectionData::Type::SingleStream_SingleStream:
-			paintHelper::drawStreamConnectionStatus(painter, option.rect, intersectionData.capabilities);
 			break;
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
+			paintHelper::drawIndividualRedundantStreamStatus(painter, option.rect, intersectionData.capabilities);
+			break;
+		case Model::IntersectionData::Type::Redundant_Redundant:
+		case Model::IntersectionData::Type::RedundantStream_SingleStream:
+		case Model::IntersectionData::Type::Redundant_SingleStream:
+		case Model::IntersectionData::Type::SingleStream_SingleStream:
+			paintHelper::drawStreamConnectionStatus(painter, option.rect, intersectionData.capabilities);
+			break;
 			break;
 		case Model::IntersectionData::Type::None:
 		default:

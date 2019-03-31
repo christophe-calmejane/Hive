@@ -64,11 +64,13 @@ QString objectName(la::avdecc::controller::ControlledEntity const* const control
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
 
-QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
+QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
+QString redundantOutputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
+QString redundantInputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept;
 QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState, la::avdecc::UniqueIdentifier const& owningController) noexcept;
@@ -109,9 +111,6 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 
 bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
 bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
-
-bool isOutputStreamRunning(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
-bool isInputStreamRunning(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 
 } // namespace helper
 } // namespace avdecc

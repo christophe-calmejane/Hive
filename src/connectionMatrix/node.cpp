@@ -28,17 +28,20 @@ Node::Type Node::type() const
 	return _type;
 }
 
-bool Node::isStreamNode() const
+bool Node::isEntityNode() const
+{
+	return _type == Type::Entity;
+}
+
+bool Node::isRedundantNode() const
 {
 	switch (_type)
 	{
-		case Node::Type::OutputStream:
-		case Node::Type::InputStream:
-		case Node::Type::RedundantOutputStream:
-		case Node::Type::RedundantInputStream:
-			return true;
-		default:
-			return false;
+	case Type::RedundantOutput:
+	case Type::RedundantInput:
+		return true;
+	default:
+		return false;
 	}
 }
 
@@ -46,8 +49,22 @@ bool Node::isRedundantStreamNode() const
 {
 	switch (_type)
 	{
-		case Node::Type::RedundantOutputStream:
-		case Node::Type::RedundantInputStream:
+	case Type::RedundantOutputStream:
+	case Type::RedundantInputStream:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool Node::isStreamNode() const
+{
+	switch (_type)
+	{
+		case Type::OutputStream:
+		case Type::InputStream:
+		case Type::RedundantOutputStream:
+		case Type::RedundantInputStream:
 			return true;
 		default:
 			return false;
@@ -67,11 +84,6 @@ Node* Node::parent() const
 bool Node::hasParent() const
 {
 	return _parent != nullptr;
-}
-
-void Node::setName(QString const& name)
-{
-	_name = name;
 }
 
 QString const& Node::name() const
@@ -129,9 +141,29 @@ Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* 
 	}
 }
 
+void Node::setName(QString const& name)
+{
+	_name = name;
+}
+
 EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID)
 {
 	return new EntityNode{ entityID };
+}
+
+void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const
+{
+	Node::accept([&avbInterfaceIndex, &visitor](Node* node)
+	{
+		if (node->isStreamNode())
+		{
+			auto* streamNode = static_cast<StreamNode*>(node);
+			if (streamNode->avbInterfaceIndex() == avbInterfaceIndex)
+			{
+				visitor(streamNode);
+			}
+		}
+	});
 }
 
 EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID)
@@ -190,6 +222,26 @@ la::avdecc::entity::model::AvbInterfaceIndex StreamNode::avbInterfaceIndex() con
 	return _avbInterfaceIndex;
 }
 
+la::avdecc::entity::model::StreamFormat StreamNode::streamFormat() const
+{
+	return _streamFormat;
+}
+
+la::avdecc::UniqueIdentifier StreamNode::grandMasterID() const
+{
+	return _grandMasterID;
+}
+
+std::uint8_t StreamNode::grandMasterDomain() const
+{
+	return _grandMasterDomain;
+}
+
+la::avdecc::controller::ControlledEntity::InterfaceLinkStatus  StreamNode::interfaceLinkStatus() const
+{
+	return _interfaceLinkStatus;
+}
+
 bool StreamNode::isRunning() const
 {
 	return _isRunning;
@@ -200,6 +252,26 @@ StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model:
 , _streamIndex{ streamIndex }
 , _avbInterfaceIndex{ avbInterfaceIndex }
 {
+}
+
+void StreamNode::setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat)
+{
+	_streamFormat = streamFormat;
+}
+
+void StreamNode::setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID)
+{
+	_grandMasterID = grandMasterID;
+}
+
+void StreamNode::setGrandMasterDomain(std::uint8_t const grandMasterDomain)
+{
+	_grandMasterDomain = grandMasterDomain;
+}
+
+void StreamNode::setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus)
+{
+	_interfaceLinkStatus = interfaceLinkStatus;
 }
 
 void StreamNode::setRunning(bool isRunning)

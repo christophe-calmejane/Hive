@@ -67,17 +67,12 @@ public:
 
 		enum class Capability
 		{
-			InterfaceDown = 1u << 0,
-			Connectable = 1u << 1, // Static
-			Connected = 1u << 2,
-			Locked = 1u << 3,
-			SameFormat = 1u << 4,
-			SameDomain = 1u << 5,
-			FastConnecting = 1u << 6,
-
-			HasCompatibleFormat = 1u << 7, // Static
-			HasTalkerCompatibleFormat = 1u << 8,
-			HasListenerCompatibleFormat = 1u << 9,
+			InterfaceDown = 1u << 0, /**< The AVB interface is down (or at least one for the intersection of 2 RedundantNodes) */
+			WrongDomain = 1u << 1, /**< The AVB domains do not match (connection is possible, but stream reservation will fail) */
+			WrongFormat = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener) */
+			Connected = 1u << 3, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
+			FastConnecting = 1u << 4, /**< Stream is fast connecting (Mutually exclusive with Connected and PartiallyConnected) */
+			PartiallyConnected = 1u << 5, /**< Some, but not all of a redundant streams tuple, are connected (Mutually exclusive with Connected and FastConnecting) */
 		};
 		using Capabilities = la::avdecc::utils::EnumBitfield<Capability>;
 

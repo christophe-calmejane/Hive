@@ -106,16 +106,13 @@ void View::onIntersectionClicked(QModelIndex const& index)
 		auto const talkerStreamIndex = static_cast<StreamNode*>(data.talker)->streamIndex();
 		auto const listenerStreamIndex = static_cast<StreamNode*>(data.listener)->streamIndex();
 
-		if (data.capabilities.test(Model::IntersectionData::Capability::Connectable))
+		if (data.capabilities.test(Model::IntersectionData::Capability::Connected))
 		{
-			if (data.capabilities.test(Model::IntersectionData::Capability::Connected))
-			{
-				manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
-			}
-			else
-			{
-				manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
-			}
+			manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
+		}
+		else
+		{
+			manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 		}
 	}
 		break;
@@ -133,16 +130,13 @@ void View::onIntersectionClicked(QModelIndex const& index)
 		auto doConnect{ false };
 		auto doDisconnect{ false };
 
-		if (data.capabilities.test(Model::IntersectionData::Capability::Connectable))
+		if (data.capabilities.test(Model::IntersectionData::Capability::Connected))
 		{
-			if (data.capabilities.test(Model::IntersectionData::Capability::Connected))
-			{
-				doDisconnect = true;
-			}
-			else
-			{
-				doConnect = true;
-			}
+			doDisconnect = true;
+		}
+		else
+		{
+			doConnect = true;
 		}
 
 		auto talkerEntity = manager.getControlledEntity(talkerID);
