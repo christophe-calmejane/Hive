@@ -29,26 +29,25 @@ namespace avdecc
 {
 using StreamConnection = std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamIdentification>;
 
-struct SourceChannelIdentification
+struct ChannelIdentification
 {
 	bool forward = true; /** This flag indicates the direction of the connections. */
-	std::optional<la::avdecc::entity::model::ConfigurationIndex> sourceConfigurationIndex = std::nullopt;
-	std::optional<la::avdecc::entity::model::AudioUnitIndex> sourceAudioUnitIndex = std::nullopt;
-	std::optional<la::avdecc::entity::model::StreamPortIndex> sourceStreamPortIndex = std::nullopt;
-	std::optional<la::avdecc::entity::model::ClusterIndex> sourceClusterIndex = std::nullopt;
-	std::optional<la::avdecc::entity::model::ClusterIndex> sourceBaseCluster = std::nullopt;
-	std::optional<std::uint16_t> sourceClusterChannel = 0;
+	std::optional<la::avdecc::entity::model::ConfigurationIndex> configurationIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::AudioUnitIndex> audioUnitIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::StreamPortIndex> streamPortIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::ClusterIndex> clusterIndex = std::nullopt;
+	std::optional<la::avdecc::entity::model::ClusterIndex> baseCluster = std::nullopt;
+	std::optional<std::uint16_t> clusterChannel = 0;
 };
 
-constexpr bool operator<(SourceChannelIdentification const lhs, SourceChannelIdentification const rhs)
+constexpr bool operator<(ChannelIdentification const lhs, ChannelIdentification const rhs)
 {
-	return lhs.sourceConfigurationIndex < rhs.sourceConfigurationIndex || lhs.sourceConfigurationIndex == rhs.sourceConfigurationIndex && lhs.sourceAudioUnitIndex < rhs.sourceAudioUnitIndex || lhs.sourceConfigurationIndex == rhs.sourceConfigurationIndex && lhs.sourceAudioUnitIndex == rhs.sourceAudioUnitIndex && lhs.sourceStreamPortIndex < rhs.sourceStreamPortIndex || lhs.sourceConfigurationIndex == rhs.sourceConfigurationIndex && lhs.sourceAudioUnitIndex == rhs.sourceAudioUnitIndex && lhs.sourceStreamPortIndex == rhs.sourceStreamPortIndex && lhs.sourceClusterIndex < rhs.sourceClusterIndex
-				 || lhs.sourceConfigurationIndex == rhs.sourceConfigurationIndex && lhs.sourceAudioUnitIndex == rhs.sourceAudioUnitIndex && lhs.sourceStreamPortIndex == rhs.sourceStreamPortIndex && lhs.sourceClusterIndex == rhs.sourceClusterIndex && lhs.sourceClusterChannel < rhs.sourceClusterChannel;
+	return lhs.configurationIndex < rhs.configurationIndex || lhs.configurationIndex == rhs.configurationIndex && lhs.audioUnitIndex < rhs.audioUnitIndex || lhs.configurationIndex == rhs.configurationIndex && lhs.audioUnitIndex == rhs.audioUnitIndex && lhs.streamPortIndex < rhs.streamPortIndex || lhs.configurationIndex == rhs.configurationIndex && lhs.audioUnitIndex == rhs.audioUnitIndex && lhs.streamPortIndex == rhs.streamPortIndex && lhs.clusterIndex < rhs.clusterIndex || lhs.configurationIndex == rhs.configurationIndex && lhs.audioUnitIndex == rhs.audioUnitIndex && lhs.streamPortIndex == rhs.streamPortIndex && lhs.clusterIndex == rhs.clusterIndex && lhs.clusterChannel < rhs.clusterChannel;
 }
 
-constexpr bool operator==(SourceChannelIdentification const lhs, SourceChannelIdentification const rhs)
+constexpr bool operator==(ChannelIdentification const lhs, ChannelIdentification const rhs)
 {
-	return lhs.sourceConfigurationIndex == rhs.sourceConfigurationIndex && lhs.sourceAudioUnitIndex == rhs.sourceAudioUnitIndex && lhs.sourceStreamPortIndex == rhs.sourceStreamPortIndex && lhs.sourceClusterIndex == rhs.sourceClusterIndex && lhs.sourceClusterChannel == rhs.sourceClusterChannel;
+	return lhs.configurationIndex == rhs.configurationIndex && lhs.audioUnitIndex == rhs.audioUnitIndex && lhs.streamPortIndex == rhs.streamPortIndex && lhs.clusterIndex == rhs.clusterIndex && lhs.clusterChannel == rhs.clusterChannel;
 }
 
 struct TargetConnectionInformation
@@ -77,7 +76,7 @@ struct TargetConnectionInformation
 struct TargetConnectionInformations
 {
 	la::avdecc::UniqueIdentifier sourceEntityId;
-	avdecc::SourceChannelIdentification sourceClusterChannelInfo;
+	avdecc::ChannelIdentification sourceClusterChannelInfo;
 	std::vector<std::shared_ptr<TargetConnectionInformation>> targets;
 
 	inline bool isEqualTo(TargetConnectionInformations const& other)
@@ -104,7 +103,7 @@ struct TargetConnectionInformations
 
 struct SourceChannelConnections
 {
-	std::map<SourceChannelIdentification, std::shared_ptr<TargetConnectionInformations>> channelMappings;
+	std::map<ChannelIdentification, std::shared_ptr<TargetConnectionInformations>> channelMappings;
 };
 
 // **************************************************************
@@ -131,7 +130,7 @@ public:
 
 	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamInputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex primaryStreamIndex) const noexcept = 0;
 
-	Q_SIGNAL void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, SourceChannelIdentification>> channels);
+	Q_SIGNAL void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, ChannelIdentification>> channels);
 };
 
 } // namespace avdecc
