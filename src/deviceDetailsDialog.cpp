@@ -205,12 +205,28 @@ public:
 				}
 
 				auto pureListener = (!configurationNode.streamInputs.empty() && configurationNode.streamOutputs.empty());
-				if (pureListener)
+				auto pureTalker = (configurationNode.streamInputs.empty() && !configurationNode.streamOutputs.empty());
+
+				auto tabCnt = tabWidget->count();
+				for (auto i = 0; i < tabCnt; ++i)
 				{
-					// remove latency tab
-					tabWidget->removeTab(1);
+					QWidget* w = tabWidget->widget(i);
+					if (!w)
+						continue;
+
+					if (pureListener && (w->objectName() == "tabLatency" || w->objectName() == "tabTransmit"))
+					{
+						tabWidget->removeTab(i);
+						i--;
+					}
+					else if (pureTalker && w->objectName() == "tabReceive")
+					{
+						tabWidget->removeTab(i);
+						i--;
+					}
 				}
-				else
+
+				if (!pureListener)
 				{
 					loadLatencyData();
 				}
@@ -456,7 +472,7 @@ public:
 	* Updates the receive table model on changes.
 	* @param channels  All channels of the devices that have changed (listener side only)
 	*/
-	Q_SLOT void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::SourceChannelIdentification>> channels)
+	Q_SLOT void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(channels);
 

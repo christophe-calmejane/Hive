@@ -149,7 +149,7 @@ public:
 	void resetChangedData();
 	void removeAllNodes();
 	void channelConnectionsUpdate(const la::avdecc::UniqueIdentifier& entityId);
-	void channelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::SourceChannelIdentification>> channels);
+	void channelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels);
 	void updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName);
 
 	Q_SIGNAL void dataEdited();
