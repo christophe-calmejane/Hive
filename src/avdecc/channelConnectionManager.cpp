@@ -149,13 +149,18 @@ public:
 							{
 								auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
 								auto const& audioUnitIndex = *mappingKV.second->sourceClusterChannelInfo.audioUnitIndex;
-								auto const& streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
-								if (configNode.audioUnits.size() > audioUnitIndex && configNode.audioUnits.at(audioUnitIndex).streamPortOutputs.size() > streamPortIndex)
+								auto const audioUnit = configNode.audioUnits.find(audioUnitIndex);
+								if (audioUnit != configNode.audioUnits.end())
 								{
-									auto streamPortInputDynamicModel = configNode.audioUnits.at(audioUnitIndex).streamPortInputs.at(streamPortIndex).dynamicModel;
-									if (streamPortInputDynamicModel)
+									auto const& streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
+									auto const streamPortInput = audioUnit->second.streamPortInputs.find(streamPortIndex);
+									if (streamPortInput != audioUnit->second.streamPortInputs.end())
 									{
-										mappings = streamPortInputDynamicModel->dynamicAudioMap;
+										auto streamPortInputDynamicModel = streamPortInput->second.dynamicModel;
+										if (streamPortInputDynamicModel)
+										{
+											mappings = streamPortInputDynamicModel->dynamicAudioMap;
+										}
 									}
 								}
 							}
