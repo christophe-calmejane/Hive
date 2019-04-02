@@ -436,8 +436,8 @@ public:
 		la::avdecc::entity::model::AudioMappings mappings;
 		try
 		{
-			auto streamPortOutputNode = controlledEntity->getStreamPortOutputNode(configurationIndex, streamPortIndex);
-			auto const& streamPortOutputDynamicModel = streamPortOutputNode.dynamicModel;
+			auto const& streamPortOutputNode = controlledEntity->getStreamPortOutputNode(configurationIndex, streamPortIndex);
+			auto const* const streamPortOutputDynamicModel = streamPortOutputNode.dynamicModel;
 			if (streamPortOutputDynamicModel)
 			{
 				mappings = streamPortOutputDynamicModel->dynamicAudioMap;
@@ -634,8 +634,8 @@ public:
 		la::avdecc::entity::model::AudioMappings mappings;
 		try
 		{
-			auto streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
-			auto const& streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
+			auto const& streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
+			auto const* const streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
 			if (streamPortInputDynamicModel)
 			{
 				mappings = streamPortInputDynamicModel->dynamicAudioMap;
