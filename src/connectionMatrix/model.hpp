@@ -22,7 +22,7 @@
 #include <QAbstractTableModel>
 #include <la/avdecc/utils.hpp>
 
-#define ENABLE_CONNECTION_MATRIX_DEBUG 0
+#define ENABLE_CONNECTION_MATRIX_DEBUG 1
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #include <QDebug>

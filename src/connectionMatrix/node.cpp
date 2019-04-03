@@ -181,7 +181,7 @@ RedundantNode* RedundantNode::createInputNode(EntityNode& parent, la::avdecc::co
 	return new RedundantNode{ Type::RedundantInput, parent, redundantIndex };
 }
 
-la::avdecc::controller::model::VirtualIndex RedundantNode::redundantIndex() const
+la::avdecc::controller::model::VirtualIndex const& RedundantNode::redundantIndex() const
 {
 	return _redundantIndex;
 }
@@ -212,32 +212,32 @@ StreamNode* StreamNode::createRedundantInputNode(RedundantNode& parent, la::avde
 	return new StreamNode{ Type::RedundantInputStream, parent, streamIndex, avbInterfaceIndex };
 }
 
-la::avdecc::entity::model::StreamIndex StreamNode::streamIndex() const
+la::avdecc::entity::model::StreamIndex const& StreamNode::streamIndex() const
 {
 	return _streamIndex;
 }
 
-la::avdecc::entity::model::AvbInterfaceIndex StreamNode::avbInterfaceIndex() const
+la::avdecc::entity::model::AvbInterfaceIndex const& StreamNode::avbInterfaceIndex() const
 {
 	return _avbInterfaceIndex;
 }
 
-la::avdecc::entity::model::StreamFormat StreamNode::streamFormat() const
+la::avdecc::entity::model::StreamFormat const& StreamNode::streamFormat() const
 {
 	return _streamFormat;
 }
 
-la::avdecc::UniqueIdentifier StreamNode::grandMasterID() const
+la::avdecc::UniqueIdentifier const& StreamNode::grandMasterID() const
 {
 	return _grandMasterID;
 }
 
-std::uint8_t StreamNode::grandMasterDomain() const
+std::uint8_t const& StreamNode::grandMasterDomain() const
 {
 	return _grandMasterDomain;
 }
 
-la::avdecc::controller::ControlledEntity::InterfaceLinkStatus  StreamNode::interfaceLinkStatus() const
+la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& StreamNode::interfaceLinkStatus() const
 {
 	return _interfaceLinkStatus;
 }

@@ -134,7 +134,7 @@ public:
 	static RedundantNode* createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
 	static RedundantNode* createInputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
 	
-	la::avdecc::controller::model::VirtualIndex redundantIndex() const;
+	la::avdecc::controller::model::VirtualIndex const& redundantIndex() const;
 	
 protected:
 	RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
@@ -153,12 +153,12 @@ public:
 	static StreamNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	static StreamNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	
-	la::avdecc::entity::model::StreamIndex streamIndex() const;
-	la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex() const;
-	la::avdecc::entity::model::StreamFormat streamFormat() const;
-	la::avdecc::UniqueIdentifier grandMasterID() const;
-	std::uint8_t grandMasterDomain() const;
-	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus interfaceLinkStatus() const;
+	la::avdecc::entity::model::StreamIndex const& streamIndex() const;
+	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const;
+	la::avdecc::entity::model::StreamFormat const& streamFormat() const;
+	la::avdecc::UniqueIdentifier const& grandMasterID() const;
+	std::uint8_t const& grandMasterDomain() const;
+	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const;
 	bool isRunning() const;
 	
 protected:

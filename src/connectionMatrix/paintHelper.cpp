@@ -33,10 +33,13 @@ static inline void drawSquare(QPainter* painter, QRect const& rect)
 
 static inline void drawDiamond(QPainter* painter, QRect const& rect)
 {
+	auto r = rect.adjusted(4, 4, -4, -4);
+
 	painter->save();
-	painter->translate(-rect.center());
+	painter->translate(r.center());
+	r.moveCenter({});
 	painter->rotate(45);
-	drawSquare(painter, rect);
+	painter->drawRect(r);
 	painter->restore();
 }
 
@@ -54,10 +57,9 @@ static inline void configurePenAndBrush(QPainter* painter, Model::IntersectionDa
 	auto const wrongDomain = capabilities.test(Model::IntersectionData::Capability::WrongDomain);
 	auto const wrongFormat = capabilities.test(Model::IntersectionData::Capability::WrongFormat);
 	auto const connected = capabilities.test(Model::IntersectionData::Capability::Connected);
-	auto const fastConnecting = capabilities.test(Model::IntersectionData::Capability::FastConnecting);
-	auto const partiallyConnected = capabilities.test(Model::IntersectionData::Capability::PartiallyConnected);
 
-	painter->setPen(QPen{ connected ? Qt::black : Qt::gray, 2 });
+	auto penColor = QColor{ connected ? Qt::black : Qt::gray };
+	painter->setPen(QPen{ penColor, 2 });
 
 	static auto const White = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Gray, qt::toolkit::materialPalette::Shade::Shade100);
 	static auto const Green = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Green, qt::toolkit::materialPalette::Shade::Shade500);
@@ -65,35 +67,26 @@ static inline void configurePenAndBrush(QPainter* painter, Model::IntersectionDa
 	static auto const Yellow = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Yellow, qt::toolkit::materialPalette::Shade::Shade500);
 	static auto const Blue = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Blue, qt::toolkit::materialPalette::Shade::Shade300);
 
-	QColor brushColor{ White };
+	auto brushColor = QColor{ White };
+
+	if (wrongDomain)
+	{
+		brushColor = Red;
+	}
+
+	if (wrongFormat)
+	{
+		brushColor = Yellow;
+	}
+
+	if (interfaceDown)
+	{
+		brushColor = Blue;
+	}
 
 	if (connected)
 	{
-		if (wrongDomain)
-		{
-			brushColor = Red;
-		}
-		else if (wrongFormat)
-		{
-			brushColor = Yellow;
-		}
-		else if (interfaceDown)
-		{
-			brushColor = Blue;
-		}
-		else
-		{
-			brushColor = Green;
-		}
-	}
-	else if (fastConnecting)
-	{
-	}
-	else if (partiallyConnected)
-	{
-	}
-	else // Not connected
-	{
+		brushColor = Green;
 	}
 
 	brushColor.setAlphaF(connected ? 1.0 : 0.5);
