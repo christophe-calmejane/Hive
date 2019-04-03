@@ -25,36 +25,34 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QPainter>
-#include <QScreen>
 
 namespace connectionMatrix
 {
-using DrawFunction = std::function<void(QPainter*, QRect const&, Model::IntersectionData::Capabilities const&)>;
-
 // We use a widget over a simple pixmap so that the device pixel ratio is handled automatically
 class CapabilitiesLabel : public QLabel
 {
 public:
-	CapabilitiesLabel(DrawFunction const& drawFunction, Model::IntersectionData::Capabilities const& capabilities, QWidget* parent = nullptr)
+	CapabilitiesLabel(Model::IntersectionData::Type const type, Model::IntersectionData::State const& state, Model::IntersectionData::Flags const& flags, QWidget* parent = nullptr)
 		: QLabel{ parent }
-		, _drawFunction{ drawFunction }
-		, _capabilities{ capabilities }
+		, _type{ type }
+		, _state{ state }
+		, _flags{ flags }
 	{
-		setFixedSize(20, 20);
+		setFixedSize(19, 19);
 	}
 
 private:
 	virtual void paintEvent(QPaintEvent* event) override
 	{
 		Q_UNUSED(event);
-
 		QPainter painter{ this };
-		_drawFunction(&painter, rect(), _capabilities);
+		paintHelper::drawCapabilities(&painter, rect(), _type, _state, _flags);
 	}
 
 private:
-	DrawFunction const _drawFunction;
-	Model::IntersectionData::Capabilities const _capabilities;
+	Model::IntersectionData::Type const _type;
+	Model::IntersectionData::State const _state;
+	Model::IntersectionData::Flags const _flags;
 };
 
 LegendDialog::LegendDialog(QWidget* parent)
@@ -62,7 +60,8 @@ LegendDialog::LegendDialog(QWidget* parent)
 {
 	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection matrix legend");
 
-	using Sections = std::vector<std::tuple<QString, DrawFunction, Model::IntersectionData::Capabilities>>;
+	using Section = std::tuple<QString, Model::IntersectionData::Type, Model::IntersectionData::State, Model::IntersectionData::Flags>;
+	using Sections = std::vector<Section>;
 
 	// Add section
 	auto const addSection = [this](QString const& title, Sections const& sections)
@@ -75,12 +74,13 @@ LegendDialog::LegendDialog(QWidget* parent)
 		for (auto const& section : sections)
 		{
 			auto const& sectionTitle = std::get<0>(section);
-			auto const& sectionDrawFunction = std::get<1>(section);
-			auto const& sectionCapabilities = std::get<2>(section);
+			auto const& sectionType = std::get<1>(section);
+			auto const& sectionState = std::get<2>(section);
+			auto const& sectionFlags = std::get<3>(section);
 
 			auto const row = sectionLayout->rowCount();
 
-			auto* capabilitiesLabel = new CapabilitiesLabel{ sectionDrawFunction, sectionCapabilities, sectionGroupBox };
+			auto* capabilitiesLabel = new CapabilitiesLabel{ sectionType, sectionState, sectionFlags, sectionGroupBox };
 			sectionLayout->addWidget(capabilitiesLabel, row, 0);
 
 			auto* descriptionLabel = new QLabel{ sectionTitle, sectionGroupBox };
@@ -90,29 +90,25 @@ LegendDialog::LegendDialog(QWidget* parent)
 		_layout.addWidget(sectionGroupBox);
 	};
 
-	auto drawEntityConnectionSummary = std::bind(&paintHelper::drawEntityConnectionSummary, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-	auto drawStreamConnectionStatus = std::bind(&paintHelper::drawStreamConnectionStatus, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-	auto drawIndividualRedundantStreamStatus = std::bind(&paintHelper::drawIndividualRedundantStreamStatus, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-
 	Sections shapeSections = {
-		{ "Entity connection summary (Not working yet)", drawEntityConnectionSummary, {} },
-		{ "Connection status for a Simple or Redundant stream", drawStreamConnectionStatus, {} },
-		{ "Connection status for the individual stream of a Redundant Stream Pair", drawIndividualRedundantStreamStatus, {} },
+		{ "Entity connection summary (Not working yet)", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
+		{ "Connection status for a Simple or Redundant stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
+		{ "Connection status for the individual stream of a Redundant Stream Pair", Model::IntersectionData::Type::RedundantStream_RedundantStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
 	};
 
 	Sections colorCodeSections = {
-		{ "Connectable without detectable error", drawStreamConnectionStatus, {} },
-		{ "Connectable but incompatible AVB domain", drawStreamConnectionStatus, {} },
-		{ "Connectable but incompatible stream format", drawStreamConnectionStatus, {} },
-		{ "Connectable but at least one Network Interface is down", drawStreamConnectionStatus, {} },
-		{ "Connectable Redundant Stream Pair but at least one error detected", drawStreamConnectionStatus, {} },
+		{ "Connectable without detectable error", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
+		{ "Connectable but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain } },
+		{ "Connectable but incompatible stream format", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormat } },
+		{ "Connectable but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown } },
+		{ "Connectable Redundant Stream Pair but at least one error detected", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
 
-		{ "Connected and no detectable error found", drawStreamConnectionStatus, {} },
-		{ "Connected but incompatible AVB domain", drawStreamConnectionStatus, {} },
-		{ "Connected but incompatible stream format", drawStreamConnectionStatus, {} },
-		{ "Connected but Network Interface is down", drawStreamConnectionStatus, {} },
-		{ "Partially connected Redundant Stream Pair", drawStreamConnectionStatus, {} },
-		{ "Redundant Stream Pair connected but at least one error detected", drawStreamConnectionStatus, {} },
+		{ "Connected and no detectable error found", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{} },
+		{ "Connected but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain } },
+		{ "Connected but incompatible stream format", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormat } },
+		{ "Connected but Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown } },
+		{ "Partially connected Redundant Stream Pair", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{} },
+		{ "Redundant Stream Pair connected but at least one error detected", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{} },
 	};
 
 	addSection("Shapes", shapeSections);

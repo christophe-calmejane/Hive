@@ -19,7 +19,6 @@
 
 #include "connectionMatrix/paintHelper.hpp"
 #include "toolkit/materialPalette.hpp"
-#include <QPainter>
 
 namespace connectionMatrix
 {
@@ -33,11 +32,10 @@ static inline void drawSquare(QPainter* painter, QRect const& rect)
 
 static inline void drawDiamond(QPainter* painter, QRect const& rect)
 {
-	auto r = rect.adjusted(4, 4, -4, -4);
-
+	auto const r = rect.translated(-rect.center()).adjusted(4, 4, -4, -4);
+	
 	painter->save();
-	painter->translate(r.center());
-	r.moveCenter({});
+	painter->translate(rect.center());
 	painter->rotate(45);
 	painter->drawRect(r);
 	painter->restore();
@@ -48,15 +46,16 @@ static inline void drawCircle(QPainter* painter, QRect const& rect)
 	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
 }
 
-static inline void configurePenAndBrush(QPainter* painter, Model::IntersectionData::Capabilities const& capabilities)
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
 {
 	painter->setRenderHint(QPainter::Antialiasing);
 	painter->setRenderHint(QPainter::HighQualityAntialiasing);
+	
+	auto const connected = state != Model::IntersectionData::State::NotConnected;
 
-	auto const interfaceDown = capabilities.test(Model::IntersectionData::Capability::InterfaceDown);
-	auto const wrongDomain = capabilities.test(Model::IntersectionData::Capability::WrongDomain);
-	auto const wrongFormat = capabilities.test(Model::IntersectionData::Capability::WrongFormat);
-	auto const connected = capabilities.test(Model::IntersectionData::Capability::Connected);
+	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
+	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
+	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
 
 	auto penColor = QColor{ connected ? Qt::black : Qt::gray };
 	painter->setPen(QPen{ penColor, 2 });
@@ -69,9 +68,9 @@ static inline void configurePenAndBrush(QPainter* painter, Model::IntersectionDa
 
 	auto brushColor = QColor{ White };
 
-	if (wrongDomain)
+	if (connected)
 	{
-		brushColor = Red;
+		brushColor = Green;
 	}
 
 	if (wrongFormat)
@@ -79,42 +78,42 @@ static inline void configurePenAndBrush(QPainter* painter, Model::IntersectionDa
 		brushColor = Yellow;
 	}
 
+	if (wrongDomain)
+	{
+		brushColor = Red;
+	}
+
 	if (interfaceDown)
 	{
 		brushColor = Blue;
 	}
 
-	if (connected)
-	{
-		brushColor = Green;
-	}
-
 	brushColor.setAlphaF(connected ? 1.0 : 0.5);
 	painter->setBrush(brushColor);
-}
 
-void drawEntityConnectionSummary(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities)
-{
-	painter->save();
-	configurePenAndBrush(painter, capabilities);
-	drawSquare(painter, rect);
-	painter->restore();
-}
-
-void drawStreamConnectionStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities)
-{
-	painter->save();
-	configurePenAndBrush(painter, capabilities);
-	drawCircle(painter, rect);
-	painter->restore();
-}
-
-void drawIndividualRedundantStreamStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities)
-{
-	painter->save();
-	configurePenAndBrush(painter, capabilities);
-	drawDiamond(painter, rect);
-	painter->restore();
+	switch (type)
+	{
+		case Model::IntersectionData::Type::Entity_Entity:
+		case Model::IntersectionData::Type::Entity_Redundant:
+		case Model::IntersectionData::Type::Entity_RedundantStream:
+		case Model::IntersectionData::Type::Entity_SingleStream:
+			drawSquare(painter, rect);
+			break;
+		case Model::IntersectionData::Type::Redundant_RedundantStream:
+		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
+			drawDiamond(painter, rect);
+			break;
+		case Model::IntersectionData::Type::Redundant_Redundant:
+		case Model::IntersectionData::Type::RedundantStream_SingleStream:
+		case Model::IntersectionData::Type::Redundant_SingleStream:
+		case Model::IntersectionData::Type::SingleStream_SingleStream:
+			drawCircle(painter, rect);
+			break;
+		case Model::IntersectionData::Type::None:
+		default:
+			painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+			break;
+	}
 }
 
 } // namespace paintHelper

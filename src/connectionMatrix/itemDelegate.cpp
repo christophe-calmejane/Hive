@@ -41,8 +41,6 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		return;
 	}
 	
-	painter->save();
-	painter->setRenderHint(QPainter::Antialiasing);
 	painter->setPen(Qt::lightGray);
 
 	// Background highlithing if selected
@@ -61,31 +59,8 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 #endif
 
 	auto const& intersectionData = static_cast<Model const*>(index.model())->intersectionData(index);
-
-	switch (intersectionData.type)
-	{
-		case Model::IntersectionData::Type::Entity_Entity:
-		case Model::IntersectionData::Type::Entity_Redundant:
-		case Model::IntersectionData::Type::Entity_RedundantStream:
-		case Model::IntersectionData::Type::Entity_SingleStream:
-			paintHelper::drawEntityConnectionSummary(painter, option.rect, intersectionData.capabilities);
-			break;
-		case Model::IntersectionData::Type::Redundant_RedundantStream:
-		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
-			paintHelper::drawIndividualRedundantStreamStatus(painter, option.rect, intersectionData.capabilities);
-			break;
-		case Model::IntersectionData::Type::Redundant_Redundant:
-		case Model::IntersectionData::Type::RedundantStream_SingleStream:
-		case Model::IntersectionData::Type::Redundant_SingleStream:
-		case Model::IntersectionData::Type::SingleStream_SingleStream:
-			paintHelper::drawStreamConnectionStatus(painter, option.rect, intersectionData.capabilities);
-			break;
-			break;
-		case Model::IntersectionData::Type::None:
-		default:
-			painter->fillRect(option.rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
-			break;
-	}
+	
+	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags);
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 	static const std::unordered_map< Model::IntersectionData::Type, qt::toolkit::materialPalette::Name> debugColor =
@@ -107,8 +82,6 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	color.setAlphaF(0.5f);
 	painter->fillRect(option.rect, color);
 #endif
-
-	painter->restore();
 }
 
 } // namespace connectionMatrix

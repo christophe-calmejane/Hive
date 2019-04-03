@@ -27,7 +27,6 @@ namespace connectionMatrix
 class Node;
 class EntityNode;
 class RedundantNode;
-class RedundantStreamNode;
 class StreamNode;
 
 class Node

@@ -58,51 +58,71 @@ using StreamSectionMap = std::unordered_map<StreamSectionKey, int, StreamSection
 // index by node
 using NodeSectionMap = std::unordered_map<Node*, int>;
 
-enum class IntersectionDirtyFlag
-{
-	UpdateConnected = 1u << 0, /**< Update the connected status, or the summary if this is a parent node */
-	UpdateFormat = 1u << 1, /**<  Update the matching format status, or the summary if this is a parent node */
-	UpdateGptp = 1u << 2, /**< Update the matching gPTP status, or the summary if this is a parent node (WARNING: For intersection of redundant and non-redundant, the complete checks has to be done, since format compatibility is not checked if GM is not the same) */
-	UpdateLinkStatus = 1u << 3, /**< Update the link status, or the summary if this is a parent node */
-};
-using IntersectionDirtyFlags = la::avdecc::utils::EnumBitfield<IntersectionDirtyFlag>;
-
 #if ENABLE_CONNECTION_MATRIX_DEBUG
-QString capabilitiesToString(Model::IntersectionData::Capabilities const& capabilities)
+
+QString typeToString(Model::IntersectionData::Type const type)
+{
+	switch (type)
+	{
+	case Model::IntersectionData::Type::None: return "None";
+	case Model::IntersectionData::Type::Entity_Entity: return "Entity / Entity";
+	case Model::IntersectionData::Type::Entity_Redundant: return "Entity / Redundant";
+	case Model::IntersectionData::Type::Entity_RedundantStream: return "Entity / Redundant Stream";
+	case Model::IntersectionData::Type::Entity_SingleStream: return "Entity / Single Stream";
+	case Model::IntersectionData::Type::Redundant_Redundant: return "Redundant / Redundant";
+	case Model::IntersectionData::Type::Redundant_RedundantStream: return "Redundant / Redundant Stream";
+	case Model::IntersectionData::Type::Redundant_SingleStream: return "Redundant / Single Stream";
+	case Model::IntersectionData::Type::RedundantStream_RedundantStream: return "Redundant Stream / Redundant Stream";
+	case Model::IntersectionData::Type::RedundantStream_SingleStream: return "Redundant Stream / Single Stream";
+	case Model::IntersectionData::Type::SingleStream_SingleStream: return "Single Stream / Single Stream";
+	default:
+		assert(false);
+		return "Unknown";
+	}
+}
+
+QString stateToString(Model::IntersectionData::State const state)
+{
+	switch (state)
+	{
+	case Model::IntersectionData::State::NotConnected: return "Not Connected";
+	case Model::IntersectionData::State::Connected: return "Connected";
+	case Model::IntersectionData::State::FastConnecting: return "Fast Connecting";
+	default:
+		assert(false);
+		return "Unknown";
+	}
+}
+
+QString flagsToString(Model::IntersectionData::Flags const& flags)
 {
 	QStringList stringList;
 
-	if (capabilities.test(Model::IntersectionData::Capability::InterfaceDown))
+	if (flags.test(Model::IntersectionData::Flag::InterfaceDown))
 	{
 		stringList << "InterfaceDown";
 	}
 
-	if (capabilities.test(Model::IntersectionData::Capability::WrongDomain))
+	if (flags.test(Model::IntersectionData::Flag::WrongDomain))
 	{
 		stringList << "WrongDomain";
 	}
 
-	if (capabilities.test(Model::IntersectionData::Capability::WrongFormat))
+	if (flags.test(Model::IntersectionData::Flag::WrongFormat))
 	{
 		stringList << "WrongFormat";
 	}
 
-	if (capabilities.test(Model::IntersectionData::Capability::Connected))
-	{
-		stringList << "Connected";
-	}
+	return stringList.join(" | ");
+}
 
-	if (capabilities.test(Model::IntersectionData::Capability::FastConnecting))
-	{
-		stringList << "FastConnecting";
-	}
+QString intersectionDataToString(Model::IntersectionData const& intersectionData)
+{
+	auto const type = typeToString(intersectionData.type);
+	auto const state = stateToString(intersectionData.state);
+	auto const flags = flagsToString(intersectionData.flags);
 
-	if (capabilities.test(Model::IntersectionData::Capability::PartiallyConnected))
-	{
-		stringList << "FastConnecting";
-	}
-
-	return stringList.join('|');
+	return type + "\n" + state + (flags.isEmpty() ? "" : "\n") + flags;
 }
 #endif
 
@@ -240,512 +260,6 @@ int indexOf(NodeSectionMap const& map, Node* node)
 	auto const it = map.find(node);
 	assert(it != std::end(map));
 	return it->second;
-}
-
-// Determines intersection type according to talker and listener
-Model::IntersectionData::Type determineIntersectionType(Node* talker, Node* listener)
-{
-	assert(talker);
-	assert(listener);
-
-	if (talker->entityID() == listener->entityID())
-	{
-		return Model::IntersectionData::Type::None;
-	}
-
-	auto const talkerType = talker->type();
-	auto const listenerType = listener->type();
-
-	if (talkerType == Node::Type::Entity && listenerType == Node::Type::Entity)
-	{
-		return Model::IntersectionData::Type::Entity_Entity;
-	}
-
-	if (talkerType == Node::Type::Entity || listenerType == Node::Type::Entity)
-	{
-		if (talkerType == Node::Type::RedundantOutput || listenerType == Node::Type::RedundantInput)
-		{
-			return Model::IntersectionData::Type::Entity_Redundant;
-		}
-
-		if (talkerType == Node::Type::RedundantOutputStream || listenerType == Node::Type::RedundantInputStream)
-		{
-			return Model::IntersectionData::Type::Entity_RedundantStream;
-		}
-
-		if (talkerType == Node::Type::OutputStream || listenerType == Node::Type::InputStream)
-		{
-			return Model::IntersectionData::Type::Entity_SingleStream;
-		}
-	}
-
-	if (talkerType == Node::Type::RedundantOutput && listenerType == Node::Type::RedundantInput)
-	{
-		return Model::IntersectionData::Type::Redundant_Redundant;
-	}
-
-	if (talkerType == Node::Type::RedundantOutput || listenerType == Node::Type::RedundantInput)
-	{
-		if (talkerType == Node::Type::RedundantOutputStream || listenerType == Node::Type::RedundantInputStream)
-		{
-			return Model::IntersectionData::Type::Redundant_RedundantStream;
-		}
-
-		if (talkerType == Node::Type::OutputStream || listenerType == Node::Type::InputStream)
-		{
-			return Model::IntersectionData::Type::Redundant_SingleStream;
-		}
-	}
-
-	if (talkerType == Node::Type::RedundantOutputStream && listenerType == Node::Type::RedundantInputStream)
-	{
-		if (talker->index() == listener->index())
-		{
-			return Model::IntersectionData::Type::RedundantStream_RedundantStream;
-		}
-		else
-		{
-			return Model::IntersectionData::Type::None;
-		}
-	}
-
-	if (talkerType == Node::Type::RedundantOutputStream || listenerType == Node::Type::RedundantInputStream)
-	{
-		if (talkerType == Node::Type::OutputStream || listenerType == Node::Type::InputStream)
-		{
-			return Model::IntersectionData::Type::RedundantStream_SingleStream;
-		}
-	}
-
-	if (talkerType == Node::Type::OutputStream && listenerType == Node::Type::InputStream)
-	{
-		return Model::IntersectionData::Type::SingleStream_SingleStream;
-	}
-
-	assert(false);
-
-	return Model::IntersectionData::Type::None;
-}
-
-// Returns true if domains are compatible
-bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& talkerLinkStatus, la::avdecc::UniqueIdentifier const& talkerGrandMasterID, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& listenerLinkStatus, la::avdecc::UniqueIdentifier const& listenerGrandMasterID)
-{
-	// If either is down, no need to check the domain, it makes no sense (so return compatible)
-	if (talkerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down)
-	{
-		return true;
-	}
-
-	// Check both have the same grandmaster
-	return talkerGrandMasterID == listenerGrandMasterID;
-}
-
-// Updates intersection data for the given dirtyFlags
-void computeIntersectionCapabilities(Model::IntersectionData& intersectionData, IntersectionDirtyFlags const dirtyFlags)
-{
-	try
-	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-
-		auto const talkerType = intersectionData.talker->type();
-		auto const listenerType = intersectionData.listener->type();
-
-		auto const talkerEntityID = intersectionData.talker->entityID();
-		auto const listenerEntityID = intersectionData.listener->entityID();
-
-		auto talkerEntity = manager.getControlledEntity(talkerEntityID);
-		auto listenerEntity = manager.getControlledEntity(listenerEntityID);
-
-		auto const& talkerEntityNode = talkerEntity->getEntityNode();
-		auto const& listenerEntityNode = listenerEntity->getEntityNode();
-
-		auto const talkerConfigurationIndex = talkerEntityNode.dynamicModel->currentConfiguration;
-		auto const listenerConfigurationIndex = listenerEntityNode.dynamicModel->currentConfiguration;
-
-		switch (intersectionData.type)
-		{
-		case Model::IntersectionData::Type::Entity_Entity:
-		case Model::IntersectionData::Type::Entity_Redundant:
-		case Model::IntersectionData::Type::Entity_RedundantStream:
-		case Model::IntersectionData::Type::Entity_SingleStream:
-		{
-		}
-			break;
-		case Model::IntersectionData::Type::Redundant_Redundant:
-		{
-			auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex());
-			auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex());
-
-			auto atLeastOneInterfaceDown = false;
-			auto atLeastOneConnected = false;
-			auto allConnected = true;
-			auto allCompatibleDomain = true;
-			auto allCompatibleFormat = true;
-
-			auto const& talkerRedundantStreams = talkerRedundantNode.redundantStreams;
-			auto const& listenerRedundantStreams = listenerRedundantNode.redundantStreams;
-			assert(talkerRedundantStreams.size() == listenerRedundantStreams.size());
-
-			auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(talkerRedundantStreams));
-			auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(talkerRedundantStreams));
-
-			// Pair iteration
-			for (; it != end; ++it.first, ++it.second)
-			{
-				auto const* const redundantTalkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it.first->second);
-				auto const* const redundantListenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it.second->second);
-
-				auto const redundantTalkerAvbInterfaceIndex = redundantTalkerStreamNode->staticModel->avbInterfaceIndex;
-				auto const redundantListenerAvbInterfaceIndex = redundantListenerStreamNode->staticModel->avbInterfaceIndex;
-
-				auto const talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(redundantTalkerAvbInterfaceIndex);
-				auto const listenerInterfaceLinkStatus = listenerEntity->getAvbInterfaceLinkStatus(redundantListenerAvbInterfaceIndex);
-				atLeastOneInterfaceDown |= talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
-
-				auto const connected = avdecc::helper::isStreamConnected(talkerEntityID, redundantTalkerStreamNode, redundantListenerStreamNode);
-				atLeastOneConnected |= connected;
-				allConnected &= connected;
-
-				auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationIndex, redundantTalkerAvbInterfaceIndex);
-				auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(talkerConfigurationIndex, redundantTalkerAvbInterfaceIndex);
-				auto const talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-				auto const listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-				allCompatibleDomain &= isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID);
-
-				auto const talkerStreamFormat = redundantTalkerStreamNode->dynamicModel->streamInfo.streamFormat;
-				auto const listenerStreamFormat = redundantListenerStreamNode->dynamicModel->streamInfo.streamFormat;
-				allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
-			}
-
-			if (atLeastOneInterfaceDown)
-			{
-				intersectionData.capabilities.set(Model::IntersectionData::Capability::InterfaceDown);
-			}
-			else
-			{
-				intersectionData.capabilities.reset(Model::IntersectionData::Capability::InterfaceDown);
-			}
-
-			if (allCompatibleDomain)
-			{
-				intersectionData.capabilities.reset(Model::IntersectionData::Capability::WrongDomain);
-			}
-			else
-			{
-				intersectionData.capabilities.set(Model::IntersectionData::Capability::WrongDomain);
-			}
-
-			if (allCompatibleFormat)
-			{
-				intersectionData.capabilities.reset(Model::IntersectionData::Capability::WrongFormat);
-			}
-			else
-			{
-				intersectionData.capabilities.set(Model::IntersectionData::Capability::WrongFormat);
-			}
-
-			if (atLeastOneConnected)
-			{
-				intersectionData.capabilities.set(Model::IntersectionData::Capability::Connected);
-			}
-			else
-			{
-				intersectionData.capabilities.reset(Model::IntersectionData::Capability::Connected);
-			}
-		}
-			break;
-		case Model::IntersectionData::Type::Redundant_SingleStream:
-		{
-			// Redundant node and non-redundant stream: We want to check if one connection is active or possible (only one should be, a non-redundant device can only be connected with either of the redundant domain pair)
-			auto redundantConfigurationIndex = la::avdecc::entity::model::getInvalidDescriptorIndex();
-			la::avdecc::controller::ControlledEntity const* redundantEntity{ nullptr };
-			la::avdecc::controller::model::RedundantStreamNode const* redundantStreamNode{ nullptr };
-			la::avdecc::controller::model::StreamNode const* nonRedundantStreamNode{ nullptr };
-			la::avdecc::controller::model::AvbInterfaceNode const* nonRedundantAvbInterfaceNode{ nullptr };
-
-			// Determine the redundant and non-redundant nodes
-			if (talkerType == Node::Type::RedundantOutput)
-			{
-				redundantConfigurationIndex = talkerConfigurationIndex;
-				redundantEntity = talkerEntity.get();
-				redundantStreamNode = &talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex());
-				nonRedundantStreamNode = &listenerEntity->getStreamInputNode(listenerConfigurationIndex, static_cast<StreamNode*>(intersectionData.listener)->streamIndex());
-				if (nonRedundantStreamNode->staticModel)
-				{
-					nonRedundantAvbInterfaceNode = &listenerEntity->getAvbInterfaceNode(listenerConfigurationIndex, static_cast<StreamNode*>(intersectionData.listener)->avbInterfaceIndex());
-				}
-			}
-			else if (listenerType == Node::Type::RedundantInput)
-			{
-				redundantConfigurationIndex = listenerConfigurationIndex;
-				redundantEntity = listenerEntity.get();
-				redundantStreamNode = &listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex());
-				nonRedundantStreamNode = &talkerEntity->getStreamOutputNode(talkerConfigurationIndex, static_cast<StreamNode*>(intersectionData.talker)->streamIndex());
-				if (nonRedundantStreamNode->staticModel)
-				{
-					nonRedundantAvbInterfaceNode = &talkerEntity->getAvbInterfaceNode(talkerConfigurationIndex, static_cast<StreamNode*>(intersectionData.talker)->avbInterfaceIndex());
-				}
-			}
-			else
-			{
-				assert(false);
-			}
-
-			// Try to find if an interface of the redundant device is connected to the same domain that the non-redundant device
-			auto matchingRedundantStreamIndex = la::avdecc::entity::model::StreamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
-			auto nonRedundantGrandmasterID = (nonRedundantAvbInterfaceNode && nonRedundantAvbInterfaceNode->dynamicModel) ? nonRedundantAvbInterfaceNode->dynamicModel->avbInfo.gptpGrandmasterID : la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
-
-			for (auto const&[redundantStreamIndex, redundantStreamNode] : redundantStreamNode->redundantStreams)
-			{
-				if (redundantStreamNode->staticModel)
-				{
-					auto const& redundantAvbInterfaceNode = redundantEntity->getAvbInterfaceNode(redundantConfigurationIndex, redundantStreamNode->staticModel->avbInterfaceIndex);
-					if (redundantAvbInterfaceNode.dynamicModel && redundantAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID == nonRedundantGrandmasterID)
-					{
-						matchingRedundantStreamIndex = redundantStreamIndex;
-						break;
-					}
-				}
-			}
-
-			auto areMatchingDomainsConnected = false;
-			auto areMatchingDomainsFastConnecting = false;
-			auto isFormatCompatible = true;
-
-			auto const foundMatchingRedundantStreamIndex = matchingRedundantStreamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex();
-
-			// Found a matching domain
-			if (foundMatchingRedundantStreamIndex)
-			{
-				// Get format compatibility and connection state
-				if (talkerType == Node::Type::RedundantOutput)
-				{
-					auto const& talkerStreamNode = redundantEntity->getStreamOutputNode(redundantConfigurationIndex, matchingRedundantStreamIndex);
-
-					areMatchingDomainsConnected = avdecc::helper::isStreamConnected(talkerEntityID, &talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
-					areMatchingDomainsFastConnecting = avdecc::helper::isStreamFastConnecting(talkerEntityID, &talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
-
-					auto const talkerStreamFormat = talkerStreamNode.dynamicModel->streamInfo.streamFormat;
-					auto const listenerStreamFormat = static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode)->dynamicModel->streamInfo.streamFormat;
-
-					isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
-				}
-				else if (listenerType == Node::Type::RedundantInput)
-				{
-					auto const& listenerStreamNode = redundantEntity->getStreamInputNode(redundantConfigurationIndex, matchingRedundantStreamIndex);
-
-					areMatchingDomainsConnected = avdecc::helper::isStreamConnected(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), &listenerStreamNode);
-					areMatchingDomainsFastConnecting = avdecc::helper::isStreamFastConnecting(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), &listenerStreamNode);
-
-					auto const talkerStreamFormat = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode)->dynamicModel->streamInfo.streamFormat;
-					auto const listenerStreamFormat = listenerStreamNode.dynamicModel->streamInfo.streamFormat;
-
-					isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
-				}
-				else
-				{
-					assert(false);
-				}
-			}
-
-			auto areConnected = areMatchingDomainsConnected;
-			auto fastConnecting = areMatchingDomainsFastConnecting;
-
-			// Always check for all connection
-			for (auto const& redundantStreamKV : redundantStreamNode->redundantStreams)
-			{
-				if (talkerType == Node::Type::RedundantOutput)
-				{
-					auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(redundantStreamKV.second);
-
-					areConnected |= avdecc::helper::isStreamConnected(talkerEntityID, talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
-					fastConnecting |= avdecc::helper::isStreamFastConnecting(talkerEntityID, talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
-				}
-				else if (listenerType == Node::Type::RedundantInput)
-				{
-					auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(redundantStreamKV.second);
-
-					areConnected |= avdecc::helper::isStreamConnected(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), listenerStreamNode);
-					fastConnecting |= avdecc::helper::isStreamFastConnecting(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), listenerStreamNode);
-				}
-				else
-				{
-					assert(false);
-				}
-			}
-
-			// Update connected state
-			if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
-			{
-				if (areConnected)
-				{
-					intersectionData.capabilities.set(Model::IntersectionData::Capability::Connected);
-				}
-				else
-				{
-					intersectionData.capabilities.reset(Model::IntersectionData::Capability::Connected);
-				}
-			}
-
-			// Set domain as compatible if there is a valid matching domain AND either no connection at all OR matching domain connection
-			if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
-			{
-				if (foundMatchingRedundantStreamIndex && (areConnected || areMatchingDomainsConnected || areMatchingDomainsConnected))
-				{
-					intersectionData.capabilities.reset(Model::IntersectionData::Capability::WrongDomain);
-				}
-				else
-				{
-					intersectionData.capabilities.set(Model::IntersectionData::Capability::WrongDomain);
-				}
-			}
-		}
-			break;
-		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
-		case Model::IntersectionData::Type::RedundantStream_SingleStream:
-		case Model::IntersectionData::Type::SingleStream_SingleStream:
-		{
-			auto const* const talkerStreamNode = static_cast<StreamNode*>(intersectionData.talker);
-			auto const* const listenerStreamNode = static_cast<StreamNode*>(intersectionData.listener);
-
-			auto const talkerAvbInterfaceIndex = talkerStreamNode->avbInterfaceIndex();
-			auto const listenerAvbInterfaceIndex = listenerStreamNode->avbInterfaceIndex();
-
-			auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
-			auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
-
-			auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
-			auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-
-			auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
-
-			// InterfaceDown
-			if (dirtyFlags.test(IntersectionDirtyFlag::UpdateLinkStatus))
-			{
-				if (interfaceDown)
-				{
-					intersectionData.capabilities.set(Model::IntersectionData::Capability::InterfaceDown);
-				}
-				else
-				{
-					intersectionData.capabilities.reset(Model::IntersectionData::Capability::InterfaceDown);
-				}
-			}
-
-			// WrongDomain
-			if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
-			{
-				if (isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID))
-				{
-					intersectionData.capabilities.reset(Model::IntersectionData::Capability::WrongDomain);
-				}
-				else
-				{
-					intersectionData.capabilities.set(Model::IntersectionData::Capability::WrongDomain);
-				}
-			}
-
-			// WrongFormat
-			if (dirtyFlags.test(IntersectionDirtyFlag::UpdateFormat))
-			{
-				auto const talkerStreamFormat = talkerStreamNode->streamFormat();
-				auto const listenerStreamFormat = listenerStreamNode->streamFormat();
-
-				if (!la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
-				{
-					intersectionData.capabilities.set(Model::IntersectionData::Capability::WrongFormat);
-				}
-				else
-				{
-					intersectionData.capabilities.reset(Model::IntersectionData::Capability::WrongFormat);
-				}
-			}
-
-			// Connected
-			if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
-			{
-				la::avdecc::controller::model::StreamOutputNode const* talkerStreamNode{ nullptr };
-
-				if (talkerType == Node::Type::RedundantOutput)
-				{
-					auto const& redundantNode = talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex());
-					auto const listenerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.listener->index());
-					assert(listenerRedundantStreamOrder < redundantNode.redundantStreams.size() && "Invalid redundant stream index");
-					auto it = std::begin(redundantNode.redundantStreams);
-					std::advance(it, listenerRedundantStreamOrder);
-					talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it->second);
-					assert(talkerStreamNode->isRedundant);
-				}
-				else if (talkerType == Node::Type::OutputStream || talkerType == Node::Type::RedundantOutputStream)
-				{
-					talkerStreamNode = &talkerEntity->getStreamOutputNode(talkerConfigurationIndex, static_cast<StreamNode*>(intersectionData.talker)->streamIndex());
-				}
-				else
-				{
-					assert(false);
-				}
-
-				la::avdecc::controller::model::StreamInputNode const* listenerStreamNode{ nullptr };
-
-				if (listenerType == Node::Type::RedundantInput)
-				{
-					auto const& redundantNode = listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex());
-					auto const talkerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.listener->index());
-					assert(talkerRedundantStreamOrder < redundantNode.redundantStreams.size() && "Invalid redundant stream index");
-					auto it = std::begin(redundantNode.redundantStreams);
-					std::advance(it, talkerRedundantStreamOrder);
-					listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it->second);
-					assert(listenerStreamNode->isRedundant);
-				}
-				else if (listenerType == Node::Type::InputStream || listenerType == Node::Type::RedundantInputStream)
-				{
-					listenerStreamNode = &listenerEntity->getStreamInputNode(listenerConfigurationIndex, static_cast<StreamNode*>(intersectionData.listener)->streamIndex());
-				}
-				else
-				{
-					assert(false);
-				}
-
-				assert(talkerStreamNode);
-				assert(listenerStreamNode);
-
-				if (avdecc::helper::isStreamConnected(talkerEntityID, talkerStreamNode, listenerStreamNode))
-				{
-					intersectionData.capabilities.set(Model::IntersectionData::Capability::Connected);
-				}
-				else
-				{
-					intersectionData.capabilities.reset(Model::IntersectionData::Capability::Connected);
-				}
-			}
-		}
-			break;
-		default:
-			break;
-		}
-	}
-	catch (...)
-	{
-		// Uncaught exception
-		AVDECC_ASSERT(false, "Uncaught exception");
-	}
-}
-
-// Initializes static intersection data
-void initializeIntersectionData(Node* talker, Node* listener, Model::IntersectionData& intersectionData)
-{
-	assert(talker);
-	assert(listener);
-
-	intersectionData.type = determineIntersectionType(talker, listener);
-	intersectionData.talker = talker;
-	intersectionData.listener = listener;
-	intersectionData.capabilities = {};
-	
-	IntersectionDirtyFlags dirtyFlags;
-	dirtyFlags.assign(0xffff); // Compute everything for initial state
-	
-	computeIntersectionCapabilities(intersectionData, dirtyFlags);
 }
 
 } // namespace priv
@@ -938,7 +452,563 @@ public:
 			emit q->endRemoveRows();
 		}
 	}
-	
+
+	enum class IntersectionDirtyFlag
+	{
+		UpdateConnected = 1u << 0, /**< Update the connected status, or the summary if this is a parent node */
+		UpdateFormat = 1u << 1, /**<  Update the matching format status, or the summary if this is a parent node */
+		UpdateGptp = 1u << 2, /**< Update the matching gPTP status, or the summary if this is a parent node (WARNING: For intersection of redundant and non-redundant, the complete checks has to be done, since format compatibility is not checked if GM is not the same) */
+		UpdateLinkStatus = 1u << 3, /**< Update the link status, or the summary if this is a parent node */
+	};
+	using IntersectionDirtyFlags = la::avdecc::utils::EnumBitfield<IntersectionDirtyFlag>;
+
+	// Returns true if domains are compatible
+	bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& talkerLinkStatus, la::avdecc::UniqueIdentifier const& talkerGrandMasterID, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& listenerLinkStatus, la::avdecc::UniqueIdentifier const& listenerGrandMasterID)
+	{
+		// If either is down, no need to check the domain, it makes no sense (so return compatible)
+		if (talkerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down)
+		{
+			return true;
+		}
+
+		// Check both have the same grandmaster
+		return talkerGrandMasterID == listenerGrandMasterID;
+	}
+
+	// Determines intersection type according to talker and listener
+	Model::IntersectionData::Type determineIntersectionType(Node* talker, Node* listener) const
+	{
+		assert(talker);
+		assert(listener);
+
+		if (talker->entityID() == listener->entityID())
+		{
+			return Model::IntersectionData::Type::None;
+		}
+
+		auto const talkerType = talker->type();
+		auto const listenerType = listener->type();
+
+		if (talkerType == Node::Type::Entity && listenerType == Node::Type::Entity)
+		{
+			return Model::IntersectionData::Type::Entity_Entity;
+		}
+
+		if (talkerType == Node::Type::Entity || listenerType == Node::Type::Entity)
+		{
+			if (talkerType == Node::Type::RedundantOutput || listenerType == Node::Type::RedundantInput)
+			{
+				return Model::IntersectionData::Type::Entity_Redundant;
+			}
+
+			if (talkerType == Node::Type::RedundantOutputStream || listenerType == Node::Type::RedundantInputStream)
+			{
+				return Model::IntersectionData::Type::Entity_RedundantStream;
+			}
+
+			if (talkerType == Node::Type::OutputStream || listenerType == Node::Type::InputStream)
+			{
+				return Model::IntersectionData::Type::Entity_SingleStream;
+			}
+		}
+
+		if (talkerType == Node::Type::RedundantOutput && listenerType == Node::Type::RedundantInput)
+		{
+			return Model::IntersectionData::Type::Redundant_Redundant;
+		}
+
+		if (talkerType == Node::Type::RedundantOutput || listenerType == Node::Type::RedundantInput)
+		{
+			if (talkerType == Node::Type::RedundantOutputStream || listenerType == Node::Type::RedundantInputStream)
+			{
+				return Model::IntersectionData::Type::Redundant_RedundantStream;
+			}
+
+			if (talkerType == Node::Type::OutputStream || listenerType == Node::Type::InputStream)
+			{
+				return Model::IntersectionData::Type::Redundant_SingleStream;
+			}
+		}
+
+		if (talkerType == Node::Type::RedundantOutputStream && listenerType == Node::Type::RedundantInputStream)
+		{
+			if (talker->index() == listener->index())
+			{
+				return Model::IntersectionData::Type::RedundantStream_RedundantStream;
+			}
+			else
+			{
+				return Model::IntersectionData::Type::None;
+			}
+		}
+
+		if (talkerType == Node::Type::RedundantOutputStream || listenerType == Node::Type::RedundantInputStream)
+		{
+			if (talkerType == Node::Type::OutputStream || listenerType == Node::Type::InputStream)
+			{
+				return Model::IntersectionData::Type::RedundantStream_SingleStream;
+			}
+		}
+
+		if (talkerType == Node::Type::OutputStream && listenerType == Node::Type::InputStream)
+		{
+			return Model::IntersectionData::Type::SingleStream_SingleStream;
+		}
+
+		assert(false);
+
+		return Model::IntersectionData::Type::None;
+	}
+
+	// Initializes static intersection data
+	void initializeIntersectionData(Node* talker, Node* listener, Model::IntersectionData& intersectionData)
+	{
+		assert(talker);
+		assert(listener);
+
+		intersectionData.talker = talker;
+		intersectionData.listener = listener;
+
+		intersectionData.type = determineIntersectionType(talker, listener);
+		intersectionData.flags = {};
+
+		IntersectionDirtyFlags dirtyFlags;
+		dirtyFlags.assign(0xffff); // Compute everything for initial state
+		computeIntersectionFlags(intersectionData, dirtyFlags);
+	}
+
+	// Updates intersection data for the given dirtyFlags
+	void computeIntersectionFlags(Model::IntersectionData& intersectionData, IntersectionDirtyFlags const dirtyFlags)
+	{
+		try
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+
+			auto const talkerType = intersectionData.talker->type();
+			auto const listenerType = intersectionData.listener->type();
+
+			auto const talkerEntityID = intersectionData.talker->entityID();
+			auto const listenerEntityID = intersectionData.listener->entityID();
+
+			auto talkerEntity = manager.getControlledEntity(talkerEntityID);
+			auto listenerEntity = manager.getControlledEntity(listenerEntityID);
+
+			auto const& talkerEntityNode = talkerEntity->getEntityNode();
+			auto const& listenerEntityNode = listenerEntity->getEntityNode();
+
+			auto const talkerConfigurationIndex = talkerEntityNode.dynamicModel->currentConfiguration;
+			auto const listenerConfigurationIndex = listenerEntityNode.dynamicModel->currentConfiguration;
+
+			switch (intersectionData.type)
+			{
+			case Model::IntersectionData::Type::Entity_Entity:
+			case Model::IntersectionData::Type::Entity_Redundant:
+			case Model::IntersectionData::Type::Entity_RedundantStream:
+			case Model::IntersectionData::Type::Entity_SingleStream:
+			{
+			}
+			break;
+			case Model::IntersectionData::Type::Redundant_Redundant:
+			{
+				auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex());
+				auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex());
+
+				auto atLeastOneInterfaceDown = false;
+				auto atLeastOneConnected = false;
+				auto allConnected = true;
+				auto allCompatibleDomain = true;
+				auto allCompatibleFormat = true;
+
+				auto const& talkerRedundantStreams = talkerRedundantNode.redundantStreams;
+				auto const& listenerRedundantStreams = listenerRedundantNode.redundantStreams;
+				assert(talkerRedundantStreams.size() == listenerRedundantStreams.size());
+
+				auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(talkerRedundantStreams));
+				auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(talkerRedundantStreams));
+
+				// Pair iteration
+				for (; it != end; ++it.first, ++it.second)
+				{
+					auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it.first->second);
+					auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it.second->second);
+
+					auto const talkerAvbInterfaceIndex = talkerStreamNode->staticModel->avbInterfaceIndex;
+					auto const listenerAvbInterfaceIndex = listenerStreamNode->staticModel->avbInterfaceIndex;
+
+					auto const talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
+					auto const listenerInterfaceLinkStatus = listenerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
+					atLeastOneInterfaceDown |= talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+
+					auto const connected = avdecc::helper::isStreamConnected(talkerEntityID, talkerStreamNode, listenerStreamNode);
+					atLeastOneConnected |= connected;
+					allConnected &= connected;
+
+					auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationIndex, talkerAvbInterfaceIndex);
+					auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerConfigurationIndex, listenerAvbInterfaceIndex);
+					auto const talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+					auto const listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+					allCompatibleDomain &= isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID);
+
+					auto const talkerStreamFormat = talkerStreamNode->dynamicModel->streamInfo.streamFormat;
+					auto const listenerStreamFormat = listenerStreamNode->dynamicModel->streamInfo.streamFormat;
+					allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+				}
+
+				if (atLeastOneInterfaceDown)
+				{
+					intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+				}
+				else
+				{
+					intersectionData.flags.reset(Model::IntersectionData::Flag::InterfaceDown);
+				}
+
+				if (allCompatibleDomain)
+				{
+					intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
+				}
+				else
+				{
+					intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+				}
+
+				if (allCompatibleFormat)
+				{
+					intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormat);
+				}
+				else
+				{
+					intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
+				}
+
+				if (atLeastOneConnected)
+				{
+					intersectionData.state = Model::IntersectionData::State::Connected;
+				}
+				else
+				{
+					intersectionData.state = Model::IntersectionData::State::NotConnected;
+				}
+			}
+			break;
+			case Model::IntersectionData::Type::Redundant_SingleStream:
+			{
+				// Redundant node and non-redundant stream: We want to check if one connection is active or possible (only one should be, a non-redundant device can only be connected with either of the redundant domain pair)
+				auto redundantConfigurationIndex = la::avdecc::entity::model::getInvalidDescriptorIndex();
+				la::avdecc::controller::ControlledEntity const* redundantEntity{ nullptr };
+				la::avdecc::controller::model::RedundantStreamNode const* redundantStreamNode{ nullptr };
+				la::avdecc::controller::model::StreamNode const* nonRedundantStreamNode{ nullptr };
+				la::avdecc::controller::model::AvbInterfaceNode const* nonRedundantAvbInterfaceNode{ nullptr };
+
+				// Determine the redundant and non-redundant nodes
+				if (talkerType == Node::Type::RedundantOutput)
+				{
+					redundantConfigurationIndex = talkerConfigurationIndex;
+					redundantEntity = talkerEntity.get();
+					redundantStreamNode = &talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex());
+					nonRedundantStreamNode = &listenerEntity->getStreamInputNode(listenerConfigurationIndex, static_cast<StreamNode*>(intersectionData.listener)->streamIndex());
+					if (nonRedundantStreamNode->staticModel)
+					{
+						nonRedundantAvbInterfaceNode = &listenerEntity->getAvbInterfaceNode(listenerConfigurationIndex, static_cast<StreamNode*>(intersectionData.listener)->avbInterfaceIndex());
+					}
+				}
+				else if (listenerType == Node::Type::RedundantInput)
+				{
+					redundantConfigurationIndex = listenerConfigurationIndex;
+					redundantEntity = listenerEntity.get();
+					redundantStreamNode = &listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex());
+					nonRedundantStreamNode = &talkerEntity->getStreamOutputNode(talkerConfigurationIndex, static_cast<StreamNode*>(intersectionData.talker)->streamIndex());
+					if (nonRedundantStreamNode->staticModel)
+					{
+						nonRedundantAvbInterfaceNode = &talkerEntity->getAvbInterfaceNode(talkerConfigurationIndex, static_cast<StreamNode*>(intersectionData.talker)->avbInterfaceIndex());
+					}
+				}
+				else
+				{
+					assert(false);
+				}
+
+				// Try to find if an interface of the redundant device is connected to the same domain that the non-redundant device
+				auto matchingRedundantStreamIndex = la::avdecc::entity::model::StreamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
+				auto nonRedundantGrandmasterID = (nonRedundantAvbInterfaceNode && nonRedundantAvbInterfaceNode->dynamicModel) ? nonRedundantAvbInterfaceNode->dynamicModel->avbInfo.gptpGrandmasterID : la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
+
+				for (auto const&[redundantStreamIndex, redundantStreamNode] : redundantStreamNode->redundantStreams)
+				{
+					if (redundantStreamNode->staticModel)
+					{
+						auto const& redundantAvbInterfaceNode = redundantEntity->getAvbInterfaceNode(redundantConfigurationIndex, redundantStreamNode->staticModel->avbInterfaceIndex);
+						if (redundantAvbInterfaceNode.dynamicModel && redundantAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID == nonRedundantGrandmasterID)
+						{
+							matchingRedundantStreamIndex = redundantStreamIndex;
+							break;
+						}
+					}
+				}
+
+				auto areMatchingDomainsConnected = false;
+				auto areMatchingDomainsFastConnecting = false;
+				auto isFormatCompatible = true;
+
+				auto const foundMatchingRedundantStreamIndex = matchingRedundantStreamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex();
+
+				// Found a matching domain
+				if (foundMatchingRedundantStreamIndex)
+				{
+					// Get format compatibility and connection state
+					if (talkerType == Node::Type::RedundantOutput)
+					{
+						auto const& talkerStreamNode = redundantEntity->getStreamOutputNode(redundantConfigurationIndex, matchingRedundantStreamIndex);
+
+						areMatchingDomainsConnected = avdecc::helper::isStreamConnected(talkerEntityID, &talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+						areMatchingDomainsFastConnecting = avdecc::helper::isStreamFastConnecting(talkerEntityID, &talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+
+						auto const talkerStreamFormat = talkerStreamNode.dynamicModel->streamInfo.streamFormat;
+						auto const listenerStreamFormat = static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode)->dynamicModel->streamInfo.streamFormat;
+
+						isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+					}
+					else if (listenerType == Node::Type::RedundantInput)
+					{
+						auto const& listenerStreamNode = redundantEntity->getStreamInputNode(redundantConfigurationIndex, matchingRedundantStreamIndex);
+
+						areMatchingDomainsConnected = avdecc::helper::isStreamConnected(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), &listenerStreamNode);
+						areMatchingDomainsFastConnecting = avdecc::helper::isStreamFastConnecting(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), &listenerStreamNode);
+
+						auto const talkerStreamFormat = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode)->dynamicModel->streamInfo.streamFormat;
+						auto const listenerStreamFormat = listenerStreamNode.dynamicModel->streamInfo.streamFormat;
+
+						isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+					}
+					else
+					{
+						assert(false);
+					}
+				}
+
+				auto areConnected = areMatchingDomainsConnected;
+				auto fastConnecting = areMatchingDomainsFastConnecting;
+
+				// Always check for all connection
+				for (auto const& redundantStreamKV : redundantStreamNode->redundantStreams)
+				{
+					if (talkerType == Node::Type::RedundantOutput)
+					{
+						auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(redundantStreamKV.second);
+
+						areConnected |= avdecc::helper::isStreamConnected(talkerEntityID, talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+						fastConnecting |= avdecc::helper::isStreamFastConnecting(talkerEntityID, talkerStreamNode, static_cast<la::avdecc::controller::model::StreamInputNode const*>(nonRedundantStreamNode));
+					}
+					else if (listenerType == Node::Type::RedundantInput)
+					{
+						auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(redundantStreamKV.second);
+
+						areConnected |= avdecc::helper::isStreamConnected(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), listenerStreamNode);
+						fastConnecting |= avdecc::helper::isStreamFastConnecting(talkerEntityID, static_cast<la::avdecc::controller::model::StreamOutputNode const*>(nonRedundantStreamNode), listenerStreamNode);
+					}
+					else
+					{
+						assert(false);
+					}
+				}
+
+				// Update connected state
+				if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
+				{
+					if (areConnected)
+					{
+						intersectionData.state = Model::IntersectionData::State::Connected;
+					}
+					else
+					{
+						intersectionData.state = Model::IntersectionData::State::NotConnected;
+					}
+				}
+
+				// Set domain as compatible if there is a valid matching domain AND either no connection at all OR matching domain connection
+				if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
+				{
+					if (foundMatchingRedundantStreamIndex && (areConnected || areMatchingDomainsConnected || areMatchingDomainsConnected))
+					{
+						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
+					}
+					else
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+					}
+				}
+			}
+			break;
+			case Model::IntersectionData::Type::Redundant_RedundantStream:
+			{
+				auto talkerSection = -1;
+				auto listenerSection = -1;
+
+				if (talkerType == Node::Type::RedundantOutput)
+				{
+					auto* redundantNode = static_cast<RedundantNode*>(intersectionData.talker);
+					auto* streamNode = static_cast<StreamNode*>(intersectionData.listener);
+
+					auto const otherStreamNode = redundantNode->childAt(streamNode->index());
+
+					talkerSection = priv::indexOf(_talkerNodeSectionMap, otherStreamNode);
+					listenerSection = priv::indexOf(_listenerNodeSectionMap, streamNode);
+				}
+				else if (listenerType == Node::Type::RedundantInput)
+				{
+					auto* redundantNode = static_cast<RedundantNode*>(intersectionData.listener);
+					auto* streamNode = static_cast<StreamNode*>(intersectionData.talker);
+
+					auto const otherStreamNode = redundantNode->childAt(streamNode->index());
+
+					talkerSection = priv::indexOf(_talkerNodeSectionMap, streamNode);
+					listenerSection = priv::indexOf(_listenerNodeSectionMap, otherStreamNode);
+				}
+				else
+				{
+					assert(false);
+				}
+
+				assert(isValidTalkerSection(talkerSection));
+				assert(isValidListenerSection(listenerSection));
+
+				// Simply copy data of the other intersection
+				try
+				{
+					intersectionData = _intersectionData.at(talkerSection).at(listenerSection);
+				}
+				catch (...)
+				{
+					// TODO, fixme
+				}
+			}
+			break;
+			case Model::IntersectionData::Type::RedundantStream_RedundantStream:
+			case Model::IntersectionData::Type::RedundantStream_SingleStream:
+			case Model::IntersectionData::Type::SingleStream_SingleStream:
+			{
+				auto const* const talkerStreamNode = static_cast<StreamNode*>(intersectionData.talker);
+				auto const* const listenerStreamNode = static_cast<StreamNode*>(intersectionData.listener);
+
+				auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
+				auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
+
+				auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
+				auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
+
+				auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+
+				// InterfaceDown
+				if (dirtyFlags.test(IntersectionDirtyFlag::UpdateLinkStatus))
+				{
+					if (interfaceDown)
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+					}
+					else
+					{
+						intersectionData.flags.reset(Model::IntersectionData::Flag::InterfaceDown);
+					}
+				}
+
+				// WrongDomain
+				if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
+				{
+					if (isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID))
+					{
+						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
+					}
+					else
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+					}
+				}
+
+				// WrongFormat
+				if (dirtyFlags.test(IntersectionDirtyFlag::UpdateFormat))
+				{
+					auto const talkerStreamFormat = talkerStreamNode->streamFormat();
+					auto const listenerStreamFormat = listenerStreamNode->streamFormat();
+
+					if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
+					{
+						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormat);
+					}
+					else
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
+					}
+				}
+
+				// Connected
+				if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
+				{
+					la::avdecc::controller::model::StreamOutputNode const* talkerStreamNode{ nullptr };
+
+					if (talkerType == Node::Type::RedundantOutput)
+					{
+						auto const& redundantNode = talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex());
+						auto const listenerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.listener->index());
+						assert(listenerRedundantStreamOrder < redundantNode.redundantStreams.size() && "Invalid redundant stream index");
+						auto it = std::begin(redundantNode.redundantStreams);
+						std::advance(it, listenerRedundantStreamOrder);
+						talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it->second);
+						assert(talkerStreamNode->isRedundant);
+					}
+					else if (talkerType == Node::Type::OutputStream || talkerType == Node::Type::RedundantOutputStream)
+					{
+						talkerStreamNode = &talkerEntity->getStreamOutputNode(talkerConfigurationIndex, static_cast<StreamNode*>(intersectionData.talker)->streamIndex());
+					}
+					else
+					{
+						assert(false);
+					}
+
+					la::avdecc::controller::model::StreamInputNode const* listenerStreamNode{ nullptr };
+
+					if (listenerType == Node::Type::RedundantInput)
+					{
+						auto const& redundantNode = listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex());
+						auto const talkerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.talker->index());
+						assert(talkerRedundantStreamOrder < redundantNode.redundantStreams.size() && "Invalid redundant stream index");
+						auto it = std::begin(redundantNode.redundantStreams);
+						std::advance(it, talkerRedundantStreamOrder);
+						listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it->second);
+						assert(listenerStreamNode->isRedundant);
+					}
+					else if (listenerType == Node::Type::InputStream || listenerType == Node::Type::RedundantInputStream)
+					{
+						listenerStreamNode = &listenerEntity->getStreamInputNode(listenerConfigurationIndex, static_cast<StreamNode*>(intersectionData.listener)->streamIndex());
+					}
+					else
+					{
+						assert(false);
+					}
+
+					assert(talkerStreamNode);
+					assert(listenerStreamNode);
+
+					if (avdecc::helper::isStreamConnected(talkerEntityID, talkerStreamNode, listenerStreamNode))
+					{
+						intersectionData.state = Model::IntersectionData::State::Connected;
+					}
+					else
+					{
+						intersectionData.state = Model::IntersectionData::State::NotConnected;
+					}
+				}
+			}
+			break;
+			default:
+				break;
+			}
+		}
+		catch (...)
+		{
+			// Uncaught exception
+			AVDECC_ASSERT(false, "Uncaught exception");
+		}
+	}
+
 	// Insertion / removal helpers
 	
 	void rebuildTalkerSectionCache()
@@ -968,8 +1038,6 @@ public:
 			{
 				auto* redundantOutput = RedundantNode::createOutputNode(*entity, redundantIndex);
 				redundantOutput->setName(avdecc::helper::redundantOutputName(redundantIndex));
-
-				auto const& redundantStreamNode = controlledEntity.getRedundantStreamOutputNode(currentConfigurationIndex, redundantIndex);
 
 				for (auto const&[streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
@@ -1033,8 +1101,6 @@ public:
 			{
 				auto* redundantInput = RedundantNode::createInputNode(*entity, redundantIndex);
 				redundantInput->setName(avdecc::helper::redundantInputName(redundantIndex));
-
-				auto const& redundantStreamNode = controlledEntity.getRedundantStreamInputNode(currentConfigurationIndex, redundantIndex);
 
 				for (auto const&[streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
@@ -1111,7 +1177,7 @@ public:
 			for (auto listenerSection = 0u; listenerSection < _listenerNodes.size(); ++listenerSection)
 			{
 				auto* listener = _listenerNodes.at(listenerSection);
-				priv::initializeIntersectionData(talker, listener, row.at(listenerSection));
+				initializeIntersectionData(talker, listener, row.at(listenerSection));
 			}
 		}
 		
@@ -1149,7 +1215,7 @@ public:
 			for (auto listenerSection = first; listenerSection <= last; ++listenerSection)
 			{
 				auto* listener = _listenerNodes.at(listenerSection);
-				priv::initializeIntersectionData(talker, listener, row.at(listenerSection));
+				initializeIntersectionData(talker, listener, row.at(listenerSection));
 			}
 		}
 
@@ -1333,14 +1399,14 @@ public:
 
 	void handleStreamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
 	{
-		auto const dirtyFlags = priv::IntersectionDirtyFlags{ priv::IntersectionDirtyFlag::UpdateConnected };
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
 		auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex);
 		listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
 	}
 
 	void handleStreamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 	{
-		auto const dirtyFlags = priv::IntersectionDirtyFlags{ priv::IntersectionDirtyFlag::UpdateLinkStatus };
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateLinkStatus };
 
 		if (hasTalker(entityID))
 		{
@@ -1361,7 +1427,7 @@ public:
 
 	void handleGptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 	{
-		auto const dirtyFlags = priv::IntersectionDirtyFlags{ priv::IntersectionDirtyFlag::UpdateGptp };
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateGptp };
 
 		if (hasTalker(entityID))
 		{
@@ -1461,7 +1527,7 @@ public:
 
 	void handleAvbInterfaceLinkStatusChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
 	{
-		auto const dirtyFlags = priv::IntersectionDirtyFlags{ priv::IntersectionDirtyFlag::UpdateLinkStatus };
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateLinkStatus };
 
 		if (hasTalker(entityID))
 		{
@@ -1586,13 +1652,13 @@ private:
 		}
 	}
 
-	void intersectionDataChanged(int const talkerSection, int const listenerSection, priv::IntersectionDirtyFlags dirtyFlags)
+	void intersectionDataChanged(int const talkerSection, int const listenerSection, IntersectionDirtyFlags dirtyFlags)
 	{
 		Q_Q(Model);
 
 		auto& data = _intersectionData.at(talkerSection).at(listenerSection);
 
-		priv::computeIntersectionCapabilities(data, dirtyFlags);
+		computeIntersectionFlags(data, dirtyFlags);
 
 		auto const index = createIndex(talkerSection, listenerSection);
 		emit q->dataChanged(index, index);
@@ -1602,9 +1668,16 @@ private:
 #endif
 	}
 
-	void talkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, priv::IntersectionDirtyFlags dirtyFlags)
+	void talkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
 		assert(talker);
+
+		// First, update the intersection
+		auto const talkerSection = talkerNodeSection(talker);
+		for (auto listenerSection = 0u; listenerSection < _listenerNodes.size(); ++listenerSection)
+		{
+			intersectionDataChanged(talkerSection, listenerSection, dirtyFlags);
+		}
 
 		// Recursively update the parents
 		if (andParents)
@@ -1628,16 +1701,9 @@ private:
 				}
 			});
 		}
-
-		auto const talkerSection = talkerNodeSection(talker);
-		for (auto listenerSection = 0u; listenerSection < _listenerNodes.size(); ++listenerSection)
-		{
-			// TODO, optimizable
-			intersectionDataChanged(talkerSection, listenerSection, dirtyFlags);
-		}
 	}
 
-	void listenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, priv::IntersectionDirtyFlags dirtyFlags)
+	void listenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
 		assert(listener);
 
@@ -1825,16 +1891,16 @@ QVariant Model::data(QModelIndex const& index, int role) const
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 	if (role == Qt::BackgroundRole)
 	{
-		auto const& data = intersectionData(index);
-		if (data.animation)
+		auto const& intersectionData = this->intersectionData(index);
+		if (intersectionData.animation)
 		{
-			return data.animation->currentValue();
+			return intersectionData.animation->currentValue();
 		}
 	}
 	else if (role == Qt::ToolTipRole)
 	{
-		auto const& data = intersectionData(index);
-		return priv::capabilitiesToString(data.capabilities);
+		auto const& intersectionData = this->intersectionData(index);
+		return priv::intersectionDataToString(intersectionData);
 	}
 #endif
 

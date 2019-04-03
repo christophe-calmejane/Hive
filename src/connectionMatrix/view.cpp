@@ -88,14 +88,14 @@ View::~View()
 
 void View::onIntersectionClicked(QModelIndex const& index)
 {
-	auto const& data = _model->intersectionData(index);
+	auto const& intersectionData = _model->intersectionData(index);
 
-	auto const talkerID = data.talker->entityID();
-	auto const listenerID = data.listener->entityID();
+	auto const talkerID = intersectionData.talker->entityID();
+	auto const listenerID = intersectionData.listener->entityID();
 
 	auto& manager = avdecc::ControllerManager::getInstance();
 
-	switch (data.type)
+	switch (intersectionData.type)
 	{
 	// Simple Stream or Single Stream of a redundant pair: connect the stream
 	// One non-redundant stream and one redundant stream: connect the stream
@@ -103,10 +103,10 @@ void View::onIntersectionClicked(QModelIndex const& index)
 	case Model::IntersectionData::Type::Redundant_SingleStream:
 	case Model::IntersectionData::Type::SingleStream_SingleStream:
 	{
-		auto const talkerStreamIndex = static_cast<StreamNode*>(data.talker)->streamIndex();
-		auto const listenerStreamIndex = static_cast<StreamNode*>(data.listener)->streamIndex();
+		auto const talkerStreamIndex = static_cast<StreamNode*>(intersectionData.talker)->streamIndex();
+		auto const listenerStreamIndex = static_cast<StreamNode*>(intersectionData.listener)->streamIndex();
 
-		if (data.capabilities.test(Model::IntersectionData::Capability::Connected))
+		if (intersectionData.state != Model::IntersectionData::State::NotConnected)
 		{
 			manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 		}
@@ -130,7 +130,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 		auto doConnect{ false };
 		auto doDisconnect{ false };
 
-		if (data.capabilities.test(Model::IntersectionData::Capability::Connected))
+		if (intersectionData.state != Model::IntersectionData::State::NotConnected)
 		{
 			doDisconnect = true;
 		}
@@ -147,21 +147,25 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			auto const& talkerEntityNode = talkerEntity->getEntityNode();
 			auto const& listenerEntityNode = listenerEntity->getEntityNode();
 
-			auto const talkerRedundantIndex = static_cast<RedundantNode*>(data.talker)->redundantIndex();
-			auto const listenerRedundantIndex = static_cast<RedundantNode*>(data.listener)->redundantIndex();
+			auto const talkerRedundantIndex = static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex();
+			auto const listenerRedundantIndex = static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex();
 
 			auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerRedundantIndex);
 			auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerRedundantIndex);
 
 			// TODO: Maybe someday handle the case for more than 2 streams for redundancy
-			AVDECC_ASSERT(talkerRedundantNode.redundantStreams.size() == listenerRedundantNode.redundantStreams.size(), "More than 2 redundant streams in the set");
-			auto talkerIt = talkerRedundantNode.redundantStreams.begin();
-			auto listenerIt = listenerRedundantNode.redundantStreams.begin();
+			auto const& talkerRedundantStreams = talkerRedundantNode.redundantStreams;
+			auto const& listenerRedundantStreams = listenerRedundantNode.redundantStreams;
+			assert(talkerRedundantStreams.size() == listenerRedundantStreams.size());
 
-			for (auto idx = 0u; idx < talkerRedundantNode.redundantStreams.size(); ++idx)
+			auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(talkerRedundantStreams));
+			auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(talkerRedundantStreams));
+
+			// Pair iteration
+			for (; it != end; ++it.first, ++it.second)
 			{
-				auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(talkerIt->second);
-				auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(listenerIt->second);
+				auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it.first->second);
+				auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it.second->second);
 
 				auto const areConnected = avdecc::helper::isStreamConnected(talkerID, talkerStreamNode, listenerStreamNode);
 
@@ -177,9 +181,6 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				{
 					LOG_HIVE_TRACE(QString("connectionMatrix::View::onClicked: Neither connecting nor disconnecting: doConnect=%1 doDisconnect=%2 areConnected=%3").arg(doConnect).arg(doDisconnect).arg(areConnected));
 				}
-
-				++talkerIt;
-				++listenerIt;
 			}
 		}
 	}

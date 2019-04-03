@@ -21,16 +21,15 @@
 
 #include "connectionMatrix/model.hpp"
 
-class QPainter;
+#include <QRect>
+#include <QPainter>
 
 namespace connectionMatrix
 {
 namespace paintHelper
 {
 
-void drawEntityConnectionSummary(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities);
-void drawStreamConnectionStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities);
-void drawIndividualRedundantStreamStatus(QPainter* painter, QRect const& rect, Model::IntersectionData::Capabilities const& capabilities);
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags);
 
 } // namespace paintHelper
 } // namespace connectionMatrix

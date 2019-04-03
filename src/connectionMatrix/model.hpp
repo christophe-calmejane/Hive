@@ -64,28 +64,28 @@ public:
 			// Stream
 			SingleStream_SingleStream,
 		};
+		
+		enum class State
+		{
+			NotConnected, /**< Stream is not connected */
+			Connected, /**< Stream is connected */
+			FastConnecting, /**< Stream is fast connecting */
+		};
 
-		enum class Capability
+		enum class Flag
 		{
 			InterfaceDown = 1u << 0, /**< The AVB interface is down (or at least one for the intersection of 2 RedundantNodes) */
 			WrongDomain = 1u << 1, /**< The AVB domains do not match (connection is possible, but stream reservation will fail) */
 			WrongFormat = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener) */
-			Connected = 1u << 3, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
-			FastConnecting = 1u << 4, /**< Stream is fast connecting (Mutually exclusive with Connected and PartiallyConnected) */
-			PartiallyConnected = 1u << 5, /**< Some, but not all of a redundant streams tuple, are connected (Mutually exclusive with Connected and FastConnecting) */
 		};
-		using Capabilities = la::avdecc::utils::EnumBitfield<Capability>;
-
-		Type type{ Type::None };
+		using Flags = la::avdecc::utils::EnumBitfield<Flag>;
 
 		Node* talker{ nullptr };
 		Node* listener{ nullptr };
 
-		Capabilities capabilities{};
-
-		// Additional redundant intersection data
-		// PrimaryChildStatus // see formal PartiallyConnected
-		// SecondaryChildStatus // see formal PartiallyConnected
+		Type type{ Type::None };
+		State state{ State::NotConnected };
+		Flags flags{};
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 		QVariantAnimation* animation{ nullptr };
