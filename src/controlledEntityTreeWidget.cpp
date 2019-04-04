@@ -30,6 +30,7 @@
 
 enum class Kind
 {
+	None,
 	EntityModelNode,
 	VirtualNode,
 };
@@ -87,9 +88,9 @@ protected:
 	virtual void updateHasError() {}
 
 private:
-	la::avdecc::entity::model::DescriptorType const _descriptorType;
-	la::avdecc::entity::model::DescriptorIndex const _descriptorIndex;
-	Kind const _kind;
+	la::avdecc::entity::model::DescriptorType const _descriptorType{ la::avdecc::entity::model::DescriptorType::Invalid };
+	la::avdecc::entity::model::DescriptorIndex const _descriptorIndex{ 0u };
+	Kind const _kind{ Kind::None };
 	bool _hasError{ false };
 };
 
@@ -155,11 +156,11 @@ class ControlledEntityTreeWidgetPrivate : public QObject, public la::avdecc::con
 public:
 	struct NodeIdentifier
 	{
-		la::avdecc::entity::model::DescriptorType const type;
-		la::avdecc::entity::model::DescriptorIndex const index;
-		Kind const kind;
+		la::avdecc::entity::model::DescriptorType type{ la::avdecc::entity::model::DescriptorType::Invalid };
+		la::avdecc::entity::model::DescriptorIndex index{ 0u };
+		Kind kind{ Kind::None };
 
-		bool operator==(NodeIdentifier const& other) const noexcept
+		constexpr bool operator==(NodeIdentifier const& other) const noexcept
 		{
 			return type == other.type && index == other.index && kind == other.kind;
 		}
@@ -170,7 +171,7 @@ public:
 			std::size_t operator()(NodeIdentifier const& id) const
 			{
 				// We use 16 bits for the descriptor type, 15 bits for the index and 1 for the kind
-				return static_cast<std::size_t>(id.type) << 16 | (static_cast<std::size_t>(id.index & 0x7fff) << 1) | static_cast<std::size_t>(id.kind);
+				return (static_cast<std::size_t>(id.type) << 16) | (static_cast<std::size_t>(id.index & 0x7fff) << 1) | static_cast<std::size_t>(id.kind);
 			}
 		};
 	};
@@ -210,8 +211,6 @@ public:
 
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
-		_entityExpandedStates.erase(entityID);
-
 		// The current entity went offline, clear everything
 		if (_controlledEntityID == entityID)
 		{
@@ -249,7 +248,7 @@ public:
 	void saveExpandedState()
 	{
 		// Build expanded state
-		NodeExpandedStates nodeExpandStates;
+		auto nodeExpandStates = NodeExpandedStates{};
 
 		Q_Q(ControlledEntityTreeWidget);
 		for (auto const& [id, item] : _map)
