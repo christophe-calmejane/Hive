@@ -288,11 +288,11 @@ public:
 	void dump() const
 	{
 		auto const rows = _intersectionData.size();
-		auto const columns = rows > 0 ? _intersectionData.at(0).size() : 0u;
+		auto const columns = rows > 0 ? _intersectionData[0].size() : 0u;
 			
 		qDebug() << "talkers" << _talkerNodes.size();
 		qDebug() << "listeners" << _listenerNodes.size();
-		qDebug() << "capabilities" << rows << "x" << columns;
+		qDebug() << "intersections" << rows << "x" << columns;
 	}
 #endif
 
@@ -302,7 +302,7 @@ public:
 		assert(isValidTalkerSection(talkerSection));
 		assert(isValidListenerSection(listenerSection));
 
-		auto& intersectionData = _intersectionData.at(talkerSection).at(listenerSection);
+		auto& intersectionData = _intersectionData[talkerSection][listenerSection];
 
 		if (!intersectionData.animation)
 		{
@@ -849,7 +849,7 @@ public:
 					auto* streamNode = static_cast<StreamNode*>(intersectionData.listener);
 
 					auto const otherStreamNode = redundantNode->childAt(streamNode->index());
-
+					
 					talkerSection = priv::indexOf(_talkerNodeSectionMap, otherStreamNode);
 					listenerSection = priv::indexOf(_listenerNodeSectionMap, streamNode);
 				}
@@ -871,15 +871,11 @@ public:
 				assert(isValidTalkerSection(talkerSection));
 				assert(isValidListenerSection(listenerSection));
 
-				// Simply copy data of the other intersection
-				try
-				{
-					intersectionData = _intersectionData.at(talkerSection).at(listenerSection);
-				}
-				catch (...)
-				{
-					// TODO, fixme
-				}
+				// Simply copy data from the source
+				auto const& sourceIntersectionData = _intersectionData[talkerSection][listenerSection];
+				
+				intersectionData.state = sourceIntersectionData.state;
+				intersectionData.flags = sourceIntersectionData.flags;
 			}
 			break;
 			case Model::IntersectionData::Type::RedundantStream_RedundantStream:
@@ -1166,18 +1162,18 @@ public:
 		
 		rebuildTalkerSectionCache();
 
-		// Update capabilities matrix
+		// Update intersection matrix (Start from the end so that children are initialized before parents)
 		_intersectionData.resize(last + 1);
-		for (auto talkerSection = first; talkerSection <= last; ++talkerSection)
+		for (auto talkerSection = last; talkerSection >= first; --talkerSection)
 		{
-			auto& row = _intersectionData.at(talkerSection);
+			auto& row = _intersectionData[talkerSection];
 			row.resize(_listenerNodes.size());
 			
-			auto* talker = _talkerNodes.at(talkerSection);
-			for (auto listenerSection = 0u; listenerSection < _listenerNodes.size(); ++listenerSection)
+			auto* talker = _talkerNodes[talkerSection];
+			for (auto listenerSection = _listenerNodes.size(); listenerSection > 0u; --listenerSection)
 			{
-				auto* listener = _listenerNodes.at(listenerSection);
-				initializeIntersectionData(talker, listener, row.at(listenerSection));
+				auto* listener = _listenerNodes[listenerSection - 1];
+				initializeIntersectionData(talker, listener, row[listenerSection]);
 			}
 		}
 		
@@ -1205,17 +1201,17 @@ public:
 
 		rebuildListenerSectionCache();
 		
-		// Update capabilities matrix
-		for (auto talkerSection = 0u; talkerSection < _talkerNodes.size(); ++talkerSection)
+		// Update intersection matrix (Start from the end so that children are initialized before parents)
+		for (auto talkerSection = _talkerNodes.size(); talkerSection > 0u; --talkerSection)
 		{
-			auto& row = _intersectionData.at(talkerSection);
+			auto& row = _intersectionData[talkerSection - 1];
 			row.resize(_listenerNodes.size());
 			
-			auto* talker = _talkerNodes.at(talkerSection);
-			for (auto listenerSection = first; listenerSection <= last; ++listenerSection)
+			auto* talker = _talkerNodes[talkerSection - 1];
+			for (auto listenerSection = last; listenerSection >= first; --listenerSection)
 			{
-				auto* listener = _listenerNodes.at(listenerSection);
-				initializeIntersectionData(talker, listener, row.at(listenerSection));
+				auto* listener = _listenerNodes[listenerSection];
+				initializeIntersectionData(talker, listener, row[listenerSection]);
 			}
 		}
 
@@ -1274,7 +1270,7 @@ public:
 			
 			for (auto talkerSection = 0u; talkerSection < _talkerNodes.size(); ++talkerSection)
 			{
-				auto& row = _intersectionData.at(talkerSection);
+				auto& row = _intersectionData[talkerSection];
 				
 				row.erase(
 					std::next(std::begin(row), first),
@@ -1296,7 +1292,7 @@ public:
 			return nullptr;
 		}
 		
-		return _talkerNodes.at(section);
+		return _talkerNodes[section];
 	}
 	
 	Node* listenerNode(int section) const
@@ -1306,7 +1302,7 @@ public:
 			return nullptr;
 		}
 		
-		return _listenerNodes.at(section);
+		return _listenerNodes[section];
 	}
 	
 	// avdecc::ControllerManager slots
@@ -1624,7 +1620,7 @@ private:
 	StreamNode* talkerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
 		auto const section = talkerStreamSection(entityID, streamIndex);
-		auto* node = _talkerNodes.at(section);
+		auto* node = _talkerNodes[section];
 		assert(node->isStreamNode());
 		return static_cast<StreamNode*>(node);
 	}
@@ -1632,7 +1628,7 @@ private:
 	StreamNode* listenerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
 		auto const section = listenerStreamSection(entityID, streamIndex);
-		auto* node = _listenerNodes.at(section);
+		auto* node = _listenerNodes[section];
 		assert(node->isStreamNode());
 		return static_cast<StreamNode*>(node);
 	}
@@ -1656,7 +1652,7 @@ private:
 	{
 		Q_Q(Model);
 
-		auto& data = _intersectionData.at(talkerSection).at(listenerSection);
+		auto& data = _intersectionData[talkerSection][listenerSection];
 
 		computeIntersectionFlags(data, dirtyFlags);
 
@@ -1811,7 +1807,7 @@ private:
 			return {};
 		}
 
-		return _talkerNodes.at(section)->name();
+		return _talkerNodes[section]->name();
 	}
 	
 	QString listenerHeaderData(int section) const
@@ -1821,7 +1817,7 @@ private:
 			return {};
 		}
 
-		return _listenerNodes.at(section)->name();
+		return _listenerNodes[section]->name();
 	}
 	
 private:
@@ -2007,7 +2003,7 @@ Model::IntersectionData const& Model::intersectionData(QModelIndex const& index)
 	assert(d->isValidTalkerSection(talkerSection));
 	assert(d->isValidListenerSection(listenerSection));
 	
-	return d->_intersectionData.at(talkerSection).at(listenerSection);
+	return d->_intersectionData[talkerSection][listenerSection];
 }
 
 void Model::setTransposed(bool const transposed)
