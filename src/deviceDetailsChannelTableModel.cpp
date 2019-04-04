@@ -434,7 +434,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								{
 									auto const& streamPortInput = controlledEntity->getStreamPortInputNode(*configurationIndex, *streamPortIndex);
 									auto const& audioClusters = streamPortInput.audioClusters;
-									auto audioClusterIt = audioClusters.find(*clusterIndex - *baseCluster);
+									auto audioClusterIt = audioClusters.find(*clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
 										auto const& audioCluster = audioClusterIt->second;
@@ -451,7 +451,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								{
 									auto const& streamPortOutput = controlledEntity->getStreamPortOutputNode(*configurationIndex, *streamPortIndex);
 									auto const& audioClusters = streamPortOutput.audioClusters;
-									auto audioClusterIt = audioClusters.find(*clusterIndex - *baseCluster);
+									auto audioClusterIt = audioClusters.find(*clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
 										auto const& audioCluster = audioClusterIt->second;
