@@ -147,21 +147,13 @@ public:
 							auto controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
 							if (controlledEntity)
 							{
-								auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
-								auto const& audioUnitIndex = *mappingKV.second->sourceClusterChannelInfo.audioUnitIndex;
-								auto const audioUnit = configNode.audioUnits.find(audioUnitIndex);
-								if (audioUnit != configNode.audioUnits.end())
+								auto const& configurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
+								auto const& streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
+								auto const& streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
+								auto const* const streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
+								if (streamPortInputDynamicModel)
 								{
-									auto const& streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
-									auto const streamPortInput = audioUnit->second.streamPortInputs.find(streamPortIndex);
-									if (streamPortInput != audioUnit->second.streamPortInputs.end())
-									{
-										auto streamPortInputDynamicModel = streamPortInput->second.dynamicModel;
-										if (streamPortInputDynamicModel)
-										{
-											mappings = streamPortInputDynamicModel->dynamicAudioMap;
-										}
-									}
+									mappings = streamPortInputDynamicModel->dynamicAudioMap;
 								}
 							}
 						}
@@ -171,10 +163,15 @@ public:
 
 						for (auto const& mapping : mappings)
 						{
-							if (*mappingKV.second->sourceClusterChannelInfo.clusterIndex + *mappingKV.second->sourceClusterChannelInfo.baseCluster == mapping.clusterOffset && *mappingKV.second->sourceClusterChannelInfo.clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamConnectionState.listenerStream.streamIndex)
+							auto const& clusterIndex = *mappingKV.second->sourceClusterChannelInfo.clusterIndex;
+							auto const& baseCluster = *mappingKV.second->sourceClusterChannelInfo.baseCluster;
+							auto const& clusterChannel = *mappingKV.second->sourceClusterChannelInfo.clusterChannel;
+							auto const& streamIndex = streamConnectionState.listenerStream.streamIndex;
+							if (clusterIndex + baseCluster == mapping.clusterOffset && clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamIndex)
 							{
 								// this propably needs a refresh
-								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+								auto const& channelIdentification = mappingKV.first;
+								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, channelIdentification);
 								listenerChannelsToUpdate.insert(channel);
 								break;
 							}
