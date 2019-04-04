@@ -28,6 +28,8 @@
 #include <QHeaderView>
 #include <QMenu>
 
+#include <unordered_set>
+
 enum class Kind
 {
 	None,
@@ -176,7 +178,7 @@ public:
 		};
 	};
 
-	using NodeExpandedStates = std::unordered_map<NodeIdentifier, bool, NodeIdentifier::hash>;
+	using NodeIdentifierSet = std::unordered_set<NodeIdentifier, NodeIdentifier::hash>;
 
 	ControlledEntityTreeWidgetPrivate(ControlledEntityTreeWidget* q)
 		: q_ptr(q)
@@ -195,8 +197,6 @@ public:
 
 		q->setControlledEntityID(la::avdecc::UniqueIdentifier{});
 		q->clearSelection();
-
-		_entityExpandedStates.clear();
 	}
 
 	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const entityID)
@@ -232,53 +232,50 @@ public:
 		}
 	}
 
-	void saveSelectedDescriptor()
-	{
-		// TODO
-	}
-
-	void restoreSelectedDescriptor()
-	{
-		Q_Q(ControlledEntityTreeWidget);
-
-		// TODO: Properly restore the previous saved index - Right now always restore the first one
-		q->setCurrentIndex(q->model()->index(0, 0));
-	}
-
-	void saveExpandedState()
+	void saveUserTreeWidgetState()
 	{
 		// Build expanded state
-		auto nodeExpandStates = NodeExpandedStates{};
+		auto currentNode = NodeIdentifier{};
+		auto expandedNodes = NodeIdentifierSet{};
 
 		Q_Q(ControlledEntityTreeWidget);
-		for (auto const& [id, item] : _map)
+		for (auto const& [id, item] : _identifierToNodeItem)
 		{
-			nodeExpandStates.insert({ id, q->isItemExpanded(item) });
+			if (item == q->currentItem())
+			{
+				currentNode = id;
+			}
+
+			// Put only the expanded nodes in the set
+			if (q->isItemExpanded(item))
+			{
+				expandedNodes.insert(id);
+			}
 		}
 
 		// Save expanded state for previous EntityID
-		_entityExpandedStates[_controlledEntityID] = nodeExpandStates;
+		_userTreeWidgetStates[_controlledEntityID] = { currentNode, std::move(expandedNodes) };
 	}
 
-	void restoreExpandedState()
+	void restoreUserTreeWidgetState()
 	{
-		Q_Q(ControlledEntityTreeWidget);
-
-		// Load expanded state if any
-		auto const it = _entityExpandedStates.find(_controlledEntityID);
-		if (it != std::end(_entityExpandedStates))
+		auto const it = _userTreeWidgetStates.find(_controlledEntityID);
+		if (it != std::end(_userTreeWidgetStates))
 		{
-			// Restore expanded state
-			auto const& states = it->second;
-			for (auto const& [id, item] : _map)
+			auto const& userTreeWidgetState = it->second;
+			for(auto const& id : userTreeWidgetState.expandedNodes)
 			{
-				try
+				if (auto* nodeItem = findItem(id))
 				{
-					q->setItemExpanded(item, states.at(id));
+					nodeItem->setExpanded(true);
 				}
-				catch (...)
-				{
-				}
+			}
+
+			if (auto* selectedItem = findItem(userTreeWidgetState.currentNode))
+			{
+				Q_Q(ControlledEntityTreeWidget);
+				auto const index = q->indexFromItem(selectedItem);
+				q->setCurrentIndex(index);
 			}
 		}
 	}
@@ -288,7 +285,7 @@ public:
 		Q_Q(ControlledEntityTreeWidget);
 
 		q->clear();
-		_map.clear();
+		_identifierToNodeItem.clear();
 
 		if (!_controlledEntityID)
 		{
@@ -304,10 +301,7 @@ public:
 		}
 
 		// Restore expanded state for new EntityID
-		restoreExpandedState();
-
-		// Restore selected descriptor for new EntityID
-		restoreSelectedDescriptor();
+		restoreUserTreeWidgetState();
 	}
 
 	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
@@ -321,8 +315,7 @@ public:
 
 		if (_controlledEntityID)
 		{
-			saveExpandedState();
-			saveSelectedDescriptor();
+			saveUserTreeWidgetState();
 		}
 
 		_controlledEntityID = entityID;
@@ -337,17 +330,17 @@ public:
 
 	NodeItem* findItem(NodeIdentifier const& nodeIdentifier) const
 	{
-		auto const it = _map.find(nodeIdentifier);
-		return it != std::end(_map) ? it->second : nullptr;
+		auto const it = _identifierToNodeItem.find(nodeIdentifier);
+		return it != std::end(_identifierToNodeItem) ? it->second : nullptr;
 	}
 
 	NodeIdentifier findNodeIdentifier(NodeItem const* item) const
 	{
-		auto const it = std::find_if(std::begin(_map), std::end(_map), [item](auto const& kv)
+		auto const it = std::find_if(std::begin(_identifierToNodeItem), std::end(_identifierToNodeItem), [item](auto const& kv)
 		{
 			return kv.second == item;
 		});
-		assert(it != std::end(_map));
+		assert(it != std::end(_identifierToNodeItem));
 		return it->first;
 	}
 
@@ -399,12 +392,12 @@ private:
 		if constexpr (std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, T>)
 		{
 			item = new EntityModelNodeItem{ static_cast<la::avdecc::controller::model::EntityModelNode const*>(node), name };
-			_map.insert({ makeIdentifier(node, Kind::EntityModelNode), item });
+			_identifierToNodeItem.insert({ makeIdentifier(node, Kind::EntityModelNode), item });
 		}
 		else if constexpr (std::is_base_of_v<la::avdecc::controller::model::VirtualNode, T>)
 		{
 			item = new VirtualNodeItem{ static_cast<la::avdecc::controller::model::VirtualNode const*>(node), name };
-			_map.insert({ makeIdentifier(node, Kind::VirtualNode), item });
+			_identifierToNodeItem.insert({ makeIdentifier(node, Kind::VirtualNode), item });
 		}
 		else
 		{
@@ -670,8 +663,17 @@ private:
 
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
 
-	std::unordered_map<NodeIdentifier, NodeItem*, NodeIdentifier::hash> _map;
-	std::unordered_map<la::avdecc::UniqueIdentifier, NodeExpandedStates, la::avdecc::UniqueIdentifier::hash> _entityExpandedStates;
+	// Quick access node item by node identifier
+	std::unordered_map<NodeIdentifier, NodeItem*, NodeIdentifier::hash> _identifierToNodeItem;
+
+	struct UserTreeWidgetState
+	{
+		NodeIdentifier currentNode{};
+		NodeIdentifierSet expandedNodes{};
+	};
+
+	// Global map that stores UserTreeWidgetState by entity ID (Stored in the class so each instance keeps its own cache)
+	std::unordered_map<la::avdecc::UniqueIdentifier, UserTreeWidgetState, la::avdecc::UniqueIdentifier::hash> _userTreeWidgetStates{};
 };
 
 ControlledEntityTreeWidget::ControlledEntityTreeWidget(QWidget* parent)
