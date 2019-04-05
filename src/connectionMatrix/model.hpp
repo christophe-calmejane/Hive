@@ -22,13 +22,12 @@
 #include <QAbstractTableModel>
 #include <la/avdecc/utils.hpp>
 
-#define ENABLE_CONNECTION_MATRIX_DEBUG 1
+#define ENABLE_CONNECTION_MATRIX_DEBUG 0
 #define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 1
 #define ENABLE_CONNECTION_MATRIX_TOOLTIP 1
 #define ENABLE_CONNECTION_MATRIX_INTERSECTION_TYPE_COLOR 0
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
-#include <QDebug>
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 #include <QVariantAnimation>
 #include <QColor>
 #endif
@@ -81,6 +80,10 @@ public:
 			InterfaceDown = 1u << 0, /**< The AVB interface is down (or at least one for the intersection of 2 RedundantNodes) */
 			WrongDomain = 1u << 1, /**< The AVB domains do not match (connection is possible, but stream reservation will fail) */
 			WrongFormat = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener) */
+
+			// Redundant special flags
+			FirstStreamWrongDomain = 1u << 3,
+			SecondStreamWrongDomain = 1u << 4,
 		};
 		using Flags = la::avdecc::utils::EnumBitfield<Flag>;
 

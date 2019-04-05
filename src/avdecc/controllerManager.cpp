@@ -591,7 +591,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString(), true);
+			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString(), true, true);
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
@@ -601,7 +601,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString());
+			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString(), true);
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}

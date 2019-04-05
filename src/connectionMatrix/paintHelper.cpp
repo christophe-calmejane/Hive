@@ -20,6 +20,8 @@
 #include "connectionMatrix/paintHelper.hpp"
 #include "toolkit/materialPalette.hpp"
 
+namespace palette = qt::toolkit::materialPalette;
+
 namespace connectionMatrix
 {
 namespace paintHelper
@@ -57,16 +59,17 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
 	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
 
-	auto penColor = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Gray, connected ? qt::toolkit::materialPalette::Shade::Shade900 : qt::toolkit::materialPalette::Shade::Shade500);
+
+	auto penColor = palette::color(palette::Name::Gray, connected ? palette::Shade::Shade900 : palette::Shade::Shade500);
 	painter->setPen(QPen{ penColor, 1.5 });
 
-	static auto const White = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Gray, qt::toolkit::materialPalette::Shade::Shade100);
-	static auto const Green = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Green, qt::toolkit::materialPalette::Shade::Shade500);
-	static auto const Red = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Red, qt::toolkit::materialPalette::Shade::Shade500);
-	static auto const Yellow = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Yellow, qt::toolkit::materialPalette::Shade::Shade500);
-	static auto const Blue = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Blue, qt::toolkit::materialPalette::Shade::Shade300);
-	static auto const Purple = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Purple, qt::toolkit::materialPalette::Shade::Shade400);
-	static auto const Orange = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Orange, qt::toolkit::materialPalette::Shade::Shade600);
+	static auto const White = palette::color(palette::Name::Gray, palette::Shade::Shade100);
+	static auto const Green = palette::color(palette::Name::Green, palette::Shade::Shade500);
+	static auto const Red = palette::color(palette::Name::Red, palette::Shade::Shade800);
+	static auto const Yellow = palette::color(palette::Name::Yellow, palette::Shade::Shade600);
+	static auto const Blue = palette::color(palette::Name::Blue, palette::Shade::Shade300);
+	static auto const Purple = palette::color(palette::Name::Purple, palette::Shade::Shade400);
+	static auto const Orange = palette::color(palette::Name::Orange, palette::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
 
@@ -107,7 +110,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		}
 	}
 
-	brushColor.setAlphaF(connected ? 1.0 : 0.5);
+	brushColor.setAlphaF(connected ? 1.0 : 0.25);
 	painter->setBrush(brushColor);
 
 	switch (type)
