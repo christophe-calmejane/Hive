@@ -150,8 +150,11 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			auto const talkerRedundantIndex = static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex();
 			auto const listenerRedundantIndex = static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex();
 
-			auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerRedundantIndex);
-			auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerRedundantIndex);
+			auto const talkerConfigurationIndex = talkerEntityNode.dynamicModel->currentConfiguration;
+			auto const listenerConfigurationIndex = listenerEntityNode.dynamicModel->currentConfiguration;
+
+			auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, talkerRedundantIndex);
+			auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, listenerRedundantIndex);
 
 			// TODO: Maybe someday handle the case for more than 2 streams for redundancy
 			auto const& talkerRedundantStreams = talkerRedundantNode.redundantStreams;

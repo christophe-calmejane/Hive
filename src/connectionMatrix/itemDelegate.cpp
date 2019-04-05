@@ -49,7 +49,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		painter->fillRect(option.rect, option.palette.highlight());
 	}
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 	auto const backgroundColorData = index.data(Qt::BackgroundRole);
 	if (!backgroundColorData.isNull())
 	{
@@ -62,7 +62,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	
 	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags);
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
+#if ENABLE_CONNECTION_MATRIX_INTERSECTION_TYPE_COLOR
 	static const std::unordered_map< Model::IntersectionData::Type, qt::toolkit::materialPalette::Name> debugColor =
 	{
 		{ Model::IntersectionData::Type::None, qt::toolkit::materialPalette::Name::Red },

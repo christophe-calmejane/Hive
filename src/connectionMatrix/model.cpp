@@ -58,7 +58,7 @@ using StreamSectionMap = std::unordered_map<StreamSectionKey, int, StreamSection
 // index by node
 using NodeSectionMap = std::unordered_map<Node*, int>;
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
+#if ENABLE_CONNECTION_MATRIX_TOOLTIP
 
 QString typeToString(Model::IntersectionData::Type const type)
 {
@@ -623,8 +623,8 @@ public:
 				auto const& listenerRedundantStreams = listenerRedundantNode.redundantStreams;
 				assert(talkerRedundantStreams.size() == listenerRedundantStreams.size());
 
-				auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(talkerRedundantStreams));
-				auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(talkerRedundantStreams));
+				auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(listenerRedundantStreams));
+				auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(listenerRedundantStreams));
 
 				// Pair iteration
 				for (; it != end; ++it.first, ++it.second)
@@ -681,9 +681,13 @@ public:
 					intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
 				}
 
-				if (atLeastOneConnected)
+				if (allConnected)
 				{
 					intersectionData.state = Model::IntersectionData::State::Connected;
+				}
+				else if (atLeastOneConnected)
+				{
+					intersectionData.state = Model::IntersectionData::State::PartiallyConnected;
 				}
 				else
 				{
@@ -1173,7 +1177,7 @@ public:
 			for (auto listenerSection = _listenerNodes.size(); listenerSection > 0u; --listenerSection)
 			{
 				auto* listener = _listenerNodes[listenerSection - 1];
-				initializeIntersectionData(talker, listener, row[listenerSection]);
+				initializeIntersectionData(talker, listener, row[listenerSection - 1]);
 			}
 		}
 		
@@ -1670,9 +1674,9 @@ private:
 
 		// First, update the intersection
 		auto const talkerSection = talkerNodeSection(talker);
-		for (auto listenerSection = 0u; listenerSection < _listenerNodes.size(); ++listenerSection)
+		for (auto listenerSection = _listenerNodes.size(); listenerSection > 0u; --listenerSection)
 		{
-			intersectionDataChanged(talkerSection, listenerSection, dirtyFlags);
+			intersectionDataChanged(talkerSection, listenerSection - 1, dirtyFlags);
 		}
 
 		// Recursively update the parents
@@ -1703,6 +1707,13 @@ private:
 	{
 		assert(listener);
 
+		// First, update the intersection
+		auto const listenerSection = listenerNodeSection(listener);
+		for (auto talkerSection = _talkerNodes.size(); talkerSection > 0; --talkerSection)
+		{
+			intersectionDataChanged(talkerSection - 1, listenerSection, dirtyFlags);
+		}
+
 		// Recursively update the parents
 		if (andParents)
 		{
@@ -1724,13 +1735,6 @@ private:
 					listenerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
 				}
 			});
-		}
-
-		auto const listenerSection = listenerNodeSection(listener);
-		for (auto talkerSection = 0u; talkerSection < _talkerNodes.size(); ++talkerSection)
-		{
-			// TODO, compute topLeft / bottomRight indexes for efficiency
-			intersectionDataChanged(talkerSection, listenerSection, dirtyFlags);
 		}
 	}
 
@@ -1884,7 +1888,7 @@ int Model::columnCount(QModelIndex const&) const
 
 QVariant Model::data(QModelIndex const& index, int role) const
 {
-#if ENABLE_CONNECTION_MATRIX_DEBUG
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 	if (role == Qt::BackgroundRole)
 	{
 		auto const& intersectionData = this->intersectionData(index);
@@ -1893,7 +1897,10 @@ QVariant Model::data(QModelIndex const& index, int role) const
 			return intersectionData.animation->currentValue();
 		}
 	}
-	else if (role == Qt::ToolTipRole)
+#endif
+
+#if ENABLE_CONNECTION_MATRIX_TOOLTIP
+	if (role == Qt::ToolTipRole)
 	{
 		auto const& intersectionData = this->intersectionData(index);
 		return priv::intersectionDataToString(intersectionData);

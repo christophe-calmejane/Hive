@@ -57,14 +57,16 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
 	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
 
-	auto penColor = QColor{ connected ? Qt::black : Qt::gray };
-	painter->setPen(QPen{ penColor, 2 });
+	auto penColor = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Gray, connected ? qt::toolkit::materialPalette::Shade::Shade900 : qt::toolkit::materialPalette::Shade::Shade500);
+	painter->setPen(QPen{ penColor, 1.5 });
 
 	static auto const White = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Gray, qt::toolkit::materialPalette::Shade::Shade100);
 	static auto const Green = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Green, qt::toolkit::materialPalette::Shade::Shade500);
 	static auto const Red = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Red, qt::toolkit::materialPalette::Shade::Shade500);
 	static auto const Yellow = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Yellow, qt::toolkit::materialPalette::Shade::Shade500);
 	static auto const Blue = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Blue, qt::toolkit::materialPalette::Shade::Shade300);
+	static auto const Purple = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Purple, qt::toolkit::materialPalette::Shade::Shade400);
+	static auto const Orange = qt::toolkit::materialPalette::color(qt::toolkit::materialPalette::Name::Orange, qt::toolkit::materialPalette::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
 
@@ -86,6 +88,23 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	if (interfaceDown)
 	{
 		brushColor = Blue;
+	}
+
+	// Special case
+	if (type == Model::IntersectionData::Type::Redundant_Redundant)
+	{
+		if (state == Model::IntersectionData::State::PartiallyConnected)
+		{
+			brushColor = Orange;
+		}
+		else if (interfaceDown)
+		{
+			brushColor = Blue;
+		}
+		else if (wrongDomain || wrongFormat)
+		{
+			brushColor = Purple;
+		}
 	}
 
 	brushColor.setAlphaF(connected ? 1.0 : 0.5);

@@ -23,6 +23,9 @@
 #include <la/avdecc/utils.hpp>
 
 #define ENABLE_CONNECTION_MATRIX_DEBUG 1
+#define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 1
+#define ENABLE_CONNECTION_MATRIX_TOOLTIP 1
+#define ENABLE_CONNECTION_MATRIX_INTERSECTION_TYPE_COLOR 0
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #include <QDebug>
@@ -70,6 +73,7 @@ public:
 			NotConnected, /**< Stream is not connected */
 			Connected, /**< Stream is connected */
 			FastConnecting, /**< Stream is fast connecting */
+			PartiallyConnected, /**< Some but not all of a redundant stream are connected */
 		};
 
 		enum class Flag
@@ -87,7 +91,7 @@ public:
 		State state{ State::NotConnected };
 		Flags flags{};
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 		QVariantAnimation* animation{ nullptr };
 #endif
 	};
