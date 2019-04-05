@@ -288,7 +288,6 @@ public:
 		}
 	}
 
-
 	/**
 	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
 	* Assumes the that the given StreamIdentification is valid.
@@ -316,37 +315,6 @@ public:
 				}
 			}
 		}
-		return false;
-	}
-
-	/**
-	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
-	* Assumes the that the given StreamIdentification is valid.
-	*/
-	bool isOutputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification streamIdentification)
-	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
-		if (controlledEntity)
-		{
-			auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
-			auto const& streamInputNode = configNode.streamInputs.at(streamIdentification.streamIndex);
-			if (!streamInputNode.isRedundant)
-			{
-				return true;
-			}
-			else
-			{
-				for (auto const& redundantStreamInput : configNode.redundantStreamInputs)
-				{
-					if (redundantStreamInput.second.primaryStream->descriptorIndex == streamIdentification.streamIndex)
-					{
-						return true;
-					}
-				}
-			}
-		}
-
 		return false;
 	}
 
