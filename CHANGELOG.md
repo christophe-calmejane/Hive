@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Only displaying _Ethernet_ kind interfaces
 - Displaying the type of ethernet adapter on macOS
+- Always reselecting the last selected Descriptor when reinspecting an Entity
 
 ### Fixed
 - Possible deadlock when trying to match stream formats
