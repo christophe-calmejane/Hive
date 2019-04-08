@@ -241,8 +241,8 @@ void MainWindow::populateInterfaceComboBox()
 	la::avdecc::networkInterface::enumerateInterfaces(
 		[this](la::avdecc::networkInterface::Interface const& networkInterface)
 		{
-			// Only display Ethernet interfaces
-			if (networkInterface.type == la::avdecc::networkInterface::Interface::Type::Ethernet && networkInterface.isActive)
+			// Only display enabled Ethernet interfaces
+			if (networkInterface.type == la::avdecc::networkInterface::Interface::Type::Ethernet && !networkInterface.isVirtual && networkInterface.isEnabled && networkInterface.isConnected)
 			{
 				_interfaceComboBox.addItem(QString::fromStdString(networkInterface.alias), QString::fromStdString(networkInterface.name));
 			}

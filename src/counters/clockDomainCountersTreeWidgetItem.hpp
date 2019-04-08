@@ -33,10 +33,10 @@
 class ClockDomainCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	ClockDomainCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters, QTreeWidget* parent = nullptr);
+	ClockDomainCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters, QTreeWidget* parent = nullptr);
 
 private:
-	void updateCounters(la::avdecc::controller::model::ClockDomainCounters const& counters);
+	void updateCounters(la::avdecc::entity::model::ClockDomainCounters const& counters);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::ClockDomainIndex const _clockDomainIndex{ 0u };

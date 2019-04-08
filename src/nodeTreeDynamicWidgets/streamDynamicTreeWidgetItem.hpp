@@ -36,11 +36,11 @@
 class StreamDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent = nullptr);
+	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::entity::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent = nullptr);
 
 private:
 	void updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo);
-	void updateConnections(la::avdecc::controller::model::StreamConnections const& connections);
+	void updateConnections(la::avdecc::entity::model::StreamConnections const& connections);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamType{ la::avdecc::entity::model::DescriptorType::Entity };

@@ -190,6 +190,7 @@ public:
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
+		qRegisterMetaType<la::avdecc::entity::StreamInputCounterValidFlags>("la::avdecc::entity::StreamInputCounterValidFlags");
 		qRegisterMetaType<la::avdecc::entity::model::AvdeccFixedString>("la::avdecc::entity::model::AvdeccFixedString");
 		qRegisterMetaType<la::avdecc::entity::model::ConfigurationIndex>("la::avdecc::entity::model::ConfigurationIndex");
 		qRegisterMetaType<la::avdecc::entity::model::DescriptorType>("la::avdecc::entity::model::DescriptorType");
@@ -225,19 +226,18 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::AvbInfo>("la::avdecc::entity::model::AvbInfo");
 		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
+		qRegisterMetaType<la::avdecc::entity::model::StreamConnectionState>("la::avdecc::entity::model::StreamConnectionState");
+		qRegisterMetaType<la::avdecc::entity::model::StreamConnections>("la::avdecc::entity::model::StreamConnections");
+		qRegisterMetaType<la::avdecc::entity::model::EntityCounters>("la::avdecc::entity::model::EntityCounters");
+		qRegisterMetaType<la::avdecc::entity::model::AvbInterfaceCounters>("la::avdecc::entity::model::AvbInterfaceCounters");
+		qRegisterMetaType<la::avdecc::entity::model::ClockDomainCounters>("la::avdecc::entity::model::ClockDomainCounters");
+		qRegisterMetaType<la::avdecc::entity::model::StreamInputCounters>("la::avdecc::entity::model::StreamInputCounters");
+		qRegisterMetaType<la::avdecc::entity::model::StreamOutputCounters>("la::avdecc::entity::model::StreamOutputCounters");
 		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>("la::avdecc::controller::ControlledEntity::InterfaceLinkStatus");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::CompatibilityFlags>("la::avdecc::controller::ControlledEntity::CompatibilityFlags");
 		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
 		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
-		qRegisterMetaType<la::avdecc::controller::model::StreamConnectionState>("la::avdecc::controller::model::StreamConnectionState");
-		qRegisterMetaType<la::avdecc::controller::model::StreamConnections>("la::avdecc::controller::model::StreamConnections");
-		qRegisterMetaType<la::avdecc::controller::model::EntityCounters>("la::avdecc::controller::model::EntityCounters");
-		qRegisterMetaType<la::avdecc::controller::model::AvbInterfaceCounters>("la::avdecc::controller::model::AvbInterfaceCounters");
-		qRegisterMetaType<la::avdecc::controller::model::ClockDomainCounters>("la::avdecc::controller::model::ClockDomainCounters");
-		qRegisterMetaType<la::avdecc::controller::model::StreamInputCounters>("la::avdecc::controller::model::StreamInputCounters");
-		qRegisterMetaType<la::avdecc::controller::model::StreamOutputCounters>("la::avdecc::controller::model::StreamOutputCounters");
-		qRegisterMetaType<la::avdecc::entity::StreamInputCounterValidFlags>("la::avdecc::entity::StreamInputCounterValidFlags");
 
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
@@ -330,11 +330,11 @@ private:
 		emit identificationStopped(entity->getEntity().getEntityID());
 	}
 	// Connection notifications (sniffed ACMP)
-	virtual void onStreamConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::model::StreamConnectionState const& state, bool const /*changedByOther*/) noexcept override
+	virtual void onStreamConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::entity::model::StreamConnectionState const& state, bool const /*changedByOther*/) noexcept override
 	{
 		emit streamConnectionChanged(state);
 	}
-	virtual void onStreamConnectionsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamConnections const& connections) noexcept override
+	virtual void onStreamConnectionsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamConnections const& connections) noexcept override
 	{
 		emit streamConnectionsChanged({ entity->getEntity().getEntityID(), streamIndex }, connections);
 	}
@@ -443,19 +443,19 @@ private:
 	{
 		emit avbInterfaceLinkStatusChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, linkStatus);
 	}
-	virtual void onEntityCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityCounters const& counters) noexcept override
+	virtual void onEntityCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::EntityCounters const& counters) noexcept override
 	{
 		emit entityCountersChanged(entity->getEntity().getEntityID(), counters);
 	}
-	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters) noexcept override
+	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters) noexcept override
 	{
 		emit avbInterfaceCountersChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, counters);
 	}
-	virtual void onClockDomainCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters) noexcept override
+	virtual void onClockDomainCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept override
 	{
 		emit clockDomainCountersChanged(entity->getEntity().getEntityID(), clockDomainIndex, counters);
 	}
-	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters) noexcept override
+	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
 
@@ -492,7 +492,7 @@ private:
 
 		emit streamInputCountersChanged(entityID, streamIndex, counters);
 	}
-	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters) noexcept override
+	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters) noexcept override
 	{
 		emit streamOutputCountersChanged(entity->getEntity().getEntityID(), streamIndex, counters);
 	}
@@ -586,24 +586,24 @@ private:
 		return {};
 	}
 
-	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString());
+			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString(), true);
 		}
-		return { la::avdecc::controller::Controller::SerializationError::InternalError, "Controller offline" };
+		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
-	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString());
 		}
-		return { la::avdecc::controller::Controller::SerializationError::InternalError, "Controller offline" };
+		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
 	ErrorCounterTracker const* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) const noexcept

@@ -36,7 +36,7 @@
 class AudioUnitDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	AudioUnitDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::controller::model::AudioUnitNodeStaticModel const* const staticModel, la::avdecc::controller::model::AudioUnitNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
+	AudioUnitDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::AudioUnitNodeStaticModel const* const staticModel, la::avdecc::entity::model::AudioUnitNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
 
 private:
 	void updateSamplingRate(la::avdecc::entity::model::SamplingRate const samplingRate);

@@ -21,7 +21,7 @@
 
 #include <QMenu>
 
-AvbInterfaceCountersTreeWidgetItem::AvbInterfaceCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters, QTreeWidget* parent)
+AvbInterfaceCountersTreeWidgetItem::AvbInterfaceCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _avbInterfaceIndex(avbInterfaceIndex)
@@ -56,7 +56,7 @@ AvbInterfaceCountersTreeWidgetItem::AvbInterfaceCountersTreeWidgetItem(la::avdec
 
 	// Listen for AvbInterfaceCountersChanged
 	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceCountersChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters)
 		{
 			if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
 			{
@@ -65,7 +65,7 @@ AvbInterfaceCountersTreeWidgetItem::AvbInterfaceCountersTreeWidgetItem(la::avdec
 		});
 }
 
-void AvbInterfaceCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::AvbInterfaceCounters const& counters)
+void AvbInterfaceCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model::AvbInterfaceCounters const& counters)
 {
 	for (auto const counterKV : counters)
 	{
