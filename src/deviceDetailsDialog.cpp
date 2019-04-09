@@ -766,6 +766,7 @@ private:
 				latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
 			}
 
+			const QSignalBlocker blocker(comboBox_PredefinedPT);
 			if (latency == std::nullopt)
 			{
 				comboBox_PredefinedPT->setCurrentIndex(0);

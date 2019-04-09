@@ -647,13 +647,16 @@ bool DeviceDetailsChannelTableModelPrivate::setData(QModelIndex const& index, QV
 		{
 			case DeviceDetailsChannelTableModelColumn::ChannelName:
 			{
-				auto const& sourceClusterIndex = _nodes.at(index.row()).connectionInformation->sourceClusterChannelInfo.clusterIndex;
-				if (!_hasChangesMap.contains(*sourceClusterIndex))
+				if (value.toString() != data(index, role))
 				{
-					_hasChangesMap.insert(*sourceClusterIndex, new QMap<DeviceDetailsChannelTableModelColumn, QVariant>());
+					auto const& sourceClusterIndex = _nodes.at(index.row()).connectionInformation->sourceClusterChannelInfo.clusterIndex;
+					if (!_hasChangesMap.contains(*sourceClusterIndex))
+					{
+						_hasChangesMap.insert(*sourceClusterIndex, new QMap<DeviceDetailsChannelTableModelColumn, QVariant>());
+					}
+					_hasChangesMap.value(*sourceClusterIndex)->insert(DeviceDetailsChannelTableModelColumn::ChannelName, value.toString());
+					emit q->dataEdited();
 				}
-				_hasChangesMap.value(*sourceClusterIndex)->insert(DeviceDetailsChannelTableModelColumn::ChannelName, value.toString());
-				emit q->dataEdited();
 				break;
 			}
 			default:
