@@ -705,6 +705,7 @@ public:
 		_hasChangesByUser = false;
 		updateButtonStates();
 		_activeConfigurationIndex = std::nullopt;
+		_userSelectedLatency = std::nullopt;
 
 		_deviceDetailsChannelTableModelTransmit.resetChangedData();
 		_deviceDetailsChannelTableModelTransmit.removeAllNodes();
