@@ -37,7 +37,7 @@ static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/en
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
 static SettingsManager::Setting ProtocolType = { "protocolType" };
-static SettingsManager::Setting InterfaceName = { "interfaceName" };
+static SettingsManager::Setting InterfaceID = { "interfaceID" };
 static SettingsManager::Setting ControllerDynamicHeaderViewState = { "controllerDynamicHeaderView/state" };
 static SettingsManager::Setting LoggerDynamicHeaderViewState = { "loggerDynamicHeaderView/state" };
 static SettingsManager::Setting EntityInspectorState = { "entityInspector/state" };
