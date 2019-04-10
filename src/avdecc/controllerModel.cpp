@@ -246,12 +246,10 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					switch (error)
 					{
 						case mediaClock::McDeterminationError::NotSupportedClockSourceType:
-							return "Unsupported Clock Source";
 						case mediaClock::McDeterminationError::NotSupportedNoAem:
-							return "Unsupported Entity";
 						case mediaClock::McDeterminationError::NotSupportedMultipleClockDomains:
 						case mediaClock::McDeterminationError::NotSupportedNoClockDomains:
-							return "Unsupported CLOCK_DOMAIN count";
+							return "N/A";
 						case mediaClock::McDeterminationError::Recursive:
 							return "Recursive";
 						case mediaClock::McDeterminationError::StreamNotConnected:
@@ -263,9 +261,9 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 						case mediaClock::McDeterminationError::AnyEntityInChainOffline:
 							return "Talker Offline";
 						case mediaClock::McDeterminationError::UnknownEntity:
-							return "Indeterminable";
+							return "Unknown Entity";
 						default:
-							return "Indeterminable";
+							return "";
 					}
 				}
 				else
