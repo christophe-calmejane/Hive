@@ -680,12 +680,9 @@ public:
 					{
 						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
 
-						la::avdecc::entity::model::StreamInfo si;
-						si.msrpAccumulatedLatency = *_userSelectedLatency;
-
 						// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
 						// TODO: needs update of library:
-						manager.setStreamOutputInfo(_entityID, streamOutput.first, si);
+						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
 					}
 				}
 			}

@@ -147,16 +147,13 @@ public:
 							auto controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
 							if (controlledEntity)
 							{
-								auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
-								auto const& audioUnitIndex = *mappingKV.second->sourceClusterChannelInfo.audioUnitIndex;
+								auto const& configurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 								auto const& streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
-								if (configNode.audioUnits.size() > audioUnitIndex && configNode.audioUnits.at(audioUnitIndex).streamPortOutputs.size() > streamPortIndex)
+								auto const& streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
+								auto const* const streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
+								if (streamPortInputDynamicModel)
 								{
-									auto streamPortInputDynamicModel = configNode.audioUnits.at(audioUnitIndex).streamPortInputs.at(streamPortIndex).dynamicModel;
-									if (streamPortInputDynamicModel)
-									{
-										mappings = streamPortInputDynamicModel->dynamicAudioMap;
-									}
+									mappings = streamPortInputDynamicModel->dynamicAudioMap;
 								}
 							}
 						}
@@ -166,10 +163,15 @@ public:
 
 						for (auto const& mapping : mappings)
 						{
-							if (*mappingKV.second->sourceClusterChannelInfo.clusterIndex + *mappingKV.second->sourceClusterChannelInfo.baseCluster == mapping.clusterOffset && *mappingKV.second->sourceClusterChannelInfo.clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamConnectionState.listenerStream.streamIndex)
+							auto const& clusterIndex = *mappingKV.second->sourceClusterChannelInfo.clusterIndex;
+							auto const& baseCluster = *mappingKV.second->sourceClusterChannelInfo.baseCluster;
+							auto const& clusterChannel = *mappingKV.second->sourceClusterChannelInfo.clusterChannel;
+							auto const& streamIndex = streamConnectionState.listenerStream.streamIndex;
+							if (clusterIndex + baseCluster == mapping.clusterOffset && clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamIndex)
 							{
 								// this propably needs a refresh
-								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, mappingKV.first);
+								auto const& channelIdentification = mappingKV.first;
+								auto channel = std::make_pair(streamConnectionState.listenerStream.entityID, channelIdentification);
 								listenerChannelsToUpdate.insert(channel);
 								break;
 							}
@@ -286,7 +288,6 @@ public:
 		}
 	}
 
-
 	/**
 	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
 	* Assumes the that the given StreamIdentification is valid.
@@ -314,37 +315,6 @@ public:
 				}
 			}
 		}
-		return false;
-	}
-
-	/**
-	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
-	* Assumes the that the given StreamIdentification is valid.
-	*/
-	bool isOutputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification streamIdentification)
-	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
-		if (controlledEntity)
-		{
-			auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
-			auto const& streamInputNode = configNode.streamInputs.at(streamIdentification.streamIndex);
-			if (!streamInputNode.isRedundant)
-			{
-				return true;
-			}
-			else
-			{
-				for (auto const& redundantStreamInput : configNode.redundantStreamInputs)
-				{
-					if (redundantStreamInput.second.primaryStream->descriptorIndex == streamIdentification.streamIndex)
-					{
-						return true;
-					}
-				}
-			}
-		}
-
 		return false;
 	}
 
@@ -436,8 +406,8 @@ public:
 		la::avdecc::entity::model::AudioMappings mappings;
 		try
 		{
-			auto streamPortOutputNode = controlledEntity->getStreamPortOutputNode(configurationIndex, streamPortIndex);
-			auto const& streamPortOutputDynamicModel = streamPortOutputNode.dynamicModel;
+			auto const& streamPortOutputNode = controlledEntity->getStreamPortOutputNode(configurationIndex, streamPortIndex);
+			auto const* const streamPortOutputDynamicModel = streamPortOutputNode.dynamicModel;
 			if (streamPortOutputDynamicModel)
 			{
 				mappings = streamPortOutputDynamicModel->dynamicAudioMap;
@@ -634,8 +604,8 @@ public:
 		la::avdecc::entity::model::AudioMappings mappings;
 		try
 		{
-			auto streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
-			auto const& streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
+			auto const& streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
+			auto const* const streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
 			if (streamPortInputDynamicModel)
 			{
 				mappings = streamPortInputDynamicModel->dynamicAudioMap;
