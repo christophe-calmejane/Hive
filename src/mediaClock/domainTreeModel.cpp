@@ -644,6 +644,7 @@ bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& p
 	q->endRemoveRows();
 
 	domainTreeItem->reevaluateDomainSampleRate();
+	emit q->deselectAll();
 
 	return true;
 }

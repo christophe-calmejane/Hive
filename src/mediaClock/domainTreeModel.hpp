@@ -146,6 +146,7 @@ public:
 	Q_SIGNAL void sampleRateSettingChanged();
 	Q_SIGNAL void mcMasterSelectionChanged();
 	Q_SIGNAL void triggerResizeColumns();
+	Q_SIGNAL void deselectAll();
 
 protected:
 private:

@@ -102,6 +102,7 @@ public:
 		connect(&_domainTreeModel, &DomainTreeModel::sampleRateSettingChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
 		connect(&_domainTreeModel, &DomainTreeModel::mcMasterSelectionChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
 		connect(&_domainTreeModel, &DomainTreeModel::triggerResizeColumns, this, &MediaClockManagementDialogImpl::resizeMCTreeViewColumns);
+		connect(&_domainTreeModel, &DomainTreeModel::deselectAll, this, &MediaClockManagementDialogImpl::removeMcDomainTreeViewSelections);
 
 		// drag&drop support
 		listView_UnassignedEntities->setDragEnabled(true);
@@ -190,6 +191,8 @@ public:
 	Q_SLOT void button_AddClicked()
 	{
 		_domainTreeModel.addNewDomain();
+		// TODO expand the newly created domain.
+
 
 		_hasChanges = true;
 		adjustButtonStates();
@@ -296,6 +299,13 @@ public:
 
 		// update remove button
 		button_Remove->setEnabled(!!selectedDomain);
+	}
+
+	Q_SLOT void removeMcDomainTreeViewSelections()
+	{
+		treeViewMediaClockDomains->clearSelection();
+		const QModelIndex index;
+		treeViewMediaClockDomains->selectionModel()->setCurrentIndex(index, QItemSelectionModel::Select);
 	}
 
 	/**
