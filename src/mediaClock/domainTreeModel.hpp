@@ -121,8 +121,8 @@ public:
 	bool removeRows(int row, int count, QModelIndex const& parent) override;
 	int rowCount(QModelIndex const& parent = QModelIndex()) const override;
 	int columnCount(QModelIndex const& parent) const;
-	QStringList DomainTreeModel::mimeTypes() const override;
-	QMimeData* DomainTreeModel::mimeData(const QModelIndexList& indexes) const override;
+	QStringList mimeTypes() const override;
+	QMimeData* mimeData(const QModelIndexList& indexes) const override;
 	Qt::DropActions supportedDropActions() const override;
 	bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
 	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
