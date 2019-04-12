@@ -135,7 +135,6 @@ void DomainTreeItem::reevaluateDomainSampleRate()
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(item);
 			if (!referenceSampleRate)
 			{
-				//
 				referenceSampleRate = entityTreeItem->sampleRate();
 			}
 			auto entitySampleRate = entityTreeItem->sampleRate();

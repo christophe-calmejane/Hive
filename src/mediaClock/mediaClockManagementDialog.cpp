@@ -103,6 +103,19 @@ public:
 		connect(&_domainTreeModel, &DomainTreeModel::mcMasterSelectionChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
 		connect(&_domainTreeModel, &DomainTreeModel::triggerResizeColumns, this, &MediaClockManagementDialogImpl::resizeMCTreeViewColumns);
 
+		// drag&drop support
+		listView_UnassignedEntities->setDragEnabled(true);
+		listView_UnassignedEntities->setDropIndicatorShown(true);
+		listView_UnassignedEntities->setDragDropOverwriteMode(false);
+		listView_UnassignedEntities->setAcceptDrops(true);
+		listView_UnassignedEntities->setDefaultDropAction(Qt::MoveAction);
+
+		treeViewMediaClockDomains->setDragEnabled(true);
+		treeViewMediaClockDomains->setDropIndicatorShown(true);
+		treeViewMediaClockDomains->setDragDropOverwriteMode(false);
+		treeViewMediaClockDomains->setAcceptDrops(true);
+		treeViewMediaClockDomains->setDefaultDropAction(Qt::MoveAction);
+
 		treeViewMediaClockDomains->setCurrentIndex(_domainTreeModel.index(-1, -1)); // set selection index to invalid intitally
 		button_AssignToDomain->setEnabled(false);
 		button_RemoveAssignment->setEnabled(false);

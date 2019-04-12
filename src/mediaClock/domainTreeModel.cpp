@@ -24,6 +24,10 @@
 #include <QLabel>
 #include <QRadioButton>
 #include <QStandardItemModel>
+#include <QMimeData>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 
 #include "mediaClock/domainTreeModel.hpp"
 #include "avdecc/mcDomainManager.hpp"
@@ -61,7 +65,12 @@ public:
 	Qt::ItemFlags flags(QModelIndex const& index) const;
 	QModelIndex index(int row, int column, QModelIndex const& parent) const;
 	QModelIndex parent(QModelIndex const& index) const;
-
+	bool removeRows(int row, int count, QModelIndex const& parent);
+	Qt::DropActions supportedDropActions() const;
+	bool canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const;
+	bool dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent);
+	QStringList mimeTypes() const;
+	QMimeData* mimeData(const QModelIndexList& indexes) const;
 	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
 	avdecc::mediaClock::MCEntityDomainMapping createMediaClockMappings();
 
@@ -581,10 +590,183 @@ Qt::ItemFlags DomainTreeModelPrivate::flags(QModelIndex const& index) const
 		return 0;
 	if (dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer())) != nullptr && index.column() == static_cast<int>(DomainTreeModelColumn::Domain))
 	{
-		return q->QAbstractItemModel::flags(index) | Qt::ItemIsEditable;
+		return q->QAbstractItemModel::flags(index) | Qt::ItemIsEditable | Qt::ItemIsDropEnabled;
 	}
 
-	return q->QAbstractItemModel::flags(index);
+	return Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | q->QAbstractItemModel::flags(index);
+}
+
+/**
+* Removes rows from the model. (Used by drag&drop mechanisms)
+*/
+bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& parent)
+{
+	Q_Q(DomainTreeModel);
+	AbstractTreeItem* parentItem;
+	if (parent.column() > 0)
+		return 0;
+
+	if (!parent.isValid())
+		parentItem = _rootItem;
+	else
+		parentItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
+
+	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(parentItem);
+	if (!domainTreeItem)
+	{
+		auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(parentItem);
+		if (entityTreeItem)
+		{
+			domainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+		}
+	}
+
+	if (!domainTreeItem)
+	{
+		return false; // no parent domain found
+	}
+
+	if (row < 0 || row + count > domainTreeItem->childCount())
+	{
+		return false;
+	}
+
+	q->beginRemoveRows(parent, row, row + count - 1);
+	for (int i = row + count - 1; i >= row; i--)
+	{
+		auto entityItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
+		removeEntity(domainTreeItem->domain().getDomainIndex(), entityItem->entityId());
+	}
+	if (!domainTreeItem->domain().getMediaClockDomainMaster())
+	{
+		domainTreeItem->setDefaultMcMaster();
+	}
+	q->endRemoveRows();
+
+	domainTreeItem->reevaluateDomainSampleRate();
+
+	return true;
+}
+
+/**
+* Gets the supported drop actions of this model. We only want to move.
+*/
+Qt::DropActions DomainTreeModelPrivate::supportedDropActions() const
+{
+	return Qt::MoveAction;
+}
+
+/**
+* Checks if the given mime data can be dropped into this model.
+*/
+bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
+{
+	if (!data->hasFormat("application/json"))
+		return false;
+
+	return true;
+}
+
+/**
+* Adds the given data (entity ids) to this model and returns true if successful.
+*/
+bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
+{
+	if (!data->hasFormat("application/json"))
+		return false;
+
+	int beginRow;
+
+	if (row != -1)
+		beginRow = row;
+	else if (parent.isValid())
+		beginRow = parent.row();
+	else
+		beginRow = rowCount(QModelIndex());
+
+	int rows = 0;
+	QJsonParseError parseError;
+	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
+	if (parseError.error != QJsonParseError::NoError)
+	{
+		return false;
+	}
+	auto jsonFormattedData = doc.object();
+	if (jsonFormattedData.empty() || jsonFormattedData.value("dataType") != "la::avdecc::UniqueIdentifier")
+	{
+		return false;
+	}
+	auto jsonFormattedDataEntries = jsonFormattedData.value("data").toArray();
+
+	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
+	std::optional<avdecc::mediaClock::DomainIndex> domainIndex = std::nullopt;
+	if (domainTreeItem)
+	{
+		domainIndex = domainTreeItem->domain().getDomainIndex();
+	}
+	else
+	{
+		auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
+		if (entityTreeItem)
+		{
+			domainIndex = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem())->domain().getDomainIndex();
+		}
+	}
+	if (!domainIndex)
+	{
+		// return if no parent could be determined
+		return false;
+	}
+	for (auto const& entry : jsonFormattedDataEntries)
+	{
+		addEntityToDomain(*domainIndex, la::avdecc::UniqueIdentifier(entry.toVariant().toULongLong()));
+	}
+
+	return true;
+}
+
+/**
+* Gets the supported mime types. (Json)
+*/
+QStringList DomainTreeModelPrivate::mimeTypes() const
+{
+	QStringList types;
+	types << "application/json";
+	return types;
+}
+
+/**
+* Gets the entity ids as mime data. 
+*/
+QMimeData* DomainTreeModelPrivate::mimeData(QModelIndexList const& indexes) const
+{
+	QMimeData* mimeData = new QMimeData();
+
+	QJsonDocument doc;
+	QJsonObject jsonFormattedData;
+	QJsonArray jsonFormattedDataEntries;
+
+	jsonFormattedData.insert("dataType", "la::avdecc::UniqueIdentifier");
+	for (QModelIndex const& index : indexes)
+	{
+		if (index.isValid())
+		{
+			auto const* entityItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
+			if (entityItem)
+			{
+				QJsonValue entityIdJsonVal((qint64)entityItem->entityId());
+				if (entityItem && !jsonFormattedDataEntries.contains(entityIdJsonVal))
+				{
+					jsonFormattedDataEntries.append(entityIdJsonVal);
+				}
+			}
+		}
+	}
+	jsonFormattedData.insert("data", jsonFormattedDataEntries);
+	doc.setObject(jsonFormattedData);
+
+	mimeData->setData("application/json", doc.toJson());
+	return mimeData;
 }
 
 /**
@@ -668,6 +850,36 @@ int DomainTreeModel::columnCount(QModelIndex const& parent) const
 	return d->columnCount(parent);
 }
 
+Qt::DropActions DomainTreeModel::supportedDropActions() const
+{
+	Q_D(const DomainTreeModel);
+	return d->supportedDropActions();
+}
+
+bool DomainTreeModel::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
+{
+	Q_D(const DomainTreeModel);
+	return d->canDropMimeData(data, action, row, column, parent);
+}
+
+bool DomainTreeModel::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
+{
+	Q_D(DomainTreeModel);
+	return d->dropMimeData(data, action, row, column, parent);
+}
+
+QStringList DomainTreeModel::mimeTypes() const
+{
+	Q_D(const DomainTreeModel);
+	return d->mimeTypes();
+}
+
+QMimeData* DomainTreeModel::mimeData(const QModelIndexList& indexes) const
+{
+	Q_D(const DomainTreeModel);
+	return d->mimeData(indexes);
+}
+
 /**
 * Gets the data of a cell.
 */
@@ -708,6 +920,12 @@ QModelIndex DomainTreeModel::parent(QModelIndex const& index) const
 {
 	Q_D(const DomainTreeModel);
 	return d->parent(index);
+}
+
+bool DomainTreeModel::removeRows(int row, int count, QModelIndex const& parent)
+{
+	Q_D(DomainTreeModel);
+	return d->removeRows(row, count, parent);
 }
 
 /**

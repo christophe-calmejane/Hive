@@ -118,8 +118,14 @@ public:
 	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 	QModelIndex index(int row, int column, QModelIndex const& parent = QModelIndex()) const override;
 	QModelIndex parent(QModelIndex const& index) const override;
+	bool removeRows(int row, int count, QModelIndex const& parent) override;
 	int rowCount(QModelIndex const& parent = QModelIndex()) const override;
-	int columnCount(QModelIndex const& parent = QModelIndex()) const override;
+	int columnCount(QModelIndex const& parent) const;
+	QStringList DomainTreeModel::mimeTypes() const override;
+	QMimeData* DomainTreeModel::mimeData(const QModelIndexList& indexes) const override;
+	Qt::DropActions supportedDropActions() const override;
+	bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
+	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
 
 	bool addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId);
 	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
