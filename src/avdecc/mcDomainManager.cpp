@@ -738,8 +738,10 @@ private:
 		auto configuredClockSourceStreamIndex = getActiveInputClockStreamIndex(entityId);
 		if (configuredClockSourceStreamIndex)
 		{
-			auto hasSingleInputStream = (activeConfiguration.streamInputs.size() == 1);
+			// A 'single input stream entity' can either have one redundant and no nonredundant or no redundant an one nonredundant input stream
+			auto hasSingleInputStream = (activeConfiguration.redundantStreamInputs.size() == 1 && activeConfiguration.streamInputs.empty()) || (activeConfiguration.streamInputs.size() == 1 && activeConfiguration.redundantStreamInputs.empty());
 			auto usesStreamInputAsClock = (activeConfiguration.streamInputs.count(*configuredClockSourceStreamIndex));
+
 			return !hasSingleInputStream || !usesStreamInputAsClock;
 		}
 
