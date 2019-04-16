@@ -125,7 +125,7 @@ AbstractTreeItem* AbstractTreeItem::childAt(int row)
 * Finds the domain tree item with the given domain index.
 * @return Null or the DomainTreeItem pointer.
 */
-DomainTreeItem* RootTreeItem::findDomainWithIndex(avdecc::mediaClock::DomainIndex const& domainIndex) const
+DomainTreeItem* RootTreeItem::findDomainWithIndex(avdecc::mediaClock::DomainIndex const domainIndex) const
 {
 	for (auto* item : m_childItems)
 	{

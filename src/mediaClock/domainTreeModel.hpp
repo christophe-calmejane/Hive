@@ -128,10 +128,10 @@ public:
 	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
 
 	bool addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId);
-	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
-	void removeEntity(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	void removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
 	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);

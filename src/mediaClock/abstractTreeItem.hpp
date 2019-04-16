@@ -64,6 +64,6 @@ protected:
 class RootTreeItem : public AbstractTreeItem
 {
 public:
-	DomainTreeItem* findDomainWithIndex(avdecc::mediaClock::DomainIndex const& domainIndex) const;
+	DomainTreeItem* findDomainWithIndex(avdecc::mediaClock::DomainIndex const domainIndex) const;
 	QList<DomainTreeItem*> findDomainsWithEntity(la::avdecc::UniqueIdentifier entityId);
 };
