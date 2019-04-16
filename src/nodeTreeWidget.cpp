@@ -237,7 +237,7 @@ private:
 			auto const milanInfo = *controlledEntity->getMilanInfo();
 
 			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
-			addFlagsItem(milanInfoItem, "Features", milanInfo.featuresFlags.getValue(), avdecc::helper::flagsToString(milanInfo.featuresFlags));
+			addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
 			addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
 		}
 

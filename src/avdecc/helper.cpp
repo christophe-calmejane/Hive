@@ -415,11 +415,11 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcep
 	return str;
 }
 
-QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags) noexcept
+QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) noexcept
 {
 	QString str;
 
-	if ((flags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
+	if (flags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
 		concatenateFlags(str, "Redundancy");
 
 	if (str.isEmpty())
