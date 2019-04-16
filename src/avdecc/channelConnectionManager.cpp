@@ -147,8 +147,8 @@ public:
 							auto controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
 							if (controlledEntity)
 							{
-								auto const& configurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
-								auto const& streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
+								auto const configurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
+								auto const streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
 								auto const& streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
 								auto const* const streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
 								if (streamPortInputDynamicModel)
@@ -163,10 +163,10 @@ public:
 
 						for (auto const& mapping : mappings)
 						{
-							auto const& clusterIndex = *mappingKV.second->sourceClusterChannelInfo.clusterIndex;
-							auto const& baseCluster = *mappingKV.second->sourceClusterChannelInfo.baseCluster;
-							auto const& clusterChannel = *mappingKV.second->sourceClusterChannelInfo.clusterChannel;
-							auto const& streamIndex = streamConnectionState.listenerStream.streamIndex;
+							auto const clusterIndex = *mappingKV.second->sourceClusterChannelInfo.clusterIndex;
+							auto const baseCluster = *mappingKV.second->sourceClusterChannelInfo.baseCluster;
+							auto const clusterChannel = *mappingKV.second->sourceClusterChannelInfo.clusterChannel;
+							auto const streamIndex = streamConnectionState.listenerStream.streamIndex;
 							if (clusterIndex + baseCluster == mapping.clusterOffset && clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamIndex)
 							{
 								// this propably needs a refresh
@@ -202,7 +202,7 @@ public:
 	/**
 	* Update the cached connection info if it's already in the map.
 	*/
-	Q_SLOT void onStreamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorType const& descriptorType, la::avdecc::entity::model::StreamPortIndex const& streamPortIndex)
+	Q_SLOT void onStreamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
 	{
 		std::set<std::pair<la::avdecc::UniqueIdentifier, ChannelIdentification>> listenerChannelsToUpdate;
 		std::set<std::pair<la::avdecc::UniqueIdentifier, ChannelIdentification>> updatedListenerChannels;

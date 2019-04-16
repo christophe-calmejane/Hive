@@ -424,10 +424,10 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 						auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo->sourceEntityId);
 						if (controlledEntity)
 						{
-							auto const& configurationIndex = connectionInfo->sourceClusterChannelInfo.configurationIndex;
-							auto const& streamPortIndex = connectionInfo->sourceClusterChannelInfo.streamPortIndex;
-							auto const& clusterIndex = connectionInfo->sourceClusterChannelInfo.clusterIndex;
-							auto const& baseCluster = connectionInfo->sourceClusterChannelInfo.baseCluster;
+							auto const configurationIndex = connectionInfo->sourceClusterChannelInfo.configurationIndex;
+							auto const streamPortIndex = connectionInfo->sourceClusterChannelInfo.streamPortIndex;
+							auto const clusterIndex = connectionInfo->sourceClusterChannelInfo.clusterIndex;
+							auto const baseCluster = connectionInfo->sourceClusterChannelInfo.baseCluster;
 							if (!connectionInfo->sourceClusterChannelInfo.forward)
 							{
 								if (configurationIndex && streamPortIndex && clusterIndex)
@@ -649,7 +649,7 @@ bool DeviceDetailsChannelTableModelPrivate::setData(QModelIndex const& index, QV
 			{
 				if (value.toString() != data(index, role))
 				{
-					auto const& sourceClusterIndex = _nodes.at(index.row()).connectionInformation->sourceClusterChannelInfo.clusterIndex;
+					auto const sourceClusterIndex = _nodes.at(index.row()).connectionInformation->sourceClusterChannelInfo.clusterIndex;
 					if (!_hasChangesMap.contains(*sourceClusterIndex))
 					{
 						_hasChangesMap.insert(*sourceClusterIndex, new QMap<DeviceDetailsChannelTableModelColumn, QVariant>());
