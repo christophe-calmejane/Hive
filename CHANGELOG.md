@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Collapse/Expand all buttons for connection matrix](https://github.com/christophe-calmejane/Hive/issues/51)
 - [Sort connection matrix by EntityID](https://github.com/christophe-calmejane/Hive/issues/59)
 - Connection matrix complete overhaul (optimization, smart connections)
+- Support for drag&drop of json virtual entity files
 
 ### Changed
 - Only displaying _Ethernet_ kind interfaces

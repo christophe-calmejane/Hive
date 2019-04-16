@@ -85,6 +85,8 @@ MainWindow::MainWindow(QWidget* parent)
 	loadSettings();
 
 	connectSignals();
+
+	setAcceptDrops(true);
 }
 
 void MainWindow::currentControllerChanged()
@@ -428,14 +430,32 @@ void MainWindow::connectSignals()
 						auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/Entity_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)), "*.json");
 						if (!filename.isEmpty())
 						{
-							auto const [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename);
+							auto [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename, false);
 							if (!error)
 							{
 								QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
 							}
 							else
 							{
-								QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+								if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex)
+								{
+									auto const choice = QMessageBox::question(this, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+									if (choice == QMessageBox::StandardButton::Yes)
+									{
+										auto const result = manager.serializeControlledEntityAsReadableJson(entityID, filename, true);
+										error = std::get<0>(result);
+										message = std::get<1>(result);
+										if (!error)
+										{
+											QMessageBox::information(this, "", "Export completed but with warnings:\n" + filename);
+										}
+										// Fallthrough to warning message
+									}
+								}
+								if (!!error)
+								{
+									QMessageBox::warning(this, "", QString("Export of EntityID %1 failed:\n%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
+								}
 							}
 						}
 					}
@@ -492,14 +512,14 @@ void MainWindow::connectSignals()
 			if (!filename.isEmpty())
 			{
 				auto& manager = avdecc::ControllerManager::getInstance();
-				auto const [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename);
+				auto [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename, false);
 				if (!error)
 				{
 					QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
 				}
 				else
 				{
-					QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+					QMessageBox::warning(this, "", QString("Export failed:\n%1").arg(message.c_str()));
 				}
 			}
 		});
@@ -688,4 +708,102 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	qApp->closeAllWindows();
 
 	QMainWindow::closeEvent(event);
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+{
+	for (auto const& u : event->mimeData()->urls())
+	{
+		auto const f = QFileInfo{ u.fileName() };
+		auto const ext = f.suffix();
+		if (ext == "json")
+		{
+			event->acceptProposedAction();
+			return;
+		}
+	}
+}
+
+void MainWindow::dropEvent(QDropEvent* event)
+{
+	auto& manager = avdecc::ControllerManager::getInstance();
+
+	auto const loadEntity = [&manager](auto const& filePath, auto const ignoreSanityChecks)
+	{
+		auto const [error, message] = manager.loadVirtualEntityFromReadableJson(filePath, ignoreSanityChecks);
+		auto msg = QString{};
+		if (!!error)
+		{
+			switch (error)
+			{
+				case la::avdecc::jsonSerializer::DeserializationError::AccessDenied:
+					msg = "Access Denied";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
+					msg = "Unsupported Dump Version";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::ParseError:
+					msg = QString("Parse Error: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::MissingKey:
+					msg = QString("Missing Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidKey:
+					msg = QString("Invalid Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidValue:
+					msg = QString("Invalid Value: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::OtherError:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::DuplicateEntityID:
+					msg = QString("An Entity already exists with the same EntityID: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotCompliant:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
+					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InternalError:
+					msg = QString("Internal Error: %1").arg(message.c_str());
+					break;
+				default:
+					AVDECC_ASSERT(false, "Unknown Error");
+					msg = "Unknown Error";
+					break;
+			}
+		}
+		return std::make_tuple(error, msg);
+	};
+
+	for (auto const& u : event->mimeData()->urls())
+	{
+		auto const f = u.toLocalFile();
+		auto const fi = QFileInfo{ f };
+		auto const ext = fi.suffix();
+		if (ext == "json")
+		{
+			auto [error, message] = loadEntity(u.toLocalFile(), false);
+			if (!!error)
+			{
+				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+				{
+					auto const choice = QMessageBox::question(this, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+					if (choice == QMessageBox::StandardButton::Yes)
+					{
+						auto const result = loadEntity(u.toLocalFile(), true);
+						error = std::get<0>(result);
+						message = std::get<1>(result);
+						// Fallthrough to warning message
+					}
+				}
+				if (!!error)
+				{
+					QMessageBox::warning(this, "Failed to load JSON entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+				}
+			}
+		}
+	}
 }

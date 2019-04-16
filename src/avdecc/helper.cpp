@@ -685,15 +685,17 @@ QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept
 		case la::avdecc::logger::Layer::Serialization:
 			return "Serialization";
 		case la::avdecc::logger::Layer::ProtocolInterface:
-			return "ProtocolInterface";
+			return "Protocol Interface";
 		case la::avdecc::logger::Layer::AemPayload:
 			return "AemPayload";
 		case la::avdecc::logger::Layer::ControllerEntity:
-			return "ControllerEntity";
+			return "Controller Entity";
 		case la::avdecc::logger::Layer::ControllerStateMachine:
-			return "ControllerStateMachine";
+			return "Controller State Machine";
 		case la::avdecc::logger::Layer::Controller:
 			return "Controller";
+		case la::avdecc::logger::Layer::JsonSerializer:
+			return "Json Serializer";
 		case la::avdecc::logger::Layer::FirstUserLayer:
 			return "Hive";
 		default:
