@@ -456,12 +456,6 @@ private:
 
 		for (auto const& entityId : _entities)
 		{
-			if (!isMediaClockDomainManagementCompatible(entityId))
-			{
-				// filter out the entities that do have aem support
-				continue;
-			}
-
 			std::vector<avdecc::mediaClock::DomainIndex> associatedDomains;
 
 			// get mc master if there is one.
