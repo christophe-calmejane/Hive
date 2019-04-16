@@ -587,7 +587,7 @@ Qt::ItemFlags DomainTreeModelPrivate::flags(QModelIndex const& index) const
 {
 	Q_Q(const DomainTreeModel);
 	if (!index.isValid())
-		return 0;
+		return Qt::ItemIsDropEnabled; // enable drop into empty space
 	if (dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer())) != nullptr)
 	{
 		// it's a domain entry
@@ -697,8 +697,8 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 	}
 	if (!domainTreeItem)
 	{
-		// return if no parent could be determined
-		return false;
+		// return true if no parent could be determined, this leads to the creation of a new domain
+		return true;
 	}
 	for (auto const& entry : jsonFormattedDataEntries)
 	{
@@ -764,8 +764,8 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction 
 	}
 	if (!domainIndex)
 	{
-		// return if no parent could be determined
-		return false;
+		// if no parent could be determined, a new domain should be created:
+		domainIndex = addNewDomain();
 	}
 	for (auto const& entry : jsonFormattedDataEntries)
 	{
