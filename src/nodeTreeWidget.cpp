@@ -417,16 +417,7 @@ private:
 
 		// Dynamic model
 		{
-			auto linkStatus = la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown;
-			try
-			{
-				linkStatus = controlledEntity->getAvbInterfaceLinkStatus(node.descriptorIndex);
-			}
-			catch (...)
-			{
-				AVDECC_ASSERT(false, "Should not happen");
-				LOG_HIVE_ERROR(QString("Visit AvbInterfaceNode %1 for %2: Exception while getting AvbInterfaceLinkStatus").arg(node.descriptorIndex).arg(avdecc::helper::uniqueIdentifierToString(controlledEntity->getEntity().getEntityID())));
-			}
+			auto linkStatus = controlledEntity->getAvbInterfaceLinkStatus(node.descriptorIndex);
 			auto* dynamicItem = new AvbInterfaceDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel, linkStatus, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
