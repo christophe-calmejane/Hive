@@ -467,7 +467,7 @@ void DomainTreeModelPrivate::handleClick(QModelIndex const& current, QModelIndex
 				auto beginIndex = index(0, static_cast<int>(DomainTreeModelColumn::MediaClockMaster), parentIndex);
 				auto endIndex = index(parentDomainTreeItem->childCount(), static_cast<int>(DomainTreeModelColumn::MediaClockMaster), parentIndex);
 				q->dataChanged(beginIndex, endIndex);
-				emit q->mcMasterSelectionChanged();
+				emit q->domainSetupChanged();
 			}
 		}
 	}
@@ -547,7 +547,7 @@ bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& v
 			if (domainTreeItem->domainSamplingRate().first != value.toInt())
 			{
 				domainTreeItem->setDomainSamplingRate(la::avdecc::entity::model::SamplingRate(value.toInt()));
-				emit q->sampleRateSettingChanged();
+				emit q->domainSetupChanged();
 				return true;
 			}
 		}
@@ -588,9 +588,16 @@ Qt::ItemFlags DomainTreeModelPrivate::flags(QModelIndex const& index) const
 	Q_Q(const DomainTreeModel);
 	if (!index.isValid())
 		return 0;
-	if (dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer())) != nullptr && index.column() == static_cast<int>(DomainTreeModelColumn::Domain))
+	if (dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer())) != nullptr)
 	{
-		return q->QAbstractItemModel::flags(index) | Qt::ItemIsEditable | Qt::ItemIsDropEnabled;
+		// it's a domain entry
+		auto flags = q->QAbstractItemModel::flags(index) | Qt::ItemIsDropEnabled;
+		if (index.column() == static_cast<int>(DomainTreeModelColumn::Domain))
+		{
+			// also it's the domain column, allow editing:
+			flags |= Qt::ItemIsEditable;
+		}
+		return flags;
 	}
 
 	return Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | q->QAbstractItemModel::flags(index);
@@ -665,6 +672,47 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 	if (!data->hasFormat("application/json"))
 		return false;
 
+	QJsonParseError parseError;
+	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
+	if (parseError.error != QJsonParseError::NoError)
+	{
+		return false;
+	}
+	auto jsonFormattedData = doc.object();
+	if (jsonFormattedData.empty() || jsonFormattedData.value("dataType") != "la::avdecc::UniqueIdentifier")
+	{
+		return false;
+	}
+
+	auto jsonFormattedDataEntries = jsonFormattedData.value("data").toArray();
+
+	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
+	if (!domainTreeItem)
+	{
+		auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
+		if (entityTreeItem)
+		{
+			domainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+		}
+	}
+	if (!domainTreeItem)
+	{
+		// return if no parent could be determined
+		return false;
+	}
+	for (auto const& entry : jsonFormattedDataEntries)
+	{
+		la::avdecc::UniqueIdentifier entityId(entry.toVariant().toULongLong());
+		for (int i = 0; i < domainTreeItem->childCount(); i++)
+		{
+			auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->child(i));
+			if (entityTreeItem && entityTreeItem->entityId() == entityId)
+			{
+				return false;
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -673,6 +721,7 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 */
 bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
 {
+	Q_Q(DomainTreeModel);
 	if (!data->hasFormat("application/json"))
 		return false;
 
@@ -722,7 +771,7 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction 
 	{
 		addEntityToDomain(*domainIndex, la::avdecc::UniqueIdentifier(entry.toVariant().toULongLong()));
 	}
-
+	emit q->domainSetupChanged();
 	return true;
 }
 
@@ -748,6 +797,7 @@ QMimeData* DomainTreeModelPrivate::mimeData(QModelIndexList const& indexes) cons
 	QJsonArray jsonFormattedDataEntries;
 
 	jsonFormattedData.insert("dataType", "la::avdecc::UniqueIdentifier");
+	jsonFormattedData.insert("dataSource", "DomainTreeModel");
 	for (QModelIndex const& index : indexes)
 	{
 		if (index.isValid())

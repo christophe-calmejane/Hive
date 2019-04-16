@@ -143,8 +143,7 @@ public:
 
 	Q_SLOT void handleClick(QModelIndex const& current, QModelIndex const& previous);
 
-	Q_SIGNAL void sampleRateSettingChanged();
-	Q_SIGNAL void mcMasterSelectionChanged();
+	Q_SIGNAL void domainSetupChanged();
 	Q_SIGNAL void triggerResizeColumns();
 	Q_SIGNAL void deselectAll();
 

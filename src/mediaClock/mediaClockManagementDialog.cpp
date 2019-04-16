@@ -99,8 +99,7 @@ public:
 
 		connect(listView_UnassignedEntities->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MediaClockManagementDialogImpl::handleUnassignedListSelectionChanged);
 		connect(treeViewMediaClockDomains->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeSelectionChanged);
-		connect(&_domainTreeModel, &DomainTreeModel::sampleRateSettingChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
-		connect(&_domainTreeModel, &DomainTreeModel::mcMasterSelectionChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
+		connect(&_domainTreeModel, &DomainTreeModel::domainSetupChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
 		connect(&_domainTreeModel, &DomainTreeModel::triggerResizeColumns, this, &MediaClockManagementDialogImpl::resizeMCTreeViewColumns);
 		connect(&_domainTreeModel, &DomainTreeModel::deselectAll, this, &MediaClockManagementDialogImpl::removeMcDomainTreeViewSelections);
 

@@ -241,6 +241,18 @@ bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::Drop
 	if (!data->hasFormat("application/json"))
 		return false;
 
+	QJsonParseError parseError;
+	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
+	if (parseError.error != QJsonParseError::NoError)
+	{
+		return false;
+	}
+	auto jsonFormattedData = doc.object();
+	if (jsonFormattedData.empty() || jsonFormattedData.value("dataType") != "la::avdecc::UniqueIdentifier" || jsonFormattedData.value("dataSource") == "UnassignedListModel")
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -305,6 +317,7 @@ QMimeData* UnassignedListModelPrivate::mimeData(QModelIndexList const& indexes) 
 	QJsonArray jsonFormattedDataEntries;
 
 	jsonFormattedData.insert("dataType", "la::avdecc::UniqueIdentifier");
+	jsonFormattedData.insert("dataSource", "UnassignedListModel");
 
 	for (QModelIndex const& index : indexes)
 	{
