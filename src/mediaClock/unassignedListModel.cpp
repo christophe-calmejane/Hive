@@ -261,6 +261,7 @@ bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::Drop
 */
 bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
 {
+	Q_Q(UnassignedListModel);
 	if (!data->hasFormat("application/json"))
 		return false;
 
@@ -291,7 +292,7 @@ bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAct
 	{
 		addEntity(la::avdecc::UniqueIdentifier(entry.toVariant().toULongLong()));
 	}
-
+	emit q->domainSetupChanged();
 	return true;
 }
 

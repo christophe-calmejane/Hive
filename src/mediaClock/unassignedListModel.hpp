@@ -63,6 +63,8 @@ public:
 	QList<la::avdecc::UniqueIdentifier> getSelectedItems(QItemSelection const& itemSelection) const;
 	QList<la::avdecc::UniqueIdentifier> getAllItems() const;
 
+	Q_SIGNAL void domainSetupChanged();
+
 private:
 	UnassignedListModelPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(UnassignedListModel)
