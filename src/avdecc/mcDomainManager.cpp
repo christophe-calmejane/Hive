@@ -461,7 +461,7 @@ private:
 			// get mc master if there is one.
 			auto mcMasterIdKV = findMediaClockMaster(entityId);
 			auto const& mcMasterId = mcMasterIdKV.first;
-			auto const& mcMasterError = mcMasterIdKV.second;
+			auto const mcMasterError = mcMasterIdKV.second;
 			if (!mcMasterError)
 			{
 				auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, mcMasterId);
@@ -478,7 +478,7 @@ private:
 				// get secondary mc master if there is one
 				auto secondaryMasterIdKV = findMediaClockMaster(entityId, true);
 				auto const& secondaryMasterId = secondaryMasterIdKV.first;
-				auto const& secondaryMasterError = secondaryMasterIdKV.second;
+				auto const secondaryMasterError = secondaryMasterIdKV.second;
 				if (secondaryMasterId) // check if the id is valid
 				{
 					if (!secondaryMasterError)
@@ -497,7 +497,7 @@ private:
 			std::set<la::avdecc::entity::model::SamplingRate> sampleRates;
 			for (auto const& entityIdKV : mappings)
 			{
-				for (auto const& entityDomainIndex : entityIdKV.second)
+				for (auto const entityDomainIndex : entityIdKV.second)
 				{
 					if (domainKV.second.getDomainIndex() == entityDomainIndex)
 					{

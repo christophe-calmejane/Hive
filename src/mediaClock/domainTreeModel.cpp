@@ -66,10 +66,10 @@ public:
 	avdecc::mediaClock::MCEntityDomainMapping createMediaClockMappings();
 
 	bool addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId);
-	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
-	void removeEntity(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId);
+	void removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
 	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);
@@ -222,7 +222,7 @@ bool DomainTreeModelPrivate::addEntityToSelection(QModelIndex const& currentInde
 * @param entityId The id of the entity to add.
 * @return		  If adding was successful.
 */
-bool DomainTreeModelPrivate::addEntityToDomain(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId)
+bool DomainTreeModelPrivate::addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId)
 {
 	Q_Q(DomainTreeModel);
 	auto* domainTreeItem = _rootItem->findDomainWithIndex(domainIndex);
@@ -277,7 +277,7 @@ QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifi
 * @param domainIndex Index of the domain to remove the entity from.
 * @param entityId	 Id of the entity to remove.
 */
-void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId)
+void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId)
 {
 	Q_Q(DomainTreeModel);
 	auto* domainItem = _rootItem->findDomainWithIndex(domainIndex);
@@ -765,7 +765,7 @@ bool DomainTreeModel::addEntityToSelection(QModelIndex const& currentIndex, la::
 * @param entityId The id of the entity to add.
 * @return If adding was successful.
 */
-bool DomainTreeModel::addEntityToDomain(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId)
+bool DomainTreeModel::addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId)
 {
 	Q_D(DomainTreeModel);
 	return d->addEntityToDomain(domainIndex, entityId);
@@ -796,7 +796,7 @@ QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifi
 * @param domainIndex Index of the domain to remove the entity from.
 * @param entityId	 Id of the entity to remove.
 */
-void DomainTreeModel::removeEntity(avdecc::mediaClock::DomainIndex const& domainIndex, la::avdecc::UniqueIdentifier const& entityId)
+void DomainTreeModel::removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId)
 {
 	Q_D(DomainTreeModel);
 	d->removeEntity(domainIndex, entityId);
