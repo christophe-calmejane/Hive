@@ -164,21 +164,26 @@ public:
 	*/
 	Q_SLOT void button_RemoveAssignmentClicked()
 	{
-		auto entityDomainInfo = _domainTreeModel.getSelectedEntity(treeViewMediaClockDomains->currentIndex());
-		if (!entityDomainInfo.first)
+		auto selectedEntities = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
+		if (selectedEntities.empty())
 		{
-			// no entity selected.
 			return;
 		}
-		// check if this entity occurs on other places in the tree.
 
-		if (!_domainTreeModel.isEntityDoubled(entityDomainInfo.second) && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainInfo.second))
+		for (auto const& selectedEntity : selectedEntities)
 		{
-			// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.
-			// If an entity cannot be added to a domain, the user should not be presented with it and then confused why he cannot use it.
-			_unassignedListModel.addEntity(entityDomainInfo.second);
+			auto const domainIndex = selectedEntity.first;
+			auto const entityId = selectedEntity.second;
+
+			// check if this entity occurs on other places in the tree.
+			if (!_domainTreeModel.isEntityDoubled(entityId) && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityId))
+			{
+				// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.
+				// If an entity cannot be added to a domain, the user should not be presented with it and then confused why he cannot use it.
+				_unassignedListModel.addEntity(entityId);
+			}
+			_domainTreeModel.removeEntity(domainIndex, entityId);
 		}
-		_domainTreeModel.removeEntity(*entityDomainInfo.first, entityDomainInfo.second);
 
 		_hasChanges = true;
 		adjustButtonStates();
@@ -204,13 +209,22 @@ public:
 	*/
 	Q_SLOT void button_RemoveClicked()
 	{
-		// remove domain
-		auto entities = _domainTreeModel.removeSelectedDomain(treeViewMediaClockDomains->currentIndex());
-
-		// add domain assigned entities back to the unassigned list.
-		for (const auto& entityId : entities)
+		auto selectedDomains = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
+		if (selectedDomains.empty())
 		{
-			_unassignedListModel.addEntity(entityId);
+			return;
+		}
+
+		for (auto const& domainIndex : selectedDomains)
+		{
+			// remove domain
+			auto entities = _domainTreeModel.removeDomain(domainIndex);
+
+			// add domain assigned entities back to the unassigned list.
+			for (const auto& entityId : entities)
+			{
+				_unassignedListModel.addEntity(entityId);
+			}
 		}
 
 		_hasChanges = true;
@@ -277,10 +291,12 @@ public:
 	*/
 	Q_SLOT void handleUnassignedListSelectionChanged()
 	{
-		auto selectedDomain = _domainTreeModel.getSelectedDomain(treeViewMediaClockDomains->currentIndex());
-		auto selectedEntity = _domainTreeModel.getSelectedEntity(treeViewMediaClockDomains->currentIndex());
+		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
+		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
+		auto const& unassignedEntitySelections = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
 
-		button_AssignToDomain->setEnabled((selectedDomain || selectedEntity.first) && !_unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection()).empty());
+		// update assign button
+		button_AssignToDomain->setEnabled(assignedDomainSelections.size() == 1 && !unassignedEntitySelections.empty());
 	}
 
 	/**
@@ -288,17 +304,18 @@ public:
 	*/
 	Q_SLOT void handleDomainTreeSelectionChanged()
 	{
-		auto selectedEntity = _domainTreeModel.getSelectedEntity(treeViewMediaClockDomains->currentIndex());
-		auto selectedDomain = _domainTreeModel.getSelectedDomain(treeViewMediaClockDomains->currentIndex());
+		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
+		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
+		auto const& unassignedEntitySelections = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
 
 		// update unassign button
-		button_RemoveAssignment->setEnabled(!!selectedEntity.first);
+		button_RemoveAssignment->setEnabled(!assignedEntitySelections.empty());
 
 		// update assign button
-		button_AssignToDomain->setEnabled((selectedDomain || selectedEntity.first) && !_unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection()).empty());
+		button_AssignToDomain->setEnabled(assignedDomainSelections.size() == 1 && !unassignedEntitySelections.empty());
 
 		// update remove button
-		button_Remove->setEnabled(!!selectedDomain);
+		button_Remove->setEnabled(!assignedDomainSelections.empty());
 	}
 
 	Q_SLOT void removeMcDomainTreeViewSelections()

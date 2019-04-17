@@ -130,11 +130,14 @@ public:
 	bool addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId);
 	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
+	QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> getSelectedEntityItems(QItemSelection const& itemSelection) const;
+	QList<avdecc::mediaClock::DomainIndex> getSelectedDomainItems(QItemSelection const& itemSelection) const;
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
 	void removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
 	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);
+	QList<la::avdecc::UniqueIdentifier> removeDomain(avdecc::mediaClock::DomainIndex domainIndex);
 	QList<la::avdecc::UniqueIdentifier> removeAllDomains();
 	bool isEntityDoubled(la::avdecc::UniqueIdentifier const& entityId) const;
 

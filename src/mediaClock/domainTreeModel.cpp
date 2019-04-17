@@ -78,10 +78,13 @@ public:
 	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
+	QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> getSelectedEntityItems(QItemSelection const& itemSelection) const;
+	QList<avdecc::mediaClock::DomainIndex> getSelectedDomainItems(QItemSelection const& itemSelection) const;
 	void removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
 	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);
+	QList<la::avdecc::UniqueIdentifier> removeDomain(avdecc::mediaClock::DomainIndex domainIndex);
 	QList<la::avdecc::UniqueIdentifier> removeAllDomains();
 	bool isEntityDoubled(la::avdecc::UniqueIdentifier const& entityId) const;
 
@@ -282,6 +285,55 @@ QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifi
 }
 
 /**
+* Gets the currently selected entities. (Extended-Selection)
+* @return Domain index and Entity id pairs of the rows that are selected.
+*/
+QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> DomainTreeModelPrivate::getSelectedEntityItems(QItemSelection const& itemSelection) const
+{
+	QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> result;
+	for (auto const& selection : itemSelection)
+	{
+		auto const& selectionIndexes = selection.indexes();
+		auto const& selectionIndexIt = selectionIndexes.begin();
+		if (selectionIndexIt != selectionIndexes.end())
+		{
+			auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(selectionIndexIt->internalPointer()));
+			if (entityTreeItem)
+			{
+				auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+				result.append(qMakePair(parentDomainTreeItem->domain().getDomainIndex(), entityTreeItem->entityId()));
+			}
+		}
+	}
+
+	return result;
+}
+
+/**
+* Gets the currently selected domains. (Extended-Selection)
+* @return Domain indices of the rows that are selected.
+*/
+QList<avdecc::mediaClock::DomainIndex> DomainTreeModelPrivate::getSelectedDomainItems(QItemSelection const& itemSelection) const
+{
+	QList<avdecc::mediaClock::DomainIndex> result;
+	for (auto const& selection : itemSelection)
+	{
+		auto const& selectionIndexes = selection.indexes();
+		auto const& selectionIndexIt = selectionIndexes.begin();
+		if (selectionIndexIt != selectionIndexes.end())
+		{
+			auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(selectionIndexIt->internalPointer()));
+			if (domainTreeItem)
+			{
+				result.append(domainTreeItem->domain().getDomainIndex());
+			}
+		}
+	}
+
+	return result;
+}
+
+/**
 * Removes an entity in a specific domain.
 * @param domainIndex Index of the domain to remove the entity from.
 * @param entityId	 Id of the entity to remove.
@@ -294,6 +346,10 @@ void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const 
 	auto* entityItem = domainItem->findEntityWithId(entityId);
 	int entityRowIndex = domainItem->indexOf(entityItem);
 
+	if (domainRowIndex == -1 || entityRowIndex == -1)
+	{
+		return;
+	}
 
 	auto domainModelIndex = index(domainRowIndex, 0, QModelIndex());
 	q->beginRemoveRows(domainModelIndex, entityRowIndex, entityRowIndex);
@@ -386,6 +442,38 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeSelectedDomain
 	{
 		auto* domainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
 		domainTreeItem->domain().setDomainIndex(i);
+	}
+
+	return entities;
+}
+
+/**
+* Removes the currently selected domain.
+* @return List containing all entity ids that were assigned to the removed domain.
+*/
+QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeDomain(avdecc::mediaClock::DomainIndex domainIndex)
+{
+	Q_Q(DomainTreeModel);
+
+	QList<la::avdecc::UniqueIdentifier> entities;
+	for (int i = _rootItem->childCount() - 1; i >= 0; i--)
+	{
+		auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(_rootItem->childAt(i)));
+		if (domainTreeItem && domainTreeItem->domain().getDomainIndex() == domainIndex)
+		{
+			// after deleting the domain all entities should be returned to the unassigned list.
+			for (int j = 0; j < _rootItem->childAt(i)->childCount(); j++)
+			{
+				auto* entityTreeItem = static_cast<EntityTreeItem*>(_rootItem->childAt(i)->childAt(j));
+				if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
+				{
+					entities.append(entityTreeItem->entityId());
+				}
+			}
+			q->beginRemoveRows(QModelIndex(), i, i);
+			_rootItem->removeChildAt(i);
+			q->endRemoveRows();
+		}
 	}
 
 	return entities;
@@ -638,7 +726,6 @@ bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& p
 		return false;
 	}
 
-	q->beginRemoveRows(parent, row, row + count - 1);
 	for (int i = row + count - 1; i >= row; i--)
 	{
 		auto entityItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
@@ -648,7 +735,6 @@ bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& p
 	{
 		domainTreeItem->setDefaultMcMaster();
 	}
-	q->endRemoveRows();
 
 	domainTreeItem->reevaluateDomainSampleRate();
 	emit q->deselectAll();
@@ -1060,6 +1146,18 @@ QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifi
 	return d->getSelectedEntity(currentIndex);
 }
 
+QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> DomainTreeModel::getSelectedEntityItems(QItemSelection const& itemSelection) const
+{
+	Q_D(const DomainTreeModel);
+	return d->getSelectedEntityItems(itemSelection);
+}
+
+QList<avdecc::mediaClock::DomainIndex> DomainTreeModel::getSelectedDomainItems(QItemSelection const& itemSelection) const
+{
+	Q_D(const DomainTreeModel);
+	return d->getSelectedDomainItems(itemSelection);
+}
+
 /**
 * Removes an entity in a specific domain.
 * @param domainIndex Index of the domain to remove the entity from.
@@ -1098,6 +1196,12 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModel::removeSelectedDomain(QModel
 {
 	Q_D(DomainTreeModel);
 	return d->removeSelectedDomain(currentIndex);
+}
+
+QList<la::avdecc::UniqueIdentifier> DomainTreeModel::removeDomain(avdecc::mediaClock::DomainIndex domainIndex)
+{
+	Q_D(DomainTreeModel);
+	return d->removeDomain(domainIndex);
 }
 
 /**
