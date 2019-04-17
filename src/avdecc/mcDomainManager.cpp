@@ -25,8 +25,6 @@
 #include <optional>
 #include <unordered_set>
 
-#include <QDebug>
-
 namespace avdecc
 {
 namespace mediaClock
@@ -2110,10 +2108,8 @@ void AsyncParallelCommandSet::invokeCommandCompleted(int commandIndex, bool erro
 		_commandCompletionCounter++;
 	}
 
-	qDebug() << "before command set completed: " << commandIndex << _commandCompletionCounter << _errorOccured;
 	if (_commandCompletionCounter >= static_cast<int>(_commands.size()))
 	{
-		qDebug() << "command set completed: " << commandIndex << _commandCompletionCounter << _errorOccured;
 		emit commandSetCompleted(_errors);
 	}
 }
@@ -2161,8 +2157,6 @@ void SequentialAsyncCommandExecuter::start()
 				progressUpdate(_completedCommandCount, _totalCommandCount);
 
 				// start next set
-
-				qDebug() << "command chain next block: " << _completedCommandCount << _totalCommandCount << _errors.size();
 				_currentCommandSet++;
 				start();
 			});
