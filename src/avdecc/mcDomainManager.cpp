@@ -734,8 +734,13 @@ private:
 		auto configuredClockSourceStreamIndex = getActiveInputClockStreamIndex(entityId);
 		if (configuredClockSourceStreamIndex)
 		{
+			auto hasSingleNonredundantInputStream = (activeConfiguration.streamInputs.size() == 1 && activeConfiguration.redundantStreamInputs.empty());
+			auto hasSingleRedundantInputStream = (activeConfiguration.redundantStreamInputs.size() == 1 && activeConfiguration.streamInputs.size() == 2);
+
 			// A 'single input stream entity' can either have one redundant and no nonredundant or no redundant an one nonredundant input stream
-			auto hasSingleInputStream = (activeConfiguration.redundantStreamInputs.size() == 1 && activeConfiguration.streamInputs.empty()) || (activeConfiguration.streamInputs.size() == 1 && activeConfiguration.redundantStreamInputs.empty());
+			auto hasSingleInputStream = hasSingleNonredundantInputStream || hasSingleRedundantInputStream;
+
+			// For both redundant and non redundant entities, the streamInputs map contains all streams that can potentially be used as clock source.
 			auto usesStreamInputAsClock = (activeConfiguration.streamInputs.count(*configuredClockSourceStreamIndex));
 
 			return !hasSingleInputStream || !usesStreamInputAsClock;
