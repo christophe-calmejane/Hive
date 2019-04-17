@@ -456,18 +456,12 @@ private:
 
 		for (auto const& entityId : _entities)
 		{
-			if (!isMediaClockDomainManagementCompatible(entityId))
-			{
-				// filter out the entities that do have aem support
-				continue;
-			}
-
 			std::vector<avdecc::mediaClock::DomainIndex> associatedDomains;
 
 			// get mc master if there is one.
 			auto mcMasterIdKV = findMediaClockMaster(entityId);
 			auto const& mcMasterId = mcMasterIdKV.first;
-			auto const& mcMasterError = mcMasterIdKV.second;
+			auto const mcMasterError = mcMasterIdKV.second;
 			if (!mcMasterError)
 			{
 				auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, mcMasterId);
@@ -484,7 +478,7 @@ private:
 				// get secondary mc master if there is one
 				auto secondaryMasterIdKV = findMediaClockMaster(entityId, true);
 				auto const& secondaryMasterId = secondaryMasterIdKV.first;
-				auto const& secondaryMasterError = secondaryMasterIdKV.second;
+				auto const secondaryMasterError = secondaryMasterIdKV.second;
 				if (secondaryMasterId) // check if the id is valid
 				{
 					if (!secondaryMasterError)
@@ -503,7 +497,7 @@ private:
 			std::set<la::avdecc::entity::model::SamplingRate> sampleRates;
 			for (auto const& entityIdKV : mappings)
 			{
-				for (auto const& entityDomainIndex : entityIdKV.second)
+				for (auto const entityDomainIndex : entityIdKV.second)
 				{
 					if (domainKV.second.getDomainIndex() == entityDomainIndex)
 					{
@@ -738,8 +732,10 @@ private:
 		auto configuredClockSourceStreamIndex = getActiveInputClockStreamIndex(entityId);
 		if (configuredClockSourceStreamIndex)
 		{
-			auto hasSingleInputStream = (activeConfiguration.streamInputs.size() == 1);
+			// A 'single input stream entity' can either have one redundant and no nonredundant or no redundant an one nonredundant input stream
+			auto hasSingleInputStream = (activeConfiguration.redundantStreamInputs.size() == 1 && activeConfiguration.streamInputs.empty()) || (activeConfiguration.streamInputs.size() == 1 && activeConfiguration.redundantStreamInputs.empty());
 			auto usesStreamInputAsClock = (activeConfiguration.streamInputs.count(*configuredClockSourceStreamIndex));
+
 			return !hasSingleInputStream || !usesStreamInputAsClock;
 		}
 
