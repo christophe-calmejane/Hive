@@ -705,6 +705,7 @@ public:
 		_hasChangesByUser = false;
 		updateButtonStates();
 		_activeConfigurationIndex = std::nullopt;
+		_userSelectedLatency = std::nullopt;
 
 		_deviceDetailsChannelTableModelTransmit.resetChangedData();
 		_deviceDetailsChannelTableModelTransmit.removeAllNodes();
@@ -766,6 +767,7 @@ private:
 				latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
 			}
 
+			const QSignalBlocker blocker(comboBox_PredefinedPT);
 			if (latency == std::nullopt)
 			{
 				comboBox_PredefinedPT->setCurrentIndex(0);
