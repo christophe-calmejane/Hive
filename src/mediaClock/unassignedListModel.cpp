@@ -290,7 +290,7 @@ bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAct
 
 	for (auto const& entry : jsonFormattedDataEntries)
 	{
-		addEntity(la::avdecc::UniqueIdentifier(entry.toVariant().toULongLong()));
+		addEntity(la::avdecc::UniqueIdentifier(static_cast<qint64>(entry.toDouble()))); // ::toDouble is used, since QJsonValue(qint64) constructor internally creates a double value, which is what happens when mimeData is created when drag is started.
 	}
 	emit q->domainSetupChanged();
 	return true;

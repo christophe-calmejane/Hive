@@ -788,7 +788,7 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 	}
 	for (auto const& entry : jsonFormattedDataEntries)
 	{
-		la::avdecc::UniqueIdentifier entityId(entry.toVariant().toULongLong());
+		la::avdecc::UniqueIdentifier entityId(static_cast<qint64>(entry.toDouble())); // ::toDouble is used, since QJsonValue(qint64) constructor internally creates a double value, which is what happens when mimeData is created when drag is started.
 		for (int i = 0; i < domainTreeItem->childCount(); i++)
 		{
 			auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->child(i));
@@ -855,7 +855,7 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction 
 	}
 	for (auto const& entry : jsonFormattedDataEntries)
 	{
-		addEntityToDomain(*domainIndex, la::avdecc::UniqueIdentifier(entry.toVariant().toULongLong()));
+		addEntityToDomain(*domainIndex, la::avdecc::UniqueIdentifier(entry.toDouble())); // ::toDouble is used, since QJsonValue(qint64) constructor internally creates a double value, which is what happens when mimeData is created when drag is started.
 	}
 	emit q->domainSetupChanged();
 	return true;
