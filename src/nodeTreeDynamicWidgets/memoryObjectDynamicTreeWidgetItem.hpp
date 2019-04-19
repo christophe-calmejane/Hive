@@ -30,7 +30,7 @@
 class MemoryObjectDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	MemoryObjectDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::controller::model::MemoryObjectNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
+	MemoryObjectDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::entity::model::MemoryObjectNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
 
 private:
 	void updateMemoryObjectLength(std::uint64_t const memoryObjectLength);

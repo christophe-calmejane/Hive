@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Entity and Full Network export as readable json
 - Strings descriptor displayed
 - Entity descriptor counters
+- Detection of arriving and departing network interfaces (and link status)
 
 ### Changed
 - Only displaying _Ethernet_ kind interfaces

@@ -107,7 +107,7 @@ void TalkerStreamConnectionWidget::updateData()
 			auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, _listenerConnection.streamIndex);
 			auto const* const dynamicModel = streamNode.dynamicModel;
 
-			if (dynamicModel->connectionState.state != la::avdecc::controller::model::StreamConnectionState::State::NotConnected)
+			if (dynamicModel->connectionState.state != la::avdecc::entity::model::StreamConnectionState::State::NotConnected)
 			{
 				if (dynamicModel->connectionState.talkerStream == _talkerConnection)
 				{

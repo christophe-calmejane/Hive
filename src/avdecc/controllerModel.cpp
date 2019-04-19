@@ -282,7 +282,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					try
 					{
 						auto const milanInfo = *controlledEntity->getMilanInfo();
-						if ((milanInfo.featuresFlags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
+						if (milanInfo.featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
 						{
 							return _compatibilityImages[4];
 						}

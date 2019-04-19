@@ -61,12 +61,12 @@ private:
 class StreamInputCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget* parent = nullptr);
+	StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters, QTreeWidget* parent = nullptr);
 
 	void setStreamInputErrorCounterFlags(la::avdecc::entity::StreamInputCounterValidFlags const& flags);
 
 private:
-	void updateCounters(la::avdecc::controller::model::StreamInputCounters const& counters);
+	void updateCounters(la::avdecc::entity::model::StreamInputCounters const& counters);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::StreamIndex const _streamIndex{ 0u };

@@ -713,7 +713,7 @@ public:
 		}
 	}
 
-	Q_SLOT void streamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& state)
+	Q_SLOT void streamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& state)
 	{
 		auto const entityID = state.listenerStream.entityID;
 		auto const streamIndex = state.listenerStream.streamIndex;

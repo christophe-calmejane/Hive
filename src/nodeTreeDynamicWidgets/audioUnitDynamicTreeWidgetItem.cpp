@@ -23,7 +23,7 @@
 
 Q_DECLARE_METATYPE(la::avdecc::entity::model::SamplingRate)
 
-AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::controller::model::AudioUnitNodeStaticModel const* const staticModel, la::avdecc::controller::model::AudioUnitNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
+AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::AudioUnitNodeStaticModel const* const staticModel, la::avdecc::entity::model::AudioUnitNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _audioUnitIndex(audioUnitIndex)

@@ -34,12 +34,12 @@ class ListenerStreamConnectionWidget : public QWidget
 {
 	Q_OBJECT
 public:
-	ListenerStreamConnectionWidget(la::avdecc::controller::model::StreamConnectionState const& state, QWidget* parent = nullptr);
+	ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamConnectionState const& state, QWidget* parent = nullptr);
 
 private:
 	void updateData();
 
-	la::avdecc::controller::model::StreamConnectionState _state{};
+	la::avdecc::entity::model::StreamConnectionState _state{};
 
 	QHBoxLayout _layout{ this };
 	QLabel _streamConnectionLabel{ this };

@@ -23,6 +23,8 @@
 #include <QFile>
 #include <QTextBrowser>
 #include <QDateTime>
+#include <QAbstractListModel>
+#include <QVector>
 
 #ifdef DEBUG
 #	include <QFileInfo>
@@ -44,6 +46,8 @@
 #include "entityLogoCache.hpp"
 
 #include "updater/updater.hpp"
+
+#include <la/avdecc/networkInterfaceHelper.hpp>
 
 #include <mutex>
 #include <memory>
@@ -76,7 +80,7 @@ MainWindow::MainWindow(QWidget* parent)
 	createControllerView();
 
 	populateProtocolComboBox();
-	populateInterfaceComboBox();
+	initInterfaceComboBox();
 
 	loadSettings();
 
@@ -86,17 +90,17 @@ MainWindow::MainWindow(QWidget* parent)
 void MainWindow::currentControllerChanged()
 {
 	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
-	auto const interfaceName = _interfaceComboBox.currentData().toString();
+	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.setValue(settings::ProtocolType, _protocolComboBox.currentText());
-	settings.setValue(settings::InterfaceName, _interfaceComboBox.currentText());
+	settings.setValue(settings::InterfaceID, interfaceID);
 
 	try
 	{
 		// Create a new Controller
 		auto& manager = avdecc::ControllerManager::getInstance();
-		manager.createController(protocolType, interfaceName, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		manager.createController(protocolType, interfaceID, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
@@ -123,6 +127,7 @@ void MainWindow::currentControlledEntityChanged(QModelIndex const& index)
 	}
 }
 
+// Private methods
 void MainWindow::registerMetaTypes()
 {
 	//
@@ -236,17 +241,13 @@ void MainWindow::populateProtocolComboBox()
 	}
 }
 
-void MainWindow::populateInterfaceComboBox()
+void MainWindow::initInterfaceComboBox()
 {
-	la::avdecc::networkInterface::enumerateInterfaces(
-		[this](la::avdecc::networkInterface::Interface const& networkInterface)
-		{
-			// Only display Ethernet interfaces
-			if (networkInterface.type == la::avdecc::networkInterface::Interface::Type::Ethernet && networkInterface.isActive)
-			{
-				_interfaceComboBox.addItem(QString::fromStdString(networkInterface.alias), QString::fromStdString(networkInterface.name));
-			}
-		});
+	_networkInterfaceModelProxy.setSourceModel(&_networkInterfaceModel);
+	_networkInterfaceModelProxy.setSortRole(Qt::UserRole);
+	_networkInterfaceModelProxy.sort(0, Qt::AscendingOrder);
+
+	_interfaceComboBox.setModel(&_networkInterfaceModelProxy);
 }
 
 void MainWindow::loadSettings()
@@ -256,7 +257,15 @@ void MainWindow::loadSettings()
 	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());
 
 	_protocolComboBox.setCurrentText(settings.getValue(settings::ProtocolType).toString());
-	_interfaceComboBox.setCurrentText(settings.getValue(settings::InterfaceName).toString());
+	auto const networkInterfaceIndex = _networkInterfaceModel.indexOf(settings.getValue(settings::InterfaceID).toString().toStdString());
+	if (!networkInterfaceIndex.isValid() || !_networkInterfaceModel.isEnabled(networkInterfaceIndex))
+	{
+		_interfaceComboBox.setCurrentIndex(-1);
+	}
+	else
+	{
+		_interfaceComboBox.setCurrentIndex(_networkInterfaceModelProxy.mapFromSource(networkInterfaceIndex).row());
+	}
 
 	currentControllerChanged();
 
@@ -272,7 +281,7 @@ void MainWindow::loadSettings()
 void MainWindow::connectSignals()
 {
 	connect(&_protocolComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
-	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
+	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);

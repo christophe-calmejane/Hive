@@ -82,7 +82,7 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept
 QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcept;
-QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) noexcept;
 
 QString probingStatusToString(la::avdecc::entity::model::ProbingStatus const status) noexcept;
 
