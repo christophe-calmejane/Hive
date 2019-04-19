@@ -20,6 +20,11 @@
 #include "mediaClock/unassignedListModel.hpp"
 
 #include <QMenu>
+#include <QMimeData>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+
 
 #include "avdecc/mcDomainManager.hpp"
 #include "avdecc/helper.hpp"
@@ -44,11 +49,17 @@ public:
 	int rowCount(QModelIndex const& parent) const;
 	QVariant data(QModelIndex const& index, int role) const;
 	Qt::ItemFlags flags(QModelIndex const& index) const;
+	bool removeRows(int row, int count, const QModelIndex& parent);
+	Qt::DropActions supportedDropActions() const;
+	bool canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const;
+	bool dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent);
+	QStringList mimeTypes() const;
+	QMimeData* mimeData(QModelIndexList const& indexes) const;
 
 	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
 	QList<la::avdecc::UniqueIdentifier> getSelectedItems(QItemSelection const& itemSelection) const;
-	void removeEntity(const la::avdecc::UniqueIdentifier& entityId);
-	void addEntity(const la::avdecc::UniqueIdentifier& entityId);
+	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
+	void addEntity(la::avdecc::UniqueIdentifier const& entityId);
 
 	QList<la::avdecc::UniqueIdentifier> getAllItems() const;
 
@@ -191,8 +202,136 @@ Qt::ItemFlags UnassignedListModelPrivate::flags(QModelIndex const& index) const
 {
 	Q_Q(const UnassignedListModel);
 	if (!index.isValid())
-		return 0;
-	return q->QAbstractItemModel::flags(index);
+		return Qt::ItemIsDropEnabled; // enable drop into empty space
+	return Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled | q->QAbstractItemModel::flags(index);
+}
+
+/**
+* Removes rows from the model. (Used by drag&drop mechanisms)
+*/
+bool UnassignedListModelPrivate::removeRows(int row, int count, QModelIndex const& parent)
+{
+	Q_Q(UnassignedListModel);
+	if (row < 0 || row + count > _entities.size())
+	{
+		return false;
+	}
+	q->beginRemoveRows(parent, row, row + count - 1);
+	for (int i = row + count - 1; i >= row; i--)
+	{
+		_entities.removeAt(i);
+	}
+	q->endRemoveRows();
+	return true;
+}
+
+/**
+* Gets the supported drop actions of this model. We only want to move.
+*/
+Qt::DropActions UnassignedListModelPrivate::supportedDropActions() const
+{
+	return Qt::MoveAction;
+}
+
+/**
+* Checks if the given mime data can be dropped into this model.
+*/
+bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
+{
+	if (!data->hasFormat("application/json"))
+		return false;
+
+	QJsonParseError parseError;
+	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
+	if (parseError.error != QJsonParseError::NoError)
+	{
+		return false;
+	}
+	auto jsonFormattedData = doc.object();
+	if (jsonFormattedData.empty() || jsonFormattedData.value("dataType") != "la::avdecc::UniqueIdentifier" || jsonFormattedData.value("dataSource") == "UnassignedListModel")
+	{
+		return false;
+	}
+
+	return true;
+}
+
+/**
+* Adds the given data (entity ids) to this model and returns true if successful.
+*/
+bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
+{
+	Q_Q(UnassignedListModel);
+	if (!data->hasFormat("application/json"))
+		return false;
+
+	int beginRow;
+
+	if (row != -1)
+		beginRow = row;
+	else if (parent.isValid())
+		beginRow = parent.row();
+	else
+		beginRow = rowCount(QModelIndex());
+
+	int rows = 0;
+	QJsonParseError parseError;
+	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
+	if (parseError.error != QJsonParseError::NoError)
+	{
+		return false;
+	}
+	auto jsonFormattedData = doc.object();
+	if (jsonFormattedData.empty() || jsonFormattedData.value("dataType") != "la::avdecc::UniqueIdentifier")
+	{
+		return false;
+	}
+	auto jsonFormattedDataEntries = jsonFormattedData.value("data").toArray();
+
+	for (auto const& entry : jsonFormattedDataEntries)
+	{
+		addEntity(la::avdecc::UniqueIdentifier(static_cast<qint64>(entry.toDouble()))); // ::toDouble is used, since QJsonValue(qint64) constructor internally creates a double value, which is what happens when mimeData is created when drag is started.
+	}
+	emit q->domainSetupChanged();
+	return true;
+}
+
+/**
+* Gets the supported mime types. (Json)
+*/
+QStringList UnassignedListModelPrivate::mimeTypes() const
+{
+	QStringList types;
+	types << "application/json";
+	return types;
+}
+
+/**
+* Gets the entity ids as mime data.
+*/
+QMimeData* UnassignedListModelPrivate::mimeData(QModelIndexList const& indexes) const
+{
+	QMimeData* mimeData = new QMimeData();
+
+	QJsonDocument doc;
+	QJsonObject jsonFormattedData;
+	QJsonArray jsonFormattedDataEntries;
+
+	jsonFormattedData.insert("dataType", "la::avdecc::UniqueIdentifier");
+	jsonFormattedData.insert("dataSource", "UnassignedListModel");
+
+	for (QModelIndex const& index : indexes)
+	{
+		if (index.isValid())
+		{
+			jsonFormattedDataEntries.append(QJsonValue((qint64)_entities.at(index.row()).getValue()));
+		}
+	}
+	jsonFormattedData.insert("data", jsonFormattedDataEntries);
+	doc.setObject(jsonFormattedData);
+
+	mimeData->setData("application/json", doc.toJson());
+	return mimeData;
 }
 
 /* ************************************************************ */
@@ -223,6 +362,42 @@ int UnassignedListModel::rowCount(QModelIndex const& parent) const
 {
 	Q_D(const UnassignedListModel);
 	return d->rowCount(parent);
+}
+
+Qt::DropActions UnassignedListModel::supportedDropActions() const
+{
+	Q_D(const UnassignedListModel);
+	return d->supportedDropActions();
+}
+
+bool UnassignedListModel::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
+{
+	Q_D(const UnassignedListModel);
+	return d->canDropMimeData(data, action, row, column, parent);
+}
+
+bool UnassignedListModel::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
+{
+	Q_D(UnassignedListModel);
+	return d->dropMimeData(data, action, row, column, parent);
+}
+
+bool UnassignedListModel::removeRows(int row, int count, const QModelIndex& parent)
+{
+	Q_D(UnassignedListModel);
+	return d->removeRows(row, count, parent);
+}
+
+QStringList UnassignedListModel::mimeTypes() const
+{
+	Q_D(const UnassignedListModel);
+	return d->mimeTypes();
+}
+
+QMimeData* UnassignedListModel::mimeData(const QModelIndexList& indexes) const
+{
+	Q_D(const UnassignedListModel);
+	return d->mimeData(indexes);
 }
 
 /**

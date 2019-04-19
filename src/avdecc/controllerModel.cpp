@@ -181,19 +181,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 
 	auto const column = static_cast<ControllerModel::Column>(index.column());
 
-	if (role == Qt::FontRole && column == ControllerModel::Column::MediaClockMasterId)
-	{
-		// Self MCM
-		auto const clockMaster = clockConnectionManager.getMediaClockMaster(entityID);
-		auto const error = clockMaster.second;
-		if (!error && clockMaster.first == entityID)
-		{
-			QFont font;
-			font.setBold(true);
-			return font;
-		}
-	}
-	else if (role == Qt::DisplayRole)
+	if (role == Qt::DisplayRole)
 	{
 		auto const& entity = controlledEntity->getEntity();
 
@@ -280,6 +268,11 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				}
 				else
 				{
+					// Self MCM
+					if (clockMaster.first == entityID)
+					{
+						return "Self";
+					}
 					return helper::uniqueIdentifierToString(clockMaster.first);
 				}
 			}

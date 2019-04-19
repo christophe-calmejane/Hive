@@ -45,11 +45,16 @@ public:
 	UnassignedListModel(QObject* parent = nullptr);
 	~UnassignedListModel();
 
+	QStringList mimeTypes() const override;
+	QMimeData* mimeData(const QModelIndexList& indexes) const override;
+
 	QVariant data(QModelIndex const& index, int role) const override;
 	Qt::ItemFlags flags(QModelIndex const& index) const override;
 	int rowCount(QModelIndex const& parent = QModelIndex()) const override;
-
-	void registerUiWidget(QListView* view);
+	Qt::DropActions supportedDropActions() const override;
+	bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
+	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
+	bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
 
 	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
 
@@ -57,6 +62,8 @@ public:
 	void addEntity(la::avdecc::UniqueIdentifier const& entityId);
 	QList<la::avdecc::UniqueIdentifier> getSelectedItems(QItemSelection const& itemSelection) const;
 	QList<la::avdecc::UniqueIdentifier> getAllItems() const;
+
+	Q_SIGNAL void domainSetupChanged();
 
 private:
 	UnassignedListModelPrivate* const d_ptr{ nullptr };

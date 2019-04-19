@@ -118,17 +118,26 @@ public:
 	QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 	QModelIndex index(int row, int column, QModelIndex const& parent = QModelIndex()) const override;
 	QModelIndex parent(QModelIndex const& index) const override;
+	bool removeRows(int row, int count, QModelIndex const& parent) override;
 	int rowCount(QModelIndex const& parent = QModelIndex()) const override;
-	int columnCount(QModelIndex const& parent = QModelIndex()) const override;
+	int columnCount(QModelIndex const& parent) const;
+	QStringList mimeTypes() const override;
+	QMimeData* mimeData(const QModelIndexList& indexes) const override;
+	Qt::DropActions supportedDropActions() const override;
+	bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
+	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
 
 	bool addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId);
 	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	std::optional<avdecc::mediaClock::DomainIndex> getSelectedDomain(QModelIndex const& currentIndex) const;
+	QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> getSelectedEntityItems(QItemSelection const& itemSelection) const;
+	QList<avdecc::mediaClock::DomainIndex> getSelectedDomainItems(QItemSelection const& itemSelection) const;
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
 	void removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
 	QList<la::avdecc::UniqueIdentifier> removeSelectedDomain(QModelIndex const& currentIndex);
+	QList<la::avdecc::UniqueIdentifier> removeDomain(avdecc::mediaClock::DomainIndex domainIndex);
 	QList<la::avdecc::UniqueIdentifier> removeAllDomains();
 	bool isEntityDoubled(la::avdecc::UniqueIdentifier const& entityId) const;
 
@@ -137,9 +146,9 @@ public:
 
 	Q_SLOT void handleClick(QModelIndex const& current, QModelIndex const& previous);
 
-	Q_SIGNAL void sampleRateSettingChanged();
-	Q_SIGNAL void mcMasterSelectionChanged();
+	Q_SIGNAL void domainSetupChanged();
 	Q_SIGNAL void triggerResizeColumns();
+	Q_SIGNAL void deselectAll();
 
 protected:
 private:

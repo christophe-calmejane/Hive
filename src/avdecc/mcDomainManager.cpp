@@ -313,7 +313,6 @@ private:
 
 			try
 			{
-				auto const& entityModel = controlledEntity->getEntityNode();
 				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 				auto const activeConfigIndex = configNode.descriptorIndex;
 
@@ -393,7 +392,6 @@ private:
 									keepSearching = false;
 									return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
 								}
-								auto connectedTalkerStreamIndex = clockStreamDynModel->connectionState.talkerStream.streamIndex;
 								if (searchedEntityIds.count(connectedTalker))
 								{
 									// recusion of entity clock stream connections detected
@@ -732,8 +730,13 @@ private:
 		auto configuredClockSourceStreamIndex = getActiveInputClockStreamIndex(entityId);
 		if (configuredClockSourceStreamIndex)
 		{
+			auto hasSingleNonredundantInputStream = (activeConfiguration.streamInputs.size() == 1 && activeConfiguration.redundantStreamInputs.empty());
+			auto hasSingleRedundantInputStream = (activeConfiguration.redundantStreamInputs.size() == 1 && activeConfiguration.streamInputs.size() == 2);
+
 			// A 'single input stream entity' can either have one redundant and no nonredundant or no redundant an one nonredundant input stream
-			auto hasSingleInputStream = (activeConfiguration.redundantStreamInputs.size() == 1 && activeConfiguration.streamInputs.empty()) || (activeConfiguration.streamInputs.size() == 1 && activeConfiguration.redundantStreamInputs.empty());
+			auto hasSingleInputStream = hasSingleNonredundantInputStream || hasSingleRedundantInputStream;
+
+			// For both redundant and non redundant entities, the streamInputs map contains all streams that can potentially be used as clock source.
 			auto usesStreamInputAsClock = (activeConfiguration.streamInputs.count(*configuredClockSourceStreamIndex));
 
 			return !hasSingleInputStream || !usesStreamInputAsClock;
@@ -767,7 +770,7 @@ private:
 				}
 			}
 		}
-		else if (sizeOldDomainIndexes == 0 && sizeNewDomainIndexes > 0 || sizeOldDomainIndexes > 0 && sizeNewDomainIndexes == 0)
+		else if ((sizeOldDomainIndexes == 0 && sizeNewDomainIndexes > 0) || (sizeOldDomainIndexes > 0 && sizeNewDomainIndexes == 0))
 		{
 			// if one of the lists is empty while the other isn't we have a change on the mc master. (Indeterminable -> ID or vice versa)
 			return true;
@@ -1748,7 +1751,6 @@ private:
 		for (auto const& entityDomainKV : currentMCDomainMapping.getEntityMediaClockMasterMappings())
 		{
 			auto const entityId = entityDomainKV.first;
-			auto const& domainIdxs = entityDomainKV.second;
 			auto const oldDomainIndexesIterator = previousMCMasterMappings.find(entityId);
 			if (oldDomainIndexesIterator != previousMCMasterMappings.end())
 			{
@@ -1756,7 +1758,7 @@ private:
 				{
 					changes.push_back(entityId);
 				}
-				else if (previousErrors.count(entityId) > 0 && currentErrors.count(entityId) > 0 && previousErrors.at(entityId) != currentErrors.at(entityId) || previousErrors.count(entityId) != currentErrors.count(entityId))
+				else if ((previousErrors.count(entityId) > 0 && currentErrors.count(entityId) > 0 && previousErrors.at(entityId) != currentErrors.at(entityId)) || previousErrors.count(entityId) != currentErrors.count(entityId))
 				{
 					// if the error type changed add the entity to the changes list as well.
 					changes.push_back(entityId);
