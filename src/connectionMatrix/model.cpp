@@ -27,6 +27,10 @@
 #	include <QDebug>
 #endif
 
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
+#include "toolkit/material/color.hpp"
+#endif
+
 #ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
 #	error "Hive requires Redundancy Feature to be enabled in AVDECC Library"
 #endif // ENABLE_AVDECC_FEATURE_REDUNDANCY
@@ -62,6 +66,7 @@ using NodeSectionMap = std::unordered_map<Node*, int>;
 
 #if ENABLE_CONNECTION_MATRIX_TOOLTIP
 
+// Converts IntersectionData::Type to string
 QString typeToString(Model::IntersectionData::Type const type)
 {
 	switch (type)
@@ -94,6 +99,7 @@ QString typeToString(Model::IntersectionData::Type const type)
 	}
 }
 
+// Converts IntersectionData::State to string
 QString stateToString(Model::IntersectionData::State const state)
 {
 	switch (state)
@@ -110,6 +116,7 @@ QString stateToString(Model::IntersectionData::State const state)
 	}
 }
 
+// Converts IntersectionData::Flags to string
 QString flagsToString(Model::IntersectionData::Flags const& flags)
 {
 	QStringList stringList;
@@ -132,6 +139,7 @@ QString flagsToString(Model::IntersectionData::Flags const& flags)
 	return stringList.join(" | ");
 }
 
+// Builds string representation of IntersectionData
 QString intersectionDataToString(Model::IntersectionData const& intersectionData)
 {
 	auto const type = typeToString(intersectionData.type);
@@ -167,7 +175,7 @@ void insertNodes(std::vector<Node*>& list, Node* node)
 #endif
 }
 
-// Range vector removal
+// Removes [first, last] items from list
 void removeNodes(Nodes& list, int first, int last)
 {
 	auto const from = std::next(std::begin(list), first);
@@ -207,30 +215,7 @@ int absoluteChildrenCount(Node* node)
 	return count;
 }
 
-// Builds and returns an EntitySectionMap from nodes
-EntitySectionMap buildEntitySectionMap(Nodes const& nodes)
-{
-	EntitySectionMap sectionMap;
-
-	for (auto section = 0u; section < nodes.size(); ++section)
-	{
-		auto* node = nodes[section];
-		if (node->type() == Node::Type::Entity)
-		{
-#if ENABLE_CONNECTION_MATRIX_DEBUG
-			qDebug() << "buildEntitySectionMap" << node->name() << "at section" << section;
-#endif
-
-			auto const [it, result] = sectionMap.insert(std::make_pair(node->entityID(), section));
-
-			assert(result);
-		}
-	}
-
-	return sectionMap;
-}
-
-// Build and returns a StreamSectionMap from nodes
+// Build and returns a StreamSectionMap from nodes (quick access map for stream nodes)
 StreamSectionMap buildStreamSectionMap(Nodes const& nodes)
 {
 	StreamSectionMap sectionMap;
@@ -257,7 +242,7 @@ StreamSectionMap buildStreamSectionMap(Nodes const& nodes)
 	return sectionMap;
 }
 
-// Build and returns a NodeSectionMap from nodes
+// Build and returns a NodeSectionMap from nodes (quick access map for nodes)
 NodeSectionMap buildNodeSectionMap(Nodes const& nodes)
 {
 	NodeSectionMap sectionMap;
@@ -504,7 +489,7 @@ public:
 		return talkerGrandMasterID == listenerGrandMasterID;
 	}
 
-	// Determines intersection type according to talker and listener
+	// Determines intersection type according to talker and listener nodes
 	Model::IntersectionData::Type determineIntersectionType(Node* talker, Node* listener) const
 	{
 		assert(talker);
@@ -589,7 +574,7 @@ public:
 		return Model::IntersectionData::Type::None;
 	}
 
-	// Initializes static intersection data
+	// Initializes intersection data
 	void initializeIntersectionData(Node* talker, Node* listener, Model::IntersectionData& intersectionData)
 	{
 		assert(talker);
@@ -1055,7 +1040,7 @@ public:
 		}
 	}
 
-	// Insertion / removal helpers
+	// Cache update helpers
 
 	void rebuildTalkerSectionCache()
 	{
@@ -1069,6 +1054,7 @@ public:
 		_listenerNodeSectionMap = priv::buildNodeSectionMap(_listenerNodes);
 	}
 
+	// Build talker node hierarchy
 	Node* buildTalkerNode(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
 	{
 		try
@@ -1132,6 +1118,7 @@ public:
 		}
 	}
 
+	// Build listener node hierarchy
 	Node* buildListenerNode(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
 	{
 		try
@@ -1195,6 +1182,7 @@ public:
 		}
 	}
 
+	// Build and add talker node hierarchy
 	void addTalker(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
 	{
 		auto* node = buildTalkerNode(controlledEntity, entityID, configurationNode);
@@ -1234,6 +1222,7 @@ public:
 		endInsertTalkerItems();
 	}
 
+	// Build and add listener node hierarchy
 	void addListener(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
 	{
 		auto* node = buildListenerNode(controlledEntity, entityID, configurationNode);
@@ -1272,6 +1261,7 @@ public:
 		endInsertListenerItems();
 	}
 
+	// Remove complete talker node hierarchy from entityID
 	void removeTalker(la::avdecc::UniqueIdentifier const& entityID)
 	{
 		if (auto* node = talkerNodeFromEntityID(entityID))
@@ -1299,6 +1289,7 @@ public:
 		}
 	}
 
+	// Remove complete listener node hierarchy from entityID
 	void removeListener(la::avdecc::UniqueIdentifier const& entityID)
 	{
 		if (auto* node = listenerNodeFromEntityID(entityID))
@@ -1331,6 +1322,7 @@ public:
 		}
 	}
 
+	// Returns talker node at section if valid, nullptr otherwise
 	Node* talkerNode(int section) const
 	{
 		if (!isValidTalkerSection(section))
@@ -1341,6 +1333,7 @@ public:
 		return _talkerNodes[section];
 	}
 
+	// Returns listener node at section if valid, nullptr otherwise
 	Node* listenerNode(int section) const
 	{
 		if (!isValidListenerSection(section))
@@ -1601,38 +1594,31 @@ public:
 	}
 
 private:
+	// Returns true if a talker exists for entityID
 	bool hasTalker(la::avdecc::UniqueIdentifier const entityID) const
 	{
 		return _talkerNodeMap.count(entityID) == 1;
 	}
 
+	// Returns true if a listener exists for entityID
 	bool hasListener(la::avdecc::UniqueIdentifier const entityID) const
 	{
 		return _listenerNodeMap.count(entityID) == 1;
 	}
 
-	int talkerEntitySection(la::avdecc::UniqueIdentifier const& entityID) const
-	{
-		auto* node = talkerNodeFromEntityID(entityID);
-		return priv::indexOf(_talkerNodeSectionMap, node);
-	}
-
-	int listenerEntitySection(la::avdecc::UniqueIdentifier const& entityID) const
-	{
-		auto* node = listenerNodeFromEntityID(entityID);
-		return priv::indexOf(_listenerNodeSectionMap, node);
-	}
-
+	// Returns talker section for node
 	int talkerNodeSection(Node* const node) const
 	{
 		return priv::indexOf(_talkerNodeSectionMap, node);
 	}
 
+	// Returns listener section for node
 	int listenerNodeSection(Node* const node) const
 	{
 		return priv::indexOf(_listenerNodeSectionMap, node);
 	}
 
+	// Returns talker stream section for entityID + streamIndex
 	int talkerStreamSection(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
 		auto const key = std::make_pair(entityID, streamIndex);
@@ -1641,6 +1627,7 @@ private:
 		return it->second;
 	}
 
+	// Returns listener stream section for entityID + streamIndex
 	int listenerStreamSection(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
 		auto const key = std::make_pair(entityID, streamIndex);
@@ -1649,6 +1636,7 @@ private:
 		return it->second;
 	}
 
+	// Returns talker EntityNode for a given entityID
 	EntityNode* talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _talkerNodeMap.find(entityID);
@@ -1658,6 +1646,7 @@ private:
 		return static_cast<EntityNode*>(node);
 	}
 
+	// Returns listener EntityNode for a given entityID
 	EntityNode* listenerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _listenerNodeMap.find(entityID);
@@ -1667,6 +1656,7 @@ private:
 		return static_cast<EntityNode*>(node);
 	}
 
+	// Returns talker StreamNode for a given entityID + streamIndex
 	StreamNode* talkerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
 		auto const section = talkerStreamSection(entityID, streamIndex);
@@ -1675,6 +1665,7 @@ private:
 		return static_cast<StreamNode*>(node);
 	}
 
+	// Returns listener StreamNode for a given entityID + streamIndex
 	StreamNode* listenerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
 		auto const section = listenerStreamSection(entityID, streamIndex);
@@ -1684,6 +1675,7 @@ private:
 	}
 
 private:
+	// Returns intersection model index for talkerSection and listenerSection (automatically transposed if required)
 	QModelIndex createIndex(int const talkerSection, int const listenerSection) const
 	{
 		Q_Q(const Model);
@@ -1698,6 +1690,7 @@ private:
 		}
 	}
 
+	// Recomputes (according to dirtyFlags) intersection data for talkerSection and listenerSection and notifies that it has changed
 	void intersectionDataChanged(int const talkerSection, int const listenerSection, IntersectionDirtyFlags dirtyFlags)
 	{
 		Q_Q(Model);
@@ -1714,18 +1707,33 @@ private:
 #endif
 	}
 
+	// Recomputes talker intersection data, possibily recomputing its parent and/or children according desired dirtyFlags
+	// Children are updated first, then the node, then the parents
 	void talkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
 		assert(talker);
 
-		// First, update the intersection
+		// Update the children
+		if (andChildren)
+		{
+			talker->accept(
+				[=](Node* child)
+			{
+				if (child != talker)
+				{
+					talkerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
+				}
+			});
+		}
+
+		// Then, update the node intersection
 		auto const talkerSection = talkerNodeSection(talker);
 		for (auto listenerSection = _listenerNodes.size(); listenerSection > 0u; --listenerSection)
 		{
 			intersectionDataChanged(talkerSection, listenerSection - 1, dirtyFlags);
 		}
 
-		// Recursively update the parents
+		// Finally, recursively update the parents
 		if (andParents)
 		{
 			auto* node = talker;
@@ -1735,33 +1743,35 @@ private:
 				node = parent;
 			}
 		}
-
-		// Update the children
-		if (andChildren)
-		{
-			talker->accept(
-				[=](Node* child)
-				{
-					if (child != talker)
-					{
-						talkerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
-					}
-				});
-		}
 	}
 
+	// Recomputes listener intersection data, possibily recomputing its parent and/or children according desired dirtyFlags
+	// Children are updated first, then the node, then the parents
 	void listenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
 		assert(listener);
 
-		// First, update the intersection
+		// Update the children
+		if (andChildren)
+		{
+			listener->accept(
+				[=](Node* child)
+			{
+				if (child != listener)
+				{
+					listenerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
+				}
+			});
+		}
+
+		// Then, update the node intersection
 		auto const listenerSection = listenerNodeSection(listener);
 		for (auto talkerSection = _talkerNodes.size(); talkerSection > 0; --talkerSection)
 		{
 			intersectionDataChanged(talkerSection - 1, listenerSection, dirtyFlags);
 		}
 
-		// Recursively update the parents
+		// Finally, recursively update the parents
 		if (andParents)
 		{
 			auto* node = listener;
@@ -1771,21 +1781,9 @@ private:
 				node = parent;
 			}
 		}
-
-		// Update the children
-		if (andChildren)
-		{
-			listener->accept(
-				[=](Node* child)
-				{
-					if (child != listener)
-					{
-						listenerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
-					}
-				});
-		}
 	}
 
+	// Notifies that talker header data has changed
 	void talkerHeaderDataChanged(Node* const node)
 	{
 		Q_Q(Model);
@@ -1799,6 +1797,7 @@ private:
 		emit q->headerDataChanged(talkerOrientation(), section, section);
 	}
 
+	// Notifies that listener header data has changed
 	void listenerHeaderDataChanged(Node* const node)
 	{
 		Q_Q(Model);
@@ -1812,46 +1811,55 @@ private:
 		emit q->headerDataChanged(listenerOrientation(), section, section);
 	}
 
+	// Returns talker header orientation
 	Qt::Orientation talkerOrientation() const
 	{
 		return !_transposed ? Qt::Vertical : Qt::Horizontal;
 	}
 
+	// Returns listener header orientation
 	Qt::Orientation listenerOrientation() const
 	{
 		return !_transposed ? Qt::Horizontal : Qt::Vertical;
 	}
 
+	// Returns the number of talker sections
 	int talkerSectionCount() const
 	{
 		return static_cast<int>(_talkerNodes.size());
 	}
 
+	// Returns the number of listener sections
 	int listenerSectionCount() const
 	{
 		return static_cast<int>(_listenerNodes.size());
 	}
 
+	// Extract talker section from index
 	int talkerIndex(QModelIndex const& index) const
 	{
 		return !_transposed ? index.row() : index.column();
 	}
 
+	// Extract listener section from index
 	int listenerIndex(QModelIndex const& index) const
 	{
 		return !_transposed ? index.column() : index.row();
 	}
 
+	// Returns true if section is a valid talker section, i.e. within [0, talkerSectionCount[
 	bool isValidTalkerSection(int section) const
 	{
 		return section >= 0 && section < talkerSectionCount();
 	}
 
+	// Returns true if section is a valid listener section, i.e. within [0, listenerSectionCount[
 	bool isValidListenerSection(int section) const
 	{
 		return section >= 0 && section < listenerSectionCount();
 	}
 
+	// Returns talker header data for sections (Qt::DisplayRole) at section
 	QString talkerHeaderData(int section) const
 	{
 		if (!isValidTalkerSection(section))
@@ -1862,6 +1870,7 @@ private:
 		return _talkerNodes[section]->name();
 	}
 
+	// Returns listener header data for sections (Qt::DisplayRole) at section
 	QString listenerHeaderData(int section) const
 	{
 		if (!isValidListenerSection(section))

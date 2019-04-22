@@ -77,9 +77,9 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		{ Model::IntersectionData::Type::SingleStream_SingleStream, qt::toolkit::material::color::Name::LightGreen },
 	};
 
-	auto brush = qt::toolkit::material::color::brush(debugColor.at(intersectionData.type), qt::toolkit::material::color::Shade::Shade500);
-	brush.setAlphaF(0.5f);
-	painter->fillRect(option.rect, brush);
+	auto color = qt::toolkit::material::color::value(debugColor.at(intersectionData.type), qt::toolkit::material::color::Shade::Shade500);
+	color.setAlphaF(0.35f);
+	painter->fillRect(option.rect, color);
 #endif
 }
 

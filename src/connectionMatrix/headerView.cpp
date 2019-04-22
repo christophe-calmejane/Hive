@@ -26,6 +26,10 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 
+#if ENABLE_CONNECTION_MATRIX_DEBUG
+#	include <QDebug>
+#endif
+
 namespace connectionMatrix
 {
 
