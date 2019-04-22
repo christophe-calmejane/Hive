@@ -24,6 +24,7 @@
 #include "avdecc/helper.hpp"
 
 #include "nodeVisitor.hpp"
+#include "toolkit/material/color.hpp"
 
 #include <QHeaderView>
 #include <QMenu>
@@ -54,7 +55,7 @@ public:
 	void setHasError(bool const hasError)
 	{
 		_hasError = hasError;
-		setForeground(0, _hasError ? Qt::red : Qt::black);
+		setForeground(0, qt::toolkit::material::color::value(_hasError ? qt::toolkit::material::color::Name::Red : qt::toolkit::material::color::Name::Black));
 
 		// Also update the parent node
 		if (auto* parent = static_cast<NodeItem*>(QTreeWidgetItem::parent()))

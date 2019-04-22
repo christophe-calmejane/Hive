@@ -21,11 +21,10 @@
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
 #include "connectionMatrix/paintHelper.hpp"
-
+#include "toolkit/material/color.hpp"
 #include <QPainter>
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
-#include "toolkit/materialPalette.hpp"
 #include <unordered_map>
 #endif
 
@@ -41,7 +40,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		return;
 	}
 	
-	painter->setPen(Qt::lightGray);
+	painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Gray));
 
 	// Background highlithing if selected
 	if (option.state & QStyle::State_Selected)
@@ -63,24 +62,24 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags);
 
 #if ENABLE_CONNECTION_MATRIX_INTERSECTION_TYPE_COLOR
-	static const std::unordered_map< Model::IntersectionData::Type, qt::toolkit::materialPalette::Name> debugColor =
+	static const std::unordered_map< Model::IntersectionData::Type, qt::toolkit::material::color::Name> debugColor =
 	{
-		{ Model::IntersectionData::Type::None, qt::toolkit::materialPalette::Name::Red },
-		{ Model::IntersectionData::Type::Entity_Entity, qt::toolkit::materialPalette::Name::Purple },
-		{ Model::IntersectionData::Type::Entity_Redundant, qt::toolkit::materialPalette::Name::Indigo },
-		{ Model::IntersectionData::Type::Entity_RedundantStream, qt::toolkit::materialPalette::Name::Teal },
-		{ Model::IntersectionData::Type::Entity_SingleStream, qt::toolkit::materialPalette::Name::Lime },
-		{ Model::IntersectionData::Type::Redundant_Redundant, qt::toolkit::materialPalette::Name::Yellow },
-		{ Model::IntersectionData::Type::Redundant_RedundantStream, qt::toolkit::materialPalette::Name::Orange },
-		{ Model::IntersectionData::Type::Redundant_SingleStream, qt::toolkit::materialPalette::Name::Brown },
-		{ Model::IntersectionData::Type::RedundantStream_RedundantStream, qt::toolkit::materialPalette::Name::Gray },
-		{ Model::IntersectionData::Type::RedundantStream_SingleStream, qt::toolkit::materialPalette::Name::BlueGray },
-		{ Model::IntersectionData::Type::SingleStream_SingleStream, qt::toolkit::materialPalette::Name::LightGreen },
+		{ Model::IntersectionData::Type::None, qt::toolkit::material::color::Name::Red },
+		{ Model::IntersectionData::Type::Entity_Entity, qt::toolkit::material::color::Name::Purple },
+		{ Model::IntersectionData::Type::Entity_Redundant, qt::toolkit::material::color::Name::Indigo },
+		{ Model::IntersectionData::Type::Entity_RedundantStream, qt::toolkit::material::color::Name::Teal },
+		{ Model::IntersectionData::Type::Entity_SingleStream, qt::toolkit::material::color::Name::Lime },
+		{ Model::IntersectionData::Type::Redundant_Redundant, qt::toolkit::material::color::Name::Yellow },
+		{ Model::IntersectionData::Type::Redundant_RedundantStream, qt::toolkit::material::color::Name::Orange },
+		{ Model::IntersectionData::Type::Redundant_SingleStream, qt::toolkit::material::color::Name::Brown },
+		{ Model::IntersectionData::Type::RedundantStream_RedundantStream, qt::toolkit::material::color::Name::Gray },
+		{ Model::IntersectionData::Type::RedundantStream_SingleStream, qt::toolkit::material::color::Name::BlueGray },
+		{ Model::IntersectionData::Type::SingleStream_SingleStream, qt::toolkit::material::color::Name::LightGreen },
 	};
 
-	auto color = qt::toolkit::materialPalette::color(debugColor.at(intersectionData.type), qt::toolkit::materialPalette::Shade::Shade500);
-	color.setAlphaF(0.5f);
-	painter->fillRect(option.rect, color);
+	auto brush = qt::toolkit::material::color::brush(debugColor.at(intersectionData.type), qt::toolkit::material::color::Shade::Shade500);
+	brush.setAlphaF(0.5f);
+	painter->fillRect(option.rect, brush);
 #endif
 }
 

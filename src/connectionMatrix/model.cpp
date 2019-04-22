@@ -326,7 +326,7 @@ public:
 			intersectionData.animation = new QVariantAnimation{ this };
 		}
 
-		intersectionData.animation->setStartValue(QColor{ Qt::red });
+		intersectionData.animation->setStartValue(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
 		intersectionData.animation->setEndValue(QColor{ Qt::transparent });
 		intersectionData.animation->setDuration(500);
 		intersectionData.animation->start();

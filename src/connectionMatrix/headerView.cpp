@@ -21,6 +21,7 @@
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "toolkit/material/color.hpp"
 #include <QPainter>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -384,11 +385,11 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	
 	if (node->isStreamNode() && !static_cast<StreamNode*>(node)->isRunning())
 	{
-		painter->setPen(Qt::red);
+		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
 	}
 	else
 	{
-		painter->setPen(Qt::white);
+		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::White));
 	}
 
 	painter->drawText(textRect, Qt::AlignVCenter, elidedText);

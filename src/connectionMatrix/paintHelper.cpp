@@ -18,9 +18,9 @@
 */
 
 #include "connectionMatrix/paintHelper.hpp"
-#include "toolkit/materialPalette.hpp"
+#include "toolkit/material/color.hpp"
 
-namespace palette = qt::toolkit::materialPalette;
+namespace color = qt::toolkit::material::color;
 
 namespace connectionMatrix
 {
@@ -59,17 +59,16 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
 	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
 
-
-	auto penColor = palette::color(palette::Name::Gray, connected ? palette::Shade::Shade900 : palette::Shade::Shade500);
+	auto penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);
 	painter->setPen(QPen{ penColor, 1.5 });
 
-	static auto const White = palette::color(palette::Name::Gray, palette::Shade::Shade100);
-	static auto const Green = palette::color(palette::Name::Green, palette::Shade::Shade500);
-	static auto const Red = palette::color(palette::Name::Red, palette::Shade::Shade800);
-	static auto const Yellow = palette::color(palette::Name::Yellow, palette::Shade::Shade600);
-	static auto const Blue = palette::color(palette::Name::Blue, palette::Shade::Shade300);
-	static auto const Purple = palette::color(palette::Name::Purple, palette::Shade::Shade400);
-	static auto const Orange = palette::color(palette::Name::Orange, palette::Shade::Shade600);
+	static auto const White = color::value(color::Name::Gray, color::Shade::Shade100);
+	static auto const Green = color::value(color::Name::Green, color::Shade::Shade500);
+	static auto const Red = color::value(color::Name::Red, color::Shade::Shade800);
+	static auto const Yellow = color::value(color::Name::Yellow, color::Shade::Shade600);
+	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade300);
+	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
+	static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
 

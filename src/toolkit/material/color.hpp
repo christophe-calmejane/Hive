@@ -20,16 +20,19 @@
 #pragma once
 
 #include <QColor>
-#include <QAbstractListModel>
+#include <QBrush>
 
 namespace qt
 {
 namespace toolkit
 {
-namespace materialPalette
+namespace material
 {
-	
-/* Palette color name definition */
+namespace color
+{
+// Name + Shade combinations as described here : https://material.io/design/color/the-color-system.html
+
+// Color name definition
 enum class Name
 {
 	Red,
@@ -51,11 +54,13 @@ enum class Name
 	Brown,
 	Gray,
 	BlueGray,
+	Black,
+	White,
 
-	Count
+	NameCount
 };
 
-/** Palette color shade definition */
+// Color shade definition
 enum class Shade
 {
 	Shade50,
@@ -73,33 +78,31 @@ enum class Shade
 	ShadeA400,
 	ShadeA700,
 
-	Count,
+	ShadeCount
 };
 
-/** Palette color luminance definition */
+// Color luminance definition
 enum class Luminance
 {
 	Dark,
 	Light
 };
 
-/** Default color shade */
+// Default color shade
 static auto constexpr DefaultShade = Shade::Shade500;
 
-/** Returns the color value for a given name + shade */
-QColor color(Name const name, Shade const shade = DefaultShade);
+// Return the color value for a given name + shade
+// May throw for invalid_argument for non existing combinations
+QColor value(Name const name, Shade const shade = DefaultShade);
 
-/** Returns the color luminance for a given name + shade */
+// Return the luminance for a given name + shade
+// May throw for invalid_argument for non existing combinations
 Luminance luminance(Name const name, Shade const shade = DefaultShade);
 
-/** Abstract model that exposes all the available colors */
-class Model : public QAbstractListModel
-{
-public:
-	virtual int rowCount(QModelIndex const& parent = {}) const override;
-	virtual QVariant data(QModelIndex const &index, int role = Qt::DisplayRole) const override;
-};
+// Return a brush that represents a given name + shade
+QBrush brush(Name const name, Shade const shade = DefaultShade) noexcept;
 
-} // namespace materialPalette
+} // namespace color
+} // namespace material
 } // namespace toolkit
 } // namespace qt

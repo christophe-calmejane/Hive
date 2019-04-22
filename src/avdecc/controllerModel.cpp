@@ -24,6 +24,7 @@
 #include "avdecc/controllerManager.hpp"
 #include "entityLogoCache.hpp"
 #include "settingsManager/settings.hpp"
+#include "toolkit/material/color.hpp"
 #include <algorithm>
 #include <array>
 #include <QFont>
@@ -239,7 +240,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				if (!streamsWithErrorCounter.empty())
 				{
 					// At least one stream contains a counter error
-					return QColor{ Qt::red };
+					return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
 				}
 			}
 		}

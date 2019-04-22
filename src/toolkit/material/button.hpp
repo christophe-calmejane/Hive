@@ -25,14 +25,17 @@ namespace qt
 {
 namespace toolkit
 {
+namespace material
+{
 // Button that uses Material Icons font
-class MaterialButton : public QPushButton
+class Button : public QPushButton
 {
 	Q_OBJECT
 public:
-	MaterialButton(QWidget* parent = nullptr);
-	MaterialButton(QString const& icon, QWidget* parent = nullptr);
+	Button(QWidget* parent = nullptr);
+	Button(QString const& icon, QWidget* parent = nullptr);
 };
 
+} // namespace material
 } // namespace toolkit
 } // namespace qt

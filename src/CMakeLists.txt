@@ -77,12 +77,11 @@ endif()
 set(TOOLKIT_HEADER_FILES
 	toolkit/comboBox.hpp
 	toolkit/dynamicHeaderView.hpp
-	toolkit/materialButton.hpp
-	toolkit/materialPalette.hpp
+	toolkit/material/button.hpp
+	toolkit/material/color.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
 	toolkit/tickableMenu.hpp
-	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
 	toolkit/graph/node.hpp
@@ -95,8 +94,8 @@ set(TOOLKIT_HEADER_FILES
 set(TOOLKIT_SOURCE_FILES
 	toolkit/comboBox.cpp
 	toolkit/dynamicHeaderView.cpp
-	toolkit/materialButton.cpp
-	toolkit/materialPalette.cpp
+	toolkit/material/button.cpp
+	toolkit/material/color.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
 	toolkit/tickableMenu.cpp

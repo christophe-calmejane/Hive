@@ -23,7 +23,8 @@
 #include "avdecc/controllerModel.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/comboBox.hpp"
-#include "toolkit/materialButton.hpp"
+#include "toolkit/material/button.hpp"
+#include "toolkit/material/color.hpp"
 
 #include <QSettings>
 #include <QLabel>
@@ -89,15 +90,15 @@ private:
 					auto const& intfc = _interfaces.at(idx);
 					if (!intfc.isEnabled)
 					{
-						return QColor{ Qt::lightGray };
+						return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Gray);
 					}
 					else if (!intfc.isConnected)
 					{
-						return QColor{ Qt::red };
+						return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
 					}
 					else
 					{
-						return QColor{ Qt::black };
+						return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Black);
 					}
 				}
 				case Qt::UserRole:
@@ -227,7 +228,7 @@ private:
 	qt::toolkit::ComboBox _interfaceComboBox{ this };
 	NetworkInterfaceModel _networkInterfaceModel{ this };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ this };
-	qt::toolkit::MaterialButton _refreshControllerButton{ "refresh", this };
+	qt::toolkit::material::Button _refreshControllerButton{ "refresh", this };
 	QLabel _controllerEntityIDLabel{ this };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };

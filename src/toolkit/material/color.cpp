@@ -17,21 +17,21 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "materialPalette.hpp"
+#include "toolkit/material/color.hpp"
 #include <unordered_map>
-#include <QPixmap>
-#include <QIcon>
 
 namespace qt
 {
 namespace toolkit
 {
-namespace materialPalette
+namespace material
+{
+namespace color
 {
 struct ColorData
 {
-	QColor value;
-	Luminance luminance;
+	QColor value; // The actual color value
+	Luminance luminance; // The associated luminance
 };
 
 using ShadeMap = std::unordered_map<Shade, ColorData>;
@@ -349,113 +349,103 @@ static const ColorMap g_colorMap = {
 			{ Shade::Shade800, { 0x37474F, Luminance::Dark } },
 			{ Shade::Shade900, { 0x263238, Luminance::Dark } },
 		} },
+	{ Name::Black,
+		{
+			{ Shade::Shade50, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade100, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade200, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade300, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade400, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade500, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade600, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade700, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade800, { Qt::black, Luminance::Dark } },
+			{ Shade::Shade900, { Qt::black, Luminance::Dark } },
+			{ Shade::ShadeA100, { Qt::black, Luminance::Dark } },
+			{ Shade::ShadeA200, { Qt::black, Luminance::Dark } },
+			{ Shade::ShadeA400, { Qt::black, Luminance::Dark } },
+			{ Shade::ShadeA700, { Qt::black, Luminance::Dark } },
+		} },
+	{ Name::White,
+		{
+			{ Shade::Shade50, { Qt::white, Luminance::Light } },
+			{ Shade::Shade100, { Qt::white, Luminance::Light } },
+			{ Shade::Shade200, { Qt::white, Luminance::Light } },
+			{ Shade::Shade300, { Qt::white, Luminance::Light } },
+			{ Shade::Shade400, { Qt::white, Luminance::Light } },
+			{ Shade::Shade500, { Qt::white, Luminance::Light } },
+			{ Shade::Shade600, { Qt::white, Luminance::Light } },
+			{ Shade::Shade700, { Qt::white, Luminance::Light } },
+			{ Shade::Shade800, { Qt::white, Luminance::Light } },
+			{ Shade::Shade900, { Qt::white, Luminance::Light } },
+			{ Shade::ShadeA100, { Qt::white, Luminance::Light } },
+			{ Shade::ShadeA200, { Qt::white, Luminance::Light } },
+			{ Shade::ShadeA400, { Qt::white, Luminance::Light } },
+			{ Shade::ShadeA700, { Qt::white, Luminance::Light } },
+		} },
 };
 
-QColor color(Name const name, Shade const shade)
+ShadeMap const& shadeMap(Name const name)
 {
 	auto const it = g_colorMap.find(name);
 	if (it == std::end(g_colorMap))
 	{
 		throw std::invalid_argument("Unknown Name");
 	}
+	return it->second;
+}
 
-	auto const jt = it->second.find(shade);
-	if (jt == std::end(it->second))
+ColorData const& colorData(Name const name, Shade const shade)
+{
+	auto const& map = shadeMap(name);
+	auto const jt = map.find(shade);
+	if (jt == std::end(map))
 	{
 		throw std::invalid_argument("Invalid Shade");
 	}
+	return jt->second;
+}
 
-	return jt->second.value;
+QColor value(Name const name, Shade const shade)
+{
+	return colorData(name, shade).value;
 }
 
 Luminance luminance(Name const name, Shade const shade)
 {
-	auto const it = g_colorMap.find(name);
-	if (it == std::end(g_colorMap))
-	{
-		throw std::invalid_argument("Unknown Name");
-	}
-
-	auto const jt = it->second.find(shade);
-	if (jt == std::end(it->second))
-	{
-		throw std::invalid_argument("Invalid Shade");
-	}
-
-	return jt->second.luminance;
+	return colorData(name, shade).luminance;
 }
 
-int Model::rowCount(QModelIndex const& parent) const
+QBrush buildBrush(Name const name, Shade const shade) noexcept
 {
-	return static_cast<int>(Name::Count);
+	auto const& shades = shadeMap(name);
+	auto const it = shades.find(shade);
+	if (it != std::end(shades))
+	{
+		return QBrush{ it->second.value };
+	}
+
+	return QBrush{ Qt::darkGray, Qt::BDiagPattern };
 }
 
-QVariant Model::data(QModelIndex const& index, int role) const
+QBrush brush(Name const name, Shade const shade) noexcept
 {
-	if (index.row() < 0 || index.row() > rowCount())
+	using Shades = std::unordered_map<Shade, QBrush>;
+	using Colors = std::unordered_map<Name, Shades>;
+
+	static Colors s_colors;
+
+	auto& shades = s_colors[name];
+	auto const it = shades.find(shade);
+	if (it == std::end(shades))
 	{
-		return {};
+		shades[shade] = buildBrush(name, shade);
 	}
 
-	auto const name = static_cast<Name>(index.row());
-
-	if (role == Qt::DisplayRole)
-	{
-		switch (name)
-		{
-			case Name::Red:
-				return "Red";
-			case Name::Pink:
-				return "Pink";
-			case Name::Purple:
-				return "Purple";
-			case Name::DeepPurple:
-				return "Deep Purple";
-			case Name::Indigo:
-				return "Indigo";
-			case Name::Blue:
-				return "Blue";
-			case Name::LightBlue:
-				return "Light Blue";
-			case Name::Cyan:
-				return "Cyan";
-			case Name::Teal:
-				return "Teal";
-			case Name::Green:
-				return "Green";
-			case Name::LightGreen:
-				return "Light Green";
-			case Name::Lime:
-				return "Lime";
-			case Name::Yellow:
-				return "Yellow";
-			case Name::Amber:
-				return "Amber";
-			case Name::Orange:
-				return "Orange";
-			case Name::DeepOrange:
-				return "Deep Orange";
-			case Name::Brown:
-				return "Brown";
-			case Name::Gray:
-				return "Gray";
-			case Name::BlueGray:
-				return "Blue Gray";
-			default:
-				assert(false);
-				return "Invalid";
-		}
-	}
-	else if (role == Qt::DecorationRole)
-	{
-		QPixmap pixmap{ 8, 8 };
-		pixmap.fill(color(name));
-		return QIcon{ pixmap };
-	}
-
-	return {};
+	return shades[shade];
 }
 
-} // namespace materialPalette
+} // namespace color
+} // namespace material
 } // namespace toolkit
 } // namespace qt
