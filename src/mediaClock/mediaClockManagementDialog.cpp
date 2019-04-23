@@ -103,6 +103,7 @@ public:
 		connect(&_domainTreeModel, &DomainTreeModel::domainSetupChanged, this, &MediaClockManagementDialogImpl::handleDomainTreeDataChanged);
 		connect(&_domainTreeModel, &DomainTreeModel::triggerResizeColumns, this, &MediaClockManagementDialogImpl::resizeMCTreeViewColumns);
 		connect(&_domainTreeModel, &DomainTreeModel::deselectAll, this, &MediaClockManagementDialogImpl::removeMcDomainTreeViewSelections);
+		connect(&_domainTreeModel, &DomainTreeModel::expandDomain, this, &MediaClockManagementDialogImpl::expandDomain);
 
 		// drag&drop support
 		listView_UnassignedEntities->setDragEnabled(true);
@@ -195,9 +196,8 @@ public:
 	*/
 	Q_SLOT void button_AddClicked()
 	{
-		_domainTreeModel.addNewDomain();
-		// TODO expand the newly created domain.
-
+		auto domainIndex = _domainTreeModel.addNewDomain();
+		expandDomain(_domainTreeModel.getDomainModelIndex(domainIndex));
 
 		_hasChanges = true;
 		adjustButtonStates();
@@ -512,6 +512,14 @@ public:
 	}
 
 	/**
+	* Expands every item in the domain tree view.
+	*/
+	Q_SLOT void expandDomain(QModelIndex index)
+	{
+		treeViewMediaClockDomains->expand(index);
+	}
+
+	/**
 	* Creates the context menu for the list view.
 	* @param pos The position the user clicked on.
 	*/
@@ -532,6 +540,7 @@ public:
 	void onCreateNewDomainActionTriggered()
 	{
 		auto newDomainIndex = _domainTreeModel.addNewDomain();
+		expandDomain(_domainTreeModel.getDomainModelIndex(newDomainIndex));
 		for (auto const& entityId : _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection()))
 		{
 			bool success = _domainTreeModel.addEntityToDomain(newDomainIndex, entityId);

@@ -73,6 +73,7 @@ public:
 	QMimeData* mimeData(const QModelIndexList& indexes) const;
 	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
 	avdecc::mediaClock::MCEntityDomainMapping createMediaClockMappings();
+	QModelIndex getDomainModelIndex(avdecc::mediaClock::DomainIndex domainIndex) const;
 
 	bool addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId);
 	bool addEntityToDomain(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
@@ -182,6 +183,22 @@ avdecc::mediaClock::MCEntityDomainMapping DomainTreeModelPrivate::createMediaClo
 	}
 
 	return mediaClockDomains;
+}
+
+/**
+* Tries to find the domain with the given index in the model and returns the model index.
+*/
+QModelIndex DomainTreeModelPrivate::getDomainModelIndex(avdecc::mediaClock::DomainIndex domainIndex) const
+{
+	for (int i = 0; i < _rootItem->childCount(); i++)
+	{
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
+		if (domainTreeItem->domain().getDomainIndex() == domainIndex)
+		{
+			return index(i, static_cast<int>(DomainTreeModelColumn::Domain), QModelIndex());
+		}
+	}
+	return QModelIndex();
 }
 
 /**
@@ -852,6 +869,7 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction 
 	{
 		// if no parent could be determined, a new domain should be created:
 		domainIndex = addNewDomain();
+		emit q->expandDomain(getDomainModelIndex(*domainIndex));
 	}
 	for (auto const& entry : jsonFormattedDataEntries)
 	{
@@ -1101,6 +1119,15 @@ avdecc::mediaClock::MCEntityDomainMapping DomainTreeModel::createMediaClockMappi
 {
 	Q_D(DomainTreeModel);
 	return d->createMediaClockMappings();
+}
+
+/**
+* Gets the model index of a domain.
+*/
+QModelIndex DomainTreeModel::getDomainModelIndex(avdecc::mediaClock::DomainIndex domainIndex) const
+{
+	Q_D(const DomainTreeModel);
+	return d->getDomainModelIndex(domainIndex);
 }
 
 /**
