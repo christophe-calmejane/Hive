@@ -44,7 +44,7 @@ View::View(QWidget* parent)
 	setHorizontalHeader(_horizontalHeaderView.get());
 	setVerticalHeader(_verticalHeaderView.get());
 	setItemDelegate(_itemDelegate.get());
-	
+
 	setSelectionMode(QAbstractItemView::NoSelection);
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setMouseTracking(true);
@@ -52,7 +52,7 @@ View::View(QWidget* parent)
 	// Take care of the top left corner widget
 	setCornerButtonEnabled(false);
 	stackUnder(_cornerWidget.get());
-	
+
 	// Apply filter when needed
 	connect(_cornerWidget.get(), &CornerWidget::filterChanged, this, &View::onFilterChanged);
 
@@ -67,10 +67,10 @@ View::View(QWidget* parent)
 	{
 		_cornerWidget->setGeometry(0, 0, verticalHeader()->width(), horizontalHeader()->height());
 	};
-	
+
 	connect(_verticalHeaderView.get(), &QHeaderView::geometriesChanged, this, updateCornerWidgetGeometry);
 	connect(_horizontalHeaderView.get(), &QHeaderView::geometriesChanged, this, updateCornerWidgetGeometry);
-	
+
 	// Handle click on the table
 	connect(this, &QTableView::clicked, this, &View::onIntersectionClicked);
 
@@ -97,10 +97,8 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 	switch (intersectionData.type)
 	{
-	// Simple Stream or Single Stream of a redundant pair: connect the stream
-	// One non-redundant stream and one redundant stream: connect the stream
 	case Model::IntersectionData::Type::RedundantStream_RedundantStream:
-	case Model::IntersectionData::Type::Redundant_SingleStream:
+	case Model::IntersectionData::Type::RedundantStream_SingleStream:
 	case Model::IntersectionData::Type::SingleStream_SingleStream:
 	{
 		auto const talkerStreamIndex = static_cast<StreamNode*>(intersectionData.talker)->streamIndex();
@@ -114,15 +112,15 @@ void View::onIntersectionClicked(QModelIndex const& index)
 		{
 			manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
 		}
-	}
 		break;
+	}
 
 	// One redundant node and one redundant stream: connect the only possible stream (diagonal)
 	case Model::IntersectionData::Type::Redundant_RedundantStream:
 	{
 		LOG_HIVE_INFO("TODO: Connect the only possible stream (the one in diagonal)");
-	}
 		break;
+	}
 
 	// Both redundant nodes: connect both streams
 	case Model::IntersectionData::Type::Redundant_Redundant:
@@ -186,15 +184,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				}
 			}
 		}
-	}
 		break;
+	}
 
-	// One non-redundant stream and one redundant node: connect the stream
-	case Model::IntersectionData::Type::RedundantStream_SingleStream:
+	case Model::IntersectionData::Type::Redundant_SingleStream:
 	{
 		LOG_HIVE_INFO("TODO: Connect the non-redundant stream to the redundant stream on the same domain."); // Print a warning if no domain matches
-	}
 		break;
+	}
 
 	default:
 		break;
@@ -227,13 +224,13 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		auto const verticalSectionState = _verticalHeaderView->saveSectionState();
 		auto const horizontalSectionState = _horizontalHeaderView->saveSectionState();
-		
+
 		_model->setTransposed(transposed);
 		_cornerWidget->setTransposed(transposed);
-		
+
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
-		
+
 		applyFilterPattern(QRegExp{ _cornerWidget->filterText() });
 	}
 }

@@ -92,11 +92,11 @@ enum class Luminance
 static auto constexpr DefaultShade = Shade::Shade500;
 
 // Return the color value for a given name + shade
-// May throw for invalid_argument for non existing combinations
+// May throw invalid_argument for non existing combinations
 QColor value(Name const name, Shade const shade = DefaultShade);
 
 // Return the luminance for a given name + shade
-// May throw for invalid_argument for non existing combinations
+// May throw invalid_argument for non existing combinations
 Luminance luminance(Name const name, Shade const shade = DefaultShade);
 
 // Return a brush that represents a given name + shade
