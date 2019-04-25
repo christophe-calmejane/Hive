@@ -678,6 +678,8 @@ public:
 					auto streamInfo = streamOutput.second.dynamicModel->streamInfo;
 					if (streamInfo.msrpAccumulatedLatency != *_userSelectedLatency)
 					{
+						streamInfo.streamInfoFlags.clear();
+						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
 						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
 
 						// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
