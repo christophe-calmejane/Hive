@@ -110,6 +110,8 @@ QString stateToString(Model::IntersectionData::State const state)
 			return "Connected";
 		case Model::IntersectionData::State::FastConnecting:
 			return "Fast Connecting";
+		case Model::IntersectionData::State::PartiallyConnected:
+			return "Partially Connected";
 		default:
 			assert(false);
 			return "Unknown";
@@ -1758,9 +1760,9 @@ private:
 				[=](Node* child)
 			{
 				if (child != listener)
-				{
+			{
 					listenerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
-				}
+			}
 			});
 		}
 

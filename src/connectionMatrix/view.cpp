@@ -159,11 +159,11 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			auto const& listenerRedundantStreams = listenerRedundantNode.redundantStreams;
 			assert(talkerRedundantStreams.size() == listenerRedundantStreams.size());
 
-			auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(talkerRedundantStreams));
-			auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(talkerRedundantStreams));
+			auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(listenerRedundantStreams));
+			auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(listenerRedundantStreams));
 
 			// Pair iteration
-			for (; it != end; ++it.first, ++it.second)
+			for (; it.first != end.first && it.second != end.second; ++it.first, ++it.second)
 			{
 				auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it.first->second);
 				auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it.second->second);

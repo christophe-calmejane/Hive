@@ -77,6 +77,11 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		brushColor = Green;
 	}
 
+	if (interfaceDown)
+	{
+		brushColor = Blue;
+	}
+
 	if (wrongFormat)
 	{
 		brushColor = Yellow;
@@ -87,11 +92,6 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		brushColor = Red;
 	}
 
-	if (interfaceDown)
-	{
-		brushColor = Blue;
-	}
-
 	// Special case
 	if (type == Model::IntersectionData::Type::Redundant_Redundant)
 	{
@@ -99,13 +99,13 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		{
 			brushColor = Orange;
 		}
-		else if (interfaceDown)
-		{
-			brushColor = Blue;
-		}
 		else if (wrongDomain || wrongFormat)
 		{
 			brushColor = Purple;
+		}
+		else if (interfaceDown)
+		{
+			brushColor = Blue;
 		}
 	}
 
