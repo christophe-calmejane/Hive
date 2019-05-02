@@ -128,13 +128,13 @@ void View::onIntersectionClicked(QModelIndex const& index)
 		auto doConnect{ false };
 		auto doDisconnect{ false };
 
-		if (intersectionData.state != Model::IntersectionData::State::NotConnected)
+		if (intersectionData.state == Model::IntersectionData::State::NotConnected || intersectionData.state == Model::IntersectionData::State::PartiallyConnected)
 		{
-			doDisconnect = true;
+			doConnect = true;
 		}
 		else
 		{
-			doConnect = true;
+			doDisconnect = true;
 		}
 
 		auto talkerEntity = manager.getControlledEntity(talkerID);
