@@ -65,8 +65,8 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	static auto const White = color::value(color::Name::Gray, color::Shade::Shade100);
 	static auto const Green = color::value(color::Name::Green, color::Shade::Shade500);
 	static auto const Red = color::value(color::Name::Red, color::Shade::Shade800);
-	static auto const Yellow = color::value(color::Name::Yellow, color::Shade::Shade600);
-	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade300);
+	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
+	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
 	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
 	static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
