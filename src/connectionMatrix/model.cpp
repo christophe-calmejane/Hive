@@ -298,7 +298,7 @@ public:
 	}
 #endif
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 	void highlightIntersection(int talkerSection, int listenerSection)
 	{
 		assert(isValidTalkerSection(talkerSection));
@@ -1702,7 +1702,7 @@ private:
 		auto const index = createIndex(talkerSection, listenerSection);
 		emit q->dataChanged(index, index);
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 		highlightIntersection(talkerSection, listenerSection);
 #endif
 	}
