@@ -312,14 +312,11 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		case Node::Type::Entity:
 			backgroundBrush = QColor{ 0x4A148C };
 			break;
+		case Node::Type::RedundantInput:
+		case Node::Type::RedundantOutput:
 		case Node::Type::InputStream:
 		case Node::Type::OutputStream:
 			backgroundBrush = QColor{ 0x7B1FA2 };
-			nodeLevel = 1;
-			break;
-		case Node::Type::RedundantInput:
-		case Node::Type::RedundantOutput:
-			backgroundBrush = QColor{ 0x09B265 };
 			nodeLevel = 1;
 			break;
 		case Node::Type::RedundantInputStream:
