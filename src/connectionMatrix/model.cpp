@@ -335,7 +335,7 @@ public:
 
 		intersectionData.animation->setStartValue(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
 		intersectionData.animation->setEndValue(QColor{ Qt::transparent });
-		intersectionData.animation->setDuration(500);
+		intersectionData.animation->setDuration(1000);
 		intersectionData.animation->start();
 
 		connect(intersectionData.animation, &QVariantAnimation::valueChanged,
@@ -710,6 +710,7 @@ public:
 					{
 						intersectionData.state = Model::IntersectionData::State::NotConnected;
 					}
+
 					break;
 				}
 				case Model::IntersectionData::Type::Redundant_SingleStream:
@@ -744,6 +745,8 @@ public:
 					{
 						if (auto* streamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
 						{
+							assert(streamNode->isRedundantStreamNode());
+
 							if (streamNode->grandMasterID() == nonRedundantGrandmasterID)
 							{
 								matchingRedundantStreamIndex = streamNode->streamIndex();
@@ -805,8 +808,8 @@ public:
 						}
 					}
 
-					auto areConnected = areMatchingDomainsConnected;
-					auto fastConnecting = areMatchingDomainsFastConnecting;
+					auto areConnected = false;
+					auto fastConnecting = false;
 
 					// Always check for all connection
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
@@ -862,6 +865,7 @@ public:
 							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
 						}
 					}
+
 					break;
 				}
 				case Model::IntersectionData::Type::Redundant_RedundantStream:
@@ -902,6 +906,7 @@ public:
 
 					intersectionData.state = sourceIntersectionData.state;
 					intersectionData.flags = sourceIntersectionData.flags;
+
 					break;
 				}
 				case Model::IntersectionData::Type::RedundantStream_RedundantStream:
@@ -1020,6 +1025,7 @@ public:
 							intersectionData.state = Model::IntersectionData::State::NotConnected;
 						}
 					}
+
 					break;
 				}
 				default:
