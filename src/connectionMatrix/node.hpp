@@ -88,7 +88,7 @@ public:
 	
 	// Visitor pattern that performs a complete hierarchy traversal
 	using Visitor = std::function<void(Node*)>;
-	void accept(Visitor const& visitor) const;
+	void accept(Visitor const& visitor, bool const onlyChildren = false) const;
 
 protected:
 	Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent);
@@ -159,6 +159,7 @@ public:
 	std::uint8_t const& grandMasterDomain() const;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const;
 	bool isRunning() const;
+	la::avdecc::entity::model::StreamConnectionState const& streamConnectionState() const;
 	
 protected:
 	StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
@@ -168,6 +169,7 @@ protected:
 	void setGrandMasterDomain(std::uint8_t const grandMasterDomain);
 	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus);
 	void setRunning(bool isRunning);
+	void setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState);
 	
 protected:
 	la::avdecc::entity::model::StreamIndex const _streamIndex;
@@ -177,6 +179,7 @@ protected:
 	std::uint8_t _grandMasterDomain;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus _interfaceLinkStatus{ la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown };
 	bool _isRunning{ true };
+	la::avdecc::entity::model::StreamConnectionState _streamConnectionState{};
 };
 
 } // namespace connectionMatrix

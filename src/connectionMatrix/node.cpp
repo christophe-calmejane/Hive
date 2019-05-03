@@ -120,12 +120,16 @@ int Node::childrenCount() const
 	return static_cast<int>(_children.size());
 }
 
-void Node::accept(Visitor const& visitor) const
+void Node::accept(Visitor const& visitor, bool const onlyChildren) const
 {
-	visitor(const_cast<Node*>(this));
+	if (!onlyChildren)
+	{
+		visitor(const_cast<Node*>(this));
+	}
+
 	for (auto const& child : _children)
 	{
-		child->accept(visitor);
+		child->accept(visitor, false);
 	}
 }
 
@@ -247,6 +251,11 @@ bool StreamNode::isRunning() const
 	return _isRunning;
 }
 
+la::avdecc::entity::model::StreamConnectionState const& StreamNode::streamConnectionState() const
+{
+	return _streamConnectionState;
+}
+
 StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
 : Node{ type, parent.entityID(), &parent }
 , _streamIndex{ streamIndex }
@@ -277,6 +286,11 @@ void StreamNode::setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity
 void StreamNode::setRunning(bool isRunning)
 {
 	_isRunning = isRunning;
+}
+
+void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
+{
+	_streamConnectionState = streamConnectionState;
 }
 
 } // namespace connectionMatrix
