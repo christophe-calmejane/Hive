@@ -64,6 +64,16 @@ QString objectName(la::avdecc::controller::ControlledEntity const* const control
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
 
+bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamConnectionState const& streamConnectionState) noexcept
+{
+	return streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected && streamConnectionState.talkerStream == talkerStream;
+}
+
+bool constexpr isFastConnectingToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamConnectionState const& streamConnectionState) noexcept
+{
+	return streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting && streamConnectionState.talkerStream == talkerStream;
+}
+
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
@@ -108,9 +118,6 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
 QString toUpperCamelCase(std::string const& text) noexcept;
 
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
-
-bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
-bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
 
 } // namespace helper
 } // namespace avdecc
