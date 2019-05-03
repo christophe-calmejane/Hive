@@ -168,7 +168,8 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it.first->second);
 				auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it.second->second);
 
-				auto const areConnected = avdecc::helper::isStreamConnected(talkerID, talkerStreamNode, listenerStreamNode);
+				auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, talkerStreamNode->descriptorIndex };
+				auto const areConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->dynamicModel->connectionState);
 
 				if (doConnect && !areConnected)
 				{
