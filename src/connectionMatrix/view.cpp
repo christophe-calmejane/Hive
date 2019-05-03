@@ -137,52 +137,30 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			doDisconnect = true;
 		}
 
-		auto talkerEntity = manager.getControlledEntity(talkerID);
-		auto listenerEntity = manager.getControlledEntity(listenerID);
+		auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
+		auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
 
-		if (talkerEntity && listenerEntity)
+		assert(talker->childrenCount() == listener->childrenCount());
+
+		for (auto i = 0; i < talker->childrenCount(); ++i)
 		{
-			auto const& talkerEntityNode = talkerEntity->getEntityNode();
-			auto const& listenerEntityNode = listenerEntity->getEntityNode();
+			auto const* const talkerStreamNode = static_cast<StreamNode*>(talker->childAt(i));
+			auto const* const listenerStreamNode = static_cast<StreamNode*>(listener->childAt(i));
 
-			auto const talkerRedundantIndex = static_cast<RedundantNode*>(intersectionData.talker)->redundantIndex();
-			auto const listenerRedundantIndex = static_cast<RedundantNode*>(intersectionData.listener)->redundantIndex();
+			auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, talkerStreamNode->streamIndex() };
+			auto const areConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState() );
 
-			auto const talkerConfigurationIndex = talkerEntityNode.dynamicModel->currentConfiguration;
-			auto const listenerConfigurationIndex = listenerEntityNode.dynamicModel->currentConfiguration;
-
-			auto const& talkerRedundantNode = talkerEntity->getRedundantStreamOutputNode(talkerConfigurationIndex, talkerRedundantIndex);
-			auto const& listenerRedundantNode = listenerEntity->getRedundantStreamInputNode(listenerConfigurationIndex, listenerRedundantIndex);
-
-			// TODO: Maybe someday handle the case for more than 2 streams for redundancy
-			auto const& talkerRedundantStreams = talkerRedundantNode.redundantStreams;
-			auto const& listenerRedundantStreams = listenerRedundantNode.redundantStreams;
-			assert(talkerRedundantStreams.size() == listenerRedundantStreams.size());
-
-			auto it = std::make_pair(std::begin(talkerRedundantStreams), std::begin(listenerRedundantStreams));
-			auto const end = std::make_pair(std::end(talkerRedundantStreams), std::end(listenerRedundantStreams));
-
-			// Pair iteration
-			for (; it.first != end.first && it.second != end.second; ++it.first, ++it.second)
+			if (doConnect && !areConnected)
 			{
-				auto const* const talkerStreamNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(it.first->second);
-				auto const* const listenerStreamNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(it.second->second);
-
-				auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, talkerStreamNode->descriptorIndex };
-				auto const areConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->dynamicModel->connectionState);
-
-				if (doConnect && !areConnected)
-				{
-					manager.connectStream(talkerID, talkerStreamNode->descriptorIndex, listenerID, listenerStreamNode->descriptorIndex);
-				}
-				else if (doDisconnect && areConnected)
-				{
-					manager.disconnectStream(talkerID, talkerStreamNode->descriptorIndex, listenerID, listenerStreamNode->descriptorIndex);
-				}
-				else
-				{
-					LOG_HIVE_TRACE(QString("connectionMatrix::View::onClicked: Neither connecting nor disconnecting: doConnect=%1 doDisconnect=%2 areConnected=%3").arg(doConnect).arg(doDisconnect).arg(areConnected));
-				}
+				manager.connectStream(talkerID, talkerStreamNode->streamIndex(), listenerID, listenerStreamNode->streamIndex());
+			}
+			else if (doDisconnect && areConnected)
+			{
+				manager.disconnectStream(talkerID, talkerStreamNode->streamIndex(), listenerID, listenerStreamNode->streamIndex());
+			}
+			else
+			{
+				LOG_HIVE_TRACE(QString("connectionMatrix::View::onClicked: Neither connecting nor disconnecting: doConnect=%1 doDisconnect=%2 areConnected=%3").arg(doConnect).arg(doDisconnect).arg(areConnected));
 			}
 		}
 		break;
