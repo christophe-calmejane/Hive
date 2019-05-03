@@ -716,20 +716,17 @@ public:
 				case Model::IntersectionData::Type::Redundant_SingleStream:
 				{
 					RedundantNode* redundantNode = nullptr;
-					StreamNode* redundantStreamNode = nullptr;
 					StreamNode* nonRedundantStreamNode = nullptr;
 
 					// Determine the redundant and non-redundant nodes
 					if (talkerType == Node::Type::RedundantOutput)
 					{
 						redundantNode = static_cast<RedundantNode*>(intersectionData.talker);
-						redundantStreamNode = static_cast<StreamNode*>(redundantNode->childAt(redundantNode->redundantIndex()));
 						nonRedundantStreamNode = static_cast<StreamNode*>(intersectionData.listener);
 					}
 					else if (listenerType == Node::Type::RedundantInput)
 					{
 						redundantNode = static_cast<RedundantNode*>(intersectionData.listener);
-						redundantStreamNode = static_cast<StreamNode*>(redundantNode->childAt(redundantNode->redundantIndex()));
 						nonRedundantStreamNode = static_cast<StreamNode*>(intersectionData.talker);
 					}
 					else
@@ -738,18 +735,18 @@ public:
 					}
 
 					// Try to find if an interface of the redundant device is connected to the same domain that the non-redundant device
-					auto matchingRedundantStreamIndex = la::avdecc::entity::model::StreamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
+					auto* matchingRedundantStreamNode = static_cast<StreamNode*>(nullptr);
 					auto nonRedundantGrandmasterID = nonRedundantStreamNode->grandMasterID();
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
-						if (auto* streamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
+						if (auto* redundantStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
 						{
-							assert(streamNode->isRedundantStreamNode());
+							assert(redundantStreamNode->isRedundantStreamNode());
 
-							if (streamNode->grandMasterID() == nonRedundantGrandmasterID)
+							if (redundantStreamNode->grandMasterID() == nonRedundantGrandmasterID)
 							{
-								matchingRedundantStreamIndex = streamNode->streamIndex();
+								matchingRedundantStreamNode = redundantStreamNode;
 								break;
 							}
 						}
@@ -759,34 +756,32 @@ public:
 					auto areMatchingDomainsFastConnecting = false;
 					auto isFormatCompatible = true;
 
-					auto const foundMatchingRedundantStreamIndex = matchingRedundantStreamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex();
-
 					// Found a matching domain
-					if (foundMatchingRedundantStreamIndex)
+					if (matchingRedundantStreamNode != nullptr)
 					{
 						// Get format compatibility and connection state
 						if (talkerType == Node::Type::RedundantOutput)
 						{
-							// Check the listener
-							auto const& streamConnectionState = nonRedundantStreamNode->streamConnectionState();
-							areMatchingDomainsConnected = streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected;
-							areMatchingDomainsFastConnecting = streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting;
+							auto const& listenerStreamConnectionState = nonRedundantStreamNode->streamConnectionState();
+							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, matchingRedundantStreamNode->streamIndex() };
 
-							auto* talkerStreamNode = static_cast<StreamNode*>(redundantNode->childAt(matchingRedundantStreamIndex));
-							auto const talkerStreamFormat = talkerStreamNode->streamFormat();
+							areMatchingDomainsConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamConnectionState);
+							areMatchingDomainsFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamConnectionState);
+
+							auto const talkerStreamFormat = matchingRedundantStreamNode->streamFormat();
 							auto const listenerStreamFormat = nonRedundantStreamNode->streamFormat();
 							isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 						}
 						else if (listenerType == Node::Type::RedundantInput)
 						{
-							// Check the listener
-							auto const& streamConnectionState = redundantStreamNode->streamConnectionState();
-							areMatchingDomainsConnected = streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected;
-							areMatchingDomainsFastConnecting = streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting;
+							auto const& listenerStreamConnectionState = matchingRedundantStreamNode->streamConnectionState();
+							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, nonRedundantStreamNode->streamIndex() };
 
-							auto* listenerStreamNode = static_cast<StreamNode*>(redundantNode->childAt(matchingRedundantStreamIndex));
+							areMatchingDomainsConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamConnectionState);
+							areMatchingDomainsFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamConnectionState);
+
 							auto const talkerStreamFormat = nonRedundantStreamNode->streamFormat();
-							auto const listenerStreamFormat = listenerStreamNode->streamFormat();
+							auto const listenerStreamFormat = matchingRedundantStreamNode->streamFormat();
 							isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 						}
 						else
@@ -808,8 +803,8 @@ public:
 						}
 					}
 
-					auto areConnected = false;
-					auto fastConnecting = false;
+					auto areConnected = areMatchingDomainsConnected;
+					auto fastConnecting = areMatchingDomainsFastConnecting;
 
 					// Always check for all connection
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
@@ -856,7 +851,7 @@ public:
 					// Set domain as compatible if there is a valid matching domain AND either no connection at all OR matching domain connection
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
 					{
-						if (foundMatchingRedundantStreamIndex && ((!areConnected && !fastConnecting) || areMatchingDomainsConnected || areMatchingDomainsFastConnecting))
+						if (matchingRedundantStreamNode != nullptr && ((!areConnected && !fastConnecting) || areMatchingDomainsConnected || areMatchingDomainsFastConnecting))
 						{
 							intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
 						}
