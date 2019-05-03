@@ -22,6 +22,7 @@
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
 #include "toolkit/helper.hpp"
+#include <deque>
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #	include <QDebug>
@@ -39,7 +40,7 @@ namespace connectionMatrix
 {
 namespace priv
 {
-using Nodes = std::vector<Node*>;
+using Nodes = std::deque<Node*>;
 
 // Entity node by entity ID
 using NodeMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::unique_ptr<Node>, la::avdecc::UniqueIdentifier::hash>;
@@ -152,8 +153,8 @@ QString intersectionDataToString(Model::IntersectionData const& intersectionData
 }
 #endif
 
-// Flatten node hierarchy and insert all nodes in list
-void insertNodes(std::vector<Node*>& list, Node* node)
+// Flatten node hierarchy and insert all nodes in list starting at first
+void insertNodes(Nodes& list, Node* node, int first)
 {
 	if (!node)
 	{
@@ -165,11 +166,15 @@ void insertNodes(std::vector<Node*>& list, Node* node)
 	auto const before = list.size();
 #endif
 
+	auto nodes = Nodes{};
 	node->accept(
-		[&list](Node* node)
+		[&nodes](Node* node)
 		{
-			list.push_back(node);
+			nodes.push_back(node);
 		});
+
+	auto const it = std::next(std::begin(list), first);
+	list.insert(it, std::begin(nodes), std::end(nodes));
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 	auto const after = list.size();
@@ -215,6 +220,21 @@ int absoluteChildrenCount(Node* node)
 	}
 
 	return count;
+}
+
+// Returns the index where entity should be inserted to keep a sorted list by entityID
+int sortedIndexForEntity(Nodes const& list, la::avdecc::UniqueIdentifier const& entityID)
+{
+	auto index = 0;
+	for (auto const* node : list)
+	{
+		if (node->entityID() > entityID)
+		{
+			break;
+		}
+		++index;
+	}
+	return index;
 }
 
 // Build and returns a StreamSectionMap from nodes (quick access map for stream nodes)
@@ -1191,19 +1211,22 @@ public:
 
 		auto const childrenCount = priv::absoluteChildrenCount(node);
 
-		auto const first = talkerSectionCount();
+		auto const first = priv::sortedIndexForEntity(_talkerNodes, entityID);
 		auto const last = first + childrenCount;
 
 		beginInsertTalkerItems(first, last);
 
 		_talkerNodeMap.insert(std::make_pair(entityID, node));
 
-		priv::insertNodes(_talkerNodes, node);
+		priv::insertNodes(_talkerNodes, node, first);
 
 		rebuildTalkerSectionCache();
 
+		// Insert new talker rows
+		auto const it = std::next(std::begin(_intersectionData), first);
+		_intersectionData.insert(it, childrenCount + 1, {});
+
 		// Update intersection matrix (Start from the end so that children are initialized before parents)
-		_intersectionData.resize(last + 1);
 		for (auto talkerSection = last; talkerSection >= first; --talkerSection)
 		{
 			auto& row = _intersectionData[talkerSection];
@@ -1231,14 +1254,14 @@ public:
 
 		auto const childrenCount = priv::absoluteChildrenCount(node);
 
-		auto const first = listenerSectionCount();
+		auto const first = priv::sortedIndexForEntity(_listenerNodes, entityID);
 		auto const last = first + childrenCount;
 
 		beginInsertListenerItems(first, last);
 
 		_listenerNodeMap.insert(std::make_pair(entityID, node));
 
-		priv::insertNodes(_listenerNodes, node);
+		priv::insertNodes(_listenerNodes, node, first);
 
 		rebuildListenerSectionCache();
 
@@ -1246,7 +1269,10 @@ public:
 		for (auto talkerSection = _talkerNodes.size(); talkerSection > 0u; --talkerSection)
 		{
 			auto& row = _intersectionData[talkerSection - 1];
-			row.resize(_listenerNodes.size());
+
+			// Insert new listener columns
+			auto const it = std::next(std::begin(row), first);
+			row.insert(it, childrenCount + 1, {});
 
 			auto* talker = _talkerNodes[talkerSection - 1];
 			for (auto listenerSection = last; listenerSection >= first; --listenerSection)
@@ -1906,7 +1932,7 @@ private:
 	priv::NodeSectionMap _listenerNodeSectionMap;
 
 	// Talker major intersection data matrix
-	std::vector<std::vector<Model::IntersectionData>> _intersectionData;
+	std::deque<std::deque<Model::IntersectionData>> _intersectionData;
 };
 
 Model::Model(QObject* parent)
