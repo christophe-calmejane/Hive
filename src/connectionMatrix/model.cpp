@@ -617,27 +617,11 @@ public:
 	{
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-
 			auto const talkerType = intersectionData.talker->type();
 			auto const listenerType = intersectionData.listener->type();
 
 			auto const talkerEntityID = intersectionData.talker->entityID();
 			auto const listenerEntityID = intersectionData.listener->entityID();
-
-			auto talkerEntity = manager.getControlledEntity(talkerEntityID);
-			auto listenerEntity = manager.getControlledEntity(listenerEntityID);
-
-			if (!talkerEntity || !listenerEntity)
-			{
-				return;
-			}
-
-			auto const& talkerEntityNode = talkerEntity->getEntityNode();
-			auto const& listenerEntityNode = listenerEntity->getEntityNode();
-
-			auto const talkerConfigurationIndex = talkerEntityNode.dynamicModel->currentConfiguration;
-			auto const listenerConfigurationIndex = listenerEntityNode.dynamicModel->currentConfiguration;
 
 			switch (intersectionData.type)
 			{
@@ -650,7 +634,6 @@ public:
 				}
 				case Model::IntersectionData::Type::Redundant_Redundant:
 				{
-#if 0
 					auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
 					auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
 
@@ -671,8 +654,11 @@ public:
 						auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
 						atLeastOneInterfaceDown |= talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
-						auto const& listenerStreamConnectionState = listenerStreamNode->streamConnectionState();
-						auto const connected = listenerStreamConnectionState.state != la::avdecc::entity::model::StreamConnectionState::State::NotConnected; // Connected or FastConnecting
+						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
+						auto const isConnectedToTalker = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
+						auto const isFastConnectingToTalker = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamConnectionState());
+
+						auto const connected = isConnectedToTalker || isFastConnectingToTalker;
 						atLeastOneConnected |= connected;
 						allConnected &= connected;
 
@@ -724,12 +710,10 @@ public:
 					{
 						intersectionData.state = Model::IntersectionData::State::NotConnected;
 					}
-#endif
 					break;
 				}
 				case Model::IntersectionData::Type::Redundant_SingleStream:
 				{
-#if 0
 					RedundantNode* redundantNode = nullptr;
 					StreamNode* redundantStreamNode = nullptr;
 					StreamNode* nonRedundantStreamNode = nullptr;
@@ -758,11 +742,11 @@ public:
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
-						if (auto* redundantStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
+						if (auto* streamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
 						{
-							if (redundantStreamNode->grandMasterID() == nonRedundantGrandmasterID)
+							if (streamNode->grandMasterID() == nonRedundantGrandmasterID)
 							{
-								matchingRedundantStreamIndex = redundantStreamNode->streamIndex();
+								matchingRedundantStreamIndex = streamNode->streamIndex();
 								break;
 							}
 						}
@@ -827,8 +811,26 @@ public:
 					// Always check for all connection
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
-						(void)i;
-						// TODO
+						if (talkerType == Node::Type::RedundantOutput)
+						{
+							auto* talkerStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i));
+							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
+
+							areConnected |= avdecc::helper::isConnectedToTalker(talkerStream, nonRedundantStreamNode->streamConnectionState());
+							fastConnecting |= avdecc::helper::isFastConnectingToTalker(talkerStream, nonRedundantStreamNode->streamConnectionState());
+						}
+						else if (listenerType == Node::Type::RedundantInput)
+						{
+							auto* listenerStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i));
+							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, nonRedundantStreamNode->streamIndex() };
+
+							areConnected |= avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
+							fastConnecting |= avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamConnectionState());
+						}
+						else
+						{
+							assert(false);
+						}
 					}
 
 					// Update connected state
@@ -860,12 +862,10 @@ public:
 							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
 						}
 					}
-#endif
 					break;
 				}
 				case Model::IntersectionData::Type::Redundant_RedundantStream:
 				{
-#if 0
 					auto talkerSection = -1;
 					auto listenerSection = -1;
 
@@ -902,7 +902,6 @@ public:
 
 					intersectionData.state = sourceIntersectionData.state;
 					intersectionData.flags = sourceIntersectionData.flags;
-#endif
 					break;
 				}
 				case Model::IntersectionData::Type::RedundantStream_RedundantStream:
