@@ -630,10 +630,16 @@ public:
 				case Model::IntersectionData::Type::Entity_RedundantStream:
 				case Model::IntersectionData::Type::Entity_SingleStream:
 				{
+					// This is a summary intersection, always update all flags
+					intersectionData.flags.clear();
+
 					break;
 				}
 				case Model::IntersectionData::Type::Redundant_Redundant:
 				{
+					// This is a summary intersection, always update all flags
+					intersectionData.flags.clear();
+
 					auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
 					auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
 
@@ -715,6 +721,9 @@ public:
 				}
 				case Model::IntersectionData::Type::Redundant_SingleStream:
 				{
+					// This is a summary intersection, always update all flags
+					intersectionData.flags.clear();
+
 					RedundantNode* redundantNode = nullptr;
 					StreamNode* nonRedundantStreamNode = nullptr;
 
@@ -791,16 +800,13 @@ public:
 					}
 
 					// Update format compatibility
-					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateFormat))
+					if (isFormatCompatible)
 					{
-						if (isFormatCompatible)
-						{
-							intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormat);
-						}
-						else
-						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
-						}
+						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormat);
+					}
+					else
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
 					}
 
 					auto areConnected = areMatchingDomainsConnected;
@@ -832,39 +838,34 @@ public:
 					}
 
 					// Update connected state
-					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
+					if (areConnected)
 					{
-						if (areConnected)
-						{
-							intersectionData.state = Model::IntersectionData::State::Connected;
-						}
-						else if (fastConnecting)
-						{
-							intersectionData.state = Model::IntersectionData::State::FastConnecting;
-						}
-						else
-						{
-							intersectionData.state = Model::IntersectionData::State::NotConnected;
-						}
+						intersectionData.state = Model::IntersectionData::State::Connected;
+					}
+					else if (fastConnecting)
+					{
+						intersectionData.state = Model::IntersectionData::State::FastConnecting;
+					}
+					else
+					{
+						intersectionData.state = Model::IntersectionData::State::NotConnected;
 					}
 
 					// Set domain as compatible if there is a valid matching domain AND either no connection at all OR matching domain connection
-					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
+					if (matchingRedundantStreamNode != nullptr && ((!areConnected && !fastConnecting) || areMatchingDomainsConnected || areMatchingDomainsFastConnecting))
 					{
-						if (matchingRedundantStreamNode != nullptr && ((!areConnected && !fastConnecting) || areMatchingDomainsConnected || areMatchingDomainsFastConnecting))
-						{
-							intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
-						}
-						else
-						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
-						}
+						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
+					}
+					else
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
 					}
 
 					break;
 				}
 				case Model::IntersectionData::Type::Redundant_RedundantStream:
 				{
+					// Duplicate information from the only possible redundant stream node
 					auto talkerSection = -1;
 					auto listenerSection = -1;
 

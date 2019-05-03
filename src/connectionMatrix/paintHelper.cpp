@@ -72,42 +72,75 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 
 	auto brushColor = QColor{ White };
 
-	if (connected)
+	if (state == Model::IntersectionData::State::Connected)
 	{
-		brushColor = Green;
-	}
-
-	if (interfaceDown)
-	{
-		brushColor = Blue;
-	}
-
-	if (wrongFormat)
-	{
-		brushColor = Yellow;
-	}
-
-	if (wrongDomain)
-	{
-		brushColor = Red;
-	}
-
-	// Special case
-	if (type == Model::IntersectionData::Type::Redundant_Redundant)
-	{
-		if (state == Model::IntersectionData::State::PartiallyConnected)
+		if (interfaceDown)
 		{
-			brushColor = Orange;
+			brushColor = Blue;
+		}
+		else if (wrongDomain)
+		{
+			brushColor = Red;
+		}
+		else if (wrongFormat)
+		{
+			brushColor = Yellow;
+		}
+		else
+		{
+			brushColor = Green;
+		}
+	}
+	else if (state == Model::IntersectionData::State::FastConnecting)
+	{
+		if (wrongDomain)
+		{
+			brushColor = Red;
+		}
+		else if (wrongFormat)
+		{
+			brushColor = Yellow;
+		}
+		else
+		{
+			brushColor = Green;
+		}
+	}
+	else if (state == Model::IntersectionData::State::PartiallyConnected)
+	{
+		if (interfaceDown)
+		{
+			brushColor = Blue;
 		}
 		else if (wrongDomain || wrongFormat)
 		{
 			brushColor = Purple;
 		}
-		else if (interfaceDown)
+		else
+		{
+			brushColor = Orange;
+		}
+	}
+	else
+	{
+		if (interfaceDown)
 		{
 			brushColor = Blue;
 		}
+		else if (wrongDomain)
+		{
+			brushColor = Red;
+		}
+		else if (wrongFormat)
+		{
+			brushColor = Yellow;
+		}
+		else
+		{
+			brushColor = White;
+		}
 	}
+
 
 	brushColor.setAlphaF(connected ? 1.0 : 0.25);
 	painter->setBrush(brushColor);

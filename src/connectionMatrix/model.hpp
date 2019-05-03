@@ -48,15 +48,15 @@ public:
 			None,
 
 			// Entity
-			Entity_Entity,
-			Entity_Redundant,
-			Entity_RedundantStream,
-			Entity_SingleStream,
+			Entity_Entity, // Summary kind
+			Entity_Redundant, // Summary kind
+			Entity_RedundantStream, // Summary kind
+			Entity_SingleStream, // Summary kind
 
 			// Redundant
-			Redundant_Redundant,
-			Redundant_RedundantStream,
-			Redundant_SingleStream,
+			Redundant_Redundant, // Summary kind
+			Redundant_RedundantStream, // Duplicate kind
+			Redundant_SingleStream, // Summary kind
 
 			// RedundantStream
 			RedundantStream_RedundantStream,
