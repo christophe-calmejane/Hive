@@ -19,17 +19,32 @@
 
 #pragma once
 
-#include <QAbstractTableModel>
-#include <la/avdecc/utils.hpp>
-
+// Debugging options
 #define ENABLE_CONNECTION_MATRIX_DEBUG 0
 #define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 1
 #define ENABLE_CONNECTION_MATRIX_TOOLTIP 1
+
+#include <QAbstractTableModel>
+#include <la/avdecc/utils.hpp>
+#include <la/avdecc/internals/entityModel.hpp>
+
+// Always disable debugging options in Release
+#ifndef DEBUG
+#undef ENABLE_CONNECTION_MATRIX_DEBUG
+#undef ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
+#undef ENABLE_CONNECTION_MATRIX_TOOLTIP
+#define ENABLE_CONNECTION_MATRIX_DEBUG 0
+#define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 0
+#define ENABLE_CONNECTION_MATRIX_TOOLTIP 0
+#endif // !DEBUG
 
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 #include <QVariantAnimation>
 #include <QColor>
 #endif
+
+#include <utility>
+#include <vector>
 
 namespace connectionMatrix
 {
@@ -81,6 +96,7 @@ public:
 			WrongFormat = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener) */
 		};
 		using Flags = la::avdecc::utils::EnumBitfield<Flag>;
+		using ConnectableStreams = std::pair<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>; // Talker StreamIndex, Listener StreamIndex
 
 		Node* talker{ nullptr };
 		Node* listener{ nullptr };
@@ -88,6 +104,7 @@ public:
 		Type type{ Type::None };
 		State state{ State::NotConnected };
 		Flags flags{};
+		std::vector<ConnectableStreams> redundantSmartConnectableStreams{}; // List of Streams that can automatically be connected when clicking on the Connection Node (only applicable when Type is Redundant_XX)
 
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 		QVariantAnimation* animation{ nullptr };

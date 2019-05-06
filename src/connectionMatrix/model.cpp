@@ -23,6 +23,7 @@
 #include "avdecc/helper.hpp"
 #include "toolkit/helper.hpp"
 #include <deque>
+#include <vector>
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #	include <QDebug>
@@ -499,14 +500,8 @@ public:
 	}
 
 	// Returns true if domains are compatible
-	bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& talkerLinkStatus, la::avdecc::UniqueIdentifier const& talkerGrandMasterID, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& listenerLinkStatus, la::avdecc::UniqueIdentifier const& listenerGrandMasterID)
+	constexpr bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& talkerLinkStatus, la::avdecc::UniqueIdentifier const& talkerGrandMasterID, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& listenerLinkStatus, la::avdecc::UniqueIdentifier const& listenerGrandMasterID) const noexcept
 	{
-		// If either is down, no need to check the domain, it makes no sense (so return compatible)
-		if (talkerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down)
-		{
-			return true;
-		}
-
 		// Check both have the same grandmaster
 		return talkerGrandMasterID == listenerGrandMasterID;
 	}
@@ -635,6 +630,7 @@ public:
 
 					break;
 				}
+
 				case Model::IntersectionData::Type::Redundant_Redundant:
 				{
 					// This is a summary intersection, always update all flags
@@ -677,33 +673,23 @@ public:
 						allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 					}
 
+					// Update flags
 					if (atLeastOneInterfaceDown)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
 					}
-					else
-					{
-						intersectionData.flags.reset(Model::IntersectionData::Flag::InterfaceDown);
-					}
 
-					if (allCompatibleDomain)
-					{
-						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
-					}
-					else
+					if (!allCompatibleDomain)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
 					}
 
-					if (allCompatibleFormat)
-					{
-						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormat);
-					}
-					else
+					if (!allCompatibleFormat)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
 					}
 
+					// Update State
 					if (allConnected)
 					{
 						intersectionData.state = Model::IntersectionData::State::Connected;
@@ -719,6 +705,7 @@ public:
 
 					break;
 				}
+
 				case Model::IntersectionData::Type::Redundant_SingleStream:
 				{
 					// This is a summary intersection, always update all flags
@@ -743,107 +730,97 @@ public:
 						assert(false);
 					}
 
-					// Try to find if an interface of the redundant device is connected to the same domain that the non-redundant device
-					auto* matchingRedundantStreamNode = static_cast<StreamNode*>(nullptr);
-					auto nonRedundantGrandmasterID = nonRedundantStreamNode->grandMasterID();
+					// Build the list of smart connectable streams:
+					//  - If the Talker is the redundant device, only get the first stream with a matching domain
+					//  - If the Listener is the redundant device, get all streams with a matching domain (so we can fully connect a device in cable redundancy mode)
+					//  - If a stream is already connected, always add it to the list
+					intersectionData.redundantSmartConnectableStreams.clear();
+
+					// Also check for Connection state and Domain/Format compatibility in the loop
+					//  - Summary is said to be Connected if at least one stream is connected
+					//  - Summary is never said to be InterfaceDown (makes no sense since one has to be Up otherwise we wouldn't get messages from the device, and we only have one redundant device here)
+					//  - Summary is said to be WrongDomain if both streams have different domains or if a connection is established while on a different domain
+					//  - Summary is said to be WrongFormat if format do not match (any of the streams, Milan redundancy impose that both Streams of the pair have the same format)
+					auto areConnected = false;
+					auto fastConnecting = false;
+					auto atLeastOneMatchingDomain = false;
+					auto allConnectionsHaveMatchingDomain = true;
+					auto isCompatibleFormat = true;
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
 						if (auto* redundantStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
 						{
 							assert(redundantStreamNode->isRedundantStreamNode());
+							auto connectableStreams = Model::IntersectionData::ConnectableStreams{};
+							auto const* listenerStreamConnectionState = static_cast<la::avdecc::entity::model::StreamConnectionState const*>(nullptr);
+							auto talkerStreamFormat = la::avdecc::entity::model::StreamFormat{};
+							auto listenerStreamFormat = la::avdecc::entity::model::StreamFormat{};
 
-							if (redundantStreamNode->grandMasterID() == nonRedundantGrandmasterID)
+							// Get information based on which node is redundant
+							if (talkerType == Node::Type::RedundantOutput)
 							{
-								matchingRedundantStreamNode = redundantStreamNode;
-								break;
+								connectableStreams = std::make_pair(redundantStreamNode->streamIndex(), nonRedundantStreamNode->streamIndex());
+								listenerStreamConnectionState = &nonRedundantStreamNode->streamConnectionState();
+								talkerStreamFormat = redundantStreamNode->streamFormat();
+								listenerStreamFormat = nonRedundantStreamNode->streamFormat();
+							}
+							else if (listenerType == Node::Type::RedundantInput)
+							{
+								connectableStreams = std::make_pair(nonRedundantStreamNode->streamIndex(), redundantStreamNode->streamIndex());
+								listenerStreamConnectionState = &redundantStreamNode->streamConnectionState();
+								talkerStreamFormat = nonRedundantStreamNode->streamFormat();
+								listenerStreamFormat = redundantStreamNode->streamFormat();
+							}
+
+							// Get Connection State
+							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, connectableStreams.first };
+							auto const streamConnected = avdecc::helper::isConnectedToTalker(talkerStream, *listenerStreamConnectionState);
+							auto const streamFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, *listenerStreamConnectionState);
+							areConnected |= streamConnected;
+							fastConnecting |= streamFastConnecting;
+
+							// Get Format Compatibility
+							isCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+
+							// Get Domain Compatibility
+							auto const sameDomain = redundantStreamNode->grandMasterID() == nonRedundantStreamNode->grandMasterID();
+							atLeastOneMatchingDomain |= sameDomain;
+							if (sameDomain || streamConnected || streamFastConnecting)
+							{
+								// Only add to the smart connection list if it's the first matching domain, or if the redundant device is a Listener (for cable redundancy)
+								if (intersectionData.redundantSmartConnectableStreams.empty() || listenerType == Node::Type::RedundantInput)
+								{
+									intersectionData.redundantSmartConnectableStreams.push_back(connectableStreams);
+								}
+								if (streamConnected || streamFastConnecting)
+								{
+									allConnectionsHaveMatchingDomain &= sameDomain;
+								}
 							}
 						}
 					}
 
-					auto areMatchingDomainsConnected = false;
-					auto areMatchingDomainsFastConnecting = false;
-					auto isFormatCompatible = true;
-
-					// Found a matching domain
-					if (matchingRedundantStreamNode != nullptr)
+					// Update flags
+					if (!atLeastOneMatchingDomain || !allConnectionsHaveMatchingDomain)
 					{
-						// Get format compatibility and connection state
-						if (talkerType == Node::Type::RedundantOutput)
-						{
-							auto const& listenerStreamConnectionState = nonRedundantStreamNode->streamConnectionState();
-							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, matchingRedundantStreamNode->streamIndex() };
-
-							areMatchingDomainsConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamConnectionState);
-							areMatchingDomainsFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamConnectionState);
-
-							auto const talkerStreamFormat = matchingRedundantStreamNode->streamFormat();
-							auto const listenerStreamFormat = nonRedundantStreamNode->streamFormat();
-							isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
-						}
-						else if (listenerType == Node::Type::RedundantInput)
-						{
-							auto const& listenerStreamConnectionState = matchingRedundantStreamNode->streamConnectionState();
-							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, nonRedundantStreamNode->streamIndex() };
-
-							areMatchingDomainsConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamConnectionState);
-							areMatchingDomainsFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamConnectionState);
-
-							auto const talkerStreamFormat = nonRedundantStreamNode->streamFormat();
-							auto const listenerStreamFormat = matchingRedundantStreamNode->streamFormat();
-							isFormatCompatible = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
-						}
-						else
-						{
-							assert(false);
-						}
+						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
 					}
 
-					// Update format compatibility
-					if (isFormatCompatible)
-					{
-						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormat);
-					}
-					else
+					if (!isCompatibleFormat)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
 					}
 
-					auto areConnected = areMatchingDomainsConnected;
-					auto fastConnecting = areMatchingDomainsFastConnecting;
-
-					// Always check for all connection
-					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
-					{
-						if (talkerType == Node::Type::RedundantOutput)
-						{
-							auto* talkerStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i));
-							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
-
-							areConnected |= avdecc::helper::isConnectedToTalker(talkerStream, nonRedundantStreamNode->streamConnectionState());
-							fastConnecting |= avdecc::helper::isFastConnectingToTalker(talkerStream, nonRedundantStreamNode->streamConnectionState());
-						}
-						else if (listenerType == Node::Type::RedundantInput)
-						{
-							auto* listenerStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i));
-							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, nonRedundantStreamNode->streamIndex() };
-
-							areConnected |= avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
-							fastConnecting |= avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamConnectionState());
-						}
-						else
-						{
-							assert(false);
-						}
-					}
-
-					// Update connected state
+					// Update State
 					if (areConnected)
 					{
 						intersectionData.state = Model::IntersectionData::State::Connected;
 					}
 					else if (fastConnecting)
 					{
+						// FastConnecting state should only be possible then the non-redundant device is a Listener, as it can be a non-Milan device
+						// If the redundant device is a Listener, then it has to be a Milan device, in which case FastConnecting state no longer exists
 						intersectionData.state = Model::IntersectionData::State::FastConnecting;
 					}
 					else
@@ -851,18 +828,9 @@ public:
 						intersectionData.state = Model::IntersectionData::State::NotConnected;
 					}
 
-					// Set domain as compatible if there is a valid matching domain AND either no connection at all OR matching domain connection
-					if (matchingRedundantStreamNode != nullptr && ((!areConnected && !fastConnecting) || areMatchingDomainsConnected || areMatchingDomainsFastConnecting))
-					{
-						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
-					}
-					else
-					{
-						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
-					}
-
 					break;
 				}
+
 				case Model::IntersectionData::Type::Redundant_RedundantStream:
 				{
 					// Duplicate information from the only possible redundant stream node
@@ -905,6 +873,7 @@ public:
 
 					break;
 				}
+
 				case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 				case Model::IntersectionData::Type::RedundantStream_SingleStream:
 				case Model::IntersectionData::Type::SingleStream_SingleStream:
@@ -1024,6 +993,7 @@ public:
 
 					break;
 				}
+
 				default:
 					break;
 			}
