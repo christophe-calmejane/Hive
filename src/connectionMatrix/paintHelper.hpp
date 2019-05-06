@@ -28,7 +28,6 @@ namespace connectionMatrix
 {
 namespace paintHelper
 {
-
 void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags);
 
 } // namespace paintHelper

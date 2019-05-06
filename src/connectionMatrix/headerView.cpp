@@ -32,7 +32,6 @@
 
 namespace connectionMatrix
 {
-
 HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	: QHeaderView{ orientation, parent }
 {
@@ -45,7 +44,7 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	setDefaultSectionSize(size);
 
 	setAttribute(Qt::WA_Hover);
-	
+
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
 }
 
@@ -57,7 +56,7 @@ QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
 void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 {
 	assert(sectionState.count() == count());
-	
+
 	_sectionState = sectionState;
 
 	for (auto section = 0; section < count(); ++section)
@@ -114,14 +113,14 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 {
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
-	
+
 	assert(node);
-	
+
 	if (node->childrenCount() == 0)
 	{
 		return;
 	}
-	
+
 	// Toggle the section expand state
 	auto const expanded = !_sectionState[logicalIndex].expanded;
 	_sectionState[logicalIndex].expanded = expanded;
@@ -129,12 +128,12 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 	qDebug() << logicalIndex << "is now" << (expanded ? "expanded" : "collapsed");
 #endif
-	
+
 	// Update hierarchy visibility
 	auto const update = [=](Node* node)
 	{
 		auto const section = model->section(node, orientation());
-		
+
 		// Do not affect the current node
 		if (section == logicalIndex)
 		{
@@ -145,11 +144,11 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 		{
 			auto const parentSection = model->section(parent, orientation());
 			_sectionState[section].visible = expanded && _sectionState[parentSection].expanded;
-			
+
 			updateSectionVisibility(section);
 		}
 	};
-	
+
 	node->accept(update);
 }
 
@@ -161,10 +160,10 @@ void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int
 		{
 			auto* model = static_cast<Model*>(this->model());
 			auto* node = model->node(section, orientation());
-			
+
 			auto expanded = true;
 			auto visible = true;
-		
+
 			switch (node->type())
 			{
 				case Node::Type::RedundantOutput:
@@ -181,7 +180,7 @@ void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int
 
 			_sectionState.push_back({ expanded, visible });
 		}
-		
+
 		updateSectionVisibility(section);
 	}
 
@@ -211,7 +210,7 @@ void HeaderView::updateSectionVisibility(int const logicalIndex)
 		assert(false);
 		return;
 	}
-	
+
 	if (_sectionState[logicalIndex].visible)
 	{
 		showSection(logicalIndex);
@@ -263,11 +262,11 @@ void HeaderView::setModel(QAbstractItemModel* model)
 	{
 		disconnect(this->model());
 	}
-	
+
 	assert(dynamic_cast<Model*>(model) != nullptr);
-	
+
 	QHeaderView::setModel(model);
-	
+
 	if (model)
 	{
 		if (orientation() == Qt::Vertical)
@@ -301,12 +300,12 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 {
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
-	
+
 	assert(node);
-	
+
 	QBrush backgroundBrush{ 0x4A148C };
 	auto nodeLevel{ 0 };
-	
+
 	switch (node->type())
 	{
 		case Node::Type::Entity:
@@ -383,7 +382,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto textRect = r.adjusted(padding, 0, -(padding + arrowSize + arrowOffset), 0);
 
 	auto const elidedText = painter->fontMetrics().elidedText(node->name(), Qt::ElideMiddle, textRect.width());
-	
+
 	if (node->isStreamNode() && !static_cast<StreamNode*>(node)->isRunning())
 	{
 		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
@@ -404,10 +403,10 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 	{
 		return;
 	}
-	
+
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
-	
+
 	assert(node);
 
 	if (node->isStreamNode())
@@ -420,10 +419,10 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 			{
 				auto const& entityNode = controlledEntity->getEntityNode();
 				auto const streamIndex = static_cast<StreamNode*>(node)->streamIndex();
-				
+
 				la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
 				auto const isOutputStream = node->type() == Node::Type::OutputStream || node->type() == Node::Type::RedundantOutputStream;
-				
+
 				if (isOutputStream)
 				{
 					streamNode = &controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
@@ -432,9 +431,9 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 				{
 					streamNode = &controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
 				}
-				
+
 				assert(streamNode != nullptr);
-				
+
 				auto addHeaderAction = [](QMenu& menu, QString const& text)
 				{
 					auto* action = menu.addAction(text);
@@ -455,18 +454,18 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 				QMenu menu;
 				addHeaderAction(menu, "Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
 				addHeaderAction(menu, "Stream: " + node->name());
-				
+
 				menu.addSeparator();
-				
+
 				auto const isRunning = static_cast<StreamNode*>(node)->isRunning();
 				auto* startStreamingAction = addAction(menu, "Start Streaming", !isRunning);
 				auto* stopStreamingAction = addAction(menu, "Stop Streaming", isRunning);
-				
+
 				menu.addSeparator();
-				
+
 				// Release the controlled entity before starting a long operation (menu.exec()
 				controlledEntity.reset();
-				
+
 				if (auto* action = menu.exec(event->globalPos()))
 				{
 					if (action == startStreamingAction)
@@ -525,7 +524,7 @@ void HeaderView::mouseDoubleClickEvent(QMouseEvent* event)
 void HeaderView::leaveEvent(QEvent* event)
 {
 	selectionModel()->clearSelection();
-	
+
 	QHeaderView::leaveEvent(event);
 }
 

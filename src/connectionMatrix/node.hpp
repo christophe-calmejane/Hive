@@ -23,7 +23,6 @@
 
 namespace connectionMatrix
 {
-
 class Node;
 class EntityNode;
 class RedundantNode;
@@ -32,6 +31,7 @@ class StreamNode;
 class Node
 {
 	friend class ModelPrivate;
+
 public:
 	enum class Type
 	{
@@ -44,9 +44,9 @@ public:
 		RedundantOutputStream,
 		RedundantInputStream,
 	};
-	
+
 	virtual ~Node() = default;
-	
+
 	// Returns node type
 	Type type() const;
 
@@ -55,37 +55,37 @@ public:
 
 	// Returns true if node type is either RedundantOutput or RedundantInput
 	bool isRedundantNode() const;
-	
+
 	// Returns true if node type is either RedundantOutputStream or RedundantInputStream
 	bool isRedundantStreamNode() const;
 
 	// Returns true if node type is either OutputStream, InputStream, RedundantOutputStream or RedundantInputStream
 	bool isStreamNode() const;
-	
+
 	// Returns the entity ID
 	la::avdecc::UniqueIdentifier const& entityID() const;
-	
+
 	// Returns the parent node
 	Node* parent() const;
-	
+
 	// Returns true if this node has a parent (false for an entity)
 	bool hasParent() const;
 
 	// Returns the name of this node (entity name, stream name, .. etc)
 	QString const& name() const;
-	
+
 	// Returns the index of the node in its parent childen
 	int index() const;
-	
+
 	// Returns the index child in this node children list, -1 if the child is not related
 	int indexOf(Node* child) const;
-	
+
 	// Returns the child node at index, null if not found
 	Node* childAt(int index) const;
 
 	// Returns the number of children
 	int childrenCount() const;
-	
+
 	// Visitor pattern that performs a complete hierarchy traversal
 	using Visitor = std::function<void(Node*)>;
 	void accept(Visitor const& visitor, bool const onlyChildren = false) const;
@@ -94,20 +94,20 @@ protected:
 	Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent);
 
 	void setName(QString const& name);
-	
+
 protected:
 	// Node type
 	Type const _type;
-	
+
 	// Associated entity ID
 	la::avdecc::UniqueIdentifier const _entityID;
-	
+
 	// Pointer to the parent node (should be null for entities only)
 	Node* const _parent;
-	
+
 	// Node name
 	QString _name;
-	
+
 	// Holds the children
 	std::vector<std::unique_ptr<Node>> _children;
 };
@@ -115,6 +115,7 @@ protected:
 class EntityNode : public Node
 {
 	friend class ModelPrivate;
+
 public:
 	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID);
 
@@ -129,15 +130,16 @@ protected:
 class RedundantNode : public Node
 {
 	friend class ModelPrivate;
+
 public:
 	static RedundantNode* createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
 	static RedundantNode* createInputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
-	
+
 	la::avdecc::controller::model::VirtualIndex const& redundantIndex() const;
-	
+
 protected:
 	RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
-	
+
 protected:
 	la::avdecc::controller::model::VirtualIndex const _redundantIndex;
 };
@@ -145,13 +147,14 @@ protected:
 class StreamNode : public Node
 {
 	friend class ModelPrivate;
+
 public:
 	static StreamNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	static StreamNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-	
+
 	static StreamNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	static StreamNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-	
+
 	la::avdecc::entity::model::StreamIndex const& streamIndex() const;
 	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const;
 	la::avdecc::entity::model::StreamFormat const& streamFormat() const;
@@ -160,7 +163,7 @@ public:
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const;
 	bool isRunning() const;
 	la::avdecc::entity::model::StreamConnectionState const& streamConnectionState() const;
-	
+
 protected:
 	StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 
@@ -170,7 +173,7 @@ protected:
 	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus);
 	void setRunning(bool isRunning);
 	void setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState);
-	
+
 protected:
 	la::avdecc::entity::model::StreamIndex const _streamIndex;
 	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex;

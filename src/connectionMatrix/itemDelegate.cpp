@@ -25,12 +25,11 @@
 #include <QPainter>
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
-#include <unordered_map>
+#	include <unordered_map>
 #endif
 
 namespace connectionMatrix
 {
-
 void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	// Sometimes when the model is transposed with hidden rows/columns, hidden items are asked to be drawn
@@ -39,7 +38,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 	{
 		return;
 	}
-	
+
 	painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Gray));
 
 	// Background highlithing if selected
@@ -58,7 +57,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 #endif
 
 	auto const& intersectionData = static_cast<Model const*>(index.model())->intersectionData(index);
-	
+
 	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags);
 }
 

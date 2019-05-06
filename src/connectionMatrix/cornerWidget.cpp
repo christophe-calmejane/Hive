@@ -24,7 +24,6 @@
 
 namespace connectionMatrix
 {
-
 QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
 {
 	QStringList headers{ { "Talkers", "Listeners" } };

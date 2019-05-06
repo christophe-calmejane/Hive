@@ -30,10 +30,10 @@ class LegendDialog : public QDialog
 	Q_OBJECT
 public:
 	LegendDialog(QWidget* parent = nullptr);
-	
+
 private:
-	QVBoxLayout _layout{this};
-	QPushButton _closeButton{"Close", this};
+	QVBoxLayout _layout{ this };
+	QPushButton _closeButton{ "Close", this };
 };
 
 } // namespace connectionMatrix

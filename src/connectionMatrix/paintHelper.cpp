@@ -26,7 +26,6 @@ namespace connectionMatrix
 {
 namespace paintHelper
 {
-
 static inline void drawSquare(QPainter* painter, QRect const& rect)
 {
 	painter->drawRect(rect.adjusted(2, 2, -2, -2));
@@ -35,7 +34,7 @@ static inline void drawSquare(QPainter* painter, QRect const& rect)
 static inline void drawDiamond(QPainter* painter, QRect const& rect)
 {
 	auto const r = rect.translated(-rect.center()).adjusted(3, 3, -3, -3);
-	
+
 	painter->save();
 	painter->translate(rect.center());
 	painter->rotate(45);
@@ -98,7 +97,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 {
 	painter->setRenderHint(QPainter::Antialiasing);
 	painter->setRenderHint(QPainter::HighQualityAntialiasing);
-	
+
 	auto const connected = state != Model::IntersectionData::State::NotConnected;
 
 	auto const penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);

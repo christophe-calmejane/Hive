@@ -24,7 +24,6 @@
 
 namespace connectionMatrix
 {
-
 class Model;
 class HeaderView;
 class ItemDelegate;
@@ -46,10 +45,10 @@ private:
 	void onIntersectionClicked(QModelIndex const& index);
 	void onFilterChanged(QString const& filter);
 	void applyFilterPattern(QRegExp const& pattern);
-	
+
 	// QTableView overrides
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
-	
+
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 

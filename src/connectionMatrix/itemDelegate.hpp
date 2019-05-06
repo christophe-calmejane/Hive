@@ -27,6 +27,7 @@ class ItemDelegate final : public QStyledItemDelegate
 {
 public:
 	using QStyledItemDelegate::QStyledItemDelegate;
+
 private:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 };

@@ -58,7 +58,7 @@ private:
 	void handleModelReset();
 	void updateSectionVisibility(int const logicalIndex);
 	void applyFilterPattern();
-	
+
 	// QHeaderView overrides
 	virtual void setModel(QAbstractItemModel* model) override;
 	virtual QSize sizeHint() const override;

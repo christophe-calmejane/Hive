@@ -30,7 +30,7 @@
 #endif
 
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
-#include "toolkit/material/color.hpp"
+#	include "toolkit/material/color.hpp"
 #endif
 
 #ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
@@ -1696,9 +1696,10 @@ private:
 		{
 			talker->accept(
 				[=](Node* child)
-			{
-				talkerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
-			}, true);
+				{
+					talkerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
+				},
+				true);
 		}
 
 		// Then, update the node intersection
@@ -1731,9 +1732,10 @@ private:
 		{
 			listener->accept(
 				[=](Node* child)
-			{
-				listenerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
-			}, true);
+				{
+					listenerIntersectionDataChanged(child, false, andChildren, dirtyFlags);
+				},
+				true);
 		}
 
 		// Then, update the node intersection

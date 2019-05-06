@@ -22,7 +22,6 @@
 
 namespace connectionMatrix
 {
-
 Node::Type Node::type() const
 {
 	return _type;
@@ -37,11 +36,11 @@ bool Node::isRedundantNode() const
 {
 	switch (_type)
 	{
-	case Type::RedundantOutput:
-	case Type::RedundantInput:
-		return true;
-	default:
-		return false;
+		case Type::RedundantOutput:
+		case Type::RedundantInput:
+			return true;
+		default:
+			return false;
 	}
 }
 
@@ -49,11 +48,11 @@ bool Node::isRedundantStreamNode() const
 {
 	switch (_type)
 	{
-	case Type::RedundantOutputStream:
-	case Type::RedundantInputStream:
-		return true;
-	default:
-		return false;
+		case Type::RedundantOutputStream:
+		case Type::RedundantInputStream:
+			return true;
+		default:
+			return false;
 	}
 }
 
@@ -98,7 +97,10 @@ int Node::index() const
 
 int Node::indexOf(Node* child) const
 {
-	auto const predicate = [child](auto const& item) { return item.get() == child; };
+	auto const predicate = [child](auto const& item)
+	{
+		return item.get() == child;
+	};
 	auto const it = std::find_if(std::begin(_children), std::end(_children), predicate);
 	assert(it != std::end(_children));
 	auto const index = std::distance(std::begin(_children), it);
@@ -111,7 +113,7 @@ Node* Node::childAt(int index) const
 	{
 		return nullptr;
 	}
-	
+
 	return _children.at(index).get();
 }
 
@@ -134,10 +136,10 @@ void Node::accept(Visitor const& visitor, bool const onlyChildren) const
 }
 
 Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent)
-: _type{ type }
-, _entityID{ entityID }
-, _parent{ parent }
-, _name{ avdecc::helper::uniqueIdentifierToString(entityID) }
+	: _type{ type }
+	, _entityID{ entityID }
+	, _parent{ parent }
+	, _name{ avdecc::helper::uniqueIdentifierToString(entityID) }
 {
 	if (_parent)
 	{
@@ -157,21 +159,22 @@ EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID)
 
 void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const
 {
-	Node::accept([&avbInterfaceIndex, &visitor](Node* node)
-	{
-		if (node->isStreamNode())
+	Node::accept(
+		[&avbInterfaceIndex, &visitor](Node* node)
 		{
-			auto* streamNode = static_cast<StreamNode*>(node);
-			if (streamNode->avbInterfaceIndex() == avbInterfaceIndex)
+			if (node->isStreamNode())
 			{
-				visitor(streamNode);
+				auto* streamNode = static_cast<StreamNode*>(node);
+				if (streamNode->avbInterfaceIndex() == avbInterfaceIndex)
+				{
+					visitor(streamNode);
+				}
 			}
-		}
-	});
+		});
 }
 
 EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID)
-: Node{ Type::Entity, entityID, nullptr}
+	: Node{ Type::Entity, entityID, nullptr }
 {
 }
 
@@ -191,8 +194,8 @@ la::avdecc::controller::model::VirtualIndex const& RedundantNode::redundantIndex
 }
 
 RedundantNode::RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex)
-: Node{ type, parent.entityID(), &parent }
-, _redundantIndex{ redundantIndex }
+	: Node{ type, parent.entityID(), &parent }
+	, _redundantIndex{ redundantIndex }
 {
 }
 
@@ -257,9 +260,9 @@ la::avdecc::entity::model::StreamConnectionState const& StreamNode::streamConnec
 }
 
 StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
-: Node{ type, parent.entityID(), &parent }
-, _streamIndex{ streamIndex }
-, _avbInterfaceIndex{ avbInterfaceIndex }
+	: Node{ type, parent.entityID(), &parent }
+	, _streamIndex{ streamIndex }
+	, _avbInterfaceIndex{ avbInterfaceIndex }
 {
 }
 

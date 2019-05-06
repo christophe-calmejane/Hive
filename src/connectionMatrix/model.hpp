@@ -30,17 +30,17 @@
 
 // Always disable debugging options in Release
 #ifndef DEBUG
-#undef ENABLE_CONNECTION_MATRIX_DEBUG
-#undef ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
-#undef ENABLE_CONNECTION_MATRIX_TOOLTIP
-#define ENABLE_CONNECTION_MATRIX_DEBUG 0
-#define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 0
-#define ENABLE_CONNECTION_MATRIX_TOOLTIP 0
+#	undef ENABLE_CONNECTION_MATRIX_DEBUG
+#	undef ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
+#	undef ENABLE_CONNECTION_MATRIX_TOOLTIP
+#	define ENABLE_CONNECTION_MATRIX_DEBUG 0
+#	define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 0
+#	define ENABLE_CONNECTION_MATRIX_TOOLTIP 0
 #endif // !DEBUG
 
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
-#include <QVariantAnimation>
-#include <QColor>
+#	include <QVariantAnimation>
+#	include <QColor>
 #endif
 
 #include <utility>
@@ -48,7 +48,6 @@
 
 namespace connectionMatrix
 {
-
 class Node;
 
 class ModelPrivate;
@@ -80,7 +79,7 @@ public:
 			// Stream
 			SingleStream_SingleStream,
 		};
-		
+
 		enum class State
 		{
 			NotConnected, /**< Stream is not connected */
@@ -113,27 +112,27 @@ public:
 
 	Model(QObject* parent = nullptr);
 	virtual ~Model();
-	
+
 	virtual int rowCount(QModelIndex const& parent = {}) const override;
-	virtual int columnCount(QModelIndex const& parent = {} ) const override;
+	virtual int columnCount(QModelIndex const& parent = {}) const override;
 	virtual QVariant data(QModelIndex const& index, int role = Qt::DisplayRole) const override;
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-	
+
 	// Returns node for the given section and orientation, nullptr otherwise
 	Node* node(int section, Qt::Orientation orientation) const;
-	
+
 	// Returns section for the given node and orientation, -1 otherwise
 	int section(Node* node, Qt::Orientation orientation) const;
 
 	// Returns intersection data for the given index
 	IntersectionData const& intersectionData(QModelIndex const& index) const;
-	
+
 	// Set the transpose state of the model (default false, rows = talkers, columns = listeners)
 	void setTransposed(bool const transposed);
 
 	// Returns the transpose state of the model
 	bool isTransposed() const;
-	
+
 private:
 	QScopedPointer<ModelPrivate> d_ptr;
 	Q_DECLARE_PRIVATE(Model);
