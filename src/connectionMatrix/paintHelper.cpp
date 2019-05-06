@@ -29,12 +29,12 @@ namespace paintHelper
 
 static inline void drawSquare(QPainter* painter, QRect const& rect)
 {
-	painter->drawRect(rect.adjusted(3, 3, -3, -3));
+	painter->drawRect(rect.adjusted(2, 2, -2, -2));
 }
 
 static inline void drawDiamond(QPainter* painter, QRect const& rect)
 {
-	auto const r = rect.translated(-rect.center()).adjusted(4, 4, -4, -4);
+	auto const r = rect.translated(-rect.center()).adjusted(3, 3, -3, -3);
 	
 	painter->save();
 	painter->translate(rect.center());
@@ -45,81 +45,29 @@ static inline void drawDiamond(QPainter* painter, QRect const& rect)
 
 static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
-	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
+	painter->drawEllipse(rect.adjusted(2, 2, -2, -2));
 }
 
-void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
+static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
 {
-	painter->setRenderHint(QPainter::Antialiasing);
-	painter->setRenderHint(QPainter::HighQualityAntialiasing);
-	
-	auto const connected = state != Model::IntersectionData::State::NotConnected;
-
-	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
-	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
-	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
-
-	auto penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);
-	painter->setPen(QPen{ penColor, 1.5 });
-
-	static auto const White = color::value(color::Name::Gray, color::Shade::Shade100);
+	static auto const White = color::value(color::Name::Gray, color::Shade::Shade300);
 	static auto const Green = color::value(color::Name::Green, color::Shade::Shade500);
 	static auto const Red = color::value(color::Name::Red, color::Shade::Shade800);
 	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
 	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
 	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
-	static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
+	//static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
 
-	if (state == Model::IntersectionData::State::Connected)
+	auto const connected = state != Model::IntersectionData::State::NotConnected;
+	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
+	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
+	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
+
+	if (state == Model::IntersectionData::State::PartiallyConnected)
 	{
-		if (interfaceDown)
-		{
-			brushColor = Blue;
-		}
-		else if (wrongDomain)
-		{
-			brushColor = Red;
-		}
-		else if (wrongFormat)
-		{
-			brushColor = Yellow;
-		}
-		else
-		{
-			brushColor = Green;
-		}
-	}
-	else if (state == Model::IntersectionData::State::FastConnecting)
-	{
-		if (wrongDomain)
-		{
-			brushColor = Red;
-		}
-		else if (wrongFormat)
-		{
-			brushColor = Yellow;
-		}
-		else
-		{
-			brushColor = Green;
-		}
-	}
-	else if (state == Model::IntersectionData::State::PartiallyConnected)
-	{
-		if (interfaceDown)
-		{
-			brushColor = Blue;
-		}
-		else if (wrongDomain || wrongFormat)
-		{
-			brushColor = Purple;
-		}
-		else
-		{
-			brushColor = Orange;
-		}
+		brushColor = Purple;
 	}
 	else
 	{
@@ -137,13 +85,24 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		}
 		else
 		{
-			brushColor = White;
+			brushColor = connected ? Green : White;
 		}
 	}
 
-
 	brushColor.setAlphaF(connected ? 1.0 : 0.25);
-	painter->setBrush(brushColor);
+
+	return brushColor;
+}
+
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
+{
+	painter->setRenderHint(QPainter::Antialiasing);
+	painter->setRenderHint(QPainter::HighQualityAntialiasing);
+	
+	auto const connected = state != Model::IntersectionData::State::NotConnected;
+
+	auto const penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);
+	auto penWidth = qreal{ 1.5 };
 
 	switch (type)
 	{
@@ -151,16 +110,25 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		case Model::IntersectionData::Type::Entity_Redundant:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
 		case Model::IntersectionData::Type::Entity_SingleStream:
+			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade200) });
+			painter->setPen(QPen{ penColor, penWidth });
 			drawSquare(painter, rect);
 			break;
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
+			painter->setBrush(getConnectionBrushColor(state, flags));
+			penWidth = qreal{ 1.0 };
+			painter->setPen(QPen{ penColor, penWidth });
 			drawDiamond(painter, rect);
 			break;
 		case Model::IntersectionData::Type::Redundant_Redundant:
+			penWidth = qreal{ 2.0 };
+			[[fallthrough]];
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
+			painter->setBrush(getConnectionBrushColor(state, flags));
+			painter->setPen(QPen{ penColor, penWidth });
 			drawCircle(painter, rect);
 			break;
 		case Model::IntersectionData::Type::None:
