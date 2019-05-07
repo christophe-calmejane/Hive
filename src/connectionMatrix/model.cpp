@@ -640,7 +640,7 @@ public:
 					auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
 
 					// Build the list of smart connectable streams:
-					intersectionData.redundantSmartConnectableStreams.clear();
+					intersectionData.smartConnectableStreams.clear();
 
 					auto atLeastOneInterfaceDown = false;
 					auto atLeastOneConnected = false;
@@ -677,7 +677,7 @@ public:
 						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
 						allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 
-						intersectionData.redundantSmartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ talkerStreamNode->streamIndex(), listenerStreamNode->streamIndex(), isConnectedToTalker, isFastConnectingToTalker });
+						intersectionData.smartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ talkerStreamNode->streamIndex(), listenerStreamNode->streamIndex(), isConnectedToTalker, isFastConnectingToTalker });
 					}
 
 					// Update flags
@@ -741,7 +741,7 @@ public:
 					//  - If the Talker is the redundant device, only get the first stream with a matching domain
 					//  - If the Listener is the redundant device, get all streams with a matching domain (so we can fully connect a device in cable redundancy mode)
 					//  - If a stream is already connected, always add it to the list
-					intersectionData.redundantSmartConnectableStreams.clear();
+					intersectionData.smartConnectableStreams.clear();
 
 					// Also check for Connection state and Domain/Format compatibility in the loop
 					//  - Summary is said to be Connected if at least one stream is connected
@@ -754,7 +754,7 @@ public:
 					auto allConnectionsHaveMatchingDomain = true;
 					auto isCompatibleFormat = true;
 					auto countConnections = size_t{ 0u };
-					auto possibleSmartConnectableStreams = decltype(intersectionData.redundantSmartConnectableStreams){};
+					auto possibleSmartConnectableStreams = decltype(intersectionData.smartConnectableStreams){};
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
@@ -802,7 +802,7 @@ public:
 								if (connectableStream.isConnected || connectableStream.isFastConnecting)
 								{
 									// Always add a Connected Stream to the smartConnectable list
-									intersectionData.redundantSmartConnectableStreams.push_back(connectableStream);
+									intersectionData.smartConnectableStreams.push_back(connectableStream);
 									allConnectionsHaveMatchingDomain &= sameDomain;
 									++countConnections;
 								}
@@ -819,9 +819,9 @@ public:
 					for (auto const& connectableStream : possibleSmartConnectableStreams)
 					{
 						// Only add to the smart connection list if it's the only one in the list, or if the redundant device is a Listener (for cable redundancy)
-						if (intersectionData.redundantSmartConnectableStreams.empty() || listenerType == Node::Type::RedundantInput)
+						if (intersectionData.smartConnectableStreams.empty() || listenerType == Node::Type::RedundantInput)
 						{
-							intersectionData.redundantSmartConnectableStreams.push_back(connectableStream);
+							intersectionData.smartConnectableStreams.push_back(connectableStream);
 						}
 					}
 
@@ -839,7 +839,7 @@ public:
 					// Update State
 					if (areConnected)
 					{
-						if (countConnections == intersectionData.redundantSmartConnectableStreams.size())
+						if (countConnections == intersectionData.smartConnectableStreams.size())
 						{
 							intersectionData.state = Model::IntersectionData::State::Connected;
 						}
@@ -901,6 +901,7 @@ public:
 
 					intersectionData.state = sourceIntersectionData.state;
 					intersectionData.flags = sourceIntersectionData.flags;
+					intersectionData.smartConnectableStreams = sourceIntersectionData.smartConnectableStreams;
 
 					break;
 				}
@@ -1020,6 +1021,10 @@ public:
 						{
 							intersectionData.state = Model::IntersectionData::State::NotConnected;
 						}
+
+						// Build the list of smart connectable streams:
+						intersectionData.smartConnectableStreams.clear();
+						intersectionData.smartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ talkerStreamNode->streamIndex(), listenerStreamNode->streamIndex(), isConnectedToTalker, isFastConnectingToTalker });
 					}
 
 					break;

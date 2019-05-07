@@ -97,31 +97,15 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 	switch (intersectionData.type)
 	{
-		// Single connection possibility
+		// Use SmartConnection algorithm
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
-		{
-			auto const talkerStreamIndex = static_cast<StreamNode*>(intersectionData.talker)->streamIndex();
-			auto const listenerStreamIndex = static_cast<StreamNode*>(intersectionData.listener)->streamIndex();
-
-			if (intersectionData.state != Model::IntersectionData::State::NotConnected)
-			{
-				manager.disconnectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
-			}
-			else
-			{
-				manager.connectStream(talkerID, talkerStreamIndex, listenerID, listenerStreamIndex);
-			}
-			break;
-		}
-
-		// Use SmartConnection algorithm
 		case Model::IntersectionData::Type::Redundant_Redundant:
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		{
-			if (intersectionData.redundantSmartConnectableStreams.empty())
+			if (intersectionData.smartConnectableStreams.empty())
 			{
 				QMessageBox::information(this, "", "Couldn't detect a Stream of the Redundant Pair on the same AVB domain than the other Entity, cannot automatically change the stream connection.\n\nPlease expand the Redundant Pair and manually choose desired stream.");
 			}
@@ -142,7 +126,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
 				auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
 
-				for (auto const& connectableStream : intersectionData.redundantSmartConnectableStreams)
+				for (auto const& connectableStream : intersectionData.smartConnectableStreams)
 				{
 					auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, connectableStream.talkerStreamIndex };
 					auto const areConnected = connectableStream.isConnected || connectableStream.isFastConnecting;

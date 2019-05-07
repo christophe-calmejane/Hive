@@ -109,7 +109,7 @@ public:
 		Type type{ Type::None };
 		State state{ State::NotConnected };
 		Flags flags{};
-		std::vector<SmartConnectableStream> redundantSmartConnectableStreams{}; // List of Streams that can automatically be connected when clicking on the Connection Node (only applicable when Type is Redundant_XX)
+		std::vector<SmartConnectableStream> smartConnectableStreams{};
 
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 		QVariantAnimation* animation{ nullptr };
