@@ -746,13 +746,15 @@ public:
 					auto atLeastOneMatchingDomain = false;
 					auto allConnectionsHaveMatchingDomain = true;
 					auto isCompatibleFormat = true;
+					auto countConnections = size_t{ 0u };
+					auto possibleSmartConnectableStreams = decltype(intersectionData.redundantSmartConnectableStreams){};
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
 						if (auto* redundantStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
 						{
 							assert(redundantStreamNode->isRedundantStreamNode());
-							auto connectableStreams = Model::IntersectionData::ConnectableStreams{};
+							auto connectableStream = Model::IntersectionData::SmartConnectableStream{};
 							auto const* listenerStreamConnectionState = static_cast<la::avdecc::entity::model::StreamConnectionState const*>(nullptr);
 							auto talkerStreamFormat = la::avdecc::entity::model::StreamFormat{};
 							auto listenerStreamFormat = la::avdecc::entity::model::StreamFormat{};
@@ -760,25 +762,27 @@ public:
 							// Get information based on which node is redundant
 							if (talkerType == Node::Type::RedundantOutput)
 							{
-								connectableStreams = std::make_pair(redundantStreamNode->streamIndex(), nonRedundantStreamNode->streamIndex());
+								connectableStream.talkerStreamIndex = redundantStreamNode->streamIndex();
+								connectableStream.listenerStreamIndex = nonRedundantStreamNode->streamIndex();
 								listenerStreamConnectionState = &nonRedundantStreamNode->streamConnectionState();
 								talkerStreamFormat = redundantStreamNode->streamFormat();
 								listenerStreamFormat = nonRedundantStreamNode->streamFormat();
 							}
 							else if (listenerType == Node::Type::RedundantInput)
 							{
-								connectableStreams = std::make_pair(nonRedundantStreamNode->streamIndex(), redundantStreamNode->streamIndex());
+								connectableStream.talkerStreamIndex = nonRedundantStreamNode->streamIndex();
+								connectableStream.listenerStreamIndex = redundantStreamNode->streamIndex();
 								listenerStreamConnectionState = &redundantStreamNode->streamConnectionState();
 								talkerStreamFormat = nonRedundantStreamNode->streamFormat();
 								listenerStreamFormat = redundantStreamNode->streamFormat();
 							}
 
 							// Get Connection State
-							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, connectableStreams.first };
-							auto const streamConnected = avdecc::helper::isConnectedToTalker(talkerStream, *listenerStreamConnectionState);
-							auto const streamFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, *listenerStreamConnectionState);
-							areConnected |= streamConnected;
-							fastConnecting |= streamFastConnecting;
+							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, connectableStream.talkerStreamIndex };
+							connectableStream.isConnected = avdecc::helper::isConnectedToTalker(talkerStream, *listenerStreamConnectionState);
+							connectableStream.isFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, *listenerStreamConnectionState);
+							areConnected |= connectableStream.isConnected;
+							fastConnecting |= connectableStream.isFastConnecting;
 
 							// Get Format Compatibility
 							isCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
@@ -786,18 +790,31 @@ public:
 							// Get Domain Compatibility
 							auto const sameDomain = redundantStreamNode->grandMasterID() == nonRedundantStreamNode->grandMasterID();
 							atLeastOneMatchingDomain |= sameDomain;
-							if (sameDomain || streamConnected || streamFastConnecting)
+							if (sameDomain || connectableStream.isConnected || connectableStream.isFastConnecting)
 							{
-								// Only add to the smart connection list if it's the first matching domain, or if the redundant device is a Listener (for cable redundancy)
-								if (intersectionData.redundantSmartConnectableStreams.empty() || listenerType == Node::Type::RedundantInput)
+								if (connectableStream.isConnected || connectableStream.isFastConnecting)
 								{
-									intersectionData.redundantSmartConnectableStreams.push_back(connectableStreams);
-								}
-								if (streamConnected || streamFastConnecting)
-								{
+									// Always add a Connected Stream to the smartConnectable list
+									intersectionData.redundantSmartConnectableStreams.push_back(connectableStream);
 									allConnectionsHaveMatchingDomain &= sameDomain;
+									++countConnections;
+								}
+								else
+								{
+									// Stream is not connected, we'll decide later if we can add it to the smartConnectable list
+									possibleSmartConnectableStreams.push_back(connectableStream);
 								}
 							}
+						}
+					}
+
+					// Process possible smartConnectable streams now
+					for (auto const& connectableStream : possibleSmartConnectableStreams)
+					{
+						// Only add to the smart connection list if it's the only one in the list, or if the redundant device is a Listener (for cable redundancy)
+						if (intersectionData.redundantSmartConnectableStreams.empty() || listenerType == Node::Type::RedundantInput)
+						{
+							intersectionData.redundantSmartConnectableStreams.push_back(connectableStream);
 						}
 					}
 
@@ -815,7 +832,14 @@ public:
 					// Update State
 					if (areConnected)
 					{
-						intersectionData.state = Model::IntersectionData::State::Connected;
+						if (countConnections == intersectionData.redundantSmartConnectableStreams.size())
+						{
+							intersectionData.state = Model::IntersectionData::State::Connected;
+						}
+						else
+						{
+							intersectionData.state = Model::IntersectionData::State::PartiallyConnected;
+						}
 					}
 					else if (fastConnecting)
 					{

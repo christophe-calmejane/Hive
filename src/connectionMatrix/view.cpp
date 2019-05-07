@@ -28,6 +28,7 @@
 #include "avdecc/hiveLogItems.hpp"
 
 #include <QMouseEvent>
+#include <QMessageBox>
 
 namespace connectionMatrix
 {
@@ -114,13 +115,6 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			break;
 		}
 
-		// One redundant node and one redundant stream: connect the only possible stream (diagonal)
-		case Model::IntersectionData::Type::Redundant_RedundantStream:
-		{
-			LOG_HIVE_INFO("TODO: Connect the only possible stream (the one in diagonal)");
-			break;
-		}
-
 		// Both redundant nodes: connect both streams
 		case Model::IntersectionData::Type::Redundant_Redundant:
 		{
@@ -165,9 +159,55 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			break;
 		}
 
+		// One redundant node and one redundant stream: connect the only possible stream (diagonal)
+		case Model::IntersectionData::Type::Redundant_RedundantStream:
+		{
+			LOG_HIVE_INFO("TODO: Connect the only possible stream (the one in diagonal)");
+			break;
+		}
+
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		{
-			LOG_HIVE_INFO("TODO: Connect the non-redundant stream to the redundant stream on the same domain."); // Print a warning if no domain matches
+			if (intersectionData.redundantSmartConnectableStreams.empty())
+			{
+				QMessageBox::information(this, "", "None of the Stream of the Redundant Pair is on the same AVB domain than the non-Redundant Stream, cannot automatically change the stream connection.\n\nPlease expand the Redundant Pair and manually choose desired stream.");
+			}
+			else
+			{
+				auto doConnect{ false };
+				auto doDisconnect{ false };
+
+				if (intersectionData.state == Model::IntersectionData::State::NotConnected || intersectionData.state == Model::IntersectionData::State::PartiallyConnected)
+				{
+					doConnect = true;
+				}
+				else
+				{
+					doDisconnect = true;
+				}
+
+				auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
+				auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
+
+				for (auto const& connectableStream : intersectionData.redundantSmartConnectableStreams)
+				{
+					auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, connectableStream.talkerStreamIndex };
+					auto const areConnected = connectableStream.isConnected || connectableStream.isFastConnecting;
+
+					if (doConnect && !areConnected)
+					{
+						manager.connectStream(talkerID, connectableStream.talkerStreamIndex, listenerID, connectableStream.listenerStreamIndex);
+					}
+					else if (doDisconnect && areConnected)
+					{
+						manager.disconnectStream(talkerID, connectableStream.talkerStreamIndex, listenerID, connectableStream.listenerStreamIndex);
+					}
+					else
+					{
+						LOG_HIVE_TRACE(QString("connectionMatrix::View::onClicked: Neither connecting nor disconnecting: doConnect=%1 doDisconnect=%2 areConnected=%3").arg(doConnect).arg(doDisconnect).arg(areConnected));
+					}
+				}
+			}
 			break;
 		}
 
