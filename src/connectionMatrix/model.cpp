@@ -639,6 +639,9 @@ public:
 					auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
 					auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
 
+					// Build the list of smart connectable streams:
+					intersectionData.redundantSmartConnectableStreams.clear();
+
 					auto atLeastOneInterfaceDown = false;
 					auto atLeastOneConnected = false;
 					auto allConnected = true;
@@ -646,9 +649,11 @@ public:
 					auto allCompatibleFormat = true;
 
 					assert(talker->childrenCount() == listener->childrenCount());
+					assert(listener->childrenCount() == 2);
 
 					for (auto i = 0; i < talker->childrenCount(); ++i)
 					{
+						// Avdecc library guarantees that the order of the redundant pair is always Primary, then Secondary
 						auto const* const talkerStreamNode = static_cast<StreamNode*>(talker->childAt(i));
 						auto const* const listenerStreamNode = static_cast<StreamNode*>(listener->childAt(i));
 
@@ -671,6 +676,8 @@ public:
 						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
 						allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+
+						intersectionData.redundantSmartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ talkerStreamNode->streamIndex(), listenerStreamNode->streamIndex(), isConnectedToTalker, isFastConnectingToTalker });
 					}
 
 					// Update flags

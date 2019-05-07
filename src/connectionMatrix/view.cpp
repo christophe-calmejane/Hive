@@ -97,6 +97,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 	switch (intersectionData.type)
 	{
+		// Single connection possibility
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
@@ -115,62 +116,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			break;
 		}
 
-		// Both redundant nodes: connect both streams
+		// Use SmartConnection algorithm
 		case Model::IntersectionData::Type::Redundant_Redundant:
-		{
-			auto doConnect{ false };
-			auto doDisconnect{ false };
-
-			if (intersectionData.state == Model::IntersectionData::State::NotConnected || intersectionData.state == Model::IntersectionData::State::PartiallyConnected)
-			{
-				doConnect = true;
-			}
-			else
-			{
-				doDisconnect = true;
-			}
-
-			auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
-			auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
-
-			assert(talker->childrenCount() == listener->childrenCount());
-
-			for (auto i = 0; i < talker->childrenCount(); ++i)
-			{
-				auto const* const talkerStreamNode = static_cast<StreamNode*>(talker->childAt(i));
-				auto const* const listenerStreamNode = static_cast<StreamNode*>(listener->childAt(i));
-
-				auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, talkerStreamNode->streamIndex() };
-				auto const areConnected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
-
-				if (doConnect && !areConnected)
-				{
-					manager.connectStream(talkerID, talkerStreamNode->streamIndex(), listenerID, listenerStreamNode->streamIndex());
-				}
-				else if (doDisconnect && areConnected)
-				{
-					manager.disconnectStream(talkerID, talkerStreamNode->streamIndex(), listenerID, listenerStreamNode->streamIndex());
-				}
-				else
-				{
-					LOG_HIVE_TRACE(QString("connectionMatrix::View::onClicked: Neither connecting nor disconnecting: doConnect=%1 doDisconnect=%2 areConnected=%3").arg(doConnect).arg(doDisconnect).arg(areConnected));
-				}
-			}
-			break;
-		}
-
-		// One redundant node and one redundant stream: connect the only possible stream (diagonal)
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
-		{
-			LOG_HIVE_INFO("TODO: Connect the only possible stream (the one in diagonal)");
-			break;
-		}
-
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		{
 			if (intersectionData.redundantSmartConnectableStreams.empty())
 			{
-				QMessageBox::information(this, "", "None of the Stream of the Redundant Pair is on the same AVB domain than the non-Redundant Stream, cannot automatically change the stream connection.\n\nPlease expand the Redundant Pair and manually choose desired stream.");
+				QMessageBox::information(this, "", "Couldn't detect a Stream of the Redundant Pair on the same AVB domain than the other Entity, cannot automatically change the stream connection.\n\nPlease expand the Redundant Pair and manually choose desired stream.");
 			}
 			else
 			{
