@@ -55,7 +55,11 @@ QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
 
 void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 {
-	assert(sectionState.count() == count());
+	if (!AVDECC_ASSERT_WITH_RET(sectionState.count() == count(), "invalid count"))
+	{
+		_sectionState = {};
+		return;
+	}
 
 	_sectionState = sectionState;
 
@@ -114,7 +118,10 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
 
-	assert(node);
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return;
+	}
 
 	if (node->childrenCount() == 0)
 	{
@@ -204,9 +211,8 @@ void HeaderView::handleModelReset()
 
 void HeaderView::updateSectionVisibility(int const logicalIndex)
 {
-	if (logicalIndex < 0 || logicalIndex >= _sectionState.count())
+	if (!AVDECC_ASSERT_WITH_RET(logicalIndex >= 0 && logicalIndex < _sectionState.count(), "invalid index"))
 	{
-		assert(false);
 		return;
 	}
 
@@ -262,7 +268,10 @@ void HeaderView::setModel(QAbstractItemModel* model)
 		disconnect(this->model());
 	}
 
-	assert(dynamic_cast<Model*>(model) != nullptr);
+	if (!AVDECC_ASSERT_WITH_RET(dynamic_cast<Model*>(model), "invalid pointer kind"))
+	{
+		return;
+	}
 
 	QHeaderView::setModel(model);
 
@@ -300,7 +309,10 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
 
-	assert(node);
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return;
+	}
 
 	QBrush backgroundBrush{ 0x4A148C };
 	auto nodeLevel{ 0 };
@@ -323,7 +335,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			nodeLevel = 2;
 			break;
 		default:
-			assert(false && "NodeType not handled");
+			AVDECC_ASSERT(false, "NodeType not handled");
 			return;
 	}
 
@@ -406,7 +418,10 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
 
-	assert(node);
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return;
+	}
 
 	if (node->isStreamNode())
 	{
@@ -431,7 +446,10 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 					streamNode = &controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
 				}
 
-				assert(streamNode != nullptr);
+				if (!AVDECC_ASSERT_WITH_RET(streamNode, "invalid node"))
+				{
+					return;
+				}
 
 				auto addHeaderAction = [](QMenu& menu, QString const& text)
 				{

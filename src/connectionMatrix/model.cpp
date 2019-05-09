@@ -96,7 +96,7 @@ QString typeToString(Model::IntersectionData::Type const type)
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
 			return "Single Stream / Single Stream";
 		default:
-			assert(false);
+			AVDECC_ASSERT(false, "Unknown Type");
 			return "Unknown";
 	}
 }
@@ -115,7 +115,7 @@ QString stateToString(Model::IntersectionData::State const state)
 		case Model::IntersectionData::State::PartiallyConnected:
 			return "Partially Connected";
 		default:
-			assert(false);
+			AVDECC_ASSERT(false, "Unknown State");
 			return "Unknown";
 	}
 }
@@ -157,9 +157,8 @@ QString intersectionDataToString(Model::IntersectionData const& intersectionData
 // Flatten node hierarchy and insert all nodes in list starting at first
 void insertNodes(Nodes& list, Node* node, int first)
 {
-	if (!node)
+	if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 	{
-		assert(false);
 		return;
 	}
 
@@ -189,7 +188,10 @@ void removeNodes(Nodes& list, int first, int last)
 	auto const from = std::next(std::begin(list), first);
 	auto const to = std::next(std::begin(list), last);
 
-	assert(from < to);
+	if (!AVDECC_ASSERT_WITH_RET(from < to, "'from' should be < to 'to'"))
+	{
+		return;
+	}
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 	auto const before = list.size();
@@ -206,9 +208,8 @@ void removeNodes(Nodes& list, int first, int last)
 // Returns the total number of children in node hierarchy
 int absoluteChildrenCount(Node* node)
 {
-	if (!node)
+	if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 	{
-		assert(false);
 		return 0;
 	}
 
@@ -258,7 +259,7 @@ StreamSectionMap buildStreamSectionMap(Nodes const& nodes)
 			auto const key = std::make_pair(entityID, streamIndex);
 			auto const [it, result] = sectionMap.insert(std::make_pair(key, section));
 
-			assert(result);
+			AVDECC_ASSERT(result, "result should not be null");
 		}
 	}
 
@@ -283,7 +284,10 @@ NodeSectionMap buildNodeSectionMap(Nodes const& nodes)
 int indexOf(NodeSectionMap const& map, Node* node)
 {
 	auto const it = map.find(node);
-	assert(it != std::end(map));
+	if (!AVDECC_ASSERT_WITH_RET(it != std::end(map), "index not found"))
+	{
+		return -1;
+	}
 	return it->second;
 }
 
@@ -324,8 +328,10 @@ public:
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 	void highlightIntersection(int talkerSection, int listenerSection)
 	{
-		assert(isValidTalkerSection(talkerSection));
-		assert(isValidListenerSection(listenerSection));
+		if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "invalid listener section"))
+		{
+			return;
+		}
 
 		auto& intersectionData = _intersectionData[talkerSection][listenerSection];
 
@@ -509,8 +515,10 @@ public:
 	// Determines intersection type according to talker and listener nodes
 	Model::IntersectionData::Type determineIntersectionType(Node* talker, Node* listener) const
 	{
-		assert(talker);
-		assert(listener);
+		if (!AVDECC_ASSERT_WITH_RET(talker, "invalid talker") || !AVDECC_ASSERT_WITH_RET(listener, "invalid listener"))
+		{
+			return Model::IntersectionData::Type::None;
+		}
 
 		if (talker->entityID() == listener->entityID())
 		{
@@ -586,7 +594,7 @@ public:
 			return Model::IntersectionData::Type::SingleStream_SingleStream;
 		}
 
-		assert(false);
+		AVDECC_ASSERT_WITH_RET(false, "Not handled");
 
 		return Model::IntersectionData::Type::None;
 	}
@@ -594,8 +602,8 @@ public:
 	// Initializes intersection data
 	void initializeIntersectionData(Node* talker, Node* listener, Model::IntersectionData& intersectionData)
 	{
-		assert(talker);
-		assert(listener);
+		AVDECC_ASSERT(talker, "invalid talker");
+		AVDECC_ASSERT(listener, "invalid listener");
 
 		intersectionData.talker = talker;
 		intersectionData.listener = listener;
@@ -648,8 +656,8 @@ public:
 					auto allCompatibleDomain = true;
 					auto allCompatibleFormat = true;
 
-					assert(talker->childrenCount() == listener->childrenCount());
-					assert(listener->childrenCount() == 2);
+					AVDECC_ASSERT(talker->childrenCount() == listener->childrenCount(), "Talker and listener should have the same child count");
+					AVDECC_ASSERT(listener->childrenCount() == 2, "Milan redundancy is limited to 2 streams per redundant pair");
 
 					for (auto i = 0; i < talker->childrenCount(); ++i)
 					{
@@ -734,7 +742,7 @@ public:
 					}
 					else
 					{
-						assert(false);
+						AVDECC_ASSERT(false, "Unhandled");
 					}
 
 					// Build the list of smart connectable streams:
@@ -758,9 +766,10 @@ public:
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
-						if (auto* redundantStreamNode = static_cast<StreamNode*>(redundantNode->childAt(i)))
+						auto const* redundantStreamNode = static_cast<StreamNode const*>(redundantNode->childAt(i));
+						if (AVDECC_ASSERT_WITH_RET(redundantStreamNode, "StreamNode should be valid"))
 						{
-							assert(redundantStreamNode->isRedundantStreamNode());
+							AVDECC_ASSERT(redundantStreamNode->isRedundantStreamNode(), "Should be a redundant node");
 							auto connectableStream = Model::IntersectionData::SmartConnectableStream{};
 							auto const* listenerStreamConnectionState = static_cast<la::avdecc::entity::model::StreamConnectionState const*>(nullptr);
 							auto talkerStreamFormat = la::avdecc::entity::model::StreamFormat{};
@@ -890,11 +899,13 @@ public:
 					}
 					else
 					{
-						assert(false);
+						AVDECC_ASSERT(false, "unhandled");
 					}
 
-					assert(isValidTalkerSection(talkerSection));
-					assert(isValidListenerSection(listenerSection));
+					if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "invalid listener section"))
+					{
+						break;
+					}
 
 					// Simply copy data from the source
 					auto const& sourceIntersectionData = _intersectionData[talkerSection][listenerSection];
@@ -973,7 +984,7 @@ public:
 							auto const listenerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.listener->index());
 							auto* talkerRedundantNode = static_cast<RedundantNode*>(intersectionData.talker);
 							talkerStreamNode = static_cast<StreamNode*>(talkerRedundantNode->childAt(listenerRedundantStreamOrder));
-							assert(talkerStreamNode->isRedundantStreamNode());
+							AVDECC_ASSERT(talkerStreamNode->isRedundantStreamNode(), "Should be a redundant node");
 						}
 						else if (talkerType == Node::Type::OutputStream || talkerType == Node::Type::RedundantOutputStream)
 						{
@@ -981,7 +992,7 @@ public:
 						}
 						else
 						{
-							assert(false);
+							AVDECC_ASSERT(false, "Unhandled");
 							return;
 						}
 
@@ -992,7 +1003,7 @@ public:
 							auto const talkerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.talker->index());
 							auto* listenerRedundantNode = static_cast<RedundantNode*>(intersectionData.listener);
 							listenerStreamNode = static_cast<StreamNode*>(listenerRedundantNode->childAt(talkerRedundantStreamOrder));
-							assert(listenerStreamNode->isRedundantStreamNode());
+							AVDECC_ASSERT(listenerStreamNode->isRedundantStreamNode(), "Should be a redundant node");
 						}
 						else if (listenerType == Node::Type::InputStream || listenerType == Node::Type::RedundantInputStream)
 						{
@@ -1000,12 +1011,14 @@ public:
 						}
 						else
 						{
-							assert(false);
+							AVDECC_ASSERT(false, "Unhandled");
 							return;
 						}
 
-						assert(talkerStreamNode);
-						assert(listenerStreamNode);
+						if (!AVDECC_ASSERT_WITH_RET(talkerStreamNode, "invalid talker node") || !AVDECC_ASSERT_WITH_RET(listenerStreamNode, "invalid listener node"))
+						{
+							break;
+						}
 
 						auto const& streamConnectionState = listenerStreamNode->streamConnectionState();
 						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
@@ -1637,7 +1650,10 @@ private:
 	{
 		auto const key = std::make_pair(entityID, streamIndex);
 		auto const it = _talkerStreamSectionMap.find(key);
-		assert(it != std::end(_talkerStreamSectionMap));
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerStreamSectionMap), "not found"))
+		{
+			return -1;
+		}
 		return it->second;
 	}
 
@@ -1646,7 +1662,10 @@ private:
 	{
 		auto const key = std::make_pair(entityID, streamIndex);
 		auto const it = _listenerStreamSectionMap.find(key);
-		assert(it != std::end(_listenerStreamSectionMap));
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerStreamSectionMap), "not found"))
+		{
+			return -1;
+		}
 		return it->second;
 	}
 
@@ -1654,9 +1673,15 @@ private:
 	EntityNode* talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _talkerNodeMap.find(entityID);
-		assert(it != std::end(_talkerNodeMap));
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerNodeMap), "not found"))
+		{
+			return nullptr;
+		}
 		auto* node = it->second.get();
-		assert(node->type() == Node::Type::Entity);
+		if (!AVDECC_ASSERT_WITH_RET(node->type() == Node::Type::Entity, "invalid type"))
+		{
+			return nullptr;
+		}
 		return static_cast<EntityNode*>(node);
 	}
 
@@ -1664,9 +1689,15 @@ private:
 	EntityNode* listenerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _listenerNodeMap.find(entityID);
-		assert(it != std::end(_listenerNodeMap));
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerNodeMap), "not found"))
+		{
+			return nullptr;
+		}
 		auto* node = it->second.get();
-		assert(node->type() == Node::Type::Entity);
+		if (!AVDECC_ASSERT_WITH_RET(node->type() == Node::Type::Entity, "invalid type"))
+		{
+			return nullptr;
+		}
 		return static_cast<EntityNode*>(node);
 	}
 
@@ -1675,7 +1706,10 @@ private:
 	{
 		auto const section = talkerStreamSection(entityID, streamIndex);
 		auto* node = _talkerNodes[section];
-		assert(node->isStreamNode());
+		if (!AVDECC_ASSERT_WITH_RET(node->isStreamNode(), "invalid type"))
+		{
+			return nullptr;
+		}
 		return static_cast<StreamNode*>(node);
 	}
 
@@ -1684,7 +1718,10 @@ private:
 	{
 		auto const section = listenerStreamSection(entityID, streamIndex);
 		auto* node = _listenerNodes[section];
-		assert(node->isStreamNode());
+		if (!AVDECC_ASSERT_WITH_RET(node->isStreamNode(), "invalid type"))
+		{
+			return nullptr;
+		}
 		return static_cast<StreamNode*>(node);
 	}
 
@@ -1725,7 +1762,10 @@ private:
 	// Children are updated first, then the node, then the parents
 	void talkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
-		assert(talker);
+		if (!AVDECC_ASSERT_WITH_RET(talker, "invalid talker"))
+		{
+			return;
+		}
 
 		// Update the children
 		if (andChildren)
@@ -1761,7 +1801,10 @@ private:
 	// Children are updated first, then the node, then the parents
 	void listenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
-		assert(listener);
+		if (!AVDECC_ASSERT_WITH_RET(listener, "invalid listener"))
+		{
+			return;
+		}
 
 		// Update the children
 		if (andChildren)
@@ -2074,8 +2117,11 @@ Model::IntersectionData const& Model::intersectionData(QModelIndex const& index)
 	auto const talkerSection = d->talkerIndex(index);
 	auto const listenerSection = d->listenerIndex(index);
 
-	assert(d->isValidTalkerSection(talkerSection));
-	assert(d->isValidListenerSection(listenerSection));
+	if (!AVDECC_ASSERT_WITH_RET(d->isValidTalkerSection(talkerSection), "invalid talker section") || !AVDECC_ASSERT_WITH_RET(d->isValidListenerSection(listenerSection), "invalid listener section"))
+	{
+		static auto const s_dummyData = Model::IntersectionData{};
+		return s_dummyData;
+	}
 
 	return d->_intersectionData[talkerSection][listenerSection];
 }

@@ -102,7 +102,10 @@ int Node::indexOf(Node* child) const
 		return item.get() == child;
 	};
 	auto const it = std::find_if(std::begin(_children), std::end(_children), predicate);
-	assert(it != std::end(_children));
+	if (!AVDECC_ASSERT_WITH_RET(it != std::end(_children), "not found"))
+	{
+		return -1;
+	}
 	auto const index = std::distance(std::begin(_children), it);
 	return static_cast<int>(index);
 }
