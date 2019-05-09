@@ -154,33 +154,32 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 
 void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
 {
+	auto const it = std::next(std::begin(_sectionState), first);
+	_sectionState.insert(it, last - first + 1, {});
+
 	for (auto section = first; section <= last; ++section)
 	{
-		if (section <= _sectionState.count())
+		auto* model = static_cast<Model*>(this->model());
+		auto* node = model->node(section, orientation());
+
+		auto expanded = true;
+		auto visible = true;
+
+		switch (node->type())
 		{
-			auto* model = static_cast<Model*>(this->model());
-			auto* node = model->node(section, orientation());
-
-			auto expanded = true;
-			auto visible = true;
-
-			switch (node->type())
-			{
-				case Node::Type::RedundantOutput:
-				case Node::Type::RedundantInput:
-					expanded = false;
-					break;
-				case Node::Type::RedundantOutputStream:
-				case Node::Type::RedundantInputStream:
-					visible = false;
-					break;
-				default:
-					break;
-			}
-
-			_sectionState.push_back({ expanded, visible });
+			case Node::Type::RedundantOutput:
+			case Node::Type::RedundantInput:
+				expanded = false;
+				break;
+			case Node::Type::RedundantOutputStream:
+			case Node::Type::RedundantInputStream:
+				visible = false;
+				break;
+			default:
+				break;
 		}
 
+		_sectionState[section] = { expanded, visible };
 		updateSectionVisibility(section);
 	}
 
