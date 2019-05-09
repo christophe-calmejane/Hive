@@ -24,6 +24,7 @@
 #include <la/avdecc/controller/avdeccController.hpp>
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
+#include "toolkit/material/colorPalette.hpp"
 
 class SettingsDialogImpl final : public Ui::SettingsDialog
 {
@@ -54,6 +55,14 @@ public:
 			automaticCheckForUpdatesCheckBox->setChecked(settings.getValue(settings::AutomaticCheckForUpdates.name).toBool());
 		}
 
+		// Theme Color
+		{
+			QSignalBlocker lock(themeColorComboBox);
+			themeColorComboBox->setModel(&_themeColorModel);
+			themeColorComboBox->setModelColumn(_themeColorModel.index(qt::toolkit::material::color::DefaultShade));
+			themeColorComboBox->setCurrentIndex(settings.getValue(settings::ThemeColorIndex.name).toInt());
+		}
+
 		// Check For Beta Updates
 		{
 			QSignalBlocker lock(checkForBetaVersionsCheckBox);
@@ -69,6 +78,9 @@ public:
 			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::AemCacheEnabled.name).toBool());
 		}
 	}
+
+private:
+	qt::toolkit::material::color::Palette _themeColorModel;
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
@@ -116,6 +128,12 @@ void SettingsDialog::on_checkForBetaVersionsCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.setValue(settings::CheckForBetaVersions.name, checked);
+}
+
+void SettingsDialog::on_themeColorComboBox_currentIndexChanged(int index)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ThemeColorIndex.name, index);
 }
 
 void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)

@@ -41,6 +41,7 @@ private:
 	Q_SLOT void on_transposeConnectionMatrixCheckBox_toggled(bool checked);
 	Q_SLOT void on_automaticCheckForUpdatesCheckBox_toggled(bool checked);
 	Q_SLOT void on_checkForBetaVersionsCheckBox_toggled(bool checked);
+	Q_SLOT void on_themeColorComboBox_currentIndexChanged(int index);
 	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
 
 	SettingsDialogImpl* _pImpl{ nullptr };
