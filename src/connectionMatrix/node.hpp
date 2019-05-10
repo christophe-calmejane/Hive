@@ -81,7 +81,10 @@ public:
 	int indexOf(Node* child) const;
 
 	// Returns the child node at index, null if not found
-	Node* childAt(int index) const;
+	Node* childAt(int index);
+
+	// Returns the child node at index, null if not found
+	Node const* childAt(int index) const;
 
 	// Returns the number of children
 	int childrenCount() const;

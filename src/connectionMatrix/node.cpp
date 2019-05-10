@@ -110,7 +110,17 @@ int Node::indexOf(Node* child) const
 	return static_cast<int>(index);
 }
 
-Node* Node::childAt(int index) const
+Node* Node::childAt(int index)
+{
+	if (index < 0 || index >= childrenCount())
+	{
+		return nullptr;
+	}
+
+	return _children.at(index).get();
+}
+
+Node const* Node::childAt(int index) const
 {
 	if (index < 0 || index >= childrenCount())
 	{

@@ -64,7 +64,7 @@ struct StreamSectionKeyHash
 using StreamSectionMap = std::unordered_map<StreamSectionKey, int, StreamSectionKeyHash>;
 
 // index by node
-using NodeSectionMap = std::unordered_map<Node*, int>;
+using NodeSectionMap = std::unordered_map<Node const*, int>;
 
 #if ENABLE_CONNECTION_MATRIX_TOOLTIP
 
@@ -283,7 +283,7 @@ NodeSectionMap buildNodeSectionMap(Nodes const& nodes)
 }
 
 // Return the index of a node contained in a NodeSectionMap
-int indexOf(NodeSectionMap const& map, Node* node)
+int indexOf(NodeSectionMap const& map, Node const* const node)
 {
 	auto const it = map.find(node);
 	if (!AVDECC_ASSERT_WITH_RET(it != std::end(map), "index not found"))
@@ -761,7 +761,7 @@ public:
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
-						auto const* redundantStreamNode = static_cast<StreamNode const*>(redundantNode->childAt(i));
+						auto const* const redundantStreamNode = static_cast<StreamNode const*>(redundantNode->childAt(i));
 						if (AVDECC_ASSERT_WITH_RET(redundantStreamNode, "StreamNode should be valid"))
 						{
 							AVDECC_ASSERT(redundantStreamNode->isRedundantStreamNode(), "Should be a redundant node");
@@ -868,27 +868,33 @@ public:
 
 				case Model::IntersectionData::Type::Redundant_RedundantStream:
 				{
-					// Duplicate information from the only possible redundant stream node
+					// Duplicate information from the only allowed redundant stream node
 					auto talkerSection = -1;
 					auto listenerSection = -1;
+					auto const* redundantNode = static_cast<RedundantNode const*>(nullptr);
+					auto const* streamNode = static_cast<StreamNode const*>(nullptr);
 
 					if (talkerType == Node::Type::RedundantOutput)
 					{
-						auto* redundantNode = static_cast<RedundantNode*>(intersectionData.talker);
-						auto* streamNode = static_cast<StreamNode*>(intersectionData.listener);
+						redundantNode = static_cast<RedundantNode const*>(intersectionData.talker);
+						streamNode = static_cast<StreamNode const*>(intersectionData.listener);
 
-						auto const otherStreamNode = redundantNode->childAt(streamNode->index());
+						// Get Talker's StreamNode matching Listener's StreamNode (diagonally matching)
+						auto const* const otherStreamNode = redundantNode->childAt(streamNode->index());
 
+						// Get the indexes for the Intersection Data we'll copy data from (Which is a RedundantStream_RedundantStream node)
 						talkerSection = priv::indexOf(_talkerNodeSectionMap, otherStreamNode);
 						listenerSection = priv::indexOf(_listenerNodeSectionMap, streamNode);
 					}
 					else if (listenerType == Node::Type::RedundantInput)
 					{
-						auto* redundantNode = static_cast<RedundantNode*>(intersectionData.listener);
-						auto* streamNode = static_cast<StreamNode*>(intersectionData.talker);
+						redundantNode = static_cast<RedundantNode const*>(intersectionData.listener);
+						streamNode = static_cast<StreamNode const*>(intersectionData.talker);
 
-						auto const otherStreamNode = redundantNode->childAt(streamNode->index());
+						// Get Listener's StreamNode matching Talker's StreamNode (diagonally matching)
+						auto const* const otherStreamNode = redundantNode->childAt(streamNode->index());
 
+						// Get the indexes for the Intersection Data we'll copy data from (Which is a RedundantStream_RedundantStream node)
 						talkerSection = priv::indexOf(_talkerNodeSectionMap, streamNode);
 						listenerSection = priv::indexOf(_listenerNodeSectionMap, otherStreamNode);
 					}
@@ -902,8 +908,9 @@ public:
 						break;
 					}
 
-					// Simply copy data from the source
+					// Get the IntersectionData source node we'll copy the data from
 					auto const& sourceIntersectionData = _intersectionData[talkerSection][listenerSection];
+					AVDECC_ASSERT(sourceIntersectionData.type == Model::IntersectionData::Type::RedundantStream_RedundantStream, "Intersection should be RedundantStream_RedundantStream");
 
 					intersectionData.state = sourceIntersectionData.state;
 					intersectionData.flags = sourceIntersectionData.flags;
@@ -977,7 +984,7 @@ public:
 
 						if (talkerType == Node::Type::RedundantOutput)
 						{
-							auto const listenerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.listener->index());
+							auto const listenerRedundantStreamOrder = intersectionData.listener->index();
 							auto* talkerRedundantNode = static_cast<RedundantNode*>(intersectionData.talker);
 							talkerStreamNode = static_cast<StreamNode*>(talkerRedundantNode->childAt(listenerRedundantStreamOrder));
 							AVDECC_ASSERT(talkerStreamNode->isRedundantStreamNode(), "Should be a redundant node");
@@ -996,7 +1003,7 @@ public:
 
 						if (listenerType == Node::Type::RedundantInput)
 						{
-							auto const talkerRedundantStreamOrder = static_cast<std::size_t>(intersectionData.talker->index());
+							auto const talkerRedundantStreamOrder = intersectionData.talker->index();
 							auto* listenerRedundantNode = static_cast<RedundantNode*>(intersectionData.listener);
 							listenerStreamNode = static_cast<StreamNode*>(listenerRedundantNode->childAt(talkerRedundantStreamOrder));
 							AVDECC_ASSERT(listenerStreamNode->isRedundantStreamNode(), "Should be a redundant node");
