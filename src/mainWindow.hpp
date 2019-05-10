@@ -220,8 +220,10 @@ private:
 	void loadSettings();
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
-	void showEvent(QShowEvent* event) override;
-	void closeEvent(QCloseEvent* event) override;
+	virtual void showEvent(QShowEvent* event) override;
+	virtual void closeEvent(QCloseEvent* event) override;
+	virtual void dragEnterEvent(QDragEnterEvent* event) override;
+	virtual void dropEvent(QDropEvent* event) override;
 
 	// Private memberes
 	qt::toolkit::ComboBox _protocolComboBox{ this };
