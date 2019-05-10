@@ -51,7 +51,7 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 void HeaderView::setColor(qt::toolkit::material::color::Name const name)
 {
 	_colorName = name;
-	repaint();
+	update();
 }
 
 QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
