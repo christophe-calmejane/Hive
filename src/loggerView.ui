@@ -90,7 +90,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="qt::toolkit::MaterialButton" name="clearButton">
+      <widget class="qt::toolkit::material::Button" name="clearButton">
        <property name="toolTip">
         <string>Clear</string>
        </property>
@@ -100,7 +100,7 @@
       </widget>
      </item>
      <item>
-      <widget class="qt::toolkit::MaterialButton" name="saveButton">
+      <widget class="qt::toolkit::material::Button" name="saveButton">
        <property name="toolTip">
         <string>Save</string>
        </property>
@@ -137,9 +137,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>qt::toolkit::MaterialButton</class>
+   <class>qt::toolkit::material::Button</class>
    <extends>QPushButton</extends>
-   <header location="global">toolkit/materialButton.hpp</header>
+   <header location="global">toolkit/material/button.hpp</header>
   </customwidget>
  </customwidgets>
  <resources>

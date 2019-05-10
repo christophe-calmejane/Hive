@@ -1,12 +1,12 @@
-qt--toolkit--MaterialButton {
+qt--toolkit--material--Button {
 	font-size: 24px;
 	border: none;
 	color: #3e3e3e;
 }
-qt--toolkit--MaterialButton:hover {
+qt--toolkit--material--Button:hover {
 	color: #262626;
 }
-qt--toolkit--MaterialButton:pressed {
+qt--toolkit--material--Button:pressed {
 	margin: 2 0 0 2;
 	color: #000000;
 }

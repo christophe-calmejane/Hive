@@ -18,19 +18,22 @@
 */
 
 #include "connectionMatrix/headerView.hpp"
-#include "connectionMatrix/headerItem.hpp"
-#include "avdecc/helper.hpp"
-
+#include "connectionMatrix/model.hpp"
+#include "connectionMatrix/node.hpp"
+#include "avdecc/controllerManager.hpp"
+#include "toolkit/material/color.hpp"
 #include <QPainter>
-#include <QMouseEvent>
+#include <QContextMenuEvent>
+#include <QMenu>
 
-Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
-Q_DECLARE_METATYPE(connectionMatrix::HeaderItem::RelativeParentIndex)
+#if ENABLE_CONNECTION_MATRIX_DEBUG
+#	include <QDebug>
+#endif
 
 namespace connectionMatrix
 {
 HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
-	: QHeaderView(orientation, parent)
+	: QHeaderView{ orientation, parent }
 {
 	setSectionResizeMode(QHeaderView::Fixed);
 	setSectionsClickable(true);
@@ -43,17 +46,6 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	setAttribute(Qt::WA_Hover);
 
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
-
-	// Has our custom filter only hides filtered sections, we can use this has a "sectionVisibilityChanged" signal
-	connect(this, &QHeaderView::sectionResized, this,
-		[this](int logicalIndex, int oldSize, int newSize)
-		{
-			// Means the section is now visible
-			if (oldSize == 0)
-			{
-				updateSectionVisibility(logicalIndex);
-			}
-		});
 }
 
 QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
@@ -63,13 +55,208 @@ QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
 
 void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 {
-	if (AVDECC_ASSERT_WITH_RET(sectionState.count() == count(), "Invalid state"))
+	if (!AVDECC_ASSERT_WITH_RET(sectionState.count() == count(), "invalid count"))
 	{
-		_sectionState = sectionState;
+		_sectionState = {};
+		return;
+	}
 
-		for (auto section = 0; section < count(); ++section)
+	_sectionState = sectionState;
+
+	for (auto section = 0; section < count(); ++section)
+	{
+		updateSectionVisibility(section);
+	}
+}
+
+void HeaderView::setFilterPattern(QRegExp const& pattern)
+{
+	_pattern = pattern;
+	applyFilterPattern();
+}
+
+void HeaderView::expandAll()
+{
+	for (auto section = 0; section < count(); ++section)
+	{
+		_sectionState[section].expanded = true;
+		_sectionState[section].visible = true;
+
+		updateSectionVisibility(section);
+	}
+
+	applyFilterPattern();
+}
+
+void HeaderView::collapseAll()
+{
+	auto* model = static_cast<Model*>(this->model());
+
+	for (auto section = 0; section < count(); ++section)
+	{
+		auto* node = model->node(section, orientation());
+
+		if (node->type() == Node::Type::Entity)
 		{
+			_sectionState[section].expanded = false;
+			_sectionState[section].visible = true;
+		}
+		else
+		{
+			_sectionState[section].expanded = false;
+			_sectionState[section].visible = false;
+		}
+
+		updateSectionVisibility(section);
+	}
+
+	applyFilterPattern();
+}
+
+void HeaderView::handleSectionClicked(int logicalIndex)
+{
+	auto* model = static_cast<Model*>(this->model());
+	auto* node = model->node(logicalIndex, orientation());
+
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return;
+	}
+
+	if (node->childrenCount() == 0)
+	{
+		return;
+	}
+
+	// Toggle the section expand state
+	auto const expanded = !_sectionState[logicalIndex].expanded;
+	_sectionState[logicalIndex].expanded = expanded;
+
+#if ENABLE_CONNECTION_MATRIX_DEBUG
+	qDebug() << logicalIndex << "is now" << (expanded ? "expanded" : "collapsed");
+#endif
+
+	// Update hierarchy visibility
+	auto const update = [=](Node* node)
+	{
+		auto const section = model->section(node, orientation());
+
+		// Do not affect the current node
+		if (section == logicalIndex)
+		{
+			return;
+		}
+
+		if (auto* parent = node->parent())
+		{
+			auto const parentSection = model->section(parent, orientation());
+			_sectionState[section].visible = expanded && _sectionState[parentSection].expanded;
+
 			updateSectionVisibility(section);
+		}
+	};
+
+	node->accept(update);
+}
+
+void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
+{
+	auto const it = std::next(std::begin(_sectionState), first);
+	_sectionState.insert(it, last - first + 1, {});
+
+	for (auto section = first; section <= last; ++section)
+	{
+		auto* model = static_cast<Model*>(this->model());
+		auto* node = model->node(section, orientation());
+
+		auto expanded = true;
+		auto visible = true;
+
+		switch (node->type())
+		{
+			case Node::Type::RedundantOutput:
+			case Node::Type::RedundantInput:
+				expanded = false;
+				break;
+			case Node::Type::RedundantOutputStream:
+			case Node::Type::RedundantInputStream:
+				visible = false;
+				break;
+			default:
+				break;
+		}
+
+		_sectionState[section] = { expanded, visible };
+		updateSectionVisibility(section);
+	}
+
+#if ENABLE_CONNECTION_MATRIX_DEBUG
+	qDebug() << "handleSectionInserted" << _sectionState.count();
+#endif
+}
+
+void HeaderView::handleSectionRemoved(QModelIndex const& parent, int first, int last)
+{
+	_sectionState.remove(first, last - first + 1);
+
+#if ENABLE_CONNECTION_MATRIX_DEBUG
+	qDebug() << "handleSectionRemoved" << _sectionState.count();
+#endif
+}
+
+void HeaderView::handleModelReset()
+{
+	_sectionState.clear();
+}
+
+void HeaderView::updateSectionVisibility(int const logicalIndex)
+{
+	if (!AVDECC_ASSERT_WITH_RET(logicalIndex >= 0 && logicalIndex < _sectionState.count(), "invalid index"))
+	{
+		return;
+	}
+
+	if (_sectionState[logicalIndex].visible)
+	{
+		showSection(logicalIndex);
+	}
+	else
+	{
+		hideSection(logicalIndex);
+	}
+}
+
+void HeaderView::applyFilterPattern()
+{
+	auto* model = static_cast<Model*>(this->model());
+
+	auto const showVisitor = [=](Node* node)
+	{
+		auto const section = model->section(node, orientation());
+		updateSectionVisibility(section); // Conditional update
+	};
+
+	auto const hideVisitor = [=](Node* node)
+	{
+		auto const section = model->section(node, orientation());
+		hideSection(section); // Hide section no matter what
+	};
+
+	for (auto section = 0; section < count(); ++section)
+	{
+		auto* node = model->node(section, orientation());
+		if (node->type() == Node::Type::Entity)
+		{
+			auto const matches = !node->name().contains(_pattern);
+
+			if (!matches)
+			{
+				node->accept(showVisitor);
+			}
+			else
+			{
+				node->accept(hideVisitor);
+			}
 		}
 	}
 }
@@ -79,6 +266,11 @@ void HeaderView::setModel(QAbstractItemModel* model)
 	if (this->model())
 	{
 		disconnect(this->model());
+	}
+
+	if (!AVDECC_ASSERT_WITH_RET(dynamic_cast<Model*>(model), "invalid pointer kind"))
+	{
+		return;
 	}
 
 	QHeaderView::setModel(model);
@@ -97,67 +289,53 @@ void HeaderView::setModel(QAbstractItemModel* model)
 		}
 
 		connect(model, &QAbstractItemModel::modelReset, this, &HeaderView::handleModelReset);
-		connect(model, &QAbstractItemModel::headerDataChanged, this, &HeaderView::handleHeaderDataChanged);
 	}
 }
 
-void HeaderView::leaveEvent(QEvent* event)
-{
-	if (!rect().contains(mapFromGlobal(QCursor::pos())))
-	{
-		selectionModel()->clearSelection();
-	}
-
-	QHeaderView::leaveEvent(event);
-}
-
-void HeaderView::mouseDoubleClickEvent(QMouseEvent* event)
-{
-	mousePressEvent(event);
-}
-
-void HeaderView::mouseMoveEvent(QMouseEvent* event)
+QSize HeaderView::sizeHint() const
 {
 	if (orientation() == Qt::Horizontal)
 	{
-		auto const column = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
-		selectionModel()->select(model()->index(0, column), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Columns);
+		return { defaultSectionSize(), 200 };
 	}
 	else
 	{
-		auto const row = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
-		selectionModel()->select(model()->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+		return { 200, defaultSectionSize() };
 	}
-
-	QHeaderView::mouseMoveEvent(event);
 }
 
 void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const
 {
-	QBrush backgroundBrush{};
+	auto* model = static_cast<Model*>(this->model());
+	auto* node = model->node(logicalIndex, orientation());
 
-	auto const nodeType = model()->headerData(logicalIndex, orientation(), Model::NodeTypeRole).value<Model::NodeType>();
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return;
+	}
+
+	QBrush backgroundBrush{ 0x4A148C };
 	auto nodeLevel{ 0 };
 
-	switch (nodeType)
+	switch (node->type())
 	{
-		case Model::NodeType::Entity:
+		case Node::Type::Entity:
 			backgroundBrush = QColor{ 0x4A148C };
 			break;
-		case Model::NodeType::InputStream:
-		case Model::NodeType::OutputStream:
-		case Model::NodeType::RedundantInput:
-		case Model::NodeType::RedundantOutput:
+		case Node::Type::RedundantInput:
+		case Node::Type::RedundantOutput:
+		case Node::Type::InputStream:
+		case Node::Type::OutputStream:
 			backgroundBrush = QColor{ 0x7B1FA2 };
 			nodeLevel = 1;
 			break;
-		case Model::NodeType::RedundantInputStream:
-		case Model::NodeType::RedundantOutputStream:
+		case Node::Type::RedundantInputStream:
+		case Node::Type::RedundantOutputStream:
 			backgroundBrush = QColor{ 0xBA68C8 };
 			nodeLevel = 2;
 			break;
 		default:
-			assert(false && "NodeType not handled");
+			AVDECC_ASSERT(false, "NodeType not handled");
 			return;
 	}
 
@@ -214,140 +392,157 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto const padding{ 4 };
 	auto textRect = r.adjusted(padding, 0, -(padding + arrowSize + arrowOffset), 0);
 
-	auto const text = model()->headerData(logicalIndex, orientation(), Qt::DisplayRole).toString();
-	auto const elidedText = painter->fontMetrics().elidedText(text, Qt::ElideMiddle, textRect.width());
+	auto const elidedText = painter->fontMetrics().elidedText(node->name(), Qt::ElideMiddle, textRect.width());
 
-	auto const isStreamingWait = model()->headerData(logicalIndex, orientation(), Model::StreamWaitingRole).toBool();
-	if (isStreamingWait)
+	if (node->isStreamNode() && !static_cast<StreamNode*>(node)->isRunning())
 	{
-		painter->setPen(Qt::red);
+		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
 	}
 	else
 	{
-		painter->setPen(Qt::white);
+		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::White));
 	}
 
 	painter->drawText(textRect, Qt::AlignVCenter, elidedText);
 	painter->restore();
 }
 
-QSize HeaderView::sizeHint() const
+void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 {
-	if (orientation() == Qt::Horizontal)
-	{
-		return { defaultSectionSize(), 200 };
-	}
-	else
-	{
-		return { 200, defaultSectionSize() };
-	}
-}
-
-void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
-{
-	for (auto section = first; section <= last; ++section)
-	{
-		// Insert new section?
-		if (section <= _sectionState.count())
-		{
-			_sectionState.push_back({});
-		}
-		else // Restore section state
-		{
-			updateSectionVisibility(section);
-		}
-	}
-}
-
-void HeaderView::handleSectionRemoved(QModelIndex const& parent, int first, int last)
-{
-	_sectionState.remove(first, last - first + 1);
-}
-
-void HeaderView::handleHeaderDataChanged(Qt::Orientation orientation, int first, int last)
-{
-	if (this->orientation() == orientation)
-	{
-		for (auto section = first; section <= last; ++section)
-		{
-			auto& state = _sectionState[section];
-			if (!state.isInitialized)
-			{
-				auto const nodeType = model()->headerData(section, orientation, Model::NodeTypeRole).value<Model::NodeType>();
-
-				switch (nodeType)
-				{
-					case Model::NodeType::RedundantOutput:
-					case Model::NodeType::RedundantInput:
-						state.isExpanded = false;
-						break;
-					case Model::NodeType::RedundantOutputStream:
-					case Model::NodeType::RedundantInputStream:
-						state.isVisible = false;
-						setSectionHidden(section, true);
-						break;
-					default:
-						break;
-				}
-
-				state.isInitialized = true;
-			}
-		}
-	}
-}
-
-void HeaderView::handleSectionClicked(int logicalIndex)
-{
-	// Check if this node has children?
-	auto const childrenCount = model()->headerData(logicalIndex, orientation(), Model::ChildrenCountRole).value<std::int32_t>();
-	if (childrenCount == -1)
+	auto const logicalIndex = logicalIndexAt(event->pos());
+	if (logicalIndex < 0)
 	{
 		return;
 	}
 
-	// Toggle the section expand state
-	auto const isExpanded = !_sectionState[logicalIndex].isExpanded;
-	_sectionState[logicalIndex].isExpanded = isExpanded;
+	auto* model = static_cast<Model*>(this->model());
+	auto* node = model->node(logicalIndex, orientation());
 
-	// Update children
-	for (auto childIndex = 0; childIndex < childrenCount; ++childIndex)
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
 	{
-		auto const index = logicalIndex + 1 + childIndex;
-		auto relativeParentIndex = model()->headerData(index, orientation(), Model::RelativeParentIndexRole).value<HeaderItem::RelativeParentIndex>();
+		return;
+	}
 
-		if (relativeParentIndex)
+	if (node->isStreamNode())
+	{
+		try
 		{
-			auto subSectionParentIndex = index + *relativeParentIndex;
-			auto subSectionIsVisible = isExpanded;
-
-			if (isExpanded)
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto const entityID = node->entityID();
+			if (auto controlledEntity = manager.getControlledEntity(entityID))
 			{
-				// Sub-section is visible only if its parent is expanded
-				subSectionIsVisible = _sectionState[subSectionParentIndex].isExpanded;
+				auto const& entityNode = controlledEntity->getEntityNode();
+				auto const streamIndex = static_cast<StreamNode*>(node)->streamIndex();
+
+				la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
+				auto const isOutputStream = node->type() == Node::Type::OutputStream || node->type() == Node::Type::RedundantOutputStream;
+
+				if (isOutputStream)
+				{
+					streamNode = &controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+				}
+				else if (node->type() == Node::Type::InputStream || node->type() == Node::Type::RedundantInputStream)
+				{
+					streamNode = &controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+				}
+
+				if (!AVDECC_ASSERT_WITH_RET(streamNode, "invalid node"))
+				{
+					return;
+				}
+
+				auto addHeaderAction = [](QMenu& menu, QString const& text)
+				{
+					auto* action = menu.addAction(text);
+					auto font = action->font();
+					font.setBold(true);
+					action->setFont(font);
+					action->setEnabled(false);
+					return action;
+				};
+
+				auto addAction = [](QMenu& menu, QString const& text, bool enabled)
+				{
+					auto* action = menu.addAction(text);
+					action->setEnabled(enabled);
+					return action;
+				};
+
+				QMenu menu;
+				addHeaderAction(menu, "Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
+				addHeaderAction(menu, "Stream: " + node->name());
+
+				menu.addSeparator();
+
+				auto const isRunning = static_cast<StreamNode*>(node)->isRunning();
+				auto* startStreamingAction = addAction(menu, "Start Streaming", !isRunning);
+				auto* stopStreamingAction = addAction(menu, "Stop Streaming", isRunning);
+
+				menu.addSeparator();
+
+				// Release the controlled entity before starting a long operation (menu.exec()
+				controlledEntity.reset();
+
+				if (auto* action = menu.exec(event->globalPos()))
+				{
+					if (action == startStreamingAction)
+					{
+						if (isOutputStream)
+						{
+							manager.startStreamOutput(entityID, streamIndex);
+						}
+						else
+						{
+							manager.startStreamInput(entityID, streamIndex);
+						}
+					}
+					else if (action == stopStreamingAction)
+					{
+						if (isOutputStream)
+						{
+							manager.stopStreamOutput(entityID, streamIndex);
+						}
+						else
+						{
+							manager.stopStreamInput(entityID, streamIndex);
+						}
+					}
+				}
 			}
-
-			_sectionState[index].isVisible = subSectionIsVisible;
-
-			updateSectionVisibility(index);
+		}
+		catch (...)
+		{
 		}
 	}
 }
 
-void HeaderView::handleModelReset()
+void HeaderView::mouseMoveEvent(QMouseEvent* event)
 {
-	_sectionState.clear();
-}
-
-void HeaderView::updateSectionVisibility(int const logicalIndex)
-{
-	if (_sectionState[logicalIndex].isVisible)
+	if (orientation() == Qt::Horizontal)
 	{
-		showSection(logicalIndex);
+		auto const column = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
+		selectionModel()->select(model()->index(0, column), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Columns);
 	}
 	else
 	{
-		hideSection(logicalIndex);
+		auto const row = logicalIndexAt(static_cast<QMouseEvent*>(event)->pos());
+		selectionModel()->select(model()->index(row, 0), QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
 	}
+
+	QHeaderView::mouseMoveEvent(event);
+}
+
+void HeaderView::mouseDoubleClickEvent(QMouseEvent* event)
+{
+	// Swallow double clicks and transform them into normal mouse press events
+	mousePressEvent(event);
+}
+
+void HeaderView::leaveEvent(QEvent* event)
+{
+	selectionModel()->clearSelection();
+
+	QHeaderView::leaveEvent(event);
 }
 
 } // namespace connectionMatrix

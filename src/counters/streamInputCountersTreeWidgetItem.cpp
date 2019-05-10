@@ -18,6 +18,7 @@
 */
 
 #include "streamInputCountersTreeWidgetItem.hpp"
+#include "toolkit/material/color.hpp"
 
 #include <map>
 #include <QMenu>
@@ -94,7 +95,7 @@ void StreamInputCountersTreeWidgetItem::setStreamInputErrorCounterFlags(la::avde
 		auto const& flag = kv.first;
 		auto* widget = kv.second;
 
-		auto const color = flags.test(flag) ? Qt::red : Qt::black;
+		auto const color = qt::toolkit::material::color::value(flags.test(flag) ? qt::toolkit::material::color::Name::Red : qt::toolkit::material::color::Name::Black);
 
 		widget->setForeground(0, color);
 		widget->setForeground(1, color);

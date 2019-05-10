@@ -196,6 +196,9 @@ void MainWindow::createControllerView()
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
 	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
+	// Disable row resizing
+	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+
 	auto* imageItemDelegate{ new ImageItemDelegate{ this } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
