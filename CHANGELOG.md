@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Strings descriptor displayed
 - Entity descriptor counters
 - Detection of arriving and departing network interfaces (and link status)
+- [Collapse/Expand all buttons for connection matrix](https://github.com/christophe-calmejane/Hive/issues/51)
 - [Sort connection matrix by EntityID](https://github.com/christophe-calmejane/Hive/issues/59)
 - Connection matrix complete overhaul (optimization, smart connections)
 
