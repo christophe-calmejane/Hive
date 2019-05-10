@@ -109,7 +109,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		case Model::IntersectionData::Type::Entity_Redundant:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
 		case Model::IntersectionData::Type::Entity_SingleStream:
-			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade200) });
+			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
 			painter->setPen(QPen{ penColor, penWidth });
 			drawSquare(painter, rect);
 			break;
