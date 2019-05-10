@@ -54,8 +54,6 @@ enum class Name
 	Brown,
 	Gray,
 	BlueGray,
-	Black,
-	White,
 
 	NameCount
 };

@@ -98,7 +98,7 @@ private:
 					}
 					else
 					{
-						return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Black);
+						return QColor{ Qt::black };
 					}
 				}
 				case Qt::UserRole:

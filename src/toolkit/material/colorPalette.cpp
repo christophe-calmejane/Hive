@@ -131,10 +131,6 @@ QString Palette::nameToString(Name const name)
 			return "Gray";
 		case Name::BlueGray:
 			return "Blue Gray";
-		case Name::Black:
-			return "Black";
-		case Name::White:
-			return "White";
 		default:
 			assert(false);
 			return "Undefined";
