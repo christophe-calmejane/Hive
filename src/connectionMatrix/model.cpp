@@ -497,19 +497,12 @@ public:
 	// Returns IntersectionDirtyFlags with all available flags set
 	static IntersectionDirtyFlags allIntersectionDirtyFlags()
 	{
-		IntersectionDirtyFlags flags;
+		auto flags = IntersectionDirtyFlags{};
 		flags.set(IntersectionDirtyFlag::UpdateConnected);
 		flags.set(IntersectionDirtyFlag::UpdateFormat);
 		flags.set(IntersectionDirtyFlag::UpdateGptp);
 		flags.set(IntersectionDirtyFlag::UpdateLinkStatus);
 		return flags;
-	}
-
-	// Returns true if domains are compatible
-	constexpr bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& talkerLinkStatus, la::avdecc::UniqueIdentifier const& talkerGrandMasterID, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& listenerLinkStatus, la::avdecc::UniqueIdentifier const& listenerGrandMasterID) const noexcept
-	{
-		// Check both have the same grandmaster
-		return talkerGrandMasterID == listenerGrandMasterID;
 	}
 
 	// Determines intersection type according to talker and listener nodes
@@ -679,7 +672,7 @@ public:
 
 						auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
 						auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-						allCompatibleDomain &= isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID);
+						allCompatibleDomain &= talkerGrandMasterID == listenerGrandMasterID;
 
 						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
@@ -948,7 +941,7 @@ public:
 					// WrongDomain
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
 					{
-						if (isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID))
+						if (talkerGrandMasterID == listenerGrandMasterID)
 						{
 							intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
 						}
