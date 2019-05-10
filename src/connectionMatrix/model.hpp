@@ -73,6 +73,7 @@ public:
 
 			// RedundantStream
 			RedundantStream_RedundantStream,
+			RedundantStream_RedundantStream_Forbidden,
 			RedundantStream_SingleStream,
 
 			// Stream

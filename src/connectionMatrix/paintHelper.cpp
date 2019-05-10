@@ -120,6 +120,21 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			painter->setPen(QPen{ penColor, penWidth });
 			drawDiamond(painter, rect);
 			break;
+		case Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden:
+			// Nominal case, not connected (since it's forbidden by Milan)
+			if (state == Model::IntersectionData::State::NotConnected)
+			{
+				painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+			}
+			else
+			{
+				// But if the connection is made using another controller, we might have a connection we want to kill
+				painter->setBrush(getConnectionBrushColor(state, flags));
+				penWidth = qreal{ 1.0 };
+				painter->setPen(QPen{ penColor, penWidth });
+				drawDiamond(painter, rect);
+			}
+			break;
 		case Model::IntersectionData::Type::Redundant_Redundant:
 			penWidth = qreal{ 2.0 };
 			[[fallthrough]];

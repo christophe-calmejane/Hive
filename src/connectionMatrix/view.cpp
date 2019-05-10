@@ -148,6 +148,28 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			break;
 		}
 
+		case Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden:
+		{
+			// The only allowed action on a forbidden connection, is disconnecting a stream that was connected using a non-milan controller
+			if (intersectionData.state != Model::IntersectionData::State::NotConnected)
+			{
+				auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
+				auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
+
+				for (auto const& connectableStream : intersectionData.smartConnectableStreams)
+				{
+					auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, connectableStream.talkerStreamIndex };
+					auto const areConnected = connectableStream.isConnected || connectableStream.isFastConnecting;
+
+					if (areConnected)
+					{
+						manager.disconnectStream(talkerID, connectableStream.talkerStreamIndex, listenerID, connectableStream.listenerStreamIndex);
+					}
+				}
+			}
+			break;
+		}
+
 		default:
 			break;
 	}

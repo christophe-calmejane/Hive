@@ -91,6 +91,8 @@ QString typeToString(Model::IntersectionData::Type const type)
 			return "Redundant / Single Stream";
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 			return "Redundant Stream / Redundant Stream";
+		case Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden:
+			return "Forbidden Redundant Stream / Redundant Stream";
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 			return "Redundant Stream / Single Stream";
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
@@ -570,7 +572,7 @@ public:
 			}
 			else
 			{
-				return Model::IntersectionData::Type::None;
+				return Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden;
 			}
 		}
 
@@ -911,6 +913,7 @@ public:
 				}
 
 				case Model::IntersectionData::Type::RedundantStream_RedundantStream:
+				case Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden:
 				case Model::IntersectionData::Type::RedundantStream_SingleStream:
 				case Model::IntersectionData::Type::SingleStream_SingleStream:
 				{
