@@ -224,7 +224,7 @@ private:
 	virtual void closeEvent(QCloseEvent* event) override;
 	virtual void dragEnterEvent(QDragEnterEvent* event) override;
 	virtual void dropEvent(QDropEvent* event) override;
-	void updateStyleSheet(qt::toolkit::material::color::Name const colorName);
+	void updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename);
 
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;

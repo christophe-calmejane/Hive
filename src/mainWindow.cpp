@@ -600,15 +600,13 @@ void MainWindow::connectSignals()
 #ifdef DEBUG
 	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, this };
 	connect(reloadStyleSheet, &QShortcut::activated, this,
-		[]()
+		[this]()
 		{
-			// Load and apply the stylesheet
-			QFile styleFile{ QString{ RESOURCES_ROOT_DIR } + "/style.qss" };
-			if (styleFile.open(QFile::ReadOnly))
-			{
-				qApp->setStyleSheet(styleFile.readAll());
-				LOG_HIVE_DEBUG("StyleSheet reloaded");
-			}
+			auto& settings = settings::SettingsManager::getInstance();
+			auto const themeColorIndex = settings.getValue(settings::ThemeColorIndex.name).toInt();
+			auto const colorName = qt::toolkit::material::color::Palette::name(themeColorIndex);
+			updateStyleSheet(colorName, QString{ RESOURCES_ROOT_DIR } + "/style.qss");
+			LOG_HIVE_DEBUG("StyleSheet reloaded");
 		});
 #endif
 }
@@ -817,14 +815,14 @@ void MainWindow::dropEvent(QDropEvent* event)
 	}
 }
 
-void MainWindow::updateStyleSheet(qt::toolkit::material::color::Name const colorName)
+void MainWindow::updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename)
 {
 	auto const baseBackgroundColor = qt::toolkit::material::color::value(colorName);
 	auto const baseForegroundColor = QColor{ qt::toolkit::material::color::luminance(colorName) == qt::toolkit::material::color::Luminance::Dark ? Qt::white : Qt::black };
 	auto const connectionMatrixBackgroundColor = qt::toolkit::material::color::value(colorName, qt::toolkit::material::color::Shade::Shade100);
 
 	// Load and apply the stylesheet
-	auto styleFile = QFile{ ":/style.qss" };
+	auto styleFile = QFile{ filename };
 	if (styleFile.open(QFile::ReadOnly))
 	{
 		auto const styleSheet = QString{ styleFile.readAll() }.arg(baseBackgroundColor.name()).arg(baseForegroundColor.name()).arg(connectionMatrixBackgroundColor.name());
@@ -838,6 +836,6 @@ void MainWindow::onSettingChanged(settings::SettingsManager::Setting const& name
 	if (name == settings::ThemeColorIndex.name)
 	{
 		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
-		updateStyleSheet(colorName);
+		updateStyleSheet(colorName, ":/style.qss");
 	}
 }
