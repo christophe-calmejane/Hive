@@ -21,6 +21,7 @@
 
 #include <QHeaderView>
 #include <QVector>
+#include "toolkit/material/color.hpp"
 
 namespace connectionMatrix
 {
@@ -34,6 +35,8 @@ public:
 	};
 
 	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
+
+	void setColor(qt::toolkit::material::color::Name const name);
 
 	// Retrieves the current sectionState for each section
 	QVector<SectionState> saveSectionState() const;
@@ -71,6 +74,8 @@ private:
 private:
 	QVector<SectionState> _sectionState;
 	QRegExp _pattern;
+
+	qt::toolkit::material::color::Name _colorName{ qt::toolkit::material::color::DefaultColor };
 };
 
 } // namespace connectionMatrix

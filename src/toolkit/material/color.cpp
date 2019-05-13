@@ -322,6 +322,11 @@ static const ColorMap g_colorMap = {
 			{ Shade::Shade700, { 0x5D4037, Luminance::Dark } },
 			{ Shade::Shade800, { 0x4E342E, Luminance::Dark } },
 			{ Shade::Shade900, { 0x3E2723, Luminance::Dark } },
+			//
+			{ Shade::ShadeA100, { 0xA1887F, Luminance::Dark } },
+			{ Shade::ShadeA200, { 0x795548, Luminance::Dark } },
+			{ Shade::ShadeA400, { 0x5D4037, Luminance::Dark } },
+			{ Shade::ShadeA700, { 0x3E2723, Luminance::Dark } },
 		} },
 	{ Name::Gray,
 		{
@@ -335,6 +340,11 @@ static const ColorMap g_colorMap = {
 			{ Shade::Shade700, { 0x616161, Luminance::Dark } },
 			{ Shade::Shade800, { 0x424242, Luminance::Dark } },
 			{ Shade::Shade900, { 0x212121, Luminance::Dark } },
+			//
+			{ Shade::ShadeA100, { 0xE0E0E0, Luminance::Light } },
+			{ Shade::ShadeA200, { 0x9E9E9E, Luminance::Light } },
+			{ Shade::ShadeA400, { 0x616161, Luminance::Dark } },
+			{ Shade::ShadeA700, { 0x212121, Luminance::Dark } },
 		} },
 	{ Name::BlueGray,
 		{
@@ -348,40 +358,11 @@ static const ColorMap g_colorMap = {
 			{ Shade::Shade700, { 0x455A64, Luminance::Dark } },
 			{ Shade::Shade800, { 0x37474F, Luminance::Dark } },
 			{ Shade::Shade900, { 0x263238, Luminance::Dark } },
-		} },
-	{ Name::Black,
-		{
-			{ Shade::Shade50, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade100, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade200, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade300, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade400, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade500, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade600, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade700, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade800, { Qt::black, Luminance::Dark } },
-			{ Shade::Shade900, { Qt::black, Luminance::Dark } },
-			{ Shade::ShadeA100, { Qt::black, Luminance::Dark } },
-			{ Shade::ShadeA200, { Qt::black, Luminance::Dark } },
-			{ Shade::ShadeA400, { Qt::black, Luminance::Dark } },
-			{ Shade::ShadeA700, { Qt::black, Luminance::Dark } },
-		} },
-	{ Name::White,
-		{
-			{ Shade::Shade50, { Qt::white, Luminance::Light } },
-			{ Shade::Shade100, { Qt::white, Luminance::Light } },
-			{ Shade::Shade200, { Qt::white, Luminance::Light } },
-			{ Shade::Shade300, { Qt::white, Luminance::Light } },
-			{ Shade::Shade400, { Qt::white, Luminance::Light } },
-			{ Shade::Shade500, { Qt::white, Luminance::Light } },
-			{ Shade::Shade600, { Qt::white, Luminance::Light } },
-			{ Shade::Shade700, { Qt::white, Luminance::Light } },
-			{ Shade::Shade800, { Qt::white, Luminance::Light } },
-			{ Shade::Shade900, { Qt::white, Luminance::Light } },
-			{ Shade::ShadeA100, { Qt::white, Luminance::Light } },
-			{ Shade::ShadeA200, { Qt::white, Luminance::Light } },
-			{ Shade::ShadeA400, { Qt::white, Luminance::Light } },
-			{ Shade::ShadeA700, { Qt::white, Luminance::Light } },
+			//
+			{ Shade::ShadeA100, { 0x90A4AE, Luminance::Light } },
+			{ Shade::ShadeA200, { 0x607D8B, Luminance::Dark } },
+			{ Shade::ShadeA400, { 0x455A64, Luminance::Dark } },
+			{ Shade::ShadeA700, { 0x263238, Luminance::Dark } },
 		} },
 };
 
@@ -406,9 +387,36 @@ ColorData const& colorData(Name const name, Shade const shade)
 	return jt->second;
 }
 
+QColor complementary(QColor const& baseColor)
+{
+	auto const r = 255 - baseColor.red();
+	auto const g = 255 - baseColor.green();
+	auto const b = 255 - baseColor.blue();
+
+	return QColor::fromRgb(r, g, b);
+}
+
 QColor value(Name const name, Shade const shade)
 {
 	return colorData(name, shade).value;
+}
+
+QColor foregroundValue(Name const name, Shade const shade)
+{
+	auto const l = luminance(name, shade);
+	return QColor{ l == Luminance::Light ? Qt::black : Qt::white };
+}
+
+QColor complementatyValue(Name const name, Shade const shade)
+{
+	auto const baseColor = value(name, shade);
+	return complementary(baseColor);
+}
+
+QColor foregroundComplementatyValue(Name const name, Shade const shade)
+{
+	auto const baseColor = foregroundValue(name, shade);
+	return complementary(baseColor);
 }
 
 Luminance luminance(Name const name, Shade const shade)

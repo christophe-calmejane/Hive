@@ -54,8 +54,6 @@ enum class Name
 	Brown,
 	Gray,
 	BlueGray,
-	Black,
-	White,
 
 	NameCount
 };
@@ -89,11 +87,27 @@ enum class Luminance
 };
 
 // Default color shade
+static auto constexpr DefaultColor = Name::DeepPurple;
 static auto constexpr DefaultShade = Shade::Shade500;
 
 // Return the color value for a given name + shade
 // May throw invalid_argument for non existing combinations
 QColor value(Name const name, Shade const shade = DefaultShade);
+
+// Return the foreground color value for given name + shade
+// May throw invalid_argument for non existing combinations
+// Foreground value is linked to the color luminance
+// Dark: white
+// Light: black
+QColor foregroundValue(Name const name, Shade const shade = DefaultShade);
+
+// Return the complementary color value for given name + shade
+// May throw invalid_argument for non existing combinations
+QColor complementatyValue(Name const name, Shade const shade = DefaultShade);
+
+// Return the foreground complementary color value for given name + shade
+// May throw invalid_argument for non existing combinations
+QColor foregroundComplementatyValue(Name const name, Shade const shade = DefaultShade);
 
 // Return the luminance for a given name + shade
 // May throw invalid_argument for non existing combinations

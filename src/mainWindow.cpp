@@ -37,6 +37,7 @@
 
 #include "nodeVisitor.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
+#include "toolkit/material/colorPalette.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
@@ -281,6 +282,9 @@ void MainWindow::loadSettings()
 
 	restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
 	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+
+	// Configure settings observers
+	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
 void MainWindow::connectSignals()
@@ -553,7 +557,7 @@ void MainWindow::connectSignals()
 	//
 
 	connect(actionOpenProjectWebPage, &QAction::triggered, this,
-		[this]()
+		[]()
 		{
 			QDesktopServices::openUrl(hive::internals::projectURL);
 		});
@@ -596,15 +600,13 @@ void MainWindow::connectSignals()
 #ifdef DEBUG
 	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, this };
 	connect(reloadStyleSheet, &QShortcut::activated, this,
-		[]()
+		[this]()
 		{
-			// Load and apply the stylesheet
-			QFile styleFile{ QString{ RESOURCES_ROOT_DIR } + "/style.qss" };
-			if (styleFile.open(QFile::ReadOnly))
-			{
-				qApp->setStyleSheet(styleFile.readAll());
-				LOG_HIVE_DEBUG("StyleSheet reloaded");
-			}
+			auto& settings = settings::SettingsManager::getInstance();
+			auto const themeColorIndex = settings.getValue(settings::ThemeColorIndex.name).toInt();
+			auto const colorName = qt::toolkit::material::color::Palette::name(themeColorIndex);
+			updateStyleSheet(colorName, QString{ RESOURCES_ROOT_DIR } + "/style.qss");
+			LOG_HIVE_DEBUG("StyleSheet reloaded");
 		});
 #endif
 }
@@ -702,8 +704,13 @@ void MainWindow::showEvent(QShowEvent* event)
 void MainWindow::closeEvent(QCloseEvent* event)
 {
 	auto& settings = settings::SettingsManager::getInstance();
+
+	// Save window geometry
 	settings.setValue(settings::MainWindowGeometry, saveGeometry());
 	settings.setValue(settings::MainWindowState, saveState());
+
+	// Unregister from settings
+	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
 
 	qApp->closeAllWindows();
 
@@ -805,5 +812,30 @@ void MainWindow::dropEvent(QDropEvent* event)
 				}
 			}
 		}
+	}
+}
+
+void MainWindow::updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename)
+{
+	auto const baseBackgroundColor = qt::toolkit::material::color::value(colorName);
+	auto const baseForegroundColor = QColor{ qt::toolkit::material::color::luminance(colorName) == qt::toolkit::material::color::Luminance::Dark ? Qt::white : Qt::black };
+	auto const connectionMatrixBackgroundColor = qt::toolkit::material::color::value(colorName, qt::toolkit::material::color::Shade::Shade100);
+
+	// Load and apply the stylesheet
+	auto styleFile = QFile{ filename };
+	if (styleFile.open(QFile::ReadOnly))
+	{
+		auto const styleSheet = QString{ styleFile.readAll() }.arg(baseBackgroundColor.name()).arg(baseForegroundColor.name()).arg(connectionMatrixBackgroundColor.name());
+
+		qApp->setStyleSheet(styleSheet);
+	}
+}
+
+void MainWindow::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
+{
+	if (name == settings::ThemeColorIndex.name)
+	{
+		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+		updateStyleSheet(colorName, ":/style.qss");
 	}
 }

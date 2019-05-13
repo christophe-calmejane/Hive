@@ -77,6 +77,7 @@ View::View(QWidget* parent)
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSettingObserver(settings::TransposeConnectionMatrix.name, this);
+	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
 View::~View()
@@ -84,6 +85,7 @@ View::~View()
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.unregisterSettingObserver(settings::TransposeConnectionMatrix.name, this);
+	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
 void View::onIntersectionClicked(QModelIndex const& index)
@@ -97,7 +99,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 	switch (intersectionData.type)
 	{
-		// Use SmartConnection algorithm
+			// Use SmartConnection algorithm
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
@@ -209,6 +211,13 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
 		applyFilterPattern(QRegExp{ _cornerWidget->filterText() });
+	}
+	else if (name == settings::ThemeColorIndex.name)
+	{
+		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+
+		_verticalHeaderView->setColor(colorName);
+		_horizontalHeaderView->setColor(colorName);
 	}
 }
 

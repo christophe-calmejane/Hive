@@ -79,6 +79,7 @@ set(TOOLKIT_HEADER_FILES
 	toolkit/dynamicHeaderView.hpp
 	toolkit/material/button.hpp
 	toolkit/material/color.hpp
+	toolkit/material/colorPalette.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
 	toolkit/tickableMenu.hpp
@@ -96,6 +97,7 @@ set(TOOLKIT_SOURCE_FILES
 	toolkit/dynamicHeaderView.cpp
 	toolkit/material/button.cpp
 	toolkit/material/color.cpp
+	toolkit/material/colorPalette.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
 	toolkit/tickableMenu.cpp

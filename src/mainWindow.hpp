@@ -98,7 +98,7 @@ private:
 					}
 					else
 					{
-						return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Black);
+						return QColor{ Qt::black };
 					}
 				}
 				case Qt::UserRole:
@@ -198,7 +198,7 @@ private:
 	DECLARE_AVDECC_OBSERVER_GUARD(NetworkInterfaceModel);
 };
 
-class MainWindow : public QMainWindow, private Ui::MainWindow
+class MainWindow : public QMainWindow, private Ui::MainWindow, private settings::SettingsManager::Observer
 {
 	Q_OBJECT
 public:
@@ -224,6 +224,10 @@ private:
 	virtual void closeEvent(QCloseEvent* event) override;
 	virtual void dragEnterEvent(QDragEnterEvent* event) override;
 	virtual void dropEvent(QDropEvent* event) override;
+	void updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename);
+
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
 	// Private memberes
 	qt::toolkit::ComboBox _protocolComboBox{ this };

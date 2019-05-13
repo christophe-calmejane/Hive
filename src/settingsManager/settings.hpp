@@ -20,6 +20,7 @@
 #pragma once
 
 #include "settingsManager.hpp"
+#include "toolkit/material/colorPalette.hpp"
 
 namespace settings
 {
@@ -31,6 +32,7 @@ static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/g
 static SettingsManager::SettingDefault TransposeConnectionMatrix = { "avdecc/general/transposeConnectionMatrix", false };
 static SettingsManager::SettingDefault AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
 static SettingsManager::SettingDefault CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
+static SettingsManager::SettingDefault ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };
 
 // Controller settings
 static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };

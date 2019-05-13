@@ -48,6 +48,12 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
 }
 
+void HeaderView::setColor(qt::toolkit::material::color::Name const name)
+{
+	_colorName = name;
+	update();
+}
+
 QVector<HeaderView::SectionState> HeaderView::saveSectionState() const
 {
 	return _sectionState;
@@ -314,24 +320,28 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		return;
 	}
 
-	QBrush backgroundBrush{ 0x4A148C };
+	auto backgroundColor = QColor{};
+	auto foregroundColor = QColor{};
 	auto nodeLevel{ 0 };
 
 	switch (node->type())
 	{
 		case Node::Type::Entity:
-			backgroundBrush = QColor{ 0x4A148C };
+			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
+			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade900);
 			break;
 		case Node::Type::RedundantInput:
 		case Node::Type::RedundantOutput:
 		case Node::Type::InputStream:
 		case Node::Type::OutputStream:
-			backgroundBrush = QColor{ 0x7B1FA2 };
+			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
+			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			nodeLevel = 1;
 			break;
 		case Node::Type::RedundantInputStream:
 		case Node::Type::RedundantOutputStream:
-			backgroundBrush = QColor{ 0xBA68C8 };
+			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade300);
+			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			nodeLevel = 2;
 			break;
 		default:
@@ -368,13 +378,14 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	if (isSelected)
 	{
-		backgroundBrush = QColor{ 0x007ACC };
+		backgroundColor = qt::toolkit::material::color::complementatyValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
+		foregroundColor = qt::toolkit::material::color::foregroundComplementatyValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
 	}
 
 	painter->save();
 	painter->setRenderHint(QPainter::Antialiasing);
 
-	painter->fillPath(path, backgroundBrush);
+	painter->fillPath(path, backgroundColor);
 	painter->translate(rect.topLeft());
 
 	auto r = QRect(0, 0, rect.width(), rect.height());
@@ -400,7 +411,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	}
 	else
 	{
-		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::White));
+		painter->setPen(foregroundColor);
 	}
 
 	painter->drawText(textRect, Qt::AlignVCenter, elidedText);
