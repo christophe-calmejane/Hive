@@ -357,6 +357,7 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		auto* mappingsItem = new QTreeWidgetItem(this);
 		mappingsItem->setText(0, "Dynamic Mappings");
 		_mappingsList = new QListWidget;
+		_mappingsList->setSelectionMode(QAbstractItemView::NoSelection);
 		parent->setItemWidget(mappingsItem, 1, _mappingsList);
 		try
 		{

@@ -81,6 +81,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		auto* item = new QTreeWidgetItem(this);
 		item->setText(0, "As Path");
 		_asPath = new QListWidget;
+		_asPath->setSelectionMode(QAbstractItemView::NoSelection);
 		parent->setItemWidget(item, 1, _asPath);
 
 		// Update info right now

@@ -150,6 +150,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		auto* item = new QTreeWidgetItem(this);
 		item->setText(0, "Connections");
 		_connections = new QListWidget;
+		_connections->setSelectionMode(QAbstractItemView::NoSelection);
 		parent->setItemWidget(item, 1, _connections);
 
 		// Update info right now
