@@ -772,7 +772,12 @@ Qt::DropActions DomainTreeModelPrivate::supportedDropActions() const
 */
 bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
 {
+	// Invalid mimeData can directly be rejected
 	if (!data->hasFormat("application/json"))
+		return false;
+
+	// Dropping is only allowed into an existing domain or empty space to create a new domain. Insertion inbetween or before existing domains is not.
+	if (!parent.isValid() && row >= 0)
 		return false;
 
 	QJsonParseError parseError;
