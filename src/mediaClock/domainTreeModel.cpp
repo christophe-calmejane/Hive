@@ -754,6 +754,11 @@ bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& p
 	}
 
 	domainTreeItem->reevaluateDomainSampleRate();
+
+	// If after removing the requested rows the domain has become empty, remove it entirely
+	if (domainTreeItem->childCount() == 0)
+		removeDomain(domainTreeItem->domain().getDomainIndex());
+
 	emit q->deselectAll();
 
 	return true;
