@@ -298,6 +298,7 @@ set(COMMON_HEADER_FILES
 	highlightForegroundItemDelegate.hpp
 	imageItemDelegate.hpp
 	mappingMatrix.hpp
+	networkInterfaceModel.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	painterHelper.hpp
@@ -313,9 +314,10 @@ set(COMMON_SOURCE_FILES
 	main.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
+	networkInterfaceModel.cpp
 	nodeTreeWidget.cpp
-	painterHelper.cpp
 	nodeVisitor.cpp
+	painterHelper.cpp
 )
 
 # Group sources

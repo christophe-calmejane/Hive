@@ -36,7 +36,6 @@ public:
 	SettingsDialog& operator=(SettingsDialog&&) = delete;
 
 private:
-
 	// General
 	Q_SLOT void on_automaticPNGDownloadCheckBox_toggled(bool checked);
 	Q_SLOT void on_clearLogoCacheButton_clicked();
