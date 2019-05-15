@@ -29,6 +29,7 @@
 
 #include <QMouseEvent>
 #include <QMessageBox>
+#include <QMenu>
 
 namespace connectionMatrix
 {
@@ -73,6 +74,10 @@ View::View(QWidget* parent)
 
 	// Handle click on the table
 	connect(this, &QTableView::clicked, this, &View::onIntersectionClicked);
+
+	// Handle contextual menu
+	setContextMenuPolicy(Qt::CustomContextMenu);
+	connect(this, &QTableView::customContextMenuRequested, this, &View::onCustomContextMenuRequested);
 
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
@@ -174,6 +179,70 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 		default:
 			break;
+	}
+}
+
+void View::onCustomContextMenuRequested(QPoint const& pos)
+{
+	try
+	{
+		auto const index = indexAt(pos);
+		if (!index.isValid())
+		{
+			return;
+		}
+
+		auto const& intersectionData = _model->intersectionData(index);
+		auto talkerNodeType = intersectionData.talker->type();
+		auto listenerNodeType = intersectionData.listener->type();
+
+		if ((talkerNodeType == Node::Type::OutputStream && listenerNodeType == Node::Type::InputStream) || (talkerNodeType == Node::Type::RedundantOutputStream && listenerNodeType == Node::Type::RedundantInputStream))
+		{
+#pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
+			if (intersectionData.flags.test(Model::IntersectionData::Flag::WrongFormat))
+			{
+				QMenu menu;
+
+				auto* matchTalkerAction = menu.addAction("Match formats using Talker");
+				auto* matchListenerAction = menu.addAction("Match formats using Listener");
+				menu.addSeparator();
+				menu.addAction("Cancel");
+
+#pragma message("TODO: setEnabled() based on format compatibility -> If talker can be set from listener, and vice versa.")
+				matchTalkerAction->setEnabled(true);
+				matchListenerAction->setEnabled(true);
+
+				auto const talkerID = intersectionData.talker->entityID();
+				auto const listenerID = intersectionData.listener->entityID();
+
+				auto const* const talkerStreamNode = static_cast<StreamNode*>(intersectionData.talker);
+				auto const* const listenerStreamNode = static_cast<StreamNode*>(intersectionData.listener);
+
+				if (auto* action = menu.exec(viewport()->mapToGlobal(pos)))
+				{
+					auto const talkerStreamIndex = talkerStreamNode->streamIndex();
+					auto const listenerStreamIndex = listenerStreamNode->streamIndex();
+
+					if (action == matchTalkerAction)
+					{
+						auto& manager = avdecc::ControllerManager::getInstance();
+						manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode->streamFormat());
+					}
+					else if (action == matchListenerAction)
+					{
+						auto& manager = avdecc::ControllerManager::getInstance();
+						manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode->streamFormat());
+					}
+				}
+			}
+		}
+		else if (talkerNodeType == Node::Type::RedundantOutput && listenerNodeType == Node::Type::RedundantInput)
+		{
+			// TODO
+		}
+	}
+	catch (...)
+	{
 	}
 }
 
