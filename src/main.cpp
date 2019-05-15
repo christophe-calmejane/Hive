@@ -115,6 +115,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::AutomaticCheckForUpdates);
 	settings.registerSetting(settings::CheckForBetaVersions);
 	settings.registerSetting(settings::ThemeColorIndex);
+	settings.registerSetting(settings::ProtocolType);
 	settings.registerSetting(settings::AemCacheEnabled);
 
 	QPixmap logo(":/Logo.png");

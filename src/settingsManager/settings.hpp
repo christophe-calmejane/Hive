@@ -35,6 +35,8 @@ static SettingsManager::SettingDefault TransposeConnectionMatrix = { "avdecc/gen
 static SettingsManager::SettingDefault AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
 static SettingsManager::SettingDefault CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
 static SettingsManager::SettingDefault ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };
+
+// Network settings
 static SettingsManager::SettingDefault ProtocolType = { "protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
 
 // Controller settings

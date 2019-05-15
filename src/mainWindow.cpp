@@ -95,6 +95,11 @@ void MainWindow::currentControllerChanged()
 
 	auto const protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
+	if (interfaceID.isEmpty())
+	{
+		LOG_HIVE_WARN("No Network Interface selected. Please choose one.");
+		return;
+	}
 
 	settings.setValue(settings::InterfaceID, interfaceID);
 
@@ -107,7 +112,7 @@ void MainWindow::currentControllerChanged()
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
-		statusbar->showMessage(e.what(), 2000);
+		LOG_HIVE_WARN(e.what());
 	}
 }
 
@@ -243,7 +248,15 @@ void MainWindow::loadSettings()
 		_interfaceComboBox.setCurrentIndex(_networkInterfaceModelProxy.mapFromSource(networkInterfaceIndex).row());
 	}
 
-	currentControllerChanged();
+	// Check if currently saved ProtocolInterface is supported
+	auto protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
+	if (!supportedTypes.test(protocolType) && !supportedTypes.empty())
+	{
+		// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
+		protocolType = *supportedTypes.begin();
+		settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+	}
 
 	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
 	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
