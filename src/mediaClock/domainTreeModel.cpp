@@ -143,7 +143,7 @@ void DomainTreeModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEnti
 
 	for (auto& entityDomainKV : domains.getEntityMediaClockMasterMappings())
 	{
-		for (int i = 0; i < _rootItem->childCount(); i++)
+		for (auto i = 0; i < _rootItem->childCount(); ++i)
 		{
 			auto* domainTreeItem = ((DomainTreeItem*)_rootItem->child(i));
 			if (std::find(entityDomainKV.second.begin(), entityDomainKV.second.end(), domainTreeItem->domain().getDomainIndex()) != entityDomainKV.second.end())
@@ -161,12 +161,12 @@ void DomainTreeModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEnti
 avdecc::mediaClock::MCEntityDomainMapping DomainTreeModelPrivate::createMediaClockMappings()
 {
 	avdecc::mediaClock::MCEntityDomainMapping mediaClockDomains;
-	for (int i = 0; i < _rootItem->childCount(); i++)
+	for (auto i = 0; i < _rootItem->childCount(); ++i)
 	{
 		auto* domainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
 		mediaClockDomains.getMediaClockDomains().emplace(domainTreeItem->domain().getDomainIndex(), avdecc::mediaClock::MCDomain(domainTreeItem->domain()));
 
-		for (int j = 0; j < domainTreeItem->childCount(); j++)
+		for (auto j = 0; j < domainTreeItem->childCount(); ++j)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(j));
 			std::vector<avdecc::mediaClock::DomainIndex> domains; // multi domain support
@@ -191,7 +191,7 @@ avdecc::mediaClock::MCEntityDomainMapping DomainTreeModelPrivate::createMediaClo
 */
 QModelIndex DomainTreeModelPrivate::getDomainModelIndex(avdecc::mediaClock::DomainIndex domainIndex) const
 {
-	for (int i = 0; i < _rootItem->childCount(); i++)
+	for (auto i = 0; i < _rootItem->childCount(); ++i)
 	{
 		auto* domainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
 		if (domainTreeItem->domain().getDomainIndex() == domainIndex)
@@ -377,7 +377,7 @@ void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const 
 	// after removing the entity that was mc master, a new media clock master should be set.
 	// just set first item for now.
 	bool mcMasterEnabledEntitiesFound = false;
-	for (int i = 0; i < domainItem->childCount(); i++)
+	for (auto i = 0; i < domainItem->childCount(); ++i)
 	{
 		if (static_cast<EntityTreeItem*>(domainItem->childAt(i))->isMediaClockDomainManageableEntity())
 		{
@@ -414,14 +414,15 @@ void DomainTreeModelPrivate::removeEntity(la::avdecc::UniqueIdentifier const& en
 
 /**
 * Determines the next unused domain index.
+* @return	The next free domain index that was determined
 */
 avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::getNextDomainIndex()
 {
 	Q_Q(DomainTreeModel);
 
 	// Determine a new unused DomainIndex first
-	std::list<int> existingDomainIndices;
-	for (int i = 0; i < _rootItem->childCount(); ++i)
+	auto existingDomainIndices = std::list<avdecc::mediaClock::DomainIndex>();
+	for (auto i = 0; i < _rootItem->childCount(); ++i)
 	{
 		auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(_rootItem->childAt(i));
 		if (domainTreeItem)
@@ -441,9 +442,9 @@ avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::getNextDomainIndex()
 	return nextDomainIndex;
 }
 
-
 /**
 * Adds a new empty domain.
+* @return	The domain index of the newly added domain
 */
 avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::addNewDomain()
 {
@@ -472,7 +473,7 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeSelectedDomain
 
 	// after deleting the domain all entities should be returned to the unassigned list.
 	QList<la::avdecc::UniqueIdentifier> entities;
-	for (int i = 0; i < domainTreeItem->childCount(); i++)
+	for (auto i = 0; i < domainTreeItem->childCount(); ++i)
 	{
 		auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
 		if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
@@ -486,7 +487,7 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeSelectedDomain
 	q->endRemoveRows();
 
 	// all following domain indices have to corrected.
-	for (int i = _rootItem->childCount() - 1; i >= domainRowIndex; i--)
+	for (auto i = _rootItem->childCount() - 1; i >= domainRowIndex; --i)
 	{
 		auto* domainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
 		domainTreeItem->domain().setDomainIndex(i);
@@ -504,13 +505,13 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeDomain(avdecc:
 	Q_Q(DomainTreeModel);
 
 	QList<la::avdecc::UniqueIdentifier> entities;
-	for (int i = _rootItem->childCount() - 1; i >= 0; i--)
+	for (auto i = _rootItem->childCount() - 1; i >= 0; --i)
 	{
 		auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(_rootItem->childAt(i)));
 		if (domainTreeItem && domainTreeItem->domain().getDomainIndex() == domainIndex)
 		{
 			// after deleting the domain all entities should be returned to the unassigned list.
-			for (int j = 0; j < _rootItem->childAt(i)->childCount(); j++)
+			for (auto j = 0; j < _rootItem->childAt(i)->childCount(); ++j)
 			{
 				auto* entityTreeItem = static_cast<EntityTreeItem*>(_rootItem->childAt(i)->childAt(j));
 				if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
@@ -536,10 +537,10 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeAllDomains()
 	Q_Q(DomainTreeModel);
 
 	QList<la::avdecc::UniqueIdentifier> entities;
-	for (int i = _rootItem->childCount() - 1; i >= 0; i--)
+	for (auto i = _rootItem->childCount() - 1; i >= 0; --i)
 	{
 		// after deleting the domain all entities should be returned to the unassigned list.
-		for (int j = 0; j < _rootItem->childAt(i)->childCount(); j++)
+		for (auto j = 0; j < _rootItem->childAt(i)->childCount(); j++)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(_rootItem->childAt(i)->childAt(j));
 			if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
@@ -564,10 +565,10 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeAllDomains()
 bool DomainTreeModelPrivate::isEntityDoubled(la::avdecc::UniqueIdentifier const& entityId) const
 {
 	int count = 0;
-	for (int i = _rootItem->childCount() - 1; i >= 0; i--)
+	for (auto i = _rootItem->childCount() - 1; i >= 0; --i)
 	{
 		// after deleting the domain all entities should be returned to the unassigned list.
-		for (int j = 0; j < _rootItem->childAt(i)->childCount(); j++)
+		for (auto j = 0; j < _rootItem->childAt(i)->childCount(); ++j)
 		{
 			if (entityId == static_cast<EntityTreeItem*>(_rootItem->childAt(i)->childAt(j))->entityId())
 			{
@@ -615,9 +616,9 @@ void DomainTreeModelPrivate::handleClick(QModelIndex const& current, QModelIndex
 Q_SLOT void DomainTreeModelPrivate::onGptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 {
 	Q_Q(DomainTreeModel);
-	for (int i = _rootItem->childCount() - 1; i >= 0; i--)
+	for (auto i = _rootItem->childCount() - 1; i >= 0; --i)
 	{
-		for (int j = 0; j < _rootItem->childAt(i)->childCount(); j++)
+		for (auto j = 0; j < _rootItem->childAt(i)->childCount(); ++j)
 		{
 			if (static_cast<EntityTreeItem*>(_rootItem->childAt(i)->childAt(j))->entityId() == entityID)
 			{
@@ -774,7 +775,7 @@ bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& p
 		return false;
 	}
 
-	for (int i = row + count - 1; i >= row; i--)
+	for (auto i = row + count - 1; i >= row; --i)
 	{
 		auto entityItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
 		removeEntity(domainTreeItem->domain().getDomainIndex(), entityItem->entityId());
@@ -847,7 +848,7 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 	for (auto const& entry : jsonFormattedDataEntries)
 	{
 		la::avdecc::UniqueIdentifier entityId(static_cast<qint64>(entry.toDouble())); // ::toDouble is used, since QJsonValue(qint64) constructor internally creates a double value, which is what happens when mimeData is created when drag is started.
-		for (int i = 0; i < domainTreeItem->childCount(); i++)
+		for (auto i = 0; i < domainTreeItem->childCount(); ++i)
 		{
 			auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->child(i));
 			if (entityTreeItem && entityTreeItem->entityId() == entityId)
@@ -1323,7 +1324,7 @@ QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionVie
 			return nullptr;
 		}
 		auto* editor = new DomainTreeDomainEditDelegate(parent);
-		for (const auto& sampleRate : sampleRates)
+		for (auto const& sampleRate : sampleRates)
 		{
 			if (sampleRate.first)
 			{
