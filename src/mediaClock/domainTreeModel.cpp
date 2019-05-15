@@ -81,6 +81,7 @@ public:
 	QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> getSelectedEntity(QModelIndex const& currentIndex) const;
 	QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> getSelectedEntityItems(QItemSelection const& itemSelection) const;
 	QList<avdecc::mediaClock::DomainIndex> getSelectedDomainItems(QItemSelection const& itemSelection) const;
+	avdecc::mediaClock::DomainIndex getNextDomainIndex();
 	void removeEntity(avdecc::mediaClock::DomainIndex const domainIndex, la::avdecc::UniqueIdentifier const& entityId);
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	avdecc::mediaClock::DomainIndex addNewDomain();
@@ -412,12 +413,42 @@ void DomainTreeModelPrivate::removeEntity(la::avdecc::UniqueIdentifier const& en
 }
 
 /**
+* Determines the next unused domain index.
+*/
+avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::getNextDomainIndex()
+{
+	Q_Q(DomainTreeModel);
+
+	// Determine a new unused DomainIndex first
+	std::list<int> existingDomainIndices;
+	for (int i = 0; i < _rootItem->childCount(); ++i)
+	{
+		auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(_rootItem->childAt(i));
+		if (domainTreeItem)
+		{
+			existingDomainIndices.push_back(domainTreeItem->domain().getDomainIndex());
+		}
+	}
+	existingDomainIndices.sort();
+
+	// As next index we are always using the next index after highest existing
+	// to spare us the effort to find any no longer used indices inbetween, since uint64 offers enough possible values
+	// and the index is only used when editing in MCMD. Domain indices are rebuilt on reopening MCMD anyways.
+	avdecc::mediaClock::DomainIndex nextDomainIndex = 0;
+	if (existingDomainIndices.size())
+		nextDomainIndex = existingDomainIndices.back() + 1;
+
+	return nextDomainIndex;
+}
+
+
+/**
 * Adds a new empty domain.
 */
 avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::addNewDomain()
 {
 	Q_Q(DomainTreeModel);
-	avdecc::mediaClock::MCDomain newDomain(_rootItem->childCount());
+	avdecc::mediaClock::MCDomain newDomain(getNextDomainIndex());
 	q->beginInsertRows(QModelIndex(), _rootItem->childCount(), _rootItem->childCount());
 	_rootItem->appendChild(new DomainTreeItem(newDomain, _rootItem));
 	q->endInsertRows();
