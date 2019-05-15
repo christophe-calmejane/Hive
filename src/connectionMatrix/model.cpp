@@ -1783,7 +1783,7 @@ private:
 
 		// Then, update the node intersection
 		auto const talkerSection = talkerNodeSection(talker);
-		for (auto listenerSection = _listenerNodes.size(); listenerSection > 0u; --listenerSection)
+		for (auto listenerSection = static_cast<int>(_listenerNodes.size()); listenerSection > 0; --listenerSection)
 		{
 			intersectionDataChanged(talkerSection, listenerSection - 1, dirtyFlags);
 		}
@@ -1822,7 +1822,7 @@ private:
 
 		// Then, update the node intersection
 		auto const listenerSection = listenerNodeSection(listener);
-		for (auto talkerSection = _talkerNodes.size(); talkerSection > 0; --talkerSection)
+		for (auto talkerSection = static_cast<int>(_talkerNodes.size()); talkerSection > 0; --talkerSection)
 		{
 			intersectionDataChanged(talkerSection - 1, listenerSection, dirtyFlags);
 		}
