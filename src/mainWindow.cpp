@@ -80,7 +80,6 @@ MainWindow::MainWindow(QWidget* parent)
 
 	createControllerView();
 
-	populateProtocolComboBox();
 	initInterfaceComboBox();
 
 	loadSettings();
@@ -92,11 +91,16 @@ MainWindow::MainWindow(QWidget* parent)
 
 void MainWindow::currentControllerChanged()
 {
-	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
-	auto const interfaceID = _interfaceComboBox.currentData().toString();
-
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::ProtocolType, _protocolComboBox.currentText());
+
+	auto const protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const interfaceID = _interfaceComboBox.currentData().toString();
+	if (interfaceID.isEmpty())
+	{
+		LOG_HIVE_WARN("No Network Interface selected. Please choose one.");
+		return;
+	}
+
 	settings.setValue(settings::InterfaceID, interfaceID);
 
 	try
@@ -108,7 +112,7 @@ void MainWindow::currentControllerChanged()
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
-		statusbar->showMessage(e.what(), 2000);
+		LOG_HIVE_WARN(e.what());
 	}
 }
 
@@ -152,10 +156,6 @@ void MainWindow::createViewMenu()
 
 void MainWindow::createMainToolBar()
 {
-	auto* protocolLabel = new QLabel("Protocol");
-	protocolLabel->setMinimumWidth(50);
-	_protocolComboBox.setMinimumWidth(100);
-
 	auto* interfaceLabel = new QLabel("Interface");
 	interfaceLabel->setMinimumWidth(50);
 	_interfaceComboBox.setMinimumWidth(100);
@@ -167,11 +167,6 @@ void MainWindow::createMainToolBar()
 	_controllerEntityIDLabel.setMinimumWidth(100);
 
 	mainToolBar->setMinimumHeight(30);
-
-	mainToolBar->addWidget(protocolLabel);
-	mainToolBar->addWidget(&_protocolComboBox);
-
-	mainToolBar->addSeparator();
 
 	mainToolBar->addWidget(interfaceLabel);
 	mainToolBar->addWidget(&_interfaceComboBox);
@@ -228,25 +223,6 @@ void MainWindow::createControllerView()
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
 }
 
-void MainWindow::populateProtocolComboBox()
-{
-	const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName{
-		{ la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap" },
-		{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
-		{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
-		{ la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual" },
-	};
-
-	for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
-	{
-#ifndef DEBUG
-		if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
-			continue;
-#endif // !DEBUG
-		_protocolComboBox.addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
-	}
-}
-
 void MainWindow::initInterfaceComboBox()
 {
 	_networkInterfaceModelProxy.setSourceModel(&_networkInterfaceModel);
@@ -262,7 +238,6 @@ void MainWindow::loadSettings()
 
 	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());
 
-	_protocolComboBox.setCurrentText(settings.getValue(settings::ProtocolType).toString());
 	auto const networkInterfaceIndex = _networkInterfaceModel.indexOf(settings.getValue(settings::InterfaceID).toString().toStdString());
 	if (!networkInterfaceIndex.isValid() || !_networkInterfaceModel.isEnabled(networkInterfaceIndex))
 	{
@@ -273,7 +248,15 @@ void MainWindow::loadSettings()
 		_interfaceComboBox.setCurrentIndex(_networkInterfaceModelProxy.mapFromSource(networkInterfaceIndex).row());
 	}
 
-	currentControllerChanged();
+	// Check if currently saved ProtocolInterface is supported
+	auto protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
+	if (!supportedTypes.test(protocolType) && !supportedTypes.empty())
+	{
+		// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
+		protocolType = *supportedTypes.begin();
+		settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+	}
 
 	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
 	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
@@ -284,12 +267,12 @@ void MainWindow::loadSettings()
 	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
 
 	// Configure settings observers
+	settings.registerSettingObserver(settings::ProtocolType.name, this);
 	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
 void MainWindow::connectSignals()
 {
-	connect(&_protocolComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
 
@@ -710,6 +693,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings.setValue(settings::MainWindowState, saveState());
 
 	// Unregister from settings
+	settings.unregisterSettingObserver(settings::ProtocolType.name, this);
 	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
 
 	qApp->closeAllWindows();
@@ -833,7 +817,11 @@ void MainWindow::updateStyleSheet(qt::toolkit::material::color::Name const color
 
 void MainWindow::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
 {
-	if (name == settings::ThemeColorIndex.name)
+	if (name == settings::ProtocolType.name)
+	{
+		currentControllerChanged();
+	}
+	else if (name == settings::ThemeColorIndex.name)
 	{
 		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 		updateStyleSheet(colorName, ":/style.qss");
