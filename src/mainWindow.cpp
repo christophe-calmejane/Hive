@@ -62,6 +62,8 @@ extern "C"
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
 
+Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
+
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
 	, _controllerModel(new avdecc::ControllerModel(this))
@@ -91,7 +93,7 @@ void MainWindow::currentControllerChanged()
 {
 	auto& settings = settings::SettingsManager::getInstance();
 
-	auto const protocolType = static_cast<la::avdecc::protocol::ProtocolInterface::Type>(settings.getValue(settings::ProtocolType.name).toInt());
+	auto const protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	settings.setValue(settings::InterfaceID, interfaceID);
