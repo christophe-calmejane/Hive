@@ -215,7 +215,6 @@ private:
 	void createViewMenu();
 	void createMainToolBar();
 	void createControllerView();
-	void populateProtocolComboBox();
 	void initInterfaceComboBox();
 	void loadSettings();
 	void connectSignals();
@@ -230,7 +229,6 @@ private:
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
 	// Private memberes
-	qt::toolkit::ComboBox _protocolComboBox{ this };
 	qt::toolkit::ComboBox _interfaceComboBox{ this };
 	NetworkInterfaceModel _networkInterfaceModel{ this };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ this };
