@@ -43,6 +43,7 @@ public:
 
 private:
 	void onIntersectionClicked(QModelIndex const& index);
+	void onCustomContextMenuRequested(QPoint const& pos);
 	void onFilterChanged(QString const& filter);
 	void applyFilterPattern(QRegExp const& pattern);
 
