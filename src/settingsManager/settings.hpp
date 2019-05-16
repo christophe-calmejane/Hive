@@ -39,7 +39,10 @@ static SettingsManager::SettingDefault CheckForBetaVersions = { "avdecc/general/
 static SettingsManager::SettingDefault ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };
 
 // Network settings
-static SettingsManager::SettingDefault ProtocolType = { "protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
+static SettingsManager::SettingDefault ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
+
+static SettingsManager::SettingDefault InterfaceTypeEthernet = { "avdecc/network/interfaceType/ethernet", true };
+static SettingsManager::SettingDefault InterfaceTypeWiFi = { "avdecc/network/interfaceType/wifi", false };
 
 // Controller settings
 static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };

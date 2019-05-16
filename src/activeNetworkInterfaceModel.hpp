@@ -19,29 +19,25 @@
 
 #pragma once
 
-#include <QAbstractListModel>
+#include <QSortFilterProxyModel>
 #include <QScopedPointer>
-#include <la/avdecc/networkInterfaceHelper.hpp>
 
-// Model for Network Interfaces
-class NetworkInterfaceModelPrivate;
-class NetworkInterfaceModel final : public QAbstractListModel
+// Model that wrap and filter an underlying NetworkInterfaceModel filtering interfaces according to the settings
+class ActiveNetworkInterfaceModelPrivate;
+class ActiveNetworkInterfaceModel : public QSortFilterProxyModel
 {
+	using QSortFilterProxyModel::setSourceModel;
+
 public:
-	NetworkInterfaceModel(QObject* parent = nullptr);
-	virtual ~NetworkInterfaceModel();
+	ActiveNetworkInterfaceModel(QObject* parent = nullptr);
+	virtual ~ActiveNetworkInterfaceModel();
 
 	bool isEnabled(QString const& id) const noexcept;
 
-	la::avdecc::networkInterface::Interface::Type interfaceType(QModelIndex const& index) const noexcept;
+private:
+	virtual bool filterAcceptsRow(int sourceRow, QModelIndex const& sourceParent) const override;
 
 private:
-	// QAbstractListModel overrides
-	virtual int rowCount(QModelIndex const& parent = {}) const override;
-	virtual QVariant data(QModelIndex const& index, int role) const override;
-	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
-
-private:
-	QScopedPointer<NetworkInterfaceModelPrivate> const d_ptr;
-	Q_DECLARE_PRIVATE(NetworkInterfaceModel);
+	QScopedPointer<ActiveNetworkInterfaceModelPrivate> const d_ptr;
+	Q_DECLARE_PRIVATE(ActiveNetworkInterfaceModel);
 };

@@ -25,6 +25,8 @@
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
 #include "toolkit/material/colorPalette.hpp"
+#include "toolkit/tickableMenu.hpp"
+#include "networkInterfaceTypeModel.hpp"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
@@ -107,6 +109,11 @@ private:
 			auto const index = protocolComboBox->findData(QVariant::fromValue(type));
 			protocolComboBox->setCurrentIndex(index);
 		}
+
+		// Interface Types
+		{
+			interfaceTypeList->setModel(&_networkInterfaceTypeModel);
+		}
 	}
 
 private:
@@ -131,6 +138,7 @@ private:
 
 private:
 	qt::toolkit::material::color::Palette _themeColorModel;
+	NetworkInterfaceTypeModel _networkInterfaceTypeModel;
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)

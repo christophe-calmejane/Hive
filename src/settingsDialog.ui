@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>471</width>
-    <height>487</height>
+    <height>573</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -237,6 +237,32 @@
       <item row="0" column="1">
        <widget class="QComboBox" name="protocolComboBox"/>
       </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="interfaceTypesLabel">
+        <property name="text">
+         <string>Interface Types</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QListView" name="interfaceTypeList">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>80</height>
+         </size>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::NoSelection</enum>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -265,6 +291,21 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>descriptorIndexStartsAt0CheckBox</tabstop>
+  <tabstop>primarilyPreferredLocaleComboBox</tabstop>
+  <tabstop>secondarilyPreferredLocaleComboBox</tabstop>
+  <tabstop>automaticPNGDownloadCheckBox</tabstop>
+  <tabstop>clearLogoCacheButton</tabstop>
+  <tabstop>transposeConnectionMatrixCheckBox</tabstop>
+  <tabstop>automaticCheckForUpdatesCheckBox</tabstop>
+  <tabstop>checkForBetaVersionsCheckBox</tabstop>
+  <tabstop>themeColorComboBox</tabstop>
+  <tabstop>enableAEMCacheCheckBox</tabstop>
+  <tabstop>enableAdvertisingCheckBox</tabstop>
+  <tabstop>controllerIDLineEdit</tabstop>
+  <tabstop>protocolComboBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

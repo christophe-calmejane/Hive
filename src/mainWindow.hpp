@@ -26,7 +26,7 @@
 #include "toolkit/material/button.hpp"
 #include "toolkit/material/color.hpp"
 #include "profiles/profiles.hpp"
-#include "networkInterfaceModel.hpp"
+#include "activeNetworkInterfaceModel.hpp"
 
 #include <QSettings>
 #include <QLabel>
@@ -87,7 +87,6 @@ private:
 	void createViewMenu();
 	void createMainToolBar();
 	void createControllerView();
-	void initInterfaceComboBox();
 	void loadSettings();
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
@@ -102,7 +101,7 @@ private:
 
 	// Private memberes
 	qt::toolkit::ComboBox _interfaceComboBox{ this };
-	NetworkInterfaceModel _networkInterfaceModel{ this };
+	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ this };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ this };
 	qt::toolkit::material::Button _refreshControllerButton{ "refresh", this };
 	QLabel _controllerEntityIDLabel{ this };

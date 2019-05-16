@@ -18,8 +18,8 @@
 */
 
 #include "networkInterfaceModel.hpp"
-#include <la/avdecc/networkInterfaceHelper.hpp>
 #include "toolkit/material/color.hpp"
+#include "avdecc/helper.hpp"
 
 class NetworkInterfaceModelPrivate : public QObject, private la::avdecc::networkInterface::NetworkInterfaceObserver
 {
@@ -30,6 +30,22 @@ public:
 	}
 
 private:
+	QModelIndex indexOf(std::string const& id) const noexcept
+	{
+		Q_Q(const NetworkInterfaceModel);
+
+		auto const it = std::find_if(_interfaces.begin(), _interfaces.end(),
+			[id](auto const& i)
+			{
+				return i.id == id;
+			});
+		if (it == _interfaces.end())
+		{
+			return {};
+		}
+		return q->createIndex(static_cast<int>(std::distance(_interfaces.begin(), it)), 0);
+	}
+
 	// la::avdecc::networkInterface::NetworkInterfaceObserver overrides
 	void onInterfaceAdded(la::avdecc::networkInterface::Interface const& intfc) noexcept
 	{
@@ -39,11 +55,11 @@ private:
 				Q_Q(NetworkInterfaceModel);
 
 				// Only use non-virtual, enabled, Ethernet interfaces
-				if (intfc.type == la::avdecc::networkInterface::Interface::Type::Ethernet && !intfc.isVirtual)
+				if (!intfc.isVirtual)
 				{
 					auto const count = q->rowCount();
 					emit q->beginInsertRows({}, count, count);
-					_interfaces.push_back(Data{ intfc.id, intfc.alias, intfc.isEnabled, intfc.isConnected });
+					_interfaces.push_back(Data{ intfc.id, intfc.alias, intfc.isEnabled, intfc.isConnected, intfc.type, avdecc::helper::interfaceTypePixmap(intfc.type) });
 					emit q->endInsertRows();
 				}
 			});
@@ -56,7 +72,7 @@ private:
 				Q_Q(NetworkInterfaceModel);
 
 				// Search the element
-				auto const index = q->indexOf(id);
+				auto const index = indexOf(id);
 				if (index.isValid())
 				{
 					// Remove it
@@ -75,7 +91,7 @@ private:
 				Q_Q(NetworkInterfaceModel);
 
 				// Search the element
-				auto const index = q->indexOf(id);
+				auto const index = indexOf(id);
 				if (index.isValid())
 				{
 					// Change data and emit signal
@@ -95,7 +111,7 @@ private:
 				Q_Q(NetworkInterfaceModel);
 
 				// Search the element
-				auto const index = q->indexOf(id);
+				auto const index = indexOf(id);
 				if (index.isValid())
 				{
 					// Change data and emit signal
@@ -117,6 +133,8 @@ private:
 		std::string name{};
 		bool isEnabled{ false };
 		bool isConnected{ false };
+		la::avdecc::networkInterface::Interface::Type interfaceType{ la::avdecc::networkInterface::Interface::Type::None };
+		QPixmap pixmap{};
 	};
 
 	// Private Members
@@ -133,31 +151,39 @@ NetworkInterfaceModel::NetworkInterfaceModel(QObject* parent)
 
 NetworkInterfaceModel::~NetworkInterfaceModel() = default;
 
-QModelIndex NetworkInterfaceModel::indexOf(std::string const& id) const noexcept
+bool NetworkInterfaceModel::isEnabled(QString const& id) const noexcept
 {
 	Q_D(const NetworkInterfaceModel);
 
 	auto const it = std::find_if(d->_interfaces.begin(), d->_interfaces.end(),
-		[id](auto const& i)
+		[id = id.toStdString()](auto const& i)
 		{
 			return i.id == id;
 		});
 	if (it == d->_interfaces.end())
 	{
-		return {};
+		return false;
 	}
-	return createIndex(static_cast<int>(std::distance(d->_interfaces.begin(), it)), 0);
+	return it->isEnabled;
 }
 
-bool NetworkInterfaceModel::isEnabled(QModelIndex const& index) const noexcept
+la::avdecc::networkInterface::Interface::Type NetworkInterfaceModel::interfaceType(QModelIndex const& index) const noexcept
 {
-	return (flags(index) & Qt::ItemIsEnabled) == Qt::ItemIsEnabled;
+	Q_D(const NetworkInterfaceModel);
+
+	auto const idx = index.row();
+	if (idx >= 0 && idx < rowCount())
+	{
+		return d->_interfaces.at(idx).interfaceType;
+	}
+
+	return la::avdecc::networkInterface::Interface::Type::None;
 }
 
 int NetworkInterfaceModel::rowCount(QModelIndex const& parent) const
 {
 	Q_D(const NetworkInterfaceModel);
-	return static_cast<int>(d->_interfaces.size());
+	return d->_interfaces.count();
 }
 
 QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
@@ -188,9 +214,9 @@ QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
 				}
 			}
 			case Qt::UserRole:
-			{
 				return QString::fromStdString(d->_interfaces.at(idx).id);
-			}
+			case Qt::DecorationRole:
+				return d->_interfaces.at(idx).pixmap;
 		}
 	}
 	return {};

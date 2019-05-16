@@ -119,5 +119,7 @@ QString toUpperCamelCase(std::string const& text) noexcept;
 
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 
+QPixmap interfaceTypePixmap(la::avdecc::networkInterface::Interface::Type const type) noexcept;
+
 } // namespace helper
 } // namespace avdecc

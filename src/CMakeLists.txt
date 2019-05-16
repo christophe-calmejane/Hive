@@ -80,6 +80,7 @@ set(TOOLKIT_HEADER_FILES
 	toolkit/material/button.hpp
 	toolkit/material/color.hpp
 	toolkit/material/colorPalette.hpp
+	toolkit/material/helper.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
 	toolkit/tickableMenu.hpp
@@ -98,6 +99,7 @@ set(TOOLKIT_SOURCE_FILES
 	toolkit/material/button.cpp
 	toolkit/material/color.cpp
 	toolkit/material/colorPalette.cpp
+	toolkit/material/helper.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
 	toolkit/tickableMenu.cpp
@@ -350,7 +352,9 @@ set(COMMON_HEADER_FILES
 	highlightForegroundItemDelegate.hpp
 	imageItemDelegate.hpp
 	mappingMatrix.hpp
+	activeNetworkInterfaceModel.hpp
 	networkInterfaceModel.hpp
+	networkInterfaceTypeModel.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	painterHelper.hpp
@@ -369,7 +373,9 @@ set(COMMON_SOURCE_FILES
 	main.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
+	activeNetworkInterfaceModel.cpp
 	networkInterfaceModel.cpp
+	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	painterHelper.cpp
