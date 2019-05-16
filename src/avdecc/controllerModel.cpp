@@ -257,7 +257,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 						case mediaClock::McDeterminationError::ParentStreamNotConnected:
 							return "Parent Stream N/C";
 						case mediaClock::McDeterminationError::ExternalClockSource:
-							return QString("External on ").append(helper::uniqueIdentifierToString(clockMaster.first));
+							return clockMaster.first == entityID ? QString("External") : QString("External on ").append(helper::uniqueIdentifierToString(clockMaster.first));
 						case mediaClock::McDeterminationError::AnyEntityInChainOffline:
 							return "Talker Offline";
 						case mediaClock::McDeterminationError::UnknownEntity:

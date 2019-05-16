@@ -209,28 +209,35 @@ private:
 
 	/**
 	* Gets the media clock master for an entity.
-	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined.
+	* If no mc master is available, the corresponding error is returned in second std:pair element.
+	* If mc is provided via external on the mc master, the ExternalClockSource error is set in addition to mc master id.
+	* @param entityId	The id of the entity for which the mc master is requested.
+	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined (NoError and ExternalClockSource errors do provide a mc master).
 	*/
 	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept override
 	{
+		auto error = McDeterminationError::NoError;
 		auto hasErrorIterator = _currentMCDomainMapping.getEntityMcErrors().find(entityId);
 		if (hasErrorIterator != _currentMCDomainMapping.getEntityMcErrors().end())
 		{
-			return std::make_pair(hasErrorIterator->first, hasErrorIterator->second);
+			// If the entityId delivered mc errors, we only can return immediately in case the error is NOT ExternalClockSource.
+			// In case it is, we need to determine the id of the device that feeds the external clock into the domain as master id.
+			if (hasErrorIterator->second != McDeterminationError::ExternalClockSource)
+				return std::make_pair(hasErrorIterator->first, hasErrorIterator->second);
+			else
+				error = McDeterminationError::ExternalClockSource;
 		}
-		else
+
+		auto entityMcDomainIterator = _currentMCDomainMapping.getEntityMediaClockMasterMappings().find(entityId);
+		if (entityMcDomainIterator != _currentMCDomainMapping.getEntityMediaClockMasterMappings().end())
 		{
-			auto entityMcDomainIterator = _currentMCDomainMapping.getEntityMediaClockMasterMappings().find(entityId);
-			if (entityMcDomainIterator != _currentMCDomainMapping.getEntityMediaClockMasterMappings().end())
+			auto const& associatedDomains = entityMcDomainIterator->second;
+			if (associatedDomains.size() > 0)
 			{
-				auto const& associatedDomains = entityMcDomainIterator->second;
-				if (associatedDomains.size() > 0)
+				auto mediaClockDomainIterator = _currentMCDomainMapping.getMediaClockDomains().find(associatedDomains.at(0));
+				if (mediaClockDomainIterator != _currentMCDomainMapping.getMediaClockDomains().end())
 				{
-					auto mediaClockDomainIterator = _currentMCDomainMapping.getMediaClockDomains().find(associatedDomains.at(0));
-					if (mediaClockDomainIterator != _currentMCDomainMapping.getMediaClockDomains().end())
-					{
-						return std::make_pair(mediaClockDomainIterator->second.getMediaClockDomainMaster(), McDeterminationError::NoError);
-					}
+					return std::make_pair(mediaClockDomainIterator->second.getMediaClockDomainMaster(), error);
 				}
 			}
 		}
@@ -465,9 +472,16 @@ private:
 				auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, mcMasterId);
 				associatedDomains.push_back(domainIndex);
 			}
+			else if (mcMasterError == McDeterminationError::ExternalClockSource)
+			{
+				// in case the mc is provided via external input on mc master, we need to do both set the error and determine the mc master id /domain idx
+				auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, mcMasterId);
+				associatedDomains.push_back(domainIndex);
+				errors.emplace(entityId, mcMasterError);
+			}
 			else
 			{
-				// errors are stored as well for the getMediaClockMaster method
+				// errors are stored as well for the findMediaClockMaster method
 				errors.emplace(entityId, mcMasterError);
 			}
 
@@ -489,7 +503,7 @@ private:
 			mappings.emplace(entityId, associatedDomains);
 		}
 
-		// loop through all domains, than through all entities in that domain to get the domain sample rate.
+		// loop through all domains, then through all entities in that domain to get the domain sample rate.
 		for (auto& domainKV : domains)
 		{
 			std::set<la::avdecc::entity::model::SamplingRate> sampleRates;

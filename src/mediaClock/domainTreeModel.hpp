@@ -144,9 +144,12 @@ public:
 	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains);
 	avdecc::mediaClock::MCEntityDomainMapping createMediaClockMappings();
 
+	QModelIndex getDomainModelIndex(avdecc::mediaClock::DomainIndex domainIndex) const;
+
 	Q_SLOT void handleClick(QModelIndex const& current, QModelIndex const& previous);
 
 	Q_SIGNAL void domainSetupChanged();
+	Q_SIGNAL void expandDomain(QModelIndex const& domainModelIndex);
 	Q_SIGNAL void triggerResizeColumns();
 	Q_SIGNAL void deselectAll();
 
