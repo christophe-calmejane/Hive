@@ -823,11 +823,10 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 
 QPixmap interfaceTypePixmap(la::avdecc::networkInterface::Interface::Type const type) noexcept
 {
-#if 0
-	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QPixmap> g_pixmap;
+	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QPixmap> s_pixmap;
 
-	auto const it = g_pixmap.find(type);
-	if (it == std::end(g_pixmap))
+	auto const it = s_pixmap.find(type);
+	if (it == std::end(s_pixmap))
 	{
 		auto what = QString{};
 
@@ -839,15 +838,16 @@ QPixmap interfaceTypePixmap(la::avdecc::networkInterface::Interface::Type const 
 			case la::avdecc::networkInterface::Interface::Type::WiFi:
 				what = "wifi";
 				break;
-
 			default:
+				AVDECC_ASSERT(false, "Unhandled type");
+				what = "error_outline";
 				break;
 		}
 
-		g_pixmap[type] = qt::toolkit::material::helper::generatePixmap(what);
+		s_pixmap[type] = qt::toolkit::material::helper::generatePixmap(what);
 	}
-#endif
-	return qt::toolkit::material::helper::generatePixmap("wifi");
+
+	return s_pixmap[type];
 }
 
 } // namespace helper

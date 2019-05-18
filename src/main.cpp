@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
 
 	// We want to propagate style sheet styles to all widgets
 	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
 	// Create the Qt Application
 	QApplication app(argc, argv);
