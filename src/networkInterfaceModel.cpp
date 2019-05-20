@@ -50,7 +50,7 @@ private:
 	void onInterfaceAdded(la::avdecc::networkInterface::Interface const& intfc) noexcept
 	{
 		QMetaObject::invokeMethod(this,
-			[this, intfc]()
+			[this, intfc = intfc]()
 			{
 				Q_Q(NetworkInterfaceModel);
 
@@ -59,7 +59,7 @@ private:
 				{
 					auto const count = q->rowCount();
 					emit q->beginInsertRows({}, count, count);
-					_interfaces.push_back(Data{ intfc.id, intfc.alias, intfc.isEnabled, intfc.isConnected, intfc.type, avdecc::helper::interfaceTypePixmap(intfc.type) });
+					_interfaces.push_back(Data{ intfc.id, intfc.alias, intfc.isEnabled, intfc.isConnected, intfc.type });
 					emit q->endInsertRows();
 				}
 			});
@@ -134,7 +134,6 @@ private:
 		bool isEnabled{ false };
 		bool isConnected{ false };
 		la::avdecc::networkInterface::Interface::Type interfaceType{ la::avdecc::networkInterface::Interface::Type::None };
-		QPixmap pixmap{};
 	};
 
 	// Private Members
@@ -216,7 +215,7 @@ QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
 			case Qt::UserRole:
 				return QString::fromStdString(d->_interfaces.at(idx).id);
 			case Qt::DecorationRole:
-				return d->_interfaces.at(idx).pixmap;
+				return avdecc::helper::interfaceTypePixmap(d->_interfaces.at(idx).interfaceType);
 		}
 	}
 	return {};

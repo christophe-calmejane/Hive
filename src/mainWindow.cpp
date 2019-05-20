@@ -179,6 +179,12 @@ void MainWindow::currentControllerChanged()
 
 	auto const protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
+
+	// Clear the current controller
+	auto& manager = avdecc::ControllerManager::getInstance();
+	manager.destroyController();
+	_controllerEntityIDLabel.clear();
+
 	if (interfaceID.isEmpty())
 	{
 		LOG_HIVE_WARN("No Network Interface selected. Please choose one.");
@@ -190,7 +196,6 @@ void MainWindow::currentControllerChanged()
 	try
 	{
 		// Create a new Controller
-		auto& manager = avdecc::ControllerManager::getInstance();
 		manager.createController(protocolType, interfaceID, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
