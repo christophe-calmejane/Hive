@@ -31,24 +31,18 @@ namespace helper
 
 QPixmap generatePixmap(QString const& what, QColor const& color)
 {
-	auto const devicePixelRatio = 2;
-	auto const side = 24;
-	auto const scaledSide = side * devicePixelRatio;
-	
-	QPixmap pixmap{ scaledSide, scaledSide };
+	QPixmap pixmap{ 16, 16 };
 	pixmap.fill(Qt::transparent);
-	pixmap.setDevicePixelRatio(devicePixelRatio);
 	
 	QPainter painter{ &pixmap };
 	painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::HighQualityAntialiasing);
 
 	QFont font{ "Material Icons" };
 	font.setStyleStrategy(QFont::PreferQuality);
-	font.setPointSizeF(20);
 	painter.setFont(font);
 
 	painter.setPen(color);
-	painter.drawText(QRect{ 0, 0, side, side }, what, QTextOption{ Qt::AlignCenter });
+	painter.drawText(pixmap.rect(), what, QTextOption{ Qt::AlignCenter });
 
 	return pixmap;
 }
