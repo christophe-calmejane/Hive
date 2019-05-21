@@ -28,12 +28,12 @@ namespace paintHelper
 {
 static inline void drawSquare(QPainter* painter, QRect const& rect)
 {
-	painter->drawRect(rect.adjusted(2, 2, -2, -2));
+	painter->drawRect(rect.adjusted(2, 2, -3, -3));
 }
 
 static inline void drawDiamond(QPainter* painter, QRect const& rect)
 {
-	auto const r = rect.translated(-rect.center()).adjusted(3, 3, -3, -3);
+	auto const r = rect.translated(-rect.center()).adjusted(3, 3, -4, -4);
 
 	painter->save();
 	painter->translate(rect.center());
@@ -44,7 +44,7 @@ static inline void drawDiamond(QPainter* painter, QRect const& rect)
 
 static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
-	painter->drawEllipse(rect.adjusted(2, 2, -2, -2));
+	painter->drawEllipse(rect.adjusted(2, 2, -3, -3));
 }
 
 static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
