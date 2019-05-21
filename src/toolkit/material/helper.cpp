@@ -28,23 +28,38 @@ namespace material
 {
 namespace helper
 {
-
-QPixmap generatePixmap(QString const& what, QColor const& color)
+QIcon generateIcon(QString const& what, QColor const& color)
 {
-	QPixmap pixmap{ 16, 16 };
-	pixmap.fill(Qt::transparent);
-	
-	QPainter painter{ &pixmap };
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::HighQualityAntialiasing);
+	auto const generatePixmap = [&color, &what](int size, int dpr)
+	{
+		QPixmap pixmap{ size * dpr, size * dpr };
+		pixmap.setDevicePixelRatio(dpr);
+		pixmap.fill(Qt::transparent);
 
-	QFont font{ "Material Icons" };
-	font.setStyleStrategy(QFont::PreferQuality);
-	painter.setFont(font);
+		QPainter painter{ &pixmap };
+		painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::HighQualityAntialiasing);
 
-	painter.setPen(color);
-	painter.drawText(pixmap.rect(), what, QTextOption{ Qt::AlignCenter });
+		QFont font{ "Material Icons" };
+		font.setStyleStrategy(QFont::PreferQuality);
+		font.setPointSize(size - 8);
 
-	return pixmap;
+		painter.setFont(font);
+
+		painter.setPen(color);
+		painter.drawText(QRect{ 0, 0, size, size }, what, QTextOption{ Qt::AlignCenter });
+
+		return pixmap;
+	};
+
+	QIcon icon;
+
+	for (auto const size : { 16, 32, 64, 128 })
+	{
+		icon.addPixmap(generatePixmap(size, 1));
+		icon.addPixmap(generatePixmap(size, 2));
+	}
+
+	return icon;
 }
 
 } // namespace helper

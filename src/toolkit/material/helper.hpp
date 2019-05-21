@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <QPixmap>
+#include <QIcon>
 
 namespace qt
 {
@@ -30,7 +30,7 @@ namespace material
 namespace helper
 {
 // Generate a pixmap of a name based material icon
-QPixmap generatePixmap(QString const& what, QColor const& color = Qt::black);
+QIcon generateIcon(QString const& what, QColor const& color = Qt::black);
 
 } // namespace helper
 } // namespace material

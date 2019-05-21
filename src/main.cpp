@@ -65,18 +65,14 @@ int main(int argc, char* argv[])
 	setupBugReporter();
 
 	// Configure QT Application
-#if defined(Q_OS_WIN)
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
+	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
 	QCoreApplication::setOrganizationDomain(hive::internals::organizationDomain);
 	QCoreApplication::setOrganizationName(hive::internals::organizationName);
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
-
-	// We want to propagate style sheet styles to all widgets
-	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
-	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
 	// Create the Qt Application
 	QApplication app(argc, argv);

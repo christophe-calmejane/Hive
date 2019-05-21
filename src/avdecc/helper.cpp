@@ -821,12 +821,12 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 	return toHexQString(entityID.getVendorID<std::uint32_t>(), true, true);
 }
 
-QPixmap interfaceTypePixmap(la::avdecc::networkInterface::Interface::Type const type) noexcept
+QIcon interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept
 {
-	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QPixmap> s_pixmap;
+	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QIcon> s_icon;
 
-	auto const it = s_pixmap.find(type);
-	if (it == std::end(s_pixmap))
+	auto const it = s_icon.find(type);
+	if (it == std::end(s_icon))
 	{
 		auto what = QString{};
 
@@ -844,10 +844,10 @@ QPixmap interfaceTypePixmap(la::avdecc::networkInterface::Interface::Type const 
 				break;
 		}
 
-		s_pixmap[type] = qt::toolkit::material::helper::generatePixmap(what);
+		s_icon[type] = qt::toolkit::material::helper::generateIcon(what);
 	}
 
-	return s_pixmap[type];
+	return s_icon[type];
 }
 
 } // namespace helper

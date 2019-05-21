@@ -157,7 +157,7 @@ QVariant NetworkInterfaceTypeModel::data(QModelIndex const& index, int role) con
 			case Qt::CheckStateRole:
 				return info.active ? Qt::Checked : Qt::Unchecked;
 			case Qt::DecorationRole:
-				return avdecc::helper::interfaceTypePixmap(type);
+				return avdecc::helper::interfaceTypeIcon(type);
 			default:
 				break;
 		}
