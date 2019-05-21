@@ -146,35 +146,31 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 	// StreamOutput dynamic info
 	if (outputDynamicModel)
 	{
-		if (!listenerEntity || !listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
-		{
-			// Create fields
-			auto* item = new QTreeWidgetItem(this);
-			item->setText(0, "Connections");
-			_connections = new QListWidget;
-			_connections->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
-			parent->setItemWidget(item, 1, _connections);
+		// Create fields
+		auto* item = new QTreeWidgetItem(this);
+		item->setText(0, "Connections");
+		_connections = new QListWidget;
+		parent->setItemWidget(item, 1, _connections);
 
-			// Update info right now
-			updateConnections(outputDynamicModel->connections);
+		// Update info right now
+		updateConnections(outputDynamicModel->connections);
 
-			// Listen for Connections changed signal
-			connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this,
-				[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
+		// Listen for Connections changed signal
+		connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this,
+			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
+			{
+				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
 				{
-					if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
-					{
-						updateConnections(connections);
-					}
-				});
-		}
+					updateConnections(connections);
+				}
+			});
 	}
 }
 
 void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo)
 {
-	_streamFormat->setText(1, avdecc::helper::toHexQString(streamInfo.streamFormat, true, true));
-	setFlagsItemText(_streamFlags, la::avdecc::utils::to_integral(streamInfo.streamInfoFlags), avdecc::helper::flagsToString(streamInfo.streamInfoFlags));
+	_streamFormat->setText(1, avdecc::helper::toHexQString(streamInfo.streamFormat.getValue(), true, true));
+	setFlagsItemText(_streamFlags, la::avdecc::utils::forceNumeric(streamInfo.streamInfoFlags.value()), avdecc::helper::flagsToString(streamInfo.streamInfoFlags));
 	_streamDestMac->setText(1, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(streamInfo.streamDestMac, true)));
 	_streamID->setText(1, avdecc::helper::toHexQString(streamInfo.streamID, true, true));
 	_streamVlanID->setText(1, QString::number(streamInfo.streamVlanID));
@@ -187,7 +183,7 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 		if (streamInfo.streamInfoFlagsEx.has_value())
 		{
 			auto const flagsEx = *streamInfo.streamInfoFlagsEx;
-			setFlagsItemText(_streamFlagsEx, la::avdecc::utils::to_integral(flagsEx), avdecc::helper::flagsToString(flagsEx));
+			setFlagsItemText(_streamFlagsEx, la::avdecc::utils::forceNumeric(flagsEx.value()), avdecc::helper::flagsToString(flagsEx));
 		}
 		else
 		{

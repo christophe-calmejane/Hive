@@ -358,7 +358,6 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		mappingsItem->setText(0, "Dynamic Mappings");
 		_mappingsList = new QListWidget;
 		parent->setItemWidget(mappingsItem, 1, _mappingsList);
-		_mappingsList->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
 		try
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();

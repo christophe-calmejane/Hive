@@ -34,6 +34,8 @@ class Filter;
 
 class View final : public QTableView, private settings::SettingsManager::Observer
 {
+	Q_OBJECT
+
 	using QTableView::setModel;
 	using QTableView::setVerticalHeader;
 	using QTableView::setHorizontalHeader;

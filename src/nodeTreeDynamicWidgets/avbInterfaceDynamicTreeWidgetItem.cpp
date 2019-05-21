@@ -81,7 +81,6 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		auto* item = new QTreeWidgetItem(this);
 		item->setText(0, "As Path");
 		_asPath = new QListWidget;
-		_asPath->setStyleSheet(".QListWidget{margin-top:4px;margin-bottom:4px}");
 		parent->setItemWidget(item, 1, _asPath);
 
 		// Update info right now
@@ -104,7 +103,7 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAvbInfo(la::avdecc::entity::model:
 	_gptpGrandmasterID->setText(1, avdecc::helper::uniqueIdentifierToString(avbInfo.gptpGrandmasterID));
 	_gptpDomainNumber->setText(1, QString::number(avbInfo.gptpDomainNumber));
 	_propagationDelay->setText(1, QString("%1 nsec").arg(avbInfo.propagationDelay));
-	setFlagsItemText(_flags, la::avdecc::utils::to_integral(avbInfo.flags), avdecc::helper::flagsToString(avbInfo.flags));
+	setFlagsItemText(_flags, la::avdecc::utils::forceNumeric(avbInfo.flags.value()), avdecc::helper::flagsToString(avbInfo.flags));
 }
 
 void AvbInterfaceDynamicTreeWidgetItem::updateLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)

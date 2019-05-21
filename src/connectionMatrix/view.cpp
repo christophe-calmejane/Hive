@@ -133,9 +133,6 @@ View::View(QWidget* parent)
 	setCornerButtonEnabled(false);
 	setMouseTracking(true);
 
-	// Configure highlight color, we don't use the palette otherwise the legend will inherit from it
-	setStyleSheet("QTableView { selection-background-color: #f3e5f5; }");
-
 	connect(this, &QTableView::clicked, this, &View::onClicked);
 
 	setContextMenuPolicy(Qt::CustomContextMenu);
@@ -383,7 +380,9 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& talkerEntityNode = talkerEntity->getEntityNode();
 							auto const& talkerStreamNode = talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
-							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode.dynamicModel->streamInfo.streamFormat);
+							auto const talkerFormat = talkerStreamNode.dynamicModel->streamInfo.streamFormat;
+							talkerEntity.reset(); // Release the controlled entity before calling the controller
+							manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerFormat);
 						}
 					}
 					else if (action == matchListenerAction)
@@ -393,7 +392,9 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 						{
 							auto const& listenerEntityNode = listenerEntity->getEntityNode();
 							auto const& listenerStreamNode = listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
-							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode.dynamicModel->streamInfo.streamFormat);
+							auto const listenerFormat = listenerStreamNode.dynamicModel->streamInfo.streamFormat;
+							listenerEntity.reset(); // Release the controlled entity before calling the controller
+							manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerFormat);
 						}
 					}
 				}

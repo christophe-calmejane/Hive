@@ -34,9 +34,16 @@ configure_file(
 	${CMAKE_CURRENT_BINARY_DIR}/internals/config.hpp
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCES_ROOT_DIR="${PROJECT_ROOT_DIR}/resources")
+
+# Process Qt resources
+qt5_add_resources(
+	RCC_RESOURCES
+	${PROJECT_ROOT_DIR}/resources/main.qrc)
+
 # Resource files
 set(RESOURCE_FILES
-	${PROJECT_ROOT_DIR}/resources/main.qrc
+	${RCC_RESOURCES}
 	${CMAKE_CURRENT_BINARY_DIR}/internals/config.hpp
 )
 
@@ -70,6 +77,7 @@ endif()
 set(TOOLKIT_HEADER_FILES
 	toolkit/comboBox.hpp
 	toolkit/dynamicHeaderView.hpp
+	toolkit/materialButton.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
 	toolkit/tickableMenu.hpp
@@ -86,6 +94,7 @@ set(TOOLKIT_HEADER_FILES
 set(TOOLKIT_SOURCE_FILES
 	toolkit/comboBox.cpp
 	toolkit/dynamicHeaderView.cpp
+	toolkit/materialButton.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
 	toolkit/tickableMenu.cpp
@@ -126,7 +135,9 @@ set(NODETREE_DYNAMIC_WIDGETS_SOURCE_FILES
 # Avdecc helper header files
 set(AVDECC_HELPER_HEADER_FILES
 	avdecc/controllerManager.hpp
+	avdecc/mcDomainManager.hpp
 	avdecc/controllerModel.hpp
+	avdecc/channelConnectionManager.hpp
 	avdecc/helper.hpp
 	avdecc/hiveLogItems.hpp
 	avdecc/loggerModel.hpp
@@ -136,7 +147,9 @@ set(AVDECC_HELPER_HEADER_FILES
 # Avdecc helper source files
 set(AVDECC_HELPER_SOURCE_FILES
 	avdecc/controllerManager.cpp
+	avdecc/mcDomainManager.cpp
 	avdecc/controllerModel.cpp
+	avdecc/channelConnectionManager.cpp
 	avdecc/helper.cpp
 	avdecc/loggerModel.cpp
 )
@@ -154,6 +167,54 @@ set(SETTINGS_DIALOG_SOURCE_FILES
 # Settings Dialog resource files
 set(SETTINGS_DIALOG_RESOURCE_FILES
 	settingsDialog.ui
+)
+
+# Media clock management dialog header files
+set(MEDIA_CLOCK_MANAGEMENT_DIALOG_HEADER_FILES
+	mediaClock/mediaClockManagementDialog.hpp
+	mediaClock/domainTreeModel.hpp
+	mediaClock/unassignedListModel.hpp
+	mediaClock/domainTreeDomainNameDelegate.hpp
+	mediaClock/domainTreeEntityNameDelegate.hpp
+	mediaClock/abstractTreeItem.hpp
+	mediaClock/domainTreeItem.hpp
+	mediaClock/entityTreeItem.hpp
+)
+
+# Media clock management dialog source files
+set(MEDIA_CLOCK_MANAGEMENT_DIALOG_SOURCE_FILES
+	mediaClock/mediaClockManagementDialog.cpp
+	mediaClock/domainTreeModel.cpp
+	mediaClock/unassignedListModel.cpp
+	mediaClock/domainTreeDomainNameDelegate.cpp
+	mediaClock/domainTreeEntityNameDelegate.cpp
+	mediaClock/abstractTreeItem.cpp
+	mediaClock/domainTreeItem.cpp
+	mediaClock/entityTreeItem.cpp
+)
+
+# Media clock management dialog resource files
+set(MEDIA_CLOCK_MANAGEMENT_DIALOG_RESOURCE_FILES
+	mediaClock/mediaClockManagementDialog.ui
+	mediaClock/domainTreeDomainNameDelegate.ui
+	mediaClock/domainTreeEntityNameDelegate.ui
+)
+
+# Device view header files
+set(DEVICE_DETAILS_DIALOG_HEADER_FILES
+	deviceDetailsDialog.hpp
+	deviceDetailsChannelTableModel.hpp
+)
+
+# Device view  source files
+set(DEVICE_DETAILS_DIALOG_SOURCE_FILES
+	deviceDetailsDialog.cpp
+	deviceDetailsChannelTableModel.cpp
+)
+
+# Device view dialog resource files
+set(DEVICE_DETAILS_DIALOG_RESOURCE_FILES
+	deviceDetailsDialog.ui
 )
 
 # About Dialog header files
@@ -194,6 +255,7 @@ set(CONNECTION_MATRIX_SOURCE_FILES
 )
 
 set(COUNTERS_HEADER_FILES
+	counters/entityCountersTreeWidgetItem.hpp
 	counters/avbInterfaceCountersTreeWidgetItem.hpp
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
@@ -201,6 +263,7 @@ set(COUNTERS_HEADER_FILES
 )
 
 set(COUNTERS_SOURCE_FILES
+	counters/entityCountersTreeWidgetItem.cpp
 	counters/avbInterfaceCountersTreeWidgetItem.cpp
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
@@ -306,6 +369,8 @@ set(COMMON_SOURCE_FILES
 source_group("Resource Files" FILES ${RESOURCE_FILES})
 source_group("Resource Files\\About Dialog" FILES ${ABOUT_DIALOG_RESOURCE_FILES})
 source_group("Resource Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_RESOURCE_FILES})
+source_group("Resource Files\\Media Clock Management Dialog" FILES ${MEDIA_CLOCK_MANAGEMENT_DIALOG_RESOURCE_FILES})
+source_group("Resource Files\\Device Details Dialog" FILES ${DEVICE_DETAILS_DIALOG_RESOURCE_FILES})
 source_group("Resource Files\\Logger View" FILES ${LOGGER_VIEW_RESOURCE_FILES})
 source_group("Resource Files\\Settings" FILES ${SETTINGS_RESOURCE_FILES})
 source_group("Resource Files\\Main Window" FILES ${MAIN_WINDOW_RESOURCE_FILES})
@@ -316,6 +381,8 @@ source_group("Header Files\\NodeTree Dynamic Widgets" FILES ${NODETREE_DYNAMIC_W
 source_group("Header Files\\Avdecc Helper" FILES ${AVDECC_HELPER_HEADER_FILES})
 source_group("Header Files\\About Dialog" FILES ${ABOUT_DIALOG_HEADER_FILES})
 source_group("Header Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_HEADER_FILES})
+source_group("Header Files\\Media Clock Management Dialog" FILES ${MEDIA_CLOCK_MANAGEMENT_DIALOG_HEADER_FILES})
+source_group("Header Files\\Device Details Dialog" FILES ${DEVICE_DETAILS_DIALOG_HEADER_FILES})
 source_group("Header Files\\Connection Matrix" FILES ${CONNECTION_MATRIX_HEADER_FILES})
 source_group("Header Files\\Logger View" FILES ${LOGGER_VIEW_HEADER_FILES})
 source_group("Header Files\\Settings" FILES ${SETTINGS_HEADER_FILES})
@@ -331,6 +398,8 @@ source_group("Source Files\\Avdecc Helper" FILES ${AVDECC_HELPER_SOURCE_FILES})
 source_group("Source Files\\About Dialog" FILES ${ABOUT_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Connection Matrix" FILES ${CONNECTION_MATRIX_SOURCE_FILES})
 source_group("Source Files\\Settings Dialog" FILES ${SETTINGS_DIALOG_SOURCE_FILES})
+source_group("Source Files\\Media Clock Management Dialog" FILES ${MEDIA_CLOCK_MANAGEMENT_DIALOG_SOURCE_FILES})
+source_group("Source Files\\Device Details Dialog" FILES ${DEVICE_DETAILS_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Logger View" FILES ${LOGGER_VIEW_SOURCE_FILES})
 source_group("Source Files\\Updater" FILES ${UPDATER_SOURCE_FILES})
 source_group("Source Files\\Main Window" FILES ${MAIN_WINDOW_SOURCE_FILES})
@@ -342,7 +411,9 @@ source_group("Source Files\\Counters" FILES ${COUNTERS_SOURCE_FILES})
 target_sources(${PROJECT_NAME} PUBLIC
 	${RESOURCE_FILES}
 	${ABOUT_DIALOG_RESOURCE_FILES}
+	${DEVICE_DETAILS_DIALOG_RESOURCE_FILES}
 	${SETTINGS_DIALOG_RESOURCE_FILES}
+	${MEDIA_CLOCK_MANAGEMENT_DIALOG_RESOURCE_FILES}
 	${LOGGER_VIEW_RESOURCE_FILES}
 	${MAIN_WINDOW_RESOURCE_FILES}
 	${FIRMWARE_UPLOAD_DIALOG_RESOURCE_FILES}
@@ -352,7 +423,9 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${AVDECC_HELPER_HEADER_FILES}
 	${ABOUT_DIALOG_HEADER_FILES}
 	${CONNECTION_MATRIX_HEADER_FILES}
+	${DEVICE_DETAILS_DIALOG_HEADER_FILES}
 	${SETTINGS_DIALOG_HEADER_FILES}
+	${MEDIA_CLOCK_MANAGEMENT_DIALOG_HEADER_FILES}
 	${LOGGER_VIEW_HEADER_FILES}
 	${SETTINGS_HEADER_FILES}
 	${UPDATER_HEADER_FILES}
@@ -366,7 +439,9 @@ target_sources(${PROJECT_NAME} PUBLIC
 	${AVDECC_HELPER_SOURCE_FILES}
 	${ABOUT_DIALOG_SOURCE_FILES}
 	${CONNECTION_MATRIX_SOURCE_FILES}
+	${DEVICE_DETAILS_DIALOG_SOURCE_FILES}
 	${SETTINGS_DIALOG_SOURCE_FILES}
+	${MEDIA_CLOCK_MANAGEMENT_DIALOG_SOURCE_FILES}
 	${LOGGER_VIEW_SOURCE_FILES}
 	${SETTINGS_SOURCE_FILES}
 	${UPDATER_SOURCE_FILES}

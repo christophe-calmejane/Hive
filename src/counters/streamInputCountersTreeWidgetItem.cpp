@@ -30,7 +30,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	static std::map<la::avdecc::entity::StreamInputCounterValidFlag, QString> s_counterNames{
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked, "Media Locked" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked, "Media Unlocked" },
-		{ la::avdecc::entity::StreamInputCounterValidFlag::StreamReset, "Stream Reset" },
+		{ la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted, "Stream Interrupted" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch, "Seq Num Mismatch" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaReset, "Media Reset" },
 		{ la::avdecc::entity::StreamInputCounterValidFlag::TimestampUncertain, "Timestamp Uncertain" },
@@ -54,7 +54,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	// Create fields
 	for (auto const nameKV : s_counterNames)
 	{
-		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, parent };
+		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, this };
 		widget->setText(0, nameKV.second);
 		widget->setHidden(true); // Hide until we get a counter value (so we don't display counters not supported by the entity)
 		_counters[nameKV.first] = widget;

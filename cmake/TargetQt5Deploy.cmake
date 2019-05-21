@@ -1,6 +1,6 @@
 function(target_qt5_deploy TARGET_NAME)
 	if(NOT WIN32 AND NOT APPLE)
-		message(FATAL_ERROR "Unsupported platform")
+		return()
 	endif()
 	if(NOT TARGET Qt5::qmake)
 		message(FATAL_ERROR "You must call find_package(Qt5 ...) before calling target_qt5_deploy")

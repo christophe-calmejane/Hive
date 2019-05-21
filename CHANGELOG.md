@@ -4,6 +4,28 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2019-05-21
+### Added
+- _Device Details Dialog_ for basic device configuration and information
+- _Media Clock Master ID_ and _Media Clock Master Name_ columns in entity list
+- _Media Clock Management Dialog_ for simple media clock distribution setup
+- Keyboard shortcut to refresh the controller (CTRL-R)
+- Button to refresh the controller (next to the Interface selection dropdown)
+- Entity Identify notifications (from entity to controller)
+- Entity and Full Network export as readable json
+- Strings descriptor displayed
+- Entity descriptor counters
+
+### Changed
+- Only displaying _Ethernet_ kind interfaces
+- Displaying the type of ethernet adapter on macOS
+
+### Fixed
+- Possible deadlock when trying to match stream formats
+- [Random crash during application exit](https://github.com/christophe-calmejane/Hive/issues/56)
+- StreamInput counters not properly displayed (as sub-nodes of the Counter node)
+- Possible crash in EntityModelInspector when an entity goes offline/online again
+
 ## [1.0.11] - 2019-02-14
 ### Added
 - Numerical values for _StreamFlags_, _StreamFlagsEx_, _ProbingStatus_ and _AcmpStatus_

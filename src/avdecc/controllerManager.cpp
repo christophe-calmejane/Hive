@@ -47,7 +47,7 @@ public:
 
 		protected:
 			// la::avdecc::controller::model::EntityModelVisitor overrides
-			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
 				for (auto const& counterKV : node.dynamicModel->counters)
 				{
@@ -75,7 +75,7 @@ public:
 
 		protected:
 			// la::avdecc::controller::model::EntityModelVisitor overrides
-			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
 				auto& errorCounter = _errorCounterTracker._streamInputCounter[node.descriptorIndex];
 
@@ -232,6 +232,7 @@ public:
 		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnectionState>("la::avdecc::controller::model::StreamConnectionState");
 		qRegisterMetaType<la::avdecc::controller::model::StreamConnections>("la::avdecc::controller::model::StreamConnections");
+		qRegisterMetaType<la::avdecc::controller::model::EntityCounters>("la::avdecc::controller::model::EntityCounters");
 		qRegisterMetaType<la::avdecc::controller::model::AvbInterfaceCounters>("la::avdecc::controller::model::AvbInterfaceCounters");
 		qRegisterMetaType<la::avdecc::controller::model::ClockDomainCounters>("la::avdecc::controller::model::ClockDomainCounters");
 		qRegisterMetaType<la::avdecc::controller::model::StreamInputCounters>("la::avdecc::controller::model::StreamInputCounters");
@@ -245,8 +246,11 @@ public:
 
 	~ControllerManagerImpl() noexcept
 	{
-		// Destroy the controller, we don't want further notifications
-		destroyController();
+		// The controller should already have been destroyed by now, but just in case, clean it we don't want further notifications
+		if (!AVDECC_ASSERT_WITH_RET(!_controller, "Controller should have been destroyed before the singleton destructor is called"))
+		{
+			destroyController();
+		}
 
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
@@ -316,6 +320,14 @@ private:
 	virtual void onCompatibilityFlagsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags) noexcept override
 	{
 		emit compatibilityFlagsChanged(entity->getEntity().getEntityID(), compatibilityFlags);
+	}
+	virtual void onIdentificationStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
+	{
+		emit identificationStarted(entity->getEntity().getEntityID());
+	}
+	virtual void onIdentificationStopped(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
+	{
+		emit identificationStopped(entity->getEntity().getEntityID());
 	}
 	// Connection notifications (sniffed ACMP)
 	virtual void onStreamConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::model::StreamConnectionState const& state, bool const /*changedByOther*/) noexcept override
@@ -431,6 +443,10 @@ private:
 	{
 		emit avbInterfaceLinkStatusChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, linkStatus);
 	}
+	virtual void onEntityCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityCounters const& counters) noexcept override
+	{
+		emit entityCountersChanged(entity->getEntity().getEntityID(), counters);
+	}
 	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters) noexcept override
 	{
 		emit avbInterfaceCountersChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, counters);
@@ -532,6 +548,24 @@ private:
 		}
 	}
 
+	virtual void destroyController() noexcept override
+	{
+		if (_controller)
+		{
+			// First remove the observer so we don't get any new notifications
+			_controller->unregisterObserver(this);
+
+			// And destroy the controller itself
+#if HAVE_ATOMIC_SMART_POINTERS
+			_controller = Controller{ nullptr };
+#else // !HAVE_ATOMIC_SMART_POINTERS
+			std::atomic_store(&_controller, SharedController{ nullptr });
+#endif // HAVE_ATOMIC_SMART_POINTERS
+
+			emit controllerOffline();
+		}
+	}
+
 	virtual la::avdecc::UniqueIdentifier getControllerEID() const noexcept override
 	{
 		auto controller = getController();
@@ -552,6 +586,25 @@ private:
 		return {};
 	}
 
+	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath) const noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString());
+		}
+		return { la::avdecc::controller::Controller::SerializationError::InternalError, "Controller offline" };
+	}
+
+	virtual std::tuple<la::avdecc::controller::Controller::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath) const noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString());
+		}
+		return { la::avdecc::controller::Controller::SerializationError::InternalError, "Controller offline" };
+	}
 
 	ErrorCounterTracker const* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{
@@ -733,6 +786,27 @@ private:
 					else
 					{
 						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, status);
+					}
+				});
+		}
+	}
+
+	virtual void setStreamOutputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& streamInfo, SetStreamOutputInfoHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo);
+			controller->setStreamOutputInfo(targetEntityID, streamIndex, streamInfo,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, status);
 					}
 				});
 		}
@@ -1353,24 +1427,6 @@ private:
 #endif // HAVE_ATOMIC_SMART_POINTERS
 	}
 
-	void destroyController()
-	{
-		if (_controller)
-		{
-			// First remove the observer so we don't get any new notifications
-			_controller->unregisterObserver(this);
-
-			// And destroy the controller itself
-#if HAVE_ATOMIC_SMART_POINTERS
-			_controller = Controller{ nullptr };
-#else // !HAVE_ATOMIC_SMART_POINTERS
-			std::atomic_store(&_controller, SharedController{ nullptr });
-#endif // HAVE_ATOMIC_SMART_POINTERS
-
-			emit controllerOffline();
-		}
-	}
-
 	// Private members
 #if HAVE_ATOMIC_SMART_POINTERS
 	std::atomic_shared_ptr<la::avdecc::controller::Controller> _controller{ nullptr };
@@ -1411,6 +1467,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Audio Unit Name";
 		case AecpCommandType::SetStreamName:
 			return "Set Stream Name";
+		case AecpCommandType::SetStreamInfo:
+			return "Set Stream Info";
 		case AecpCommandType::SetAvbInterfaceName:
 			return "Set AVB Interface Name";
 		case AecpCommandType::SetClockSourceName:

@@ -22,20 +22,30 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QTextBrowser>
+#include <QDateTime>
+
+#ifdef DEBUG
+#	include <QFileInfo>
+#	include <QDir>
+#endif
 
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 #include "internals/config.hpp"
 
 #include "nodeVisitor.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "avdecc/mcDomainManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
+#include "mediaClock/mediaClockManagementDialog.hpp"
 #include "highlightForegroundItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
+#include "deviceDetailsDialog.hpp"
 
 #include "updater/updater.hpp"
 
@@ -75,6 +85,9 @@ MainWindow::MainWindow(QWidget* parent)
 	loadSettings();
 
 	connectSignals();
+
+	// create channel connection manager instance
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 }
 
 void MainWindow::currentControllerChanged()
@@ -146,6 +159,8 @@ void MainWindow::createMainToolBar()
 	interfaceLabel->setMinimumWidth(50);
 	_interfaceComboBox.setMinimumWidth(100);
 
+	_refreshControllerButton.setToolTip("Reload Controller");
+
 	auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
 	controllerEntityIDLabel->setMinimumWidth(50);
 	_controllerEntityIDLabel.setMinimumWidth(100);
@@ -162,8 +177,17 @@ void MainWindow::createMainToolBar()
 
 	mainToolBar->addSeparator();
 
+	mainToolBar->addWidget(&_refreshControllerButton);
+
+	mainToolBar->addSeparator();
+
 	mainToolBar->addWidget(controllerEntityIDLabel);
 	mainToolBar->addWidget(&_controllerEntityIDLabel);
+
+#ifdef Q_OS_MAC
+	// See https://bugreports.qt.io/browse/QTBUG-13635
+	mainToolBar->setStyleSheet("QToolBar QLabel { padding-bottom: 5; }");
+#endif
 }
 
 void MainWindow::createControllerView()
@@ -224,7 +248,8 @@ void MainWindow::populateInterfaceComboBox()
 	la::avdecc::networkInterface::enumerateInterfaces(
 		[this](la::avdecc::networkInterface::Interface const& networkInterface)
 		{
-			if (networkInterface.type != la::avdecc::networkInterface::Interface::Type::Loopback && networkInterface.isActive)
+			// Only display Ethernet interfaces
+			if (networkInterface.type == la::avdecc::networkInterface::Interface::Type::Ethernet && networkInterface.isActive)
 			{
 				_interfaceComboBox.addItem(QString::fromStdString(networkInterface.alias), QString::fromStdString(networkInterface.name));
 			}
@@ -255,6 +280,7 @@ void MainWindow::connectSignals()
 {
 	connect(&_protocolComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
+	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
@@ -263,6 +289,28 @@ void MainWindow::connectSignals()
 			auto& settings = settings::SettingsManager::getInstance();
 			settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 		});
+
+	connect(controllerTableView, &QTableView::doubleClicked, this,
+		[this](QModelIndex const& index)
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto const entityID = _controllerModel->controlledEntityID(index);
+			auto controlledEntity = manager.getControlledEntity(entityID);
+
+			auto const& entity = controlledEntity->getEntity();
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			{
+				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+				dialog->setControlledEntityID(entityID);
+				dialog->show();
+				connect(dialog, &DeviceDetailsDialog::finished, this,
+					[this, dialog](int result)
+					{
+						dialog->deleteLater();
+					});
+			}
+		});
+
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
@@ -281,11 +329,13 @@ void MainWindow::connectSignals()
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
 				auto* lockAction{ static_cast<QAction*>(nullptr) };
 				auto* unlockAction{ static_cast<QAction*>(nullptr) };
+				auto* deviceView{ static_cast<QAction*>(nullptr) };
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
+				auto* dumpEntity{ static_cast<QAction*>(nullptr) };
 
-				if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+				if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					// Do not propose Acquire if the device is Milan (not supported)
 					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
@@ -329,9 +379,12 @@ void MainWindow::connectSignals()
 
 					menu.addSeparator();
 
-					// Inspect, Logo, ...
+					// Device Details, Inspect, Logo, ...
 					{
-						inspect = menu.addAction("Inspect");
+						deviceView = menu.addAction("Device Details...");
+					}
+					{
+						inspect = menu.addAction("Inspect Entity Model...");
 					}
 					{
 						getLogo = menu.addAction("Retrieve Entity Logo");
@@ -343,6 +396,15 @@ void MainWindow::connectSignals()
 				}
 
 				menu.addSeparator();
+
+				// Dump Entity
+				{
+					dumpEntity = menu.addAction("Export Entity...");
+				}
+
+				menu.addSeparator();
+
+				// Cancel
 				menu.addAction("Cancel");
 
 				// Release the controlled entity before starting a long operation (menu.exec)
@@ -366,6 +428,17 @@ void MainWindow::connectSignals()
 					{
 						manager.unlockEntity(entityID);
 					}
+					else if (action == deviceView)
+					{
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						dialog->setControlledEntityID(entityID);
+						dialog->show();
+						connect(dialog, &DeviceDetailsDialog::finished, this,
+							[this, dialog](int result)
+							{
+								dialog->deleteLater();
+							});
+					}
 					else if (action == inspect)
 					{
 						auto* inspector = new EntityInspector;
@@ -381,6 +454,22 @@ void MainWindow::connectSignals()
 					else if (action == clearErrorFlags)
 					{
 						manager.clearAllStreamInputCounterValidFlags(entityID);
+					}
+					else if (action == dumpEntity)
+					{
+						auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/Entity_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)), "*.json");
+						if (!filename.isEmpty())
+						{
+							auto const [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename);
+							if (!error)
+							{
+								QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
+							}
+							else
+							{
+								QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+							}
+						}
 					}
 				}
 			}
@@ -428,10 +517,38 @@ void MainWindow::connectSignals()
 
 	//
 
+	connect(actionExportFullNetworkState, &QAction::triggered, this,
+		[this]()
+		{
+			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/FullDump_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "*.json");
+			if (!filename.isEmpty())
+			{
+				auto& manager = avdecc::ControllerManager::getInstance();
+				auto const [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename);
+				if (!error)
+				{
+					QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
+				}
+				else
+				{
+					QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+				}
+			}
+		});
+
+	//
+
 	connect(actionSettings, &QAction::triggered, this,
 		[this]()
 		{
 			SettingsDialog dialog{ this };
+			dialog.exec();
+		});
+
+	connect(actionMediaClockManagement, &QAction::triggered, this,
+		[this]()
+		{
+			MediaClockManagementDialog dialog{ this };
 			dialog.exec();
 		});
 
@@ -491,6 +608,24 @@ void MainWindow::connectSignals()
 		{
 			LOG_HIVE_WARN("Failed to check for new version: " + reason);
 		});
+
+	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, this };
+	connect(refreshController, &QShortcut::activated, this, &MainWindow::currentControllerChanged);
+
+#ifdef DEBUG
+	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, this };
+	connect(reloadStyleSheet, &QShortcut::activated, this,
+		[]()
+		{
+			// Load and apply the stylesheet
+			QFile styleFile{ QString{ RESOURCES_ROOT_DIR } + "/style.qss" };
+			if (styleFile.open(QFile::ReadOnly))
+			{
+				qApp->setStyleSheet(styleFile.readAll());
+				LOG_HIVE_DEBUG("StyleSheet reloaded");
+			}
+		});
+#endif
 }
 
 void MainWindow::showChangeLog(QString const title, QString const versionString)

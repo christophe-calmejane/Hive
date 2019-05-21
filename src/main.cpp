@@ -22,13 +22,14 @@
 
 #include <QSharedMemory>
 #include <QMessageBox>
-
+#include <QFile>
 #include <QSplashScreen>
 
 #include <iostream>
 #include <chrono>
 
 #include "mainWindow.hpp"
+#include "avdecc/controllerManager.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 
@@ -72,7 +73,18 @@ int main(int argc, char* argv[])
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
 
+	// We want to propagate style sheet styles to all widgets
+	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+
+	// Create the Qt Application
 	QApplication app(argc, argv);
+
+	// Load and apply the stylesheet
+	QFile styleFile{ ":/style.qss" };
+	if (styleFile.open(QFile::ReadOnly))
+	{
+		app.setStyleSheet(styleFile.readAll());
+	}
 
 	// Runtime sanity check on Avdecc Library compilation options
 	{
@@ -140,11 +152,12 @@ int main(int argc, char* argv[])
 	splash.close();
 	window.show();
 
+	auto retValue = int{ 0u };
 #ifndef BUGREPORTER_CATCH_EXCEPTIONS
 	try
 #endif // !BUGREPORTER_CATCH_EXCEPTIONS
 	{
-		return app.exec();
+		retValue = app.exec();
 	}
 #ifndef BUGREPORTER_CATCH_EXCEPTIONS
 	catch (std::exception const& e)
@@ -156,5 +169,10 @@ int main(int argc, char* argv[])
 		QMessageBox::warning(nullptr, "", "Uncaught exception");
 	}
 #endif // !BUGREPORTER_CATCH_EXCEPTIONS
-	return 0;
+
+	// Destroy the controller before leaving main (so it's properly cleaned before all static variables are destroyed in a random order)
+	avdecc::ControllerManager::getInstance().destroyController();
+
+	// Return from main
+	return retValue;
 }

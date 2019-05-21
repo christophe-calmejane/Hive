@@ -12,8 +12,11 @@ cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
+qtVersion="5.12.1"
+
 # Default values
 default_VisualGenerator="Visual Studio 15 2017"
+default_VisualGeneratorArch="Win32"
 default_VisualToolset="v141"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
@@ -21,6 +24,7 @@ default_VisualSdk="8.1"
 
 # 
 cmake_generator=""
+generator_arch=""
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
 	# CMake.app not found, use cmake from the path
@@ -34,6 +38,7 @@ else
 	cmake_path="cmake"
 	if isWindows; then
 		generator="$default_VisualGenerator"
+		generator_arch="$default_VisualGeneratorArch"
 		toolset="$default_VisualToolset"
 		toolchain="$default_VisualToolchain"
 		platformSdk="$default_VisualSdk"
@@ -55,6 +60,7 @@ cmake_config=""
 add_cmake_opt=()
 outputFolderForced=0
 useVSclang=0
+useVS2019=0
 hasTeamId=0
 doSign=0
 useSources=0
@@ -74,6 +80,7 @@ do
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
+				echo " -vs2019 -> Compile using VS 2019 compiler instead of the default one"
 				echo " -clang -> Compile using clang for VisualStudio (if predefined toolset do not work, override with -t option INSTEAD of -clang)"
 			fi
 			if isMac; then
@@ -160,10 +167,18 @@ do
 			;;
 		-64)
 			if isWindows; then
-				generator="Visual Studio 15 2017 Win64"
+				generator_arch="x64"
 				arch="x64"
 			else
-				echo "ERROR: -64 option is only supported on Windows platform"
+				echo "ERROR: -64 option is only supported on Windows platform (linux and macOS are already defaulting to 64 bits)"
+				exit 4
+			fi
+			;;
+		-vs2019)
+			if isWindows; then
+				useVS2019=1
+			else
+				echo "ERROR: -vs2019 option is only supported on Windows platform"
 				exit 4
 			fi
 			;;
@@ -245,6 +260,12 @@ if isLinux; then
 	fi
 fi
 
+# Using -vs2019 option
+if [ $useVS2019 -eq 1 ]; then
+	generator="Visual Studio 16 2019"
+	toolset="v142"
+fi
+
 # Using -clang option (shortcut to auto-define the toolset)
 if [ $useVSclang -eq 1 ]; then
 	toolset="v141_clang_c2"
@@ -256,6 +277,11 @@ if [[ isWindows && $toolset =~ clang ]]; then
 	platformSdk="10.0"
 fi
 
+generator_arch_option=""
+if [ ! -z "${generator_arch}" ]; then
+	generator_arch_option="-A${generator_arch} "
+fi
+
 toolset_option=""
 if [ ! -z "${toolset}" ]; then
 	if [ ! -z "${toolchain}" ]; then
@@ -265,11 +291,17 @@ if [ ! -z "${toolset}" ]; then
 	fi
 fi
 
+sdk_option=""
+if [ ! -z "${platformSdk}" ]; then
+	sdk_option="-DCMAKE_SYSTEM_VERSION=$platformSdk"
+fi
+
 hiveVersion=$(grep "HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
 if [[ $hiveVersion == "" ]]; then
 	echo "Cannot detect project version"
 	exit 1
 fi
+hiveVersion="${hiveVersion//[$'\t\r\n']}"
 
 # Check if we have a release or devel version
 oldIFS="$IFS"
@@ -284,21 +316,42 @@ else
 	echo "Release version, using offical avdecc"
 fi
 
-qtVersion="5.11.2"
-
-# TODO: Search for this Qt version instead of hardcoding the path
 if isWindows; then
 	qtBasePath="c:/Qt/${qtVersion}"
-	qtArch="msvc2015"
+	if [ "$arch" == "x64" ]; then
+		qtArch="msvc2017_64"
+	else
+		qtArch="msvc2017"
+	fi
 elif isMac; then
 	qtBasePath="/Applications/Qt/${qtVersion}"
 	qtArch="clang_64"
+elif isLinux; then
+	if [ "x${QT_BASE_PATH}" == "x" ]; then
+		echo "QT_BASE_PATH env variable should be defined to the root folder of Qt installation (where MaintenanceTool resides)"
+		exit 1
+	fi
+	if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
+		echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
+		exit 1
+	fi
+	qtBasePath="${QT_BASE_PATH}/${qtVersion}"
+	qtArch="gcc_64"
+else
+	echo "Unsupported platform"
+	exit 1
 fi
 
 # Check specified Qt version is available
 if [ ! -d "${qtBasePath}" ];
 then
 	echo "Cannot find Qt v$qtVersion installation path."
+	exit 1
+fi
+
+# Check specified Qt arch is available
+if [ ! -d "${qtBasePath}/${qtArch}" ]; then
+	echo "Cannot find Qt arch '${qtArch}' for Qt v${qtVersion}"
 	exit 1
 fi
 
@@ -310,7 +363,7 @@ fi
 add_cmake_opt+=("-DQt5_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5")
 
 echo "Generating cmake project..."
-"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}" $cmake_config
+"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $generator_arch_option $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}" $cmake_config
 
 echo ""
 echo "All done, generated project lies in ${outputFolder}"

@@ -106,8 +106,8 @@ public:
 
 		for (auto const& key : keys)
 		{
-			emit imageChanged(key.first, Type::Entity);
-			emit imageChanged(key.first, Type::Manufacturer);
+			emit imageChanged(la::avdecc::UniqueIdentifier{ key.first }, Type::Entity);
+			emit imageChanged(la::avdecc::UniqueIdentifier{ key.first }, Type::Manufacturer);
 		}
 	}
 
@@ -126,7 +126,7 @@ private:
 		}
 	}
 
-	using Key = QPair<quint64, quint64>;
+	using Key = QPair<la::avdecc::UniqueIdentifier::value_type, la::avdecc::UniqueIdentifier::value_type>;
 
 	Key makeKey(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{
@@ -139,7 +139,7 @@ private:
 	QString fileName(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept
 	{
 		auto const key{ makeKey(entityID) };
-		return QString{ typeToString(type) + '-' + avdecc::helper::uniqueIdentifierToString(key.first) + '-' + avdecc::helper::uniqueIdentifierToString(key.second) };
+		return QString{ typeToString(type) + '-' + avdecc::helper::uniqueIdentifierToString(la::avdecc::UniqueIdentifier{ key.first }) + '-' + avdecc::helper::uniqueIdentifierToString(la::avdecc::UniqueIdentifier{ key.second }) };
 	}
 
 	QString imageDir() const noexcept

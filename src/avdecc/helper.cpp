@@ -49,7 +49,7 @@ QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 	return toHexQString(identifier.getValue(), true, true);
 }
 
-QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node)
+QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
 {
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.descriptorIndex, node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
@@ -72,7 +72,7 @@ QString entityName(la::avdecc::controller::ControlledEntity const& controlledEnt
 	{
 		auto const& entity = controlledEntity.getEntity();
 
-		if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			return controlledEntity.getEntityNode().dynamicModel->entityName.data();
 		}
@@ -95,7 +95,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 	{
 		auto const& entity = controlledEntity.getEntity();
 
-		if (la::avdecc::utils::hasFlag(entity.getEntityCapabilities(), la::avdecc::entity::EntityCapabilities::AemSupported))
+		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			return controlledEntity.getEntityNode().dynamicModel->groupName.data();
 		}
@@ -319,14 +319,14 @@ QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcep
 {
 	QString str;
 
-	if (flags == la::avdecc::entity::AvbInterfaceFlags::None)
+	if (flags.empty())
 		return "None";
 
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::AvbInterfaceFlags::GptpGrandmasterSupported))
+	if (flags.test(la::avdecc::entity::AvbInterfaceFlag::GptpGrandmasterSupported))
 		concatenateFlags(str, "GptpGrandmasterSupported");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::AvbInterfaceFlags::GptpSupported))
+	if (flags.test(la::avdecc::entity::AvbInterfaceFlag::GptpSupported))
 		concatenateFlags(str, "GptpSupported");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::AvbInterfaceFlags::SrpSupported))
+	if (flags.test(la::avdecc::entity::AvbInterfaceFlag::SrpSupported))
 		concatenateFlags(str, "SrpSupported");
 
 	return str;
@@ -336,14 +336,14 @@ QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags) noexcept
 {
 	QString str;
 
-	if (flags == la::avdecc::entity::AvbInfoFlags::None)
+	if (flags.empty())
 		return "None";
 
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::AvbInfoFlags::AsCapable))
+	if (flags.test(la::avdecc::entity::AvbInfoFlag::AsCapable))
 		concatenateFlags(str, "AS Capable");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::AvbInfoFlags::GptpEnabled))
+	if (flags.test(la::avdecc::entity::AvbInfoFlag::GptpEnabled))
 		concatenateFlags(str, "Gptp Enabled");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::AvbInfoFlags::SrpEnabled))
+	if (flags.test(la::avdecc::entity::AvbInfoFlag::SrpEnabled))
 		concatenateFlags(str, "Srp Enabled");
 
 	return str;
@@ -353,12 +353,12 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept
 {
 	QString str;
 
-	if (flags == la::avdecc::entity::ClockSourceFlags::None)
+	if (flags.empty())
 		return "None";
 
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::ClockSourceFlags::StreamID))
+	if (flags.test(la::avdecc::entity::ClockSourceFlag::StreamID))
 		concatenateFlags(str, "Stream");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::ClockSourceFlags::LocalID))
+	if (flags.test(la::avdecc::entity::ClockSourceFlag::LocalID))
 		concatenateFlags(str, "Local");
 
 	return str;
@@ -368,14 +368,14 @@ QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept
 {
 	QString str;
 
-	if (flags == la::avdecc::entity::PortFlags::None)
+	if (flags.empty())
 		return "None";
 
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::PortFlags::ClockSyncSource))
+	if (flags.test(la::avdecc::entity::PortFlag::ClockSyncSource))
 		concatenateFlags(str, "ClockSyncSource");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::PortFlags::AsyncSampleRateConv))
+	if (flags.test(la::avdecc::entity::PortFlag::AsyncSampleRateConv))
 		concatenateFlags(str, "AsyncSampleRateConv");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::PortFlags::SyncSampleRateConv))
+	if (flags.test(la::avdecc::entity::PortFlag::SyncSampleRateConv))
 		concatenateFlags(str, "SyncSampleRateConv");
 
 	return str;
@@ -385,17 +385,17 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 {
 	QString str;
 
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::StreamInfoFlags::ClassB))
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::ClassB))
 		concatenateFlags(str, "ClassB");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::StreamInfoFlags::FastConnect))
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::FastConnect))
 		concatenateFlags(str, "FastConnect");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::StreamInfoFlags::SavedState))
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::SavedState))
 		concatenateFlags(str, "SavedState");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::StreamInfoFlags::StreamingWait))
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamingWait))
 		concatenateFlags(str, "StreamingWait");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::StreamInfoFlags::SupportsEncrypted))
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::SupportsEncrypted))
 		concatenateFlags(str, "SupportsEncrypted");
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::StreamInfoFlags::EncryptedPdu))
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::EncryptedPdu))
 		concatenateFlags(str, "EncryptedPdu");
 
 	if (str.isEmpty())
@@ -407,7 +407,7 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcep
 {
 	QString str;
 
-	if (la::avdecc::utils::hasFlag(flags, la::avdecc::entity::StreamInfoFlagsEx::Registering))
+	if (flags.test(la::avdecc::entity::StreamInfoFlagEx::Registering))
 		concatenateFlags(str, "Registering");
 
 	if (str.isEmpty())
@@ -449,31 +449,31 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) 
 {
 	QString str;
 
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::EfuMode))
+	if (caps.test(la::avdecc::entity::EntityCapability::EfuMode))
 		concatenateFlags(str, "EfuMode");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AddressAccessSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::AddressAccessSupported))
 		concatenateFlags(str, "AddressAccessSupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::GatewayEntity))
+	if (caps.test(la::avdecc::entity::EntityCapability::GatewayEntity))
 		concatenateFlags(str, "GatewayEntity");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::AemSupported))
 		concatenateFlags(str, "AemSupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::LegacyAvc))
+	if (caps.test(la::avdecc::entity::EntityCapability::LegacyAvc))
 		concatenateFlags(str, "LegacyAvc");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AssociationIDSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::AssociationIDSupported))
 		concatenateFlags(str, "AssociationIDSupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::VendorUniqueSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::VendorUniqueSupported))
 		concatenateFlags(str, "VendorUniqueSupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::ClassASupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::ClassASupported))
 		concatenateFlags(str, "ClassASupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::ClassBSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::ClassBSupported))
 		concatenateFlags(str, "ClassBSupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::GptpSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::GptpSupported))
 		concatenateFlags(str, "GptpSupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemAuthenticationSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::AemAuthenticationSupported))
 		concatenateFlags(str, "AemAuthenticationSupported");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemAuthenticationRequired))
+	if (caps.test(la::avdecc::entity::EntityCapability::AemAuthenticationRequired))
 		concatenateFlags(str, "AemAuthenticationRequired");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::EntityCapabilities::AemPersistentAcquireSupported))
+	if (caps.test(la::avdecc::entity::EntityCapability::AemPersistentAcquireSupported))
 		concatenateFlags(str, "AemPersistentAcquireSupported");
 
 	if (str.isEmpty())
@@ -485,21 +485,21 @@ QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps) 
 {
 	QString str;
 
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::Implemented))
+	if (caps.test(la::avdecc::entity::TalkerCapability::Implemented))
 		concatenateFlags(str, "Implemented");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::OtherSource))
+	if (caps.test(la::avdecc::entity::TalkerCapability::OtherSource))
 		concatenateFlags(str, "OtherSource");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::ControlSource))
+	if (caps.test(la::avdecc::entity::TalkerCapability::ControlSource))
 		concatenateFlags(str, "ControlSource");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::MediaClockSource))
+	if (caps.test(la::avdecc::entity::TalkerCapability::MediaClockSource))
 		concatenateFlags(str, "MediaClockSource");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::SmpteSource))
+	if (caps.test(la::avdecc::entity::TalkerCapability::SmpteSource))
 		concatenateFlags(str, "SmpteSource");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::MidiSource))
+	if (caps.test(la::avdecc::entity::TalkerCapability::MidiSource))
 		concatenateFlags(str, "MidiSource");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::AudioSource))
+	if (caps.test(la::avdecc::entity::TalkerCapability::AudioSource))
 		concatenateFlags(str, "AudioSource");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::TalkerCapabilities::VideoSource))
+	if (caps.test(la::avdecc::entity::TalkerCapability::VideoSource))
 		concatenateFlags(str, "VideoSource");
 
 	if (str.isEmpty())
@@ -511,21 +511,21 @@ QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps
 {
 	QString str;
 
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::Implemented))
+	if (caps.test(la::avdecc::entity::ListenerCapability::Implemented))
 		concatenateFlags(str, "Implemented");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::OtherSink))
+	if (caps.test(la::avdecc::entity::ListenerCapability::OtherSink))
 		concatenateFlags(str, "OtherSink");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::ControlSink))
+	if (caps.test(la::avdecc::entity::ListenerCapability::ControlSink))
 		concatenateFlags(str, "ControlSink");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::MediaClockSink))
+	if (caps.test(la::avdecc::entity::ListenerCapability::MediaClockSink))
 		concatenateFlags(str, "MediaClockSink");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::SmpteSink))
+	if (caps.test(la::avdecc::entity::ListenerCapability::SmpteSink))
 		concatenateFlags(str, "SmpteSink");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::MidiSink))
+	if (caps.test(la::avdecc::entity::ListenerCapability::MidiSink))
 		concatenateFlags(str, "MidiSink");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::AudioSink))
+	if (caps.test(la::avdecc::entity::ListenerCapability::AudioSink))
 		concatenateFlags(str, "AudioSink");
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ListenerCapabilities::VideoSink))
+	if (caps.test(la::avdecc::entity::ListenerCapability::VideoSink))
 		concatenateFlags(str, "VideoSink");
 
 	if (str.isEmpty())
@@ -537,7 +537,7 @@ QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const ca
 {
 	QString str;
 
-	if (la::avdecc::utils::hasFlag(caps, la::avdecc::entity::ControllerCapabilities::Implemented))
+	if (caps.test(la::avdecc::entity::ControllerCapability::Implemented))
 		concatenateFlags(str, "Implemented");
 
 	if (str.isEmpty())

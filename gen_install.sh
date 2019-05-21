@@ -228,6 +228,7 @@ if [[ $cmakeHiveVersion == "" ]]; then
 	echo "Cannot detect project version"
 	exit 1
 fi
+cmakeHiveVersion="${cmakeHiveVersion//[$'\t\r\n']}"
 
 # Check if we have a release or devel version
 oldIFS="$IFS"
@@ -329,18 +330,6 @@ if [ $? -eq 0 ]; then
 	fi
 	echo "done"
 fi
-
-#pushd "${outputFolder}" &> /dev/null
-#echo -n "Signing package... "
-#log=$("$cmake_path" --build . --config "${buildConfig}" --target SignPackage)
-#if [ $? -ne 0 ]; then
-#	echo "Failed to sign package ;("
-#	echo ""
-#	echo $log
-#	exit 1
-#fi
-#echo "done"
-#popd &> /dev/null
 
 installerFile=$(ls ${outputFolder}/*${fullInstallerName})
 if [ ! -f "$installerFile" ]; then

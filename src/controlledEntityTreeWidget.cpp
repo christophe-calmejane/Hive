@@ -115,7 +115,7 @@ public:
 	};
 
 	VirtualNodeItem(la::avdecc::controller::model::VirtualNode const* node, QString const& name)
-		: NodeItem{ Kind::VirtualNode, node->descriptorType, node->virtualIndex, name }
+		: NodeItem{ Kind::VirtualNode, node->descriptorType, static_cast<la::avdecc::entity::model::DescriptorIndex>(node->virtualIndex), name }
 	{
 	}
 
@@ -186,12 +186,13 @@ public:
 
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
+		// Always remove saved state
+		_entityExpandedStates.erase(entityID);
+
 		if (_controlledEntityID != entityID)
 		{
 			return;
 		}
-
-		_entityExpandedStates.erase(entityID);
 
 		Q_Q(ControlledEntityTreeWidget);
 		q->clearSelection();
@@ -410,7 +411,7 @@ private:
 		}
 		else
 		{
-			static_assert(false, "Invalid base type");
+			AVDECC_ASSERT(false, "if constexpr not handled");
 		}
 
 		// Store the node inside the item
@@ -432,13 +433,13 @@ private:
 		return item;
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::EntityNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		auto genName = [type = node.descriptorType](QString const& name)
 		{
 			return QString("%1: %2").arg(avdecc::helper::descriptorTypeToString(type), name);
 		};
-		auto* item = addItem(parent, &node, genName(node.dynamicModel->entityName.data()));
+		auto* item = addItem(nullptr, &node, genName(node.dynamicModel->entityName.data()));
 
 		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::entityNameChanged, item,
 			[genName, item](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
@@ -451,7 +452,7 @@ private:
 		q->setItemExpanded(item, true);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const parent, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		auto genName = [type = node.descriptorType, index = node.descriptorIndex](QString const& name)
 		{
@@ -508,7 +509,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
@@ -520,43 +521,53 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+	void processStreamInputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept
 	{
-		// Do not show redundant streams that have Configuration as direct parent
-		if (!node.isRedundant || parent->descriptorType != la::avdecc::entity::model::DescriptorType::Configuration)
+		auto const name = genName(controlledEntity, node);
+		auto* item = addItem(parent, &node, name);
+
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto const flags = manager.getStreamInputErrorCounterFlags(_controlledEntityID, node.descriptorIndex);
+		item->setHasError(!flags.empty());
+
+		connect(&manager, &avdecc::ControllerManager::streamNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
+			});
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+	{
+		// Only show non-redundant streams when the parent is Configuration
+		if (!node.isRedundant)
 		{
-			auto const name = genName(controlledEntity, node);
-			auto* item = addItem(parent, &node, name);
-
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto const flags = manager.getStreamInputErrorCounterFlags(_controlledEntityID, node.descriptorIndex);
-			item->setHasError(!flags.empty());
-
-			connect(&manager, &avdecc::ControllerManager::streamNameChanged, item,
-				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
-				{
-					updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
-				});
+			processStreamInputNode(controlledEntity, parent, node);
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	void processStreamOutputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept
 	{
-		// Do not show redundant streams that have Configuration as direct parent
-		if (!node.isRedundant || parent->descriptorType != la::avdecc::entity::model::DescriptorType::Configuration)
-		{
-			auto const name = genName(controlledEntity, node);
-			auto* item = addItem(parent, &node, name);
+		auto const name = genName(controlledEntity, node);
+		auto* item = addItem(parent, &node, name);
 
-			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item,
-				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
-				{
-					updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
-				});
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
+			});
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	{
+		// Only show non-redundant streams when the parent is Configuration
+		if (!node.isRedundant)
+		{
+			processStreamOutputNode(controlledEntity, parent, node);
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
@@ -568,41 +579,25 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
-	{
-		// Only add ClockSource nodes that are not direct parent of Configuration (use aliases only)
-		if (parent->descriptorType != la::avdecc::entity::model::DescriptorType::Configuration)
-		{
-			auto const name = genName(controlledEntity, node);
-			auto* item = addItem(parent, &node, name);
-
-			connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceNameChanged, item,
-				[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& /*clockSourceName*/)
-				{
-					updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex);
-				});
-		}
-	}
-
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::LocaleNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::LocaleNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), node.staticModel->localeID.data());
 		addItem(parent, &node, name);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StringsNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::LocaleNode const* const parent, la::avdecc::controller::model::StringsNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
 		addItem(parent, &node, name);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::AudioUnitNode const* const parent, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
 		addItem(parent, &node, name);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandGrandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*grandParent*/, la::avdecc::controller::model::StreamPortNode const* const parent, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
 	{
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
@@ -614,13 +609,13 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandGrandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*grandParent*/, la::avdecc::controller::model::StreamPortNode const* const parent, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
 		addItem(parent, &node, name);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
@@ -632,13 +627,19 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::ClockDomainNode const* const parent, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
 	{
-		auto const name = QString("REDUNDANT_%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.virtualIndex));
-		addItem(parent, &node, name);
+		auto const name = genName(controlledEntity, node);
+		auto* item = addItem(parent, &node, name);
+
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& /*clockSourceName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex);
+			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
 	{
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
@@ -648,6 +649,22 @@ private:
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::MemoryObject, memoryObjectIndex);
 			});
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	{
+		auto const name = QString("REDUNDANT_%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.virtualIndex));
+		addItem(parent, &node, name);
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::RedundantStreamNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+	{
+		processStreamInputNode(controlledEntity, parent, node);
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::RedundantStreamNode const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	{
+		processStreamOutputNode(controlledEntity, parent, node);
 	}
 
 private:
