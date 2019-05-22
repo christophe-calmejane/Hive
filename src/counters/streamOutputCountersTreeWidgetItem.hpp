@@ -36,10 +36,10 @@
 class StreamOutputCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamOutputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters, QTreeWidget* parent = nullptr);
+	StreamOutputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters, QTreeWidget* parent = nullptr);
 
 private:
-	void updateCounters(la::avdecc::controller::model::StreamOutputCounters const& counters);
+	void updateCounters(la::avdecc::entity::model::StreamOutputCounters const& counters);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::StreamIndex const _streamIndex{ 0u };

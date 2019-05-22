@@ -17,19 +17,28 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "toolkit/material/button.hpp"
 
-#include <QStyledItemDelegate>
-
-namespace connectionMatrix
+namespace qt
 {
-class ItemDelegate final : public QStyledItemDelegate
+namespace toolkit
 {
-public:
-	using QStyledItemDelegate::QStyledItemDelegate;
+namespace material
+{
+Button::Button(QWidget* parent)
+	: Button{ QString::null, parent }
+{
+}
 
-private:
-	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
-};
+Button::Button(QString const& icon, QWidget* parent)
+	: QPushButton{ icon, parent }
+{
+	QFont font{ "Material Icons" };
+	font.setStyleStrategy(QFont::PreferQuality);
+	setFont(font);
+	setFlat(true);
+}
 
-} // namespace connectionMatrix
+} // namespace material
+} // namespace toolkit
+} // namespace qt

@@ -20,6 +20,9 @@
 #pragma once
 
 #include "settingsManager.hpp"
+#include "toolkit/material/colorPalette.hpp"
+#include <la/avdecc/internals/protocolInterface.hpp>
+#include <la/avdecc/utils.hpp>
 
 namespace settings
 {
@@ -31,13 +34,16 @@ static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/g
 static SettingsManager::SettingDefault TransposeConnectionMatrix = { "avdecc/general/transposeConnectionMatrix", false };
 static SettingsManager::SettingDefault AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
 static SettingsManager::SettingDefault CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
+static SettingsManager::SettingDefault ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };
+
+// Network settings
+static SettingsManager::SettingDefault ProtocolType = { "protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
 
 // Controller settings
 static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
-static SettingsManager::Setting ProtocolType = { "protocolType" };
-static SettingsManager::Setting InterfaceName = { "interfaceName" };
+static SettingsManager::Setting InterfaceID = { "interfaceID" };
 static SettingsManager::Setting ControllerDynamicHeaderViewState = { "controllerDynamicHeaderView/state" };
 static SettingsManager::Setting LoggerDynamicHeaderViewState = { "loggerDynamicHeaderView/state" };
 static SettingsManager::Setting EntityInspectorState = { "entityInspector/state" };

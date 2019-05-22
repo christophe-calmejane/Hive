@@ -19,20 +19,21 @@
 
 #pragma once
 
+#include <QDialog>
+#include <QLayout>
 #include <QPushButton>
 
-namespace qt
+namespace connectionMatrix
 {
-namespace toolkit
-{
-// Button that uses Material Icons font
-class MaterialButton : public QPushButton
+class LegendDialog : public QDialog
 {
 	Q_OBJECT
 public:
-	MaterialButton(QWidget* parent = nullptr);
-	MaterialButton(QString const& icon, QWidget* parent = nullptr);
+	LegendDialog(QWidget* parent = nullptr);
+
+private:
+	QVBoxLayout _layout{ this };
+	QPushButton _closeButton{ "Close", this };
 };
 
-} // namespace toolkit
-} // namespace qt
+} // namespace connectionMatrix

@@ -77,11 +77,12 @@ endif()
 set(TOOLKIT_HEADER_FILES
 	toolkit/comboBox.hpp
 	toolkit/dynamicHeaderView.hpp
-	toolkit/materialButton.hpp
+	toolkit/material/button.hpp
+	toolkit/material/color.hpp
+	toolkit/material/colorPalette.hpp
 	toolkit/tableView.hpp
 	toolkit/textEntry.hpp
 	toolkit/tickableMenu.hpp
-	toolkit/transposeProxyModel.hpp
 	toolkit/graph/connection.hpp
 	toolkit/graph/inputSocket.hpp
 	toolkit/graph/node.hpp
@@ -94,7 +95,9 @@ set(TOOLKIT_HEADER_FILES
 set(TOOLKIT_SOURCE_FILES
 	toolkit/comboBox.cpp
 	toolkit/dynamicHeaderView.cpp
-	toolkit/materialButton.cpp
+	toolkit/material/button.cpp
+	toolkit/material/color.cpp
+	toolkit/material/colorPalette.cpp
 	toolkit/tableView.cpp
 	toolkit/textEntry.cpp
 	toolkit/tickableMenu.cpp
@@ -234,22 +237,24 @@ set(ABOUT_DIALOG_RESOURCE_FILES
 
 # Connection Matriw header files
 set(CONNECTION_MATRIX_HEADER_FILES
-	connectionMatrix/headerItem.hpp
+	connectionMatrix/cornerWidget.hpp
 	connectionMatrix/headerView.hpp
 	connectionMatrix/itemDelegate.hpp
-	connectionMatrix/legend.hpp
+	connectionMatrix/legendDialog.hpp
 	connectionMatrix/model.hpp
+	connectionMatrix/node.hpp
 	connectionMatrix/paintHelper.hpp
 	connectionMatrix/view.hpp
 )
 
 # Connection Matrix source files
 set(CONNECTION_MATRIX_SOURCE_FILES
-	connectionMatrix/headerItem.cpp
+	connectionMatrix/cornerWidget.cpp
+	connectionMatrix/legendDialog.cpp
 	connectionMatrix/headerView.cpp
 	connectionMatrix/itemDelegate.cpp
-	connectionMatrix/legend.cpp
 	connectionMatrix/model.cpp
+	connectionMatrix/node.cpp
 	connectionMatrix/paintHelper.cpp
 	connectionMatrix/view.cpp
 )
@@ -345,6 +350,7 @@ set(COMMON_HEADER_FILES
 	highlightForegroundItemDelegate.hpp
 	imageItemDelegate.hpp
 	mappingMatrix.hpp
+	networkInterfaceModel.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	painterHelper.hpp
@@ -360,9 +366,10 @@ set(COMMON_SOURCE_FILES
 	main.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
+	networkInterfaceModel.cpp
 	nodeTreeWidget.cpp
-	painterHelper.cpp
 	nodeVisitor.cpp
+	painterHelper.cpp
 )
 
 # Group sources

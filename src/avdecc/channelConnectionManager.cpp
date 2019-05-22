@@ -86,7 +86,7 @@ public:
 	/**
 	* Update the cached connection info if it's already in the map.
 	*/
-	Q_SLOT void onStreamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& streamConnectionState)
+	Q_SLOT void onStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
 	{
 		// check if it is a redundant (secondary) stream, if so stop processing. (redundancy is handled inside the determineChannelConnectionsReverse method)
 		if (!isInputStreamPrimaryOrNonRedundant(streamConnectionState.listenerStream))
@@ -102,7 +102,7 @@ public:
 
 			// if a stream was disconnected, only update the entries that have a connection currently
 			// and if the stream was connected, only update the entries that have no connections yet.
-			if (streamConnectionState.state == la::avdecc::controller::model::StreamConnectionState::State::NotConnected)
+			if (streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::NotConnected)
 			{
 				for (auto const& mappingKV : connectionInfo->channelMappings)
 				{
@@ -244,7 +244,7 @@ public:
 						for (auto const& streamInput : configuration.streamInputs)
 						{
 							auto* streamInputDynamicModel = streamInput.second.dynamicModel;
-							if (streamInputDynamicModel && streamInputDynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected)
+							if (streamInputDynamicModel && streamInputDynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
 							{
 								currentlyConnectedEntities.emplace(streamInputDynamicModel->connectionState.talkerStream.entityID);
 							}
@@ -321,9 +321,9 @@ public:
 	/**
 	* Iterates over the list of known entities and returns all connections that originate from the given talker.
 	*/
-	std::vector<la::avdecc::controller::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier talkerEntityId)
+	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier talkerEntityId)
 	{
-		std::vector<la::avdecc::controller::model::StreamConnectionState> disconnectedStreams;
+		std::vector<la::avdecc::entity::model::StreamConnectionState> disconnectedStreams;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{
@@ -717,9 +717,9 @@ public:
 	/**
 	* Iterates over the list of known entities and returns all connections that originate from the given talker.
 	*/
-	std::vector<la::avdecc::controller::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const& talkerEntityId) const noexcept
+	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const& talkerEntityId) const noexcept
 	{
-		std::vector<la::avdecc::controller::model::StreamConnectionState> disconnectedStreams;
+		std::vector<la::avdecc::entity::model::StreamConnectionState> disconnectedStreams;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{

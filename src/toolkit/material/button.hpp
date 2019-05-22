@@ -17,26 +17,25 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "materialButton.hpp"
+#pragma once
+
+#include <QPushButton>
 
 namespace qt
 {
 namespace toolkit
 {
-MaterialButton::MaterialButton(QWidget* parent)
-	: MaterialButton{ QString::null, parent }
+namespace material
 {
-}
-
-MaterialButton::MaterialButton(QString const& icon, QWidget* parent)
-	: QPushButton{ icon, parent }
+// Button that uses Material Icons font
+class Button : public QPushButton
 {
-	QFont font{ "Material Icons" };
-	font.setStyleStrategy(QFont::PreferQuality);
-	setFont(font);
+	Q_OBJECT
+public:
+	Button(QWidget* parent = nullptr);
+	Button(QString const& icon, QWidget* parent = nullptr);
+};
 
-	setFlat(true);
-}
-
+} // namespace material
 } // namespace toolkit
 } // namespace qt

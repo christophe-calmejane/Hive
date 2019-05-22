@@ -64,9 +64,23 @@ QString objectName(la::avdecc::controller::ControlledEntity const* const control
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
 
-QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
+bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamConnectionState const& streamConnectionState) noexcept
+{
+	return streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected && streamConnectionState.talkerStream == talkerStream;
+}
+
+bool constexpr isFastConnectingToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamConnectionState const& streamConnectionState) noexcept
+{
+	return streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting && streamConnectionState.talkerStream == talkerStream;
+}
+
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
+QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
+QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
+QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
+QString redundantOutputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
+QString redundantInputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept;
 QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState, la::avdecc::UniqueIdentifier const& owningController) noexcept;
@@ -82,7 +96,7 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept
 QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcept;
-QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) noexcept;
 
 QString probingStatusToString(la::avdecc::entity::model::ProbingStatus const status) noexcept;
 
@@ -104,9 +118,6 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
 QString toUpperCamelCase(std::string const& text) noexcept;
 
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
-
-bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
-bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept;
 
 } // namespace helper
 } // namespace avdecc

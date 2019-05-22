@@ -28,21 +28,17 @@
 #include <QHeaderView>
 #include <QMenu>
 
+#include <unordered_set>
+
 // Base node item
 class NodeItem : public QObject, public QTreeWidgetItem
 {
 	using QObject::parent;
 
 public:
-	enum class Kind
+	bool isVirtual() const noexcept
 	{
-		EntityModelNode,
-		VirtualNode,
-	};
-
-	Kind kind() const
-	{
-		return _kind;
+		return _isVirtual;
 	}
 
 	la::avdecc::entity::model::DescriptorType descriptorType() const
@@ -63,7 +59,7 @@ public:
 		// Also update the parent node
 		if (auto* parent = static_cast<NodeItem*>(QTreeWidgetItem::parent()))
 		{
-			if (parent->kind() == NodeItem::Kind::VirtualNode)
+			if (parent->isVirtual())
 			{
 				parent->updateHasError();
 			}
@@ -76,8 +72,8 @@ public:
 	}
 
 protected:
-	NodeItem(Kind const kind, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& name)
-		: _kind{ kind }
+	NodeItem(bool const isVirtual, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& name)
+		: _isVirtual{ isVirtual }
 		, _descriptorType{ descriptorType }
 		, _descriptorIndex{ descriptorIndex }
 	{
@@ -87,9 +83,9 @@ protected:
 	virtual void updateHasError() {}
 
 private:
-	la::avdecc::entity::model::DescriptorType const _descriptorType;
-	la::avdecc::entity::model::DescriptorIndex const _descriptorIndex;
-	Kind const _kind;
+	la::avdecc::entity::model::DescriptorType const _descriptorType{ la::avdecc::entity::model::DescriptorType::Invalid };
+	la::avdecc::entity::model::DescriptorIndex const _descriptorIndex{ 0u };
+	bool const _isVirtual{ false };
 	bool _hasError{ false };
 };
 
@@ -98,7 +94,7 @@ class EntityModelNodeItem : public NodeItem
 {
 public:
 	EntityModelNodeItem(la::avdecc::controller::model::EntityModelNode const* node, QString const& name)
-		: NodeItem{ Kind::EntityModelNode, node->descriptorType, node->descriptorIndex, name }
+		: NodeItem{ false, node->descriptorType, node->descriptorIndex, name }
 	{
 	}
 };
@@ -115,7 +111,7 @@ public:
 	};
 
 	VirtualNodeItem(la::avdecc::controller::model::VirtualNode const* node, QString const& name)
-		: NodeItem{ Kind::VirtualNode, node->descriptorType, static_cast<la::avdecc::entity::model::DescriptorIndex>(node->virtualIndex), name }
+		: NodeItem{ true, node->descriptorType, static_cast<la::avdecc::entity::model::DescriptorIndex>(node->virtualIndex), name }
 	{
 	}
 
@@ -153,6 +149,46 @@ protected:
 class ControlledEntityTreeWidgetPrivate : public QObject, public la::avdecc::controller::model::EntityModelVisitor
 {
 public:
+	struct NodeIdentifier
+	{
+		la::avdecc::entity::model::DescriptorType type{ la::avdecc::entity::model::DescriptorType::Invalid };
+		la::avdecc::entity::model::DescriptorIndex index{ 0u };
+		bool isVirtual{ false };
+
+		NodeIdentifier() noexcept = default;
+
+		NodeIdentifier(la::avdecc::entity::model::DescriptorType const type, la::avdecc::entity::model::DescriptorIndex const index) noexcept
+			: type(type)
+			, index(index)
+			, isVirtual(false)
+		{
+		}
+
+		NodeIdentifier(la::avdecc::entity::model::DescriptorType const type, la::avdecc::controller::model::VirtualIndex const index) noexcept
+			: type(type)
+			, index(index)
+			, isVirtual(true)
+		{
+		}
+
+		constexpr bool operator==(NodeIdentifier const& other) const noexcept
+		{
+			return type == other.type && index == other.index && isVirtual == other.isVirtual;
+		}
+
+		/** Hash functor to be used for std::hash */
+		struct hash
+		{
+			std::size_t operator()(NodeIdentifier const& id) const
+			{
+				// We use 16 bits for the descriptor type, 15 bits for the index and 1 for the kind
+				return (static_cast<std::size_t>(id.type) << 16) | (static_cast<std::size_t>(id.index & 0x7fff) << 1) | static_cast<std::size_t>(id.isVirtual);
+			}
+		};
+	};
+
+	using NodeIdentifierSet = std::unordered_set<NodeIdentifier, NodeIdentifier::hash>;
+
 	ControlledEntityTreeWidgetPrivate(ControlledEntityTreeWidget* q)
 		: q_ptr(q)
 	{
@@ -170,8 +206,6 @@ public:
 
 		q->setControlledEntityID(la::avdecc::UniqueIdentifier{});
 		q->clearSelection();
-
-		_entityExpandedStates.clear();
 	}
 
 	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const entityID)
@@ -186,16 +220,12 @@ public:
 
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
-		// Always remove saved state
-		_entityExpandedStates.erase(entityID);
-
-		if (_controlledEntityID != entityID)
+		// The current entity went offline, clear everything
+		if (_controlledEntityID == entityID)
 		{
-			return;
+			Q_Q(ControlledEntityTreeWidget);
+			q->clearSelection();
 		}
-
-		Q_Q(ControlledEntityTreeWidget);
-		q->clearSelection();
 	}
 
 	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
@@ -205,64 +235,76 @@ public:
 			return;
 		}
 
-		if (auto* item = findEntityModelNodeItem(la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex))
+		if (auto* item = findItem({ la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex }))
 		{
 			item->setHasError(!flags.empty());
 		}
 	}
 
-	void saveSelectedDescriptor()
-	{
-		// TODO
-	}
-
-	void restoreSelectedDescriptor()
-	{
-		Q_Q(ControlledEntityTreeWidget);
-
-		// TODO: Properly restore the previous saved index - Right now always restore the first one
-		q->setCurrentIndex(q->model()->index(0, 0));
-	}
-
-	void saveExpandedState()
+	void saveUserTreeWidgetState()
 	{
 		// Build expanded state
-		NodeExpandedStates states;
+		auto currentNode = NodeIdentifier{};
+		auto expandedNodes = NodeIdentifierSet{};
 
 		Q_Q(ControlledEntityTreeWidget);
-		for (auto const& kv : _map)
+		for (auto const& [id, item] : _identifierToNodeItem)
 		{
-			auto const& node{ kv.first };
-			auto const& item{ kv.second };
-			states.insert({ node, q->isItemExpanded(item) });
+			if (item == q->currentItem())
+			{
+				currentNode = id;
+			}
+
+			// Put only the expanded nodes in the set
+			if (q->isItemExpanded(item))
+			{
+				expandedNodes.insert(id);
+			}
+		}
+
+		if (_controlledEntityID.getValue() == 0x001B92FFFE01B930)
+		{
+			_userTreeWidgetStates[la::avdecc::UniqueIdentifier{ 0x001B92FFFF01B930 }] = { currentNode, expandedNodes };
+		}
+		if (_controlledEntityID.getValue() == 0x001B92FFFF01B930)
+		{
+			_userTreeWidgetStates[la::avdecc::UniqueIdentifier{ 0x001B92FFFE01B930 }] = { currentNode, expandedNodes };
 		}
 
 		// Save expanded state for previous EntityID
-		_entityExpandedStates[_controlledEntityID] = states;
+		_userTreeWidgetStates[_controlledEntityID] = { currentNode, std::move(expandedNodes) };
 	}
 
-	void restoreExpandedState()
+	void restoreUserTreeWidgetState()
 	{
 		Q_Q(ControlledEntityTreeWidget);
 
-		// Load expanded state if any
-		auto const statesIt = _entityExpandedStates.find(_controlledEntityID);
-		if (statesIt != _entityExpandedStates.end())
+		auto nodeSelected = false;
+		auto const it = _userTreeWidgetStates.find(_controlledEntityID);
+		if (it != std::end(_userTreeWidgetStates))
 		{
-			// Restore expanded state
-			auto const& states = statesIt->second;
-			for (auto const& kv : _map)
+			auto const& userTreeWidgetState = it->second;
+			for (auto const& id : userTreeWidgetState.expandedNodes)
 			{
-				auto const& node{ kv.first };
-				auto const& item{ kv.second };
-				try
+				if (auto* nodeItem = findItem(id))
 				{
-					q->setItemExpanded(item, states.at(node));
-				}
-				catch (...)
-				{
+					nodeItem->setExpanded(true);
 				}
 			}
+
+			if (auto* selectedItem = findItem(userTreeWidgetState.currentNode))
+			{
+				auto const index = q->indexFromItem(selectedItem);
+				q->setCurrentIndex(index);
+				nodeSelected = true;
+			}
+		}
+
+		// First time we see this entity or model changed
+		if (!nodeSelected)
+		{
+			// Select the first node, which is always Entity Descriptor
+			q->setCurrentIndex(q->model()->index(0, 0));
 		}
 	}
 
@@ -271,10 +313,12 @@ public:
 		Q_Q(ControlledEntityTreeWidget);
 
 		q->clear();
-		_map.clear();
+		_identifierToNodeItem.clear();
 
 		if (!_controlledEntityID)
+		{
 			return;
+		}
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(_controlledEntityID);
@@ -285,10 +329,7 @@ public:
 		}
 
 		// Restore expanded state for new EntityID
-		restoreExpandedState();
-
-		// Restore selected descriptor for new EntityID
-		restoreSelectedDescriptor();
+		restoreUserTreeWidgetState();
 	}
 
 	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
@@ -302,8 +343,7 @@ public:
 
 		if (_controlledEntityID)
 		{
-			saveExpandedState();
-			saveSelectedDescriptor();
+			saveUserTreeWidgetState();
 		}
 
 		_controlledEntityID = entityID;
@@ -316,48 +356,38 @@ public:
 		return _controlledEntityID;
 	}
 
-	NodeItem* findEntityModelNodeItem(la::avdecc::entity::model::DescriptorType const& descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex) const
+	NodeItem* findItem(NodeIdentifier const& nodeIdentifier) const
 	{
-		auto const it = std::find_if(std::begin(_map), std::end(_map),
-			[&descriptorType, &descriptorIndex](auto const& kv)
+		auto const it = _identifierToNodeItem.find(nodeIdentifier);
+		return it != std::end(_identifierToNodeItem) ? it->second : nullptr;
+	}
+
+	NodeIdentifier findNodeIdentifier(NodeItem const* item) const
+	{
+		auto const it = std::find_if(std::begin(_identifierToNodeItem), std::end(_identifierToNodeItem),
+			[item](auto const& kv)
 			{
-				auto const* item = kv.second;
-				if (item->kind() == NodeItem::Kind::VirtualNode)
-				{
-					// Exclude virtual nodes
-					return false;
-				}
-				else
-				{
-					return item->descriptorType() == descriptorType && item->descriptorIndex() == descriptorIndex;
-				}
+				return kv.second == item;
 			});
-		if (it != std::end(_map))
-		{
-			return it->second;
-		}
-		return nullptr;
+		assert(it != std::end(_identifierToNodeItem));
+		return it->first;
 	}
 
 	void customContextMenuRequested(QPoint const& pos)
 	{
 		Q_Q(ControlledEntityTreeWidget);
 
-		auto const item = static_cast<NodeItem*>(q->itemAt(pos));
+		auto const* item = static_cast<NodeItem*>(q->itemAt(pos));
 		if (!item)
 		{
 			return;
 		}
 
-		auto const* node = find(item);
-		if (!node)
+		auto const nodeIdentifier = findNodeIdentifier(item);
+		if (nodeIdentifier.type == la::avdecc::entity::model::DescriptorType::Configuration)
 		{
-			return;
-		}
-
-		if (node->descriptorType == la::avdecc::entity::model::DescriptorType::Configuration)
-		{
-			auto const* configurationNode = static_cast<la::avdecc::controller::model::ConfigurationNode const*>(node);
+			auto const& anyNode = item->data(0, Qt::UserRole).value<AnyNode>().getNode();
+			auto const* configurationNode = std::any_cast<la::avdecc::controller::model::ConfigurationNode const*>(anyNode);
 
 			QMenu menu;
 
@@ -378,36 +408,38 @@ public:
 	}
 
 private:
-	la::avdecc::controller::model::Node const* find(NodeItem const* item)
+	template<typename NodeType>
+	NodeIdentifier makeIdentifier(NodeType const* node) const noexcept
 	{
-		for (auto const& it : _map)
+		if constexpr (std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, NodeType>)
 		{
-			if (it.second == item)
-			{
-				return it.first;
-			}
+			return { node->descriptorType, static_cast<la::avdecc::controller::model::EntityModelNode const*>(node)->descriptorIndex };
 		}
-
-		return nullptr;
+		else if constexpr (std::is_base_of_v<la::avdecc::controller::model::VirtualNode, NodeType>)
+		{
+			return { node->descriptorType, static_cast<la::avdecc::controller::model::VirtualNode const*>(node)->virtualIndex };
+		}
+		else
+		{
+			AVDECC_ASSERT(false, "if constexpr not handled");
+			return {};
+		}
 	}
 
-	NodeItem* find(la::avdecc::controller::model::Node const* const node)
-	{
-		return node ? _map.at(node) : nullptr;
-	}
-
-	template<typename T>
-	NodeItem* addItem(la::avdecc::controller::model::Node const* parent, T const* node, QString const& name) noexcept
+	template<typename ParentNodeType, typename NodeType>
+	NodeItem* addItem(ParentNodeType const* parent, NodeType const* node, QString const& name) noexcept
 	{
 		NodeItem* item = nullptr;
 
-		if constexpr (std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, T>)
+		if constexpr (std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, NodeType>)
 		{
 			item = new EntityModelNodeItem{ static_cast<la::avdecc::controller::model::EntityModelNode const*>(node), name };
+			_identifierToNodeItem.insert({ makeIdentifier(node), item });
 		}
-		else if constexpr (std::is_base_of_v<la::avdecc::controller::model::VirtualNode, T>)
+		else if constexpr (std::is_base_of_v<la::avdecc::controller::model::VirtualNode, NodeType>)
 		{
 			item = new VirtualNodeItem{ static_cast<la::avdecc::controller::model::VirtualNode const*>(node), name };
+			_identifierToNodeItem.insert({ makeIdentifier(node), item });
 		}
 		else
 		{
@@ -418,8 +450,10 @@ private:
 		auto const anyNode = AnyNode(node);
 		item->setData(0, Qt::UserRole, QVariant::fromValue(anyNode));
 
-		if (auto* parentItem = find(parent))
+		if (parent)
 		{
+			auto* parentItem = findItem(makeIdentifier(parent));
+			assert(parentItem);
 			parentItem->addChild(item);
 		}
 		else
@@ -427,8 +461,6 @@ private:
 			Q_Q(ControlledEntityTreeWidget);
 			q->addTopLevelItem(item);
 		}
-
-		_map.insert({ node, item });
 
 		return item;
 	}
@@ -439,7 +471,7 @@ private:
 		{
 			return QString("%1: %2").arg(avdecc::helper::descriptorTypeToString(type), name);
 		};
-		auto* item = addItem(nullptr, &node, genName(node.dynamicModel->entityName.data()));
+		auto* item = addItem<la::avdecc::controller::model::Node const*>(nullptr, &node, genName(node.dynamicModel->entityName.data()));
 
 		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::entityNameChanged, item,
 			[genName, item](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
@@ -521,7 +553,8 @@ private:
 			});
 	}
 
-	void processStreamInputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept
+	template<typename ParentNodeType>
+	void processStreamInputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, ParentNodeType const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept
 	{
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
@@ -546,7 +579,8 @@ private:
 		}
 	}
 
-	void processStreamOutputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::Node const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept
+	template<typename ParentNodeType>
+	void processStreamOutputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, ParentNodeType const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept
 	{
 		auto const name = genName(controlledEntity, node);
 		auto* item = addItem(parent, &node, name);
@@ -672,10 +706,18 @@ private:
 	Q_DECLARE_PUBLIC(ControlledEntityTreeWidget);
 
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
-	std::unordered_map<la::avdecc::controller::model::Node const*, NodeItem*> _map;
 
-	using NodeExpandedStates = std::unordered_map<la::avdecc::controller::model::Node const*, bool>;
-	std::unordered_map<la::avdecc::UniqueIdentifier, NodeExpandedStates, la::avdecc::UniqueIdentifier::hash> _entityExpandedStates;
+	// Quick access node item by node identifier
+	std::unordered_map<NodeIdentifier, NodeItem*, NodeIdentifier::hash> _identifierToNodeItem;
+
+	struct UserTreeWidgetState
+	{
+		NodeIdentifier currentNode{};
+		NodeIdentifierSet expandedNodes{};
+	};
+
+	// Global map that stores UserTreeWidgetState by entity ID (Stored in the class so each instance keeps its own cache)
+	std::unordered_map<la::avdecc::UniqueIdentifier, UserTreeWidgetState, la::avdecc::UniqueIdentifier::hash> _userTreeWidgetStates{};
 };
 
 ControlledEntityTreeWidget::ControlledEntityTreeWidget(QWidget* parent)

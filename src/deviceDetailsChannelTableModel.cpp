@@ -46,7 +46,7 @@ bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::
 {
 	if (listenerNode && listenerNode->dynamicModel && talkerNode)
 	{
-		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
 
 	return false;
@@ -62,114 +62,23 @@ bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avd
 {
 	if (listenerNode && listenerNode->dynamicModel && talkerNode)
 	{
-		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
 
 	return false;
 }
 
-/**
-* Detect the current connection status to be displayed.
-* @param talkerEntityId				The id of the talking entity.
-* @param talkerStreamIndex			The index of the output stream to check.
-* @param talkerStreamRedundant		Flag indicating if the talking stream is redundant.
-* @param listenerEntityId			The id of the listening entity.
-* @param listenerStreamIndex		The index of the inout stream to check.
-* @param listenerStreamRedundant	Flag indicating if the listening stream is redundant.
-*/
-DeviceDetailsChannelTableModel::ConnectionStatus connectionStatus(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex talkerStreamIndex, bool talkerStreamRedundant, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex listenerStreamIndex, bool listenerStreamRedundant) noexcept
+// Returns true if domains are compatible
+bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& talkerLinkStatus, la::avdecc::UniqueIdentifier const& talkerGrandMasterID, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& listenerLinkStatus, la::avdecc::UniqueIdentifier const& listenerGrandMasterID)
 {
-	if (talkerEntityId == listenerEntityId)
-		return DeviceDetailsChannelTableModel::ConnectionStatus::None;
-
-	try
+	// If either is down, no need to check the domain, it makes no sense (so return compatible)
+	if (talkerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down)
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto talkerEntity = manager.getControlledEntity(talkerEntityId);
-		auto listenerEntity = manager.getControlledEntity(listenerEntityId);
-		if (talkerEntity && listenerEntity)
-		{
-			auto const& talkerEntityNode = talkerEntity->getEntityNode();
-			auto const& talkerEntityInfo = talkerEntity->getEntity();
-			auto const& listenerEntityNode = listenerEntity->getEntityNode();
-			auto const& listenerEntityInfo = listenerEntity->getEntity();
-
-			auto const computeFormatCompatible = [](la::avdecc::controller::model::StreamOutputNode const& talkerNode, la::avdecc::controller::model::StreamInputNode const& listenerNode)
-			{
-				return la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerNode.dynamicModel->streamInfo.streamFormat, talkerNode.dynamicModel->streamInfo.streamFormat);
-			};
-			auto const computeDomainCompatible = [&talkerEntity, &listenerEntity, &talkerEntityNode, &listenerEntityNode](auto const talkerAvbInterfaceIndex, auto const listenerAvbInterfaceIndex)
-			{
-				try
-				{
-					// Get the AvbInterface associated to the streams
-					auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerAvbInterfaceIndex);
-					auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerAvbInterfaceIndex);
-
-					// Check both have the same grandmaster
-					return talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID == listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-				}
-				catch (...)
-				{
-					return false;
-				}
-			};
-			enum class ConnectState
-			{
-				NotConnected = 0,
-				FastConnecting,
-				Connected,
-			};
-			auto const computeCapabilities = [](ConnectState const connectState, bool const areAllConnected, bool const isFormatCompatible, bool const isDomainCompatible)
-			{
-				auto caps{ DeviceDetailsChannelTableModel::ConnectionStatus::None };
-
-				if (!isDomainCompatible)
-					caps |= DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain;
-
-				if (!isFormatCompatible)
-					caps |= DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat;
-
-				if (connectState != ConnectState::NotConnected)
-				{
-					if (areAllConnected)
-						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::Connected;
-					else if (connectState == ConnectState::FastConnecting)
-						caps |= DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting;
-				}
-
-				return caps;
-			};
-
-			{
-				la::avdecc::controller::model::StreamOutputNode const* talkerNode{ nullptr };
-				la::avdecc::controller::model::StreamInputNode const* listenerNode{ nullptr };
-				if (talkerEntityNode.dynamicModel && listenerEntityNode.dynamicModel)
-				{
-					talkerNode = &talkerEntity->getStreamOutputNode(talkerEntityNode.dynamicModel->currentConfiguration, talkerStreamIndex);
-					listenerNode = &listenerEntity->getStreamInputNode(listenerEntityNode.dynamicModel->currentConfiguration, listenerStreamIndex);
-
-					// Get connected state
-					auto const areConnected = isStreamConnected(talkerEntityId, talkerNode, listenerNode);
-					auto const fastConnecting = isStreamFastConnecting(talkerEntityId, talkerNode, listenerNode);
-					auto const connectState = areConnected ? ConnectState::Connected : (fastConnecting ? ConnectState::FastConnecting : ConnectState::NotConnected);
-
-					// Get stream format compatibility
-					auto const isFormatCompatible = computeFormatCompatible(*talkerNode, *listenerNode);
-
-					// Get domain compatibility
-					auto const isDomainCompatible = computeDomainCompatible(talkerNode->staticModel->avbInterfaceIndex, listenerNode->staticModel->avbInterfaceIndex);
-
-					return computeCapabilities(connectState, areConnected, isFormatCompatible, isDomainCompatible);
-				}
-			}
-		}
-	}
-	catch (...)
-	{
+		return true;
 	}
 
-	return DeviceDetailsChannelTableModel::ConnectionStatus::None;
+	// Check both have the same grandmaster
+	return talkerGrandMasterID == listenerGrandMasterID;
 }
 
 // **************************************************************
@@ -559,25 +468,67 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				{
 					for (auto const& clusterKV : connection->targetClusterChannels)
 					{
+						auto const& sourceEntityId = connection->targetEntityId;
 						auto const& targetEntityId = connection->targetEntityId;
-						auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(targetEntityId);
-						if (!controlledEntity)
+						auto talkerEntity = avdecc::ControllerManager::getInstance().getControlledEntity(sourceEntityId);
+						auto listenerEntity = avdecc::ControllerManager::getInstance().getControlledEntity(targetEntityId);
+						if (!talkerEntity || !listenerEntity)
 						{
 							continue;
 						}
-						auto const& entityNode = controlledEntity->getEntityNode();
+						auto const& entityNode = talkerEntity->getEntityNode();
 						if (entityNode.dynamicModel)
 						{
-							auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+							auto const& talkerConfigurationNode = talkerEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+							auto const& listenerConfigurationNode = talkerEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
 
-							DeviceDetailsChannelTableModel::ConnectionStatus status;
-							if (connectionInfo->sourceClusterChannelInfo.forward)
+							DeviceDetailsChannelTableModel::ConnectionStatus status{ connectionMatrix::Model::IntersectionData::Type::SingleStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected };
+							auto const& talkerOutputStreamNode = talkerEntity->getStreamOutputNode(talkerConfigurationNode.descriptorIndex, connection->sourceStreamIndex);
+							auto const& listenerInputStreamNode = listenerEntity->getStreamInputNode(listenerConfigurationNode.descriptorIndex, connection->targetStreamIndex);
+
+							auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
+							auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationNode.descriptorIndex, talkerAvbInterfaceIndex);
+							auto talkerStreamFormat = talkerOutputStreamNode.dynamicModel->streamInfo.streamFormat;
+							auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+							auto talkerGrandMasterDomain = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+							auto talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
+							auto talkerRunning = talkerEntity->isStreamInputRunning(talkerConfigurationNode.descriptorIndex, connection->sourceStreamIndex);
+
+							auto const listenerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
+							auto const& listenerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(listenerConfigurationNode.descriptorIndex, listenerAvbInterfaceIndex);
+							auto listenerStreamFormat = talkerOutputStreamNode.dynamicModel->streamInfo.streamFormat;
+							auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+							auto listenerGrandMasterDomain = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+							auto listenerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
+							auto listenerRunning = talkerEntity->isStreamInputRunning(listenerConfigurationNode.descriptorIndex, connection->targetStreamIndex);
+
+							if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
 							{
-								status = connectionStatus(connectionInfo->sourceEntityId, connection->sourceStreamIndex, connection->isSourceRedundant, targetEntityId, connection->targetStreamIndex, connection->isTargetRedundant);
+								status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongFormat);
 							}
 							else
 							{
-								status = connectionStatus(targetEntityId, connection->targetStreamIndex, connection->isTargetRedundant, connectionInfo->sourceEntityId, connection->sourceStreamIndex, connection->isSourceRedundant);
+								status.flags.set(connectionMatrix::Model::IntersectionData::Flag::WrongFormat);
+							}
+
+							auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+
+							if (interfaceDown)
+							{
+								status.flags.set(connectionMatrix::Model::IntersectionData::Flag::InterfaceDown);
+							}
+							else
+							{
+								status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::InterfaceDown);
+							}
+
+							if (isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID))
+							{
+								status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongDomain);
+							}
+							else
+							{
+								status.flags.set(connectionMatrix::Model::IntersectionData::Flag::WrongDomain);
 							}
 
 							connectionStates.append(QVariant::fromValue(status));
@@ -607,13 +558,53 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								}
 								while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 								{
-									if (connectionInfo->sourceClusterChannelInfo.forward)
+									DeviceDetailsChannelTableModel::ConnectionStatus status{ connectionMatrix::Model::IntersectionData::Type::SingleStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected };
+									auto const& talkerOutputStreamNode = talkerEntity->getStreamOutputNode(talkerConfigurationNode.descriptorIndex, connection->sourceStreamIndex);
+									auto const& listenerInputStreamNode = listenerEntity->getStreamInputNode(listenerConfigurationNode.descriptorIndex, connection->targetStreamIndex);
+
+									auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
+									auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationNode.descriptorIndex, talkerAvbInterfaceIndex);
+									auto talkerStreamFormat = talkerOutputStreamNode.dynamicModel->streamInfo.streamFormat;
+									auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+									auto talkerGrandMasterDomain = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+									auto talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
+									auto talkerRunning = talkerEntity->isStreamInputRunning(talkerConfigurationNode.descriptorIndex, connection->sourceStreamIndex);
+
+									auto const listenerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
+									auto const& listenerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(listenerConfigurationNode.descriptorIndex, listenerAvbInterfaceIndex);
+									auto listenerStreamFormat = talkerOutputStreamNode.dynamicModel->streamInfo.streamFormat;
+									auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
+									auto listenerGrandMasterDomain = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+									auto listenerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
+									auto listenerRunning = talkerEntity->isStreamInputRunning(listenerConfigurationNode.descriptorIndex, connection->targetStreamIndex);
+
+									if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
 									{
-										status = connectionStatus(connectionInfo->sourceEntityId, itOutputs->first, connection->isSourceRedundant, connection->targetEntityId, itInputs->first, connection->isTargetRedundant);
+										status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongFormat);
 									}
 									else
 									{
-										status = connectionStatus(connection->targetEntityId, itInputs->first, connection->isTargetRedundant, connectionInfo->sourceEntityId, itOutputs->first, connection->isSourceRedundant);
+										status.flags.set(connectionMatrix::Model::IntersectionData::Flag::WrongFormat);
+									}
+
+									auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+
+									if (interfaceDown)
+									{
+										status.flags.set(connectionMatrix::Model::IntersectionData::Flag::InterfaceDown);
+									}
+									else
+									{
+										status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::InterfaceDown);
+									}
+
+									if (isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID))
+									{
+										status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongDomain);
+									}
+									else
+									{
+										status.flags.set(connectionMatrix::Model::IntersectionData::Flag::WrongDomain);
 									}
 									connectionStates.append(QVariant::fromValue(status));
 
@@ -865,53 +856,6 @@ TableRowEntry const& DeviceDetailsChannelTableModel::tableDataAtRow(int row) con
 	return d->tableDataAtRow(row);
 }
 
-
-void drawConnectionState(DeviceDetailsChannelTableModel::ConnectionStatus status, QPainter* painter, QRect iconDrawRect)
-{
-	if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::Connected))
-	{
-		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
-		{
-			connectionMatrix::drawWrongDomainConnectedStream(painter, iconDrawRect, false);
-		}
-		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
-		{
-			connectionMatrix::drawWrongFormatConnectedStream(painter, iconDrawRect, false);
-		}
-		else
-		{
-			connectionMatrix::drawConnectedStream(painter, iconDrawRect, false);
-		}
-	}
-	else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::FastConnecting))
-	{
-		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
-		{
-			connectionMatrix::drawWrongDomainFastConnectingStream(painter, iconDrawRect, false);
-		}
-		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
-		{
-			connectionMatrix::drawWrongFormatFastConnectingStream(painter, iconDrawRect, false);
-		}
-		else
-		{
-			connectionMatrix::drawFastConnectingStream(painter, iconDrawRect, false);
-		}
-	}
-	else
-	{
-		if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongDomain))
-		{
-			connectionMatrix::drawWrongDomainNotConnectedStream(painter, iconDrawRect, false);
-		}
-		else if (la::avdecc::utils::hasFlag(status, DeviceDetailsChannelTableModel::ConnectionStatus::WrongFormat))
-		{
-			connectionMatrix::drawWrongFormatNotConnectedStream(painter, iconDrawRect, false);
-		}
-	}
-}
-
-
 /* ************************************************************ */
 /* ConnectionStateItemDelegate                                  */
 /* ************************************************************ */
@@ -943,7 +887,8 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 		DeviceDetailsChannelTableModel::ConnectionStatus status = connection.value<DeviceDetailsChannelTableModel::ConnectionStatus>();
 
 		QRect iconDrawRect(option.rect.left() + (option.rect.width() - circleDiameter) / 2.0f, option.rect.top() + margin + innerRow * (fontPixelHeight + margin), circleDiameter, circleDiameter);
-		drawConnectionState(status, painter, iconDrawRect);
+
+		connectionMatrix::paintHelper::drawCapabilities(painter, iconDrawRect, status.type, status.state, status.flags);
 
 		innerRow++;
 	}

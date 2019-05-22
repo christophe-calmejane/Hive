@@ -21,7 +21,7 @@
 
 #include <QMenu>
 
-EntityCountersTreeWidgetItem::EntityCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::EntityCounters const& counters, QTreeWidget* parent)
+EntityCountersTreeWidgetItem::EntityCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::EntityCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 {
@@ -49,7 +49,7 @@ EntityCountersTreeWidgetItem::EntityCountersTreeWidgetItem(la::avdecc::UniqueIde
 
 	// Listen for EntityCountersChanged
 	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::entityCountersChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::EntityCounters const& counters)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::EntityCounters const& counters)
 		{
 			if (entityID == _entityID)
 			{
@@ -58,7 +58,7 @@ EntityCountersTreeWidgetItem::EntityCountersTreeWidgetItem(la::avdecc::UniqueIde
 		});
 }
 
-void EntityCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::EntityCounters const& counters)
+void EntityCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model::EntityCounters const& counters)
 {
 	for (auto const counterKV : counters)
 	{

@@ -23,6 +23,8 @@
 #include <QFile>
 #include <QTextBrowser>
 #include <QDateTime>
+#include <QAbstractListModel>
+#include <QVector>
 
 #ifdef DEBUG
 #	include <QFileInfo>
@@ -36,6 +38,7 @@
 
 #include "nodeVisitor.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
+#include "toolkit/material/colorPalette.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "aboutDialog.hpp"
@@ -48,6 +51,8 @@
 #include "deviceDetailsDialog.hpp"
 
 #include "updater/updater.hpp"
+
+#include <la/avdecc/networkInterfaceHelper.hpp>
 
 #include <mutex>
 #include <memory>
@@ -79,36 +84,41 @@ MainWindow::MainWindow(QWidget* parent)
 
 	createControllerView();
 
-	populateProtocolComboBox();
-	populateInterfaceComboBox();
+	initInterfaceComboBox();
 
 	loadSettings();
 
 	connectSignals();
 
+	setAcceptDrops(true);
 	// create channel connection manager instance
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 }
 
 void MainWindow::currentControllerChanged()
 {
-	auto const protocolType = _protocolComboBox.currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
-	auto const interfaceName = _interfaceComboBox.currentData().toString();
-
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::ProtocolType, _protocolComboBox.currentText());
-	settings.setValue(settings::InterfaceName, _interfaceComboBox.currentText());
+
+	auto const protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const interfaceID = _interfaceComboBox.currentData().toString();
+	if (interfaceID.isEmpty())
+	{
+		LOG_HIVE_WARN("No Network Interface selected. Please choose one.");
+		return;
+	}
+
+	settings.setValue(settings::InterfaceID, interfaceID);
 
 	try
 	{
 		// Create a new Controller
 		auto& manager = avdecc::ControllerManager::getInstance();
-		manager.createController(protocolType, interfaceName, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		manager.createController(protocolType, interfaceID, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
-		statusbar->showMessage(e.what(), 2000);
+		LOG_HIVE_WARN(e.what());
 	}
 }
 
@@ -130,6 +140,7 @@ void MainWindow::currentControlledEntityChanged(QModelIndex const& index)
 	}
 }
 
+// Private methods
 void MainWindow::registerMetaTypes()
 {
 	//
@@ -151,10 +162,6 @@ void MainWindow::createViewMenu()
 
 void MainWindow::createMainToolBar()
 {
-	auto* protocolLabel = new QLabel("Protocol");
-	protocolLabel->setMinimumWidth(50);
-	_protocolComboBox.setMinimumWidth(100);
-
 	auto* interfaceLabel = new QLabel("Interface");
 	interfaceLabel->setMinimumWidth(50);
 	_interfaceComboBox.setMinimumWidth(100);
@@ -166,11 +173,6 @@ void MainWindow::createMainToolBar()
 	_controllerEntityIDLabel.setMinimumWidth(100);
 
 	mainToolBar->setMinimumHeight(30);
-
-	mainToolBar->addWidget(protocolLabel);
-	mainToolBar->addWidget(&_protocolComboBox);
-
-	mainToolBar->addSeparator();
 
 	mainToolBar->addWidget(interfaceLabel);
 	mainToolBar->addWidget(&_interfaceComboBox);
@@ -198,6 +200,9 @@ void MainWindow::createControllerView()
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
 	controllerTableView->setFocusPolicy(Qt::ClickFocus);
 
+	// Disable row resizing
+	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+
 	auto* imageItemDelegate{ new ImageItemDelegate{ this } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
@@ -224,36 +229,13 @@ void MainWindow::createControllerView()
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
 }
 
-void MainWindow::populateProtocolComboBox()
+void MainWindow::initInterfaceComboBox()
 {
-	const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName{
-		{ la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap" },
-		{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
-		{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
-		{ la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual" },
-	};
+	_networkInterfaceModelProxy.setSourceModel(&_networkInterfaceModel);
+	_networkInterfaceModelProxy.setSortRole(Qt::UserRole);
+	_networkInterfaceModelProxy.sort(0, Qt::AscendingOrder);
 
-	for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
-	{
-#ifndef DEBUG
-		if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
-			continue;
-#endif // !DEBUG
-		_protocolComboBox.addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
-	}
-}
-
-void MainWindow::populateInterfaceComboBox()
-{
-	la::avdecc::networkInterface::enumerateInterfaces(
-		[this](la::avdecc::networkInterface::Interface const& networkInterface)
-		{
-			// Only display Ethernet interfaces
-			if (networkInterface.type == la::avdecc::networkInterface::Interface::Type::Ethernet && networkInterface.isActive)
-			{
-				_interfaceComboBox.addItem(QString::fromStdString(networkInterface.alias), QString::fromStdString(networkInterface.name));
-			}
-		});
+	_interfaceComboBox.setModel(&_networkInterfaceModelProxy);
 }
 
 void MainWindow::loadSettings()
@@ -262,10 +244,25 @@ void MainWindow::loadSettings()
 
 	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());
 
-	_protocolComboBox.setCurrentText(settings.getValue(settings::ProtocolType).toString());
-	_interfaceComboBox.setCurrentText(settings.getValue(settings::InterfaceName).toString());
+	auto const networkInterfaceIndex = _networkInterfaceModel.indexOf(settings.getValue(settings::InterfaceID).toString().toStdString());
+	if (!networkInterfaceIndex.isValid() || !_networkInterfaceModel.isEnabled(networkInterfaceIndex))
+	{
+		_interfaceComboBox.setCurrentIndex(-1);
+	}
+	else
+	{
+		_interfaceComboBox.setCurrentIndex(_networkInterfaceModelProxy.mapFromSource(networkInterfaceIndex).row());
+	}
 
-	currentControllerChanged();
+	// Check if currently saved ProtocolInterface is supported
+	auto protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
+	if (!supportedTypes.test(protocolType) && !supportedTypes.empty())
+	{
+		// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
+		protocolType = *supportedTypes.begin();
+		settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+	}
 
 	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
 	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
@@ -274,12 +271,15 @@ void MainWindow::loadSettings()
 
 	restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
 	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+
+	// Configure settings observers
+	settings.registerSettingObserver(settings::ProtocolType.name, this);
+	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
 void MainWindow::connectSignals()
 {
-	connect(&_protocolComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
-	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::activated), this, &MainWindow::currentControllerChanged);
+	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);
@@ -460,14 +460,32 @@ void MainWindow::connectSignals()
 						auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/Entity_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)), "*.json");
 						if (!filename.isEmpty())
 						{
-							auto const [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename);
+							auto [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename, false);
 							if (!error)
 							{
 								QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
 							}
 							else
 							{
-								QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+								if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex)
+								{
+									auto const choice = QMessageBox::question(this, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+									if (choice == QMessageBox::StandardButton::Yes)
+									{
+										auto const result = manager.serializeControlledEntityAsReadableJson(entityID, filename, true);
+										error = std::get<0>(result);
+										message = std::get<1>(result);
+										if (!error)
+										{
+											QMessageBox::information(this, "", "Export completed but with warnings:\n" + filename);
+										}
+										// Fallthrough to warning message
+									}
+								}
+								if (!!error)
+								{
+									QMessageBox::warning(this, "", QString("Export of EntityID %1 failed:\n%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
+								}
 							}
 						}
 					}
@@ -524,14 +542,14 @@ void MainWindow::connectSignals()
 			if (!filename.isEmpty())
 			{
 				auto& manager = avdecc::ControllerManager::getInstance();
-				auto const [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename);
+				auto [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename, false);
 				if (!error)
 				{
 					QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
 				}
 				else
 				{
-					QMessageBox::warning(this, "", "Export failed."); // TODO: Print error message based on error enum value (and string)
+					QMessageBox::warning(this, "", QString("Export failed:\n%1").arg(message.c_str()));
 				}
 			}
 		});
@@ -572,7 +590,7 @@ void MainWindow::connectSignals()
 	//
 
 	connect(actionOpenProjectWebPage, &QAction::triggered, this,
-		[this]()
+		[]()
 		{
 			QDesktopServices::openUrl(hive::internals::projectURL);
 		});
@@ -615,15 +633,13 @@ void MainWindow::connectSignals()
 #ifdef DEBUG
 	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, this };
 	connect(reloadStyleSheet, &QShortcut::activated, this,
-		[]()
+		[this]()
 		{
-			// Load and apply the stylesheet
-			QFile styleFile{ QString{ RESOURCES_ROOT_DIR } + "/style.qss" };
-			if (styleFile.open(QFile::ReadOnly))
-			{
-				qApp->setStyleSheet(styleFile.readAll());
-				LOG_HIVE_DEBUG("StyleSheet reloaded");
-			}
+			auto& settings = settings::SettingsManager::getInstance();
+			auto const themeColorIndex = settings.getValue(settings::ThemeColorIndex.name).toInt();
+			auto const colorName = qt::toolkit::material::color::Palette::name(themeColorIndex);
+			updateStyleSheet(colorName, QString{ RESOURCES_ROOT_DIR } + "/style.qss");
+			LOG_HIVE_DEBUG("StyleSheet reloaded");
 		});
 #endif
 }
@@ -721,10 +737,143 @@ void MainWindow::showEvent(QShowEvent* event)
 void MainWindow::closeEvent(QCloseEvent* event)
 {
 	auto& settings = settings::SettingsManager::getInstance();
+
+	// Save window geometry
 	settings.setValue(settings::MainWindowGeometry, saveGeometry());
 	settings.setValue(settings::MainWindowState, saveState());
+
+	// Unregister from settings
+	settings.unregisterSettingObserver(settings::ProtocolType.name, this);
+	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
 
 	qApp->closeAllWindows();
 
 	QMainWindow::closeEvent(event);
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+{
+	for (auto const& u : event->mimeData()->urls())
+	{
+		auto const f = QFileInfo{ u.fileName() };
+		auto const ext = f.suffix();
+		if (ext == "json")
+		{
+			event->acceptProposedAction();
+			return;
+		}
+	}
+}
+
+void MainWindow::dropEvent(QDropEvent* event)
+{
+	auto& manager = avdecc::ControllerManager::getInstance();
+
+	auto const loadEntity = [&manager](auto const& filePath, auto const ignoreSanityChecks)
+	{
+		auto const [error, message] = manager.loadVirtualEntityFromReadableJson(filePath, ignoreSanityChecks);
+		auto msg = QString{};
+		if (!!error)
+		{
+			switch (error)
+			{
+				case la::avdecc::jsonSerializer::DeserializationError::AccessDenied:
+					msg = "Access Denied";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
+					msg = "Unsupported Dump Version";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::ParseError:
+					msg = QString("Parse Error: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::MissingKey:
+					msg = QString("Missing Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidKey:
+					msg = QString("Invalid Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidValue:
+					msg = QString("Invalid Value: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::OtherError:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::DuplicateEntityID:
+					msg = QString("An Entity already exists with the same EntityID: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotCompliant:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
+					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InternalError:
+					msg = QString("Internal Error: %1").arg(message.c_str());
+					break;
+				default:
+					AVDECC_ASSERT(false, "Unknown Error");
+					msg = "Unknown Error";
+					break;
+			}
+		}
+		return std::make_tuple(error, msg);
+	};
+
+	for (auto const& u : event->mimeData()->urls())
+	{
+		auto const f = u.toLocalFile();
+		auto const fi = QFileInfo{ f };
+		auto const ext = fi.suffix();
+		if (ext == "json")
+		{
+			auto [error, message] = loadEntity(u.toLocalFile(), false);
+			if (!!error)
+			{
+				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+				{
+					auto const choice = QMessageBox::question(this, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+					if (choice == QMessageBox::StandardButton::Yes)
+					{
+						auto const result = loadEntity(u.toLocalFile(), true);
+						error = std::get<0>(result);
+						message = std::get<1>(result);
+						// Fallthrough to warning message
+					}
+				}
+				if (!!error)
+				{
+					QMessageBox::warning(this, "Failed to load JSON entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+				}
+			}
+		}
+	}
+}
+
+void MainWindow::updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename)
+{
+	auto const baseBackgroundColor = qt::toolkit::material::color::value(colorName);
+	auto const baseForegroundColor = QColor{ qt::toolkit::material::color::luminance(colorName) == qt::toolkit::material::color::Luminance::Dark ? Qt::white : Qt::black };
+	auto const connectionMatrixBackgroundColor = qt::toolkit::material::color::value(colorName, qt::toolkit::material::color::Shade::Shade100);
+
+	// Load and apply the stylesheet
+	auto styleFile = QFile{ filename };
+	if (styleFile.open(QFile::ReadOnly))
+	{
+		auto const styleSheet = QString{ styleFile.readAll() }.arg(baseBackgroundColor.name()).arg(baseForegroundColor.name()).arg(connectionMatrixBackgroundColor.name());
+
+		qApp->setStyleSheet(styleSheet);
+	}
+}
+
+void MainWindow::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
+{
+	if (name == settings::ProtocolType.name)
+	{
+		currentControllerChanged();
+	}
+	else if (name == settings::ThemeColorIndex.name)
+	{
+		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+		updateStyleSheet(colorName, ":/style.qss");
+	}
 }

@@ -20,49 +20,54 @@
 #pragma once
 
 #include "ui_mainWindow.h"
-#include <QSettings>
-#include <QLabel>
-#include <memory>
 #include "avdecc/controllerModel.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/comboBox.hpp"
-#include "toolkit/materialButton.hpp"
+#include "toolkit/material/button.hpp"
+#include "toolkit/material/color.hpp"
+#include "networkInterfaceModel.hpp"
+
+#include <QSettings>
+#include <QLabel>
+#include <memory>
 
 class DynamicHeaderView;
 
-class MainWindow : public QMainWindow, private Ui::MainWindow
+class MainWindow : public QMainWindow, private Ui::MainWindow, private settings::SettingsManager::Observer
 {
 	Q_OBJECT
 public:
+	// Constructor
 	MainWindow(QWidget* parent = nullptr);
 
+private:
+	// Private Slots
 	Q_SLOT void currentControllerChanged();
 	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
 
-private:
+	// Private methods
 	void registerMetaTypes();
-
 	void createViewMenu();
 	void createMainToolBar();
-
 	void createControllerView();
-
-	void populateProtocolComboBox();
-	void populateInterfaceComboBox();
-
+	void initInterfaceComboBox();
 	void loadSettings();
-
 	void connectSignals();
-
-private:
 	void showChangeLog(QString const title, QString const versionString);
-	void showEvent(QShowEvent* event) override;
-	void closeEvent(QCloseEvent* event) override;
+	virtual void showEvent(QShowEvent* event) override;
+	virtual void closeEvent(QCloseEvent* event) override;
+	virtual void dragEnterEvent(QDragEnterEvent* event) override;
+	virtual void dropEvent(QDropEvent* event) override;
+	void updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename);
 
-private:
-	qt::toolkit::ComboBox _protocolComboBox{ this };
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
+
+	// Private memberes
 	qt::toolkit::ComboBox _interfaceComboBox{ this };
-	qt::toolkit::MaterialButton _refreshControllerButton{ "refresh", this };
+	NetworkInterfaceModel _networkInterfaceModel{ this };
+	QSortFilterProxyModel _networkInterfaceModelProxy{ this };
+	qt::toolkit::material::Button _refreshControllerButton{ "refresh", this };
 	QLabel _controllerEntityIDLabel{ this };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };

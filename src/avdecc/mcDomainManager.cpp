@@ -116,7 +116,7 @@ private:
 	/**
 	* Handles the change of a clock source on a stream connection. Checks if the stream is a clock stream and if so emits the mediaClockConnectionsUpdate signal.
 	*/
-	Q_SLOT void onStreamConnectionChanged(la::avdecc::controller::model::StreamConnectionState const& streamConnectionState)
+	Q_SLOT void onStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
 	{
 		auto affectsMcMaster = false;
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -1358,9 +1358,9 @@ private:
 	/**
 	* Iterates over the list of known entities and returns all connections that originate from the given talker.
 	*/
-	std::vector<la::avdecc::controller::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier talkerEntityId)
+	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier talkerEntityId)
 	{
-		std::vector<la::avdecc::controller::model::StreamConnectionState> disconnectedStreams;
+		std::vector<la::avdecc::entity::model::StreamConnectionState> disconnectedStreams;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{
@@ -1397,9 +1397,9 @@ private:
 	/**
 	* Gets all entities that have stream connection to the given listener entity.
 	*/
-	std::vector<la::avdecc::controller::model::StreamConnectionState> getAllStreamInputConnections(la::avdecc::UniqueIdentifier targetEntityId)
+	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamInputConnections(la::avdecc::UniqueIdentifier targetEntityId)
 	{
-		std::vector<la::avdecc::controller::model::StreamConnectionState> streamsToDisconnect;
+		std::vector<la::avdecc::entity::model::StreamConnectionState> streamsToDisconnect;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 
 		auto const controlledEntity = manager.getControlledEntity(targetEntityId);
@@ -1419,7 +1419,7 @@ private:
 					if (streamInputDynModel)
 					{
 						auto connectionState = streamInputDynModel->connectionState;
-						if (connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected)
+						if (connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
 						{
 							streamsToDisconnect.push_back(connectionState);
 						}
@@ -1438,7 +1438,7 @@ private:
 	* @param entityId The id of the entity to disconnect the streams from.
 	* @return A list of all streams that were disconnected.
 	*/
-	std::vector<AsyncParallelCommandSet::AsyncCommand> removeAllStreamOutputConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::controller::model::StreamConnectionState> const& connections)
+	std::vector<AsyncParallelCommandSet::AsyncCommand> removeAllStreamOutputConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
 	{
 		std::vector<AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1500,7 +1500,7 @@ private:
 	* @param entityId The id of the entity to disconnect the streams from.
 	* @return A list of all streams that were disconnected.
 	*/
-	std::vector<AsyncParallelCommandSet::AsyncCommand> removeAllStreamInputConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::controller::model::StreamConnectionState> const& connections)
+	std::vector<AsyncParallelCommandSet::AsyncCommand> removeAllStreamInputConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
 	{
 		std::vector<AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1611,7 +1611,7 @@ private:
 	* @param entityId The id of the entity to connect the streams from.
 	* @param A list of all streams that shall be connected.
 	*/
-	std::vector<AsyncParallelCommandSet::AsyncCommand> restoreOutputStreamConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::controller::model::StreamConnectionState> const& connections)
+	std::vector<AsyncParallelCommandSet::AsyncCommand> restoreOutputStreamConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
 	{
 		std::vector<AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1673,7 +1673,7 @@ private:
 	* @param entityId The id of the entity to connect the streams from.
 	* @param A list of all streams that shall be connected.
 	*/
-	std::vector<AsyncParallelCommandSet::AsyncCommand> restoreInputStreamConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::controller::model::StreamConnectionState> const& connections)
+	std::vector<AsyncParallelCommandSet::AsyncCommand> restoreInputStreamConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
 	{
 		std::vector<AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();

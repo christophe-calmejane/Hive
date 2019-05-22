@@ -33,10 +33,10 @@
 class EntityCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	EntityCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::EntityCounters const& counters, QTreeWidget* parent = nullptr);
+	EntityCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::EntityCounters const& counters, QTreeWidget* parent = nullptr);
 
 private:
-	void updateCounters(la::avdecc::controller::model::EntityCounters const& counters);
+	void updateCounters(la::avdecc::entity::model::EntityCounters const& counters);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 

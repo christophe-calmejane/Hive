@@ -24,6 +24,9 @@
 #include <la/avdecc/controller/avdeccController.hpp>
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
+#include "toolkit/material/colorPalette.hpp"
+
+Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
 class SettingsDialogImpl final : public Ui::SettingsDialog
 {
@@ -34,29 +37,50 @@ public:
 		setupUi(parent);
 
 		// Initialize settings (blocking signals)
+		loadGeneralSettings();
+		loadControllerSettings();
+		loadNetworkSettings();
+	}
+
+private:
+	void loadGeneralSettings()
+	{
 		auto& settings = settings::SettingsManager::getInstance();
 
 		// Automatic PNG Download
 		{
-			QSignalBlocker lock(automaticPNGDownloadCheckBox);
+			auto const lock = QSignalBlocker{ automaticPNGDownloadCheckBox };
 			automaticPNGDownloadCheckBox->setChecked(settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool());
 		}
 
 		// Transpose Connection Matrix
 		{
-			QSignalBlocker lock(transposeConnectionMatrixCheckBox);
+			auto const lock = QSignalBlocker{ transposeConnectionMatrixCheckBox };
 			transposeConnectionMatrixCheckBox->setChecked(settings.getValue(settings::TransposeConnectionMatrix.name).toBool());
 		}
 
 		// Automatic Check For Updates
 		{
-			QSignalBlocker lock(automaticCheckForUpdatesCheckBox);
+			auto const lock = QSignalBlocker{ automaticCheckForUpdatesCheckBox };
 			automaticCheckForUpdatesCheckBox->setChecked(settings.getValue(settings::AutomaticCheckForUpdates.name).toBool());
 		}
 
+		// Theme Color
+		{
+			auto const lock = QSignalBlocker{ themeColorComboBox };
+			themeColorComboBox->setModel(&_themeColorModel);
+			themeColorComboBox->setModelColumn(_themeColorModel.index(qt::toolkit::material::color::DefaultShade));
+			themeColorComboBox->setCurrentIndex(settings.getValue(settings::ThemeColorIndex.name).toInt());
+		}
+	}
+
+	void loadControllerSettings()
+	{
+		auto& settings = settings::SettingsManager::getInstance();
+
 		// Check For Beta Updates
 		{
-			QSignalBlocker lock(checkForBetaVersionsCheckBox);
+			auto const lock = QSignalBlocker{ checkForBetaVersionsCheckBox };
 			checkForBetaVersionsCheckBox->setChecked(settings.getValue(settings::CheckForBetaVersions.name).toBool());
 			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
 			checkForBetaVersionsLabel->setEnabled(enabled);
@@ -65,10 +89,48 @@ public:
 
 		// AEM Cache
 		{
-			QSignalBlocker lock(enableAEMCacheCheckBox);
+			auto const lock = QSignalBlocker{ enableAEMCacheCheckBox };
 			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::AemCacheEnabled.name).toBool());
 		}
 	}
+
+	void loadNetworkSettings()
+	{
+		auto& settings = settings::SettingsManager::getInstance();
+
+		// Protocol Interface
+		{
+			auto const lock = QSignalBlocker{ protocolComboBox };
+			populateProtocolComboBox();
+
+			auto const type = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+			auto const index = protocolComboBox->findData(QVariant::fromValue(type));
+			protocolComboBox->setCurrentIndex(index);
+		}
+	}
+
+private:
+	void populateProtocolComboBox()
+	{
+		const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName{
+			{ la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual" },
+		};
+
+		for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
+		{
+#ifndef DEBUG
+			if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
+				continue;
+#endif // !DEBUG
+			protocolComboBox->addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
+		}
+	}
+
+private:
+	qt::toolkit::material::color::Palette _themeColorModel;
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
@@ -118,8 +180,21 @@ void SettingsDialog::on_checkForBetaVersionsCheckBox_toggled(bool checked)
 	settings.setValue(settings::CheckForBetaVersions.name, checked);
 }
 
+void SettingsDialog::on_themeColorComboBox_currentIndexChanged(int index)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ThemeColorIndex.name, index);
+}
+
 void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.setValue(settings::AemCacheEnabled.name, checked);
+}
+
+void SettingsDialog::on_protocolComboBox_currentIndexChanged(int index)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	auto const type = _pImpl->protocolComboBox->currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
+	settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(type));
 }

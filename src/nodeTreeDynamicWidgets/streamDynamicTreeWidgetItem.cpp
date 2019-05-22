@@ -24,7 +24,7 @@
 
 #include <QMenu>
 
-StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent)
+StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::entity::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamType(streamType)
@@ -36,7 +36,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 	auto* currentFormatItem = new QTreeWidgetItem(this);
 	currentFormatItem->setText(0, "Stream Format");
 
-	la::avdecc::controller::model::StreamNodeDynamicModel const* const dynamicModel = inputDynamicModel ? static_cast<decltype(dynamicModel)>(inputDynamicModel) : static_cast<decltype(dynamicModel)>(outputDynamicModel);
+	la::avdecc::entity::model::StreamNodeDynamicModel const* const dynamicModel = inputDynamicModel ? static_cast<decltype(dynamicModel)>(inputDynamicModel) : static_cast<decltype(dynamicModel)>(outputDynamicModel);
 
 	auto* formatComboBox = new StreamFormatComboBox{ _entityID };
 	formatComboBox->setStreamFormats(staticModel->formats);
@@ -150,6 +150,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		auto* item = new QTreeWidgetItem(this);
 		item->setText(0, "Connections");
 		_connections = new QListWidget;
+		_connections->setSelectionMode(QAbstractItemView::NoSelection);
 		parent->setItemWidget(item, 1, _connections);
 
 		// Update info right now
@@ -157,7 +158,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 		// Listen for Connections changed signal
 		connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this,
-			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::controller::model::StreamConnections const& connections)
+			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections)
 			{
 				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
 				{
@@ -216,7 +217,7 @@ void StreamDynamicTreeWidgetItem::updateStreamInfo(la::avdecc::entity::model::St
 	}
 }
 
-void StreamDynamicTreeWidgetItem::updateConnections(la::avdecc::controller::model::StreamConnections const& connections)
+void StreamDynamicTreeWidgetItem::updateConnections(la::avdecc::entity::model::StreamConnections const& connections)
 {
 	_connections->clear();
 
