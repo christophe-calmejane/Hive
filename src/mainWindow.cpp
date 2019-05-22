@@ -33,18 +33,22 @@
 
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 #include "internals/config.hpp"
 
 #include "nodeVisitor.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/material/colorPalette.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "avdecc/mcDomainManager.hpp"
 #include "aboutDialog.hpp"
 #include "settingsDialog.hpp"
+#include "mediaClock/mediaClockManagementDialog.hpp"
 #include "highlightForegroundItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "settingsManager/settings.hpp"
 #include "entityLogoCache.hpp"
+#include "deviceDetailsDialog.hpp"
 
 #include "updater/updater.hpp"
 
@@ -87,6 +91,9 @@ MainWindow::MainWindow(QWidget* parent)
 	connectSignals();
 
 	setAcceptDrops(true);
+
+	// create channel connection manager instance
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 }
 
 void MainWindow::currentControllerChanged()
@@ -221,6 +228,8 @@ void MainWindow::createControllerView()
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), 180);
 }
 
 void MainWindow::initInterfaceComboBox()
@@ -283,6 +292,28 @@ void MainWindow::connectSignals()
 			auto& settings = settings::SettingsManager::getInstance();
 			settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 		});
+
+	connect(controllerTableView, &QTableView::doubleClicked, this,
+		[this](QModelIndex const& index)
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto const entityID = _controllerModel->controlledEntityID(index);
+			auto controlledEntity = manager.getControlledEntity(entityID);
+
+			auto const& entity = controlledEntity->getEntity();
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			{
+				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+				dialog->setControlledEntityID(entityID);
+				dialog->show();
+				connect(dialog, &DeviceDetailsDialog::finished, this,
+					[this, dialog](int result)
+					{
+						dialog->deleteLater();
+					});
+			}
+		});
+
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
@@ -301,6 +332,7 @@ void MainWindow::connectSignals()
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
 				auto* lockAction{ static_cast<QAction*>(nullptr) };
 				auto* unlockAction{ static_cast<QAction*>(nullptr) };
+				auto* deviceView{ static_cast<QAction*>(nullptr) };
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
@@ -350,9 +382,12 @@ void MainWindow::connectSignals()
 
 					menu.addSeparator();
 
-					// Inspect, Logo, ...
+					// Device Details, Inspect, Logo, ...
 					{
-						inspect = menu.addAction("Inspect...");
+						deviceView = menu.addAction("Device Details...");
+					}
+					{
+						inspect = menu.addAction("Inspect Entity Model...");
 					}
 					{
 						getLogo = menu.addAction("Retrieve Entity Logo");
@@ -395,6 +430,17 @@ void MainWindow::connectSignals()
 					else if (action == unlockAction)
 					{
 						manager.unlockEntity(entityID);
+					}
+					else if (action == deviceView)
+					{
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						dialog->setControlledEntityID(entityID);
+						dialog->show();
+						connect(dialog, &DeviceDetailsDialog::finished, this,
+							[this, dialog](int result)
+							{
+								dialog->deleteLater();
+							});
 					}
 					else if (action == inspect)
 					{
@@ -517,6 +563,13 @@ void MainWindow::connectSignals()
 		[this]()
 		{
 			SettingsDialog dialog{ this };
+			dialog.exec();
+		});
+
+	connect(actionMediaClockManagement, &QAction::triggered, this,
+		[this]()
+		{
+			MediaClockManagementDialog dialog{ this };
 			dialog.exec();
 		});
 
