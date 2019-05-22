@@ -525,7 +525,7 @@ public:
 	/**
 	* Updates the transmit table models on stream connection changes.
 	*/
-	Q_SLOT void streamConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& streamIdentification, la::avdecc::controller::model::StreamConnections const&)
+	Q_SLOT void streamConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& streamIdentification, la::avdecc::entity::model::StreamConnections const&)
 	{
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(streamIdentification.entityID);
 

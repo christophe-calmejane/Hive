@@ -28,21 +28,21 @@
 #include <QLabel>
 #include <QHBoxLayout>
 
-#include <toolkit/materialButton.hpp>
+#include "toolkit/material/button.hpp"
 
 class ListenerStreamConnectionWidget : public QWidget
 {
 	Q_OBJECT
 public:
-	ListenerStreamConnectionWidget(la::avdecc::controller::model::StreamConnectionState const& state, QWidget* parent = nullptr);
+	ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamConnectionState const& state, QWidget* parent = nullptr);
 
 private:
 	void updateData();
 
-	la::avdecc::controller::model::StreamConnectionState _state{};
+	la::avdecc::entity::model::StreamConnectionState _state{};
 
 	QHBoxLayout _layout{ this };
 	QLabel _streamConnectionLabel{ this };
 	QLabel _entityNameLabel{ this };
-	qt::toolkit::MaterialButton _disconnectButton{ "block", this };
+	qt::toolkit::material::Button _disconnectButton{ "block", this };
 };

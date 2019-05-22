@@ -19,40 +19,27 @@
 
 #pragma once
 
-#include <QWidget>
-#include <QLayout>
-#include <QPushButton>
-#include <QLineEdit>
+#include <QAbstractListModel>
+#include <QScopedPointer>
 
-namespace connectionMatrix
+// Model for Network Interfaces
+class NetworkInterfaceModelPrivate;
+class NetworkInterfaceModel final : public QAbstractListModel
 {
-class Legend : public QWidget
-{
-	Q_OBJECT
 public:
-	Legend(QWidget* parent = nullptr);
+	NetworkInterfaceModel(QObject* parent = nullptr);
+	virtual ~NetworkInterfaceModel();
 
-	void setTransposed(bool const isTransposed);
-	bool isTransposed() const;
-
-	QString filterText() const;
-
-signals:
-	void filterChanged(QString const& filter);
+	QModelIndex indexOf(std::string const& id) const noexcept;
+	bool isEnabled(QModelIndex const& index) const noexcept;
 
 private:
-	virtual void paintEvent(QPaintEvent*) override;
+	// QAbstractListModel overrides
+	virtual int rowCount(QModelIndex const& parent = {}) const override;
+	virtual QVariant data(QModelIndex const& index, int role) const override;
+	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
 
 private:
-	QGridLayout _layout{ this };
-	QWidget _buttonContainer{ this };
-	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
-	QPushButton _button{ "Show Legend", &_buttonContainer };
-	QLineEdit _searchLineEdit{ &_buttonContainer };
-	QWidget _horizontalPlaceholder{ this };
-	QWidget _verticalPlaceholder{ this };
-	bool _isTransposed{ false };
+	QScopedPointer<NetworkInterfaceModelPrivate> const d_ptr;
+	Q_DECLARE_PRIVATE(NetworkInterfaceModel);
 };
-
-
-} // namespace connectionMatrix

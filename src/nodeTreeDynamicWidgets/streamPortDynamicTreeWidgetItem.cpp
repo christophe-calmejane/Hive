@@ -339,7 +339,7 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 /* ************************************************************ */
 /* StreamPortDynamicTreeWidgetItem                              */
 /* ************************************************************ */
-StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::controller::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
+StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamPortType(streamPortType)
@@ -357,6 +357,7 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		auto* mappingsItem = new QTreeWidgetItem(this);
 		mappingsItem->setText(0, "Dynamic Mappings");
 		_mappingsList = new QListWidget;
+		_mappingsList->setSelectionMode(QAbstractItemView::NoSelection);
 		parent->setItemWidget(mappingsItem, 1, _mappingsList);
 		try
 		{

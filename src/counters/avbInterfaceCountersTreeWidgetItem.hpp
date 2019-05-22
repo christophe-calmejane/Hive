@@ -33,10 +33,10 @@
 class AvbInterfaceCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	AvbInterfaceCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::model::AvbInterfaceCounters const& counters, QTreeWidget* parent = nullptr);
+	AvbInterfaceCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters, QTreeWidget* parent = nullptr);
 
 private:
-	void updateCounters(la::avdecc::controller::model::AvbInterfaceCounters const& counters);
+	void updateCounters(la::avdecc::entity::model::AvbInterfaceCounters const& counters);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex{ 0u };

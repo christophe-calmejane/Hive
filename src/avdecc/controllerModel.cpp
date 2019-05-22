@@ -25,9 +25,9 @@
 #include "avdecc/mcDomainManager.hpp"
 #include "entityLogoCache.hpp"
 #include "settingsManager/settings.hpp"
+#include "toolkit/material/color.hpp"
 #include <algorithm>
 #include <array>
-#include <QTimer>
 #include <QFont>
 #include <set>
 #include <unordered_map>
@@ -317,7 +317,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 				if (!streamsWithErrorCounter.empty())
 				{
 					// At least one stream contains a counter error
-					return QColor{ Qt::red };
+					return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
 				}
 			}
 		}
@@ -359,7 +359,7 @@ QVariant ControllerModelPrivate::data(QModelIndex const& index, int role) const
 					try
 					{
 						auto const milanInfo = *controlledEntity->getMilanInfo();
-						if ((milanInfo.featuresFlags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
+						if (milanInfo.featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
 						{
 							return _compatibilityImages[4];
 						}

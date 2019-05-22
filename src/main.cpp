@@ -79,13 +79,6 @@ int main(int argc, char* argv[])
 	// Create the Qt Application
 	QApplication app(argc, argv);
 
-	// Load and apply the stylesheet
-	QFile styleFile{ ":/style.qss" };
-	if (styleFile.open(QFile::ReadOnly))
-	{
-		app.setStyleSheet(styleFile.readAll());
-	}
-
 	// Runtime sanity check on Avdecc Library compilation options
 	{
 		auto const options = la::avdecc::getCompileOptions();
@@ -121,6 +114,8 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::TransposeConnectionMatrix);
 	settings.registerSetting(settings::AutomaticCheckForUpdates);
 	settings.registerSetting(settings::CheckForBetaVersions);
+	settings.registerSetting(settings::ThemeColorIndex);
+	settings.registerSetting(settings::ProtocolType);
 	settings.registerSetting(settings::AemCacheEnabled);
 
 	QPixmap logo(":/Logo.png");

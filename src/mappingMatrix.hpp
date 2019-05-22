@@ -130,8 +130,8 @@ public:
 
 			try
 			{
-				item->connectOutput(_outputs.at(outputSlot.first)->outputAt(outputSlot.second));
-				item->connectInput(_inputs.at(inputSlot.first)->inputAt(inputSlot.second));
+				item->connectOutput(_outputs.at(outputSlot.first)->outputAt(static_cast<int>(outputSlot.second)));
+				item->connectInput(_inputs.at(inputSlot.first)->inputAt(static_cast<int>(inputSlot.second)));
 
 				_scene.addItem(item);
 			}

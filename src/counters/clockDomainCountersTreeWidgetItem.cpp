@@ -21,7 +21,7 @@
 
 #include <QMenu>
 
-ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters, QTreeWidget* parent)
+ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _clockDomainIndex(clockDomainIndex)
@@ -52,7 +52,7 @@ ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc:
 
 	// Listen for ClockDomainCountersChanged
 	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainCountersChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::ClockDomainCounters const& counters)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters)
 		{
 			if (entityID == _entityID && clockDomainIndex == _clockDomainIndex)
 			{
@@ -61,7 +61,7 @@ ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc:
 		});
 }
 
-void ClockDomainCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::ClockDomainCounters const& counters)
+void ClockDomainCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model::ClockDomainCounters const& counters)
 {
 	for (auto const counterKV : counters)
 	{
