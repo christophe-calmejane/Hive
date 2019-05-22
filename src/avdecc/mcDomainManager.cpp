@@ -209,28 +209,35 @@ private:
 
 	/**
 	* Gets the media clock master for an entity.
-	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined.
+	* If no mc master is available, the corresponding error is returned in second std:pair element.
+	* If mc is provided via external on the mc master, the ExternalClockSource error is set in addition to mc master id.
+	* @param entityId	The id of the entity for which the mc master is requested.
+	* @return A pair of an entity id and an error. Error identifies if an mc master could be determined (NoError and ExternalClockSource errors do provide a mc master).
 	*/
 	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept override
 	{
+		auto error = McDeterminationError::NoError;
 		auto hasErrorIterator = _currentMCDomainMapping.getEntityMcErrors().find(entityId);
 		if (hasErrorIterator != _currentMCDomainMapping.getEntityMcErrors().end())
 		{
-			return std::make_pair(hasErrorIterator->first, hasErrorIterator->second);
+			// If the entityId delivered mc errors, we only can return immediately in case the error is NOT ExternalClockSource.
+			// In case it is, we need to determine the id of the device that feeds the external clock into the domain as master id.
+			if (hasErrorIterator->second != McDeterminationError::ExternalClockSource)
+				return std::make_pair(hasErrorIterator->first, hasErrorIterator->second);
+			else
+				error = McDeterminationError::ExternalClockSource;
 		}
-		else
+
+		auto entityMcDomainIterator = _currentMCDomainMapping.getEntityMediaClockMasterMappings().find(entityId);
+		if (entityMcDomainIterator != _currentMCDomainMapping.getEntityMediaClockMasterMappings().end())
 		{
-			auto entityMcDomainIterator = _currentMCDomainMapping.getEntityMediaClockMasterMappings().find(entityId);
-			if (entityMcDomainIterator != _currentMCDomainMapping.getEntityMediaClockMasterMappings().end())
+			auto const& associatedDomains = entityMcDomainIterator->second;
+			if (associatedDomains.size() > 0)
 			{
-				auto const& associatedDomains = entityMcDomainIterator->second;
-				if (associatedDomains.size() > 0)
+				auto mediaClockDomainIterator = _currentMCDomainMapping.getMediaClockDomains().find(associatedDomains.at(0));
+				if (mediaClockDomainIterator != _currentMCDomainMapping.getMediaClockDomains().end())
 				{
-					auto mediaClockDomainIterator = _currentMCDomainMapping.getMediaClockDomains().find(associatedDomains.at(0));
-					if (mediaClockDomainIterator != _currentMCDomainMapping.getMediaClockDomains().end())
-					{
-						return std::make_pair(mediaClockDomainIterator->second.getMediaClockDomainMaster(), McDeterminationError::NoError);
-					}
+					return std::make_pair(mediaClockDomainIterator->second.getMediaClockDomainMaster(), error);
 				}
 			}
 		}
@@ -313,7 +320,6 @@ private:
 
 			try
 			{
-				auto const& entityModel = controlledEntity->getEntityNode();
 				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 				auto const activeConfigIndex = configNode.descriptorIndex;
 
@@ -393,7 +399,6 @@ private:
 									keepSearching = false;
 									return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
 								}
-								auto connectedTalkerStreamIndex = clockStreamDynModel->connectionState.talkerStream.streamIndex;
 								if (searchedEntityIds.count(connectedTalker))
 								{
 									// recusion of entity clock stream connections detected
@@ -456,26 +461,27 @@ private:
 
 		for (auto const& entityId : _entities)
 		{
-			if (!isMediaClockDomainManagementCompatible(entityId))
-			{
-				// filter out the entities that do have aem support
-				continue;
-			}
-
 			std::vector<avdecc::mediaClock::DomainIndex> associatedDomains;
 
 			// get mc master if there is one.
 			auto mcMasterIdKV = findMediaClockMaster(entityId);
 			auto const& mcMasterId = mcMasterIdKV.first;
-			auto const& mcMasterError = mcMasterIdKV.second;
+			auto const mcMasterError = mcMasterIdKV.second;
 			if (!mcMasterError)
 			{
 				auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, mcMasterId);
 				associatedDomains.push_back(domainIndex);
 			}
+			else if (mcMasterError == McDeterminationError::ExternalClockSource)
+			{
+				// in case the mc is provided via external input on mc master, we need to do both set the error and determine the mc master id /domain idx
+				auto const domainIndex = getOrCreateDomainIndexForClockMasterId(domains, mcMasterId);
+				associatedDomains.push_back(domainIndex);
+				errors.emplace(entityId, mcMasterError);
+			}
 			else
 			{
-				// errors are stored as well for the getMediaClockMaster method
+				// errors are stored as well for the findMediaClockMaster method
 				errors.emplace(entityId, mcMasterError);
 			}
 
@@ -484,7 +490,7 @@ private:
 				// get secondary mc master if there is one
 				auto secondaryMasterIdKV = findMediaClockMaster(entityId, true);
 				auto const& secondaryMasterId = secondaryMasterIdKV.first;
-				auto const& secondaryMasterError = secondaryMasterIdKV.second;
+				auto const secondaryMasterError = secondaryMasterIdKV.second;
 				if (secondaryMasterId) // check if the id is valid
 				{
 					if (!secondaryMasterError)
@@ -497,13 +503,13 @@ private:
 			mappings.emplace(entityId, associatedDomains);
 		}
 
-		// loop through all domains, than through all entities in that domain to get the domain sample rate.
+		// loop through all domains, then through all entities in that domain to get the domain sample rate.
 		for (auto& domainKV : domains)
 		{
 			std::set<la::avdecc::entity::model::SamplingRate> sampleRates;
 			for (auto const& entityIdKV : mappings)
 			{
-				for (auto const& entityDomainIndex : entityIdKV.second)
+				for (auto const entityDomainIndex : entityIdKV.second)
 				{
 					if (domainKV.second.getDomainIndex() == entityDomainIndex)
 					{
@@ -738,8 +744,15 @@ private:
 		auto configuredClockSourceStreamIndex = getActiveInputClockStreamIndex(entityId);
 		if (configuredClockSourceStreamIndex)
 		{
-			auto hasSingleInputStream = (activeConfiguration.streamInputs.size() == 1);
+			auto hasSingleNonredundantInputStream = (activeConfiguration.streamInputs.size() == 1 && activeConfiguration.redundantStreamInputs.empty());
+			auto hasSingleRedundantInputStream = (activeConfiguration.redundantStreamInputs.size() == 1 && activeConfiguration.streamInputs.size() == 2);
+
+			// A 'single input stream entity' can either have one redundant and no nonredundant or no redundant an one nonredundant input stream
+			auto hasSingleInputStream = hasSingleNonredundantInputStream || hasSingleRedundantInputStream;
+
+			// For both redundant and non redundant entities, the streamInputs map contains all streams that can potentially be used as clock source.
 			auto usesStreamInputAsClock = (activeConfiguration.streamInputs.count(*configuredClockSourceStreamIndex));
+
 			return !hasSingleInputStream || !usesStreamInputAsClock;
 		}
 
@@ -771,7 +784,7 @@ private:
 				}
 			}
 		}
-		else if (sizeOldDomainIndexes == 0 && sizeNewDomainIndexes > 0 || sizeOldDomainIndexes > 0 && sizeNewDomainIndexes == 0)
+		else if ((sizeOldDomainIndexes == 0 && sizeNewDomainIndexes > 0) || (sizeOldDomainIndexes > 0 && sizeNewDomainIndexes == 0))
 		{
 			// if one of the lists is empty while the other isn't we have a change on the mc master. (Indeterminable -> ID or vice versa)
 			return true;
@@ -1752,7 +1765,6 @@ private:
 		for (auto const& entityDomainKV : currentMCDomainMapping.getEntityMediaClockMasterMappings())
 		{
 			auto const entityId = entityDomainKV.first;
-			auto const& domainIdxs = entityDomainKV.second;
 			auto const oldDomainIndexesIterator = previousMCMasterMappings.find(entityId);
 			if (oldDomainIndexesIterator != previousMCMasterMappings.end())
 			{
@@ -1760,7 +1772,7 @@ private:
 				{
 					changes.push_back(entityId);
 				}
-				else if (previousErrors.count(entityId) > 0 && currentErrors.count(entityId) > 0 && previousErrors.at(entityId) != currentErrors.at(entityId) || previousErrors.count(entityId) != currentErrors.count(entityId))
+				else if ((previousErrors.count(entityId) > 0 && currentErrors.count(entityId) > 0 && previousErrors.at(entityId) != currentErrors.at(entityId)) || previousErrors.count(entityId) != currentErrors.count(entityId))
 				{
 					// if the error type changed add the entity to the changes list as well.
 					changes.push_back(entityId);
