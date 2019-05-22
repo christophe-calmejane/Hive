@@ -308,13 +308,12 @@ oldIFS="$IFS"
 IFS='.' read -a versionSplit <<< "$hiveVersion"
 IFS="$oldIFS"
 
-if [ ${#versionSplit[*]} -eq 4 ]; then
-	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc-local")
-	echo "Development version, using local avdecc copy"
-else
-	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc")
-	echo "Release version, using offical avdecc"
+# Check for legacy 'avdecc-local' folder
+if [ -d "3rdparty/avdecc-local" ]; then
+	echo "Legacy '3rdparty/avdecc-local' no longer used, please remove this folder/link"
+	exit 1
 fi
+add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc")
 
 if isWindows; then
 	qtBasePath="c:/Qt/${qtVersion}"

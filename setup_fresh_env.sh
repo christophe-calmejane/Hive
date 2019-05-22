@@ -59,40 +59,6 @@ setupEnv()
 	fi
 	echo "done"
   
-	echo -n "Creating symbolic link for dev branch... "
-	local osName
-	getOS osName
-	if [[ $osName = win ]];
-	then
-		local absPath
-		getFolderAbsoluteOSDependantPath absPath "3rdparty/"
-		local cmdParam="/C"
-		if [[ $OSTYPE = msys ]];
-		then
-			cmdParam="//C" # We have to escape /C or msys will convert it to c:
-		fi
-		local log=$(cmd $cmdParam "mklink /J ${absPath}avdecc-local ${absPath}avdecc" 2>&1)
-		if [ $? -ne 0 ];
-		then
-			echo "failed!"
-			echo ""
-			echo "Error log:"
-			echo $log
-			exit 1
-		fi
-	else
-		local log=$(ln -sf 3rdparty/avdecc 3rdparty/avdecc-local 2>&1)
-		if [ $? -ne 0 ];
-		then
-			echo "failed!"
-			echo ""
-			echo "Error log:"
-			echo $log
-			exit 1
-		fi
-	fi
-	echo "done (feel free to change created '3rdparty/avdecc-local' symlink to something custom)"
-	
 	echo -n "Downloading WinPcap Developer's Pack... "
 	local result
 	result=$(which wget 2>&1)
