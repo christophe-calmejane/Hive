@@ -91,6 +91,7 @@ MainWindow::MainWindow(QWidget* parent)
 	connectSignals();
 
 	setAcceptDrops(true);
+
 	// create channel connection manager instance
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 }
@@ -227,6 +228,8 @@ void MainWindow::createControllerView()
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), 80);
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), 90);
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), 160);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), 180);
 }
 
 void MainWindow::initInterfaceComboBox()

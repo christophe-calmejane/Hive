@@ -35,7 +35,6 @@
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
-
 namespace avdecc
 {
 class ControllerModelPrivate : public QObject, private settings::SettingsManager::Observer
