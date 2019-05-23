@@ -68,32 +68,112 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
-MainWindow::MainWindow(Defaults const& defaults, QWidget* parent)
+MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
 	, _controllerModel(new avdecc::ControllerModel(this))
 {
+	// Setup common UI
 	setupUi(this);
 
 	// Set title
 	setWindowTitle(hive::internals::applicationLongName + " - Version " + QCoreApplication::applicationVersion());
 
+	// Register all Qt metatypes
 	registerMetaTypes();
 
+	// Setup the current profile
+	setupProfile();
+}
+
+void MainWindow::setupAdvancedView(Defaults const& defaults)
+{
+	// Create "view" sub-menu
 	createViewMenu();
+
+	// Create the main toolbar
 	createMainToolBar();
 
+	// Create the ControllerView widget
 	createControllerView();
 
+	// Initialize the Interface ComboBox
 	initInterfaceComboBox();
 
-	loadSettings(defaults);
+	// Initialize UI defaults
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), !defaults.controllerTableView_EntityLogo_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), !defaults.controllerTableView_Compatibility_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), !defaults.controllerTableView_Name_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), !defaults.controllerTableView_Group_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), !defaults.controllerTableView_AcquireState_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), !defaults.controllerTableView_LockState_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterId), !defaults.controllerTableView_GrandmasterID_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), !defaults.controllerTableView_GptpDomain_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), !defaults.controllerTableView_InterfaceIndex_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), !defaults.controllerTableView_AssociationID_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), !defaults.controllerTableView_MediaClockMasterID_Visible);
+	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), !defaults.controllerTableView_MediaClockMasterName_Visible);
 
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), defaults.ColumnWidth_Logo);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), defaults.ColumnWidth_Compatibility);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), defaults.ColumnWidth_UniqueIdentifier);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), defaults.ColumnWidth_Name);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), defaults.ColumnWidth_Group);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), defaults.ColumnWidth_ExclusiveAccessState);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), defaults.ColumnWidth_ExclusiveAccessState);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterId), defaults.ColumnWidth_UniqueIdentifier);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), defaults.ColumnWidth_GPTPDomain);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), defaults.ColumnWidth_InterfaceIndex);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), defaults.ColumnWidth_UniqueIdentifier);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), defaults.ColumnWidth_UniqueIdentifier);
+	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults.ColumnWidth_Name);
+
+	mainToolBar->setVisible(defaults.mainWindow_Toolbar_Visible);
+	entityInspectorDockWidget->setVisible(defaults.mainWindow_Inspector_Visible);
+	loggerDockWidget->setVisible(defaults.mainWindow_Logger_Visible);
+
+	// Load settings, overriding defaults
+	loadSettings();
+
+	// Connect all signals
 	connectSignals();
 
+	// Register AcceptDrops so we can drop VirtualEntities as JSON
 	setAcceptDrops(true);
 
-	// create channel connection manager instance
-	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+	// Create channel connection manager instance
+	avdecc::ChannelConnectionManager::getInstance();
+}
+
+void MainWindow::setupStandardProfile()
+{
+	setupAdvancedView(Defaults{ true, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
+}
+
+void MainWindow::setupDeveloperProfile()
+{
+	setupAdvancedView(Defaults{});
+}
+
+void MainWindow::setupProfile()
+{
+	// Update the UI and other stuff, based on the current Profile
+	auto& settings = settings::SettingsManager::getInstance();
+
+	auto const userProfile = settings.getValue(settings::UserProfile.name).value<profiles::ProfileType>();
+
+	switch (userProfile)
+	{
+		case profiles::ProfileType::None:
+		default:
+			AVDECC_ASSERT(false, "No profile selected");
+			[[fallthrough]];
+		case profiles::ProfileType::Standard:
+			setupStandardProfile();
+			break;
+		case profiles::ProfileType::Developer:
+			setupDeveloperProfile();
+			break;
+	}
 }
 
 void MainWindow::currentControllerChanged()
@@ -227,41 +307,8 @@ void MainWindow::initInterfaceComboBox()
 	_interfaceComboBox.setModel(&_networkInterfaceModelProxy);
 }
 
-void MainWindow::loadSettings(Defaults const& defaults)
+void MainWindow::loadSettings()
 {
-	// First initialize defaults
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), !defaults.controllerTableView_EntityLogo_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), !defaults.controllerTableView_Compatibility_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), !defaults.controllerTableView_Name_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), !defaults.controllerTableView_Group_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), !defaults.controllerTableView_AcquireState_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), !defaults.controllerTableView_LockState_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterId), !defaults.controllerTableView_GrandmasterID_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), !defaults.controllerTableView_GptpDomain_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), !defaults.controllerTableView_InterfaceIndex_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), !defaults.controllerTableView_AssociationID_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), !defaults.controllerTableView_MediaClockMasterID_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), !defaults.controllerTableView_MediaClockMasterName_Visible);
-
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), defaults.ColumnWidth_Logo);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), defaults.ColumnWidth_Compatibility);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), defaults.ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), defaults.ColumnWidth_Name);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), defaults.ColumnWidth_Group);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), defaults.ColumnWidth_ExclusiveAccessState);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), defaults.ColumnWidth_ExclusiveAccessState);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterId), defaults.ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), defaults.ColumnWidth_GPTPDomain);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), defaults.ColumnWidth_InterfaceIndex);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationId), defaults.ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), defaults.ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults.ColumnWidth_Name);
-
-	mainToolBar->setVisible(defaults.mainWindow_Toolbar_Visible);
-	entityInspectorDockWidget->setVisible(defaults.mainWindow_Inspector_Visible);
-	loggerDockWidget->setVisible(defaults.mainWindow_Logger_Visible);
-
-	// Load settings, overriding defaults
 	auto& settings = settings::SettingsManager::getInstance();
 
 	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());

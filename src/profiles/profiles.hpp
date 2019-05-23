@@ -19,25 +19,18 @@
 
 #pragma once
 
-#include <QGridLayout>
-#include <QFrame>
-#include <QLabel>
+#include <QMetaType>
 
-class ProfileWidget : public QFrame
+namespace profiles
 {
-	Q_OBJECT
-public:
-	ProfileWidget(QString const& title, QString const& description, QString const& icon, QWidget* parent = nullptr);
+enum class ProfileType
+{
+	None = 0,
+	Standard = 1,
+	Developer = 2,
 
-signals:
-	void clicked();
-
-protected:
-	virtual void mousePressEvent(QMouseEvent* event) override;
-
-private:
-	QGridLayout _layout{ this };
-	QLabel _title{ this };
-	QLabel _description{ this };
-	QLabel _icon{ this };
+	Default = Standard
 };
+} // namespace profiles
+
+Q_DECLARE_METATYPE(profiles::ProfileType)

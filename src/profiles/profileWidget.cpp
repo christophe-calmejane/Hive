@@ -17,8 +17,10 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "profileSelection/profileWidget.hpp"
+#include "profileWidget.hpp"
 
+namespace profiles
+{
 ProfileWidget::ProfileWidget(QString const& title, QString const& description, QString const& icon, QWidget* parent)
 	: QFrame{ parent }
 {
@@ -45,8 +47,9 @@ ProfileWidget::ProfileWidget(QString const& title, QString const& description, Q
 	)");
 }
 
-void ProfileWidget::mousePressEvent(QMouseEvent* event)
+void ProfileWidget::mouseReleaseEvent(QMouseEvent* event)
 {
 	emit clicked();
-	QWidget::mousePressEvent(event);
+	QWidget::mouseReleaseEvent(event);
 }
+} // namespace profiles

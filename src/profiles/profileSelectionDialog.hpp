@@ -18,3 +18,31 @@
 */
 
 #pragma once
+
+#include <QDialog>
+#include <QGridLayout>
+#include <QSignalMapper>
+
+#include "profiles.hpp"
+
+namespace profiles
+{
+class ProfileWidget;
+
+class ProfileSelectionDialog : public QDialog
+{
+	Q_OBJECT
+public:
+	ProfileSelectionDialog(QWidget* parent = nullptr);
+
+	ProfileType selectedProfile() const;
+
+private Q_SLOTS:
+	void onProfileSelected(int profile);
+
+private:
+	QGridLayout _layout{ this };
+	ProfileType _selectedProfile{ ProfileType::Default };
+	QSignalMapper _signalMapper{};
+};
+} // namespace profiles

@@ -19,33 +19,28 @@
 
 #pragma once
 
-#include <QDialog>
 #include <QGridLayout>
-#include <QSignalMapper>
+#include <QFrame>
+#include <QLabel>
 
-class ProfileWidget;
-
-class ProfileSelectionDialog : public QDialog
+namespace profiles
+{
+class ProfileWidget : public QFrame
 {
 	Q_OBJECT
 public:
-	enum class Profile
-	{
-		Standard,
-		Developer,
+	ProfileWidget(QString const& title, QString const& description, QString const& icon, QWidget* parent = nullptr);
 
-		Default = Standard,
-	};
+signals:
+	void clicked();
 
-	ProfileSelectionDialog(QWidget* parent = nullptr);
-
-	Profile selectedProfile() const;
-
-private Q_SLOTS:
-	void onProfileSelected(int profile);
+protected:
+	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
 	QGridLayout _layout{ this };
-	Profile _selectedProfile{ Profile::Default };
-	QSignalMapper _signalMapper{};
+	QLabel _title{ this };
+	QLabel _description{ this };
+	QLabel _icon{ this };
 };
+} // namespace profiles

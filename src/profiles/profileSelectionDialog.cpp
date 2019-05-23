@@ -17,11 +17,13 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "profileSelection/profileSelectionDialog.hpp"
-#include "profileSelection/profileWidget.hpp"
+#include "profileSelectionDialog.hpp"
+#include "profileWidget.hpp"
 
 #include <QApplication>
 
+namespace profiles
+{
 ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
 	: QDialog(parent)
 {
@@ -31,7 +33,7 @@ ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
 	// Handle profile widget mapping
 	connect(&_signalMapper, SIGNAL(mapped(int)), this, SLOT(onProfileSelected(int)));
 
-	auto const addProfile = [this](QString const& title, QString const& description, QString const& icon, Profile const profile)
+	auto const addProfile = [this](QString const& title, QString const& description, QString const& icon, ProfileType const profile)
 	{
 		auto* widget = new ProfileWidget{ title, description, icon, this };
 		_layout.addWidget(widget);
@@ -41,17 +43,18 @@ ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
 	};
 
 	// Describe and add profiles
-	addProfile("Standard", "Standard profile description", "face", Profile::Standard);
-	addProfile("Developer", "Developer user profile description", "bug_report", Profile::Developer);
+	addProfile("Standard", "Standard profile description", "face", ProfileType::Standard);
+	addProfile("Developer", "Developer profile description", "bug_report", ProfileType::Developer);
 }
 
-ProfileSelectionDialog::Profile ProfileSelectionDialog::selectedProfile() const
+ProfileType ProfileSelectionDialog::selectedProfile() const
 {
 	return _selectedProfile;
 }
 
 void ProfileSelectionDialog::onProfileSelected(int profile)
 {
-	_selectedProfile = static_cast<Profile>(profile);
+	_selectedProfile = static_cast<ProfileType>(profile);
 	accept();
 }
+} // namespace profiles

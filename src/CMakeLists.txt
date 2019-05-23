@@ -355,9 +355,9 @@ set(COMMON_HEADER_FILES
 	nodeVisitor.hpp
 	painterHelper.hpp
 	settingsManager/settingsManager.hpp
-	profileSelection/profileDefaults.hpp
-	profileSelection/profileSelectionDialog.hpp
-	profileSelection/profileWidget.hpp
+	profiles/profiles.hpp
+	profiles/profileSelectionDialog.hpp
+	profiles/profileWidget.hpp
 )
 
 # Common source files
@@ -373,8 +373,8 @@ set(COMMON_SOURCE_FILES
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	painterHelper.cpp
-	profileSelection/profileSelectionDialog.cpp
-	profileSelection/profileWidget.cpp
+	profiles/profileSelectionDialog.cpp
+	profiles/profileWidget.cpp
 )
 
 # Group sources

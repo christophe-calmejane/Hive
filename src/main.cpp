@@ -32,7 +32,7 @@
 #include "avdecc/controllerManager.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
-#include "profileSelection/profileSelectionDialog.hpp"
+#include "profiles/profileSelectionDialog.hpp"
 
 #ifdef DEBUG
 #	define SPLASH_DELAY 0
@@ -123,13 +123,17 @@ int main(int argc, char* argv[])
 	// https://material.io/icons/
 	QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf");
 
-	ProfileSelectionDialog profileSelectionDialog;
-	profileSelectionDialog.exec();
+	// Read saved profile
+	auto const userProfile = settings.getValue(settings::UserProfile.name).value<profiles::ProfileType>();
 
-	auto const profile = profileSelectionDialog.selectedProfile();
-
-	return 0;
-
+	// First time launch, ask the user to choose a profile
+	if (userProfile == profiles::ProfileType::None)
+	{
+		auto profileSelectionDialog = profiles::ProfileSelectionDialog{};
+		profileSelectionDialog.exec();
+		auto const profile = profileSelectionDialog.selectedProfile();
+		settings.setValue(settings::UserProfile.name, la::avdecc::utils::to_integral(profile));
+	}
 
 	QPixmap logo(":/Logo.png");
 	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);
@@ -140,7 +144,7 @@ int main(int argc, char* argv[])
 	std::chrono::time_point<std::chrono::system_clock> start{ std::chrono::system_clock::now() };
 
 	// Load main window
-	auto window = MainWindow{ Defaults{} };
+	auto window = MainWindow{};
 	//window.show(); // This forces the creation of the window // Don't try to show it, it blinks sometimes (and window.hide() seems to create the window too)
 	window.hide(); // Immediately hides it (even though it was not actually shown since processEvents was not called)
 
