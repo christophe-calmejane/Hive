@@ -32,6 +32,7 @@
 #include "avdecc/controllerManager.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
+#include "profileSelection/profileSelectionDialog.hpp"
 
 #ifdef DEBUG
 #	define SPLASH_DELAY 0
@@ -118,6 +119,18 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::ProtocolType);
 	settings.registerSetting(settings::AemCacheEnabled);
 
+	// Load fonts
+	// https://material.io/icons/
+	QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf");
+
+	ProfileSelectionDialog profileSelectionDialog;
+	profileSelectionDialog.exec();
+
+	auto const profile = profileSelectionDialog.selectedProfile();
+
+	return 0;
+
+
 	QPixmap logo(":/Logo.png");
 	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);
 	splash.show();
@@ -125,10 +138,6 @@ int main(int argc, char* argv[])
 
 	/* Load everything we need */
 	std::chrono::time_point<std::chrono::system_clock> start{ std::chrono::system_clock::now() };
-
-	// Load fonts
-	// https://material.io/icons/
-	QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf");
 
 	// Load main window
 	auto window = MainWindow{ Defaults{} };
