@@ -114,7 +114,7 @@
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <property name="windowTitle">
-    <string>Interface</string>
+    <string>Controller Toolbar</string>
    </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>

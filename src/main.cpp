@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 	QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf");
 
 	// Load main window
-	MainWindow window;
+	auto window = MainWindow{ Defaults{} };
 	//window.show(); // This forces the creation of the window // Don't try to show it, it blinks sometimes (and window.hide() seems to create the window too)
 	window.hide(); // Immediately hides it (even though it was not actually shown since processEvents was not called)
 

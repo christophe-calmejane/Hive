@@ -31,6 +31,37 @@
 #include <QLabel>
 #include <memory>
 
+struct Defaults
+{
+	static constexpr int ColumnWidth_UniqueIdentifier = 160;
+	static constexpr int ColumnWidth_Logo = 60;
+	static constexpr int ColumnWidth_Compatibility = 50;
+	static constexpr int ColumnWidth_Name = 180;
+	static constexpr int ColumnWidth_ExclusiveAccessState = 80;
+	static constexpr int ColumnWidth_Group = 80;
+	static constexpr int ColumnWidth_GPTPDomain = 80;
+	static constexpr int ColumnWidth_InterfaceIndex = 90;
+
+	// MainWindow widgets
+	bool mainWindow_Toolbar_Visible{ true };
+	bool mainWindow_Inspector_Visible{ true };
+	bool mainWindow_Logger_Visible{ true };
+
+	// Controller Table View
+	bool controllerTableView_EntityLogo_Visible{ true };
+	bool controllerTableView_Compatibility_Visible{ true };
+	bool controllerTableView_Name_Visible{ true };
+	bool controllerTableView_Group_Visible{ true };
+	bool controllerTableView_AcquireState_Visible{ true };
+	bool controllerTableView_LockState_Visible{ true };
+	bool controllerTableView_GrandmasterID_Visible{ true };
+	bool controllerTableView_GptpDomain_Visible{ true };
+	bool controllerTableView_InterfaceIndex_Visible{ true };
+	bool controllerTableView_AssociationID_Visible{ true };
+	bool controllerTableView_MediaClockMasterID_Visible{ true };
+	bool controllerTableView_MediaClockMasterName_Visible{ true };
+};
+
 class DynamicHeaderView;
 
 class MainWindow : public QMainWindow, private Ui::MainWindow, private settings::SettingsManager::Observer
@@ -38,7 +69,7 @@ class MainWindow : public QMainWindow, private Ui::MainWindow, private settings:
 	Q_OBJECT
 public:
 	// Constructor
-	MainWindow(QWidget* parent = nullptr);
+	MainWindow(Defaults const& defaults, QWidget* parent = nullptr);
 
 private:
 	// Private Slots
@@ -51,7 +82,7 @@ private:
 	void createMainToolBar();
 	void createControllerView();
 	void initInterfaceComboBox();
-	void loadSettings();
+	void loadSettings(Defaults const& defaults);
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
 	virtual void showEvent(QShowEvent* event) override;
