@@ -104,6 +104,7 @@ private:
 	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ this };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ this };
 	qt::toolkit::material::Button _refreshControllerButton{ "refresh", this };
+	qt::toolkit::material::Button _openMcmdDialogButton{ "schedule", this };
 	QLabel _controllerEntityIDLabel{ this };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };

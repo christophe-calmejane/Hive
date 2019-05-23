@@ -237,6 +237,7 @@ void MainWindow::registerMetaTypes()
 void MainWindow::createViewMenu()
 {
 	menuView->addAction(mainToolBar->toggleViewAction());
+	menuView->addAction(utilitiesToolBar->toggleViewAction());
 	menuView->addSeparator();
 	menuView->addAction(entityInspectorDockWidget->toggleViewAction());
 	menuView->addSeparator();
@@ -251,6 +252,7 @@ void MainWindow::createMainToolBar()
 	_interfaceComboBox.setModel(&_activeNetworkInterfaceModel);
 
 	_refreshControllerButton.setToolTip("Reload Controller");
+	_openMcmdDialogButton.setToolTip("Media Clock Management");
 
 	auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
 	controllerEntityIDLabel->setMinimumWidth(50);
@@ -261,14 +263,15 @@ void MainWindow::createMainToolBar()
 	mainToolBar->addWidget(interfaceLabel);
 	mainToolBar->addWidget(&_interfaceComboBox);
 
-	mainToolBar->addSeparator();
+	utilitiesToolBar->addWidget(&_refreshControllerButton);
+	utilitiesToolBar->addSeparator();
 
-	mainToolBar->addWidget(&_refreshControllerButton);
+	utilitiesToolBar->addWidget(&_openMcmdDialogButton);
 
-	mainToolBar->addSeparator();
+	utilitiesToolBar->addSeparator();
 
-	mainToolBar->addWidget(controllerEntityIDLabel);
-	mainToolBar->addWidget(&_controllerEntityIDLabel);
+	utilitiesToolBar->addWidget(controllerEntityIDLabel);
+	utilitiesToolBar->addWidget(&_controllerEntityIDLabel);
 
 #ifdef Q_OS_MAC
 	// See https://bugreports.qt.io/browse/QTBUG-13635
@@ -347,6 +350,12 @@ void MainWindow::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
+	connect(&_openMcmdDialogButton, &QPushButton::clicked, this,
+		[this]()
+		{
+			MediaClockManagementDialog dialog{ this };
+			dialog.exec();
+		});
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
