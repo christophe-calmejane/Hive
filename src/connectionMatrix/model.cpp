@@ -21,6 +21,7 @@
 #include "connectionMatrix/node.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
+#include "avdecc/hiveLogItems.hpp"
 #include "toolkit/helper.hpp"
 #include <deque>
 #include <vector>
@@ -1447,84 +1448,124 @@ public:
 
 	void handleStreamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
 	{
+		// Event affecting a single stream node (either Input or Output)
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
-			auto* node = talkerStreamNode(entityID, streamIndex);
-			node->setRunning(isRunning);
-			emit talkerHeaderDataChanged(node);
+			if (auto* node = talkerStreamNode(entityID, streamIndex))
+			{
+				node->setRunning(isRunning);
+				talkerHeaderDataChanged(node);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
 		}
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 		{
-			auto* node = listenerStreamNode(entityID, streamIndex);
-			node->setRunning(isRunning);
-			emit listenerHeaderDataChanged(node);
+			if (auto* node = listenerStreamNode(entityID, streamIndex))
+			{
+				node->setRunning(isRunning);
+				listenerHeaderDataChanged(node);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
 		}
 	}
 
 	void handleStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& state)
 	{
+		// Event affecting a single stream intersection, but having repercussion on parent intersection "summary" nodes
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
-		auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex);
-		listener->setStreamConnectionState(state);
-		listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+		if (auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex))
+		{
+			listener->setStreamConnectionState(state);
+			listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+		}
+		else
+		{
+			LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(state.listenerStream.entityID)).arg(state.listenerStream.streamIndex));
+		}
 	}
 
 	void handleStreamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 	{
-		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateLinkStatus };
+		// Event affecting a single stream node (either Input or Output), but having repercussion on parent intersection "summary" nodes
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateFormat };
 
-		if (hasTalker(entityID))
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
-			auto* node = talkerStreamNode(entityID, streamIndex);
-			node->setStreamFormat(streamFormat);
-
-			talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+			if (auto* node = talkerStreamNode(entityID, streamIndex))
+			{
+				node->setStreamFormat(streamFormat);
+				talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
 		}
-
-		if (hasListener(entityID))
+		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 		{
-			auto* node = listenerStreamNode(entityID, streamIndex);
-			node->setStreamFormat(streamFormat);
-
-			listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+			if (auto* node = listenerStreamNode(entityID, streamIndex))
+			{
+				node->setStreamFormat(streamFormat);
+				listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
 		}
 	}
 
 	void handleGptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 	{
+		// Event affecting the whole entity (all streams, Input and Output)
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateGptp };
 
 		if (hasTalker(entityID))
 		{
-			auto* talker = talkerNodeFromEntityID(entityID);
-
-			talker->accept(avbInterfaceIndex,
-				[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
-				{
-					node->setGrandMasterID(grandMasterID);
-					node->setGrandMasterDomain(grandMasterDomain);
-
-					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
-				});
+			if (auto* talker = talkerNodeFromEntityID(entityID))
+			{
+				talker->accept(avbInterfaceIndex,
+					[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
+					{
+						node->setGrandMasterID(grandMasterID);
+						node->setGrandMasterDomain(grandMasterDomain);
+						talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+					});
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::gPTPChanged: Invalid Talker: TalkerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+			}
 		}
 
 		if (hasListener(entityID))
 		{
-			auto* listener = listenerNodeFromEntityID(entityID);
-
-			listener->accept(avbInterfaceIndex,
-				[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
-				{
-					node->setGrandMasterID(grandMasterID);
-					node->setGrandMasterDomain(grandMasterDomain);
-
-					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
-				});
+			if (auto* listener = listenerNodeFromEntityID(entityID))
+			{
+				listener->accept(avbInterfaceIndex,
+					[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
+					{
+						node->setGrandMasterID(grandMasterID);
+						node->setGrandMasterDomain(grandMasterDomain);
+						listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+					});
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::gPTPChanged: Invalid Listener: ListenerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+			}
 		}
 	}
 
 	void handleEntityNameChanged(la::avdecc::UniqueIdentifier const entityID)
 	{
+		// Event affecting the whole entity (but just the entity node as Talker and Listener)
 		try
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
@@ -1535,18 +1576,28 @@ public:
 
 				if (hasTalker(entityID))
 				{
-					auto* node = talkerNodeFromEntityID(entityID);
-					node->setName(name);
-
-					talkerHeaderDataChanged(node);
+					if (auto* node = talkerNodeFromEntityID(entityID))
+					{
+						node->setName(name);
+						talkerHeaderDataChanged(node);
+					}
+					else
+					{
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::EntityNameChanged: Invalid Talker: TalkerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+					}
 				}
 
 				if (hasListener(entityID))
 				{
-					auto* node = listenerNodeFromEntityID(entityID);
-					node->setName(name);
-
-					listenerHeaderDataChanged(node);
+					if (auto* node = listenerNodeFromEntityID(entityID))
+					{
+						node->setName(name);
+						listenerHeaderDataChanged(node);
+					}
+					else
+					{
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::EntityNameChanged: Invalid Listener: ListenerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+					}
 				}
 			}
 		}
@@ -1559,6 +1610,7 @@ public:
 
 	void handleStreamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
 	{
+		// Event affecting a single stream node (either Input or Output)
 		try
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
@@ -1569,19 +1621,29 @@ public:
 				{
 					auto const name = avdecc::helper::outputStreamName(*controlledEntity, streamIndex);
 
-					auto* node = talkerStreamNode(entityID, streamIndex);
-					node->setName(name);
-
-					talkerHeaderDataChanged(node);
+					if (auto* node = talkerStreamNode(entityID, streamIndex))
+					{
+						node->setName(name);
+						talkerHeaderDataChanged(node);
+					}
+					else
+					{
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					}
 				}
 				else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 				{
 					auto const name = avdecc::helper::inputStreamName(*controlledEntity, streamIndex);
 
-					auto* node = listenerStreamNode(entityID, streamIndex);
-					node->setName(name);
-
-					listenerHeaderDataChanged(node);
+					if (auto* node = listenerStreamNode(entityID, streamIndex))
+					{
+						node->setName(name);
+						listenerHeaderDataChanged(node);
+					}
+					else
+					{
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					}
 				}
 			}
 		}
@@ -1594,32 +1656,41 @@ public:
 
 	void handleAvbInterfaceLinkStatusChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
 	{
+		// Event affecting the whole entity (all streams, Input and Output)
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateLinkStatus };
 
 		if (hasTalker(entityID))
 		{
-			auto* talker = talkerNodeFromEntityID(entityID);
-
-			talker->accept(avbInterfaceIndex,
-				[this, linkStatus, dirtyFlags](StreamNode* node)
-				{
-					node->setInterfaceLinkStatus(linkStatus);
-
-					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
-				});
+			if (auto* talker = talkerNodeFromEntityID(entityID))
+			{
+				talker->accept(avbInterfaceIndex,
+					[this, linkStatus, dirtyFlags](StreamNode* node)
+					{
+						node->setInterfaceLinkStatus(linkStatus);
+						talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+					});
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::AvbInterfaceLinkStatusChanged: Invalid Talker: TalkerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+			}
 		}
 
 		if (hasListener(entityID))
 		{
-			auto* listener = listenerNodeFromEntityID(entityID);
-
-			listener->accept(avbInterfaceIndex,
-				[this, linkStatus, dirtyFlags](StreamNode* node)
-				{
-					node->setInterfaceLinkStatus(linkStatus);
-
-					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
-				});
+			if (auto* listener = listenerNodeFromEntityID(entityID))
+			{
+				listener->accept(avbInterfaceIndex,
+					[this, linkStatus, dirtyFlags](StreamNode* node)
+					{
+						node->setInterfaceLinkStatus(linkStatus);
+						listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+					});
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::AvbInterfaceLinkStatusChanged: Invalid Listener: ListenerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+			}
 		}
 	}
 
