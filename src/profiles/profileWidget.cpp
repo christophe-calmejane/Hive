@@ -38,10 +38,10 @@ ProfileWidget::ProfileWidget(QString const& title, QString const& description, Q
 	_icon.setFixedWidth(60);
 
 	setStyleSheet(R"(
-		ProfileWidget {
+		profiles--ProfileWidget {
 			background-color: #ddd;
 		}
-		ProfileWidget:hover {
+		profiles--ProfileWidget:hover {
 			background-color: #ccc;
 		}
 	)");

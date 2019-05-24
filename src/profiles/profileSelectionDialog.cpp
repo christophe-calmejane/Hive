@@ -27,7 +27,7 @@ namespace profiles
 ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(QCoreApplication::applicationName() + " Profile Selection");
+	setWindowTitle("Please Choose The Default User Profile");
 	_layout.setSpacing(20);
 
 	// Handle profile widget mapping
@@ -43,8 +43,8 @@ ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
 	};
 
 	// Describe and add profiles
-	addProfile("Standard", "Standard profile description", "face", ProfileType::Standard);
-	addProfile("Developer", "Developer profile description", "bug_report", ProfileType::Developer);
+	addProfile("Standard (Default)", "Intended for standard users, application engineers.\nChoose this if in doubt.", "face", ProfileType::Standard);
+	addProfile("Advanced", "Intended for advanced users and developers.", "school", ProfileType::Developer);
 }
 
 ProfileType ProfileSelectionDialog::selectedProfile() const
