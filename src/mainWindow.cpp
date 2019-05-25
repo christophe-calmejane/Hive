@@ -804,7 +804,8 @@ void MainWindow::showEvent(QShowEvent* event)
 				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
 				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
 
-				if (lastVersion == hive::internals::cmakeVersionString)
+				// Do not show the ChangeLog during first ever launch, or if the last launched version is the same than current one
+				if (lastVersion.isEmpty() || lastVersion == hive::internals::cmakeVersionString)
 					return;
 
 				// Postpone the dialog creation
