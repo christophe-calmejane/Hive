@@ -209,7 +209,7 @@ set(DEVICE_DETAILS_DIALOG_HEADER_FILES
 	deviceDetailsChannelTableModel.hpp
 )
 
-# Device view  source files
+# Device view source files
 set(DEVICE_DETAILS_DIALOG_SOURCE_FILES
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
@@ -355,6 +355,9 @@ set(COMMON_HEADER_FILES
 	nodeVisitor.hpp
 	painterHelper.hpp
 	settingsManager/settingsManager.hpp
+	profiles/profiles.hpp
+	profiles/profileSelectionDialog.hpp
+	profiles/profileWidget.hpp
 )
 
 # Common source files
@@ -370,6 +373,8 @@ set(COMMON_SOURCE_FILES
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	painterHelper.cpp
+	profiles/profileSelectionDialog.cpp
+	profiles/profileWidget.cpp
 )
 
 # Group sources

@@ -20,6 +20,7 @@
 #pragma once
 
 #include "settingsManager.hpp"
+#include "profiles/profiles.hpp"
 #include "toolkit/material/colorPalette.hpp"
 #include <la/avdecc/internals/protocolInterface.hpp>
 #include <la/avdecc/utils.hpp>
@@ -27,7 +28,8 @@
 namespace settings
 {
 // Settings with a default initial value
-static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVersion", "1.0.0.0" };
+static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVersion", "" };
+static SettingsManager::SettingDefault UserProfile = { "userProfile", la::avdecc::utils::to_integral(profiles::ProfileType::None) };
 
 // General settings
 static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
