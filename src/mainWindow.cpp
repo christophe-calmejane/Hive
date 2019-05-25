@@ -776,6 +776,8 @@ void MainWindow::showEvent(QShowEvent* event)
 	std::call_once(once,
 		[this]()
 		{
+			auto& settings = settings::SettingsManager::getInstance();
+
 			// Time to check for new version
 			{
 				auto& updater = Updater::getInstance();
@@ -784,9 +786,21 @@ void MainWindow::showEvent(QShowEvent* event)
 					updater.checkForNewVersion();
 				}
 			}
+			// Check if we have a network interface selected
+			{
+				auto const interfaceID = _interfaceComboBox.currentData().toString();
+				if (interfaceID.isEmpty())
+				{
+					// Postpone the dialog creation
+					QTimer::singleShot(0,
+						[this]()
+						{
+							QMessageBox::warning(this, "", "No Network Interface selected.\nPlease choose one in the Toolbar.");
+						});
+				}
+			}
 			// Check if this is the first time we launch a new Hive version
 			{
-				auto& settings = settings::SettingsManager::getInstance();
 				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
 				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
 
