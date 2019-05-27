@@ -17,8 +17,8 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "abstracttreeitem.hpp"
-#include "domaintreeitem.hpp"
+#include "abstractTreeItem.hpp"
+#include "domainTreeItem.hpp"
 #include "entityTreeItem.hpp"
 
 /**

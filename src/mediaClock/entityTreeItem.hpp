@@ -22,7 +22,7 @@
 #include <QList>
 #include <QVariant>
 
-#include "abstracttreeitem.hpp"
+#include "abstractTreeItem.hpp"
 #include "avdecc/mcDomainManager.hpp"
 
 // **************************************************************

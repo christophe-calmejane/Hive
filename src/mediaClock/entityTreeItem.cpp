@@ -17,7 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "entitytreeitem.hpp"
+#include "entityTreeItem.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "la/avdecc/utils.hpp"
