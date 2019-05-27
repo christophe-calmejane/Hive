@@ -23,7 +23,7 @@
 #include <QVariant>
 #include <QStringList>
 
-#include "abstracttreeitem.hpp"
+#include "abstractTreeItem.hpp"
 #include "avdecc/mcDomainManager.hpp"
 
 class EntityTreeItem;
