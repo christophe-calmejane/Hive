@@ -407,6 +407,8 @@ source_group("Source Files" FILES ${COMMON_SOURCE_FILES})
 source_group("Source Files\\Firmware Upload Dialog" FILES ${FIRMWARE_UPLOAD_DIALOG_SOURCE_FILES})
 source_group("Source Files\\Counters" FILES ${COUNTERS_SOURCE_FILES})
 
+cmake_policy(SET CMP0076 OLD)
+
 # Executable creation
 target_sources(${PROJECT_NAME} PUBLIC
 	${RESOURCE_FILES}
