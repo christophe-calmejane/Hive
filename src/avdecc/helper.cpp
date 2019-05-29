@@ -19,6 +19,7 @@
 
 #include "helper.hpp"
 #include "controllerManager.hpp"
+#include "toolkit/material/helper.hpp"
 #include <la/avdecc/utils.hpp>
 #include <cctype>
 
@@ -818,6 +819,35 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 
 	// If not found, convert to hex string
 	return toHexQString(entityID.getVendorID<std::uint32_t>(), true, true);
+}
+
+QIcon interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept
+{
+	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QIcon> s_icon;
+
+	auto const it = s_icon.find(type);
+	if (it == std::end(s_icon))
+	{
+		auto what = QString{};
+
+		switch (type)
+		{
+			case la::avdecc::networkInterface::Interface::Type::Ethernet:
+				what = "settings_ethernet";
+				break;
+			case la::avdecc::networkInterface::Interface::Type::WiFi:
+				what = "wifi";
+				break;
+			default:
+				AVDECC_ASSERT(false, "Unhandled type");
+				what = "error_outline";
+				break;
+		}
+
+		s_icon[type] = qt::toolkit::material::helper::generateIcon(what);
+	}
+
+	return s_icon[type];
 }
 
 } // namespace helper

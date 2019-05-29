@@ -23,25 +23,25 @@
 #include <QScopedPointer>
 #include <la/avdecc/networkInterfaceHelper.hpp>
 
-// Model for Network Interfaces
-class NetworkInterfaceModelPrivate;
-class NetworkInterfaceModel final : public QAbstractListModel
+// Model for Network Interface Types, load and update the associated settings
+class NetworkInterfaceTypeModelPrivate;
+class NetworkInterfaceTypeModel final : public QAbstractListModel
 {
 public:
-	NetworkInterfaceModel(QObject* parent = nullptr);
-	virtual ~NetworkInterfaceModel();
+	NetworkInterfaceTypeModel(QObject* parent = nullptr);
+	virtual ~NetworkInterfaceTypeModel();
 
-	bool isEnabled(QString const& id) const noexcept;
-
-	la::avdecc::networkInterface::Interface::Type interfaceType(QModelIndex const& index) const noexcept;
+	void setActive(la::avdecc::networkInterface::Interface::Type const interfaceType, bool const active);
+	bool isActive(la::avdecc::networkInterface::Interface::Type const interfaceType) const;
 
 private:
 	// QAbstractListModel overrides
 	virtual int rowCount(QModelIndex const& parent = {}) const override;
 	virtual QVariant data(QModelIndex const& index, int role) const override;
+	virtual bool setData(QModelIndex const& index, QVariant const& value, int role = Qt::EditRole) override;
 	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
 
 private:
-	QScopedPointer<NetworkInterfaceModelPrivate> const d_ptr;
-	Q_DECLARE_PRIVATE(NetworkInterfaceModel);
+	QScopedPointer<NetworkInterfaceTypeModelPrivate> const d_ptr;
+	Q_DECLARE_PRIVATE(NetworkInterfaceTypeModel);
 };

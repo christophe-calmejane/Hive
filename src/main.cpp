@@ -65,17 +65,14 @@ int main(int argc, char* argv[])
 	setupBugReporter();
 
 	// Configure QT Application
-#if defined(Q_OS_WIN)
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
+	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
 	QCoreApplication::setOrganizationDomain(hive::internals::organizationDomain);
 	QCoreApplication::setOrganizationName(hive::internals::organizationName);
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
-
-	// We want to propagate style sheet styles to all widgets
-	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
 
 	// Create the Qt Application
 	QApplication app(argc, argv);
@@ -110,13 +107,21 @@ int main(int argc, char* argv[])
 
 	// Register settings (creating default value if none was saved before)
 	auto& settings = settings::SettingsManager::getInstance();
+
+	// General
 	settings.registerSetting(settings::LastLaunchedVersion);
 	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
 	settings.registerSetting(settings::TransposeConnectionMatrix);
 	settings.registerSetting(settings::AutomaticCheckForUpdates);
 	settings.registerSetting(settings::CheckForBetaVersions);
 	settings.registerSetting(settings::ThemeColorIndex);
+
+	// Network
 	settings.registerSetting(settings::ProtocolType);
+	settings.registerSetting(settings::InterfaceTypeEthernet);
+	settings.registerSetting(settings::InterfaceTypeWiFi);
+
+	// Controller
 	settings.registerSetting(settings::AemCacheEnabled);
 
 	// Load fonts

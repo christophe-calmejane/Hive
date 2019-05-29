@@ -21,6 +21,7 @@
 
 #include <QString>
 #include <QObject>
+#include <QIcon>
 #include <functional>
 #include <la/avdecc/controller/avdeccController.hpp>
 #include <la/avdecc/internals/streamFormatInfo.hpp>
@@ -118,6 +119,8 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
 QString toUpperCamelCase(std::string const& text) noexcept;
 
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
+
+QIcon interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept;
 
 } // namespace helper
 } // namespace avdecc

@@ -96,9 +96,6 @@ void MainWindow::setupAdvancedView(Defaults const& defaults)
 	// Create the ControllerView widget
 	createControllerView();
 
-	// Initialize the Interface ComboBox
-	initInterfaceComboBox();
-
 	// Initialize UI defaults
 	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), !defaults.controllerTableView_EntityLogo_Visible);
 	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), !defaults.controllerTableView_Compatibility_Visible);
@@ -182,6 +179,12 @@ void MainWindow::currentControllerChanged()
 
 	auto const protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
+
+	// Clear the current controller
+	auto& manager = avdecc::ControllerManager::getInstance();
+	manager.destroyController();
+	_controllerEntityIDLabel.clear();
+
 	if (interfaceID.isEmpty())
 	{
 		LOG_HIVE_WARN("No Network Interface selected. Please choose one.");
@@ -193,7 +196,6 @@ void MainWindow::currentControllerChanged()
 	try
 	{
 		// Create a new Controller
-		auto& manager = avdecc::ControllerManager::getInstance();
 		manager.createController(protocolType, interfaceID, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
@@ -246,6 +248,7 @@ void MainWindow::createMainToolBar()
 	auto* interfaceLabel = new QLabel("Interface");
 	interfaceLabel->setMinimumWidth(50);
 	_interfaceComboBox.setMinimumWidth(100);
+	_interfaceComboBox.setModel(&_activeNetworkInterfaceModel);
 
 	_refreshControllerButton.setToolTip("Reload Controller");
 
@@ -298,34 +301,28 @@ void MainWindow::createControllerView()
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 }
 
-void MainWindow::initInterfaceComboBox()
-{
-	_networkInterfaceModelProxy.setSourceModel(&_networkInterfaceModel);
-	_networkInterfaceModelProxy.setSortRole(Qt::UserRole);
-	_networkInterfaceModelProxy.sort(0, Qt::AscendingOrder);
-
-	_interfaceComboBox.setModel(&_networkInterfaceModelProxy);
-}
-
 void MainWindow::loadSettings()
 {
 	auto& settings = settings::SettingsManager::getInstance();
 
 	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());
 
-	auto const networkInterfaceIndex = _networkInterfaceModel.indexOf(settings.getValue(settings::InterfaceID).toString().toStdString());
-	if (!networkInterfaceIndex.isValid() || !_networkInterfaceModel.isEnabled(networkInterfaceIndex))
+	auto const networkInterfaceId = settings.getValue(settings::InterfaceID).toString();
+	auto const networkInterfaceIndex = _interfaceComboBox.findData(networkInterfaceId);
+
+	// Select the interface from the settings, if present and active
+	if (networkInterfaceIndex >= 0 && _activeNetworkInterfaceModel.isEnabled(networkInterfaceId))
 	{
-		_interfaceComboBox.setCurrentIndex(-1);
+		_interfaceComboBox.setCurrentIndex(networkInterfaceIndex);
 	}
 	else
 	{
-		_interfaceComboBox.setCurrentIndex(_networkInterfaceModelProxy.mapFromSource(networkInterfaceIndex).row());
+		_interfaceComboBox.setCurrentIndex(-1);
 	}
 
 	// Check if currently saved ProtocolInterface is supported
 	auto protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
-	auto const supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
+	auto supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
 	if (!supportedTypes.test(protocolType) && !supportedTypes.empty())
 	{
 		// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
