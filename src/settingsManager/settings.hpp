@@ -40,7 +40,6 @@ static SettingsManager::SettingDefault ThemeColorIndex = { "avdecc/general/theme
 
 // Network settings
 static SettingsManager::SettingDefault ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
-
 static SettingsManager::SettingDefault InterfaceTypeEthernet = { "avdecc/network/interfaceType/ethernet", true };
 static SettingsManager::SettingDefault InterfaceTypeWiFi = { "avdecc/network/interfaceType/wifi", false };
 
