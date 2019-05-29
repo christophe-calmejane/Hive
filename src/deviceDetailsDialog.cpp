@@ -675,6 +675,13 @@ public:
 				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
 				for (auto const& streamOutput : configurationNode.streamOutputs)
 				{
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamInfo.streamFormat);
+					auto const streamType = streamFormatInfo->getType();
+					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+					{
+						// skip clock stream
+						continue;
+					}
 					auto streamInfo = streamOutput.second.dynamicModel->streamInfo;
 					if (streamInfo.msrpAccumulatedLatency != *_userSelectedLatency)
 					{
