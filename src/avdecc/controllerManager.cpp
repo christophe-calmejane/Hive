@@ -185,6 +185,9 @@ public:
 	ControllerManagerImpl() noexcept
 	{
 		qRegisterMetaType<std::uint8_t>("std::uint8_t");
+		qRegisterMetaType<std::uint16_t>("std::uint16_t");
+		qRegisterMetaType<std::uint64_t>("std::uint64_t");
+		qRegisterMetaType<std::chrono::milliseconds>("std::chrono::milliseconds");
 		qRegisterMetaType<AecpCommandType>("avdecc::ControllerManager::AecpCommandType");
 		qRegisterMetaType<AcmpCommandType>("avdecc::ControllerManager::AcmpCommandType");
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
@@ -290,7 +293,7 @@ private:
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
 		_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
-		emit entityOnline(entityID);
+		emit entityOnline(entityID, entity->getEnumerationTime());
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
@@ -515,6 +518,27 @@ private:
 	virtual void onOperationCompleted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, bool const failed) noexcept override
 	{
 		emit operationCompleted(entity->getEntity().getEntityID(), descriptorType, descriptorIndex, operationID, failed);
+	}
+	// Statistics
+	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		emit aecpRetryCounterChanged(entity->getEntity().getEntityID(), value);
+	}
+	virtual void onAecpTimeoutCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		emit aecpTimeoutCounterChanged(entity->getEntity().getEntityID(), value);
+	}
+	virtual void onAecpUnexpectedResponseCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		emit aecpUnexpectedResponseCounterChanged(entity->getEntity().getEntityID(), value);
+	}
+	virtual void onAecpResponseAverageTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::chrono::milliseconds const& value) noexcept override
+	{
+		emit aecpResponseAverageTimeChanged(entity->getEntity().getEntityID(), value);
+	}
+	virtual void onAemAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		emit aemAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), value);
 	}
 
 	// ControllerManager overrides

@@ -20,7 +20,10 @@
 #pragma once
 
 #include <la/avdecc/controller/avdeccController.hpp>
+
 #include <memory>
+#include <chrono>
+
 #include <QObject>
 
 namespace avdecc
@@ -196,7 +199,7 @@ public:
 	/* Entity changed signals */
 	Q_SIGNAL void transportError();
 	Q_SIGNAL void entityQueryError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::QueryCommandError const error);
-	Q_SIGNAL void entityOnline(la::avdecc::UniqueIdentifier const entityID);
+	Q_SIGNAL void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const enumerationTime);
 	Q_SIGNAL void entityOffline(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void unsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void compatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags);
@@ -245,6 +248,14 @@ public:
 
 	/* Counter errors signals */
 	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags);
+
+	/* Statistics signals */
+	Q_SIGNAL void aecpRetryCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	Q_SIGNAL void aecpTimeoutCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	Q_SIGNAL void aecpUnexpectedResponseCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
+	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+
 }; // namespace avdecc
 
 } // namespace avdecc

@@ -362,6 +362,7 @@ set(COMMON_HEADER_FILES
 	profiles/profiles.hpp
 	profiles/profileSelectionDialog.hpp
 	profiles/profileWidget.hpp
+	statistics/entityStatisticsTreeWidgetItem.hpp
 )
 
 # Common source files
@@ -381,6 +382,7 @@ set(COMMON_SOURCE_FILES
 	painterHelper.cpp
 	profiles/profileSelectionDialog.cpp
 	profiles/profileWidget.cpp
+	statistics/entityStatisticsTreeWidgetItem.cpp
 )
 
 # Group sources
