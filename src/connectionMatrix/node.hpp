@@ -20,6 +20,7 @@
 #pragma once
 
 #include "avdecc/helper.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 
 namespace connectionMatrix
 {
@@ -36,13 +37,23 @@ public:
 	enum class Type
 	{
 		None,
+		
 		Entity,
-		OutputStream,
-		InputStream,
+		
 		RedundantOutput,
 		RedundantInput,
+		
 		RedundantOutputStream,
 		RedundantInputStream,
+		
+		RedundantOutputChannel,
+		RedundantInputChannel,
+		
+		OutputStream,
+		InputStream,
+		
+		OutputChannel,
+		InputChannel,
 	};
 
 	virtual ~Node() = default;
@@ -58,9 +69,15 @@ public:
 
 	// Returns true if node type is either RedundantOutputStream or RedundantInputStream
 	bool isRedundantStreamNode() const;
-
-	// Returns true if node type is either OutputStream, InputStream, RedundantOutputStream or RedundantInputStream
+	
+	// Returns true if node type is either RedundantOutputChannel or RedundantInputChannel
+	bool isRedundantChannelNode() const;
+	
+	// Returns true if node type is either RedundantOutputStream, RedundantInputStream, OutputStream or InputStream
 	bool isStreamNode() const;
+	
+	// Returns true if node type is either RedundantOutputChannel, RedundantInputChannel, OutputChannel or InputChannel
+	bool isChannelNode() const;
 
 	// Returns the entity ID
 	la::avdecc::UniqueIdentifier const& entityID() const;
@@ -89,9 +106,9 @@ public:
 	// Returns the number of children
 	int childrenCount() const;
 
-	// Visitor pattern that performs a complete hierarchy traversal
+	// Visitor pattern that performs a hierarchy traversal
 	using Visitor = std::function<void(Node*)>;
-	void accept(Visitor const& visitor, bool const onlyChildren = false) const;
+	void accept(Visitor const& visitor, bool const childrenOnly = false) const;
 
 protected:
 	Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent);
@@ -122,7 +139,7 @@ class EntityNode : public Node
 public:
 	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID);
 
-	// Visitor pattern that performs is called on every stream node that matches avbInterfaceIndex
+	// Visitor pattern that is called on every stream node that matches avbInterfaceIndex
 	using AvbInterfaceIndexVisitor = std::function<void(StreamNode*)>;
 	void accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const;
 
@@ -152,14 +169,17 @@ class StreamNode : public Node
 	friend class ModelPrivate;
 
 public:
+	static StreamNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
+	static StreamNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
+	
 	static StreamNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	static StreamNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 
-	static StreamNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-	static StreamNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-
+	// Static entity model data
 	la::avdecc::entity::model::StreamIndex const& streamIndex() const;
 	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const;
+	
+	// Cached data from the controller
 	la::avdecc::entity::model::StreamFormat const& streamFormat() const;
 	la::avdecc::UniqueIdentifier const& grandMasterID() const;
 	std::uint8_t const& grandMasterDomain() const;
@@ -188,4 +208,27 @@ protected:
 	la::avdecc::entity::model::StreamConnectionState _streamConnectionState{};
 };
 
+class ChannelNode : public Node
+{
+	friend class ModelPrivate;
+	
+public:
+	static ChannelNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+	static ChannelNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+	
+	static ChannelNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+	static ChannelNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+
+	// Static entity model data
+	la::avdecc::entity::model::ClusterIndex const& clusterIndex() const;
+	std::uint16_t const& channelIndex() const;
+
+protected:
+	ChannelNode(Type const type, Node& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+
+protected:
+	la::avdecc::entity::model::ClusterIndex const _clusterIndex;
+	std::uint16_t const _channelIndex;
+};
+	
 } // namespace connectionMatrix

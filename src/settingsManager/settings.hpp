@@ -34,6 +34,7 @@ static SettingsManager::SettingDefault UserProfile = { "userProfile", la::avdecc
 // General settings
 static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
 static SettingsManager::SettingDefault TransposeConnectionMatrix = { "avdecc/general/transposeConnectionMatrix", false };
+static SettingsManager::SettingDefault ChannelModeConnectionMatrix = { "avdecc/general/channelModeConnectionMatrix", false };
 static SettingsManager::SettingDefault AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
 static SettingsManager::SettingDefault CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
 static SettingsManager::SettingDefault ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };

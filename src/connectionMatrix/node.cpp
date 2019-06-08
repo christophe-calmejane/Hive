@@ -56,6 +56,18 @@ bool Node::isRedundantStreamNode() const
 	}
 }
 
+bool Node::isRedundantChannelNode() const
+{
+	switch (_type)
+	{
+		case Type::RedundantOutputChannel:
+		case Type::RedundantInputChannel:
+			return true;
+		default:
+			return false;
+	}
+}
+
 bool Node::isStreamNode() const
 {
 	switch (_type)
@@ -64,6 +76,20 @@ bool Node::isStreamNode() const
 		case Type::InputStream:
 		case Type::RedundantOutputStream:
 		case Type::RedundantInputStream:
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool Node::isChannelNode() const
+{
+	switch (_type)
+	{
+		case Type::OutputChannel:
+		case Type::InputChannel:
+		case Type::RedundantOutputChannel:
+		case Type::RedundantInputChannel:
 			return true;
 		default:
 			return false;
@@ -135,9 +161,9 @@ int Node::childrenCount() const
 	return static_cast<int>(_children.size());
 }
 
-void Node::accept(Visitor const& visitor, bool const onlyChildren) const
+void Node::accept(Visitor const& visitor, bool const childrenOnly) const
 {
-	if (!onlyChildren)
+	if (!childrenOnly)
 	{
 		visitor(const_cast<Node*>(this));
 	}
@@ -211,6 +237,16 @@ RedundantNode::RedundantNode(Type const type, EntityNode& parent, la::avdecc::co
 	, _redundantIndex{ redundantIndex }
 {
 }
+	
+StreamNode* StreamNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+{
+	return new StreamNode{ Type::RedundantOutputStream, parent, streamIndex, avbInterfaceIndex };
+}
+
+StreamNode* StreamNode::createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+{
+	return new StreamNode{ Type::RedundantInputStream, parent, streamIndex, avbInterfaceIndex };
+}
 
 StreamNode* StreamNode::createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
 {
@@ -220,16 +256,6 @@ StreamNode* StreamNode::createOutputNode(EntityNode& parent, la::avdecc::entity:
 StreamNode* StreamNode::createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
 {
 	return new StreamNode{ Type::InputStream, parent, streamIndex, avbInterfaceIndex };
-}
-
-StreamNode* StreamNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
-{
-	return new StreamNode{ Type::RedundantOutputStream, parent, streamIndex, avbInterfaceIndex };
-}
-
-StreamNode* StreamNode::createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
-{
-	return new StreamNode{ Type::RedundantInputStream, parent, streamIndex, avbInterfaceIndex };
 }
 
 la::avdecc::entity::model::StreamIndex const& StreamNode::streamIndex() const
@@ -307,6 +333,43 @@ void StreamNode::setRunning(bool isRunning)
 void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
 {
 	_streamConnectionState = streamConnectionState;
+}
+
+ChannelNode* ChannelNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+{
+	return new ChannelNode{ Type::RedundantOutputChannel, parent, clusterIndex, channelIndex };
+}
+
+ChannelNode* ChannelNode::createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+{
+	return new ChannelNode{ Type::RedundantInputChannel, parent, clusterIndex, channelIndex };
+}
+
+ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+{
+	return new ChannelNode{ Type::OutputChannel, parent, clusterIndex, channelIndex };
+}
+
+ChannelNode* ChannelNode::createInputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+{
+	return new ChannelNode{ Type::InputChannel, parent, clusterIndex, channelIndex };
+}
+
+la::avdecc::entity::model::ClusterIndex const& ChannelNode::clusterIndex() const
+{
+	return _clusterIndex;
+}
+
+std::uint16_t const& ChannelNode::channelIndex() const
+{
+	return _channelIndex;
+}
+
+ChannelNode::ChannelNode(Type const type, Node& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+	: Node{ type, parent.entityID(), &parent }
+	, _clusterIndex{ clusterIndex }
+	, _channelIndex{ channelIndex }
+{
 }
 
 } // namespace connectionMatrix

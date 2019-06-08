@@ -20,6 +20,7 @@
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "toolkit/helper.hpp"
@@ -50,21 +51,36 @@ using NodeMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::unique_ptr
 // Entity section by entity ID
 using EntitySectionMap = std::unordered_map<la::avdecc::UniqueIdentifier, int, la::avdecc::UniqueIdentifier::hash>;
 
-// Stream identifier by entity ID and index
-using StreamSectionKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
+// Stream entity ID and index
+using StreamKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
 
-struct StreamSectionKeyHash
+struct StreamKeyHash
 {
-	std::size_t operator()(StreamSectionKey const& key) const
+	std::size_t operator()(StreamKey const& key) const
 	{
 		return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<int>()(key.second);
 	}
 };
 
-// Stream section by entity ID and index
-using StreamSectionMap = std::unordered_map<StreamSectionKey, int, StreamSectionKeyHash>;
+// StreamNode by StreamKey
+using StreamNodeMap = std::unordered_map<StreamKey, StreamNode*, StreamKeyHash>;
 
-// index by node
+// Channel entity ID and cluster index
+// CAUTION, ClusterIndex == ChannelIndex for milan devices
+using ChannelKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex>;
+
+struct ChannelKeyHash
+{
+	std::size_t operator()(ChannelKey const& key) const
+	{
+		return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<int>()(key.second);
+	}
+};
+
+// ChannelNode by ChannelKey
+using ChannelNodeMap = std::unordered_map<ChannelKey, ChannelNode*, ChannelKeyHash>;
+
+// Section by Node
 using NodeSectionMap = std::unordered_map<Node const*, int>;
 
 #if ENABLE_CONNECTION_MATRIX_TOOLTIP
@@ -82,22 +98,38 @@ QString typeToString(Model::IntersectionData::Type const type)
 			return "Entity / Redundant";
 		case Model::IntersectionData::Type::Entity_RedundantStream:
 			return "Entity / Redundant Stream";
+		case Model::IntersectionData::Type::Entity_RedundantChannel:
+			return "Entity / Redundant Channel";
 		case Model::IntersectionData::Type::Entity_SingleStream:
 			return "Entity / Single Stream";
+		case Model::IntersectionData::Type::Entity_SingleChannel:
+			return "Entity / Single Channel";
 		case Model::IntersectionData::Type::Redundant_Redundant:
 			return "Redundant / Redundant";
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 			return "Redundant / Redundant Stream";
+		case Model::IntersectionData::Type::Redundant_RedundantChannel:
+			return "Redundant / Redundant Channel";
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 			return "Redundant / Single Stream";
+		case Model::IntersectionData::Type::Redundant_SingleChannel:
+			return "Redundant / Single Channel";
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 			return "Redundant Stream / Redundant Stream";
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden:
 			return "Forbidden Redundant Stream / Redundant Stream";
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 			return "Redundant Stream / Single Stream";
+		case Model::IntersectionData::Type::RedundantChannel_RedundantChannel:
+			return "Redundant Channel / Redundant Channel";
+		case Model::IntersectionData::Type::RedundantChannel_RedundantChannel_Forbidden:
+			return "Forbidden Redundant Channel / Redundant Channel";
+		case Model::IntersectionData::Type::RedundantChannel_SingleChannel:
+			return "Redundant Channel / Single Channel";
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
 			return "Single Stream / Single Stream";
+		case Model::IntersectionData::Type::SingleChannel_SingleChannel:
+			return "Single Channel / Single Channel";
 		default:
 			AVDECC_ASSERT(false, "Unknown Type");
 			return "Unknown";
@@ -157,8 +189,132 @@ QString intersectionDataToString(Model::IntersectionData const& intersectionData
 }
 #endif
 
+// Visit node in stream mode (visitor is called on children that are revelant in Model::Mode::Stream mode)
+using StreamVisitor = std::function<void(StreamNode*)>;
+void streamModeAccept(Node* node, StreamVisitor const& visitor, bool const childrenOnly)
+{
+	node->accept(
+		[&visitor](Node* child)
+		{
+			if (child->isEntityNode() || child->isRedundantNode() || child->isStreamNode())
+			{
+				visitor(static_cast<StreamNode*>(child));
+			}
+		},
+		childrenOnly);
+}
+
+// Visit node in channel mode (visitor is called on children that are revelant in Model::Mode::Channel mode)
+using ChannelVisitor = std::function<void(ChannelNode*)>;
+void channelModeAccept(Node* node, ChannelVisitor const& visitor, bool const childrenOnly)
+{
+	node->accept(
+		[&visitor](Node* child)
+		{
+			if (child->isEntityNode() || child->isRedundantNode() || child->isChannelNode())
+			{
+				visitor(static_cast<ChannelNode*>(child));
+			}
+		},
+		childrenOnly);
+}
+
+// Visit node according to mode
+void acceptWithMode(Node* node, Model::Mode const mode, Node::Visitor const& visitor, bool const childrenOnly = false)
+{
+	if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
+	{
+		return;
+	}
+
+	switch (mode)
+	{
+		case Model::Mode::Stream:
+			streamModeAccept(node, visitor, childrenOnly);
+			break;
+		case Model::Mode::Channel:
+			channelModeAccept(node, visitor, childrenOnly);
+			break;
+		default:
+			AVDECC_ASSERT(false, "Unhandled Mode");
+			break;
+	}
+}
+
+using ForeachStreamVisitor = std::function<void(StreamKey const&, StreamNode*)>;
+void foreachStreamNode(Node* node, ForeachStreamVisitor const& visitor)
+{
+	priv::streamModeAccept(node,
+		[&visitor](StreamNode* node)
+		{
+			auto const key = std::make_pair(node->entityID(), node->streamIndex());
+			visitor(key, node);
+		},
+		true);
+}
+
+using ForeachChannelVisitor = std::function<void(ChannelKey const&, ChannelNode*)>;
+void foreachChannelNode(Node* node, ForeachChannelVisitor const& visitor)
+{
+	priv::channelModeAccept(node,
+		[&visitor](ChannelNode* node)
+		{
+			auto const key = std::make_pair(node->entityID(), node->clusterIndex());
+			visitor(key, node);
+		},
+		true);
+}
+
+// Insert stream nodes in map
+void insertStreamNodes(StreamNodeMap& map, Node* node)
+{
+	foreachStreamNode(node,
+		[&map](StreamKey const& key, StreamNode* streamNode)
+		{
+			map.insert(std::make_pair(key, streamNode));
+		});
+}
+
+// Remove stream nodes from map
+void removeStreamNodes(StreamNodeMap& map, Node* node)
+{
+	foreachStreamNode(node,
+		[&map](StreamKey const& key, StreamNode* streamNode)
+		{
+			auto const it = map.find(key);
+			if (AVDECC_ASSERT_WITH_RET(it != std::end(map), "Invalid key"))
+			{
+				map.erase(key);
+			}
+		});
+}
+
+// Insert channel nodes in map
+void insertChannelNodes(ChannelNodeMap& map, Node* node)
+{
+	foreachChannelNode(node,
+		[&map](ChannelKey const& key, ChannelNode* channelNode)
+		{
+			map.insert(std::make_pair(key, channelNode));
+		});
+}
+
+// Remove channel nodes from map
+void removeChannelNodes(ChannelNodeMap& map, Node* node)
+{
+	foreachChannelNode(node,
+		[&map](ChannelKey const& key, ChannelNode* channelNode)
+		{
+			auto const it = map.find(key);
+			if (AVDECC_ASSERT_WITH_RET(it != std::end(map), "Invalid key"))
+			{
+				map.erase(key);
+			}
+		});
+}
+
 // Flatten node hierarchy and insert all nodes in list starting at first
-void insertNodes(Nodes& list, Node* node, int first)
+void insertNodes(Nodes& list, Node* node, Model::Mode const mode, int const first)
 {
 	if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 	{
@@ -170,7 +326,7 @@ void insertNodes(Nodes& list, Node* node, int first)
 #endif
 
 	auto nodes = Nodes{};
-	node->accept(
+	acceptWithMode(node, mode,
 		[&nodes](Node* node)
 		{
 			nodes.push_back(node);
@@ -208,20 +364,19 @@ void removeNodes(Nodes& list, int first, int last)
 #endif
 }
 
-// Returns the total number of children in node hierarchy
-int absoluteChildrenCount(Node* node)
+// Returns the number of children in node hierarchy depending on mode
+int childrenCount(Node* node, Model::Mode const mode)
 {
-	if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
-	{
-		return 0;
-	}
-
 	auto count = 0;
 
-	for (auto i = 0; i < node->childrenCount(); ++i)
+	if (AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 	{
-		auto* child = node->childAt(i);
-		count += 1 + absoluteChildrenCount(child);
+		acceptWithMode(node, mode,
+			[&count](Node*)
+			{
+				++count;
+			},
+			true);
 	}
 
 	return count;
@@ -242,33 +397,6 @@ int sortedIndexForEntity(Nodes const& list, la::avdecc::UniqueIdentifier const& 
 	return index;
 }
 
-// Build and returns a StreamSectionMap from nodes (quick access map for stream nodes)
-StreamSectionMap buildStreamSectionMap(Nodes const& nodes)
-{
-	StreamSectionMap sectionMap;
-
-	for (auto section = 0u; section < nodes.size(); ++section)
-	{
-		auto* node = nodes[section];
-		if (node->isStreamNode())
-		{
-			auto const entityID = node->entityID();
-			auto const streamIndex = static_cast<StreamNode*>(node)->streamIndex();
-
-#if ENABLE_CONNECTION_MATRIX_DEBUG
-			qDebug() << "buildStreamSectionMap" << node->name() << ", stream" << streamIndex << "at section" << section;
-#endif
-
-			auto const key = std::make_pair(entityID, streamIndex);
-			auto const [it, result] = sectionMap.insert(std::make_pair(key, section));
-
-			AVDECC_ASSERT(result, "result should not be null");
-		}
-	}
-
-	return sectionMap;
-}
-
 // Build and returns a NodeSectionMap from nodes (quick access map for nodes)
 NodeSectionMap buildNodeSectionMap(Nodes const& nodes)
 {
@@ -287,11 +415,23 @@ NodeSectionMap buildNodeSectionMap(Nodes const& nodes)
 int indexOf(NodeSectionMap const& map, Node const* const node)
 {
 	auto const it = map.find(node);
-	if (!AVDECC_ASSERT_WITH_RET(it != std::end(map), "index not found"))
+	if (!AVDECC_ASSERT_WITH_RET(it != std::end(map), "Index not found"))
 	{
 		return -1;
 	}
 	return it->second;
+}
+
+// Returns cluster channel name.
+// It is assumed that if channel == 0, the channel is not displayed
+QString clusterChannelName(QString const& clusterName, std::uint16_t const channel)
+{
+	if (channel > 0)
+	{
+		return QString{ "%1.%2" }.arg(clusterName).arg(channel);
+	}
+
+	return clusterName;
 }
 
 } // namespace priv
@@ -307,13 +447,22 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamConnectionChanged, this, &ModelPrivate::handleStreamConnectionChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ModelPrivate::handleGptpChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
+
+		// Stream
+		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamConnectionChanged, this, &ModelPrivate::handleStreamConnectionChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
+
+		// Channel
+		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
+
+		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &ModelPrivate::handleListenerChannelConnectionsUpdate);
 	}
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
@@ -331,7 +480,7 @@ public:
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 	void highlightIntersection(int talkerSection, int listenerSection)
 	{
-		if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "invalid listener section"))
+		if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "Invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "Invalid listener section"))
 		{
 			return;
 		}
@@ -511,7 +660,7 @@ public:
 	// Determines intersection type according to talker and listener nodes
 	Model::IntersectionData::Type determineIntersectionType(Node* talker, Node* listener) const
 	{
-		if (!AVDECC_ASSERT_WITH_RET(talker, "invalid talker") || !AVDECC_ASSERT_WITH_RET(listener, "invalid listener"))
+		if (!AVDECC_ASSERT_WITH_RET(talker, "Invalid talker") || !AVDECC_ASSERT_WITH_RET(listener, "Invalid listener"))
 		{
 			return Model::IntersectionData::Type::None;
 		}
@@ -545,6 +694,11 @@ public:
 			{
 				return Model::IntersectionData::Type::Entity_SingleStream;
 			}
+
+			if (talkerType == Node::Type::OutputChannel || listenerType == Node::Type::InputChannel)
+			{
+				return Model::IntersectionData::Type::Entity_SingleChannel;
+			}
 		}
 
 		if (talkerType == Node::Type::RedundantOutput && listenerType == Node::Type::RedundantInput)
@@ -562,6 +716,11 @@ public:
 			if (talkerType == Node::Type::OutputStream || listenerType == Node::Type::InputStream)
 			{
 				return Model::IntersectionData::Type::Redundant_SingleStream;
+			}
+
+			if (talkerType == Node::Type::OutputChannel || listenerType == Node::Type::InputChannel)
+			{
+				return Model::IntersectionData::Type::Redundant_SingleChannel;
 			}
 		}
 
@@ -590,6 +749,11 @@ public:
 			return Model::IntersectionData::Type::SingleStream_SingleStream;
 		}
 
+		if (talkerType == Node::Type::OutputChannel && listenerType == Node::Type::InputChannel)
+		{
+			return Model::IntersectionData::Type::SingleChannel_SingleChannel;
+		}
+
 		AVDECC_ASSERT_WITH_RET(false, "Not handled");
 
 		return Model::IntersectionData::Type::None;
@@ -598,8 +762,8 @@ public:
 	// Initializes intersection data
 	void initializeIntersectionData(Node* talker, Node* listener, Model::IntersectionData& intersectionData)
 	{
-		AVDECC_ASSERT(talker, "invalid talker");
-		AVDECC_ASSERT(listener, "invalid listener");
+		AVDECC_ASSERT(talker, "Invalid talker");
+		AVDECC_ASSERT(listener, "Invalid listener");
 
 		intersectionData.talker = talker;
 		intersectionData.listener = listener;
@@ -620,7 +784,6 @@ public:
 			auto const listenerType = intersectionData.listener->type();
 
 			auto const talkerEntityID = intersectionData.talker->entityID();
-			auto const listenerEntityID = intersectionData.listener->entityID();
 
 			switch (intersectionData.type)
 			{
@@ -901,10 +1064,10 @@ public:
 					}
 					else
 					{
-						AVDECC_ASSERT(false, "unhandled");
+						AVDECC_ASSERT(false, "Unhandled");
 					}
 
-					if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "invalid listener section"))
+					if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "Invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "Invalid listener section"))
 					{
 						break;
 					}
@@ -1019,7 +1182,7 @@ public:
 							return;
 						}
 
-						if (!AVDECC_ASSERT_WITH_RET(talkerStreamNode, "invalid talker node") || !AVDECC_ASSERT_WITH_RET(listenerStreamNode, "invalid listener node"))
+						if (!AVDECC_ASSERT_WITH_RET(talkerStreamNode, "Invalid talker node") || !AVDECC_ASSERT_WITH_RET(listenerStreamNode, "Invalid listener node"))
 						{
 							break;
 						}
@@ -1062,13 +1225,11 @@ public:
 
 	void rebuildTalkerSectionCache()
 	{
-		_talkerStreamSectionMap = priv::buildStreamSectionMap(_talkerNodes);
 		_talkerNodeSectionMap = priv::buildNodeSectionMap(_talkerNodes);
 	}
 
 	void rebuildListenerSectionCache()
 	{
-		_listenerStreamSectionMap = priv::buildStreamSectionMap(_listenerNodes);
 		_listenerNodeSectionMap = priv::buildNodeSectionMap(_listenerNodes);
 	}
 
@@ -1123,6 +1284,31 @@ public:
 					outputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber);
 					outputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 					outputStream->setRunning(controlledEntity.isStreamOutputRunning(currentConfigurationIndex, streamIndex));
+				}
+			}
+
+			// Channels for Milan compatible entities only
+			if (controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+			{
+				for (auto const& [audioUnitIndex, audioUnitNode] : configurationNode.audioUnits)
+				{
+					for (auto const& [streamPortIndex, streamPortNode] : audioUnitNode.streamPortOutputs)
+					{
+						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						{
+							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
+							{
+								auto const* const staticModel = clusterNode.staticModel;
+								for (auto channel = 0; channel < staticModel->channelCount; ++channel)
+								{
+									auto* outputChannel = ChannelNode::createOutputNode(*entity, clusterIndex, channel);
+									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
+									auto const channelName = priv::clusterChannelName(clusterName, channel);
+									outputChannel->setName(channelName);
+								}
+							}
+						}
+					}
 				}
 			}
 
@@ -1196,6 +1382,31 @@ public:
 				}
 			}
 
+			// Channels for Milan compatible entities only
+			if (controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+			{
+				for (auto const& [audioUnitIndex, audioUnitNode] : configurationNode.audioUnits)
+				{
+					for (auto const& [streamPortIndex, streamPortNode] : audioUnitNode.streamPortInputs)
+					{
+						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						{
+							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
+							{
+								auto const* const staticModel = clusterNode.staticModel;
+								for (auto channel = 0; channel < staticModel->channelCount; ++channel)
+								{
+									auto* inputChannel = ChannelNode::createInputNode(*entity, clusterIndex, channel);
+									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
+									auto const channelName = priv::clusterChannelName(clusterName, channel);
+									inputChannel->setName(channelName);
+								}
+							}
+						}
+					}
+				}
+			}
+
 			return entity;
 		}
 		catch (...)
@@ -1206,21 +1417,32 @@ public:
 		}
 	}
 
-	// Build and add talker node hierarchy
-	void addTalker(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
+	// Insert a talker node hierarchy in the model
+	void insertTalkerNode(Node* node)
 	{
-		auto* node = buildTalkerNode(controlledEntity, entityID, configurationNode);
+		if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
+		{
+			return;
+		}
 
-		auto const childrenCount = priv::absoluteChildrenCount(node);
+		auto const entityID = node->entityID();
+		auto const childrenCount = priv::childrenCount(node, _mode);
 
 		auto const first = priv::sortedIndexForEntity(_talkerNodes, entityID);
 		auto const last = first + childrenCount;
 
 		beginInsertTalkerItems(first, last);
 
-		_talkerNodeMap.insert(std::make_pair(entityID, node));
+		// The node may already exist is we're here because the mode has changed
+		if (!_talkerNodeMap.count(entityID))
+		{
+			_talkerNodeMap.insert(std::make_pair(entityID, node));
 
-		priv::insertNodes(_talkerNodes, node, first);
+			priv::insertStreamNodes(_talkerStreamNodeMap, node);
+			priv::insertChannelNodes(_talkerChannelNodeMap, node);
+		}
+
+		priv::insertNodes(_talkerNodes, node, _mode, first);
 
 		rebuildTalkerSectionCache();
 
@@ -1249,21 +1471,32 @@ public:
 		endInsertTalkerItems();
 	}
 
-	// Build and add listener node hierarchy
-	void addListener(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
+	// Insert a listener node hierarchy in the model
+	void insertListenerNode(Node* node)
 	{
-		auto* node = buildListenerNode(controlledEntity, entityID, configurationNode);
+		if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
+		{
+			return;
+		}
 
-		auto const childrenCount = priv::absoluteChildrenCount(node);
+		auto const entityID = node->entityID();
+		auto const childrenCount = priv::childrenCount(node, _mode);
 
 		auto const first = priv::sortedIndexForEntity(_listenerNodes, entityID);
 		auto const last = first + childrenCount;
 
 		beginInsertListenerItems(first, last);
 
-		_listenerNodeMap.insert(std::make_pair(entityID, node));
+		// The node may already exist is we're here because the mode has changed
+		if (!_listenerNodeMap.count(entityID))
+		{
+			_listenerNodeMap.insert(std::make_pair(entityID, node));
 
-		priv::insertNodes(_listenerNodes, node, first);
+			priv::insertStreamNodes(_listenerStreamNodeMap, node);
+			priv::insertChannelNodes(_listenerChannelNodeMap, node);
+		}
+
+		priv::insertNodes(_listenerNodes, node, _mode, first);
 
 		rebuildListenerSectionCache();
 
@@ -1296,12 +1529,15 @@ public:
 	{
 		if (auto* node = talkerNodeFromEntityID(entityID))
 		{
-			auto const childrenCount = priv::absoluteChildrenCount(node);
+			auto const childrenCount = priv::childrenCount(node, _mode);
 
 			auto const first = priv::indexOf(_talkerNodeSectionMap, node);
 			auto const last = first + childrenCount;
 
 			beginRemoveTalkerItems(first, last);
+
+			priv::removeStreamNodes(_talkerStreamNodeMap, node);
+			priv::removeChannelNodes(_talkerChannelNodeMap, node);
 
 			priv::removeNodes(_talkerNodes, first, last + 1 /* entity */);
 
@@ -1324,12 +1560,15 @@ public:
 	{
 		if (auto* node = listenerNodeFromEntityID(entityID))
 		{
-			auto const childrenCount = priv::absoluteChildrenCount(node);
+			auto const childrenCount = priv::childrenCount(node, _mode);
 
 			auto const first = priv::indexOf(_listenerNodeSectionMap, node);
 			auto const last = first + childrenCount;
 
 			beginRemoveListenerItems(first, last);
+
+			priv::removeStreamNodes(_listenerStreamNodeMap, node);
+			priv::removeChannelNodes(_listenerChannelNodeMap, node);
 
 			priv::removeNodes(_listenerNodes, first, last + 1 /* entity */);
 
@@ -1383,13 +1622,7 @@ public:
 		emit q->beginResetModel();
 		_talkerNodeMap.clear();
 		_listenerNodeMap.clear();
-		_talkerNodes.clear();
-		_listenerNodes.clear();
-		_talkerStreamSectionMap.clear();
-		_listenerStreamSectionMap.clear();
-		_talkerNodeSectionMap.clear();
-		_listenerNodeSectionMap.clear();
-		_intersectionData.clear();
+		clearCachedData();
 		emit q->endResetModel();
 	}
 
@@ -1401,7 +1634,9 @@ public:
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
 			{
-				if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+				auto const entityCapabilities = controlledEntity->getEntity().getEntityCapabilities();
+
+				if (!entityCapabilities.test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
 					return;
 				}
@@ -1412,13 +1647,15 @@ public:
 				// Talker
 				if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
 				{
-					addTalker(*controlledEntity, entityID, configurationNode);
+					auto* node = buildTalkerNode(*controlledEntity, entityID, configurationNode);
+					insertTalkerNode(node);
 				}
 
 				// Listener
 				if (controlledEntity->getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty())
 				{
-					addListener(*controlledEntity, entityID, configurationNode);
+					auto* node = buildListenerNode(*controlledEntity, entityID, configurationNode);
+					insertListenerNode(node);
 				}
 			}
 		}
@@ -1443,81 +1680,6 @@ public:
 		if (hasListener(entityID))
 		{
 			removeListener(entityID);
-		}
-	}
-
-	void handleStreamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
-	{
-		// Event affecting a single stream node (either Input or Output)
-		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-		{
-			if (auto* node = talkerStreamNode(entityID, streamIndex))
-			{
-				node->setRunning(isRunning);
-				talkerHeaderDataChanged(node);
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
-			}
-		}
-		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
-		{
-			if (auto* node = listenerStreamNode(entityID, streamIndex))
-			{
-				node->setRunning(isRunning);
-				listenerHeaderDataChanged(node);
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
-			}
-		}
-	}
-
-	void handleStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& state)
-	{
-		// Event affecting a single stream intersection, but having repercussion on parent intersection "summary" nodes
-		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
-		if (auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex))
-		{
-			listener->setStreamConnectionState(state);
-			listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
-		}
-		else
-		{
-			LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(state.listenerStream.entityID)).arg(state.listenerStream.streamIndex));
-		}
-	}
-
-	void handleStreamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
-	{
-		// Event affecting a single stream node (either Input or Output), but having repercussion on parent intersection "summary" nodes
-		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateFormat };
-
-		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-		{
-			if (auto* node = talkerStreamNode(entityID, streamIndex))
-			{
-				node->setStreamFormat(streamFormat);
-				talkerIntersectionDataChanged(node, true, false, dirtyFlags);
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
-			}
-		}
-		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
-		{
-			if (auto* node = listenerStreamNode(entityID, streamIndex))
-			{
-				node->setStreamFormat(streamFormat);
-				listenerIntersectionDataChanged(node, true, false, dirtyFlags);
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
-			}
 		}
 	}
 
@@ -1608,52 +1770,6 @@ public:
 		}
 	}
 
-	void handleStreamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
-	{
-		// Event affecting a single stream node (either Input or Output)
-		try
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto controlledEntity = manager.getControlledEntity(entityID);
-			if (controlledEntity)
-			{
-				if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-				{
-					auto const name = avdecc::helper::outputStreamName(*controlledEntity, streamIndex);
-
-					if (auto* node = talkerStreamNode(entityID, streamIndex))
-					{
-						node->setName(name);
-						talkerHeaderDataChanged(node);
-					}
-					else
-					{
-						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
-					}
-				}
-				else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
-				{
-					auto const name = avdecc::helper::inputStreamName(*controlledEntity, streamIndex);
-
-					if (auto* node = listenerStreamNode(entityID, streamIndex))
-					{
-						node->setName(name);
-						listenerHeaderDataChanged(node);
-					}
-					else
-					{
-						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
-					}
-				}
-			}
-		}
-		catch (...)
-		{
-			// Uncaught exception
-			AVDECC_ASSERT(false, "Uncaught exception");
-		}
-	}
-
 	void handleAvbInterfaceLinkStatusChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
 	{
 		// Event affecting the whole entity (all streams, Input and Output)
@@ -1694,6 +1810,192 @@ public:
 		}
 	}
 
+	void handleStreamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
+	{
+		// Event affecting a single stream node (either Input or Output), but having repercussion on parent intersection "summary" nodes
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateFormat };
+
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			if (auto* node = talkerStreamNode(entityID, streamIndex))
+			{
+				node->setStreamFormat(streamFormat);
+				talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
+		}
+		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			if (auto* node = listenerStreamNode(entityID, streamIndex))
+			{
+				node->setStreamFormat(streamFormat);
+				listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
+		}
+	}
+
+	void handleStreamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
+	{
+		// Event affecting a single stream node (either Input or Output)
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			if (auto* node = talkerStreamNode(entityID, streamIndex))
+			{
+				node->setRunning(isRunning);
+				streamModeTalkerHeaderDataChanged(node);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
+		}
+		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			if (auto* node = listenerStreamNode(entityID, streamIndex))
+			{
+				node->setRunning(isRunning);
+				streamModeTalkerHeaderDataChanged(node);
+			}
+			else
+			{
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+			}
+		}
+	}
+
+	void handleStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& state)
+	{
+		// Event affecting a single stream intersection, but having repercussion on parent intersection "summary" nodes
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
+		if (auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex))
+		{
+			listener->setStreamConnectionState(state);
+			listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+		}
+		else
+		{
+			LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(state.listenerStream.entityID)).arg(state.listenerStream.streamIndex));
+		}
+	}
+
+	void handleStreamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
+	{
+		// Event affecting a single stream node (either Input or Output)
+		try
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+			if (controlledEntity)
+			{
+				if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+				{
+					auto const name = avdecc::helper::outputStreamName(*controlledEntity, streamIndex);
+
+					if (auto* node = talkerStreamNode(entityID, streamIndex))
+					{
+						node->setName(name);
+						streamModeTalkerHeaderDataChanged(node);
+					}
+					else
+					{
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					}
+				}
+				else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+				{
+					auto const name = avdecc::helper::inputStreamName(*controlledEntity, streamIndex);
+
+					if (auto* node = listenerStreamNode(entityID, streamIndex))
+					{
+						node->setName(name);
+						streamModeListenerHeaderDataChanged(node);
+					}
+					else
+					{
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					}
+				}
+			}
+		}
+		catch (...)
+		{
+			// Uncaught exception
+			AVDECC_ASSERT(false, "Uncaught exception");
+		}
+	}
+
+	void handleCompatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags compatibilityFlags)
+	{
+		if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			// Only add if not in the list already
+			if (!hasTalker(entityID) && !hasListener(entityID))
+			{
+				handleEntityOnline(entityID);
+			}
+		}
+		else
+		{
+			handleEntityOffline(entityID);
+		}
+	}
+
+	void handleAudioClusterNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+	{
+		try
+		{
+#pragma message("TODO: cache the current configuration in the node to avoid locking the controller from the main thread")
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+			auto const& entityNode = controlledEntity->getEntityNode();
+			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
+
+			// We're only interested in the current configuration
+			if (currentConfigurationIndex != configurationIndex)
+			{
+				return;
+			}
+
+			if (hasTalkerCluster(entityID, audioClusterIndex))
+			{
+				if (auto* channelNode = talkerChannelNode(entityID, audioClusterIndex))
+				{
+					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
+					channelNode->setName(channelName);
+
+					channelModeTalkerHeaderDataChanged(channelNode);
+				}
+			}
+
+			if (hasListenerCluster(entityID, audioClusterIndex))
+			{
+				if (auto* channelNode = listenerChannelNode(entityID, audioClusterIndex))
+				{
+					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
+					channelNode->setName(channelName);
+
+					channelModeListenerHeaderDataChanged(channelNode);
+				}
+			}
+		}
+		catch (...)
+		{
+			// Uncaught exception
+			AVDECC_ASSERT(false, "Uncaught exception");
+		}
+	}
+
+	// avdecc::ChannelConnectionManager slots
+
+	void handleListenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels) {}
+
 private:
 	// Returns true if a talker exists for entityID
 	bool hasTalker(la::avdecc::UniqueIdentifier const entityID) const
@@ -1719,40 +2021,16 @@ private:
 		return priv::indexOf(_listenerNodeSectionMap, node);
 	}
 
-	// Returns talker stream section for entityID + streamIndex
-	int talkerStreamSection(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
-	{
-		auto const key = std::make_pair(entityID, streamIndex);
-		auto const it = _talkerStreamSectionMap.find(key);
-		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerStreamSectionMap), "not found"))
-		{
-			return -1;
-		}
-		return it->second;
-	}
-
-	// Returns listener stream section for entityID + streamIndex
-	int listenerStreamSection(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
-	{
-		auto const key = std::make_pair(entityID, streamIndex);
-		auto const it = _listenerStreamSectionMap.find(key);
-		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerStreamSectionMap), "not found"))
-		{
-			return -1;
-		}
-		return it->second;
-	}
-
 	// Returns talker EntityNode for a given entityID
 	EntityNode* talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _talkerNodeMap.find(entityID);
-		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerNodeMap), "not found"))
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerNodeMap), "Not found"))
 		{
 			return nullptr;
 		}
 		auto* node = it->second.get();
-		if (!AVDECC_ASSERT_WITH_RET(node->type() == Node::Type::Entity, "invalid type"))
+		if (!AVDECC_ASSERT_WITH_RET(node->type() == Node::Type::Entity, "Invalid type"))
 		{
 			return nullptr;
 		}
@@ -1763,12 +2041,12 @@ private:
 	EntityNode* listenerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _listenerNodeMap.find(entityID);
-		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerNodeMap), "not found"))
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerNodeMap), "Not found"))
 		{
 			return nullptr;
 		}
 		auto* node = it->second.get();
-		if (!AVDECC_ASSERT_WITH_RET(node->type() == Node::Type::Entity, "invalid type"))
+		if (!AVDECC_ASSERT_WITH_RET(node->type() == Node::Type::Entity, "Invalid type"))
 		{
 			return nullptr;
 		}
@@ -1778,25 +2056,63 @@ private:
 	// Returns talker StreamNode for a given entityID + streamIndex
 	StreamNode* talkerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
-		auto const section = talkerStreamSection(entityID, streamIndex);
-		auto* node = _talkerNodes[section];
-		if (!AVDECC_ASSERT_WITH_RET(node->isStreamNode(), "invalid type"))
+		auto const key = std::make_pair(entityID, streamIndex);
+		auto const it = _talkerStreamNodeMap.find(key);
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerStreamNodeMap), "Invalid stream"))
 		{
 			return nullptr;
 		}
-		return static_cast<StreamNode*>(node);
+		return it->second;
 	}
 
 	// Returns listener StreamNode for a given entityID + streamIndex
 	StreamNode* listenerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const
 	{
-		auto const section = listenerStreamSection(entityID, streamIndex);
-		auto* node = _listenerNodes[section];
-		if (!AVDECC_ASSERT_WITH_RET(node->isStreamNode(), "invalid type"))
+		auto const key = std::make_pair(entityID, streamIndex);
+		auto const it = _listenerStreamNodeMap.find(key);
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerStreamNodeMap), "Invalid stream"))
 		{
 			return nullptr;
 		}
-		return static_cast<StreamNode*>(node);
+		return it->second;
+	}
+
+	bool hasTalkerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const
+	{
+		auto const key = std::make_pair(entityID, audioClusterIndex);
+		auto const it = _talkerChannelNodeMap.find(key);
+		return it != std::end(_talkerChannelNodeMap);
+	}
+
+	bool hasListenerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const
+	{
+		auto const key = std::make_pair(entityID, audioClusterIndex);
+		auto const it = _listenerChannelNodeMap.find(key);
+		return it != std::end(_listenerChannelNodeMap);
+	}
+
+	// Returns talker ChannelNode for a given entityID + configurationIndex
+	ChannelNode* talkerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const
+	{
+		auto const key = std::make_pair(entityID, audioClusterIndex);
+		auto const it = _talkerChannelNodeMap.find(key);
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerChannelNodeMap), "Invalid channel"))
+		{
+			return nullptr;
+		}
+		return it->second;
+	}
+
+	// Returns listener ChannelNode for a given entityID + streamIndex
+	ChannelNode* listenerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const
+	{
+		auto const key = std::make_pair(entityID, audioClusterIndex);
+		auto const it = _listenerChannelNodeMap.find(key);
+		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerChannelNodeMap), "Invalid channel"))
+		{
+			return nullptr;
+		}
+		return it->second;
 	}
 
 private:
@@ -1836,7 +2152,7 @@ private:
 	// Children are updated first, then the node, then the parents
 	void talkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
-		if (!AVDECC_ASSERT_WITH_RET(talker, "invalid talker"))
+		if (!AVDECC_ASSERT_WITH_RET(talker, "Invalid talker"))
 		{
 			return;
 		}
@@ -1875,7 +2191,7 @@ private:
 	// Children are updated first, then the node, then the parents
 	void listenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
 	{
-		if (!AVDECC_ASSERT_WITH_RET(listener, "invalid listener"))
+		if (!AVDECC_ASSERT_WITH_RET(listener, "Invalid listener"))
 		{
 			return;
 		}
@@ -1936,6 +2252,38 @@ private:
 #endif
 
 		emit q->headerDataChanged(listenerOrientation(), section, section);
+	}
+
+	void streamModeTalkerHeaderDataChanged(Node* const node)
+	{
+		if (_mode == Model::Mode::Stream)
+		{
+			talkerHeaderDataChanged(node);
+		}
+	}
+
+	void streamModeListenerHeaderDataChanged(Node* const node)
+	{
+		if (_mode == Model::Mode::Stream)
+		{
+			listenerHeaderDataChanged(node);
+		}
+	}
+
+	void channelModeTalkerHeaderDataChanged(Node* const node)
+	{
+		if (_mode == Model::Mode::Channel)
+		{
+			talkerHeaderDataChanged(node);
+		}
+	}
+
+	void channelModeListenerHeaderDataChanged(Node* const node)
+	{
+		if (_mode == Model::Mode::Channel)
+		{
+			listenerHeaderDataChanged(node);
+		}
 	}
 
 	// Returns talker header orientation
@@ -2008,29 +2356,43 @@ private:
 		return _listenerNodes[section]->name();
 	}
 
+	void clearCachedData()
+	{
+		_talkerNodes.clear();
+		_listenerNodes.clear();
+		_talkerNodeSectionMap.clear();
+		_listenerNodeSectionMap.clear();
+		_intersectionData.clear();
+	}
+
 private:
 	Model* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(Model);
 
+	Model::Mode _mode{ Model::Mode::Stream };
 	bool _transposed{ false };
 
-	// Entity nodes by entity ID
+	// EntityNode per entityID (persistent)
 	priv::NodeMap _talkerNodeMap;
 	priv::NodeMap _listenerNodeMap;
 
-	// Flattened nodes
+	// Stream nodes by StreamKey
+	priv::StreamNodeMap _talkerStreamNodeMap;
+	priv::StreamNodeMap _listenerStreamNodeMap;
+
+	// Channel nodes by ChannelKey
+	priv::ChannelNodeMap _talkerChannelNodeMap;
+	priv::ChannelNodeMap _listenerChannelNodeMap;
+
+	// Flattened nodes (cache)
 	priv::Nodes _talkerNodes;
 	priv::Nodes _listenerNodes;
 
-	// Stream section quick access map
-	priv::StreamSectionMap _talkerStreamSectionMap;
-	priv::StreamSectionMap _listenerStreamSectionMap;
-
-	// Node section quick access map
+	// Node section quick access map (cache)
 	priv::NodeSectionMap _talkerNodeSectionMap;
 	priv::NodeSectionMap _listenerNodeSectionMap;
 
-	// Talker major intersection data matrix
+	// Talker major intersection data matrix (cache)
 	std::deque<std::deque<Model::IntersectionData>> _intersectionData;
 };
 
@@ -2200,6 +2562,39 @@ Model::IntersectionData const& Model::intersectionData(QModelIndex const& index)
 	return d->_intersectionData[talkerSection][listenerSection];
 }
 
+void Model::setMode(Mode const mode)
+{
+	Q_D(Model);
+
+	if (mode != d->_mode)
+	{
+		emit beginResetModel();
+
+		d->_mode = mode;
+		d->clearCachedData();
+
+		emit endResetModel();
+
+		// Rebuild the cache data for all known entities
+
+		for (auto const& [entityID, entityNode] : d->_talkerNodeMap)
+		{
+			d->insertTalkerNode(entityNode.get());
+		}
+
+		for (auto const& [entityID, entityNode] : d->_listenerNodeMap)
+		{
+			d->insertListenerNode(entityNode.get());
+		}
+	}
+}
+
+Model::Mode Model::mode() const
+{
+	Q_D(const Model);
+	return d->_mode;
+}
+
 void Model::setTransposed(bool const transposed)
 {
 	Q_D(Model);
@@ -2216,6 +2611,12 @@ bool Model::isTransposed() const
 {
 	Q_D(const Model);
 	return d->_transposed;
+}
+
+void Model::accept(Node* node, Visitor const& visitor, bool const childrenOnly) const
+{
+	Q_D(const Model);
+	priv::acceptWithMode(node, d->_mode, visitor, childrenOnly);
 }
 
 } // namespace connectionMatrix

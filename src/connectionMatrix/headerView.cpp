@@ -162,7 +162,7 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 		}
 	};
 
-	node->accept(update);
+	model->accept(node, update, true);
 }
 
 void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
@@ -257,11 +257,11 @@ void HeaderView::applyFilterPattern()
 
 			if (!matches)
 			{
-				node->accept(showVisitor);
+				model->accept(node, showVisitor);
 			}
 			else
 			{
-				node->accept(hideVisitor);
+				model->accept(node, showVisitor);
 			}
 		}
 	}
@@ -315,7 +315,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
 
-	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	if (!node) //!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
 	{
 		return;
 	}
@@ -334,12 +334,16 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		case Node::Type::RedundantOutput:
 		case Node::Type::InputStream:
 		case Node::Type::OutputStream:
+		case Node::Type::InputChannel:
+		case Node::Type::OutputChannel:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			nodeLevel = 1;
 			break;
 		case Node::Type::RedundantInputStream:
 		case Node::Type::RedundantOutputStream:
+		case Node::Type::RedundantInputChannel:
+		case Node::Type::RedundantOutputChannel:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			nodeLevel = 2;
