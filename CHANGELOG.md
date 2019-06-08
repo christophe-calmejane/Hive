@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Connection matrix complete overhaul (optimization, smart connections)
 - Support for drag&drop of json virtual entity files
 - Color theme selection in Settings
+- Controller Statistics (displayed in Entity Node)
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity

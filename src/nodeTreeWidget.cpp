@@ -36,6 +36,7 @@
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "counters/streamOutputCountersTreeWidgetItem.hpp"
+#include "statistics/entityStatisticsTreeWidgetItem.hpp"
 #include "entityLogoCache.hpp"
 #include "firmwareUploadDialog.hpp"
 #include "aecpCommandComboBox.hpp"
@@ -185,6 +186,8 @@ private:
 		createIdItem(&node);
 		createAccessItem(controlledEntity);
 
+		auto const& entity = *controlledEntity;
+
 		Q_Q(NodeTreeWidget);
 
 		// Names
@@ -192,8 +195,8 @@ private:
 			auto* nameItem = new QTreeWidgetItem(q);
 			nameItem->setText(0, "Names");
 
-			addEditableTextItem(nameItem, "Entity Name", avdecc::helper::entityName(*controlledEntity), avdecc::ControllerManager::AecpCommandType::SetEntityName, {});
-			addEditableTextItem(nameItem, "Group Name", avdecc::helper::groupName(*controlledEntity), avdecc::ControllerManager::AecpCommandType::SetEntityGroupName, {});
+			addEditableTextItem(nameItem, "Entity Name", avdecc::helper::entityName(entity), avdecc::ControllerManager::AecpCommandType::SetEntityName, {});
+			addEditableTextItem(nameItem, "Group Name", avdecc::helper::groupName(entity), avdecc::ControllerManager::AecpCommandType::SetEntityGroupName, {});
 		}
 
 		// Static model
@@ -206,22 +209,22 @@ private:
 
 			// Currently, use the getEntity() information, but maybe in the future the controller will have the information in its static/dynamic model
 			{
-				auto const& entity = controlledEntity->getEntity();
-				auto const talkerCaps = entity.getTalkerCapabilities();
-				auto const listenerCaps = entity.getListenerCapabilities();
-				auto const ctrlCaps = entity.getControllerCapabilities();
+				auto const& e = entity.getEntity();
+				auto const talkerCaps = e.getTalkerCapabilities();
+				auto const listenerCaps = e.getListenerCapabilities();
+				auto const ctrlCaps = e.getControllerCapabilities();
 
-				addTextItem(descriptorItem, "Entity Model ID", avdecc::helper::uniqueIdentifierToString(entity.getEntityModelID()));
+				addTextItem(descriptorItem, "Entity Model ID", avdecc::helper::uniqueIdentifierToString(e.getEntityModelID()));
 				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::forceNumeric(talkerCaps.value()), avdecc::helper::capabilitiesToString(talkerCaps));
-				addTextItem(descriptorItem, "Talker Max Sources", QString::number(entity.getTalkerStreamSources()));
+				addTextItem(descriptorItem, "Talker Max Sources", QString::number(e.getTalkerStreamSources()));
 				addFlagsItem(descriptorItem, "Listener Capabilities", la::avdecc::utils::forceNumeric(listenerCaps.value()), avdecc::helper::capabilitiesToString(listenerCaps));
-				addTextItem(descriptorItem, "Listener Max Sinks", QString::number(entity.getListenerStreamSinks()));
+				addTextItem(descriptorItem, "Listener Max Sinks", QString::number(e.getListenerStreamSinks()));
 				addFlagsItem(descriptorItem, "Controller Capabilities", la::avdecc::utils::forceNumeric(ctrlCaps.value()), avdecc::helper::capabilitiesToString(ctrlCaps));
-				addTextItem(descriptorItem, "Identify Control Index", entity.getIdentifyControlIndex() ? QString::number(*entity.getIdentifyControlIndex()) : QString("Not Set"));
+				addTextItem(descriptorItem, "Identify Control Index", e.getIdentifyControlIndex() ? QString::number(*e.getIdentifyControlIndex()) : QString("Not Set"));
 			}
 
-			addTextItem(descriptorItem, "Vendor Name", controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
-			addTextItem(descriptorItem, "Model Name", controlledEntity->getLocalizedString(staticModel->modelNameString).data());
+			addTextItem(descriptorItem, "Vendor Name", entity.getLocalizedString(staticModel->vendorNameString).data());
+			addTextItem(descriptorItem, "Model Name", entity.getLocalizedString(staticModel->modelNameString).data());
 			addTextItem(descriptorItem, "Firmware Version", dynamicModel->firmwareVersion.data());
 			addTextItem(descriptorItem, "Serial Number", dynamicModel->serialNumber.data());
 
@@ -229,12 +232,12 @@ private:
 		}
 
 		// Milan Info
-		if (controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		if (entity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 		{
 			auto* milanInfoItem = new QTreeWidgetItem(q);
 			milanInfoItem->setText(0, "Milan Info");
 
-			auto const milanInfo = *controlledEntity->getMilanInfo();
+			auto const milanInfo = *entity.getMilanInfo();
 
 			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 			addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
@@ -243,7 +246,7 @@ private:
 
 		// Discovery information
 		{
-			createDiscoveryInfo(controlledEntity->getEntity());
+			createDiscoveryInfo(entity.getEntity());
 		}
 
 		// Dynamic model
@@ -251,10 +254,10 @@ private:
 			auto* dynamicItem = new QTreeWidgetItem(q);
 			dynamicItem->setText(0, "Dynamic Info");
 
-			auto const& entity = controlledEntity->getEntity();
-			auto const entityCaps = entity.getEntityCapabilities();
+			auto const& e = entity.getEntity();
+			auto const entityCaps = e.getEntityCapabilities();
 			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::forceNumeric(entityCaps.value()), avdecc::helper::capabilitiesToString(entityCaps));
-			addTextItem(dynamicItem, "Association ID", entity.getAssociationID() ? avdecc::helper::uniqueIdentifierToString(*entity.getAssociationID()) : QString("Not Set"));
+			addTextItem(dynamicItem, "Association ID", e.getAssociationID() ? avdecc::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString("Not Set"));
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
@@ -263,7 +266,7 @@ private:
 
 			for (auto const& it : node.configurations)
 			{
-				configurationComboBox->addItem(QString::number(it.first) + ": " + avdecc::helper::configurationName(controlledEntity, it.second), it.first);
+				configurationComboBox->addItem(QString::number(it.first) + ": " + avdecc::helper::configurationName(&entity, it.second), it.first);
 			}
 
 			auto currentConfigurationComboBoxIndex = configurationComboBox->findData(node.dynamicModel->currentConfiguration);
@@ -289,6 +292,12 @@ private:
 		{
 			auto* countersItem = new EntityCountersTreeWidgetItem(_controlledEntityID, node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
+		}
+
+		// Statistics
+		{
+			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getEnumerationTime(), q);
+			statisticsItem->setText(0, "Statistics");
 		}
 	}
 
