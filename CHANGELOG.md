@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for drag&drop of json virtual entity files
 - Color theme selection in Settings
 - Controller Statistics (displayed in Entity Node)
+- Utilities toolbar for quick access to Media Clock Management and Settings
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity
