@@ -85,7 +85,7 @@ private:
 	void setupProfile();
 	void registerMetaTypes();
 	void createViewMenu();
-	void createMainToolBar();
+	void createToolbars();
 	void createControllerView();
 	void loadSettings();
 	void connectSignals();
@@ -104,6 +104,8 @@ private:
 	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ this };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ this };
 	qt::toolkit::material::Button _refreshControllerButton{ "refresh", this };
+	qt::toolkit::material::Button _openMcmdDialogButton{ "schedule", this };
+	qt::toolkit::material::Button _openSettingsButton{ "settings", this };
 	QLabel _controllerEntityIDLabel{ this };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };

@@ -90,8 +90,8 @@ void MainWindow::setupAdvancedView(Defaults const& defaults)
 	// Create "view" sub-menu
 	createViewMenu();
 
-	// Create the main toolbar
-	createMainToolBar();
+	// Create toolbars
+	createToolbars();
 
 	// Create the ControllerView widget
 	createControllerView();
@@ -124,7 +124,7 @@ void MainWindow::setupAdvancedView(Defaults const& defaults)
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterId), defaults.ColumnWidth_UniqueIdentifier);
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults.ColumnWidth_Name);
 
-	mainToolBar->setVisible(defaults.mainWindow_Toolbar_Visible);
+	controllerToolBar->setVisible(defaults.mainWindow_Toolbar_Visible);
 	entityInspectorDockWidget->setVisible(defaults.mainWindow_Inspector_Visible);
 	loggerDockWidget->setVisible(defaults.mainWindow_Logger_Visible);
 
@@ -236,43 +236,58 @@ void MainWindow::registerMetaTypes()
 
 void MainWindow::createViewMenu()
 {
-	menuView->addAction(mainToolBar->toggleViewAction());
+	// Toolbars visibility toggle
+	menuView->addAction(controllerToolBar->toggleViewAction());
+	menuView->addAction(utilitiesToolBar->toggleViewAction());
 	menuView->addSeparator();
+
+	// Entity Inspector visibility toggle
 	menuView->addAction(entityInspectorDockWidget->toggleViewAction());
 	menuView->addSeparator();
+
+	// Logger visibility toggle
 	menuView->addAction(loggerDockWidget->toggleViewAction());
 }
 
-void MainWindow::createMainToolBar()
+void MainWindow::createToolbars()
 {
-	auto* interfaceLabel = new QLabel("Interface");
-	interfaceLabel->setMinimumWidth(50);
-	_interfaceComboBox.setMinimumWidth(100);
-	_interfaceComboBox.setModel(&_activeNetworkInterfaceModel);
+	// Controller Toolbar
+	{
+		auto* interfaceLabel = new QLabel("Interface");
+		interfaceLabel->setMinimumWidth(50);
+		_interfaceComboBox.setMinimumWidth(100);
+		_interfaceComboBox.setModel(&_activeNetworkInterfaceModel);
 
-	_refreshControllerButton.setToolTip("Reload Controller");
+		auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
+		controllerEntityIDLabel->setMinimumWidth(50);
+		_controllerEntityIDLabel.setMinimumWidth(100);
 
-	auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
-	controllerEntityIDLabel->setMinimumWidth(50);
-	_controllerEntityIDLabel.setMinimumWidth(100);
+		controllerToolBar->setMinimumHeight(30);
+		controllerToolBar->addWidget(interfaceLabel);
+		controllerToolBar->addWidget(&_interfaceComboBox);
+		controllerToolBar->addSeparator();
+		controllerToolBar->addWidget(controllerEntityIDLabel);
+		controllerToolBar->addWidget(&_controllerEntityIDLabel);
+	}
 
-	mainToolBar->setMinimumHeight(30);
+	// Utilities Toolbar
+	{
+		_refreshControllerButton.setToolTip("Reload Controller");
+		_openMcmdDialogButton.setToolTip("Media Clock Management");
+		_openSettingsButton.setToolTip("Settings");
 
-	mainToolBar->addWidget(interfaceLabel);
-	mainToolBar->addWidget(&_interfaceComboBox);
-
-	mainToolBar->addSeparator();
-
-	mainToolBar->addWidget(&_refreshControllerButton);
-
-	mainToolBar->addSeparator();
-
-	mainToolBar->addWidget(controllerEntityIDLabel);
-	mainToolBar->addWidget(&_controllerEntityIDLabel);
+		utilitiesToolBar->setMinimumHeight(30);
+		utilitiesToolBar->addWidget(&_refreshControllerButton);
+		utilitiesToolBar->addSeparator();
+		utilitiesToolBar->addWidget(&_openMcmdDialogButton);
+		utilitiesToolBar->addSeparator();
+		utilitiesToolBar->addWidget(&_openSettingsButton);
+	}
 
 #ifdef Q_OS_MAC
 	// See https://bugreports.qt.io/browse/QTBUG-13635
-	mainToolBar->setStyleSheet("QToolBar QLabel { padding-bottom: 5; }");
+	controllerToolBar->setStyleSheet("QToolBar QLabel { padding-bottom: 5; }");
+	utilitiesToolBar->setStyleSheet("QToolBar QLabel { padding-bottom: 5; }");
 #endif
 }
 
@@ -347,6 +362,18 @@ void MainWindow::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
+	connect(&_openMcmdDialogButton, &QPushButton::clicked, this,
+		[this]()
+		{
+			MediaClockManagementDialog dialog{ this };
+			dialog.exec();
+		});
+	connect(&_openSettingsButton, &QPushButton::clicked, this,
+		[this]()
+		{
+			SettingsDialog dialog{ this };
+			dialog.exec();
+		});
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
