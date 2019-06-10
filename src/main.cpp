@@ -126,7 +126,11 @@ int main(int argc, char* argv[])
 
 	// Load fonts
 	// https://material.io/icons/
-	QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf");
+	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1)
+	{
+		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
+		return 1;
+	}
 
 	// Read saved profile
 	auto const userProfile = settings.getValue(settings::UserProfile.name).value<profiles::ProfileType>();
