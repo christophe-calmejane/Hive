@@ -17,6 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "ui_mainWindow.h"
 #include "mainWindow.hpp"
 #include <QtWidgets>
 #include <QMessageBox>
@@ -25,6 +26,8 @@
 #include <QDateTime>
 #include <QAbstractListModel>
 #include <QVector>
+#include <QSettings>
+#include <QLabel>
 
 #ifdef DEBUG
 #	include <QFileInfo>
@@ -34,23 +37,27 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/channelConnectionManager.hpp"
-#include "internals/config.hpp"
-
-#include "nodeVisitor.hpp"
-#include "toolkit/dynamicHeaderView.hpp"
-#include "toolkit/material/colorPalette.hpp"
+#include "avdecc/controllerModel.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
-#include "aboutDialog.hpp"
-#include "settingsDialog.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
+#include "internals/config.hpp"
+#include "profiles/profiles.hpp"
+#include "settingsManager/settings.hpp"
+#include "toolkit/comboBox.hpp"
+#include "toolkit/dynamicHeaderView.hpp"
+#include "toolkit/material/button.hpp"
+#include "toolkit/material/color.hpp"
+#include "toolkit/material/colorPalette.hpp"
+#include "updater/updater.hpp"
+#include "activeNetworkInterfaceModel.hpp"
+#include "aboutDialog.hpp"
+#include "deviceDetailsDialog.hpp"
+#include "entityLogoCache.hpp"
 #include "highlightForegroundItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
-#include "settingsManager/settings.hpp"
-#include "entityLogoCache.hpp"
-#include "deviceDetailsDialog.hpp"
-
-#include "updater/updater.hpp"
+#include "nodeVisitor.hpp"
+#include "settingsDialog.hpp"
 
 #include <la/avdecc/networkInterfaceHelper.hpp>
 
@@ -68,24 +75,96 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
-MainWindow::MainWindow(QWidget* parent)
-	: QMainWindow(parent)
-	, _controllerModel(new avdecc::ControllerModel(this))
+class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
 {
-	// Setup common UI
-	setupUi(this);
+public:
+	MainWindowImpl(::MainWindow* parent)
+		: _parent(parent)
+		, _controllerModel(new avdecc::ControllerModel(parent))
+	{
+		// Setup common UI
+		setupUi(parent);
 
-	// Set title
-	setWindowTitle(hive::internals::applicationLongName + " - Version " + QCoreApplication::applicationVersion());
+		// Register all Qt metatypes
+		registerMetaTypes();
 
-	// Register all Qt metatypes
-	registerMetaTypes();
+		// Setup the current profile
+		setupProfile();
+	}
 
-	// Setup the current profile
-	setupProfile();
-}
+	// Deleted compiler auto-generated methods
+	MainWindowImpl(MainWindowImpl const&) = delete;
+	MainWindowImpl(MainWindowImpl&&) = delete;
+	MainWindowImpl& operator=(MainWindowImpl const&) = delete;
+	MainWindowImpl& operator=(MainWindowImpl&&) = delete;
 
-void MainWindow::setupAdvancedView(Defaults const& defaults)
+	// Private Structs
+	struct Defaults
+	{
+		static constexpr int ColumnWidth_UniqueIdentifier = 160;
+		static constexpr int ColumnWidth_Logo = 60;
+		static constexpr int ColumnWidth_Compatibility = 50;
+		static constexpr int ColumnWidth_Name = 180;
+		static constexpr int ColumnWidth_ExclusiveAccessState = 80;
+		static constexpr int ColumnWidth_Group = 80;
+		static constexpr int ColumnWidth_GPTPDomain = 80;
+		static constexpr int ColumnWidth_InterfaceIndex = 90;
+
+		// MainWindow widgets
+		bool mainWindow_Toolbar_Visible{ true };
+		bool mainWindow_Inspector_Visible{ true };
+		bool mainWindow_Logger_Visible{ true };
+
+		// Controller Table View
+		bool controllerTableView_EntityLogo_Visible{ true };
+		bool controllerTableView_Compatibility_Visible{ true };
+		bool controllerTableView_Name_Visible{ true };
+		bool controllerTableView_Group_Visible{ true };
+		bool controllerTableView_AcquireState_Visible{ true };
+		bool controllerTableView_LockState_Visible{ true };
+		bool controllerTableView_GrandmasterID_Visible{ true };
+		bool controllerTableView_GptpDomain_Visible{ true };
+		bool controllerTableView_InterfaceIndex_Visible{ true };
+		bool controllerTableView_AssociationID_Visible{ true };
+		bool controllerTableView_MediaClockMasterID_Visible{ true };
+		bool controllerTableView_MediaClockMasterName_Visible{ true };
+	};
+
+	// Private Slots
+	Q_SLOT void currentControllerChanged();
+	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
+
+	// Private methods
+	void setupAdvancedView(Defaults const& defaults);
+	void setupStandardProfile();
+	void setupDeveloperProfile();
+	void setupProfile();
+	void registerMetaTypes();
+	void createViewMenu();
+	void createToolbars();
+	void createControllerView();
+	void loadSettings();
+	void connectSignals();
+	void showChangeLog(QString const title, QString const versionString);
+	void updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename);
+
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
+
+	// Private memberes
+	::MainWindow* _parent{ nullptr };
+	qt::toolkit::ComboBox _interfaceComboBox{ _parent };
+	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ _parent };
+	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
+	qt::toolkit::material::Button _refreshControllerButton{ "refresh", _parent };
+	qt::toolkit::material::Button _openMcmdDialogButton{ "schedule", _parent };
+	qt::toolkit::material::Button _openSettingsButton{ "settings", _parent };
+	QLabel _controllerEntityIDLabel{ _parent };
+	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
+	avdecc::ControllerModel* _controllerModel{ nullptr };
+};
+
+void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
 {
 	// Create "view" sub-menu
 	createViewMenu();
@@ -134,24 +213,21 @@ void MainWindow::setupAdvancedView(Defaults const& defaults)
 	// Connect all signals
 	connectSignals();
 
-	// Register AcceptDrops so we can drop VirtualEntities as JSON
-	setAcceptDrops(true);
-
 	// Create channel connection manager instance
 	avdecc::ChannelConnectionManager::getInstance();
 }
 
-void MainWindow::setupStandardProfile()
+void MainWindowImpl::setupStandardProfile()
 {
 	setupAdvancedView(Defaults{ true, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
 }
 
-void MainWindow::setupDeveloperProfile()
+void MainWindowImpl::setupDeveloperProfile()
 {
 	setupAdvancedView(Defaults{});
 }
 
-void MainWindow::setupProfile()
+void MainWindowImpl::setupProfile()
 {
 	// Update the UI and other stuff, based on the current Profile
 	auto& settings = settings::SettingsManager::getInstance();
@@ -173,7 +249,7 @@ void MainWindow::setupProfile()
 	}
 }
 
-void MainWindow::currentControllerChanged()
+void MainWindowImpl::currentControllerChanged()
 {
 	auto& settings = settings::SettingsManager::getInstance();
 
@@ -205,7 +281,7 @@ void MainWindow::currentControllerChanged()
 	}
 }
 
-void MainWindow::currentControlledEntityChanged(QModelIndex const& index)
+void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 {
 	if (!index.isValid())
 	{
@@ -224,7 +300,7 @@ void MainWindow::currentControlledEntityChanged(QModelIndex const& index)
 }
 
 // Private methods
-void MainWindow::registerMetaTypes()
+void MainWindowImpl::registerMetaTypes()
 {
 	//
 	qRegisterMetaType<la::avdecc::logger::Layer>("la::avdecc::logger::Layer");
@@ -234,7 +310,7 @@ void MainWindow::registerMetaTypes()
 	qRegisterMetaType<EntityLogoCache::Type>("EntityLogoCache::Type");
 }
 
-void MainWindow::createViewMenu()
+void MainWindowImpl::createViewMenu()
 {
 	// Toolbars visibility toggle
 	menuView->addAction(controllerToolBar->toggleViewAction());
@@ -249,7 +325,7 @@ void MainWindow::createViewMenu()
 	menuView->addAction(loggerDockWidget->toggleViewAction());
 }
 
-void MainWindow::createToolbars()
+void MainWindowImpl::createToolbars()
 {
 	// Controller Toolbar
 	{
@@ -291,7 +367,7 @@ void MainWindow::createToolbars()
 #endif
 }
 
-void MainWindow::createControllerView()
+void MainWindowImpl::createControllerView()
 {
 	controllerTableView->setModel(_controllerModel);
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -302,13 +378,13 @@ void MainWindow::createControllerView()
 	// Disable row resizing
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
-	auto* imageItemDelegate{ new ImageItemDelegate{ this } };
+	auto* imageItemDelegate{ new ImageItemDelegate{ _parent } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
-	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ this } };
+	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ _parent } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityId), highlightForegroundItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
@@ -316,7 +392,7 @@ void MainWindow::createControllerView()
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 }
 
-void MainWindow::loadSettings()
+void MainWindowImpl::loadSettings()
 {
 	auto& settings = settings::SettingsManager::getInstance();
 
@@ -350,32 +426,29 @@ void MainWindow::loadSettings()
 	entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
 	splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
 
-	restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
-	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
-
 	// Configure settings observers
 	settings.registerSettingObserver(settings::ProtocolType.name, this);
 	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
-void MainWindow::connectSignals()
+void MainWindowImpl::connectSignals()
 {
-	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::currentControllerChanged);
-	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindow::currentControllerChanged);
+	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
+	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindowImpl::currentControllerChanged);
 	connect(&_openMcmdDialogButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			MediaClockManagementDialog dialog{ this };
+			MediaClockManagementDialog dialog{ _parent };
 			dialog.exec();
 		});
 	connect(&_openSettingsButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			SettingsDialog dialog{ this };
+			SettingsDialog dialog{ _parent };
 			dialog.exec();
 		});
 
-	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindow::currentControlledEntityChanged);
+	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
 		[this]()
 		{
@@ -393,10 +466,10 @@ void MainWindow::connectSignals()
 			auto const& entity = controlledEntity->getEntity();
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
-				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
 				dialog->setControlledEntityID(entityID);
 				dialog->show();
-				connect(dialog, &DeviceDetailsDialog::finished, this,
+				connect(dialog, &DeviceDetailsDialog::finished, _parent,
 					[this, dialog](int result)
 					{
 						dialog->deleteLater();
@@ -523,10 +596,10 @@ void MainWindow::connectSignals()
 					}
 					else if (action == deviceView)
 					{
-						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
 						dialog->setControlledEntityID(entityID);
 						dialog->show();
-						connect(dialog, &DeviceDetailsDialog::finished, this,
+						connect(dialog, &DeviceDetailsDialog::finished, _parent,
 							[this, dialog](int result)
 							{
 								dialog->deleteLater();
@@ -550,19 +623,19 @@ void MainWindow::connectSignals()
 					}
 					else if (action == dumpEntity)
 					{
-						auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/Entity_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)), "*.json");
+						auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/Entity_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)), "*.json");
 						if (!filename.isEmpty())
 						{
 							auto [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename, false);
 							if (!error)
 							{
-								QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
+								QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
 							}
 							else
 							{
 								if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex)
 								{
-									auto const choice = QMessageBox::question(this, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+									auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
 									if (choice == QMessageBox::StandardButton::Yes)
 									{
 										auto const result = manager.serializeControlledEntityAsReadableJson(entityID, filename, true);
@@ -570,14 +643,14 @@ void MainWindow::connectSignals()
 										message = std::get<1>(result);
 										if (!error)
 										{
-											QMessageBox::information(this, "", "Export completed but with warnings:\n" + filename);
+											QMessageBox::information(_parent, "", "Export completed but with warnings:\n" + filename);
 										}
 										// Fallthrough to warning message
 									}
 								}
 								if (!!error)
 								{
-									QMessageBox::warning(this, "", QString("Export of EntityID %1 failed:\n%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
+									QMessageBox::warning(_parent, "", QString("Export of EntityID %1 failed:\n%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
 								}
 							}
 						}
@@ -614,7 +687,7 @@ void MainWindow::connectSignals()
 		{
 			if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
 			{
-				QMessageBox::warning(this, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+				QMessageBox::warning(_parent, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
 			}
 		});
 	connect(&manager, &avdecc::ControllerManager::endAcmpCommand, this,
@@ -622,7 +695,7 @@ void MainWindow::connectSignals()
 		{
 			if (status != la::avdecc::entity::ControllerEntity::ControlStatus::Success)
 			{
-				QMessageBox::warning(this, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+				QMessageBox::warning(_parent, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
 			}
 		});
 
@@ -631,18 +704,18 @@ void MainWindow::connectSignals()
 	connect(actionExportFullNetworkState, &QAction::triggered, this,
 		[this]()
 		{
-			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/FullDump_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "*.json");
+			auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/FullDump_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "*.json");
 			if (!filename.isEmpty())
 			{
 				auto& manager = avdecc::ControllerManager::getInstance();
 				auto [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename, false);
 				if (!error)
 				{
-					QMessageBox::information(this, "", "Export successfully completed:\n" + filename);
+					QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
 				}
 				else
 				{
-					QMessageBox::warning(this, "", QString("Export failed:\n%1").arg(message.c_str()));
+					QMessageBox::warning(_parent, "", QString("Export failed:\n%1").arg(message.c_str()));
 				}
 			}
 		});
@@ -652,14 +725,14 @@ void MainWindow::connectSignals()
 	connect(actionSettings, &QAction::triggered, this,
 		[this]()
 		{
-			SettingsDialog dialog{ this };
+			SettingsDialog dialog{ _parent };
 			dialog.exec();
 		});
 
 	connect(actionMediaClockManagement, &QAction::triggered, this,
 		[this]()
 		{
-			MediaClockManagementDialog dialog{ this };
+			MediaClockManagementDialog dialog{ _parent };
 			dialog.exec();
 		});
 
@@ -668,7 +741,7 @@ void MainWindow::connectSignals()
 	connect(actionAbout, &QAction::triggered, this,
 		[this]()
 		{
-			AboutDialog dialog{ this };
+			AboutDialog dialog{ _parent };
 			dialog.exec();
 		});
 
@@ -720,12 +793,12 @@ void MainWindow::connectSignals()
 			LOG_HIVE_WARN("Failed to check for new version: " + reason);
 		});
 
-	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, this };
-	connect(refreshController, &QShortcut::activated, this, &MainWindow::currentControllerChanged);
+	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, _parent };
+	connect(refreshController, &QShortcut::activated, this, &MainWindowImpl::currentControllerChanged);
 
 #ifdef DEBUG
-	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, this };
-	connect(reloadStyleSheet, &QShortcut::activated, this,
+	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, _parent };
+	connect(reloadStyleSheet, &QShortcut::activated, _parent,
 		[this]()
 		{
 			auto& settings = settings::SettingsManager::getInstance();
@@ -737,10 +810,10 @@ void MainWindow::connectSignals()
 #endif
 }
 
-void MainWindow::showChangeLog(QString const title, QString const versionString)
+void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
 {
 	// Create dialog popup
-	QDialog dialog{ this };
+	QDialog dialog{ _parent };
 	QVBoxLayout layout{ &dialog };
 	QTextBrowser view;
 	layout.addWidget(&view);
@@ -812,7 +885,7 @@ void MainWindow::showEvent(QShowEvent* event)
 			}
 			// Check if we have a network interface selected
 			{
-				auto const interfaceID = _interfaceComboBox.currentData().toString();
+				auto const interfaceID = _pImpl->_interfaceComboBox.currentData().toString();
 				if (interfaceID.isEmpty())
 				{
 					// Postpone the dialog creation
@@ -836,7 +909,7 @@ void MainWindow::showEvent(QShowEvent* event)
 				QTimer::singleShot(0,
 					[this, versionString = std::move(lastVersion)]()
 					{
-						showChangeLog("What's New", versionString);
+						_pImpl->showChangeLog("What's New", versionString);
 					});
 			}
 		});
@@ -851,8 +924,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings.setValue(settings::MainWindowState, saveState());
 
 	// Unregister from settings
-	settings.unregisterSettingObserver(settings::ProtocolType.name, this);
-	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.unregisterSettingObserver(settings::ProtocolType.name, _pImpl);
+	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, _pImpl);
 
 	qApp->closeAllWindows();
 
@@ -957,7 +1030,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 	}
 }
 
-void MainWindow::updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename)
+void MainWindowImpl::updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename)
 {
 	auto const baseBackgroundColor = qt::toolkit::material::color::value(colorName);
 	auto const baseForegroundColor = QColor{ qt::toolkit::material::color::luminance(colorName) == qt::toolkit::material::color::Luminance::Dark ? Qt::white : Qt::black };
@@ -973,7 +1046,7 @@ void MainWindow::updateStyleSheet(qt::toolkit::material::color::Name const color
 	}
 }
 
-void MainWindow::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
+void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
 {
 	if (name == settings::ProtocolType.name)
 	{
@@ -984,4 +1057,25 @@ void MainWindow::onSettingChanged(settings::SettingsManager::Setting const& name
 		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 		updateStyleSheet(colorName, ":/style.qss");
 	}
+}
+
+MainWindow::MainWindow(QWidget* parent)
+	: QMainWindow(parent)
+	, _pImpl(new MainWindowImpl(this))
+{
+	// Set title
+	setWindowTitle(hive::internals::applicationLongName + " - Version " + QCoreApplication::applicationVersion());
+
+	// Register AcceptDrops so we can drop VirtualEntities as JSON
+	setAcceptDrops(true);
+
+	// Restore geometry
+	auto& settings = settings::SettingsManager::getInstance();
+	restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
+	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+}
+
+MainWindow::~MainWindow() noexcept
+{
+	delete _pImpl;
 }

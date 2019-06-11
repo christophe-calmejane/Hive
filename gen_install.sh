@@ -294,16 +294,6 @@ if [ $? -ne 0 ]; then
 	echo $log
 	exit 1
 fi
-# For some reason, for macOS signing to work properly, we need to run deployqt twice, so let's run it now, it will be run again during "package" target
-log=$("$cmake_path" --build . --config "${buildConfig}" --target Hive_deployqt)
-if [ $? -ne 0 ]; then
-	echo "Failed:"
-	echo ""
-	echo $log
-	exit 1
-fi
-echo "done"
-popd &> /dev/null
 
 pushd "${outputFolder}" &> /dev/null
 echo -n "Generating project installer... "
