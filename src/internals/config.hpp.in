@@ -19,8 +19,7 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
+#include <QString>
 
 namespace hive
 {

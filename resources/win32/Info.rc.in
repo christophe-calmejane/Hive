@@ -11,7 +11,7 @@ BEGIN
     BEGIN
 			VALUE "CompanyName", "${PROJECT_COMPANYNAME}\0"
 			VALUE "FileDescription", "${PROJECT_FULL_NAME}\0"
-			VALUE "FileVersion", "${LA_PROJECT_VERSION_STRING}\0"
+			VALUE "FileVersion", "${LA_PROJECT_FILEVERSION_STRING}\0"
 			VALUE "ProductName", "${PROJECT_NAME}\0"
 			VALUE "ProductVersion", "${LA_PROJECT_VERSION_STRING}\0"
 			VALUE "LegalCopyright", "${PROJECT_LEGALCOPYRIGHT}\0"
