@@ -97,7 +97,7 @@ bool ActiveNetworkInterfaceModel::isEnabled(QString const& id) const noexcept
 	return d->_model.isEnabled(id);
 }
 
-bool ActiveNetworkInterfaceModel::filterAcceptsRow(int sourceRow, QModelIndex const& sourceParent) const
+bool ActiveNetworkInterfaceModel::filterAcceptsRow(int sourceRow, QModelIndex const& /*sourceParent*/) const
 {
 	Q_D(const ActiveNetworkInterfaceModel);
 	auto const index = d->_model.index(sourceRow);

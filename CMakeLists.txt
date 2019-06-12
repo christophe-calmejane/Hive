@@ -1,4 +1,4 @@
-# Hive - Pro Audio Avdecc Controller
+# Root CMake File for Hive
 
 # Minimum CMake version
 cmake_minimum_required(VERSION 3.12)
@@ -15,12 +15,14 @@ set(HIVE_VERSION 1.2.0.1)
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
 # Build options
+option(BUILD_HIVE_TESTS "Build Hive tests." TRUE)
+option(BUILD_HIVE_APPLICATION "Build Hive main application." TRUE)
 # Install options
 option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." TRUE)
 # Signing options
 option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
 
-############ CMake configuration
+############ CMake Configuration
 
 project(Hive)
 
@@ -45,12 +47,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Specifies the build type." FORCE)
 endif()
 
-# Add our cmake modules & packages
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-
-# Find Qt dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+# Include our internal macros
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required for find_package(BugTrap REQUIRED)
+include(cmake/TargetSetupDeploy.cmake)
 
 # Avdecc project location
 if(NOT AVDECC_BASE_FOLDER)
@@ -115,7 +114,7 @@ if(ENABLE_AVDECC_USE_FMTLIB)
 	set_target_properties(fmt PROPERTIES FOLDER "Libraries")
 endif()
 
-############ Define some variables (most to be removed when reworking cmake files and using setup_project macro)
+############ Define some variables
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
 set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")
@@ -139,7 +138,17 @@ endif()
 add_subdirectory(src)
 
 # Add tests
-add_subdirectory(tests/src)
+if(BUILD_HIVE_TESTS)
+	message(STATUS "Building Hive tests")
+	# Setup gtest options
+	set(gtest_force_shared_crt ON CACHE BOOL "For shared crt for gtest" FORCE)
+	set(BUILD_GMOCK OFF CACHE BOOL "Don't build the googlemock subproject" FORCE)
+	set(INSTALL_GTEST OFF CACHE BOOL "Disable installation of googletest. (Projects embedding googletest may want to turn this OFF.)" FORCE)
+	# Include gtest framework
+	add_subdirectory(${AVDECC_BASE_FOLDER}/externals/3rdparty/gtest)
+	# Include our unit tests
+	add_subdirectory(tests)
+endif()
 
 # Force Project as visual default target
 set_directory_properties(PROPERTIES VS_STARTUP_PROJECT ${PROJECT_NAME})
