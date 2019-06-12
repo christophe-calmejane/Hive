@@ -130,7 +130,7 @@ public:
 	}
 
 	/**
-	* Loads all data needed from an entity to display in this dialog. 
+	* Loads all data needed from an entity to display in this dialog.
 	* @param entityID Id of the entity to load the data from.
 	*/
 	void loadCurrentControlledEntity(la::avdecc::UniqueIdentifier const entityID, bool leaveOutGeneralData)
@@ -249,7 +249,7 @@ public:
 	*/
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const /*parent*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
-		const QSignalBlocker blocker(comboBoxConfiguration);
+		QSignalBlocker const blocker(comboBoxConfiguration);
 		comboBoxConfiguration->addItem(avdecc::helper::configurationName(controlledEntity, node), node.descriptorIndex);
 
 		// relevant Node:
@@ -280,7 +280,15 @@ public:
 				{
 					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortInputKV.first, inputAudioClusterKV.first, streamPortInputKV.second.staticModel->baseCluster, channelIndex);
+						avdecc::ChannelIdentification sourceChannelIdentification;
+						sourceChannelIdentification.configurationIndex = *_previousConfigurationIndex;
+						sourceChannelIdentification.audioUnitIndex = audioUnitIndex;
+						sourceChannelIdentification.streamPortIndex = streamPortInputKV.first;
+						sourceChannelIdentification.clusterIndex = inputAudioClusterKV.first;
+						sourceChannelIdentification.baseCluster = streamPortInputKV.second.staticModel->baseCluster;
+						sourceChannelIdentification.clusterChannel = channelIndex;
+						sourceChannelIdentification.forward = true;
+						auto connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, sourceChannelIdentification);
 
 						_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 					}
@@ -297,7 +305,15 @@ public:
 				{
 					for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						auto const connectionInformation = channelConnectionManager.getChannelConnections(_entityID, *_previousConfigurationIndex, audioUnitIndex, streamPortOutputKV.first, outputAudioClusterKV.first, streamPortOutputKV.second.staticModel->baseCluster, channelIndex);
+						avdecc::ChannelIdentification sourceChannelIdentification;
+						sourceChannelIdentification.configurationIndex = *_previousConfigurationIndex;
+						sourceChannelIdentification.audioUnitIndex = audioUnitIndex;
+						sourceChannelIdentification.streamPortIndex = streamPortOutputKV.first;
+						sourceChannelIdentification.clusterIndex = outputAudioClusterKV.first;
+						sourceChannelIdentification.baseCluster = streamPortOutputKV.second.staticModel->baseCluster;
+						sourceChannelIdentification.clusterChannel = channelIndex;
+						sourceChannelIdentification.forward = true;
+						auto connectionInformation = channelConnectionManager.getChannelConnections(_entityID, sourceChannelIdentification);
 
 						_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 					}
@@ -439,12 +455,11 @@ public:
 	* Invoked after a command has been exectued. We use it to detect if all data that was changed has been written.
 	* @param entityID		The id of the entity the command was executed on.
 	* @param cmdType		The executed command type.
-	* @param commandStatus  The status of the command. 
+	* @param commandStatus  The status of the command.
 	*/
 	Q_SLOT void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
 	{
 		// TODO propably show message when a command failed.
-
 		if (entityID == _entityID)
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
