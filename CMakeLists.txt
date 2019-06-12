@@ -138,15 +138,17 @@ endif()
 add_subdirectory(src)
 
 # Add tests
-#if(BUILD_HIVE_TESTS)
-	#message(STATUS "Building Hive tests")
+if(BUILD_HIVE_TESTS)
+	message(STATUS "Building Hive tests")
 	# Setup gtest options
-	#set(gtest_force_shared_crt ON CACHE BOOL "For shared crt for gtest" FORCE)
+	set(gtest_force_shared_crt ON CACHE BOOL "For shared crt for gtest" FORCE)
+	set(BUILD_GMOCK OFF CACHE BOOL "Don't build the googlemock subproject" FORCE)
+	set(INSTALL_GTEST OFF CACHE BOOL "Disable installation of googletest. (Projects embedding googletest may want to turn this OFF.)" FORCE)
 	# Include gtest framework
-	#add_subdirectory(${AVDECC_BASE_FOLDER}/externals/3rdparty/gtest/googletest)
+	add_subdirectory(${AVDECC_BASE_FOLDER}/externals/3rdparty/gtest)
 	# Include our unit tests
-	#add_subdirectory(tests)
-#endif()
+	add_subdirectory(tests)
+endif()
 
 # Force Project as visual default target
 set_directory_properties(PROPERTIES VS_STARTUP_PROJECT ${PROJECT_NAME})
