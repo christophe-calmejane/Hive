@@ -213,22 +213,23 @@ class ChannelNode : public Node
 	friend class ModelPrivate;
 	
 public:
-	static ChannelNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
-	static ChannelNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+	static ChannelNode* createRedundantOutputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification);
+	static ChannelNode* createRedundantInputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification);
 	
-	static ChannelNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
-	static ChannelNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+	static ChannelNode* createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
+	static ChannelNode* createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
 
 	// Static entity model data
+	avdecc::ChannelIdentification const& channelIdentification() const;
+
 	la::avdecc::entity::model::ClusterIndex const& clusterIndex() const;
 	std::uint16_t const& channelIndex() const;
 
 protected:
-	ChannelNode(Type const type, Node& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex);
+	ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification);
 
 protected:
-	la::avdecc::entity::model::ClusterIndex const _clusterIndex;
-	std::uint16_t const _channelIndex;
+	avdecc::ChannelIdentification const _channelIdentification;
 };
 	
 } // namespace connectionMatrix

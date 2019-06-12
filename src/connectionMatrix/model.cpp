@@ -190,30 +190,28 @@ QString intersectionDataToString(Model::IntersectionData const& intersectionData
 #endif
 
 // Visit node in stream mode (visitor is called on children that are revelant in Model::Mode::Stream mode)
-using StreamVisitor = std::function<void(StreamNode*)>;
-void streamModeAccept(Node* node, StreamVisitor const& visitor, bool const childrenOnly)
+void streamModeAccept(Node* node, Node::Visitor const& visitor, bool const childrenOnly)
 {
 	node->accept(
 		[&visitor](Node* child)
 		{
 			if (child->isEntityNode() || child->isRedundantNode() || child->isStreamNode())
 			{
-				visitor(static_cast<StreamNode*>(child));
+				visitor(child);
 			}
 		},
 		childrenOnly);
 }
 
 // Visit node in channel mode (visitor is called on children that are revelant in Model::Mode::Channel mode)
-using ChannelVisitor = std::function<void(ChannelNode*)>;
-void channelModeAccept(Node* node, ChannelVisitor const& visitor, bool const childrenOnly)
+void channelModeAccept(Node* node, Node::Visitor const& visitor, bool const childrenOnly)
 {
 	node->accept(
 		[&visitor](Node* child)
 		{
-			if (child->isEntityNode() || child->isRedundantNode() || child->isChannelNode())
+			if (child->isEntityNode() || child->isChannelNode())
 			{
-				visitor(static_cast<ChannelNode*>(child));
+				visitor(child);
 			}
 		},
 		childrenOnly);
@@ -241,14 +239,20 @@ void acceptWithMode(Node* node, Model::Mode const mode, Node::Visitor const& vis
 	}
 }
 
+
+
 using ForeachStreamVisitor = std::function<void(StreamKey const&, StreamNode*)>;
 void foreachStreamNode(Node* node, ForeachStreamVisitor const& visitor)
 {
 	priv::streamModeAccept(node,
-		[&visitor](StreamNode* node)
+		[&visitor](Node* node)
 		{
-			auto const key = std::make_pair(node->entityID(), node->streamIndex());
-			visitor(key, node);
+			if (node->isStreamNode())
+			{
+				auto* streamNode = dynamic_cast<StreamNode*>(node);
+				auto const key = std::make_pair(streamNode->entityID(), streamNode->streamIndex());
+				visitor(key, streamNode);
+			}
 		},
 		true);
 }
@@ -257,10 +261,14 @@ using ForeachChannelVisitor = std::function<void(ChannelKey const&, ChannelNode*
 void foreachChannelNode(Node* node, ForeachChannelVisitor const& visitor)
 {
 	priv::channelModeAccept(node,
-		[&visitor](ChannelNode* node)
+		[&visitor](Node* node)
 		{
-			auto const key = std::make_pair(node->entityID(), node->clusterIndex());
-			visitor(key, node);
+			if (node->isChannelNode())
+			{
+				auto* channelNode = dynamic_cast<ChannelNode*>(node);
+				auto const key = std::make_pair(channelNode->entityID(), channelNode->clusterIndex());
+				visitor(key, channelNode);
+			}
 		},
 		true);
 }
@@ -271,7 +279,8 @@ void insertStreamNodes(StreamNodeMap& map, Node* node)
 	foreachStreamNode(node,
 		[&map](StreamKey const& key, StreamNode* streamNode)
 		{
-			map.insert(std::make_pair(key, streamNode));
+			auto const& [it, result] = map.insert(std::make_pair(key, streamNode));
+			AVDECC_ASSERT(result, "Trying to insert the same key twice");
 		});
 }
 
@@ -784,6 +793,7 @@ public:
 			auto const listenerType = intersectionData.listener->type();
 
 			auto const talkerEntityID = intersectionData.talker->entityID();
+			auto const listenerEntityID = intersectionData.listener->entityID();
 
 			switch (intersectionData.type)
 			{
@@ -1210,6 +1220,12 @@ public:
 					break;
 				}
 
+				case Model::IntersectionData::Type::SingleChannel_SingleChannel:
+				{
+					intersectionData.state = Model::IntersectionData::State::Connected;
+					break;
+				}
+
 				default:
 					break;
 			}
@@ -1301,7 +1317,16 @@ public:
 								auto const* const staticModel = clusterNode.staticModel;
 								for (auto channel = 0; channel < staticModel->channelCount; ++channel)
 								{
-									auto* outputChannel = ChannelNode::createOutputNode(*entity, clusterIndex, channel);
+									auto channelIdentification = avdecc::ChannelIdentification{};
+									channelIdentification.configurationIndex = configurationNode.descriptorIndex;
+									channelIdentification.audioUnitIndex = audioUnitIndex;
+									channelIdentification.streamPortIndex = streamPortIndex;
+									channelIdentification.clusterIndex = clusterIndex;
+									channelIdentification.baseCluster = streamPortNode.staticModel->baseCluster;
+									channelIdentification.clusterChannel = channel;
+									channelIdentification.forward = false;
+
+									auto* outputChannel = ChannelNode::createOutputNode(*entity, channelIdentification);
 									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
 									auto const channelName = priv::clusterChannelName(clusterName, channel);
 									outputChannel->setName(channelName);
@@ -1396,7 +1421,16 @@ public:
 								auto const* const staticModel = clusterNode.staticModel;
 								for (auto channel = 0; channel < staticModel->channelCount; ++channel)
 								{
-									auto* inputChannel = ChannelNode::createInputNode(*entity, clusterIndex, channel);
+									auto channelIdentification = avdecc::ChannelIdentification{};
+									channelIdentification.configurationIndex = configurationNode.descriptorIndex;
+									channelIdentification.audioUnitIndex = audioUnitIndex;
+									channelIdentification.streamPortIndex = streamPortIndex;
+									channelIdentification.clusterIndex = clusterIndex;
+									channelIdentification.baseCluster = streamPortNode.staticModel->baseCluster;
+									channelIdentification.clusterChannel = channel;
+									channelIdentification.forward = false;
+
+									auto* inputChannel = ChannelNode::createInputNode(*entity, channelIdentification);
 									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
 									auto const channelName = priv::clusterChannelName(clusterName, channel);
 									inputChannel->setName(channelName);
@@ -1433,7 +1467,7 @@ public:
 
 		beginInsertTalkerItems(first, last);
 
-		// The node may already exist is we're here because the mode has changed
+		// The node may already exist if we're here because the mode has changed
 		if (!_talkerNodeMap.count(entityID))
 		{
 			_talkerNodeMap.insert(std::make_pair(entityID, node));
@@ -1487,7 +1521,7 @@ public:
 
 		beginInsertListenerItems(first, last);
 
-		// The node may already exist is we're here because the mode has changed
+		// The node may already exist if we're here because the mode has changed
 		if (!_listenerNodeMap.count(entityID))
 		{
 			_listenerNodeMap.insert(std::make_pair(entityID, node));
@@ -1820,7 +1854,7 @@ public:
 			if (auto* node = talkerStreamNode(entityID, streamIndex))
 			{
 				node->setStreamFormat(streamFormat);
-				talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+				streamModeTalkerIntersectionDataChanged(node, true, false, dirtyFlags);
 			}
 			else
 			{
@@ -1832,7 +1866,7 @@ public:
 			if (auto* node = listenerStreamNode(entityID, streamIndex))
 			{
 				node->setStreamFormat(streamFormat);
-				listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+				streamModeListenerIntersectionDataChanged(node, true, false, dirtyFlags);
 			}
 			else
 			{
@@ -1877,7 +1911,7 @@ public:
 		if (auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex))
 		{
 			listener->setStreamConnectionState(state);
-			listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+			streamModeListenerIntersectionDataChanged(listener, true, true, dirtyFlags);
 		}
 		else
 		{
@@ -1994,7 +2028,16 @@ public:
 
 	// avdecc::ChannelConnectionManager slots
 
-	void handleListenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels) {}
+	void handleListenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels)
+	{
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
+
+		for (auto const& [entityID, channelInfo] : channels)
+		{
+			auto* listenerNode = listenerChannelNode(entityID, *channelInfo.clusterIndex);
+			channelModeListenerIntersectionDataChanged(listenerNode, true, false, dirtyFlags);
+		}
+	}
 
 private:
 	// Returns true if a talker exists for entityID
@@ -2283,6 +2326,38 @@ private:
 		if (_mode == Model::Mode::Channel)
 		{
 			listenerHeaderDataChanged(node);
+		}
+	}
+
+	void streamModeTalkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
+	{
+		if (_mode == Model::Mode::Stream)
+		{
+			talkerIntersectionDataChanged(talker, andParents, andChildren, dirtyFlags);
+		}
+	}
+
+	void streamModeListenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
+	{
+		if (_mode == Model::Mode::Stream)
+		{
+			listenerIntersectionDataChanged(listener, andParents, andChildren, dirtyFlags);
+		}
+	}
+
+	void channelModeTalkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
+	{
+		if (_mode == Model::Mode::Channel)
+		{
+			talkerIntersectionDataChanged(talker, andParents, andChildren, dirtyFlags);
+		}
+	}
+
+	void channelModeListenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
+	{
+		if (_mode == Model::Mode::Channel)
+		{
+			listenerIntersectionDataChanged(listener, andParents, andChildren, dirtyFlags);
 		}
 	}
 

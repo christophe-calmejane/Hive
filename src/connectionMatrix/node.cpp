@@ -335,40 +335,44 @@ void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConne
 	_streamConnectionState = streamConnectionState;
 }
 
-ChannelNode* ChannelNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+ChannelNode* ChannelNode::createRedundantOutputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification)
 {
-	return new ChannelNode{ Type::RedundantOutputChannel, parent, clusterIndex, channelIndex };
+	return new ChannelNode{ Type::RedundantOutputChannel, parent, channelIdentification };
 }
 
-ChannelNode* ChannelNode::createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+ChannelNode* ChannelNode::createRedundantInputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification)
 {
-	return new ChannelNode{ Type::RedundantInputChannel, parent, clusterIndex, channelIndex };
+	return new ChannelNode{ Type::RedundantInputChannel, parent, channelIdentification };
 }
 
-ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)
 {
-	return new ChannelNode{ Type::OutputChannel, parent, clusterIndex, channelIndex };
+	return new ChannelNode{ Type::OutputChannel, parent, channelIdentification };
 }
 
-ChannelNode* ChannelNode::createInputNode(EntityNode& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+ChannelNode* ChannelNode::createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)
 {
-	return new ChannelNode{ Type::InputChannel, parent, clusterIndex, channelIndex };
+	return new ChannelNode{ Type::InputChannel, parent, channelIdentification };
+}
+
+avdecc::ChannelIdentification const& ChannelNode::channelIdentification() const
+{
+	return _channelIdentification;
 }
 
 la::avdecc::entity::model::ClusterIndex const& ChannelNode::clusterIndex() const
 {
-	return _clusterIndex;
+	return *_channelIdentification.clusterIndex;
 }
 
 std::uint16_t const& ChannelNode::channelIndex() const
 {
-	return _channelIndex;
+	return *_channelIdentification.clusterChannel;
 }
 
-ChannelNode::ChannelNode(Type const type, Node& parent, la::avdecc::entity::model::ClusterIndex const& clusterIndex, std::uint16_t const channelIndex)
+ChannelNode::ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification)
 	: Node{ type, parent.entityID(), &parent }
-	, _clusterIndex{ clusterIndex }
-	, _channelIndex{ channelIndex }
+	, _channelIdentification{ channelIdentification }
 {
 }
 

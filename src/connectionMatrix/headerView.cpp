@@ -261,7 +261,7 @@ void HeaderView::applyFilterPattern()
 			}
 			else
 			{
-				model->accept(node, showVisitor);
+				model->accept(node, hideVisitor);
 			}
 		}
 	}
