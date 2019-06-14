@@ -227,9 +227,7 @@ source_group("Header Files" FILES ${HEADER_FILES_GENERATED})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON})
 source_group(TREE ${RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
-#if(RESOURCE_FILES_GENERATED)
 source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
-#endif()
 
 # Define static library to be used by main application and unit tests
 add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON})
