@@ -46,6 +46,7 @@ private:
 	void onCustomContextMenuRequested(QPoint const& pos);
 	void onFilterChanged(QString const& filter);
 	void applyFilterPattern(QRegExp const& pattern);
+	void forceFilter();
 
 	// QTableView overrides
 	virtual void mouseMoveEvent(QMouseEvent* event) override;

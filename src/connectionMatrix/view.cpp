@@ -259,6 +259,11 @@ void View::applyFilterPattern(QRegExp const& pattern)
 	_horizontalHeaderView->setFilterPattern(pattern);
 }
 
+void View::forceFilter()
+{
+	applyFilterPattern(QRegExp{ _cornerWidget->filterText() });
+}
+
 void View::mouseMoveEvent(QMouseEvent* event)
 {
 	auto const index = indexAt(event->pos());
@@ -281,7 +286,7 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
-		applyFilterPattern(QRegExp{ _cornerWidget->filterText() });
+		forceFilter();
 	}
 	else if (name == settings::ChannelModeConnectionMatrix.name)
 	{
@@ -289,6 +294,8 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		auto const mode = channelMode ? Model::Mode::Channel : Model::Mode::Stream;
 		
 		_model->setMode(mode);
+
+		forceFilter();
 	}
 	else if (name == settings::ThemeColorIndex.name)
 	{
