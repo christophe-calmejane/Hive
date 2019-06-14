@@ -46,7 +46,7 @@ namespace priv
 using Nodes = std::deque<Node*>;
 
 // Entity node by entity ID
-using NodeMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::unique_ptr<Node>, la::avdecc::UniqueIdentifier::hash>;
+using NodeMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::unique_ptr<EntityNode>, la::avdecc::UniqueIdentifier::hash>;
 
 // Entity section by entity ID
 using EntitySectionMap = std::unordered_map<la::avdecc::UniqueIdentifier, int, la::avdecc::UniqueIdentifier::hash>;
@@ -239,17 +239,15 @@ void acceptWithMode(Node* node, Model::Mode const mode, Node::Visitor const& vis
 	}
 }
 
-
-
 using ForeachStreamVisitor = std::function<void(StreamKey const&, StreamNode*)>;
-void foreachStreamNode(Node* node, ForeachStreamVisitor const& visitor)
+void foreachStreamNode(EntityNode* node, ForeachStreamVisitor const& visitor)
 {
 	priv::streamModeAccept(node,
 		[&visitor](Node* node)
 		{
 			if (node->isStreamNode())
 			{
-				auto* streamNode = dynamic_cast<StreamNode*>(node);
+				auto* streamNode = static_cast<StreamNode*>(node);
 				auto const key = std::make_pair(streamNode->entityID(), streamNode->streamIndex());
 				visitor(key, streamNode);
 			}
@@ -258,14 +256,14 @@ void foreachStreamNode(Node* node, ForeachStreamVisitor const& visitor)
 }
 
 using ForeachChannelVisitor = std::function<void(ChannelKey const&, ChannelNode*)>;
-void foreachChannelNode(Node* node, ForeachChannelVisitor const& visitor)
+void foreachChannelNode(EntityNode* node, ForeachChannelVisitor const& visitor)
 {
 	priv::channelModeAccept(node,
 		[&visitor](Node* node)
 		{
 			if (node->isChannelNode())
 			{
-				auto* channelNode = dynamic_cast<ChannelNode*>(node);
+				auto* channelNode = static_cast<ChannelNode*>(node);
 				auto const key = std::make_pair(channelNode->entityID(), channelNode->clusterIndex());
 				visitor(key, channelNode);
 			}
@@ -274,18 +272,18 @@ void foreachChannelNode(Node* node, ForeachChannelVisitor const& visitor)
 }
 
 // Insert stream nodes in map
-void insertStreamNodes(StreamNodeMap& map, Node* node)
+void insertStreamNodes(StreamNodeMap& map, EntityNode* node)
 {
 	foreachStreamNode(node,
 		[&map](StreamKey const& key, StreamNode* streamNode)
 		{
 			auto const& [it, result] = map.insert(std::make_pair(key, streamNode));
-			AVDECC_ASSERT(result, "Trying to insert the same key twice");
+			AVDECC_ASSERT_WITH_RET(result, "Trying to insert the same key twice");
 		});
 }
 
 // Remove stream nodes from map
-void removeStreamNodes(StreamNodeMap& map, Node* node)
+void removeStreamNodes(StreamNodeMap& map, EntityNode* node)
 {
 	foreachStreamNode(node,
 		[&map](StreamKey const& key, StreamNode* streamNode)
@@ -299,17 +297,18 @@ void removeStreamNodes(StreamNodeMap& map, Node* node)
 }
 
 // Insert channel nodes in map
-void insertChannelNodes(ChannelNodeMap& map, Node* node)
+void insertChannelNodes(ChannelNodeMap& map, EntityNode* node)
 {
 	foreachChannelNode(node,
 		[&map](ChannelKey const& key, ChannelNode* channelNode)
 		{
-			map.insert(std::make_pair(key, channelNode));
+			auto const& [it, result] = map.insert(std::make_pair(key, channelNode));
+			AVDECC_ASSERT_WITH_RET(result, "Trying to insert the same key twice");
 		});
 }
 
 // Remove channel nodes from map
-void removeChannelNodes(ChannelNodeMap& map, Node* node)
+void removeChannelNodes(ChannelNodeMap& map, EntityNode* node)
 {
 	foreachChannelNode(node,
 		[&map](ChannelKey const& key, ChannelNode* channelNode)
@@ -1250,7 +1249,7 @@ public:
 	}
 
 	// Build talker node hierarchy
-	Node* buildTalkerNode(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
+	EntityNode* buildTalkerNode(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
 	{
 		try
 		{
@@ -1348,7 +1347,7 @@ public:
 	}
 
 	// Build listener node hierarchy
-	Node* buildListenerNode(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
+	EntityNode* buildListenerNode(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::model::ConfigurationNode const& configurationNode)
 	{
 		try
 		{
@@ -1452,7 +1451,7 @@ public:
 	}
 
 	// Insert a talker node hierarchy in the model
-	void insertTalkerNode(Node* node)
+	void insertTalkerNode(EntityNode* node)
 	{
 		if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 		{
@@ -1506,7 +1505,7 @@ public:
 	}
 
 	// Insert a listener node hierarchy in the model
-	void insertListenerNode(Node* node)
+	void insertListenerNode(EntityNode* node)
 	{
 		if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 		{
