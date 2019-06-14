@@ -1655,6 +1655,13 @@ public:
 		emit q->beginResetModel();
 		_talkerNodeMap.clear();
 		_listenerNodeMap.clear();
+
+		_talkerStreamNodeMap.clear();
+		_listenerStreamNodeMap.clear();
+
+		_talkerChannelNodeMap.clear();
+		_listenerChannelNodeMap.clear();
+
 		clearCachedData();
 		emit q->endResetModel();
 	}
