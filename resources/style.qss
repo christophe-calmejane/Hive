@@ -22,7 +22,7 @@ qt--toolkit--material--Button:hover {
 }
 qt--toolkit--material--Button:pressed {
 	margin: 2 0 0 2;
-	color: #000000;
+	color: %1;
 }
 NodeTreeWidget .QListWidget {
 	margin-top: 4;
