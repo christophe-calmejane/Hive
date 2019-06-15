@@ -229,6 +229,16 @@ public:
 
 	static StreamNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	static StreamNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
+	
+	using Key = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
+
+	struct KeyHash
+	{
+		std::size_t operator()(Key const& key) const
+		{
+			return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<int>()(key.second);
+		}
+	};
 
 	// Static entity model data
 	la::avdecc::entity::model::StreamIndex const& streamIndex() const;
@@ -270,18 +280,37 @@ class ChannelNode : public Node
 public:
 	static ChannelNode* createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
 	static ChannelNode* createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
+	
+	// For milan devices channel == 0
+	using Key = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex>;
+	
+	struct KeyHash
+	{
+		std::size_t operator()(Key const& key) const
+		{
+			return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<int>()(key.second);
+		}
+	};
+	
+	using StreamIndexByChannelKey = std::unordered_map<Key, la::avdecc::entity::model::StreamIndex, KeyHash>;
 
 	// Static entity model data
 	avdecc::ChannelIdentification const& channelIdentification() const;
-
-	la::avdecc::entity::model::ClusterIndex const& clusterIndex() const;
-	std::uint16_t const& channelIndex() const;
+	
+	la::avdecc::entity::model::ClusterIndex clusterIndex() const; // const& ?
+	std::uint16_t channelIndex() const; // const&?
+	
+	// Cached data from the controller
+	StreamIndexByChannelKey const& streamIndices() const;
 
 protected:
 	ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification);
+	
+	void setStreamIndices(StreamIndexByChannelKey const& streamIndices);
 
 protected:
 	avdecc::ChannelIdentification const _channelIdentification;
+	StreamIndexByChannelKey _streamIndices;
 };
 
 } // namespace connectionMatrix

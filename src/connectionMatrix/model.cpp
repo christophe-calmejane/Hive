@@ -51,33 +51,18 @@ using NodeMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::unique_ptr
 // Entity section by entity ID
 using EntitySectionMap = std::unordered_map<la::avdecc::UniqueIdentifier, int, la::avdecc::UniqueIdentifier::hash>;
 
-// Stream entity ID and index
-using StreamKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
+// Unique stream identifier
+using StreamKey = StreamNode::Key;
+using StreamKeyHash = StreamNode::KeyHash;
 static auto const InvalidStreamKey = StreamKey{};
-
-struct StreamKeyHash
-{
-	std::size_t operator()(StreamKey const& key) const
-	{
-		return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<int>()(key.second);
-	}
-};
 
 // StreamNode by StreamKey
 using StreamNodeMap = std::unordered_map<StreamKey, StreamNode*, StreamKeyHash>;
 
-// Channel entity ID and cluster index
-// CAUTION, ClusterIndex == ChannelIndex for milan devices
-using ChannelKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex>;
+// Unique channel identifier
+using ChannelKey = ChannelNode::Key;
+using ChannelKeyHash = ChannelNode::KeyHash;
 static auto const InvalidChannelKey = ChannelKey{};
-
-struct ChannelKeyHash
-{
-	std::size_t operator()(ChannelKey const& key) const
-	{
-		return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<int>()(key.second);
-	}
-};
 
 // ChannelNode by ChannelKey
 using ChannelNodeMap = std::unordered_map<ChannelKey, ChannelNode*, ChannelKeyHash>;
@@ -416,6 +401,30 @@ QString clusterChannelName(QString const& clusterName, std::uint16_t const chann
 	}
 
 	return clusterName;
+}
+
+// Returns the list of channels impacted by a given streamIndex
+std::vector<ChannelNode*> computeChannelNodesImpactedByStream(EntityNode* node, la::avdecc::entity::model::StreamIndex const streamIndex)
+{
+	auto nodes = std::vector<ChannelNode*>{};
+	
+	static_cast<Node*>(node)->accept<Node::ChannelPolicy>(
+		[&nodes, &streamIndex](Node* node)
+		{
+			if (AVDECC_ASSERT_WITH_RET(node->isChannelNode(), "Node should be of type ChannelNode"))
+			{
+				auto* channelNode = static_cast<ChannelNode*>(node);
+				for (auto const& [key, index] : channelNode->streamIndices())
+				{
+					if (index == streamIndex)
+					{
+						nodes.push_back(channelNode);
+					}
+				}
+			}
+		});
+	
+	return nodes;
 }
 
 } // namespace priv
@@ -768,6 +777,7 @@ public:
 			auto const listenerType = intersectionData.listener->type();
 
 			auto const talkerEntityID = intersectionData.talker->entityID();
+			auto const listenerEntityID = intersectionData.listener->entityID();
 
 			switch (intersectionData.type)
 			{
@@ -1083,47 +1093,7 @@ public:
 
 					auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
-					// InterfaceDown
-					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateLinkStatus))
-					{
-						if (interfaceDown)
-						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
-						}
-						else
-						{
-							intersectionData.flags.reset(Model::IntersectionData::Flag::InterfaceDown);
-						}
-					}
-
-					// WrongDomain
-					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
-					{
-						if (talkerGrandMasterID == listenerGrandMasterID)
-						{
-							intersectionData.flags.reset(Model::IntersectionData::Flag::WrongDomain);
-						}
-						else
-						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
-						}
-					}
-
-					// WrongFormat
-					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateFormat))
-					{
-						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
-						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
-
-						if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
-						{
-							intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormat);
-						}
-						else
-						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormat);
-						}
-					}
+					auto flags = computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
 
 					// Connected
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
@@ -1196,7 +1166,51 @@ public:
 
 				case Model::IntersectionData::Type::SingleChannel_SingleChannel:
 				{
-					intersectionData.state = Model::IntersectionData::State::Connected;
+					auto const* const talkerChannelNode = static_cast<ChannelNode*>(intersectionData.talker);
+					auto const* const listenerChannelNode = static_cast<ChannelNode*>(intersectionData.listener);
+
+					// get the stream indices
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto const streamConnectionIndices = channelConnectionManager.getStreamIndexPairUsedByAudioChannelConnection(talkerEntityID, talkerChannelNode->channelIdentification(), listenerEntityID, listenerChannelNode->channelIdentification());
+
+					if (!streamConnectionIndices.empty())
+					{
+						intersectionData.smartConnectableStreams.clear();
+						Model::IntersectionData::Flags combinedFlags;
+						auto allConnected = true;
+						for (auto const& streamConnection : streamConnectionIndices)
+						{
+							auto talkerStreamIndex = streamConnection.first.streamIndex;
+							auto listenerStreamIndex = streamConnection.second.streamIndex;
+
+							auto const* talkerStreamNode = ModelPrivate::talkerStreamNode(talkerEntityID, talkerStreamIndex);
+							auto const* listenerStreamNode = ModelPrivate::listenerStreamNode(listenerEntityID, listenerStreamIndex);
+
+							auto flags = computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
+							combinedFlags |= flags;
+
+							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamIndex };
+							auto const connected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
+							allConnected &= connected;
+						}
+
+						intersectionData.flags = combinedFlags;
+
+						if (allConnected)
+						{
+							intersectionData.state = Model::IntersectionData::State::Connected;
+						}
+						else
+						{
+							intersectionData.state = Model::IntersectionData::State::PartiallyConnected;
+						}
+					}
+					else
+					{
+						intersectionData.flags = {};
+						intersectionData.state = Model::IntersectionData::State::NotConnected;
+					}
+
 					break;
 				}
 
@@ -1209,6 +1223,55 @@ public:
 			// Uncaught exception
 			AVDECC_ASSERT(false, "Uncaught exception");
 		}
+	}
+
+	Model::IntersectionData::Flags computeStreamIntersectionFlags(StreamNode const* const talkerStreamNode, StreamNode const* const listenerStreamNode) const
+	{
+		auto flags = Model::IntersectionData::Flags{};
+
+		auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
+		auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
+
+		auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
+		auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
+
+		auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+
+
+		// InterfaceDown
+		if (interfaceDown)
+		{
+			flags.set(Model::IntersectionData::Flag::InterfaceDown);
+		}
+		else
+		{
+			flags.reset(Model::IntersectionData::Flag::InterfaceDown);
+		}
+
+		// WrongDomain
+		if (talkerGrandMasterID == listenerGrandMasterID)
+		{
+			flags.reset(Model::IntersectionData::Flag::WrongDomain);
+		}
+		else
+		{
+			flags.set(Model::IntersectionData::Flag::WrongDomain);
+		}
+
+		// WrongFormat
+		auto const talkerStreamFormat = talkerStreamNode->streamFormat();
+		auto const listenerStreamFormat = listenerStreamNode->streamFormat();
+
+		if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
+		{
+			flags.reset(Model::IntersectionData::Flag::WrongFormat);
+		}
+		else
+		{
+			flags.set(Model::IntersectionData::Flag::WrongFormat);
+		}
+
+		return flags;
 	}
 
 	// Cache update helpers
@@ -2016,6 +2079,33 @@ public:
 		for (auto const& [entityID, channelInfo] : channels)
 		{
 			auto* listenerNode = listenerChannelNode(entityID, *channelInfo.clusterIndex);
+			auto streamIndices = ChannelNode::StreamIndexByChannelKey{};
+			
+			auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+			auto const channelConnections = channelConnectionManager.getChannelConnectionsReverse(entityID, channelInfo);
+			
+			
+#if 0
+			if (!channelConnections->targets.empty())
+			{
+				auto const& target = channelConnections->targets.at(0);
+				
+				auto const talkerEntityID = target->targetEntityId;
+				auto const talkerStreamIndex = target->targetStreamIndex;
+				auto const key = std::make_pair(talkerEntityID, talkerStreamIndex);
+				
+				auto const streamIndex = target->sourceStreamIndex;
+
+				streamIndices.emplace(std::make_pair(key, streamIndex));
+				
+				//// TODO clean up the saved indices.
+				//auto* talkerNode = talkerChannelNode(talkerEntityId, talkerClusterIndex);
+				//talkerNode->currentStreamIndices().emplace(std::make_pair(listenerEntityID, *listenerChannelInfo.clusterIndex), channelConnections->targets.at(0)->targetStreamIndex);
+			}
+#endif
+			
+			listenerNode->setStreamIndices(streamIndices);
+			
 			channelModeListenerIntersectionDataChanged(listenerNode, true, false, dirtyFlags);
 		}
 	}
@@ -2137,6 +2227,32 @@ private:
 			return nullptr;
 		}
 		return it->second;
+	}
+
+	// Returns the list of talker ChannelNode impacted by streamIndex
+	std::vector<ChannelNode*> talkerChannelNodesImpactedByStreamIndex(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const& streamIndex) const
+	{
+		auto* talkerNode = talkerNodeFromEntityID(entityID);
+		
+		if (AVDECC_ASSERT_WITH_RET(talkerNode, "Talker node not found"))
+		{
+			return priv::computeChannelNodesImpactedByStream(talkerNode, streamIndex);
+		}
+
+		return {};
+	}
+
+	// Returns the list of listener ChannelNode impacted by streamIndex
+	std::vector<ChannelNode*> listenerChannelNodesImpactedByStreamIndex(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const& streamIndex) const
+	{
+		auto* listenerNode = listenerNodeFromEntityID(entityID);
+		
+		if (AVDECC_ASSERT_WITH_RET(listenerNode, "Listener node not found"))
+		{
+			return priv::computeChannelNodesImpactedByStream(listenerNode, streamIndex);
+		}
+		
+		return {};
 	}
 
 private:
