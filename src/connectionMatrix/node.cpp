@@ -56,18 +56,6 @@ bool Node::isRedundantStreamNode() const
 	}
 }
 
-bool Node::isRedundantChannelNode() const
-{
-	switch (_type)
-	{
-		case Type::RedundantOutputChannel:
-		case Type::RedundantInputChannel:
-			return true;
-		default:
-			return false;
-	}
-}
-
 bool Node::isStreamNode() const
 {
 	switch (_type)
@@ -88,8 +76,6 @@ bool Node::isChannelNode() const
 	{
 		case Type::OutputChannel:
 		case Type::InputChannel:
-		case Type::RedundantOutputChannel:
-		case Type::RedundantInputChannel:
 			return true;
 		default:
 			return false;
@@ -159,19 +145,6 @@ Node const* Node::childAt(int index) const
 int Node::childrenCount() const
 {
 	return static_cast<int>(_children.size());
-}
-
-void Node::accept(Visitor const& visitor, bool const childrenOnly) const
-{
-	if (!childrenOnly)
-	{
-		visitor(const_cast<Node*>(this));
-	}
-
-	for (auto const& child : _children)
-	{
-		child->accept(visitor, false);
-	}
 }
 
 Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent)
@@ -333,16 +306,6 @@ void StreamNode::setRunning(bool isRunning)
 void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
 {
 	_streamConnectionState = streamConnectionState;
-}
-
-ChannelNode* ChannelNode::createRedundantOutputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification)
-{
-	return new ChannelNode{ Type::RedundantOutputChannel, parent, channelIdentification };
-}
-
-ChannelNode* ChannelNode::createRedundantInputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification)
-{
-	return new ChannelNode{ Type::RedundantInputChannel, parent, channelIdentification };
 }
 
 ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)

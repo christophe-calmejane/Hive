@@ -174,26 +174,29 @@ void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int
 	{
 		auto* model = static_cast<Model*>(this->model());
 		auto* node = model->node(section, orientation());
-
-		auto expanded = true;
-		auto visible = true;
-
-		switch (node->type())
+		
+		if (AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 		{
-			case Node::Type::RedundantOutput:
-			case Node::Type::RedundantInput:
-				expanded = false;
-				break;
-			case Node::Type::RedundantOutputStream:
-			case Node::Type::RedundantInputStream:
-				visible = false;
-				break;
-			default:
-				break;
-		}
+			auto expanded = true;
+			auto visible = true;
 
-		_sectionState[section] = { expanded, visible };
-		updateSectionVisibility(section);
+			switch (node->type())
+			{
+				case Node::Type::RedundantOutput:
+				case Node::Type::RedundantInput:
+					expanded = false;
+					break;
+				case Node::Type::RedundantOutputStream:
+				case Node::Type::RedundantInputStream:
+					visible = false;
+					break;
+				default:
+					break;
+			}
+
+			_sectionState[section] = { expanded, visible };
+			updateSectionVisibility(section);
+		}
 	}
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
@@ -342,8 +345,6 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			break;
 		case Node::Type::RedundantInputStream:
 		case Node::Type::RedundantOutputStream:
-		case Node::Type::RedundantInputChannel:
-		case Node::Type::RedundantOutputChannel:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			nodeLevel = 2;

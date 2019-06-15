@@ -37,21 +37,18 @@ public:
 	enum class Type
 	{
 		None,
-		
+
 		Entity,
-		
+
 		RedundantOutput,
 		RedundantInput,
-		
+
 		RedundantOutputStream,
 		RedundantInputStream,
-		
-		RedundantOutputChannel,
-		RedundantInputChannel,
-		
+
 		OutputStream,
 		InputStream,
-		
+
 		OutputChannel,
 		InputChannel,
 	};
@@ -69,14 +66,11 @@ public:
 
 	// Returns true if node type is either RedundantOutputStream or RedundantInputStream
 	bool isRedundantStreamNode() const;
-	
-	// Returns true if node type is either RedundantOutputChannel or RedundantInputChannel
-	bool isRedundantChannelNode() const;
-	
+
 	// Returns true if node type is either RedundantOutputStream, RedundantInputStream, OutputStream or InputStream
 	bool isStreamNode() const;
-	
-	// Returns true if node type is either RedundantOutputChannel, RedundantInputChannel, OutputChannel or InputChannel
+
+	// Returns true if node type is either OutputChannel or InputChannel
 	bool isChannelNode() const;
 
 	// Returns the entity ID
@@ -105,10 +99,71 @@ public:
 
 	// Returns the number of children
 	int childrenCount() const;
+	
+	// Visitor policy that visit all node types
+	struct CompleteHierarchyPolicy
+	{
+		static bool shouldVisit(Node const* const)
+		{
+			return true;
+		}
+	};
 
-	// Visitor pattern that performs a hierarchy traversal
+	// Visitor policy that visit all relevant nodes in StreamMode
+	struct StreamHierarchyPolicy
+	{
+		static bool shouldVisit(Node const* const node)
+		{
+			return node->isEntityNode() || node->isRedundantNode() || node->isStreamNode();
+		}
+	};
+
+	// Visitor policy that visit all relevant nodes in ChannelMode
+	struct ChannelHierarchyPolicy
+	{
+		static bool shouldVisit(Node const* const node)
+		{
+			return node->isEntityNode() || node->isChannelNode();
+		}
+	};
+
+	// Visitor policy that visit only nodes of StreamNode type
+	struct StreamPolicy
+	{
+		static bool shouldVisit(Node const* const node)
+		{
+			return node->isStreamNode();
+		}
+	};
+
+	// Visitor policy that visit only nodes of ChannelNode type
+	struct ChannelPolicy
+	{
+		static bool shouldVisit(Node const* const node)
+		{
+			return node->isChannelNode();
+		}
+	};
+
+// Visitor pattern
 	using Visitor = std::function<void(Node*)>;
-	void accept(Visitor const& visitor, bool const childrenOnly = false) const;
+	
+	template<typename Policy = CompleteHierarchyPolicy>
+	void accept(Visitor const& visitor, bool const childrenOnly = false) const
+	{
+		if (!childrenOnly)
+		{
+			if (Policy::shouldVisit(this))
+			{
+				visitor(const_cast<Node*>(this));
+			}
+		}
+		
+		for (auto const& child : _children)
+		{
+			child->accept<Policy>(visitor, false);
+		}
+	}
 
 protected:
 	Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent);
@@ -171,14 +226,14 @@ class StreamNode : public Node
 public:
 	static StreamNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	static StreamNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-	
+
 	static StreamNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	static StreamNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 
 	// Static entity model data
 	la::avdecc::entity::model::StreamIndex const& streamIndex() const;
 	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const;
-	
+
 	// Cached data from the controller
 	la::avdecc::entity::model::StreamFormat const& streamFormat() const;
 	la::avdecc::UniqueIdentifier const& grandMasterID() const;
@@ -211,11 +266,8 @@ protected:
 class ChannelNode : public Node
 {
 	friend class ModelPrivate;
-	
+
 public:
-	static ChannelNode* createRedundantOutputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification);
-	static ChannelNode* createRedundantInputNode(RedundantNode& parent, avdecc::ChannelIdentification const& channelIdentification);
-	
 	static ChannelNode* createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
 	static ChannelNode* createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
 
@@ -231,5 +283,5 @@ protected:
 protected:
 	avdecc::ChannelIdentification const _channelIdentification;
 };
-	
+
 } // namespace connectionMatrix

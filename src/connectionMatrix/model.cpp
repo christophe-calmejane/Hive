@@ -53,6 +53,7 @@ using EntitySectionMap = std::unordered_map<la::avdecc::UniqueIdentifier, int, l
 
 // Stream entity ID and index
 using StreamKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
+static auto const InvalidStreamKey = StreamKey{};
 
 struct StreamKeyHash
 {
@@ -68,6 +69,7 @@ using StreamNodeMap = std::unordered_map<StreamKey, StreamNode*, StreamKeyHash>;
 // Channel entity ID and cluster index
 // CAUTION, ClusterIndex == ChannelIndex for milan devices
 using ChannelKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex>;
+static auto const InvalidChannelKey = ChannelKey{};
 
 struct ChannelKeyHash
 {
@@ -189,36 +191,8 @@ QString intersectionDataToString(Model::IntersectionData const& intersectionData
 }
 #endif
 
-// Visit node in stream mode (visitor is called on children that are revelant in Model::Mode::Stream mode)
-void streamModeAccept(Node* node, Node::Visitor const& visitor, bool const childrenOnly)
-{
-	node->accept(
-		[&visitor](Node* child)
-		{
-			if (child->isEntityNode() || child->isRedundantNode() || child->isStreamNode())
-			{
-				visitor(child);
-			}
-		},
-		childrenOnly);
-}
-
-// Visit node in channel mode (visitor is called on children that are revelant in Model::Mode::Channel mode)
-void channelModeAccept(Node* node, Node::Visitor const& visitor, bool const childrenOnly)
-{
-	node->accept(
-		[&visitor](Node* child)
-		{
-			if (child->isEntityNode() || child->isChannelNode())
-			{
-				visitor(child);
-			}
-		},
-		childrenOnly);
-}
-
 // Visit node according to mode
-void acceptWithMode(Node* node, Model::Mode const mode, Node::Visitor const& visitor, bool const childrenOnly = false)
+void accept(Node* node, Model::Mode const mode, Node::Visitor const& visitor, bool const childrenOnly = false)
 {
 	if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 	{
@@ -228,10 +202,10 @@ void acceptWithMode(Node* node, Model::Mode const mode, Node::Visitor const& vis
 	switch (mode)
 	{
 		case Model::Mode::Stream:
-			streamModeAccept(node, visitor, childrenOnly);
+			node->accept<Node::StreamHierarchyPolicy>(visitor, childrenOnly);
 			break;
 		case Model::Mode::Channel:
-			channelModeAccept(node, visitor, childrenOnly);
+			node->accept<Node::ChannelHierarchyPolicy>(visitor, childrenOnly);
 			break;
 		default:
 			AVDECC_ASSERT(false, "Unhandled Mode");
@@ -239,57 +213,54 @@ void acceptWithMode(Node* node, Model::Mode const mode, Node::Visitor const& vis
 	}
 }
 
-using ForeachStreamVisitor = std::function<void(StreamKey const&, StreamNode*)>;
-void foreachStreamNode(EntityNode* node, ForeachStreamVisitor const& visitor)
+// Checks if node is actually a StreamNode and return its associated key, otherwise returns InvalidStreamKey
+StreamKey makeStreamKey(Node* node)
 {
-	priv::streamModeAccept(node,
-		[&visitor](Node* node)
-		{
-			if (node->isStreamNode())
-			{
-				auto* streamNode = static_cast<StreamNode*>(node);
-				auto const key = std::make_pair(streamNode->entityID(), streamNode->streamIndex());
-				visitor(key, streamNode);
-			}
-		},
-		true);
+	if (AVDECC_ASSERT_WITH_RET(node->isStreamNode(), "Node should be of type StreamNode"))
+	{
+		auto* streamNode = static_cast<StreamNode*>(node);
+		return std::make_pair(streamNode->entityID(), streamNode->streamIndex());
+	}
+
+	return InvalidStreamKey;
 }
 
-using ForeachChannelVisitor = std::function<void(ChannelKey const&, ChannelNode*)>;
-void foreachChannelNode(EntityNode* node, ForeachChannelVisitor const& visitor)
+// Checks if node is actually a ChannelNode and return its associated key, otherwise returns InvalidChannelKey
+ChannelKey makeChannelKey(Node* node)
 {
-	priv::channelModeAccept(node,
-		[&visitor](Node* node)
-		{
-			if (node->isChannelNode())
-			{
-				auto* channelNode = static_cast<ChannelNode*>(node);
-				auto const key = std::make_pair(channelNode->entityID(), channelNode->clusterIndex());
-				visitor(key, channelNode);
-			}
-		},
-		true);
+	if (AVDECC_ASSERT_WITH_RET(node->isChannelNode(), "Node should be of type ChannelNode"))
+	{
+		auto* channelNode = static_cast<ChannelNode*>(node);
+		return std::make_pair(channelNode->entityID(), channelNode->clusterIndex());
+	}
+
+	return InvalidChannelKey;
 }
 
 // Insert stream nodes in map
-void insertStreamNodes(StreamNodeMap& map, EntityNode* node)
+void insertStreamNodes(StreamNodeMap& map, Node* node)
 {
-	foreachStreamNode(node,
-		[&map](StreamKey const& key, StreamNode* streamNode)
+	node->accept<Node::StreamPolicy>(
+		[&map](Node* node)
 		{
-			auto const& [it, result] = map.insert(std::make_pair(key, streamNode));
-			AVDECC_ASSERT_WITH_RET(result, "Trying to insert the same key twice");
+			auto const key = makeStreamKey(node);
+			if (key != InvalidStreamKey)
+			{
+				auto const& [it, result] = map.insert(std::make_pair(key, static_cast<StreamNode*>(node)));
+				AVDECC_ASSERT_WITH_RET(result, "Trying to insert the same key twice in the same map");
+			}
 		});
 }
 
 // Remove stream nodes from map
-void removeStreamNodes(StreamNodeMap& map, EntityNode* node)
+void removeStreamNodes(StreamNodeMap& map, Node* node)
 {
-	foreachStreamNode(node,
-		[&map](StreamKey const& key, StreamNode* streamNode)
+	node->accept<Node::StreamPolicy>(
+		[&map](Node* node)
 		{
+			auto const key = makeStreamKey(node);
 			auto const it = map.find(key);
-			if (AVDECC_ASSERT_WITH_RET(it != std::end(map), "Invalid key"))
+			if (AVDECC_ASSERT_WITH_RET(it != std::end(map), "Trying to erase a key that is not in the map"))
 			{
 				map.erase(key);
 			}
@@ -297,24 +268,29 @@ void removeStreamNodes(StreamNodeMap& map, EntityNode* node)
 }
 
 // Insert channel nodes in map
-void insertChannelNodes(ChannelNodeMap& map, EntityNode* node)
+void insertChannelNodes(ChannelNodeMap& map, Node* node)
 {
-	foreachChannelNode(node,
-		[&map](ChannelKey const& key, ChannelNode* channelNode)
+	node->accept<Node::ChannelPolicy>(
+		[&map](Node* node)
 		{
-			auto const& [it, result] = map.insert(std::make_pair(key, channelNode));
-			AVDECC_ASSERT_WITH_RET(result, "Trying to insert the same key twice");
+			auto const key = makeChannelKey(node);
+			if (key != InvalidChannelKey)
+			{
+				auto const& [it, result] = map.insert(std::make_pair(key, static_cast<ChannelNode*>(node)));
+				AVDECC_ASSERT_WITH_RET(result, "Trying to insert the same key twice in the same map");
+			}
 		});
 }
 
 // Remove channel nodes from map
-void removeChannelNodes(ChannelNodeMap& map, EntityNode* node)
+void removeChannelNodes(ChannelNodeMap& map, Node* node)
 {
-	foreachChannelNode(node,
-		[&map](ChannelKey const& key, ChannelNode* channelNode)
+	node->accept<Node::ChannelPolicy>(
+		[&map](Node* node)
 		{
+			auto const key = makeChannelKey(node);
 			auto const it = map.find(key);
-			if (AVDECC_ASSERT_WITH_RET(it != std::end(map), "Invalid key"))
+			if (AVDECC_ASSERT_WITH_RET(it != std::end(map), "Trying to erase a key that is not in the map"))
 			{
 				map.erase(key);
 			}
@@ -334,7 +310,7 @@ void insertNodes(Nodes& list, Node* node, Model::Mode const mode, int const firs
 #endif
 
 	auto nodes = Nodes{};
-	acceptWithMode(node, mode,
+	accept(node, mode,
 		[&nodes](Node* node)
 		{
 			nodes.push_back(node);
@@ -379,7 +355,7 @@ int childrenCount(Node* node, Model::Mode const mode)
 
 	if (AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 	{
-		acceptWithMode(node, mode,
+		accept(node, mode,
 			[&count](Node*)
 			{
 				++count;
@@ -792,7 +768,6 @@ public:
 			auto const listenerType = intersectionData.listener->type();
 
 			auto const talkerEntityID = intersectionData.talker->entityID();
-			auto const listenerEntityID = intersectionData.listener->entityID();
 
 			switch (intersectionData.type)
 			{
@@ -2697,7 +2672,7 @@ bool Model::isTransposed() const
 void Model::accept(Node* node, Visitor const& visitor, bool const childrenOnly) const
 {
 	Q_D(const Model);
-	priv::acceptWithMode(node, d->_mode, visitor, childrenOnly);
+	priv::accept(node, d->_mode, visitor, childrenOnly);
 }
 
 } // namespace connectionMatrix
