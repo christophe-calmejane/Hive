@@ -1898,7 +1898,11 @@ public:
 			if (auto* node = talkerStreamNode(entityID, streamIndex))
 			{
 				node->setStreamFormat(streamFormat);
-				streamModeTalkerIntersectionDataChanged(node, true, false, dirtyFlags);
+				
+				if (_mode == Model::Mode::Stream)
+				{
+					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+				}
 			}
 			else
 			{
@@ -1910,7 +1914,11 @@ public:
 			if (auto* node = listenerStreamNode(entityID, streamIndex))
 			{
 				node->setStreamFormat(streamFormat);
-				streamModeListenerIntersectionDataChanged(node, true, false, dirtyFlags);
+				
+				if (_mode == Model::Mode::Stream)
+				{
+					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+				}
 			}
 			else
 			{
@@ -1927,7 +1935,11 @@ public:
 			if (auto* node = talkerStreamNode(entityID, streamIndex))
 			{
 				node->setRunning(isRunning);
-				streamModeTalkerHeaderDataChanged(node);
+				
+				if (_mode == Model::Mode::Stream)
+				{
+					talkerHeaderDataChanged(node);
+				}
 			}
 			else
 			{
@@ -1939,7 +1951,11 @@ public:
 			if (auto* node = listenerStreamNode(entityID, streamIndex))
 			{
 				node->setRunning(isRunning);
-				streamModeTalkerHeaderDataChanged(node);
+				
+				if (_mode == Model::Mode::Stream)
+				{
+					listenerHeaderDataChanged(node);
+				}
 			}
 			else
 			{
@@ -1955,7 +1971,11 @@ public:
 		if (auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex))
 		{
 			listener->setStreamConnectionState(state);
-			streamModeListenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+			
+			if (_mode == Model::Mode::Stream)
+			{
+				listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+			}
 		}
 		else
 		{
@@ -1979,7 +1999,11 @@ public:
 					if (auto* node = talkerStreamNode(entityID, streamIndex))
 					{
 						node->setName(name);
-						streamModeTalkerHeaderDataChanged(node);
+						
+						if (_mode == Model::Mode::Stream)
+						{
+							talkerHeaderDataChanged(node);
+						}
 					}
 					else
 					{
@@ -1993,7 +2017,11 @@ public:
 					if (auto* node = listenerStreamNode(entityID, streamIndex))
 					{
 						node->setName(name);
-						streamModeListenerHeaderDataChanged(node);
+						
+						if (_mode == Model::Mode::Stream)
+						{
+							listenerHeaderDataChanged(node);
+						}
 					}
 					else
 					{
@@ -2048,7 +2076,10 @@ public:
 					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
-					channelModeTalkerHeaderDataChanged(channelNode);
+					if (_mode == Model::Mode::Channel)
+					{
+						talkerHeaderDataChanged(channelNode);
+					}
 				}
 			}
 
@@ -2058,8 +2089,11 @@ public:
 				{
 					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
-
-					channelModeListenerHeaderDataChanged(channelNode);
+					
+					if (_mode == Model::Mode::Channel)
+					{
+						listenerHeaderDataChanged(channelNode);
+					}
 				}
 			}
 		}
@@ -2083,9 +2117,7 @@ public:
 			
 			auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 			auto const channelConnections = channelConnectionManager.getChannelConnectionsReverse(entityID, channelInfo);
-			
-			
-#if 0
+
 			if (!channelConnections->targets.empty())
 			{
 				auto const& target = channelConnections->targets.at(0);
@@ -2102,11 +2134,13 @@ public:
 				//auto* talkerNode = talkerChannelNode(talkerEntityId, talkerClusterIndex);
 				//talkerNode->currentStreamIndices().emplace(std::make_pair(listenerEntityID, *listenerChannelInfo.clusterIndex), channelConnections->targets.at(0)->targetStreamIndex);
 			}
-#endif
 			
 			listenerNode->setStreamIndices(streamIndices);
 			
-			channelModeListenerIntersectionDataChanged(listenerNode, true, false, dirtyFlags);
+			if (_mode == Model::Mode::Channel)
+			{
+				listenerIntersectionDataChanged(listenerNode, true, false, dirtyFlags);
+			}
 		}
 	}
 
@@ -2392,70 +2426,6 @@ private:
 #endif
 
 		emit q->headerDataChanged(listenerOrientation(), section, section);
-	}
-
-	void streamModeTalkerHeaderDataChanged(Node* const node)
-	{
-		if (_mode == Model::Mode::Stream)
-		{
-			talkerHeaderDataChanged(node);
-		}
-	}
-
-	void streamModeListenerHeaderDataChanged(Node* const node)
-	{
-		if (_mode == Model::Mode::Stream)
-		{
-			listenerHeaderDataChanged(node);
-		}
-	}
-
-	void channelModeTalkerHeaderDataChanged(Node* const node)
-	{
-		if (_mode == Model::Mode::Channel)
-		{
-			talkerHeaderDataChanged(node);
-		}
-	}
-
-	void channelModeListenerHeaderDataChanged(Node* const node)
-	{
-		if (_mode == Model::Mode::Channel)
-		{
-			listenerHeaderDataChanged(node);
-		}
-	}
-
-	void streamModeTalkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
-	{
-		if (_mode == Model::Mode::Stream)
-		{
-			talkerIntersectionDataChanged(talker, andParents, andChildren, dirtyFlags);
-		}
-	}
-
-	void streamModeListenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
-	{
-		if (_mode == Model::Mode::Stream)
-		{
-			listenerIntersectionDataChanged(listener, andParents, andChildren, dirtyFlags);
-		}
-	}
-
-	void channelModeTalkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
-	{
-		if (_mode == Model::Mode::Channel)
-		{
-			talkerIntersectionDataChanged(talker, andParents, andChildren, dirtyFlags);
-		}
-	}
-
-	void channelModeListenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
-	{
-		if (_mode == Model::Mode::Channel)
-		{
-			listenerIntersectionDataChanged(listener, andParents, andChildren, dirtyFlags);
-		}
 	}
 
 	// Returns talker header orientation
