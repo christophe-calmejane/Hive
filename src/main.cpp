@@ -147,9 +147,21 @@ int main(int argc, char* argv[])
 		auto const profile = profileSelectionDialog.selectedProfile();
 		settings.setValue(settings::UserProfile.name, la::avdecc::utils::to_integral(profile));
 	}
-
-	QPixmap logo(":/Logo.png");
-	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);
+	
+	auto splash = QSplashScreen{};
+	
+	// Use MainWindow geometry so that the splash screen on the same screen
+	auto const mainWindowGeometry = settings.getValue(settings::MainWindowGeometry).toByteArray();
+	splash.restoreGeometry(mainWindowGeometry);
+	
+	// Configure and force the underlying window creation
+	splash.setWindowFlag(Qt::WindowStaysOnTopHint);
+	splash.winId();
+	
+	// Now that the splash screen is configured on the right screen, set the pixmap
+	auto const logo = QPixmap{":/Logo.png"};
+	splash.setPixmap(logo);
+	
 	splash.show();
 	app.processEvents();
 
