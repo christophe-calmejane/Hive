@@ -112,7 +112,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 		{
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary:
 			{
-				callbackTryAgainElevatedRights();
+				la::avdecc::utils::invokeProtectedHandler(callbackTryAgainElevatedRights);
 				break;
 			}
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::Impossible:
