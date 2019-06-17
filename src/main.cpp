@@ -24,6 +24,7 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QSplashScreen>
+#include <QDesktopWidget>
 
 #include <iostream>
 #include <chrono>
@@ -147,21 +148,19 @@ int main(int argc, char* argv[])
 		auto const profile = profileSelectionDialog.selectedProfile();
 		settings.setValue(settings::UserProfile.name, la::avdecc::utils::to_integral(profile));
 	}
-	
-	auto splash = QSplashScreen{};
-	
-	// Use MainWindow geometry so that the splash screen on the same screen
+
+	auto const logo = QPixmap{ ":/Logo.png" };
+	auto splash = QSplashScreen{ logo, Qt::WindowStaysOnTopHint };
+
+	// Use MainWindow geometry on a dummy widget to get the target screen (i.e, where the main window will appear)
+	QWidget dummy;
 	auto const mainWindowGeometry = settings.getValue(settings::MainWindowGeometry).toByteArray();
-	splash.restoreGeometry(mainWindowGeometry);
-	
-	// Configure and force the underlying window creation
-	splash.setWindowFlag(Qt::WindowStaysOnTopHint);
-	splash.winId();
-	
-	// Now that the splash screen is configured on the right screen, set the pixmap
-	auto const logo = QPixmap{":/Logo.png"};
-	splash.setPixmap(logo);
-	
+	dummy.restoreGeometry(mainWindowGeometry);
+	auto const availableScreenGeometry = QApplication::desktop()->screenGeometry(&dummy);
+
+	// Center our splash screen on this target screen
+	splash.move(availableScreenGeometry.center() - logo.rect().center());
+
 	splash.show();
 	app.processEvents();
 
