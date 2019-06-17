@@ -57,7 +57,7 @@ public:
 		Stream,
 		Channel,
 	};
-	
+
 	struct IntersectionData
 	{
 		enum class Type
@@ -79,12 +79,12 @@ public:
 			Redundant_RedundantChannel, // Duplicate kind
 			Redundant_SingleStream, // Summary kind
 			Redundant_SingleChannel, // Summary kind
-			
+
 			// RedundantStream
 			RedundantStream_RedundantStream,
 			RedundantStream_RedundantStream_Forbidden,
 			RedundantStream_SingleStream,
-			
+
 			// RedundantChannel
 			RedundantChannel_RedundantChannel,
 			RedundantChannel_RedundantChannel_Forbidden,
@@ -92,7 +92,7 @@ public:
 
 			// Stream
 			SingleStream_SingleStream,
-			
+
 			// Channel
 			SingleChannel_SingleChannel,
 		};
@@ -150,10 +150,10 @@ public:
 
 	// Returns intersection data for the given index
 	IntersectionData const& intersectionData(QModelIndex const& index) const;
-	
+
 	// Set the model mode
 	void setMode(Mode const mode);
-	
+
 	// Returns the mode of the model
 	Mode mode() const;
 

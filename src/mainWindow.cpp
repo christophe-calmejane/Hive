@@ -456,7 +456,8 @@ void MainWindowImpl::loadSettings()
 
 	// Configure connectionMatrix mode
 	auto const channelMode = settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
-	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting; action->setChecked(true);
+	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting;
+	action->setChecked(true);
 	_channelModeButton.setChecked(channelMode);
 
 	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
@@ -488,13 +489,13 @@ void MainWindowImpl::connectSignals()
 			settings.setValue(settings::ChannelModeConnectionMatrix.name, checked);
 			_channelModeButton.setChecked(checked);
 		});
-	
+
 	connect(&_channelModeButton, &QPushButton::toggled, this,
-					[this](bool checked)
-					{
-						auto* action = checked ? actionChannelModeRouting : actionStreamModeRouting;
-						action->setChecked(true);
-					});
+		[this](bool checked)
+		{
+			auto* action = checked ? actionChannelModeRouting : actionStreamModeRouting;
+			action->setChecked(true);
+		});
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,

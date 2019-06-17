@@ -174,7 +174,7 @@ void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int
 	{
 		auto* model = static_cast<Model*>(this->model());
 		auto* node = model->node(section, orientation());
-		
+
 		if (AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 		{
 			auto expanded = true;

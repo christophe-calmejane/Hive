@@ -105,7 +105,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 	auto& manager = avdecc::ControllerManager::getInstance();
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-	
+
 	auto const handleChannelCreationResult = [this](avdecc::ChannelConnectionManager::ChannelConnectResult channelConnectResult, std::function<void()> callbackTryAgainElevatedRights)
 	{
 		switch (channelConnectResult)
@@ -270,7 +270,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			}
 			break;
 		}
-			
+
 		case Model::IntersectionData::Type::Entity_SingleChannel:
 		{
 			if (_model->mode() == Model::Mode::Channel && QApplication::keyboardModifiers().testFlag(Qt::ControlModifier))

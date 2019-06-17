@@ -403,30 +403,6 @@ QString clusterChannelName(QString const& clusterName, std::uint16_t const chann
 	return clusterName;
 }
 
-// Returns the list of channels impacted by a given streamIndex
-std::vector<ChannelNode*> computeChannelNodesImpactedByStream(EntityNode* node, la::avdecc::entity::model::StreamIndex const streamIndex)
-{
-	auto nodes = std::vector<ChannelNode*>{};
-	
-	static_cast<Node*>(node)->accept<Node::ChannelPolicy>(
-		[&nodes, &streamIndex](Node* node)
-		{
-			if (AVDECC_ASSERT_WITH_RET(node->isChannelNode(), "Node should be of type ChannelNode"))
-			{
-				auto* channelNode = static_cast<ChannelNode*>(node);
-				for (auto const& [key, index] : channelNode->streamIndices())
-				{
-					if (index == streamIndex)
-					{
-						nodes.push_back(channelNode);
-					}
-				}
-			}
-		});
-	
-	return nodes;
-}
-
 } // namespace priv
 
 class ModelPrivate : public QObject
@@ -1898,7 +1874,7 @@ public:
 			if (auto* node = talkerStreamNode(entityID, streamIndex))
 			{
 				node->setStreamFormat(streamFormat);
-				
+
 				if (_mode == Model::Mode::Stream)
 				{
 					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
@@ -1914,7 +1890,7 @@ public:
 			if (auto* node = listenerStreamNode(entityID, streamIndex))
 			{
 				node->setStreamFormat(streamFormat);
-				
+
 				if (_mode == Model::Mode::Stream)
 				{
 					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
@@ -1935,7 +1911,7 @@ public:
 			if (auto* node = talkerStreamNode(entityID, streamIndex))
 			{
 				node->setRunning(isRunning);
-				
+
 				if (_mode == Model::Mode::Stream)
 				{
 					talkerHeaderDataChanged(node);
@@ -1951,7 +1927,7 @@ public:
 			if (auto* node = listenerStreamNode(entityID, streamIndex))
 			{
 				node->setRunning(isRunning);
-				
+
 				if (_mode == Model::Mode::Stream)
 				{
 					listenerHeaderDataChanged(node);
@@ -1971,7 +1947,7 @@ public:
 		if (auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex))
 		{
 			listener->setStreamConnectionState(state);
-			
+
 			if (_mode == Model::Mode::Stream)
 			{
 				listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
@@ -1999,7 +1975,7 @@ public:
 					if (auto* node = talkerStreamNode(entityID, streamIndex))
 					{
 						node->setName(name);
-						
+
 						if (_mode == Model::Mode::Stream)
 						{
 							talkerHeaderDataChanged(node);
@@ -2017,7 +1993,7 @@ public:
 					if (auto* node = listenerStreamNode(entityID, streamIndex))
 					{
 						node->setName(name);
-						
+
 						if (_mode == Model::Mode::Stream)
 						{
 							listenerHeaderDataChanged(node);
@@ -2089,7 +2065,7 @@ public:
 				{
 					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
-					
+
 					if (_mode == Model::Mode::Channel)
 					{
 						listenerHeaderDataChanged(channelNode);
@@ -2113,30 +2089,7 @@ public:
 		for (auto const& [entityID, channelInfo] : channels)
 		{
 			auto* listenerNode = listenerChannelNode(entityID, *channelInfo.clusterIndex);
-			auto streamIndices = ChannelNode::StreamIndexByChannelKey{};
-			
-			auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-			auto const channelConnections = channelConnectionManager.getChannelConnectionsReverse(entityID, channelInfo);
 
-			if (!channelConnections->targets.empty())
-			{
-				auto const& target = channelConnections->targets.at(0);
-				
-				auto const talkerEntityID = target->targetEntityId;
-				auto const talkerStreamIndex = target->targetStreamIndex;
-				auto const key = std::make_pair(talkerEntityID, talkerStreamIndex);
-				
-				auto const streamIndex = target->sourceStreamIndex;
-
-				streamIndices.emplace(std::make_pair(key, streamIndex));
-				
-				//// TODO clean up the saved indices.
-				//auto* talkerNode = talkerChannelNode(talkerEntityId, talkerClusterIndex);
-				//talkerNode->currentStreamIndices().emplace(std::make_pair(listenerEntityID, *listenerChannelInfo.clusterIndex), channelConnections->targets.at(0)->targetStreamIndex);
-			}
-			
-			listenerNode->setStreamIndices(streamIndices);
-			
 			if (_mode == Model::Mode::Channel)
 			{
 				listenerIntersectionDataChanged(listenerNode, true, false, dirtyFlags);
@@ -2261,32 +2214,6 @@ private:
 			return nullptr;
 		}
 		return it->second;
-	}
-
-	// Returns the list of talker ChannelNode impacted by streamIndex
-	std::vector<ChannelNode*> talkerChannelNodesImpactedByStreamIndex(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const& streamIndex) const
-	{
-		auto* talkerNode = talkerNodeFromEntityID(entityID);
-		
-		if (AVDECC_ASSERT_WITH_RET(talkerNode, "Talker node not found"))
-		{
-			return priv::computeChannelNodesImpactedByStream(talkerNode, streamIndex);
-		}
-
-		return {};
-	}
-
-	// Returns the list of listener ChannelNode impacted by streamIndex
-	std::vector<ChannelNode*> listenerChannelNodesImpactedByStreamIndex(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const& streamIndex) const
-	{
-		auto* listenerNode = listenerNodeFromEntityID(entityID);
-		
-		if (AVDECC_ASSERT_WITH_RET(listenerNode, "Listener node not found"))
-		{
-			return priv::computeChannelNodesImpactedByStream(listenerNode, streamIndex);
-		}
-		
-		return {};
 	}
 
 private:

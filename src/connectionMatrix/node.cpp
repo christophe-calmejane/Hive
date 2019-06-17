@@ -210,7 +210,7 @@ RedundantNode::RedundantNode(Type const type, EntityNode& parent, la::avdecc::co
 	, _redundantIndex{ redundantIndex }
 {
 }
-	
+
 StreamNode* StreamNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
 {
 	return new StreamNode{ Type::RedundantOutputStream, parent, streamIndex, avbInterfaceIndex };
@@ -322,7 +322,7 @@ avdecc::ChannelIdentification const& ChannelNode::channelIdentification() const
 {
 	return _channelIdentification;
 }
-	
+
 la::avdecc::entity::model::ClusterIndex ChannelNode::clusterIndex() const
 {
 	return *_channelIdentification.clusterIndex;
@@ -332,21 +332,11 @@ std::uint16_t ChannelNode::channelIndex() const
 {
 	return *_channelIdentification.clusterChannel;
 }
-	
-ChannelNode::StreamIndexByChannelKey const& ChannelNode::streamIndices() const
-{
-	return _streamIndices;
-}
 
 ChannelNode::ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification)
 	: Node{ type, parent.entityID(), &parent }
 	, _channelIdentification{ channelIdentification }
 {
-}
-	
-void ChannelNode::setStreamIndices(StreamIndexByChannelKey const& streamIndices)
-{
-	_streamIndices = streamIndices;
 }
 
 } // namespace connectionMatrix
