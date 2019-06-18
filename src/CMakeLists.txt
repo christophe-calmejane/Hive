@@ -111,6 +111,7 @@ set(HEADER_FILES_COMMON
 	aboutDialog.hpp
 	loggerView.hpp
 	firmwareUploadDialog.hpp
+	multiFirmwareUpdateDialog.hpp
 	mainWindow.hpp
 	aecpCommandComboBox.hpp
 	controlledEntityTreeWidget.hpp
@@ -188,6 +189,7 @@ set(SOURCE_FILES_COMMON
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
 	firmwareUploadDialog.cpp
+	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp
 	mainWindow.cpp
 	settingsDialog.cpp
@@ -214,6 +216,7 @@ set(UI_FILES_COMMON
 	aboutDialog.ui
 	loggerView.ui
 	firmwareUploadDialog.ui
+	multiFirmwareUpdateDialog.ui
 	mainWindow.ui
 )
 

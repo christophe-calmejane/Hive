@@ -50,7 +50,7 @@
      <x>0</x>
      <y>0</y>
      <width>1400</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -86,6 +86,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionMediaClockManagement"/>
+    <addaction name="actionDeviceFirmwareUpdate"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -173,6 +174,16 @@
   <action name="actionSettings">
    <property name="text">
     <string>Settings...</string>
+   </property>
+  </action>
+  <action name="actionDevice_Firmware_Update">
+   <property name="text">
+    <string>Device Firmware Update...</string>
+   </property>
+  </action>
+  <action name="actionDeviceFirmwareUpdate">
+   <property name="text">
+    <string>Device Firmware Update...</string>
    </property>
   </action>
  </widget>
