@@ -38,9 +38,9 @@ protected:
 	bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override
 	{
 		// only allow entities with a firmware node.
-		auto const& entityIdIndex = sourceModel()->index(sourceRow, 0, sourceParent);
+		auto const entityIdIndex = sourceModel()->index(sourceRow, 0, sourceParent);
 
-		auto const* controllerModel = static_cast<avdecc::ControllerModel*>(sourceModel());
+		auto const* const controllerModel = static_cast<avdecc::ControllerModel const*>(sourceModel());
 		auto& controllerManager = avdecc::ControllerManager::getInstance();
 
 		auto const entity = controllerManager.getControlledEntity(controllerModel->controlledEntityID(entityIdIndex));
@@ -65,6 +65,7 @@ protected:
 MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(avdecc::ControllerModel* controllerModel, QWidget* parent)
 	: QDialog(parent)
 	, _ui(new Ui::MultiFirmwareUpdateDialog)
+	, _controllerModel(controllerModel)
 {
 	_ui->setupUi(this);
 
@@ -72,10 +73,9 @@ MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(avdecc::ControllerModel* co
 	_ui->buttonContinue->setEnabled(false);
 	setWindowTitle("Firmware Update Selection");
 
-	_controllerModel = controllerModel;
 
 	//controllerModel
-	FirmwareUpdateSelectionModel* proxyModel = new FirmwareUpdateSelectionModel(this);
+	auto* const proxyModel = new FirmwareUpdateSelectionModel(this);
 	proxyModel->setSourceModel(_controllerModel);
 
 	// use the controller model to display the entities

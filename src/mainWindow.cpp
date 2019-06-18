@@ -355,12 +355,16 @@ void MainWindowImpl::createToolbars()
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
 
+		// Controller
 		utilitiesToolBar->setMinimumHeight(30);
 		utilitiesToolBar->addWidget(&_refreshControllerButton);
+
+		// Tools
 		utilitiesToolBar->addSeparator();
 		utilitiesToolBar->addWidget(&_openMcmdDialogButton);
-		utilitiesToolBar->addSeparator();
 		utilitiesToolBar->addWidget(&_openMultiFirmwareUpdateDialogButton);
+
+		// Settings
 		utilitiesToolBar->addSeparator();
 		utilitiesToolBar->addWidget(&_openSettingsButton);
 	}

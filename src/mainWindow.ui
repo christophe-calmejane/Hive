@@ -176,11 +176,6 @@
     <string>Settings...</string>
    </property>
   </action>
-  <action name="actionDevice_Firmware_Update">
-   <property name="text">
-    <string>Device Firmware Update...</string>
-   </property>
-  </action>
   <action name="actionDeviceFirmwareUpdate">
    <property name="text">
     <string>Device Firmware Update...</string>
