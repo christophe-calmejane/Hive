@@ -52,16 +52,32 @@ using NodeMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::unique_ptr
 using EntitySectionMap = std::unordered_map<la::avdecc::UniqueIdentifier, int, la::avdecc::UniqueIdentifier::hash>;
 
 // Unique stream identifier
-using StreamKey = StreamNode::Key;
-using StreamKeyHash = StreamNode::KeyHash;
+using StreamKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
+
+struct StreamKeyHash
+{
+	std::size_t operator()(StreamKey const& key) const
+	{
+		return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<la::avdecc::entity::model::StreamIndex>()(key.second);
+	}
+};
+
 static auto const InvalidStreamKey = StreamKey{};
 
 // StreamNode by StreamKey
 using StreamNodeMap = std::unordered_map<StreamKey, StreamNode*, StreamKeyHash>;
 
 // Unique channel identifier
-using ChannelKey = ChannelNode::Key;
-using ChannelKeyHash = ChannelNode::KeyHash;
+using ChannelKey = std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex>;
+
+struct ChannelKeyHash
+{
+	std::size_t operator()(ChannelKey const& key) const
+	{
+		return la::avdecc::UniqueIdentifier::hash()(key.first) ^ std::hash<la::avdecc::entity::model::ClusterIndex>()(key.second);
+	}
+};
+
 static auto const InvalidChannelKey = ChannelKey{};
 
 // ChannelNode by ChannelKey
