@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Detection of arriving and departing network interfaces (and link status)
 - [Collapse/Expand all buttons for connection matrix](https://github.com/christophe-calmejane/Hive/issues/51)
 - [Sort connection matrix by EntityID](https://github.com/christophe-calmejane/Hive/issues/59)
-- Connection matrix complete overhaul (optimization, smart connections)
+- Major performance improvements
+- Smart connections in Connection Matrix
 - Support for drag&drop of json virtual entity files
 - Color theme selection in Settings
 - Controller Statistics (displayed in Entity Node)
 - Utilities toolbar for quick access to Media Clock Management and Settings
+- [WinPcap included in Windows Installer](https://github.com/christophe-calmejane/Hive/issues/14)
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity

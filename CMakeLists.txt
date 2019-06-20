@@ -30,6 +30,9 @@ project(Hive)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
+# Default Component
+set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "Hive")
+
 # Set minimum OSX version
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "Force the target to be at least a Mac OS X 10.9" FORCE)
 
@@ -121,6 +124,7 @@ set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")
 set(PROJECT_FULL_NAME "${PROJECT_NAME} - Pro Audio Avdecc Controller")
 set(PROJECT_COMPANYNAME "KikiSoft")
 set(PROJECT_AUTHORS "Emilien Vallot, Christophe Calmejane and other contributors")
+set(PROJECT_CONTACT "christophe.calmejane@l-acoustics.com")
 set(PROJECT_REVERSE_DOMAINNAME "fr.${PROJECT_COMPANYNAME}")
 set(PROJECT_DOMAINNAME "${PROJECT_COMPANYNAME}.fr")
 set(PROJECT_URL "https://github.com/christophe-calmejane/Hive")
@@ -130,6 +134,32 @@ set(PROJECT_ROOT_DIR "${PROJECT_SOURCE_DIR}")
 set(PROJECT_ARCH "32-bit")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(PROJECT_ARCH "64-bit")
+endif()
+
+# Split HIVE_VERSION string
+string(REGEX MATCHALL "([0-9]+)" HIVE_VERSION_SPLIT "${HIVE_VERSION}")
+list(LENGTH HIVE_VERSION_SPLIT HIVE_VERSION_SPLIT_LENGTH)
+if(${HIVE_VERSION_SPLIT_LENGTH} LESS 3)
+	message(FATAL_ERROR "Cannot parse version string")
+endif()
+list(GET HIVE_VERSION_SPLIT 0 HIVE_VERSION_MAJOR)
+list(GET HIVE_VERSION_SPLIT 1 HIVE_VERSION_MINOR)
+list(GET HIVE_VERSION_SPLIT 2 HIVE_VERSION_PATCH)
+if(${HIVE_VERSION_SPLIT_LENGTH} EQUAL 4)
+	list(GET HIVE_VERSION_SPLIT 3 HIVE_VERSION_BETA)
+else()
+	set(HIVE_VERSION_BETA "0")
+endif()
+
+# Compute Marketing Version String (Visible)
+# TODO: Have an option (passed from gen_install) to select the number of digits to display (and possibly a postfix)
+set(HIVE_MARKETING_VERSION_STRING "${HIVE_VERSION_MAJOR}.${HIVE_VERSION_MINOR}")
+
+# Compute Full Friendly Version String (Visible)
+if(${HIVE_VERSION_BETA} STREQUAL "0")
+	set(HIVE_FRIENDLY_VERSION_STRING "${HIVE_VERSION_MAJOR}.${HIVE_VERSION_MINOR}.${HIVE_VERSION_PATCH}")
+else()
+	set(HIVE_FRIENDLY_VERSION_STRING "${HIVE_VERSION_MAJOR}.${HIVE_VERSION_MINOR}.${HIVE_VERSION_PATCH}-beta${HIVE_VERSION_BETA}")
 endif()
 
 ############ Add projects

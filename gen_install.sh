@@ -223,7 +223,7 @@ trap 'cleanup_main $?' EXIT
 # Cleanup previous build folders, just in case
 rm -rf "${callerFolderPath}${outputFolder}"
 
-cmakeHiveVersion=$(grep "HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
+cmakeHiveVersion=$(grep -P "set\(HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
 if [[ $cmakeHiveVersion == "" ]]; then
 	echo "Cannot detect project version"
 	exit 1
@@ -294,6 +294,8 @@ if [ $? -ne 0 ]; then
 	echo $log
 	exit 1
 fi
+echo "done"
+popd &> /dev/null
 
 pushd "${outputFolder}" &> /dev/null
 echo -n "Generating project installer... "
