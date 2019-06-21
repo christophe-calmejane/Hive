@@ -296,18 +296,6 @@ if [ ! -z "${platformSdk}" ]; then
 	sdk_option="-DCMAKE_SYSTEM_VERSION=$platformSdk"
 fi
 
-hiveVersion=$(grep "HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
-if [[ $hiveVersion == "" ]]; then
-	echo "Cannot detect project version"
-	exit 1
-fi
-hiveVersion="${hiveVersion//[$'\t\r\n']}"
-
-# Check if we have a release or devel version
-oldIFS="$IFS"
-IFS='.' read -a versionSplit <<< "$hiveVersion"
-IFS="$oldIFS"
-
 # Check for legacy 'avdecc-local' folder
 if [ -d "3rdparty/avdecc-local" ]; then
 	echo "Legacy '3rdparty/avdecc-local' no longer used, please remove this folder/link"

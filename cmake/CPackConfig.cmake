@@ -1,7 +1,7 @@
 ############ CPack configuration
 
 # Set Install Key (used to detect if a previous version should be uninstalled first)
-set(HIVE_INSTALL_KEY "${PROJECT_NAME} ${HIVE_MARKETING_VERSION_STRING}")
+set(HIVE_INSTALL_KEY "${PROJECT_NAME} ${HIVE_MARKETING_VERSION}")
 
 # Use IFW on all platform instead of os-dependant installer
 #set(USE_IFW_GENERATOR ON)
@@ -23,7 +23,7 @@ endif()
 # Basic settings
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VENDOR "${PROJECT_COMPANYNAME}")
-set(CPACK_PACKAGE_VERSION "${HIVE_FRIENDLY_VERSION_STRING}")
+set(CPACK_PACKAGE_VERSION "${HIVE_FRIENDLY_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_FULL_NAME}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${CPACK_PACKAGE_VENDOR}/${HIVE_INSTALL_KEY}")
 if(NOT HIVE_INSTALLER_NAME)
@@ -34,7 +34,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_ROOT_DIR}/COPYING.LESSER")
 set(CPACK_PACKAGE_ICON "${ICON_PATH}")
 
 # Advanced settings
-set(CPACK_PACKAGE_EXECUTABLES "${PROJECT_NAME};${PROJECT_NAME} ${HIVE_MARKETING_VERSION_STRING}")
+set(CPACK_PACKAGE_EXECUTABLES "${PROJECT_NAME};${PROJECT_NAME} ${HIVE_MARKETING_VERSION}")
 set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${HIVE_INSTALL_KEY}")
 set(CPACK_CREATE_DESKTOP_LINKS "${PROJECT_NAME}")
 
@@ -61,8 +61,8 @@ else()
 		# NSIS Common settings
 		set(CPACK_NSIS_COMPRESSOR "/SOLID LZMA")
 		set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
-		set(CPACK_NSIS_PACKAGE_NAME "${PROJECT_FULL_NAME} ${HIVE_MARKETING_VERSION_STRING}") # Name to be shown in the title bar of the installer
-		set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_NAME} ${HIVE_MARKETING_VERSION_STRING}") # Name to be shown in Windows Add/Remove Program control panel
+		set(CPACK_NSIS_PACKAGE_NAME "${PROJECT_FULL_NAME} ${HIVE_MARKETING_VERSION}") # Name to be shown in the title bar of the installer
+		set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_NAME} ${HIVE_MARKETING_VERSION}") # Name to be shown in Windows Add/Remove Program control panel
 		set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/${PROJECT_NAME}.exe") # Icon to be shown in Windows Add/Remove Program control panel
 		set(CPACK_NSIS_HELP_LINK "${PROJECT_URL}")
 		set(CPACK_NSIS_URL_INFO_ABOUT "${PROJECT_URL}")
@@ -106,12 +106,12 @@ else()
 
 		# Add shortcuts during install
 		set(CPACK_NSIS_CREATE_ICONS_EXTRA "\
-			CreateShortCut \\\"$DESKTOP\\\\${PROJECT_NAME} ${HIVE_MARKETING_VERSION_STRING}.lnk\\\" \\\"$INSTDIR\\\\bin\\\\${PROJECT_NAME}.exe\\\" \\\"\\\""
+			CreateShortCut \\\"$DESKTOP\\\\${PROJECT_NAME} ${HIVE_MARKETING_VERSION}.lnk\\\" \\\"$INSTDIR\\\\bin\\\\${PROJECT_NAME}.exe\\\" \\\"\\\""
 		)
 
 		# Remove shortcuts during uninstall
 		set(CPACK_NSIS_DELETE_ICONS_EXTRA "\
-			Delete \\\"$DESKTOP\\\\${PROJECT_NAME} ${HIVE_MARKETING_VERSION_STRING}.lnk\\\""
+			Delete \\\"$DESKTOP\\\\${PROJECT_NAME} ${HIVE_MARKETING_VERSION}.lnk\\\""
 		)
 
 		include(CPack REQUIRED)

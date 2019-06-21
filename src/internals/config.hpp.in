@@ -27,8 +27,8 @@ namespace internals
 {
 	QString const applicationShortName{ "@PROJECT_NAME@" };
 	QString const applicationLongName{ "@PROJECT_FULL_NAME@" };
-	QString const versionString{ "@HIVE_FRIENDLY_VERSION_STRING@" };
-	QString const marketingVersion{ "@HIVE_MARKETING_VERSION_STRING@" };
+	QString const versionString{ "@HIVE_FRIENDLY_VERSION@" };
+	QString const marketingVersion{ "@HIVE_MARKETING_VERSION@" };
 	QString const cmakeVersionString{ "@HIVE_VERSION@" };
 	QString const projectURL{ "@PROJECT_URL@" };
 	QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
