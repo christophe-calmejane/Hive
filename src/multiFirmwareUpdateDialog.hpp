@@ -18,6 +18,7 @@
 */
 
 #pragma once
+
 #include <vector>
 #include <tuple>
 
@@ -27,20 +28,22 @@
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 
-#include "avdecc/controllerModel.hpp"
-
 #include "toolkit/dynamicHeaderView.hpp"
+
 namespace Ui
 {
 class MultiFirmwareUpdateDialog;
 }
+
+
+class Model;
 
 class MultiFirmwareUpdateDialog : public QDialog
 {
 	Q_OBJECT
 
 public:
-	MultiFirmwareUpdateDialog(avdecc::ControllerModel* controllerModel, QWidget* parent = nullptr);
+	MultiFirmwareUpdateDialog(QWidget* parent = nullptr);
 	~MultiFirmwareUpdateDialog();
 
 private:
@@ -61,6 +64,6 @@ private:
 
 private:
 	Ui::MultiFirmwareUpdateDialog* _ui{ nullptr };
-	avdecc::ControllerModel* _controllerModel{ nullptr };
+	Model* _model{ nullptr };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal };
 };
