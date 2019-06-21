@@ -63,4 +63,5 @@ private:
 	QScopedPointer<ControllerModelPrivate> const d_ptr;
 	Q_DECLARE_PRIVATE(ControllerModel)
 };
+
 } // namespace avdecc

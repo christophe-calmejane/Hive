@@ -156,7 +156,7 @@ private:
 					auto const& configurationNode = controlledEntity->getConfigurationNode(configurationIndex);
 					for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
 					{
-						//if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+						if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
 						{
 							Q_Q(Model);
 
@@ -290,11 +290,11 @@ Model::Model(QObject* parent)
 	// Initialize the model for each existing entity
 	auto& manager = avdecc::ControllerManager::getInstance();
 	manager.foreachEntity(
-			[this](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& controlledEntity)
-			{
-				Q_D(Model);
-				d->handleEntityOnline(entityID);
-			});
+		[this](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& controlledEntity)
+		{
+			Q_D(Model);
+			d->handleEntityOnline(entityID);
+		});
 }
 
 Model::~Model() = default;
@@ -329,20 +329,17 @@ la::avdecc::UniqueIdentifier Model::controlledEntityID(QModelIndex const& index)
 	return d->controlledEntityID(index);
 }
 
-// @param Model: the controller model to create the firmware update selection model from it.
 MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(QWidget* parent)
-	: QDialog(parent)
-	, _ui(new Ui::MultiFirmwareUpdateDialog)
+	: QDialog{ parent }
+	, _ui{ new Ui::MultiFirmwareUpdateDialog }
 	, _model{ new Model{ this } }
-	{
+{
 	_ui->setupUi(this);
 
 	// Initial configuration
 	_ui->buttonContinue->setEnabled(false);
 	setWindowTitle("Firmware Update Selection");
 
-
-	// use the controller model to display the entities
 	_ui->controllerTableView->setModel(_model);
 
 	// configure multiselection
@@ -350,14 +347,10 @@ MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(QWidget* parent)
 	_ui->controllerTableView->setSelectionMode(QAbstractItemView::ExtendedSelection);
 	_ui->controllerTableView->setFocusPolicy(Qt::ClickFocus);
 	_ui->controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	_ui->controllerTableView->horizontalHeader()->setStretchLastSection(true);
 
-	_controllerDynamicHeaderView.setHighlightSections(false);
-	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(Model::Column::EntityID));
-
-	_ui->controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
-
-	// stretch the headers
-	_ui->controllerTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+	_ui->controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(Model::Column::EntityID), 160);
+	_ui->controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(Model::Column::Name), 180);
 
 	connect(_ui->controllerTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MultiFirmwareUpdateDialog::onItemSelectionChanged);
 	connect(_ui->buttonContinue, &QPushButton::clicked, this, &MultiFirmwareUpdateDialog::handleContinueButtonClicked);
@@ -375,28 +368,37 @@ void MultiFirmwareUpdateDialog::handleContinueButtonClicked()
 
 void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const& selected, QItemSelection const& deselected)
 {
-	// update the next button state
-	auto& manager = avdecc::ControllerManager::getInstance();
+	// Update the next button state
 	auto const& selectedRows = _ui->controllerTableView->selectionModel()->selectedRows();
 	if (selectedRows.empty())
 	{
 		_ui->buttonContinue->setEnabled(false);
 		return;
 	}
+
+	auto& manager = avdecc::ControllerManager::getInstance();
+
+	// Check that all selected entities have the same model name
 	QString modelName;
 	for (auto const& rowIndex : selectedRows)
 	{
-		auto const selectedEntityId = _model->controlledEntityID(rowIndex);
-		auto const selectedEntity = manager.getControlledEntity(selectedEntityId);
-		auto const rowModelName = selectedEntity->getLocalizedString(selectedEntity->getEntityNode().staticModel->modelNameString).data();
-		if (modelName.isEmpty())
+		auto const entityID = _model->controlledEntityID(rowIndex);
+		auto const controlledEntity = manager.getControlledEntity(entityID);
+		auto const& entityNode = controlledEntity->getEntityNode();
+
+		if (entityNode.staticModel)
 		{
-			modelName = rowModelName;
-		}
-		else if (modelName != rowModelName)
-		{
-			_ui->buttonContinue->setEnabled(false);
-			return;
+			auto const rowModelName = controlledEntity->getLocalizedString(entityNode.staticModel->modelNameString).data();
+
+			if (modelName.isEmpty())
+			{
+				modelName = rowModelName;
+			}
+			else if (modelName != rowModelName)
+			{
+				_ui->buttonContinue->setEnabled(false);
+				return;
+			}
 		}
 	}
 
@@ -405,69 +407,74 @@ void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const& sel
 
 void MultiFirmwareUpdateDialog::startFirmwareUpdate()
 {
-	// collect the entity ids
-	std::list<la::avdecc::UniqueIdentifier> selectedEntities;
-	auto const& selectedRows = _ui->controllerTableView->selectionModel()->selectedRows();
-	for (auto const& rowIndex : selectedRows)
+	// Show file select dialog
+	auto const fileName = QFileDialog::getOpenFileName(this, "Choose Firmware File", "", "");
+	if (fileName.isEmpty())
 	{
-		auto const selectedEntityId = _model->controlledEntityID(rowIndex);
-		selectedEntities.push_back(selectedEntityId);
+		return;
 	}
 
-	// show file select dialog
-	QString fileName = QFileDialog::getOpenFileName(this, "Choose Firmware File", "", "");
-	if (!fileName.isEmpty())
+	// Open the file
+	auto file = QFile{ fileName };
+	if (!file.open(QIODevice::ReadOnly))
 	{
-		// Open the file
-		QFile file{ fileName };
-		if (!file.open(QIODevice::ReadOnly))
+		QMessageBox::critical(this, "", "Failed to load firmware file.");
+		return;
+	}
+
+	// Determine the maximum length (TODO, cache in the model?)
+	auto& manager = avdecc::ControllerManager::getInstance();
+	auto maximumLength = 0;
+
+	auto firmwareUpdateEntityInfos = std::vector<FirmwareUploadDialog::EntityInfo>{};
+
+	auto const& selectedRows = _ui->controllerTableView->selectionModel()->selectedRows();
+	for (auto const& index : selectedRows)
+	{
+		auto const entityID = _model->controlledEntityID(index);
+		auto const controlledEntity = manager.getControlledEntity(entityID);
+		if (controlledEntity)
 		{
-			QMessageBox::critical(this, "", "Failed to load firmware file.");
-			return;
-		}
-
-
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto maximumLength = 0;
-
-		std::vector<FirmwareUploadDialog::EntityInfo> firmwareUpdateEntityInfos;
-		for (auto const& selectedEntityId : selectedEntities)
-		{
-			auto const selectedEntity = manager.getControlledEntity(selectedEntityId);
-			for (auto const& [index, memoryObjectNode] : selectedEntity->getCurrentConfigurationNode().memoryObjects)
+			auto const& entityNode = controlledEntity->getEntityNode();
+			if (entityNode.dynamicModel)
 			{
-				if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+				auto const configurationIndex = entityNode.dynamicModel->currentConfiguration;
+				auto const& configurationNode = controlledEntity->getConfigurationNode(configurationIndex);
+				for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
 				{
-					if (maximumLength == 0)
+					if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
 					{
-						// pick first entity's max length, all following entities should have the same.
-						maximumLength = memoryObjectNode.staticModel->maximumLength;
+						if (maximumLength == 0)
+						{
+							// Pick first entity's max length, all following entities should have the same.
+							maximumLength = memoryObjectNode.staticModel->maximumLength;
+						}
+
+						auto const* const model = memoryObjectNode.staticModel;
+						firmwareUpdateEntityInfos.emplace_back(entityID, memoryObjectNode.descriptorIndex, model->startAddress);
+						break;
 					}
-					auto const* const model = memoryObjectNode.staticModel;
-					firmwareUpdateEntityInfos.push_back({ selectedEntityId, memoryObjectNode.descriptorIndex, model->startAddress });
-					break;
 				}
 			}
 		}
-
-		// Read all data
-		auto data = file.readAll();
-
-		// Check length
-		if (maximumLength != 0 && data.size() > maximumLength)
-		{
-			QMessageBox::critical(this, "", "The firmware file is not compatible with selected devices.");
-			return;
-		}
-
-		// close this dialog once a compatible file has been selected
-		close();
-
-		// Start firmware upload dialog
-		FirmwareUploadDialog dialog{ { data.constData(), static_cast<size_t>(data.count()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
-		dialog.exec();
 	}
-}
 
+	// Read all data
+	auto data = file.readAll();
+
+	// Check length
+	if (maximumLength != 0 && data.size() > maximumLength)
+	{
+		QMessageBox::critical(this, "", "The firmware file is not compatible with selected devices.");
+		return;
+	}
+
+	// Close this dialog once a compatible file has been selected
+	close();
+
+	// Start firmware upload dialog
+	auto dialog = FirmwareUploadDialog{ { data.constData(), static_cast<size_t>(data.count()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
+	dialog.exec();
+}
 
 #include "multiFirmwareUpdateDialog.moc"

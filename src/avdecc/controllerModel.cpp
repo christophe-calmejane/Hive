@@ -222,7 +222,7 @@ class ControllerModelPrivate : public QObject, private settings::SettingsManager
 	Q_OBJECT
 public:
 	ControllerModelPrivate(ControllerModel* model)
-		: q_ptr(model)
+		: q_ptr{ model }
 	{
 		// Connect avdecc::ControllerManager signals
 		auto& controllerManager = avdecc::ControllerManager::getInstance();

@@ -65,5 +65,4 @@ private:
 private:
 	Ui::MultiFirmwareUpdateDialog* _ui{ nullptr };
 	Model* _model{ nullptr };
-	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal };
 };

@@ -444,25 +444,11 @@ void MainWindowImpl::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindowImpl::currentControllerChanged);
-	connect(&_openMcmdDialogButton, &QPushButton::clicked, this,
-		[this]()
-		{
-			MediaClockManagementDialog dialog{ _parent };
-			dialog.exec();
-		});
-	connect(&_openMultiFirmwareUpdateDialogButton, &QPushButton::clicked, this,
-		[this]()
-		{
-			MultiFirmwareUpdateDialog dialog{ _controllerModel, _parent };
-			dialog.exec();
-		});
 
-	connect(&_openSettingsButton, &QPushButton::clicked, this,
-		[this]()
-		{
-			SettingsDialog dialog{ _parent };
-			dialog.exec();
-		});
+	connect(&_openMcmdDialogButton, &QPushButton::clicked, actionMediaClockManagement, &QAction::trigger);
+	connect(&_openMultiFirmwareUpdateDialogButton, &QPushButton::clicked, actionDeviceFirmwareUpdate, &QAction::trigger);
+
+	connect(&_openSettingsButton, &QPushButton::clicked, actionSettings, &QAction::trigger);
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
@@ -748,7 +734,7 @@ void MainWindowImpl::connectSignals()
 	connect(actionDeviceFirmwareUpdate, &QAction::triggered, this,
 		[this]()
 		{
-			MultiFirmwareUpdateDialog dialog{ _controllerModel, _parent };
+			MultiFirmwareUpdateDialog dialog{ _parent };
 			dialog.exec();
 		});
 
