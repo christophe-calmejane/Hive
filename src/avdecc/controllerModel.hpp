@@ -33,35 +33,34 @@ public:
 	{
 		EntityLogo,
 		Compatibility,
-		EntityId,
+		EntityID,
 		Name,
 		Group,
 		AcquireState,
 		LockState,
-		GrandmasterId,
+		GrandmasterID,
 		GptpDomain,
 		InterfaceIndex,
-		AssociationId,
-		MediaClockMasterId,
+		AssociationID,
+		MediaClockMasterID,
 		MediaClockMasterName,
 
 		Count
 	};
 
 	ControllerModel(QObject* parent = nullptr);
-	~ControllerModel();
+	virtual ~ControllerModel();
 
-	virtual int rowCount(QModelIndex const& parent = QModelIndex()) const override;
-	virtual int columnCount(QModelIndex const& parent = QModelIndex()) const override;
+	virtual int rowCount(QModelIndex const& parent = {}) const override;
+	virtual int columnCount(QModelIndex const& parent = {}) const override;
 	virtual QVariant data(QModelIndex const& index, int role = Qt::DisplayRole) const override;
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
 
 	// Helpers
 	la::avdecc::UniqueIdentifier controlledEntityID(QModelIndex const& index) const;
 
 private:
-	ControllerModelPrivate* const d_ptr{ nullptr };
+	QScopedPointer<ControllerModelPrivate> const d_ptr;
 	Q_DECLARE_PRIVATE(ControllerModel)
 };
 } // namespace avdecc
