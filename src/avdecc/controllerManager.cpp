@@ -292,12 +292,14 @@ private:
 	virtual void onEntityOnline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
+		_entities.insert(entityID);
 		_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
 		emit entityOnline(entityID, entity->getEnumerationTime());
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
+		_entities.erase(entityID);
 		_entityErrorCounterTrackers.erase(entityID);
 		emit entityOffline(entityID);
 	}
@@ -1442,6 +1444,25 @@ private:
 		}
 	}
 
+	virtual void foreachEntity(ControlledEntityCallback const& callback) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			// Build a vector of all locked entities
+			std::vector<la::avdecc::controller::ControlledEntityGuard> controlledEntities;
+			for (auto& entityID : _entities)
+			{
+				controlledEntities.emplace_back(getControlledEntity(entityID));
+			}
+
+			for (auto const& controlledEntity : controlledEntities)
+			{
+				callback(controlledEntity->getEntity().getEntityID(), *controlledEntity);
+			}
+		}
+	}
+
 	// Private methods
 	SharedController getController() noexcept
 	{
@@ -1467,6 +1488,8 @@ private:
 #else // !HAVE_ATOMIC_SMART_POINTERS
 	SharedController _controller{ nullptr };
 #endif // HAVE_ATOMIC_SMART_POINTERS
+
+	std::set<la::avdecc::UniqueIdentifier> _entities;
 
 	// Store per entity error counter flags
 	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterTracker, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterTrackers;

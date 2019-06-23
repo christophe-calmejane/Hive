@@ -58,6 +58,7 @@
 #include "imageItemDelegate.hpp"
 #include "nodeVisitor.hpp"
 #include "settingsDialog.hpp"
+#include "multiFirmwareUpdateDialog.hpp"
 
 #include <la/avdecc/networkInterfaceHelper.hpp>
 
@@ -158,6 +159,7 @@ public:
 	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
 	qt::toolkit::material::Button _refreshControllerButton{ "refresh", _parent };
 	qt::toolkit::material::Button _openMcmdDialogButton{ "schedule", _parent };
+	qt::toolkit::material::Button _openMultiFirmwareUpdateDialogButton{ "get_app", _parent };
 	qt::toolkit::material::Button _openSettingsButton{ "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
@@ -351,11 +353,18 @@ void MainWindowImpl::createToolbars()
 		_refreshControllerButton.setToolTip("Reload Controller");
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
+		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
 
+		// Controller
 		utilitiesToolBar->setMinimumHeight(30);
 		utilitiesToolBar->addWidget(&_refreshControllerButton);
+
+		// Tools
 		utilitiesToolBar->addSeparator();
 		utilitiesToolBar->addWidget(&_openMcmdDialogButton);
+		utilitiesToolBar->addWidget(&_openMultiFirmwareUpdateDialogButton);
+
+		// Settings
 		utilitiesToolBar->addSeparator();
 		utilitiesToolBar->addWidget(&_openSettingsButton);
 	}
@@ -435,18 +444,11 @@ void MainWindowImpl::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindowImpl::currentControllerChanged);
-	connect(&_openMcmdDialogButton, &QPushButton::clicked, this,
-		[this]()
-		{
-			MediaClockManagementDialog dialog{ _parent };
-			dialog.exec();
-		});
-	connect(&_openSettingsButton, &QPushButton::clicked, this,
-		[this]()
-		{
-			SettingsDialog dialog{ _parent };
-			dialog.exec();
-		});
+
+	connect(&_openMcmdDialogButton, &QPushButton::clicked, actionMediaClockManagement, &QAction::trigger);
+	connect(&_openMultiFirmwareUpdateDialogButton, &QPushButton::clicked, actionDeviceFirmwareUpdate, &QAction::trigger);
+
+	connect(&_openSettingsButton, &QPushButton::clicked, actionSettings, &QAction::trigger);
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
@@ -726,6 +728,13 @@ void MainWindowImpl::connectSignals()
 		[this]()
 		{
 			SettingsDialog dialog{ _parent };
+			dialog.exec();
+		});
+
+	connect(actionDeviceFirmwareUpdate, &QAction::triggered, this,
+		[this]()
+		{
+			MultiFirmwareUpdateDialog dialog{ _parent };
 			dialog.exec();
 		});
 

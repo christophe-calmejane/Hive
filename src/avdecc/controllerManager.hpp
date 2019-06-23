@@ -188,6 +188,9 @@ public:
 	virtual void disconnectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectStreamHandler const& handler = {}) noexcept = 0;
 	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectTalkerStreamHandler const& handler = {}) noexcept = 0;
 
+	using ControlledEntityCallback = std::function<void(la::avdecc::UniqueIdentifier const&, la::avdecc::controller::ControlledEntity const&)>;
+	virtual void foreachEntity(ControlledEntityCallback const& callback) noexcept = 0;
+
 	/* Static methods */
 	static QString typeToString(AecpCommandType const type) noexcept;
 	static QString typeToString(AcmpCommandType const type) noexcept;

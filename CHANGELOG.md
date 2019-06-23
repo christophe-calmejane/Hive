@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Controller Statistics (displayed in Entity Node)
 - Utilities toolbar for quick access to Media Clock Management and Settings
 - [WinPcap included in Windows Installer](https://github.com/christophe-calmejane/Hive/issues/14)
+- Device Firmware Update multi-selection window
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity
