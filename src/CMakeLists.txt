@@ -106,6 +106,7 @@ set(HEADER_FILES_COMMON
 	toolkit/graph/view.hpp
 	updater/updater.hpp
 	settingsDialog.hpp
+	defaults.hpp
 	deviceDetailsDialog.hpp
 	deviceDetailsChannelTableModel.hpp
 	aboutDialog.hpp

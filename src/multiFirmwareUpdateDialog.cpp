@@ -18,6 +18,7 @@
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
 #include "firmwareUploadDialog.hpp"
+#include "defaults.hpp"
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -147,7 +148,7 @@ private:
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
-			if (controlledEntity)
+			if (controlledEntity && controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				auto const& entityNode = controlledEntity->getEntityNode();
 				if (entityNode.dynamicModel)
@@ -179,8 +180,7 @@ private:
 		}
 		catch (...)
 		{
-			// Uncaught exception
-			AVDECC_ASSERT(false, "Uncaught exception");
+			// Ignore exceptions
 		}
 	}
 
@@ -349,8 +349,9 @@ MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(QWidget* parent)
 	_ui->controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	_ui->controllerTableView->horizontalHeader()->setStretchLastSection(true);
 
-	_ui->controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(Model::Column::EntityID), 160);
-	_ui->controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(Model::Column::Name), 180);
+	_ui->controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(Model::Column::EntityID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
+	_ui->controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(Model::Column::Name), defaults::ui::AdvancedView::ColumnWidth_Name);
+	_ui->controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(Model::Column::FirmwareVersion), defaults::ui::AdvancedView::ColumnWidth_Firmware);
 
 	connect(_ui->controllerTableView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &MultiFirmwareUpdateDialog::onItemSelectionChanged);
 	connect(_ui->buttonContinue, &QPushButton::clicked, this, &MultiFirmwareUpdateDialog::handleContinueButtonClicked);
