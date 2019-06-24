@@ -223,7 +223,7 @@ trap 'cleanup_main $?' EXIT
 # Cleanup previous build folders, just in case
 rm -rf "${callerFolderPath}${outputFolder}"
 
-cmakeHiveVersion=$(grep -Po "set *\( *.+_VERSION *\K[0-9.]+(?= *\))" CMakeLists.txt)
+cmakeHiveVersion=$(grep -Po "set *\(.+_VERSION +\K[0-9]+(\.[0-9]+)+(?= *\))" CMakeLists.txt)
 if [[ $cmakeHiveVersion == "" ]]; then
 	echo "Cannot detect project version"
 	exit 1
