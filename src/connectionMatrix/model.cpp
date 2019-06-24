@@ -298,24 +298,31 @@ void removeChannelNodes(ChannelNodeMap& map, Node* node)
 		});
 }
 
-// Flatten node hierarchy and insert all nodes in list starting at first
-void insertNodes(Nodes& list, Node* node, Model::Mode const mode, int const first)
+// Flatten node hierarchy
+Nodes flattenEntityNode(Node* node, Model::Mode const mode)
 {
+	auto nodes = Nodes{};
+
 	if (!AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 	{
-		return;
+		return nodes;
 	}
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
-	auto const before = list.size();
-#endif
-
-	auto nodes = Nodes{};
 	accept(node, mode,
 		[&nodes](Node* node)
 		{
 			nodes.push_back(node);
 		});
+
+	return nodes;
+}
+
+// Insert nodes in list, starting a first index
+void insertNodes(Nodes& list, Nodes const& nodes, int first)
+{
+#if ENABLE_CONNECTION_MATRIX_DEBUG
+	auto const before = list.size();
+#endif
 
 	auto const it = std::next(std::begin(list), first);
 	list.insert(it, std::begin(nodes), std::end(nodes));
@@ -349,23 +356,6 @@ void removeNodes(Nodes& list, int first, int last)
 #endif
 }
 
-// Returns the number of children in node hierarchy depending on mode
-int childrenCount(Node* node, Model::Mode const mode)
-{
-	auto count = 0;
-
-	if (AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
-	{
-		accept(node, mode,
-			[&count](Node*)
-			{
-				++count;
-			},
-			true);
-	}
-
-	return count;
-}
 
 // Returns the index where entity should be inserted to keep a sorted list by entityID
 int sortedIndexForEntity(Nodes const& list, la::avdecc::UniqueIdentifier const& entityID)
@@ -1489,23 +1479,22 @@ public:
 		}
 
 		auto const entityID = node->entityID();
-		auto const childrenCount = priv::childrenCount(node, _mode);
+
+		auto const flattendedNodes = priv::flattenEntityNode(node, _mode);
+		auto const childrenCount = static_cast<int>(flattendedNodes.size()) - 1;
+
+		// This entity has nothing to display in this mode
+		if (childrenCount <= 0)
+		{
+			return;
+		}
 
 		auto const first = priv::sortedIndexForEntity(_talkerNodes, entityID);
 		auto const last = first + childrenCount;
 
 		beginInsertTalkerItems(first, last);
 
-		// The node may already exist if we're here because the mode has changed
-		if (!_talkerNodeMap.count(entityID))
-		{
-			_talkerNodeMap.insert(std::make_pair(entityID, node));
-
-			priv::insertStreamNodes(_talkerStreamNodeMap, node);
-			priv::insertChannelNodes(_talkerChannelNodeMap, node);
-		}
-
-		priv::insertNodes(_talkerNodes, node, _mode, first);
+		priv::insertNodes(_talkerNodes, flattendedNodes, first);
 
 		rebuildTalkerSectionCache();
 
@@ -1543,23 +1532,22 @@ public:
 		}
 
 		auto const entityID = node->entityID();
-		auto const childrenCount = priv::childrenCount(node, _mode);
+
+		auto const flattendedNodes = priv::flattenEntityNode(node, _mode);
+		auto const childrenCount = static_cast<int>(flattendedNodes.size()) - 1;
+
+		// This entity has nothing to display in this mode
+		if (childrenCount <= 0)
+		{
+			return;
+		}
 
 		auto const first = priv::sortedIndexForEntity(_listenerNodes, entityID);
 		auto const last = first + childrenCount;
 
 		beginInsertListenerItems(first, last);
 
-		// The node may already exist if we're here because the mode has changed
-		if (!_listenerNodeMap.count(entityID))
-		{
-			_listenerNodeMap.insert(std::make_pair(entityID, node));
-
-			priv::insertStreamNodes(_listenerStreamNodeMap, node);
-			priv::insertChannelNodes(_listenerChannelNodeMap, node);
-		}
-
-		priv::insertNodes(_listenerNodes, node, _mode, first);
+		priv::insertNodes(_listenerNodes, flattendedNodes, first);
 
 		rebuildListenerSectionCache();
 
@@ -1588,70 +1576,66 @@ public:
 	}
 
 	// Remove complete talker node hierarchy from entityID
-	void removeTalker(la::avdecc::UniqueIdentifier const& entityID)
+	void removeTalker(EntityNode* node)
 	{
-		if (auto* node = talkerNodeFromEntityID(entityID))
+		auto const flattendedNodes = priv::flattenEntityNode(node, _mode);
+		auto const childrenCount = static_cast<int>(flattendedNodes.size()) - 1;
+
+		if (childrenCount <= 0)
 		{
-			auto const childrenCount = priv::childrenCount(node, _mode);
+			return;
+		}
 
-			auto const first = priv::indexOf(_talkerNodeSectionMap, node);
-			auto const last = first + childrenCount;
+		auto const first = priv::indexOf(_talkerNodeSectionMap, node);
+		auto const last = first + childrenCount;
 
-			beginRemoveTalkerItems(first, last);
+		beginRemoveTalkerItems(first, last);
 
-			priv::removeStreamNodes(_talkerStreamNodeMap, node);
-			priv::removeChannelNodes(_talkerChannelNodeMap, node);
+		priv::removeNodes(_talkerNodes, first, last + 1 /* entity */);
 
-			priv::removeNodes(_talkerNodes, first, last + 1 /* entity */);
+		rebuildTalkerSectionCache();
 
-			rebuildTalkerSectionCache();
-
-			_talkerNodeMap.erase(entityID);
-
-			_intersectionData.erase(std::next(std::begin(_intersectionData), first), std::next(std::begin(_intersectionData), last + 1));
+		_intersectionData.erase(std::next(std::begin(_intersectionData), first), std::next(std::begin(_intersectionData), last + 1));
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
-			dump();
+		dump();
 #endif
 
-			endRemoveTalkerItems();
-		}
+		endRemoveTalkerItems();
 	}
 
 	// Remove complete listener node hierarchy from entityID
-	void removeListener(la::avdecc::UniqueIdentifier const& entityID)
+	void removeListener(EntityNode* node)
 	{
-		if (auto* node = listenerNodeFromEntityID(entityID))
+		auto const flattendedNodes = priv::flattenEntityNode(node, _mode);
+		auto const childrenCount = static_cast<int>(flattendedNodes.size()) - 1;
+
+		if (childrenCount <= 0)
 		{
-			auto const childrenCount = priv::childrenCount(node, _mode);
+			return;
+		}
 
-			auto const first = priv::indexOf(_listenerNodeSectionMap, node);
-			auto const last = first + childrenCount;
+		auto const first = priv::indexOf(_listenerNodeSectionMap, node);
+		auto const last = first + childrenCount;
 
-			beginRemoveListenerItems(first, last);
+		beginRemoveListenerItems(first, last);
 
-			priv::removeStreamNodes(_listenerStreamNodeMap, node);
-			priv::removeChannelNodes(_listenerChannelNodeMap, node);
+		priv::removeNodes(_listenerNodes, first, last + 1 /* entity */);
 
-			priv::removeNodes(_listenerNodes, first, last + 1 /* entity */);
+		rebuildListenerSectionCache();
 
-			rebuildListenerSectionCache();
+		for (auto talkerSection = 0u; talkerSection < _talkerNodes.size(); ++talkerSection)
+		{
+			auto& row = _intersectionData[talkerSection];
 
-			_listenerNodeMap.erase(entityID);
-
-			for (auto talkerSection = 0u; talkerSection < _talkerNodes.size(); ++talkerSection)
-			{
-				auto& row = _intersectionData[talkerSection];
-
-				row.erase(std::next(std::begin(row), first), std::next(std::begin(row), last + 1));
-			}
+			row.erase(std::next(std::begin(row), first), std::next(std::begin(row), last + 1));
+		}
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
-			dump();
+		dump();
 #endif
 
-			endRemoveListenerItems();
-		}
+		endRemoveListenerItems();
 	}
 
 	// Returns talker node at section if valid, nullptr otherwise
@@ -1718,6 +1702,12 @@ public:
 				if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
 				{
 					auto* node = buildTalkerNode(*controlledEntity, entityID, configurationNode);
+
+					_talkerNodeMap.insert(std::make_pair(entityID, node));
+
+					priv::insertStreamNodes(_talkerStreamNodeMap, node);
+					priv::insertChannelNodes(_talkerChannelNodeMap, node);
+
 					insertTalkerNode(node);
 				}
 
@@ -1725,6 +1715,13 @@ public:
 				if (controlledEntity->getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty())
 				{
 					auto* node = buildListenerNode(*controlledEntity, entityID, configurationNode);
+
+					// Insert nodes in cache for quick access
+					_listenerNodeMap.insert(std::make_pair(entityID, node));
+
+					priv::insertStreamNodes(_listenerStreamNodeMap, node);
+					priv::insertChannelNodes(_listenerChannelNodeMap, node);
+
 					insertListenerNode(node);
 				}
 			}
@@ -1742,14 +1739,24 @@ public:
 
 	void handleEntityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
-		if (hasTalker(entityID))
+		if (auto* node = talkerNodeFromEntityID(entityID))
 		{
-			removeTalker(entityID);
+			removeTalker(node);
+
+			// Remove from cache
+			priv::removeStreamNodes(_talkerStreamNodeMap, node);
+			priv::removeChannelNodes(_talkerChannelNodeMap, node);
+			_talkerNodeMap.erase(entityID);
 		}
 
-		if (hasListener(entityID))
+		if (auto* node = listenerNodeFromEntityID(entityID))
 		{
-			removeListener(entityID);
+			removeListener(node);
+
+			// Remove from cache
+			priv::removeStreamNodes(_listenerStreamNodeMap, node);
+			priv::removeChannelNodes(_listenerChannelNodeMap, node);
+			_listenerNodeMap.erase(entityID);
 		}
 	}
 
