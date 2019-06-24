@@ -1286,7 +1286,7 @@ public:
 			auto const& entityNode = controlledEntity.getEntityNode();
 			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
 
-			auto* entity = EntityNode::create(entityID);
+			auto* entity = EntityNode::create(entityID, controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan));
 			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
 
 			// Redundant streams
@@ -1384,7 +1384,7 @@ public:
 			auto const& entityNode = controlledEntity.getEntityNode();
 			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
 
-			auto* entity = EntityNode::create(entityID);
+			auto* entity = EntityNode::create(entityID, controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan));
 			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
 
 			// Redundant streams

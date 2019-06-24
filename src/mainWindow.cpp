@@ -480,7 +480,7 @@ void MainWindowImpl::connectSignals()
 	connect(&_openMultiFirmwareUpdateDialogButton, &QPushButton::clicked, actionDeviceFirmwareUpdate, &QAction::trigger);
 
 	connect(&_openSettingsButton, &QPushButton::clicked, actionSettings, &QAction::trigger);
-	
+
 	connect(actionChannelModeRouting, &QAction::toggled, this,
 		[this](bool checked)
 		{

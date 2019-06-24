@@ -24,11 +24,6 @@
 
 namespace connectionMatrix
 {
-class Node;
-class EntityNode;
-class RedundantNode;
-class StreamNode;
-
 class Node
 {
 	friend class ModelPrivate;
@@ -103,46 +98,31 @@ public:
 	// Visitor policy that visit all node types
 	struct CompleteHierarchyPolicy
 	{
-		static bool shouldVisit(Node const* const)
-		{
-			return true;
-		}
+		static bool shouldVisit(Node const* const) noexcept;
 	};
 
 	// Visitor policy that visit all relevant nodes in StreamMode
 	struct StreamHierarchyPolicy
 	{
-		static bool shouldVisit(Node const* const node)
-		{
-			return node->isEntityNode() || node->isRedundantNode() || node->isStreamNode();
-		}
-	};
-
-	// Visitor policy that visit all relevant nodes in ChannelMode
-	struct ChannelHierarchyPolicy
-	{
-		static bool shouldVisit(Node const* const node)
-		{
-			return node->isEntityNode() || node->isChannelNode();
-		}
+		static bool shouldVisit(Node const* const node) noexcept;
 	};
 
 	// Visitor policy that visit only nodes of StreamNode type
 	struct StreamPolicy
 	{
-		static bool shouldVisit(Node const* const node)
-		{
-			return node->isStreamNode();
-		}
+		static bool shouldVisit(Node const* const node) noexcept;
+	};
+
+	// Visitor policy that visit all relevant nodes in ChannelMode
+	struct ChannelHierarchyPolicy
+	{
+		static bool shouldVisit(Node const* const node) noexcept;
 	};
 
 	// Visitor policy that visit only nodes of ChannelNode type
 	struct ChannelPolicy
 	{
-		static bool shouldVisit(Node const* const node)
-		{
-			return node->isChannelNode();
-		}
+		static bool shouldVisit(Node const* const node) noexcept;
 	};
 
 	// Visitor pattern
@@ -192,14 +172,19 @@ class EntityNode : public Node
 	friend class ModelPrivate;
 
 public:
-	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID);
+	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan);
 
 	// Visitor pattern that is called on every stream node that matches avbInterfaceIndex
-	using AvbInterfaceIndexVisitor = std::function<void(StreamNode*)>;
+	using AvbInterfaceIndexVisitor = std::function<void(class StreamNode*)>;
 	void accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const;
 
+	bool isMilan() const noexcept;
+
 protected:
-	EntityNode(la::avdecc::UniqueIdentifier const& entityID);
+	EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan);
+
+protected:
+	bool _isMilan{ false };
 };
 
 class RedundantNode : public Node
