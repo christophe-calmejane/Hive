@@ -206,7 +206,7 @@ private:
 							if (controlledEntity)
 							{
 								auto const configurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
-								auto const streamPortIndex = *mappingKV.second->sourceClusterChannelInfo.streamPortIndex;
+								auto const streamPortIndex = *mappingKV.second->sourceClusterChannelInfo->streamPortIndex;
 								auto const& streamPortInputNode = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
 								auto const* const streamPortInputDynamicModel = streamPortInputNode.dynamicModel;
 								if (streamPortInputDynamicModel)
@@ -221,9 +221,9 @@ private:
 
 						for (auto const& mapping : mappings)
 						{
-							auto const clusterIndex = *mappingKV.second->sourceClusterChannelInfo.clusterIndex;
-							auto const baseCluster = *mappingKV.second->sourceClusterChannelInfo.baseCluster;
-							auto const clusterChannel = *mappingKV.second->sourceClusterChannelInfo.clusterChannel;
+							auto const clusterIndex = mappingKV.second->sourceClusterChannelInfo->clusterIndex;
+							auto const baseCluster = *mappingKV.second->sourceClusterChannelInfo->baseCluster;
+							auto const clusterChannel = mappingKV.second->sourceClusterChannelInfo->clusterChannel;
 							auto const streamIndex = streamConnectionState.listenerStream.streamIndex;
 
 							auto virtualStreamIndex = getRedundantVirtualIndexFromInputStreamIndex(streamConnectionState.listenerStream);
@@ -571,13 +571,17 @@ private:
 		auto result = std::make_shared<TargetConnectionInformations>();
 		result->sourceClusterChannelInfo = sourceChannelIdentification;
 		result->sourceEntityId = entityId;
+		if (!sourceChannelIdentification.streamPortIndex || !sourceChannelIdentification.audioUnitIndex || !sourceChannelIdentification.baseCluster)
+		{
+			return result; // incomplete arguments.
+		}
 
-		auto const configurationIndex = *sourceChannelIdentification.configurationIndex;
+		auto const configurationIndex = sourceChannelIdentification.configurationIndex;
 		auto const audioUnitIndex = *sourceChannelIdentification.audioUnitIndex;
 		auto const streamPortIndex = *sourceChannelIdentification.streamPortIndex;
-		auto const clusterIndex = *sourceChannelIdentification.clusterIndex;
+		auto const clusterIndex = sourceChannelIdentification.clusterIndex;
 		auto const baseCluster = *sourceChannelIdentification.baseCluster;
-		auto const clusterChannel = *sourceChannelIdentification.clusterChannel;
+		auto const clusterChannel = sourceChannelIdentification.clusterChannel;
 
 		// find channel connections via connection matrix + stream connections.
 		// an output channel can be connected to one or multiple input channels on different devices or to none.
@@ -771,7 +775,7 @@ private:
 		result->sourceEntityId = entityId;
 
 		// make sure forward is set to false
-		result->sourceClusterChannelInfo.forward = false;
+		result->sourceClusterChannelInfo->forward = false;
 
 		// find channel connections via connection matrix + stream connections.
 		// an output channel can be connected to one or multiple input channels on different devices or to none.
@@ -783,21 +787,23 @@ private:
 		{
 			return result;
 		}
+
 		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
 			return result;
 		}
-		if (!sourceChannelIdentification.configurationIndex || !sourceChannelIdentification.streamPortIndex || !sourceChannelIdentification.audioUnitIndex || !sourceChannelIdentification.clusterIndex || !sourceChannelIdentification.baseCluster || !sourceChannelIdentification.clusterChannel)
+
+		if (!sourceChannelIdentification.streamPortIndex || !sourceChannelIdentification.audioUnitIndex || !sourceChannelIdentification.baseCluster)
 		{
-			return result;
+			return result; // incomplete arguments.
 		}
 
-		auto const configurationIndex = *sourceChannelIdentification.configurationIndex;
+		auto const configurationIndex = sourceChannelIdentification.configurationIndex;
 		auto const streamPortIndex = *sourceChannelIdentification.streamPortIndex;
 		auto const audioUnitIndex = *sourceChannelIdentification.audioUnitIndex;
-		auto const clusterIndex = *sourceChannelIdentification.clusterIndex;
+		auto const clusterIndex = sourceChannelIdentification.clusterIndex;
 		auto const baseCluster = *sourceChannelIdentification.baseCluster;
-		auto const clusterChannel = *sourceChannelIdentification.clusterChannel;
+		auto const clusterChannel = sourceChannelIdentification.clusterChannel;
 
 		la::avdecc::controller::model::ConfigurationNode configurationNode;
 		try
@@ -1119,17 +1125,7 @@ private:
 	*/
 	virtual std::shared_ptr<TargetConnectionInformations> getAllChannelConnectionsBetweenDevices(la::avdecc::UniqueIdentifier const& sourceEntityId, la::avdecc::entity::model::StreamPortIndex const sourceStreamPortIndex, la::avdecc::UniqueIdentifier const& targetEntityId) const noexcept
 	{
-		ChannelIdentification sourceChannelIdentification;
-		sourceChannelIdentification.configurationIndex = std::nullopt;
-		sourceChannelIdentification.audioUnitIndex = std::nullopt;
-		sourceChannelIdentification.streamPortIndex = sourceStreamPortIndex;
-		sourceChannelIdentification.clusterIndex = std::nullopt;
-		sourceChannelIdentification.baseCluster = std::nullopt;
-		sourceChannelIdentification.clusterChannel = std::nullopt;
-		sourceChannelIdentification.forward = true;
-
 		auto result = std::make_shared<TargetConnectionInformations>();
-		result->sourceClusterChannelInfo = sourceChannelIdentification;
 		result->sourceEntityId = sourceEntityId;
 
 		// find channel connections via connection matrix + stream connections.
@@ -1364,11 +1360,11 @@ private:
 				auto const streamPortInputAudioMappings = controlledListenerEntity->getStreamPortInputAudioMappings(*channelPair.second.streamPortIndex);
 				for (auto const& mapping : streamPortInputAudioMappings)
 				{
-					if (mapping.clusterChannel == *listenerChannelIdentification.clusterChannel && mapping.clusterOffset == *listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster)
+					if (mapping.clusterChannel == listenerChannelIdentification.clusterChannel && mapping.clusterOffset == listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster)
 					{
 						la::avdecc::entity::model::AudioMapping listenerMapping;
-						listenerMapping.clusterChannel = *listenerChannelIdentification.clusterChannel;
-						listenerMapping.clusterOffset = *listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
+						listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
+						listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
 						listenerMapping.streamChannel = mapping.streamChannel;
 						listenerMapping.streamIndex = mapping.streamIndex;
 
@@ -1413,7 +1409,7 @@ private:
 					}
 					if (checkStreamFormatType(streamOutput.dynamicModel->streamInfo.streamFormat, la::avdecc::entity::model::StreamFormatInfo::Type::AAF))
 					{
-						auto freeOrReusableChannelConnection = findFreeOrReuseChannelOnExistingStreamConnection(talkerEntityId, deviceConnectionKV.first, *talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, *talkerChannelIdentification.clusterChannel, newMappingsTalker, listenerEntityId, deviceConnectionKV.second, *listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, *listenerChannelIdentification.clusterChannel, newMappingsListener, adjustedStreamChannelCount);
+						auto freeOrReusableChannelConnection = findFreeOrReuseChannelOnExistingStreamConnection(talkerEntityId, deviceConnectionKV.first, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, newMappingsTalker, listenerEntityId, deviceConnectionKV.second, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newMappingsListener, adjustedStreamChannelCount);
 
 						// already connected and also got a free channel on a compatible stream
 						if (freeOrReusableChannelConnection)
@@ -1425,15 +1421,15 @@ private:
 							auto const connectionStreamTargetPrimaryIndex = deviceConnectionKV.second;
 
 							la::avdecc::entity::model::AudioMapping talkerMapping;
-							talkerMapping.clusterChannel = *talkerChannelIdentification.clusterChannel;
-							talkerMapping.clusterOffset = *talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
+							talkerMapping.clusterChannel = talkerChannelIdentification.clusterChannel;
+							talkerMapping.clusterOffset = talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
 							talkerMapping.streamChannel = connectionStreamChannel;
 							talkerMapping.streamIndex = connectionStreamSourcePrimaryIndex;
 							insertAudioMapping(newMappingsTalker, talkerMapping, *channelPair.second.streamPortIndex);
 
 							la::avdecc::entity::model::AudioMapping listenerMapping;
-							listenerMapping.clusterChannel = *listenerChannelIdentification.clusterChannel;
-							listenerMapping.clusterOffset = *listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
+							listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
+							listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
 							listenerMapping.streamChannel = connectionStreamChannel;
 							listenerMapping.streamIndex = connectionStreamTargetPrimaryIndex;
 
@@ -1451,7 +1447,7 @@ private:
 
 			if (!foundResuableExistingStreamConnection)
 			{
-				auto findStreamConnectionResult = findAvailableStreamConnection(talkerEntityId, listenerEntityId, *talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, *talkerChannelIdentification.clusterChannel, *listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, *listenerChannelIdentification.clusterChannel, newStreamConnections, allowRemovalOfUnusedAudioMappings);
+				auto findStreamConnectionResult = findAvailableStreamConnection(talkerEntityId, listenerEntityId, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newStreamConnections, allowRemovalOfUnusedAudioMappings);
 
 				if (findStreamConnectionResult.unallowedRemovalOfUnusedAudioMappingsNecessary)
 				{
@@ -1466,16 +1462,16 @@ private:
 					auto const connectionStreamChannel = std::get<2>(primaryStreamConnection);
 
 					la::avdecc::entity::model::AudioMapping talkerMapping;
-					talkerMapping.clusterChannel = *talkerChannelIdentification.clusterChannel;
-					talkerMapping.clusterOffset = *talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
+					talkerMapping.clusterChannel = talkerChannelIdentification.clusterChannel;
+					talkerMapping.clusterOffset = talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
 					talkerMapping.streamChannel = connectionStreamChannel;
 					talkerMapping.streamIndex = connectionStreamSourcePrimaryIndex;
 
 					insertAudioMapping(newMappingsTalker, talkerMapping, *channelPair.second.streamPortIndex);
 
 					la::avdecc::entity::model::AudioMapping listenerMapping;
-					listenerMapping.clusterChannel = *listenerChannelIdentification.clusterChannel;
-					listenerMapping.clusterOffset = *listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
+					listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
+					listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
 					listenerMapping.streamChannel = connectionStreamChannel;
 					listenerMapping.streamIndex = connectionStreamTargetPrimaryIndex;
 
@@ -1867,14 +1863,7 @@ private:
 			return ChannelDisconnectResult::Unsupported;
 		}
 
-		ChannelIdentification listenerChannelIdentification;
-		listenerChannelIdentification.forward = false;
-		listenerChannelIdentification.configurationIndex = controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex;
-		listenerChannelIdentification.audioUnitIndex = listenerAudioUnitIndex;
-		listenerChannelIdentification.streamPortIndex = listenerStreamPortIndex;
-		listenerChannelIdentification.clusterIndex = listenerClusterIndex;
-		listenerChannelIdentification.baseCluster = listenerBaseCluster;
-		listenerChannelIdentification.clusterChannel = listenerClusterChannel;
+		ChannelIdentification listenerChannelIdentification(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerClusterIndex, listenerClusterChannel, false, listenerAudioUnitIndex, listenerStreamPortIndex, listenerBaseCluster);
 
 		auto const channelConnectionOfListenerChannel = getChannelConnectionsReverse(listenerEntityId, listenerChannelIdentification);
 
@@ -1934,14 +1923,7 @@ private:
 			}
 
 			// determine the amount of channel receivers:
-			ChannelIdentification talkerChannelIdentification;
-			talkerChannelIdentification.forward = true;
-			talkerChannelIdentification.configurationIndex = controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex;
-			talkerChannelIdentification.audioUnitIndex = talkerAudioUnitIndex;
-			talkerChannelIdentification.streamPortIndex = talkerStreamPortIndex;
-			talkerChannelIdentification.clusterIndex = talkerClusterIndex;
-			talkerChannelIdentification.baseCluster = talkerBaseCluster;
-			talkerChannelIdentification.clusterChannel = talkerClusterChannel;
+			ChannelIdentification talkerChannelIdentification(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerClusterIndex, talkerClusterChannel, true, talkerAudioUnitIndex, talkerStreamPortIndex, talkerBaseCluster);
 
 			int talkerChannelReceivers = 0;
 			auto const channelConnectionsOfTalkerChannel = getChannelConnections(talkerEntityId, talkerChannelIdentification);
@@ -2025,7 +2007,7 @@ private:
 			{
 				for (auto const& targetClusterKV : deviceConnection->targetClusterChannels)
 				{
-					if (deviceConnection->targetAudioUnitIndex == *listenerChannelIdentification.audioUnitIndex && deviceConnection->targetStreamPortIndex == *talkerChannelIdentification.streamPortIndex && targetClusterKV.first == *talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster && targetClusterKV.second == *talkerChannelIdentification.clusterChannel)
+					if (deviceConnection->targetAudioUnitIndex == *listenerChannelIdentification.audioUnitIndex && deviceConnection->targetStreamPortIndex == *talkerChannelIdentification.streamPortIndex && targetClusterKV.first == talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster && targetClusterKV.second == talkerChannelIdentification.clusterChannel)
 					{
 						std::vector<StreamConnection> result;
 						for (auto const [talkerStreamIndex, listenerStreamIndex] : deviceConnection->streamPairs)

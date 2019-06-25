@@ -223,7 +223,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 						{
 							for (uint16_t channel = 0; channel < talkerAudioClusterKV.second.staticModel->channelCount; channel++)
 							{
-								talkerChannels.push_back(avdecc::ChannelIdentification{ talkerConfiguration.descriptorIndex, talkerAudioClusterKV.first, channel, talkerAudioUnitKV.first, talkerStreamPortOutputKV.first, talkerStreamPortOutputKV.second.staticModel->baseCluster, true });
+								talkerChannels.push_back(avdecc::ChannelIdentification(talkerConfiguration.descriptorIndex, talkerAudioClusterKV.first, channel, true, talkerAudioUnitKV.first, talkerStreamPortOutputKV.first, talkerStreamPortOutputKV.second.staticModel->baseCluster));
 							}
 						}
 					}
@@ -237,7 +237,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 						{
 							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel->channelCount; channel++)
 							{
-								listenerChannels.push_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster, false });
+								listenerChannels.push_back(avdecc::ChannelIdentification(listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, false, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster));
 							}
 						}
 					}
@@ -301,7 +301,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 						{
 							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel->channelCount; channel++)
 							{
-								listenerChannels.push_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster, false });
+								listenerChannels.push_back(avdecc::ChannelIdentification(listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, false, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster));
 							}
 						}
 					}
@@ -340,11 +340,11 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 			if (intersectionData.state != Model::IntersectionData::State::NotConnected)
 			{
-				channelConnectionManager.removeChannelConnection(talkerID, *talkerChannelIdentification.audioUnitIndex, *talkerChannelIdentification.streamPortIndex, *talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, *talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.audioUnitIndex, *listenerChannelIdentification.streamPortIndex, *listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, *listenerChannelIdentification.clusterChannel);
+				channelConnectionManager.removeChannelConnection(talkerID, *talkerChannelIdentification.audioUnitIndex, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.audioUnitIndex, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel);
 			}
 			else
 			{
-				auto error = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.audioUnitIndex, *talkerChannelIdentification.streamPortIndex, *talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, *talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.audioUnitIndex, *listenerChannelIdentification.streamPortIndex, *listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, *listenerChannelIdentification.clusterChannel);
+				auto error = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.audioUnitIndex, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.audioUnitIndex, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel);
 				handleChannelCreationResult(error,
 					[=]()
 					{
@@ -353,7 +353,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 						if (result == QMessageBox::StandardButton::Yes)
 						{
 							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.audioUnitIndex, *talkerChannelIdentification.streamPortIndex, *talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, *talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.audioUnitIndex, *listenerChannelIdentification.streamPortIndex, *listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, *listenerChannelIdentification.clusterChannel, true);
+							auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.audioUnitIndex, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.audioUnitIndex, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, true);
 							handleChannelCreationResult(errorSecondTry, {});
 						}
 					});

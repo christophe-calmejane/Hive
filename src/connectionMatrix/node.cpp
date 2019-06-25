@@ -331,12 +331,12 @@ avdecc::ChannelIdentification const& ChannelNode::channelIdentification() const
 
 la::avdecc::entity::model::ClusterIndex ChannelNode::clusterIndex() const
 {
-	return *_channelIdentification.clusterIndex;
+	return _channelIdentification.clusterIndex;
 }
 
 std::uint16_t ChannelNode::channelIndex() const
 {
-	return *_channelIdentification.clusterChannel;
+	return _channelIdentification.clusterChannel;
 }
 
 ChannelNode::ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification)
