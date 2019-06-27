@@ -236,9 +236,9 @@ private:
 									auto const configIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 									auto const& redundantListenerStreamNode = controlledEntity->getRedundantStreamInputNode(configIndex, *virtualListenerIndex);
 									bool atLeastOneConnected = false;
-									for (auto const& [streamIndex, streamNode] : redundantListenerStreamNode.redundantStreams)
+									for (auto const& [redundantListenerStreamIndex, streamNode] : redundantListenerStreamNode.redundantStreams)
 									{
-										if (controlledEntity->getStreamInputNode(configIndex, streamIndex).dynamicModel->connectionState.state != la::avdecc::entity::model::StreamConnectionState::State::NotConnected)
+										if (controlledEntity->getStreamInputNode(configIndex, redundantListenerStreamIndex).dynamicModel->connectionState.state != la::avdecc::entity::model::StreamConnectionState::State::NotConnected)
 										{
 											atLeastOneConnected = true;
 											break;
@@ -1538,8 +1538,7 @@ private:
 	* @param listenerClusterChannel The cluster channel number.
 	* @return ChannelConnectResult::NoError if the connection and mappings could be created.
 	*/
-	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::AudioUnitIndex const talkerAudioUnitIndex, la::avdecc::entity::model::StreamPortIndex const talkerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const talkerClusterIndex, la::avdecc::entity::model::ClusterIndex const talkerBaseCluster, std::uint16_t const talkerClusterChannel, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::AudioUnitIndex const listenerAudioUnitIndex, la::avdecc::entity::model::StreamPortIndex const listenerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const listenerClusterIndex, la::avdecc::entity::model::ClusterIndex const listenerBaseCluster, std::uint16_t const listenerClusterChannel,
-		bool allowRemovalOfUnusedAudioMappings, uint16_t streamChannelCountHint) const noexcept
+	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamPortIndex const talkerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const talkerClusterIndex, la::avdecc::entity::model::ClusterIndex const talkerBaseCluster, std::uint16_t const talkerClusterChannel, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamPortIndex const listenerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const listenerClusterIndex, la::avdecc::entity::model::ClusterIndex const listenerBaseCluster, std::uint16_t const listenerClusterChannel, bool allowRemovalOfUnusedAudioMappings, uint16_t streamChannelCountHint) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
@@ -1631,13 +1630,13 @@ private:
 
 					if (allowRemovalOfUnusedAudioMappings && !findStreamConnectionResult.listenerDynamicMappingsToRemove.empty())
 					{
-						avdecc::ControllerManager::RemoveStreamPortInputAudioMappingsHandler responseHandler = [=](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+						avdecc::ControllerManager::RemoveStreamPortInputAudioMappingsHandler responseHandler = [=](la::avdecc::UniqueIdentifier const& /*entityID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
 						{
 							// change the stream format if necessary
 							auto compatibleFormats = findCompatibleStreamPairFormat(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, streamChannelCountHint);
 							adjustStreamPairFormats(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, compatibleFormats);
 
-							avdecc::ControllerManager::ConnectStreamHandler responseHandler = [](la::avdecc::UniqueIdentifier const& talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const& listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+							avdecc::ControllerManager::ConnectStreamHandler responseHandler = [](la::avdecc::UniqueIdentifier const& /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const& /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const /*status*/)
 							{
 								// TODO handle errors?
 							};
@@ -1653,7 +1652,7 @@ private:
 						auto const& compatibleFormats = findCompatibleStreamPairFormat(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, streamChannelCountHint);
 						adjustStreamPairFormats(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, compatibleFormats);
 
-						avdecc::ControllerManager::ConnectStreamHandler responseHandler = [](la::avdecc::UniqueIdentifier const& talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const& listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+						avdecc::ControllerManager::ConnectStreamHandler responseHandler = [](la::avdecc::UniqueIdentifier const& /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const& /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const /*status*/)
 						{
 							// TODO handle errors?
 						};
@@ -1932,10 +1931,7 @@ private:
 			{
 				if (deviceConnection->sourceStreamIndex == *connectionStreamSourceIndex && deviceConnection->streamChannel == connectionStreamChannel)
 				{
-					for (auto const& clusterIdentificationPair : deviceConnection->targetClusterChannels)
-					{
-						talkerChannelReceivers++;
-					}
+					talkerChannelReceivers += deviceConnection->targetClusterChannels.size();
 				}
 			}
 
@@ -2587,10 +2583,10 @@ private:
 												assignedChannelsListener.insert(assignedChannelsListenerOnExistingStreamConnections.begin(), assignedChannelsListenerOnExistingStreamConnections.end());
 											}
 
-											std::vector<uint16_t> unwantedConnections;
-											set_intersection(assignedChannelsTalker.begin(), assignedChannelsTalker.end(), assignedChannelsListener.begin(), assignedChannelsListener.end(), back_inserter(unwantedConnections));
+											std::vector<uint16_t> unwantedConnectionsAfterAssignments;
+											set_intersection(assignedChannelsTalker.begin(), assignedChannelsTalker.end(), assignedChannelsListener.begin(), assignedChannelsListener.end(), back_inserter(unwantedConnectionsAfterAssignments));
 
-											if (!intersectionFree.empty() && unwantedConnections.empty())
+											if (!intersectionFree.empty() && unwantedConnectionsAfterAssignments.empty())
 											{
 												if (streamConfigurationMatches)
 												{
@@ -2601,7 +2597,7 @@ private:
 													defaultResult = buildResult(streamOutputKV.second, streamInputKV.second, intersectionFree.at(0));
 												}
 											}
-											else if (!unwantedConnections.empty())
+											else if (!unwantedConnectionsAfterAssignments.empty())
 											{
 												// check if the unwanted connection - listener dynamic mappings can be removed safely
 												// it can be removed if no other entity is connected to it:
@@ -2627,7 +2623,7 @@ private:
 
 														auto result = buildResult(streamOutputKV.second, streamInputKV.second, streamChannelToUse);
 														//the mapping can be removed:
-														for (auto unwantedConnectionChannel : unwantedConnections)
+														for (auto unwantedConnectionChannel : unwantedConnectionsAfterAssignments)
 														{
 															auto unwantedMappingsMatch = getMappingsFromStreamInputChannel(listenerEntityId, streamInputKV.first, unwantedConnectionChannel);
 
@@ -2834,8 +2830,6 @@ private:
 
 		auto const& currentStreamOutputFormat = streamOutputNode.dynamicModel->streamInfo.streamFormat;
 		auto const currentStreamOutputFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(currentStreamOutputFormat);
-		auto currentStreamOutputFormatType = currentStreamOutputFormatInfo->getType();
-		auto currentStreamOutputFormatChannelCount = currentStreamOutputFormatInfo->getChannelsCount();
 
 		la::avdecc::controller::model::StreamInputNode streamInputNode;
 		try
@@ -2847,9 +2841,6 @@ private:
 			return std::make_pair(std::nullopt, std::nullopt);
 		}
 		auto const& currentStreamInputFormat = streamInputNode.dynamicModel->streamInfo.streamFormat;
-		auto const currentStreamInputFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(currentStreamInputFormat);
-		auto currentStreamInputFormatType = currentStreamInputFormatInfo->getType();
-		auto currentStreamInputFormatChannelCount = currentStreamInputFormatInfo->getChannelsCount();
 
 		std::vector<std::pair<la::avdecc::entity::model::StreamFormat, la::avdecc::entity::model::StreamFormat>> compatibleFormatOptions;
 
@@ -3122,7 +3113,6 @@ private:
 
 					std::vector<uint16_t> intersection;
 					set_intersection(freeStreamSlotsSource.begin(), freeStreamSlotsSource.end(), freeStreamSlotsTarget.begin(), freeStreamSlotsTarget.end(), back_inserter(intersection));
-					int i = 0;
 
 					auto streamOutputConnections = getStreamOutputConnections(talkerEntityId, talkerStreamIndex);
 					for (auto const& streamOutputConnection : streamOutputConnections)
