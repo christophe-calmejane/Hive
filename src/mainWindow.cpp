@@ -71,6 +71,7 @@ extern "C"
 #include <mkdio.h>
 }
 
+#define PROG_ID 0x0003
 #define VENDOR_ID 0x001B92
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
@@ -266,7 +267,12 @@ void MainWindowImpl::currentControllerChanged()
 	try
 	{
 		// Create a new Controller
-		manager.createController(protocolType, interfaceID, 0x0003, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+#ifdef DEBUG
+		auto const progID = std::uint16_t{ PROG_ID + 1 }; // Use next PROG_ID in debug (so we can launch 2 Hive instances at the same time, one in Release and one in Debug)
+#else // !DEBUG
+		auto const progID = std::uint16_t{ PROG_ID };
+#endif // DEBUG
+		manager.createController(protocolType, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
 		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
