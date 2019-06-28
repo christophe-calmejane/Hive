@@ -152,8 +152,8 @@ public:
 	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
 	qt::toolkit::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
 	qt::toolkit::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
-	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Material Icons", "get_app", _parent }; // Alternatives: unarchive, move_to_inbox, publish, https://pngtree.com/free-icon/firmware-update_645152
-	qt::toolkit::FlatIconButton _openSettingsButton{ "Material Icons", "settings", _parent };
+	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
+	qt::toolkit::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
