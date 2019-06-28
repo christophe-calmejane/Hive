@@ -132,8 +132,12 @@ private:
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
-		auto const entityModelID = controlledEntity->getEntity().getEntityModelID();
-		return qMakePair(entityID.getValue(), entityModelID.getValue());
+		if (controlledEntity)
+		{
+			auto const entityModelID = controlledEntity->getEntity().getEntityModelID();
+			return qMakePair(entityID.getValue(), entityModelID.getValue());
+		}
+		return {};
 	}
 
 	QString fileName(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept
