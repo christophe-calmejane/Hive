@@ -23,7 +23,7 @@
 #include <QLayout>
 #include <QPushButton>
 #include <QLineEdit>
-#include "toolkit/material/button.hpp"
+#include "toolkit/flatIconButton.hpp"
 
 namespace connectionMatrix
 {
@@ -58,14 +58,14 @@ private:
 	QLineEdit _searchLineEdit{ &_buttonContainer };
 
 	QHBoxLayout _horizontalLayout;
-	qt::toolkit::material::Button _horizontalExpandButton{ "expand_more" };
+	qt::toolkit::FlatIconButton _horizontalExpandButton{ "Material Icons", "expand_more" };
 	QWidget _horizontalPlaceholder{ this };
-	qt::toolkit::material::Button _horizontalCollapseButton{ "expand_less" };
+	qt::toolkit::FlatIconButton _horizontalCollapseButton{ "Material Icons", "expand_less" };
 
 	QVBoxLayout _verticalLayout;
-	qt::toolkit::material::Button _verticalCollapseButton{ "chevron_left" };
+	qt::toolkit::FlatIconButton _verticalCollapseButton{ "Material Icons", "chevron_left" };
 	QWidget _verticalPlaceholder{ this };
-	qt::toolkit::material::Button _verticalExpandButton{ "chevron_right" };
+	qt::toolkit::FlatIconButton _verticalExpandButton{ "Material Icons", "chevron_right" };
 
 	bool _isTransposed{ false };
 };

@@ -17,28 +17,29 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "toolkit/material/button.hpp"
+#include "toolkit/flatIconButton.hpp"
 
 namespace qt
 {
 namespace toolkit
 {
-namespace material
+FlatIconButton::FlatIconButton(QWidget* parent)
+	: FlatIconButton{ QString::null, QString::null, parent }
 {
-Button::Button(QWidget* parent)
-	: Button{ QString::null, parent }
-{
+	//auto font = QFont{ "Material Icons" };
+	//font.setStyleStrategy(QFont::PreferQuality);
+	//setFont(font);
 }
 
-Button::Button(QString const& icon, QWidget* parent)
+FlatIconButton::FlatIconButton(QString const& fontFamily, QString const& icon, QWidget* parent)
 	: QPushButton{ icon, parent }
 {
-	QFont font{ "Material Icons" };
+	auto font = QFont{ fontFamily };
 	font.setStyleStrategy(QFont::PreferQuality);
 	setFont(font);
+
 	setFlat(true);
 }
 
-} // namespace material
 } // namespace toolkit
 } // namespace qt
