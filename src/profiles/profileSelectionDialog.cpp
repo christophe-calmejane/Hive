@@ -25,7 +25,7 @@
 namespace profiles
 {
 ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 {
 	setWindowTitle("Please Choose The Default User Profile");
 	_layout.setSpacing(20);

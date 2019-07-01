@@ -330,7 +330,7 @@ la::avdecc::UniqueIdentifier Model::controlledEntityID(QModelIndex const& index)
 }
 
 MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(QWidget* parent)
-	: QDialog{ parent }
+	: QDialog{ parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint }
 	, _ui{ new Ui::MultiFirmwareUpdateDialog }
 	, _model{ new Model{ this } }
 {

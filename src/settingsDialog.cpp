@@ -142,7 +142,7 @@ private:
 };
 
 SettingsDialog::SettingsDialog(QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 	, _pImpl(new SettingsDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " Settings");

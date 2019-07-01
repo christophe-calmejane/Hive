@@ -180,9 +180,9 @@ class MappingMatrixDialog : public QDialog
 public:
 	MappingMatrixDialog(const Outputs& outputs, const Inputs& inputs, const Connections& connections, QWidget* parent = nullptr)
 #ifdef Q_OS_WIN32
-		: QDialog(parent, Qt::Dialog) // Because Qt::Tool is ugly on windows
+		: QDialog(parent, Qt::Dialog | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint) // Because Qt::Tool is ugly on windows and '?' needs to be hidden (currently not supported)
 #else
-		: QDialog(parent, Qt::Tool)
+		: QDialog(parent, Qt::Tool | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 #endif
 		, _mappingMatrix{ outputs, inputs, connections, this }
 	{

@@ -66,7 +66,7 @@ private:
 };
 
 FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::DeviceMemoryBuffer&& firmwareData, QString const& name, std::vector<EntityInfo> entitiesToUpdate, QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 	, _ui(new Ui::FirmwareUploadDialog)
 	, _firmwareData(firmwareData)
 {
