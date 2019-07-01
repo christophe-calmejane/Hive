@@ -1276,7 +1276,8 @@ public:
 			auto const& entityNode = controlledEntity.getEntityNode();
 			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
 
-			auto* entity = EntityNode::create(entityID, controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan));
+			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
+			auto* entity = EntityNode::create(entityID, isMilan);
 			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
 
 			// Redundant streams
@@ -1323,7 +1324,7 @@ public:
 			}
 
 			// Channels for Milan compatible entities only
-			if (controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+			if (isMilan)
 			{
 				for (auto const& [audioUnitIndex, audioUnitNode] : configurationNode.audioUnits)
 				{
@@ -1367,7 +1368,8 @@ public:
 			auto const& entityNode = controlledEntity.getEntityNode();
 			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
 
-			auto* entity = EntityNode::create(entityID, controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan));
+			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
+			auto* entity = EntityNode::create(entityID, isMilan);
 			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
 
 			// Redundant streams
@@ -1420,7 +1422,7 @@ public:
 			}
 
 			// Channels for Milan compatible entities only
-			if (controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+			if (isMilan)
 			{
 				for (auto const& [audioUnitIndex, audioUnitNode] : configurationNode.audioUnits)
 				{
@@ -1751,40 +1753,26 @@ public:
 		// Event affecting the whole entity (all streams, Input and Output)
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateGptp };
 
-		if (hasTalker(entityID))
+		if (auto* talker = talkerNodeFromEntityID(entityID))
 		{
-			if (auto* talker = talkerNodeFromEntityID(entityID))
-			{
-				talker->accept(avbInterfaceIndex,
-					[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
-					{
-						node->setGrandMasterID(grandMasterID);
-						node->setGrandMasterDomain(grandMasterDomain);
-						talkerIntersectionDataChanged(node, true, false, dirtyFlags);
-					});
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::gPTPChanged: Invalid Talker: TalkerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
-			}
+			talker->accept(avbInterfaceIndex,
+				[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
+				{
+					node->setGrandMasterID(grandMasterID);
+					node->setGrandMasterDomain(grandMasterDomain);
+					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+				});
 		}
 
-		if (hasListener(entityID))
+		if (auto* listener = listenerNodeFromEntityID(entityID))
 		{
-			if (auto* listener = listenerNodeFromEntityID(entityID))
-			{
-				listener->accept(avbInterfaceIndex,
-					[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
-					{
-						node->setGrandMasterID(grandMasterID);
-						node->setGrandMasterDomain(grandMasterDomain);
-						listenerIntersectionDataChanged(node, true, false, dirtyFlags);
-					});
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::gPTPChanged: Invalid Listener: ListenerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
-			}
+			listener->accept(avbInterfaceIndex,
+				[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
+				{
+					node->setGrandMasterID(grandMasterID);
+					node->setGrandMasterDomain(grandMasterDomain);
+					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+				});
 		}
 	}
 
@@ -1799,30 +1787,16 @@ public:
 			{
 				auto const name = avdecc::helper::smartEntityName(*controlledEntity);
 
-				if (hasTalker(entityID))
+				if (auto* node = talkerNodeFromEntityID(entityID))
 				{
-					if (auto* node = talkerNodeFromEntityID(entityID))
-					{
-						node->setName(name);
-						talkerHeaderDataChanged(node);
-					}
-					else
-					{
-						LOG_HIVE_ERROR(QString("connectionMatrix::Model::EntityNameChanged: Invalid Talker: TalkerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
-					}
+					node->setName(name);
+					talkerHeaderDataChanged(node);
 				}
 
-				if (hasListener(entityID))
+				if (auto* node = listenerNodeFromEntityID(entityID))
 				{
-					if (auto* node = listenerNodeFromEntityID(entityID))
-					{
-						node->setName(name);
-						listenerHeaderDataChanged(node);
-					}
-					else
-					{
-						LOG_HIVE_ERROR(QString("connectionMatrix::Model::EntityNameChanged: Invalid Listener: ListenerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
-					}
+					node->setName(name);
+					listenerHeaderDataChanged(node);
 				}
 			}
 		}
@@ -1838,38 +1812,24 @@ public:
 		// Event affecting the whole entity (all streams, Input and Output)
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateLinkStatus };
 
-		if (hasTalker(entityID))
+		if (auto* talker = talkerNodeFromEntityID(entityID))
 		{
-			if (auto* talker = talkerNodeFromEntityID(entityID))
-			{
-				talker->accept(avbInterfaceIndex,
-					[this, linkStatus, dirtyFlags](StreamNode* node)
-					{
-						node->setInterfaceLinkStatus(linkStatus);
-						talkerIntersectionDataChanged(node, true, false, dirtyFlags);
-					});
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::AvbInterfaceLinkStatusChanged: Invalid Talker: TalkerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
-			}
+			talker->accept(avbInterfaceIndex,
+				[this, linkStatus, dirtyFlags](StreamNode* node)
+				{
+					node->setInterfaceLinkStatus(linkStatus);
+					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+				});
 		}
 
-		if (hasListener(entityID))
+		if (auto* listener = listenerNodeFromEntityID(entityID))
 		{
-			if (auto* listener = listenerNodeFromEntityID(entityID))
-			{
-				listener->accept(avbInterfaceIndex,
-					[this, linkStatus, dirtyFlags](StreamNode* node)
-					{
-						node->setInterfaceLinkStatus(linkStatus);
-						listenerIntersectionDataChanged(node, true, false, dirtyFlags);
-					});
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::AvbInterfaceLinkStatusChanged: Invalid Listener: ListenerID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
-			}
+			listener->accept(avbInterfaceIndex,
+				[this, linkStatus, dirtyFlags](StreamNode* node)
+				{
+					node->setInterfaceLinkStatus(linkStatus);
+					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+				});
 		}
 	}
 
@@ -2024,17 +1984,43 @@ public:
 
 	void handleCompatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags compatibilityFlags)
 	{
-		if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		auto const isMilan = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
+
+		// Check if entity was Milan compatible, but isn't anymore
+		if (!isMilan)
 		{
-			// Only add if not in the list already
-			if (!hasTalker(entityID) && !hasListener(entityID))
-			{
-				handleEntityOnline(entityID);
-			}
-		}
-		else
-		{
+#pragma message("TODO: Handle this properly (see comments below)")
+			/*
+			When an entity looses it's Milan Compatibility Flag (and only this flag, not the other existing or future flags), we want it to be removed from the CBR view but NOT from the SBR view.
+			So we have to clear the CBR cached nodes, the channel nodes from the EntityNode, and force a refresh (do the reverse of what is done in buildTalkerNode and buildListenerNode)
+			See void Model::setMode(Mode const mode), we probably want to do what's inside this method, but for just this entity
+			*/
+#if 1
+			// Quick hack, always trigger entity offline/online
 			handleEntityOffline(entityID);
+			handleEntityOnline(entityID);
+#else
+			if (auto* node = talkerNodeFromEntityID(entityID))
+			{
+				// Was Milan
+				if (node->isMilan())
+				{
+					// Remove from Channel cache
+					priv::removeChannelNodes(_talkerChannelNodeMap, node);
+					... Other things to do
+				}
+			}
+
+			if (auto* node = listenerNodeFromEntityID(entityID))
+			{
+				if (node->isMilan())
+				{
+					// Remove from Channel cache
+					priv::removeChannelNodes(_listenerChannelNodeMap, node);
+					... Other things to do
+		}
+			}
+#endif
 		}
 	}
 
@@ -2107,18 +2093,6 @@ public:
 	}
 
 private:
-	// Returns true if a talker exists for entityID
-	bool hasTalker(la::avdecc::UniqueIdentifier const entityID) const
-	{
-		return _talkerNodeMap.count(entityID) == 1;
-	}
-
-	// Returns true if a listener exists for entityID
-	bool hasListener(la::avdecc::UniqueIdentifier const entityID) const
-	{
-		return _listenerNodeMap.count(entityID) == 1;
-	}
-
 	// Returns talker section for node
 	int talkerNodeSection(Node* const node) const
 	{
@@ -2135,7 +2109,7 @@ private:
 	EntityNode* talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _talkerNodeMap.find(entityID);
-		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_talkerNodeMap), "Not found"))
+		if (it == std::end(_talkerNodeMap))
 		{
 			return nullptr;
 		}
@@ -2151,7 +2125,7 @@ private:
 	EntityNode* listenerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
 		auto const it = _listenerNodeMap.find(entityID);
-		if (!AVDECC_ASSERT_WITH_RET(it != std::end(_listenerNodeMap), "Not found"))
+		if (it == std::end(_listenerNodeMap))
 		{
 			return nullptr;
 		}
