@@ -99,7 +99,7 @@ set(HEADER_FILES_COMMON
 	statistics/entityStatisticsTreeWidgetItem.hpp
 	toolkit/comboBox.hpp
 	toolkit/dynamicHeaderView.hpp
-	toolkit/material/button.hpp
+	toolkit/flatIconButton.hpp
 	toolkit/material/color.hpp
 	toolkit/material/colorPalette.hpp
 	toolkit/material/helper.hpp
@@ -180,7 +180,7 @@ set(SOURCE_FILES_COMMON
 	statistics/entityStatisticsTreeWidgetItem.cpp
 	toolkit/comboBox.cpp
 	toolkit/dynamicHeaderView.cpp
-	toolkit/material/button.cpp
+	toolkit/flatIconButton.cpp
 	toolkit/material/color.cpp
 	toolkit/material/colorPalette.cpp
 	toolkit/material/helper.cpp

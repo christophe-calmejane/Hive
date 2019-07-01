@@ -125,8 +125,12 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::AemCacheEnabled);
 
 	// Load fonts
-	// https://material.io/icons/
-	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1)
+	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/
+	{
+		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
+		return 1;
+	}
+	if (QFontDatabase::addApplicationFont(":/Hive.ttf") == -1) // Our own made font
 	{
 		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
 		return 1;

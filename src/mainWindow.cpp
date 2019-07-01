@@ -45,8 +45,8 @@
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
 #include "toolkit/comboBox.hpp"
+#include "toolkit/flatIconButton.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
-#include "toolkit/material/button.hpp"
 #include "toolkit/material/color.hpp"
 #include "toolkit/material/colorPalette.hpp"
 #include "updater/updater.hpp"
@@ -150,10 +150,10 @@ public:
 	qt::toolkit::ComboBox _interfaceComboBox{ _parent };
 	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ _parent };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
-	qt::toolkit::material::Button _refreshControllerButton{ "refresh", _parent };
-	qt::toolkit::material::Button _openMcmdDialogButton{ "schedule", _parent };
-	qt::toolkit::material::Button _openMultiFirmwareUpdateDialogButton{ "get_app", _parent }; // Alternatives: unarchive, move_to_inbox, publish, https://pngtree.com/free-icon/firmware-update_645152
-	qt::toolkit::material::Button _openSettingsButton{ "settings", _parent };
+	qt::toolkit::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
+	qt::toolkit::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
+	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
+	qt::toolkit::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	avdecc::ControllerModel* _controllerModel{ nullptr };

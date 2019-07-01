@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>MaterialIcons-Regular.ttf</file>
+        <file>Hive.ttf</file>
         <file>Logo.png</file>
         <file alias="CHANGELOG.md">../CHANGELOG.md</file>
         <file>locked.png</file>

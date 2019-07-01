@@ -28,7 +28,7 @@
 #include <QLabel>
 #include <QHBoxLayout>
 
-#include "toolkit/material/button.hpp"
+#include "toolkit/flatIconButton.hpp"
 
 class ListenerStreamConnectionWidget : public QWidget
 {
@@ -44,5 +44,5 @@ private:
 	QHBoxLayout _layout{ this };
 	QLabel _streamConnectionLabel{ this };
 	QLabel _entityNameLabel{ this };
-	qt::toolkit::material::Button _disconnectButton{ "block", this };
+	qt::toolkit::FlatIconButton _disconnectButton{ "Material Icons", "block", this };
 };
