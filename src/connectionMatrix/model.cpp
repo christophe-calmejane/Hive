@@ -1075,7 +1075,7 @@ public:
 
 					auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
-					auto flags = computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
+					intersectionData.flags = computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
 
 					// Connected
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
@@ -1158,7 +1158,7 @@ public:
 					if (!streamConnectionIndices.empty())
 					{
 						intersectionData.smartConnectableStreams.clear();
-						Model::IntersectionData::Flags combinedFlags;
+						auto combinedFlags = Model::IntersectionData::Flags{};
 						auto allConnected = true;
 						for (auto const& streamConnection : streamConnectionIndices)
 						{
@@ -1168,8 +1168,7 @@ public:
 							auto const* talkerStreamNode = ModelPrivate::talkerStreamNode(talkerEntityID, talkerStreamIndex);
 							auto const* listenerStreamNode = ModelPrivate::listenerStreamNode(listenerEntityID, listenerStreamIndex);
 
-							auto flags = computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
-							combinedFlags |= flags;
+							combinedFlags |= computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
 
 							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamIndex };
 							auto const connected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
@@ -1218,7 +1217,6 @@ public:
 		auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
 
 		auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
-
 
 		// InterfaceDown
 		if (interfaceDown)
