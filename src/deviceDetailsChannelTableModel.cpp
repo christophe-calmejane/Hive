@@ -209,7 +209,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 	for (auto& node : _nodes)
 	{
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-		if (node.connectionInformation->sourceClusterChannelInfo->forward)
+		if (node.connectionInformation->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 		{
 			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
 			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
@@ -242,7 +242,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(std::set<st
 	for (auto& node : _nodes)
 	{
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-		if (node.connectionInformation->sourceClusterChannelInfo->forward)
+		if (node.connectionInformation->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 		{
 			// in the case of the talker we can't know which channels have to be updated without getting the changes from the ChannelConnectionManager
 			// therefor all talkers are updated for now. To improve on this talker connections would need to be cached in the ChannelConnectionManager like the listenerChannelConnections are cached.
@@ -337,7 +337,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							auto const streamPortIndex = *connectionInfo->sourceClusterChannelInfo->streamPortIndex;
 							auto const clusterIndex = connectionInfo->sourceClusterChannelInfo->clusterIndex;
 							auto const baseCluster = connectionInfo->sourceClusterChannelInfo->baseCluster;
-							if (!connectionInfo->sourceClusterChannelInfo->forward)
+							if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::InputToOutput)
 							{
 								if (configurationIndex && streamPortIndex && clusterIndex)
 								{
@@ -717,6 +717,10 @@ QVariant DeviceDetailsChannelTableModelPrivate::headerData(int section, Qt::Orie
 	{
 		if (role == Qt::DisplayRole)
 		{
+			if (static_cast<size_t>(section) >= _nodes.size())
+			{
+				return {};
+			}
 			return _nodes.at(section).connectionInformation->sourceClusterChannelInfo->clusterIndex - *_nodes.at(section).connectionInformation->sourceClusterChannelInfo->baseCluster + 1; // +1 to make the row count start at 1 instead of 0.
 		}
 	}

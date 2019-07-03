@@ -566,7 +566,7 @@ private:
 	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnections(la::avdecc::UniqueIdentifier const& entityId, ChannelIdentification sourceChannelIdentification) const noexcept
 	{
 		// make sure forward is set to true
-		sourceChannelIdentification.forward = true;
+		sourceChannelIdentification.direction = ChannelConnectionDirection::OutputToInput;
 
 		auto result = std::make_shared<TargetConnectionInformations>();
 		result->sourceClusterChannelInfo = sourceChannelIdentification;
@@ -774,8 +774,8 @@ private:
 		result->sourceClusterChannelInfo = sourceChannelIdentification;
 		result->sourceEntityId = entityId;
 
-		// make sure forward is set to false
-		result->sourceClusterChannelInfo->forward = false;
+		// make sure direction is correct
+		result->sourceClusterChannelInfo->direction = ChannelConnectionDirection::InputToOutput;
 
 		// find channel connections via connection matrix + stream connections.
 		// an output channel can be connected to one or multiple input channels on different devices or to none.
@@ -1862,7 +1862,7 @@ private:
 			return ChannelDisconnectResult::Unsupported;
 		}
 
-		ChannelIdentification listenerChannelIdentification(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerClusterIndex, listenerClusterChannel, false, listenerAudioUnitIndex, listenerStreamPortIndex, listenerBaseCluster);
+		ChannelIdentification listenerChannelIdentification(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerClusterIndex, listenerClusterChannel, ChannelConnectionDirection::InputToOutput, listenerAudioUnitIndex, listenerStreamPortIndex, listenerBaseCluster);
 
 		auto const channelConnectionOfListenerChannel = getChannelConnectionsReverse(listenerEntityId, listenerChannelIdentification);
 
@@ -1922,7 +1922,7 @@ private:
 			}
 
 			// determine the amount of channel receivers:
-			ChannelIdentification talkerChannelIdentification(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerClusterIndex, talkerClusterChannel, true, talkerAudioUnitIndex, talkerStreamPortIndex, talkerBaseCluster);
+			ChannelIdentification talkerChannelIdentification(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerClusterIndex, talkerClusterChannel, ChannelConnectionDirection::OutputToInput, talkerAudioUnitIndex, talkerStreamPortIndex, talkerBaseCluster);
 
 			int talkerChannelReceivers = 0;
 			auto const channelConnectionsOfTalkerChannel = getChannelConnections(talkerEntityId, talkerChannelIdentification);

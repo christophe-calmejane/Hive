@@ -1333,9 +1333,9 @@ public:
 							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
 							{
 								auto const* const staticModel = clusterNode.staticModel;
-								for (auto channel = 0; channel < staticModel->channelCount; ++channel)
+								for (auto channel = (uint16_t)0u; channel < staticModel->channelCount; ++channel)
 								{
-									auto channelIdentification = avdecc::ChannelIdentification(configurationNode.descriptorIndex, clusterIndex, channel, false, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster);
+									auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
 
 									auto* outputChannel = ChannelNode::createOutputNode(*entity, channelIdentification);
 									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
@@ -1431,9 +1431,9 @@ public:
 							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
 							{
 								auto const* const staticModel = clusterNode.staticModel;
-								for (auto channel = 0; channel < staticModel->channelCount; ++channel)
+								for (auto channel = (uint16_t)0u; channel < staticModel->channelCount; ++channel)
 								{
-									auto channelIdentification = avdecc::ChannelIdentification(configurationNode.descriptorIndex, clusterIndex, channel, false, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster);
+									auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
 
 									auto* inputChannel = ChannelNode::createInputNode(*entity, channelIdentification);
 									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
@@ -2016,7 +2016,7 @@ public:
 					// Remove from Channel cache
 					priv::removeChannelNodes(_listenerChannelNodeMap, node);
 					... Other things to do
-		}
+				}
 			}
 #endif
 		}

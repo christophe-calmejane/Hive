@@ -280,7 +280,7 @@ public:
 				{
 					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						avdecc::ChannelIdentification sourceChannelIdentification(*_previousConfigurationIndex, inputAudioClusterKV.first, channelIndex, true, audioUnitIndex, streamPortInputKV.first, streamPortInputKV.second.staticModel->baseCluster);
+						auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, inputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortInputKV.first, streamPortInputKV.second.staticModel->baseCluster };
 						auto connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, sourceChannelIdentification);
 
 						_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
@@ -298,7 +298,7 @@ public:
 				{
 					for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 					{
-						avdecc::ChannelIdentification sourceChannelIdentification(*_previousConfigurationIndex, outputAudioClusterKV.first, channelIndex, true, audioUnitIndex, streamPortOutputKV.first, streamPortOutputKV.second.staticModel->baseCluster);
+						auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, outputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::OutputToInput, audioUnitIndex, streamPortOutputKV.first, streamPortOutputKV.second.staticModel->baseCluster };
 						auto connectionInformation = channelConnectionManager.getChannelConnections(_entityID, sourceChannelIdentification);
 
 						_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);

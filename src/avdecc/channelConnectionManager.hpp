@@ -29,17 +29,31 @@ namespace avdecc
 {
 using StreamConnection = std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamIdentification>;
 
+enum class ChannelConnectionDirection
+{
+	OutputToInput,
+	InputToOutput,
+};
+
 struct ChannelIdentification
 {
-	ChannelIdentification(la::avdecc::entity::model::ConfigurationIndex configurationIndex, la::avdecc::entity::model::ClusterIndex clusterIndex, std::uint16_t clusterChannel, bool forward = false, std::optional<la::avdecc::entity::model::AudioUnitIndex> audioUnitIndex = std::nullopt, std::optional<la::avdecc::entity::model::StreamPortIndex> streamPortIndex = std::nullopt, std::optional<la::avdecc::entity::model::ClusterIndex> baseCluster = std::nullopt)
+	ChannelIdentification(la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, std::uint16_t const clusterChannel, ChannelConnectionDirection const channelConnectionDirection, std::optional<la::avdecc::entity::model::AudioUnitIndex> const audioUnitIndex = std::nullopt, std::optional<la::avdecc::entity::model::StreamPortIndex> streamPortIndex = std::nullopt, std::optional<la::avdecc::entity::model::ClusterIndex> baseCluster = std::nullopt)
 	{
 		this->configurationIndex = configurationIndex;
 		this->clusterIndex = clusterIndex;
 		this->clusterChannel = clusterChannel;
-		this->forward = forward;
+		this->direction = channelConnectionDirection;
 		this->audioUnitIndex = audioUnitIndex;
 		this->streamPortIndex = streamPortIndex;
 		this->baseCluster = baseCluster;
+	}
+
+	/**
+	* Checks if the identifying data (configurationIndex, clusterIndex and clusterChannel) match.
+	*/
+	bool IsSameIdentification(ChannelIdentification const& other)
+	{
+		return this->configurationIndex == other.configurationIndex && this->clusterIndex == other.clusterIndex && this->clusterChannel == other.clusterChannel;
 	}
 
 	/*Identifying data*/
@@ -48,20 +62,32 @@ struct ChannelIdentification
 	std::uint16_t clusterChannel{ 0 };
 
 	/*Additional data*/
+	ChannelConnectionDirection direction{ ChannelConnectionDirection::OutputToInput };
 	std::optional<la::avdecc::entity::model::AudioUnitIndex> audioUnitIndex{ 0 };
 	std::optional<la::avdecc::entity::model::StreamPortIndex> streamPortIndex{ 0 };
 	std::optional<la::avdecc::entity::model::ClusterIndex> baseCluster{ 0 };
-	bool forward{ false }; /** This flag indicates the direction of the connections. */
 };
 
 constexpr bool operator<(ChannelIdentification const& lhs, ChannelIdentification const& rhs)
 {
-	return lhs.configurationIndex < rhs.configurationIndex || lhs.configurationIndex == rhs.configurationIndex && lhs.clusterIndex < rhs.clusterIndex || lhs.configurationIndex == rhs.configurationIndex && lhs.clusterIndex == rhs.clusterIndex && lhs.clusterChannel < rhs.clusterChannel;
+	if (lhs.configurationIndex < rhs.configurationIndex)
+	{
+		return true;
+	}
+	else if (lhs.configurationIndex == rhs.configurationIndex && lhs.clusterIndex < rhs.clusterIndex)
+	{
+		return true;
+	}
+	else if (lhs.configurationIndex == rhs.configurationIndex && lhs.clusterIndex == rhs.clusterIndex && lhs.clusterChannel < rhs.clusterChannel)
+	{
+		return true;
+	}
+	return false;
 }
 
 constexpr bool operator==(ChannelIdentification const& lhs, ChannelIdentification const& rhs)
 {
-	return lhs.configurationIndex == rhs.configurationIndex && lhs.clusterIndex == rhs.clusterIndex && lhs.clusterChannel == rhs.clusterChannel;
+	return lhs.configurationIndex == rhs.configurationIndex && lhs.clusterIndex == rhs.clusterIndex && lhs.clusterChannel == rhs.clusterChannel && lhs.direction == rhs.direction && *lhs.audioUnitIndex == *rhs.audioUnitIndex && *lhs.streamPortIndex == *rhs.streamPortIndex && *lhs.baseCluster == *rhs.baseCluster;
 }
 
 struct TargetConnectionInformation
