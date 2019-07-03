@@ -206,8 +206,6 @@ private:
 	{
 		if (auto const row = entityRow(entityID))
 		{
-			Q_Q(Model);
-
 			auto& data = _entities[*row];
 			data.name = entityName;
 
@@ -290,7 +288,7 @@ Model::Model(QObject* parent)
 	// Initialize the model for each existing entity
 	auto& manager = avdecc::ControllerManager::getInstance();
 	manager.foreachEntity(
-		[this](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& controlledEntity)
+		[this](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const&)
 		{
 			Q_D(Model);
 			d->handleEntityOnline(entityID);
@@ -299,13 +297,13 @@ Model::Model(QObject* parent)
 
 Model::~Model() = default;
 
-int Model::rowCount(QModelIndex const& parent) const
+int Model::rowCount(QModelIndex const&) const
 {
 	Q_D(const Model);
 	return d->rowCount();
 }
 
-int Model::columnCount(QModelIndex const& parent) const
+int Model::columnCount(QModelIndex const&) const
 {
 	Q_D(const Model);
 	return d->columnCount();
@@ -367,7 +365,7 @@ void MultiFirmwareUpdateDialog::handleContinueButtonClicked()
 	startFirmwareUpdate();
 }
 
-void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const& selected, QItemSelection const& deselected)
+void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const&, QItemSelection const&)
 {
 	// Update the next button state
 	auto const& selectedRows = _ui->controllerTableView->selectionModel()->selectedRows();
@@ -461,10 +459,10 @@ void MultiFirmwareUpdateDialog::startFirmwareUpdate()
 	}
 
 	// Read all data
-	auto data = file.readAll();
+	auto firmwareFileData = file.readAll();
 
 	// Check length
-	if (maximumLength != 0 && data.size() > maximumLength)
+	if (maximumLength != 0 && firmwareFileData.size() > maximumLength)
 	{
 		QMessageBox::critical(this, "", "The firmware file is not compatible with selected devices.");
 		return;
@@ -474,7 +472,7 @@ void MultiFirmwareUpdateDialog::startFirmwareUpdate()
 	close();
 
 	// Start firmware upload dialog
-	auto dialog = FirmwareUploadDialog{ { data.constData(), static_cast<size_t>(data.count()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
+	auto dialog = FirmwareUploadDialog{ { firmwareFileData.constData(), static_cast<size_t>(firmwareFileData.count()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
 	dialog.exec();
 }
 

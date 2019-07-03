@@ -407,8 +407,6 @@ void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const 
 */
 void DomainTreeModelPrivate::removeEntity(la::avdecc::UniqueIdentifier const& entityId)
 {
-	Q_Q(DomainTreeModel);
-
 	QList<DomainTreeItem*> domainsToRemoveFrom = _rootItem->findDomainsWithEntity(entityId);
 
 	for (auto const& domainToRemoveFrom : domainsToRemoveFrom)
@@ -423,8 +421,6 @@ void DomainTreeModelPrivate::removeEntity(la::avdecc::UniqueIdentifier const& en
 */
 avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::getNextDomainIndex()
 {
-	Q_Q(DomainTreeModel);
-
 	// Determine a new unused DomainIndex first
 	auto existingDomainIndices = std::list<avdecc::mediaClock::DomainIndex>();
 	auto const childCount = _rootItem->childCount();
@@ -496,8 +492,8 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeSelectedDomain
 	// all following domain indices have to corrected.
 	for (auto i = _rootItem->childCount() - 1; i >= domainRowIndex; --i)
 	{
-		auto* domainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
-		domainTreeItem->domain().setDomainIndex(i);
+		auto* subsequentDomainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
+		subsequentDomainTreeItem->domain().setDomainIndex(i);
 	}
 
 	return entities;
@@ -594,7 +590,7 @@ bool DomainTreeModelPrivate::isEntityDoubled(la::avdecc::UniqueIdentifier const&
 * @param current The currently selected cell index.
 * @param previous The previously selected cell index.
 */
-void DomainTreeModelPrivate::handleClick(QModelIndex const& current, QModelIndex const& previous)
+void DomainTreeModelPrivate::handleClick(QModelIndex const& current, QModelIndex const& /*previous*/)
 {
 	Q_Q(DomainTreeModel);
 
@@ -623,7 +619,7 @@ void DomainTreeModelPrivate::handleClick(QModelIndex const& current, QModelIndex
 /**
 * Handle gptp changes from the Controller Manager to update the according cell.
 */
-Q_SLOT void DomainTreeModelPrivate::onGptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
+Q_SLOT void DomainTreeModelPrivate::onGptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const /*avbInterfaceIndex*/, la::avdecc::UniqueIdentifier const /*grandMasterId*/, std::uint8_t const /*grandMasterDomain*/)
 {
 	Q_Q(DomainTreeModel);
 	for (auto i = _rootItem->childCount() - 1; i >= 0; --i)
@@ -661,7 +657,7 @@ int DomainTreeModelPrivate::rowCount(QModelIndex const& parent) const
 /**
 * Gets the column count of the table.
 */
-int DomainTreeModelPrivate::columnCount(QModelIndex const& parent) const
+int DomainTreeModelPrivate::columnCount(QModelIndex const& /*parent*/) const
 {
 	return 2;
 }
@@ -683,7 +679,7 @@ QVariant DomainTreeModelPrivate::data(QModelIndex const& index, int role) const
 /**
 * Sets the data on a cell when supported.
 */
-bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& value, int role)
+bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& value, int /*role*/)
 {
 	Q_Q(DomainTreeModel);
 	if (index.column() == static_cast<int>(DomainTreeModelColumn::Domain))
@@ -692,9 +688,9 @@ bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& v
 
 		if (domainTreeItem != nullptr)
 		{
-			if (domainTreeItem->domainSamplingRate().first != value.toInt())
+			if (*domainTreeItem->domainSamplingRate().first != value.toUInt())
 			{
-				domainTreeItem->setDomainSamplingRate(la::avdecc::entity::model::SamplingRate(value.toInt()));
+				domainTreeItem->setDomainSamplingRate(la::avdecc::entity::model::SamplingRate(value.toUInt()));
 				emit q->domainSetupChanged();
 				return true;
 			}
@@ -818,7 +814,7 @@ Qt::DropActions DomainTreeModelPrivate::supportedDropActions() const
 /**
 * Checks if the given mime data can be dropped into this model.
 */
-bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
+bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction, int row, int /*column*/, QModelIndex const& parent) const
 {
 	// Invalid mimeData can directly be rejected
 	if (!data->hasFormat("application/json"))
@@ -876,7 +872,7 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 /**
 * Adds the given data (entity ids) to this model and returns true if successful.
 */
-bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
+bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction, int row, int /*column*/, QModelIndex const& parent)
 {
 	Q_Q(DomainTreeModel);
 	if (!data->hasFormat("application/json"))
@@ -891,7 +887,6 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction 
 	else
 		beginRow = rowCount(QModelIndex());
 
-	int rows = 0;
 	QJsonParseError parseError;
 	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
 	if (parseError.error != QJsonParseError::NoError)
@@ -1325,7 +1320,6 @@ SampleRateDomainDelegate::SampleRateDomainDelegate(QTreeView* parent)
 QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
-	auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
 
 	if (domainTreeItem != nullptr)
 	{
@@ -1373,7 +1367,7 @@ QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionVie
 
 		void (QComboBox::*indexChangedSignal)(int) = &QComboBox::currentIndexChanged;
 		editor->getComboBox()->connect(editor->getComboBox(), indexChangedSignal, this,
-			[this, editor](int newIndex)
+			[this, editor](int /*newIndex*/)
 			{
 				// allow to directly change the data from the change signal
 				auto* p = const_cast<SampleRateDomainDelegate*>(this);
@@ -1403,7 +1397,7 @@ void SampleRateDomainDelegate::setModelData(QWidget* editor, QAbstractItemModel*
 /**
 * Updates the geometry of the item.
 */
-void SampleRateDomainDelegate::updateEditorGeometry(QWidget* editor, QStyleOptionViewItem const& option, QModelIndex const& index) const
+void SampleRateDomainDelegate::updateEditorGeometry(QWidget* editor, QStyleOptionViewItem const& option, QModelIndex const& /*index*/) const
 {
 	editor->setGeometry(option.rect);
 }
@@ -1497,7 +1491,7 @@ void SampleRateDomainDelegate::paint(QPainter* painter, QStyleOptionViewItem con
 /**
 * Gets a size hint for the column.
 */
-QSize SampleRateDomainDelegate::sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const
+QSize SampleRateDomainDelegate::sizeHint(QStyleOptionViewItem const& /*option*/, QModelIndex const& /*index*/) const
 {
 	return QSize(340, 22);
 }
@@ -1517,7 +1511,7 @@ MCMasterSelectionDelegate::MCMasterSelectionDelegate(QTreeView* parent)
 /**
 * Sets the geometry of the editor.
 */
-void MCMasterSelectionDelegate::updateEditorGeometry(QWidget* editor, QStyleOptionViewItem const& option, QModelIndex const& index) const
+void MCMasterSelectionDelegate::updateEditorGeometry(QWidget* editor, QStyleOptionViewItem const& option, QModelIndex const& /*index*/) const
 {
 	editor->setGeometry(option.rect);
 }
@@ -1556,7 +1550,7 @@ void MCMasterSelectionDelegate::paint(QPainter* painter, QStyleOptionViewItem co
 /**
 * Gets a size hint for the column.
 */
-QSize MCMasterSelectionDelegate::sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const
+QSize MCMasterSelectionDelegate::sizeHint(QStyleOptionViewItem const&, QModelIndex const&) const
 {
 	return QSize(55, 22);
 }

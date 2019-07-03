@@ -1,4 +1,5 @@
 /*
+
 * Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
@@ -143,7 +144,6 @@ public:
 		updateButtonStates();
 
 		auto& manager = avdecc::ControllerManager::getInstance();
-		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
@@ -242,12 +242,12 @@ public:
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::EntityNode const& /*node*/) noexcept override {}
 
 	/**
 	* Get every configuration. Set the active configuration if it wasn't set before already.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const parent, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const /*parent*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		const QSignalBlocker blocker(comboBoxConfiguration);
 		comboBoxConfiguration->addItem(avdecc::helper::configurationName(controlledEntity, node), node.descriptorIndex);
@@ -262,7 +262,7 @@ public:
 	/**
 	* Add every transmit and receive node into the table.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		if (!controlledEntity)
 		{
@@ -309,62 +309,62 @@ public:
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamOutputNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::AvbInterfaceNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::ClockSourceNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::LocaleNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::LocaleNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::LocaleNode const* const parent, la::avdecc::controller::model::StringsNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::LocaleNode const* const /*parent*/, la::avdecc::controller::model::StringsNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::AudioUnitNode const* const parent, la::avdecc::controller::model::StreamPortNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*parent*/, la::avdecc::controller::model::StreamPortNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandGrandParent, la::avdecc::controller::model::AudioUnitNode const* const grandParent, la::avdecc::controller::model::StreamPortNode const* const parent, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandGrandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*grandParent*/, la::avdecc::controller::model::StreamPortNode const* const /*parent*/, la::avdecc::controller::model::AudioClusterNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandGrandParent, la::avdecc::controller::model::AudioUnitNode const* const grandParent, la::avdecc::controller::model::StreamPortNode const* const parent, la::avdecc::controller::model::AudioMapNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandGrandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*grandParent*/, la::avdecc::controller::model::StreamPortNode const* const /*parent*/, la::avdecc::controller::model::AudioMapNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::ClockDomainNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::MemoryObjectNode const& /*node*/) noexcept override {}
 
 	/**
 	* Invoked whenever the entity name gets changed in the model.
@@ -441,7 +441,7 @@ public:
 	* @param cmdType		The executed command type.
 	* @param commandStatus  The status of the command. 
 	*/
-	Q_SLOT void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const commandStatus)
+	Q_SLOT void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
 	{
 		// TODO propably show message when a command failed.
 
@@ -485,7 +485,7 @@ public:
 	/**
 	* Updates the table models on changes.
 	*/
-	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
+	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const /*avbInterfaceIndex*/, la::avdecc::UniqueIdentifier const /*grandMasterID*/, std::uint8_t const /*grandMasterDomain*/)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
@@ -499,7 +499,7 @@ public:
 	/**
 	* Updates the table models on stream connection changes.
 	*/
-	Q_SLOT void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
+	Q_SLOT void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const /*descriptorType*/, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, bool const /*isRunning*/)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
@@ -513,7 +513,7 @@ public:
 	/**
 	* Updates the latency tab data.
 	*/
-	Q_SLOT void streamInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const streamInfo)
+	Q_SLOT void streamInfoChanged(la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, la::avdecc::entity::model::StreamInfo const /*streamInfo*/)
 	{
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
@@ -525,7 +525,7 @@ public:
 	/**
 	* Updates the transmit table model on audio mapping changes.
 	*/
-	Q_SLOT void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
+	Q_SLOT void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const /*streamPortIndex*/)
 	{
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 		{
@@ -554,7 +554,7 @@ public:
 	/**
 	* Invoked whenever the entity name gets changed in the view.
 	*/
-	Q_SLOT void lineEditDeviceNameChanged(QString const& entityName)
+	Q_SLOT void lineEditDeviceNameChanged(QString const& /*entityName*/)
 	{
 		setModifiedStyleOnWidget(lineEditDeviceName, true);
 		_hasChangesByUser = true;
@@ -565,7 +565,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void lineEditGroupNameChanged(QString const& entityGroupName)
+	Q_SLOT void lineEditGroupNameChanged(QString const& /*entityGroupName*/)
 	{
 		setModifiedStyleOnWidget(lineEditGroupName, true);
 		_hasChangesByUser = true;
@@ -578,9 +578,9 @@ public:
 	*/
 	Q_SLOT void comboBoxPredefinedPTChanged(QString text)
 	{
-		if (radioButton_PredefinedPT->isChecked() && _userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
+		if (radioButton_PredefinedPT->isChecked() && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
 		{
-			_userSelectedLatency = comboBox_PredefinedPT->currentData().toInt();
+			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
 			updateButtonStates();
 		}
@@ -592,9 +592,9 @@ public:
 	*/
 	Q_SLOT void radioButtonPredefinedPTClicked(bool state)
 	{
-		if (state && _userSelectedLatency != comboBox_PredefinedPT->currentData().toInt())
+		if (state && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
 		{
-			_userSelectedLatency = comboBox_PredefinedPT->currentData().toInt();
+			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
 			updateButtonStates();
 		}

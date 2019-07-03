@@ -391,7 +391,6 @@ public:
 			return result;
 		}
 
-		auto const& entityNode = controlledEntity->getEntityNode();
 		la::avdecc::controller::model::ConfigurationNode configurationNode;
 		try
 		{
@@ -512,7 +511,7 @@ public:
 		return result;
 	}
 
-	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnectionsReverse(la::avdecc::UniqueIdentifier entityId, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
+	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnectionsReverse(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterIndex, la::avdecc::entity::model::ClusterIndex const baseCluster, std::uint16_t const clusterChannel) noexcept
 	{
 		bool entityAlreadyInMap = false;
 		ChannelIdentification sourceChannelIdentification;
@@ -587,8 +586,6 @@ public:
 		{
 			return result;
 		}
-
-		auto const& entityNode = controlledEntity->getEntityNode();
 
 		la::avdecc::controller::model::ConfigurationNode configurationNode;
 		try

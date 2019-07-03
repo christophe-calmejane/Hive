@@ -172,7 +172,7 @@ QList<la::avdecc::UniqueIdentifier> UnassignedListModelPrivate::getAllItems() co
 /**
 * Gets the row count of the table.
 */
-int UnassignedListModelPrivate::rowCount(QModelIndex const& parent) const
+int UnassignedListModelPrivate::rowCount(QModelIndex const& /*parent*/) const
 {
 	return _entities.size();
 }
@@ -236,7 +236,7 @@ Qt::DropActions UnassignedListModelPrivate::supportedDropActions() const
 /**
 * Checks if the given mime data can be dropped into this model.
 */
-bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
+bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction, int /*row*/, int /*column*/, QModelIndex const& /*parent*/) const
 {
 	if (!data->hasFormat("application/json"))
 		return false;
@@ -259,7 +259,7 @@ bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::Drop
 /**
 * Adds the given data (entity ids) to this model and returns true if successful.
 */
-bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
+bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction /*action*/, int row, int, QModelIndex const& parent)
 {
 	Q_Q(UnassignedListModel);
 	if (!data->hasFormat("application/json"))
@@ -274,7 +274,6 @@ bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAct
 	else
 		beginRow = rowCount(QModelIndex());
 
-	int rows = 0;
 	QJsonParseError parseError;
 	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
 	if (parseError.error != QJsonParseError::NoError)

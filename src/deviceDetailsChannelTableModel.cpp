@@ -271,7 +271,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(std::set<st
 /**
 * Update an audio cluster name.
 */
-void DeviceDetailsChannelTableModelPrivate::updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+void DeviceDetailsChannelTableModelPrivate::updateAudioClusterName(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& /*audioClusterName*/)
 {
 	Q_Q(DeviceDetailsChannelTableModel);
 	int row = 0;
@@ -330,8 +330,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				{
 					try
 					{
-						auto const& manager = avdecc::ControllerManager::getInstance();
-						auto const controlledEntity = manager.getControlledEntity(connectionInfo->sourceEntityId);
+						auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo->sourceEntityId);
 						if (controlledEntity)
 						{
 							auto const configurationIndex = connectionInfo->sourceClusterChannelInfo.configurationIndex;
@@ -759,7 +758,7 @@ DeviceDetailsChannelTableModel::~DeviceDetailsChannelTableModel()
 /**
 * Gets the row count.
 */
-int DeviceDetailsChannelTableModel::rowCount(QModelIndex const& parent) const
+int DeviceDetailsChannelTableModel::rowCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const DeviceDetailsChannelTableModel);
 	return d->rowCount();
@@ -768,7 +767,7 @@ int DeviceDetailsChannelTableModel::rowCount(QModelIndex const& parent) const
 /**
 * Gets the column count.
 */
-int DeviceDetailsChannelTableModel::columnCount(QModelIndex const& parent) const
+int DeviceDetailsChannelTableModel::columnCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const DeviceDetailsChannelTableModel);
 	return d->columnCount();
@@ -937,11 +936,7 @@ QSize ConnectionStateItemDelegate::sizeHint(QStyleOptionViewItem const& option, 
 
 	int margin = ConnectionStateItemDelegate::Margin;
 	int totalHeight = margin;
-	auto const& tableData = model->tableDataAtRow(index.row());
-	for (auto const& line : modelData)
-	{
-		totalHeight += fontPixelHeight + margin;
-	}
+	totalHeight += (fontPixelHeight + margin) * modelData.size();
 	return QSize(40, totalHeight);
 }
 
@@ -993,11 +988,7 @@ QSize ConnectionInfoItemDelegate::sizeHint(QStyleOptionViewItem const& option, Q
 
 	int margin = ConnectionStateItemDelegate::Margin;
 	int totalHeight = margin;
-	auto const& tableData = model->tableDataAtRow(index.row());
-	for (auto const& line : modelData)
-	{
-		totalHeight += fontPixelHeight + margin;
-	}
+	totalHeight += (fontPixelHeight + margin) * modelData.size();
 	return QSize(350, totalHeight);
 }
 
