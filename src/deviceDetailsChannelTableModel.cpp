@@ -334,14 +334,14 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 						if (controlledEntity)
 						{
 							auto const configurationIndex = connectionInfo->sourceClusterChannelInfo->configurationIndex;
-							auto const streamPortIndex = *connectionInfo->sourceClusterChannelInfo->streamPortIndex;
+							auto const streamPortIndex = connectionInfo->sourceClusterChannelInfo->streamPortIndex;
 							auto const clusterIndex = connectionInfo->sourceClusterChannelInfo->clusterIndex;
 							auto const baseCluster = connectionInfo->sourceClusterChannelInfo->baseCluster;
 							if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::InputToOutput)
 							{
-								if (configurationIndex && streamPortIndex && clusterIndex)
+								if (streamPortIndex)
 								{
-									auto const& streamPortInput = controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex);
+									auto const& streamPortInput = controlledEntity->getStreamPortInputNode(configurationIndex, *streamPortIndex);
 									auto const& audioClusters = streamPortInput.audioClusters;
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
@@ -356,9 +356,9 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							}
 							else
 							{
-								if (configurationIndex && streamPortIndex && clusterIndex)
+								if (streamPortIndex)
 								{
-									auto const& streamPortOutput = controlledEntity->getStreamPortOutputNode(configurationIndex, streamPortIndex);
+									auto const& streamPortOutput = controlledEntity->getStreamPortOutputNode(configurationIndex, *streamPortIndex);
 									auto const& audioClusters = streamPortOutput.audioClusters;
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
