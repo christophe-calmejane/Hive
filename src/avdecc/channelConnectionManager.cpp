@@ -297,8 +297,8 @@ private:
 		{
 			if (_listenerChannelMappings.find(entityId) != _listenerChannelMappings.end())
 			{
-				auto connectionInfo = _listenerChannelMappings.at(entityId);
-				for (auto const& mappingKV : connectionInfo->channelMappings)
+				auto const& listenerMappings = _listenerChannelMappings.at(entityId)->channelMappings;
+				for (auto const& mappingKV : listenerMappings)
 				{
 					if (mappingKV.first.streamPortIndex == streamPortIndex)
 					{
@@ -1143,10 +1143,10 @@ private:
 			return result;
 		}
 
-		la::avdecc::entity::model::AudioMappings mappings = controlledEntity->getStreamPortOutputAudioMappings(sourceStreamPortIndex);
-
 		std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
-		for (auto const& mapping : mappings)
+
+		auto const& streamPortOutputAudioMappings = controlledEntity->getStreamPortOutputAudioMappings(sourceStreamPortIndex);
+		for (auto const& mapping : streamPortOutputAudioMappings)
 		{
 			sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
 		}
@@ -1357,7 +1357,7 @@ private:
 			auto const& listenerChannelIdentification = channelPair.second;
 			try
 			{
-				auto const streamPortInputAudioMappings = controlledListenerEntity->getStreamPortInputAudioMappings(*channelPair.second.streamPortIndex);
+				auto const& streamPortInputAudioMappings = controlledListenerEntity->getStreamPortInputAudioMappings(*channelPair.second.streamPortIndex);
 				for (auto const& mapping : streamPortInputAudioMappings)
 				{
 					if (mapping.clusterChannel == listenerChannelIdentification.clusterChannel && mapping.clusterOffset == listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster)
@@ -1477,6 +1477,11 @@ private:
 
 					insertAudioMapping(newMappingsListener, listenerMapping, *channelPair.second.streamPortIndex);
 
+					for (auto const& mappingToRemove : findStreamConnectionResult.listenerDynamicMappingsToRemove)
+					{
+						insertAudioMapping(overriddenMappingsListener, mappingToRemove, *channelPair.second.streamPortIndex);
+					}
+
 					newStreamConnections.push_back(std::make_pair(connectionStreamSourcePrimaryIndex, connectionStreamTargetPrimaryIndex));
 
 					streamDeviceConnections.push_back(std::make_pair(connectionStreamSourcePrimaryIndex, connectionStreamTargetPrimaryIndex));
@@ -1556,7 +1561,8 @@ private:
 		bool overwritingListenerMapping = false;
 		la::avdecc::entity::model::StreamIndex overwritingListenerMappingStreamIndex = 0;
 		la::avdecc::entity::model::StreamIndex overwritingListenerMappingStreamChannel = 0;
-		for (auto const& mapping : controlledListenerEntity->getStreamPortInputAudioMappings(listenerStreamPortIndex))
+		auto const& listenerMappings = controlledListenerEntity->getStreamPortInputAudioMappings(listenerStreamPortIndex);
+		for (auto const& mapping : listenerMappings)
 		{
 			if (mapping.clusterChannel == listenerClusterChannel && mapping.clusterOffset == listenerClusterIndex - listenerBaseCluster)
 			{
@@ -1672,7 +1678,8 @@ private:
 				bool overwritingTalkerMapping = false;
 				la::avdecc::entity::model::StreamIndex overwritingTalkerMappingStreamIndex = 0;
 				la::avdecc::entity::model::StreamIndex overwritingTalkerMappingStreamChannel = 0;
-				for (auto const& mapping : controlledTalkerEntity->getStreamPortOutputAudioMappings(talkerStreamPortIndex))
+				auto const& talkerMappings = controlledTalkerEntity->getStreamPortOutputAudioMappings(talkerStreamPortIndex);
+				for (auto const& mapping : talkerMappings)
 				{
 					if (mapping.clusterChannel == talkerClusterChannel && mapping.clusterOffset == talkerClusterIndex - talkerBaseCluster)
 					{
