@@ -1958,10 +1958,11 @@ CommandExecutionError AsyncParallelCommandSet::controlStatusToCommandError(la::a
 		case la::avdecc::entity::LocalEntity::ControlStatus::CouldNotSendMessage:
 		case la::avdecc::entity::LocalEntity::ControlStatus::ControllerNotAuthorized:
 		case la::avdecc::entity::LocalEntity::ControlStatus::IncompatibleRequest:
-		case la::avdecc::entity::LocalEntity::ControlStatus::NotSupported:
 		case la::avdecc::entity::LocalEntity::ControlStatus::UnknownEntity:
 		case la::avdecc::entity::LocalEntity::ControlStatus::InternalError:
 			return CommandExecutionError::CommandFailure;
+		case la::avdecc::entity::LocalEntity::ControlStatus::NotSupported:
+			return CommandExecutionError::NotSupported;
 		default:
 			return CommandExecutionError::CommandFailure;
 	}
@@ -1985,6 +1986,8 @@ CommandExecutionError AsyncParallelCommandSet::aemCommandStatusToCommandError(la
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::EntityMisbehaving:
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented:
 			return CommandExecutionError::EntityError;
+		case la::avdecc::entity::LocalEntity::AemCommandStatus::NotSupported:
+			return CommandExecutionError::NotSupported;
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::NoSuchDescriptor:
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::NotAuthenticated:
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::AuthenticationDisabled:
@@ -1992,7 +1995,6 @@ CommandExecutionError AsyncParallelCommandSet::aemCommandStatusToCommandError(la
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::NoResources:
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::InProgress:
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::StreamIsRunning:
-		case la::avdecc::entity::LocalEntity::AemCommandStatus::NotSupported:
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::UnknownEntity:
 		case la::avdecc::entity::LocalEntity::AemCommandStatus::InternalError:
 			return CommandExecutionError::CommandFailure;

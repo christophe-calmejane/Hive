@@ -35,6 +35,8 @@ private:
 	std::set<la::avdecc::UniqueIdentifier> _entities{}; // No lock required, only read/write in the UI thread
 	std::map<la::avdecc::UniqueIdentifier, std::shared_ptr<SourceChannelConnections>> _listenerChannelMappings;
 
+	mediaClock::SequentialAsyncCommandExecuter _sequentialAcmpCommandExecuter{};
+
 public:
 	/**
 	* Constructor.
@@ -48,6 +50,14 @@ public:
 
 		connect(&manager, &ControllerManager::streamConnectionChanged, this, &ChannelConnectionManagerImpl::onStreamConnectionChanged);
 		connect(&manager, &ControllerManager::streamPortAudioMappingsChanged, this, &ChannelConnectionManagerImpl::onStreamPortAudioMappingsChanged);
+
+		connect(&_sequentialAcmpCommandExecuter, &mediaClock::SequentialAsyncCommandExecuter::completed, this,
+			[this](mediaClock::CommandExecutionErrors errors)
+			{
+				CreateConnectionsInfo info;
+				info.connectionCreationErrors = errors;
+				emit createChannelConnectionsFinished(info);
+			});
 	}
 
 	/**
@@ -1515,302 +1525,350 @@ private:
 	/**
 	* Tries to establish a channel connection between two audio channels of different devices.
 	*
-	* Detailed algorithm description:
-	* First check if the target cluster channel is unoccupied -> else return
-	* then check if there is a stream connection between the 2 devices
-	* if so, check if the talker already has a fitting cluster channel to stream channel connection -> if yes, reuse that channel for the new connection
-	* if not check if there is a free slot left -> if yes use that slot
-	* this is done over all existing stream connection between the two devices
-	* if no fitting stream connections exist already, create a new one.
-	*
-	* then map the source to the first index of the stream.
-	*
-	* -> Extended algorithm, may need user confirmation:
-	* If the previous steps didn't lead to finding a proper stream connection, try to use an existing stream and see if there is an unassigned slot and there are no side effects from using it.
-	* if not show user an error, that there is no stream left to configure the connection.
-	*
 	* @param talkerEntityId The id of the talker entity.
-	* @param talkerAudioUnitIndex The index of the talker audio unit to use.
-	* @param talkerStreamPortIndex The index of the talker stream port to use.
-	* @param talkerClusterIndex The index of the audio cluster to use.
-	* @param talkerBaseCluster The base cluster of the talker.
-	* @param talkerClusterChannel The cluster channel number.
 	* @param listenerEntityId The id of the listener entity.
-	* @param listenerAudioUnitIndex The index of the listener audio unit to use.
-	* @param listenerStreamPortIndex The index of the listener stream port to use.
-	* @param listenerClusterIndex The index of the audio cluster to use.
-	* @param listenerBaseCluster The base cluster of the listener.
-	* @param listenerClusterChannel The cluster channel number.
-	* @return ChannelConnectResult::NoError if the connection and mappings could be created.
+	* @param talkerChannelIdentification The identification for the output channel.
+	* @param listenerChannelIdentification The identification for the input channel.
+	* @return ChannelConnectResult::NoError if it is theoretically possbile to create the connection. However errors can occur while executing the commands. The errors can be catched from the createChannelConnectionsFinished signal.
 	*/
-	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamPortIndex const talkerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const talkerClusterIndex, la::avdecc::entity::model::ClusterIndex const talkerBaseCluster, std::uint16_t const talkerClusterChannel, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamPortIndex const listenerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const listenerClusterIndex, la::avdecc::entity::model::ClusterIndex const listenerBaseCluster, std::uint16_t const listenerClusterChannel, bool allowRemovalOfUnusedAudioMappings, uint16_t streamChannelCountHint) const noexcept
+	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, avdecc::ChannelIdentification const& talkerChannelIdentification, avdecc::ChannelIdentification const& listenerChannelIdentification, bool allowRemovalOfUnusedAudioMappings) noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
-		auto controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
+		std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> channelsToConnect;
+		channelsToConnect.push_back(std::make_pair(talkerChannelIdentification, listenerChannelIdentification));
 
-		if (!controlledTalkerEntity || !controlledListenerEntity)
-		{
-			return ChannelConnectResult::Error;
-		}
-		if (!controlledTalkerEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
-		{
-			return ChannelConnectResult::Unsupported;
-		}
-
-		bool overwritingListenerMapping = false;
-		la::avdecc::entity::model::StreamIndex overwritingListenerMappingStreamIndex = 0;
-		la::avdecc::entity::model::StreamIndex overwritingListenerMappingStreamChannel = 0;
-		auto const& listenerMappings = controlledListenerEntity->getStreamPortInputAudioMappings(listenerStreamPortIndex);
-		for (auto const& mapping : listenerMappings)
-		{
-			if (mapping.clusterChannel == listenerClusterChannel && mapping.clusterOffset == listenerClusterIndex - listenerBaseCluster)
-			{
-				overwritingListenerMapping = true;
-				overwritingListenerMappingStreamChannel = mapping.streamChannel;
-				overwritingListenerMappingStreamIndex = mapping.streamIndex;
-			}
-		}
-
-		auto streamDeviceConnections = getStreamConnectionsBetweenDevices(talkerEntityId, listenerEntityId);
-		std::optional<la::avdecc::entity::model::StreamIndex> connectionStreamSourcePrimaryIndex = std::nullopt;
-		std::optional<la::avdecc::entity::model::StreamIndex> connectionStreamTargetPrimaryIndex = std::nullopt;
-		std::optional<uint16_t> connectionStreamChannel = std::nullopt;
-		bool resuseOfTalkerStreamChannel = false;
-		bool reuseOfListenerStreamChannel = false;
-		StreamChannelMappings newMappingsTalker;
-		StreamChannelMappings newMappingsListener;
-
-		for (auto const& deviceConnectionKV : streamDeviceConnections)
-		{
-			// try to reuse existing stream connection + channel mapping when only the output mapping is missing
-			try
-			{
-				auto const& streamOutput = controlledTalkerEntity->getStreamOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, deviceConnectionKV.first);
-				auto const& streamInput = controlledListenerEntity->getStreamInputNode(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, deviceConnectionKV.second);
-				if (checkStreamFormatType(streamOutput.dynamicModel->streamInfo.streamFormat, la::avdecc::entity::model::StreamFormatInfo::Type::AAF) && streamOutput.dynamicModel->streamInfo.streamFormat == streamInput.dynamicModel->streamInfo.streamFormat)
-				{
-					auto freeOrReusableChannelConnection = findFreeOrReuseChannelOnExistingStreamConnection(talkerEntityId, deviceConnectionKV.first, talkerClusterIndex - talkerBaseCluster, talkerClusterChannel, newMappingsTalker, listenerEntityId, deviceConnectionKV.second, listenerClusterIndex - listenerBaseCluster, listenerClusterChannel, newMappingsListener);
-
-					// already connected and also got a free channel on a compatible stream
-					if (freeOrReusableChannelConnection)
-					{
-						connectionStreamChannel = std::get<0>(*freeOrReusableChannelConnection);
-						resuseOfTalkerStreamChannel = std::get<1>(*freeOrReusableChannelConnection);
-						reuseOfListenerStreamChannel = std::get<2>(*freeOrReusableChannelConnection);
-						connectionStreamSourcePrimaryIndex = deviceConnectionKV.first;
-						connectionStreamTargetPrimaryIndex = deviceConnectionKV.second;
-
-						auto redundantStreamOutputs = getRedundantStreamOutputsForPrimary(talkerEntityId, *connectionStreamTargetPrimaryIndex);
-						auto redundantStreamInputs = getRedundantStreamInputsForPrimary(listenerEntityId, *connectionStreamSourcePrimaryIndex);
-
-						break;
-					}
-				}
-			}
-			catch (la::avdecc::controller::ControlledEntity::Exception const&)
-			{
-			}
-		}
-
-		bool removalOfUnusedStreamConnectionsNecessary = false;
-
-		// if we get here and connectionStreamSourceIndex is nullopt, no stream with a free channel is connected to the target.
-		// check if we can create a new stream
-		if (!connectionStreamSourcePrimaryIndex)
-		{
-			auto findStreamConnectionResult = findAvailableStreamConnection(talkerEntityId, listenerEntityId, talkerClusterIndex - talkerBaseCluster, talkerClusterChannel, listenerClusterIndex - listenerBaseCluster, listenerClusterChannel, {}, allowRemovalOfUnusedAudioMappings);
-			removalOfUnusedStreamConnectionsNecessary = findStreamConnectionResult.unallowedRemovalOfUnusedAudioMappingsNecessary;
-
-			if (!findStreamConnectionResult.connectionsToCreate.empty())
-			{
-				// first is the primary:
-				connectionStreamSourcePrimaryIndex = std::get<0>(findStreamConnectionResult.connectionsToCreate.at(0));
-				connectionStreamTargetPrimaryIndex = std::get<1>(findStreamConnectionResult.connectionsToCreate.at(0));
-				connectionStreamChannel = std::get<2>(findStreamConnectionResult.connectionsToCreate.at(0));
-				bool isPrimary = true;
-				for (auto const& streamConnectionToCreate : findStreamConnectionResult.connectionsToCreate)
-				{
-					auto streamSourceIndex = std::get<0>(streamConnectionToCreate);
-					auto streamTargetIndex = std::get<1>(streamConnectionToCreate);
-
-					if (allowRemovalOfUnusedAudioMappings && !findStreamConnectionResult.listenerDynamicMappingsToRemove.empty())
-					{
-						avdecc::ControllerManager::RemoveStreamPortInputAudioMappingsHandler responseHandler = [=](la::avdecc::UniqueIdentifier const& /*entityID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
-						{
-							// change the stream format if necessary
-							auto compatibleFormats = findCompatibleStreamPairFormat(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, streamChannelCountHint);
-							adjustStreamPairFormats(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, compatibleFormats);
-
-							avdecc::ControllerManager::ConnectStreamHandler responseHandler = [](la::avdecc::UniqueIdentifier const& /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const& /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const /*status*/)
-							{
-								// TODO handle errors?
-							};
-
-							auto& manager = avdecc::ControllerManager::getInstance();
-							manager.connectStream(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, responseHandler);
-						};
-						manager.removeStreamPortInputAudioMappings(listenerEntityId, listenerStreamPortIndex, findStreamConnectionResult.listenerDynamicMappingsToRemove, responseHandler);
-					}
-					else
-					{
-						// change the stream format if necessary
-						auto const& compatibleFormats = findCompatibleStreamPairFormat(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, streamChannelCountHint);
-						adjustStreamPairFormats(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, compatibleFormats);
-
-						avdecc::ControllerManager::ConnectStreamHandler responseHandler = [](la::avdecc::UniqueIdentifier const& /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const& /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const /*status*/)
-						{
-							// TODO handle errors?
-						};
-
-						manager.connectStream(talkerEntityId, streamSourceIndex, listenerEntityId, streamTargetIndex, responseHandler);
-					}
-					isPrimary = false;
-				}
-			}
-		}
-
-		// at this point we should have a stream that is connected to the target device and only have to setup the channel mappings:
-		if (connectionStreamSourcePrimaryIndex)
-		{
-			if (!resuseOfTalkerStreamChannel)
-			{
-				bool overwritingTalkerMapping = false;
-				la::avdecc::entity::model::StreamIndex overwritingTalkerMappingStreamIndex = 0;
-				la::avdecc::entity::model::StreamIndex overwritingTalkerMappingStreamChannel = 0;
-				auto const& talkerMappings = controlledTalkerEntity->getStreamPortOutputAudioMappings(talkerStreamPortIndex);
-				for (auto const& mapping : talkerMappings)
-				{
-					if (mapping.clusterChannel == talkerClusterChannel && mapping.clusterOffset == talkerClusterIndex - talkerBaseCluster)
-					{
-						overwritingTalkerMapping = true;
-						overwritingTalkerMappingStreamChannel = mapping.streamChannel;
-						overwritingTalkerMappingStreamIndex = mapping.streamIndex;
-					}
-				}
-
-				if (overwritingTalkerMapping)
-				{
-					la::avdecc::entity::model::AudioMapping mappingToRemove;
-					mappingToRemove.clusterChannel = talkerClusterChannel;
-					mappingToRemove.clusterOffset = talkerClusterIndex - talkerBaseCluster;
-					mappingToRemove.streamChannel = overwritingTalkerMappingStreamChannel;
-					mappingToRemove.streamIndex = overwritingTalkerMappingStreamIndex;
-					la::avdecc::entity::model::AudioMappings mappings;
-					mappings.push_back(mappingToRemove);
-					manager.removeStreamPortInputAudioMappings(listenerEntityId, listenerStreamPortIndex, mappings);
-				}
-
-				la::avdecc::entity::model::AudioMappings mappings;
-				la::avdecc::entity::model::AudioMapping mapping;
-				mapping.clusterChannel = talkerClusterChannel;
-				mapping.clusterOffset = talkerClusterIndex - talkerBaseCluster;
-				mapping.streamChannel = *connectionStreamChannel;
-				mapping.streamIndex = *connectionStreamSourcePrimaryIndex;
-				mappings.push_back(mapping);
-
-				manager.addStreamPortOutputAudioMappings(talkerEntityId, talkerStreamPortIndex, mappings);
-			}
-
-			if (!reuseOfListenerStreamChannel)
-			{
-				if (overwritingListenerMapping)
-				{
-					la::avdecc::entity::model::AudioMapping mappingToRemove;
-					mappingToRemove.clusterChannel = listenerClusterChannel;
-					mappingToRemove.clusterOffset = listenerClusterIndex - listenerBaseCluster;
-					mappingToRemove.streamChannel = overwritingListenerMappingStreamChannel;
-					mappingToRemove.streamIndex = overwritingListenerMappingStreamIndex;
-					la::avdecc::entity::model::AudioMappings mappings;
-					mappings.push_back(mappingToRemove);
-					manager.removeStreamPortInputAudioMappings(listenerEntityId, listenerStreamPortIndex, mappings);
-				}
-
-				la::avdecc::entity::model::AudioMappings mappings;
-				la::avdecc::entity::model::AudioMapping mapping;
-				mapping.clusterChannel = listenerClusterChannel;
-				mapping.clusterOffset = listenerClusterIndex - listenerBaseCluster;
-				mapping.streamChannel = *connectionStreamChannel;
-				mapping.streamIndex = *connectionStreamTargetPrimaryIndex;
-				mappings.push_back(mapping);
-
-				manager.addStreamPortInputAudioMappings(listenerEntityId, listenerStreamPortIndex, mappings);
-			}
-		}
-		else
-		{
-			if (removalOfUnusedStreamConnectionsNecessary)
-			{
-				return ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary;
-			}
-			else
-			{
-				return ChannelConnectResult::Impossible;
-			}
-		}
-
-		return ChannelConnectResult::NoError;
+		return createChannelConnections(talkerEntityId, listenerEntityId, channelsToConnect, allowRemovalOfUnusedAudioMappings);
 	}
 
-	virtual ChannelConnectResult createChannelConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool allowRemovalOfUnusedAudioMappings) const noexcept
+	/**
+	* Tries to establish the channel connections between two audio channels of different devices.
+	*
+	* @param talkerEntityId The id of the talker entity.
+	* @param listenerEntityId The id of the listener entity.
+	* @param talkerChannelIdentification The identification for the output channel.
+	* @param listenerChannelIdentification The identification for the input channel.
+	* @return ChannelConnectResult::NoError if it is theoretically possbile to create the connection. However errors can occur while executing the commands. The errors can be catched from the createChannelConnectionsFinished signal.
+	*/
+	virtual ChannelConnectResult createChannelConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool allowRemovalOfUnusedAudioMappings) noexcept
 	{
 		// count the number of channel connections needed (filter doubled talker connections)
 		uint16_t channelUsage = 0;
-		std::set<avdecc::ChannelIdentification> processedTalkers;
+		std::set<avdecc::ChannelIdentification> uniqueTalkers;
 		for (auto const& connection : talkerToListenerChannelConnections)
 		{
-			auto const& processedTalkersIt = processedTalkers.find(connection.first);
-			if (processedTalkersIt == processedTalkers.end())
+			auto const& processedTalkersIt = uniqueTalkers.find(connection.first);
+			if (processedTalkersIt == uniqueTalkers.end())
 			{
 				channelUsage++;
-				processedTalkers.insert(connection.first);
+				uniqueTalkers.insert(connection.first);
 			}
 		}
 
 		auto const& result = checkChannelCreationsPossible(talkerEntityId, listenerEntityId, talkerToListenerChannelConnections, allowRemovalOfUnusedAudioMappings, channelUsage);
 		if (result.connectionCheckResult == ChannelConnectResult::NoError)
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			std::vector<mediaClock::AsyncParallelCommandSet*> commands;
+
+			std::vector<mediaClock::AsyncParallelCommandSet::AsyncCommand> commandsChangeStreamFormat;
+			std::vector<mediaClock::AsyncParallelCommandSet::AsyncCommand> commandsCreateStreamConnections;
 			for (auto const& newStreamConnection : result.newStreamConnections)
 			{
 				// change the stream format if necessary
 				auto const& compatibleStreamFormats = findCompatibleStreamPairFormat(talkerEntityId, newStreamConnection.first, listenerEntityId, newStreamConnection.second, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, channelUsage);
-				adjustStreamPairFormats(talkerEntityId, newStreamConnection.first, listenerEntityId, newStreamConnection.second, compatibleStreamFormats);
+
+				auto const talkerStreamIndex = newStreamConnection.first;
+				if (compatibleStreamFormats.first)
+				{
+					commandsChangeStreamFormat.push_back(
+						[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+						{
+							auto& manager = avdecc::ControllerManager::getInstance();
+							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+							{
+								// notify SequentialAsyncCommandExecuter that the command completed.
+								auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+								if (error != mediaClock::CommandExecutionError::NoError)
+								{
+									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::StopStream);
+								}
+								parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+							};
+							manager.setStreamOutputFormat(talkerEntityId, talkerStreamIndex, *compatibleStreamFormats.first, responseHandler);
+							return true;
+						});
+				}
+				if (compatibleStreamFormats.second)
+				{
+					commandsChangeStreamFormat.push_back(
+						[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+						{
+							auto& manager = avdecc::ControllerManager::getInstance();
+							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+							{
+								// notify SequentialAsyncCommandExecuter that the command completed.
+								auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+								if (error != mediaClock::CommandExecutionError::NoError)
+								{
+									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::StopStream);
+								}
+								parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+							};
+							manager.setStreamInputFormat(listenerEntityId, newStreamConnection.second, *compatibleStreamFormats.second, responseHandler);
+							return true;
+						});
+				}
 
 				// get the redundant connections and connect all
 				auto const& redundantOutputStreams = getRedundantStreamOutputsForPrimary(talkerEntityId, newStreamConnection.first);
 				auto const& redundantInputStreams = getRedundantStreamInputsForPrimary(listenerEntityId, newStreamConnection.second);
 				auto redundantOutputStreamsIterator = redundantOutputStreams.begin();
 				auto redundantInputStreamsIterator = redundantInputStreams.begin();
+				auto talkerPrimStreamIndex{ newStreamConnection.first };
+				auto listenerPrimStreamIndex{ newStreamConnection.second };
+
+				if (!redundantOutputStreams.empty() && !redundantInputStreams.empty())
+				{
+					talkerPrimStreamIndex = redundantOutputStreamsIterator->first;
+					listenerPrimStreamIndex = redundantInputStreamsIterator->first;
+				}
 
 				// connect primary
-				manager.connectStream(talkerEntityId, newStreamConnection.first, listenerEntityId, newStreamConnection.second);
+				commandsCreateStreamConnections.push_back(
+					[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					{
+						auto& manager = avdecc::ControllerManager::getInstance();
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+						{
+							// notify SequentialAsyncCommandExecuter that the command completed.
+							auto error = mediaClock::AsyncParallelCommandSet::controlStatusToCommandError(status);
+							if (error != mediaClock::CommandExecutionError::NoError)
+							{
+								switch (status)
+								{
+									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerMisbehaving:
+									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerUnknownID:
+									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerDestMacFail:
+									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoBandwidth:
+									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoStreamIndex:
+									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerExclusive:
+										parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										break;
+									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerMisbehaving:
+									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerUnknownID:
+									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerExclusive:
+										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										break;
+									default:
+										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+								}
+							}
+							parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+						};
+						manager.connectStream(talkerEntityId, talkerPrimStreamIndex, listenerEntityId, listenerPrimStreamIndex, responseHandler);
+						return true;
+					});
 
 				// connect secundary
 				while (redundantOutputStreamsIterator != redundantOutputStreams.end() && redundantInputStreamsIterator != redundantInputStreams.end())
 				{
 					if (newStreamConnection.first != redundantOutputStreamsIterator->first && newStreamConnection.second != redundantInputStreamsIterator->first)
 					{
-						manager.connectStream(talkerEntityId, redundantOutputStreamsIterator->first, listenerEntityId, redundantInputStreamsIterator->first);
+						auto const talkerSecStreamIndex = redundantOutputStreamsIterator->first;
+						auto const listenerSecStreamIndex = redundantInputStreamsIterator->first;
+						commandsCreateStreamConnections.push_back(
+							[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+							{
+								auto& manager = avdecc::ControllerManager::getInstance();
+								auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+								{
+									// notify SequentialAsyncCommandExecuter that the command completed.
+									auto error = mediaClock::AsyncParallelCommandSet::controlStatusToCommandError(status);
+									if (error != mediaClock::CommandExecutionError::NoError)
+									{
+										switch (status)
+										{
+											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerMisbehaving:
+											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerUnknownID:
+											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerDestMacFail:
+											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoBandwidth:
+											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoStreamIndex:
+											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerExclusive:
+												parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+												break;
+											case la::avdecc::entity::LocalEntity::ControlStatus::ListenerMisbehaving:
+											case la::avdecc::entity::LocalEntity::ControlStatus::ListenerUnknownID:
+											case la::avdecc::entity::LocalEntity::ControlStatus::ListenerExclusive:
+												parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+												break;
+											default:
+												parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+												parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										}
+									}
+									parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+								};
+								manager.connectStream(talkerEntityId, talkerSecStreamIndex, listenerEntityId, listenerSecStreamIndex, responseHandler);
+								return true;
+							});
 					}
 					redundantOutputStreamsIterator++;
 					redundantInputStreamsIterator++;
 				}
 			}
+			auto* commandSetChangeStreamFormat = new mediaClock::AsyncParallelCommandSet(commandsChangeStreamFormat);
+			auto* commandSetCreateStreamConnections = new mediaClock::AsyncParallelCommandSet(commandsCreateStreamConnections);
 
+
+			// create the set of streams to stop and later start again
+			std::set<la::avdecc::entity::model::StreamIndex> talkerStreamsToStop;
 			for (auto const& mappingsTalker : result.newMappingsTalker)
 			{
-				for (auto const& mapping : mappingsTalker.second)
-				{
-					manager.addStreamPortOutputAudioMappings(talkerEntityId, mapping.first, mapping.second);
-				}
+				talkerStreamsToStop.insert(mappingsTalker.first);
 			}
 
+			// create the set of streams to stop and later start again
+			std::set<la::avdecc::entity::model::StreamIndex> listenerStreamsToStop;
+			for (auto const& mappingsListener : result.newMappingsListener)
+			{
+				listenerStreamsToStop.insert(mappingsListener.first);
+			}
+
+			// create commands to stop the streams
+			std::vector<mediaClock::AsyncParallelCommandSet::AsyncCommand> commandsStopStreams;
+			for (auto const streamIndex : talkerStreamsToStop)
+			{
+				commandsStopStreams.push_back(
+					[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					{
+						auto& manager = avdecc::ControllerManager::getInstance();
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+						{
+							// notify SequentialAsyncCommandExecuter that the command completed.
+							auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+							if (error != mediaClock::CommandExecutionError::NoError)
+							{
+								parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::StopStream);
+							}
+							parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+						};
+						manager.stopStreamOutput(talkerEntityId, streamIndex, responseHandler);
+						return true;
+					});
+			}
+			for (auto const streamIndex : listenerStreamsToStop)
+			{
+				commandsStopStreams.push_back(
+					[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					{
+						auto& manager = avdecc::ControllerManager::getInstance();
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+						{
+							// notify SequentialAsyncCommandExecuter that the command completed.
+							auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+							if (error != mediaClock::CommandExecutionError::NoError)
+							{
+								parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::StopStream);
+							}
+							parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+						};
+						manager.stopStreamOutput(listenerEntityId, streamIndex, responseHandler);
+						return true;
+					});
+			}
+			auto* commandSetStopStreams = new mediaClock::AsyncParallelCommandSet(commandsStopStreams);
+
+			std::vector<mediaClock::AsyncParallelCommandSet::AsyncCommand> commandsStartStreams;
+			for (auto const streamIndex : talkerStreamsToStop)
+			{
+				commandsStartStreams.push_back(
+					[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					{
+						auto& manager = avdecc::ControllerManager::getInstance();
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+						{
+							// notify SequentialAsyncCommandExecuter that the command completed.
+							auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+							if (error != mediaClock::CommandExecutionError::NoError)
+							{
+								parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::StartStream);
+							}
+							parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+						};
+						manager.startStreamOutput(talkerEntityId, streamIndex, responseHandler);
+						return true;
+					});
+			}
+
+			for (auto const streamIndex : listenerStreamsToStop)
+			{
+				commandsStartStreams.push_back(
+					[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					{
+						auto& manager = avdecc::ControllerManager::getInstance();
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+						{
+							// notify SequentialAsyncCommandExecuter that the command completed.
+							auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+							if (error != mediaClock::CommandExecutionError::NoError)
+							{
+								parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::StartStream);
+							}
+							parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+						};
+						manager.startStreamInput(listenerEntityId, streamIndex, responseHandler);
+						return true;
+					});
+			}
+			auto* commandSetStartStreams = new mediaClock::AsyncParallelCommandSet(commandsStartStreams);
+
+			std::vector<mediaClock::AsyncParallelCommandSet::AsyncCommand> commandsRemoveMappings;
 			for (auto const& mappingsListener : result.overriddenMappingsListener)
 			{
 				for (auto const& mapping : mappingsListener.second)
 				{
-					manager.removeStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second);
+					commandsRemoveMappings.push_back(
+						[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+						{
+							auto& manager = avdecc::ControllerManager::getInstance();
+							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+							{
+								// notify SequentialAsyncCommandExecuter that the command completed.
+								auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+								if (error != mediaClock::CommandExecutionError::NoError)
+								{
+									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
+								}
+								parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+							};
+							manager.removeStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, responseHandler);
+							return true;
+						});
+				}
+			}
+			auto* commandSetRemoveMappings = new mediaClock::AsyncParallelCommandSet(commandsRemoveMappings);
+
+			std::vector<mediaClock::AsyncParallelCommandSet::AsyncCommand> commandsCreateMappings;
+			for (auto const& mappingsTalker : result.newMappingsTalker)
+			{
+				for (auto const& mapping : mappingsTalker.second)
+				{
+					commandsCreateMappings.push_back(
+						[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+						{
+							auto& manager = avdecc::ControllerManager::getInstance();
+							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+							{
+								// notify SequentialAsyncCommandExecuter that the command completed.
+								auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+								if (error != mediaClock::CommandExecutionError::NoError)
+								{
+									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
+								}
+								parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+							};
+							manager.addStreamPortOutputAudioMappings(talkerEntityId, mapping.first, mapping.second, responseHandler);
+							return true;
+						});
 				}
 			}
 
@@ -1818,9 +1876,38 @@ private:
 			{
 				for (auto const& mapping : mappingsListener.second)
 				{
-					manager.addStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second);
+					commandsCreateMappings.push_back(
+						[=](mediaClock::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+						{
+							auto& manager = avdecc::ControllerManager::getInstance();
+							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+							{
+								// notify SequentialAsyncCommandExecuter that the command completed.
+								auto error = mediaClock::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
+								if (error != mediaClock::CommandExecutionError::NoError)
+								{
+									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
+								}
+								parentCommandSet->invokeCommandCompleted(commandIndex, error != mediaClock::CommandExecutionError::NoError);
+							};
+							manager.addStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, responseHandler);
+							return true;
+						});
 				}
 			}
+			auto* commandSetCreateMappings = new mediaClock::AsyncParallelCommandSet(commandsCreateMappings);
+
+			// create chain
+			commands.push_back(commandSetChangeStreamFormat);
+			commands.push_back(commandSetCreateStreamConnections);
+			commands.push_back(commandSetStopStreams);
+			commands.push_back(commandSetRemoveMappings);
+			commands.push_back(commandSetCreateMappings);
+			commands.push_back(commandSetStartStreams);
+
+			// execute the command chain
+			_sequentialAcmpCommandExecuter.setCommandChain(commands);
+			_sequentialAcmpCommandExecuter.start();
 		}
 
 		return result.connectionCheckResult;

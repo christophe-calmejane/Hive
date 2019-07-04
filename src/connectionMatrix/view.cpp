@@ -85,6 +85,10 @@ View::View(QWidget* parent)
 	settings.registerSettingObserver(settings::TransposeConnectionMatrix.name, this);
 	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
 	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
+
+	// react on connection completed signals to show error messages.
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+	connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::createChannelConnectionsFinished, this, &View::handleCreateChannelConnectionsFinished);
 }
 
 View::~View()
@@ -344,7 +348,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			}
 			else
 			{
-				auto error = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel);
+				auto error = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, false);
 				handleChannelCreationResult(error,
 					[=]()
 					{
@@ -353,7 +357,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 						if (result == QMessageBox::StandardButton::Yes)
 						{
 							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, true);
+							auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, true);
 							handleChannelCreationResult(errorSecondTry, {});
 						}
 					});
@@ -485,6 +489,118 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		_verticalHeaderView->setColor(colorName);
 		_horizontalHeaderView->setColor(colorName);
+	}
+}
+
+void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo const& info)
+{
+	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> iteratedEntityIds;
+	for (auto it = info.connectionCreationErrors.begin(), end = info.connectionCreationErrors.end(); it != end; it++) // upper_bound not supported on mac (to iterate over unique keys)
+	{
+		if (iteratedEntityIds.find(it->first) == iteratedEntityIds.end())
+		{
+			iteratedEntityIds.insert(it->first);
+		}
+		else
+		{
+			continue; // entity already displayed.
+		}
+		auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+		auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+		if (controlledEntity)
+		{
+			entityName = avdecc::helper::smartEntityName(*controlledEntity);
+		}
+		auto errorsForEntity = info.connectionCreationErrors.equal_range(it->first);
+		QString errors;
+
+		// if a stream couldn't be stopped we won't show the error. Also the start stream error won't be shown in this case.
+		auto stopStreamFailed{ false };
+		for (auto i = errorsForEntity.first; i != errorsForEntity.second; ++i)
+		{
+			if (i->second.commandTypeAcmp)
+			{
+				switch (*i->second.commandTypeAcmp)
+				{
+					case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+						errors += "Connecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+						errors += "Disconnecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+						errors += "Disconnecting talker stream failed. ";
+						break;
+				}
+			}
+			else if (i->second.commandTypeAecp)
+			{
+				switch (*i->second.commandTypeAecp)
+				{
+					case avdecc::ControllerManager::AecpCommandType::SetStreamFormat:
+						errors += "Setting the stream format failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings:
+						errors += "Adding of dynamic mappings failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::RemoveStreamPortAudioMappings:
+						errors += "Removal of dynamic mappings failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::StartStream:
+						// only show the error if the stop didn't fail
+						if (!stopStreamFailed)
+						{
+							errors += "Starting the stream failed. ";
+						}
+						else
+						{
+							continue; // continue the loop
+						}
+						break;
+					case avdecc::ControllerManager::AecpCommandType::StopStream:
+						stopStreamFailed = true;
+						continue; // never show stop stream failures -> continue the loop
+				}
+			}
+			switch (i->second.errorType)
+			{
+				case avdecc::mediaClock::CommandExecutionError::LockedByOther:
+					errors += "Entity is locked.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::AcquiredByOther:
+					errors += "Entity is aquired by an other controller.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::Timeout:
+					errors += "Command timed out. Entity might be offline.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::EntityError:
+					errors += "Entity error. Operation might not be supported.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::NetworkIssue:
+					errors += "Network error.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::CommandFailure:
+					errors += "Command failure.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::NoMediaClockInputAvailable:
+					errors += "Device does not have any compatible media clock inputs.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::NoMediaClockOutputAvailable:
+					errors += "Device does not have any compatible media clock outputs.";
+					break;
+				case avdecc::mediaClock::CommandExecutionError::NotSupported:
+					errors += "The command is not supported by this device.";
+					break;
+				default:
+					errors += "Unknwon error.";
+					break;
+			}
+			errors += "\n";
+		}
+		if (!errors.isEmpty())
+		{
+			QMessageBox::information(qobject_cast<QWidget*>(this), "Error while applying", QString("Error(s) occured on %1 while applying the configuration:\n\n%2").arg(entityName).arg(errors));
+		}
 	}
 }
 

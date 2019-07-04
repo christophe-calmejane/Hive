@@ -40,6 +40,7 @@ enum class CommandExecutionError
 	CommandFailure,
 	NetworkIssue,
 	Timeout,
+	NotSupported,
 	NoMediaClockOutputAvailable,
 	NoMediaClockInputAvailable,
 };
