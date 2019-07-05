@@ -20,6 +20,7 @@
 #include "channelConnectionManager.hpp"
 
 #include <set>
+#include <algorithm>
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 
@@ -78,7 +79,8 @@ private:
 
 	using StreamPortAudioMappings = std::map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings>;
 	using StreamChannelMappings = std::map<la::avdecc::entity::model::StreamIndex, StreamPortAudioMappings>;
-	using StreamConnections = std::vector<std::pair<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>>;
+	using StreamConnection = std::pair<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>;
+	using StreamConnections = std::vector<StreamConnection>;
 	using StreamFormatChanges = std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamFormat>;
 	struct CheckChannelCreationsPossibleResult
 	{
@@ -88,6 +90,102 @@ private:
 		StreamChannelMappings newMappingsListener;
 
 		StreamConnections newStreamConnections;
+	};
+
+	struct StreamChannelInfo
+	{
+		StreamChannelInfo(la::avdecc::entity::model::StreamIndex talkerPrimaryStreamIndex, la::avdecc::entity::model::StreamIndex listenerPrimaryStreamIndex, uint16_t streamChannel, bool streamAlreadyConnected, bool reusesTalkerMapping, bool reusesListenerMapping, bool isTalkerDefaultMapped, la::avdecc::entity::model::StreamFormat talkerStreamFormat, la::avdecc::entity::model::StreamFormat listenerStreamFormat)
+			: talkerPrimaryStreamIndex(talkerPrimaryStreamIndex)
+			, listenerPrimaryStreamIndex(listenerPrimaryStreamIndex)
+			, streamChannel(streamChannel)
+			, streamAlreadyConnected(streamAlreadyConnected)
+			, reusesTalkerMapping(reusesTalkerMapping)
+			, reusesListenerMapping(reusesListenerMapping)
+			, isTalkerDefaultMapped(isTalkerDefaultMapped)
+			, talkerStreamFormat(talkerStreamFormat)
+			, listenerStreamFormat(listenerStreamFormat)
+		{
+		}
+
+		StreamChannelInfo() {}
+
+		la::avdecc::entity::model::StreamIndex talkerPrimaryStreamIndex{ 0 };
+		la::avdecc::entity::model::StreamIndex listenerPrimaryStreamIndex{ 0 };
+		uint16_t streamChannel{ 0 };
+		bool streamAlreadyConnected{ false };
+		bool reusesTalkerMapping{ false };
+		bool reusesListenerMapping{ false };
+		bool isTalkerDefaultMapped{ false }; // n:n mapping, meaning the cluster at index n (with channel 0) is mapped to the stream channel n.
+		la::avdecc::entity::model::StreamFormat talkerStreamFormat{ 0 };
+		la::avdecc::entity::model::StreamFormat listenerStreamFormat{ 0 };
+	};
+
+	struct StreamChannelInfoPriority
+	{
+		inline bool operator()(const StreamChannelInfo& streamChannelInfo1, const StreamChannelInfo& streamChannelInfo2)
+		{
+			if (streamChannelInfo1.reusesTalkerMapping == streamChannelInfo2.reusesTalkerMapping)
+			{
+				if (streamChannelInfo1.isTalkerDefaultMapped == streamChannelInfo2.isTalkerDefaultMapped)
+				{
+					if (streamChannelInfo1.streamAlreadyConnected == streamChannelInfo2.streamAlreadyConnected)
+					{
+						if ((streamChannelInfo1.talkerStreamFormat == streamChannelInfo1.listenerStreamFormat) == (streamChannelInfo2.talkerStreamFormat == streamChannelInfo2.listenerStreamFormat))
+						{
+							if (streamChannelInfo1.reusesListenerMapping == streamChannelInfo2.reusesListenerMapping)
+							{
+								// couldn't find any criteria to sort by prio, use the listenerStreamIndex or stream channel as sorting criteria
+								if (streamChannelInfo1.listenerPrimaryStreamIndex == streamChannelInfo2.listenerPrimaryStreamIndex)
+								{
+									return streamChannelInfo1.streamChannel < streamChannelInfo2.streamChannel;
+								}
+								return streamChannelInfo1.listenerPrimaryStreamIndex < streamChannelInfo2.listenerPrimaryStreamIndex;
+							}
+							else if (streamChannelInfo1.reusesListenerMapping == streamChannelInfo2.reusesListenerMapping)
+							{
+								return true;
+							}
+							else
+							{
+								return false;
+							}
+						}
+						else if (streamChannelInfo1.talkerStreamFormat == streamChannelInfo1.listenerStreamFormat && streamChannelInfo2.talkerStreamFormat != streamChannelInfo2.listenerStreamFormat)
+						{
+							return true;
+						}
+						else
+						{
+							return false;
+						}
+					}
+					else if (streamChannelInfo1.streamAlreadyConnected && !streamChannelInfo2.streamAlreadyConnected)
+					{
+						return true;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else if (streamChannelInfo1.isTalkerDefaultMapped && !streamChannelInfo2.isTalkerDefaultMapped)
+				{
+					return true;
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else if (streamChannelInfo1.reusesTalkerMapping && !streamChannelInfo2.reusesTalkerMapping)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		}
 	};
 
 	/**
@@ -1290,21 +1388,28 @@ private:
 	/**
 	* Checks if the given connections could be created on the current setup (allowing format changes)
 	* could alse be used for normal channel connections in the matrix.
-	* 
+	*
 	* algorithm:
-	* find all potiential connections that could be used.
-	* first only streams are configured correctly already and connected to the listener
-	* then correctly configured streams that are not connected
-	* then unconnected wrongly configured
+	* FOR EVERY CHANNEL CONNECTION PAIR GIVEN:
+	* find all potiential connections and mappings that could be used.
+	* sort by best fit (less changes are preferred)
+	* use the first (best) entry and store needed stream and mapping adjustments
+	*
+	* If any mapping changes on the talker is needed, ChannelConnectResult::NeedsTalkerMappingAdjustment is returned.
+	* If any mappings on the listener need to be removed, ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary is returned.
+	* The algorithm stops in both cases. However there won't be an error if a talker that currently has no stream connections needs mapping changes.
+	*
+	* To enable removal of mappings the 'allowTalkerMappingChanges' and 'allowRemovalOfUnusedAudioMappings' have to be set to true for the respective side.
 	*
 	* @param talkerEntityId The id of the talker entity.
 	* @param listenerEntityId The id of the listener entity.
-	* @param	std::vector<std::pair<avdecc::ChannelIdentification>>
+	* @param std::vector<std::pair<avdecc::ChannelIdentification>>
 	* @param talkerToListenerChannelConnections The desired channel connection to be checked
+	* @param allowTalkerMappingChanges Flag parameter to indicate if talker mappings can be added or removed. (Talker mapping changes require stream disconnection which might lead to audio dropouts) 
 	* @param allowRemovalOfUnusedAudioMappings Flag parameter to indicate if existing mappings can be overridden
 	* @param channelUsageHint
 	*/
-	CheckChannelCreationsPossibleResult checkChannelCreationsPossible(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool allowRemovalOfUnusedAudioMappings, uint16_t channelUsageHint) const noexcept
+	CheckChannelCreationsPossibleResult checkChannelCreationsPossible(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool allowTalkerMappingChanges, bool allowRemovalOfUnusedAudioMappings, uint16_t channelUsageHint) const noexcept
 	{
 		auto insertAudioMapping = [](StreamChannelMappings& streamChannelMappings, la::avdecc::entity::model::AudioMapping const& audioMapping, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
 		{
@@ -1348,7 +1453,7 @@ private:
 			return {};
 		}
 
-		// in here the new mappings for each stream are stored
+		// store all connection, format and mapping changes, that will be applied as batch command chain
 		StreamChannelMappings overriddenMappingsListener;
 		StreamChannelMappings newMappingsTalker;
 		StreamChannelMappings newMappingsListener;
@@ -1356,222 +1461,467 @@ private:
 		StreamFormatChanges streamFormatChangesTalker;
 		StreamFormatChanges streamFormatChangesListener;
 
-		auto streamDeviceConnections = getStreamConnectionsBetweenDevices(talkerEntityId, listenerEntityId);
-
-		// check if every connection is creatable
-		// to do so, every new connection has to be stored into a temporary connection object (so that no new connection overwrites previous ones)
-
 		for (auto const& channelPair : talkerToListenerChannelConnections)
 		{
 			auto const& talkerChannelIdentification = channelPair.first;
 			auto const& listenerChannelIdentification = channelPair.second;
+
 			try
 			{
-				auto const& streamPortInputAudioMappings = controlledListenerEntity->getStreamPortInputAudioMappings(*channelPair.second.streamPortIndex);
-				for (auto const& mapping : streamPortInputAudioMappings)
+				std::vector<StreamChannelInfo> streamChannelInfos = findAllUsableStreamChannels(talkerEntityId, listenerEntityId, talkerChannelIdentification, listenerChannelIdentification, newStreamConnections, newMappingsTalker, newMappingsListener);
+				if (streamChannelInfos.empty())
 				{
-					if (mapping.clusterChannel == listenerChannelIdentification.clusterChannel && mapping.clusterOffset == listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster)
+					return CheckChannelCreationsPossibleResult{ ChannelConnectResult::Impossible };
+				}
+				std::sort(streamChannelInfos.begin(), streamChannelInfos.end(), StreamChannelInfoPriority());
+
+				// take the first entry of the streamChannelInfos after they were sorted as the channel to use
+				auto streamChannelInfoToUse = streamChannelInfos.begin();
+
+				// the user has to agree that talker mappings are changed (can lead to audio interruptions)
+				if (!allowTalkerMappingChanges && !streamChannelInfoToUse->reusesTalkerMapping)
+				{
+					// check if the talker stream is used anywhere yet, only then it makes sense to show a warning
+					auto connections = getStreamOutputConnections(talkerEntityId, streamChannelInfoToUse->talkerPrimaryStreamIndex);
+					if (!connections.empty())
 					{
+						return CheckChannelCreationsPossibleResult{ ChannelConnectResult::NeedsTalkerMappingAdjustment };
+					}
+				}
+
+				// IF A NEW STREAM CONNECTION WILL BE CREATED: remove listener mappings that have to be removed before the new connection can be created, but only after user confirmation
+				if (!streamChannelInfoToUse->streamAlreadyConnected)
+				{
+					auto assignedChannelsTalker = getAssignedChannelsOnTalkerStream(talkerEntityId, streamChannelInfoToUse->talkerPrimaryStreamIndex);
+					auto assignedChannelsListener = getAssignedChannelsOnListenerStream(listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex);
+
+					std::vector<uint16_t> unwantedConnectionsAfterStreamConnect;
+					set_intersection(assignedChannelsTalker.begin(), assignedChannelsTalker.end(), assignedChannelsListener.begin(), assignedChannelsListener.end(), back_inserter(unwantedConnectionsAfterStreamConnect));
+
+					if (!unwantedConnectionsAfterStreamConnect.empty() && !allowRemovalOfUnusedAudioMappings)
+					{
+						return CheckChannelCreationsPossibleResult{ ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary };
+					}
+
+					// remove all listener mappings that would be created by the new stream connection
+					for (auto const unwantedStreamConnectionChannel : unwantedConnectionsAfterStreamConnect)
+					{
+						auto unwantedMappings = getMappingsFromStreamInputChannel(listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex, unwantedStreamConnectionChannel);
+						for (auto const& unwantedMapping : unwantedMappings)
+						{
+							insertAudioMapping(overriddenMappingsListener, unwantedMapping, *listenerChannelIdentification.streamPortIndex);
+						}
+					}
+
+					newStreamConnections.push_back(std::make_pair(streamChannelInfoToUse->talkerPrimaryStreamIndex, streamChannelInfoToUse->listenerPrimaryStreamIndex));
+				}
+
+				// IF NEW TALKER MAPPINGS ARE CREATED: remove listener mappings that would be created, except for the one that we actually want if it is reused, but only after user confirmation
+				if (!streamChannelInfoToUse->reusesTalkerMapping)
+				{
+					auto unwantedMappings = getMappingsFromStreamInputChannel(listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex, streamChannelInfoToUse->streamChannel);
+					if (!unwantedMappings.empty() && !allowRemovalOfUnusedAudioMappings)
+					{
+						return CheckChannelCreationsPossibleResult{ ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary };
+					}
+
+					for (auto const& unwantedMapping : unwantedMappings)
+					{
+						if (streamChannelInfoToUse->reusesListenerMapping && unwantedMapping.clusterOffset == listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster)
+						{
+							continue;
+						}
+						// remove the mapping
+						insertAudioMapping(overriddenMappingsListener, unwantedMapping, *listenerChannelIdentification.streamPortIndex);
+					}
+				}
+
+				// IF ANOTHER LISTENER'S MAPPINGS WILL BE OVERWRITTEN: remove listener mappings that will be overwritten, but only after user confirmation
+				/*auto connectedListenerStreams = controlledListenerEntity->
+				for (auto const& connectedListenerStream : connectedListenerStreams)
+				{
+					auto assignedStreamChannels = getAssignedChannelsOnConnectedListenerStreams(talkerEntityId, connectedListenerStream.listenerStream.entityID, streamChannelInfoToUse->talkerPrimaryStreamIndex);
+					for (auto assignedChannel : assignedStreamChannels)
+					{
+						auto unwantedMappings = getMappingsFromStreamInputChannel(connectedListenerStream.listenerStream.entityID, connectedListenerStream.listenerStream.streamIndex, assignedChannel);
+						if (!unwantedMappings.empty() && !allowRemovalOfUnusedAudioMappings)
+						{
+							return CheckChannelCreationsPossibleResult{ ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary };
+						}
+					}
+				}*/
+
+				// talker mapping
+				if (!streamChannelInfoToUse->reusesTalkerMapping)
+				{
+					if (!streamChannelInfoToUse->isTalkerDefaultMapped)
+					{
+						// create the talker mapping, because it is not created together with the default mappings
+						la::avdecc::entity::model::AudioMapping talkerMapping;
+						talkerMapping.clusterChannel = talkerChannelIdentification.clusterChannel;
+						talkerMapping.clusterOffset = talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
+						talkerMapping.streamChannel = streamChannelInfoToUse->streamChannel;
+						talkerMapping.streamIndex = streamChannelInfoToUse->talkerPrimaryStreamIndex;
+						insertAudioMapping(newMappingsTalker, talkerMapping, *talkerChannelIdentification.streamPortIndex);
+					}
+
+					// get the default mappings that can be created on the talker side without side effects of creating unwanted channel connections
+					auto const mappings = getPossibleDefaultMappings(talkerEntityId, streamChannelInfoToUse->talkerPrimaryStreamIndex, listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex, newMappingsTalker, overriddenMappingsListener);
+
+					// create the talker default mappings if a new talker mapping has to be made
+					for (auto const& talkerMapping : mappings)
+					{
+						insertAudioMapping(newMappingsTalker, talkerMapping, *talkerChannelIdentification.streamPortIndex);
+					}
+				}
+
+				if (!streamChannelInfoToUse->reusesListenerMapping)
+				{
+					// remove the mapping to the listener channel before creating a new one
+					auto const streamPortInputAudioMappings = controlledListenerEntity->getStreamPortInputAudioMappings(*channelPair.second.streamPortIndex);
+					for (auto const& mapping : streamPortInputAudioMappings)
+					{
+						if (mapping.clusterChannel == listenerChannelIdentification.clusterChannel && mapping.clusterOffset == listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster)
+						{
+							la::avdecc::entity::model::AudioMapping listenerMapping;
+							listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
+							listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
+							listenerMapping.streamChannel = mapping.streamChannel;
+							listenerMapping.streamIndex = mapping.streamIndex;
+
+							insertAudioMapping(overriddenMappingsListener, listenerMapping, *channelPair.second.streamPortIndex);
+						}
+					}
+
+					//if (streamChannelInfoToUse->isTalkerDefaultMapped)
+					{
+						// create the listener mapping
 						la::avdecc::entity::model::AudioMapping listenerMapping;
 						listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
 						listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
-						listenerMapping.streamChannel = mapping.streamChannel;
-						listenerMapping.streamIndex = mapping.streamIndex;
-
-						insertAudioMapping(overriddenMappingsListener, listenerMapping, *channelPair.second.streamPortIndex);
+						listenerMapping.streamChannel = streamChannelInfoToUse->streamChannel;
+						listenerMapping.streamIndex = streamChannelInfoToUse->listenerPrimaryStreamIndex;
+						insertAudioMapping(newMappingsListener, listenerMapping, *listenerChannelIdentification.streamPortIndex);
 					}
+					//else
+					//{
+					//	// TODO create mapping ??
+					//}
+				}
+
+				auto const& compatibleFormats = findCompatibleStreamPairFormat(talkerEntityId, streamChannelInfoToUse->talkerPrimaryStreamIndex, listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, channelUsageHint);
+				if (compatibleFormats.first)
+				{
+					streamFormatChangesTalker.emplace(streamChannelInfoToUse->talkerPrimaryStreamIndex, *compatibleFormats.first);
+				}
+				if (compatibleFormats.second)
+				{
+					streamFormatChangesTalker.emplace(streamChannelInfoToUse->listenerPrimaryStreamIndex, *compatibleFormats.second);
 				}
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
 			}
+		}
 
-			bool foundResuableExistingStreamConnection = false;
-			for (auto const& deviceConnectionKV : streamDeviceConnections)
+		return CheckChannelCreationsPossibleResult{ ChannelConnectResult::NoError, std::move(overriddenMappingsListener), std::move(newMappingsTalker), std::move(newMappingsListener), std::move(newStreamConnections) };
+	}
+
+	/**
+	* Finds all possible stream & channel combinations that allow to connect the two cluster channels.
+	*/
+	std::vector<StreamChannelInfo> findAllUsableStreamChannels(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::UniqueIdentifier const listenerEntityId, avdecc::ChannelIdentification const& talkerChannelIdentification, avdecc::ChannelIdentification const& listenerChannelIdentification, StreamConnections const& newStreamConnections, StreamChannelMappings const& newMappingsTalker, StreamChannelMappings const& newMappingsListener) const noexcept
+	{
+		std::vector<StreamChannelInfo> result;
+
+		// find all (existing and possible) stream connections between the devices
+		// check all listenerChannelConnections on it
+		auto streamConnections = getStreamConnectionsBetweenDevices(talkerEntityId, listenerEntityId);
+
+		// filter out streamConnections that are redundant
+		auto primaryStreamConnection = StreamConnections{};
+		for (auto const& streamConnection : streamConnections)
+		{
+			if (isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification{ listenerEntityId, streamConnection.second }))
 			{
-				// try to reuse existing stream connection + channel mapping when only the output mapping is missing
-				try
-				{
-					auto const& streamOutput = controlledTalkerEntity->getStreamOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, deviceConnectionKV.first);
-					auto const& streamInput = controlledListenerEntity->getStreamInputNode(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, deviceConnectionKV.second);
+				primaryStreamConnection.push_back(streamConnection);
+			}
+		}
 
-					auto const& newConnectionIt = std::find(newStreamConnections.begin(), newStreamConnections.end(), deviceConnectionKV);
-					std::optional<uint16_t> adjustedStreamChannelCount = std::nullopt;
-					// not a new connection + streamformat is not equals.
-					if (newConnectionIt == newStreamConnections.end() && streamOutput.dynamicModel->streamInfo.streamFormat != streamInput.dynamicModel->streamInfo.streamFormat)
-					{
-						continue;
-					}
-					else if (newConnectionIt != newStreamConnections.end())
-					{
-						auto streamFormatChangeTalker = streamFormatChangesTalker.find(newConnectionIt->first);
-						auto streamFormatChangeListener = streamFormatChangesListener.find(newConnectionIt->second);
-						if (streamFormatChangeTalker != streamFormatChangesTalker.end())
-						{
-							auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatChangeTalker->second);
-							adjustedStreamChannelCount = streamFormatInfo->getChannelsCount();
-						}
-						else if (streamFormatChangeListener != streamFormatChangesListener.end())
-						{
-							auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatChangeListener->second);
-							adjustedStreamChannelCount = streamFormatInfo->getChannelsCount();
-						}
-					}
-					if (checkStreamFormatType(streamOutput.dynamicModel->streamInfo.streamFormat, la::avdecc::entity::model::StreamFormatInfo::Type::AAF))
-					{
-						auto freeOrReusableChannelConnection = findFreeOrReuseChannelOnExistingStreamConnection(talkerEntityId, deviceConnectionKV.first, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, newMappingsTalker, listenerEntityId, deviceConnectionKV.second, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newMappingsListener, adjustedStreamChannelCount);
+		// also take into account stream connections, that will be batch created with this one:
+		primaryStreamConnection.insert(primaryStreamConnection.end(), newStreamConnections.begin(), newStreamConnections.end());
 
-						// already connected and also got a free channel on a compatible stream
-						if (freeOrReusableChannelConnection)
-						{
-							auto const connectionStreamChannel = std::get<0>(*freeOrReusableChannelConnection);
-							auto const resuseOfTalkerStreamChannel = std::get<1>(*freeOrReusableChannelConnection);
-							auto const reuseOfListenerStreamChannel = std::get<2>(*freeOrReusableChannelConnection);
-							auto const connectionStreamSourcePrimaryIndex = deviceConnectionKV.first;
-							auto const connectionStreamTargetPrimaryIndex = deviceConnectionKV.second;
+		// iterate over existing stream connections
+		for (auto const& streamConnection : primaryStreamConnection)
+		{
+			// get all stream channels that could be used for the connection
+			auto const usableChannels = findAllUsableStreamChannelsOnStreamConnection(talkerEntityId, listenerEntityId, streamConnection, true, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newMappingsTalker, newMappingsListener);
+			result.insert(result.end(), usableChannels.begin(), usableChannels.end());
+		}
 
-							if (!resuseOfTalkerStreamChannel)
-							{
-								la::avdecc::entity::model::AudioMapping talkerMapping;
-								talkerMapping.clusterChannel = talkerChannelIdentification.clusterChannel;
-								talkerMapping.clusterOffset = talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
-								talkerMapping.streamChannel = connectionStreamChannel;
-								talkerMapping.streamIndex = connectionStreamSourcePrimaryIndex;
-								insertAudioMapping(newMappingsTalker, talkerMapping, *channelPair.second.streamPortIndex);
-							}
+		// check the stream connections that have not been created yet
+		auto possibleStreamConnections = getPossibleAudioStreamConnectionsBetweenDevices(talkerEntityId, listenerEntityId);
 
-							if (!reuseOfListenerStreamChannel)
-							{
-								la::avdecc::entity::model::AudioMapping listenerMapping;
-								listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
-								listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
-								listenerMapping.streamChannel = connectionStreamChannel;
-								listenerMapping.streamIndex = connectionStreamTargetPrimaryIndex;
+		// filter out stream connections that are redundant
+		auto primaryPossibleStreamConnection = StreamConnections{};
+		for (auto const& possibleStreamConnection : possibleStreamConnections)
+		{
+			// only add if not redundant and isn't already in newStreamConnections
+			if (std::find(newStreamConnections.begin(), newStreamConnections.end(), possibleStreamConnection) == newStreamConnections.end() && isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification{ listenerEntityId, possibleStreamConnection.second }))
+			{
+				primaryPossibleStreamConnection.push_back(possibleStreamConnection);
+			}
+		}
 
-								insertAudioMapping(newMappingsListener, listenerMapping, *channelPair.second.streamPortIndex);
-							}
+		for (auto const& streamConnection : primaryPossibleStreamConnection)
+		{
+			// get all stream channels that could be used for the connection
+			auto const usableChannels = findAllUsableStreamChannelsOnStreamConnection(talkerEntityId, listenerEntityId, streamConnection, false, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newMappingsTalker, newMappingsListener);
+			result.insert(result.end(), usableChannels.begin(), usableChannels.end());
+		}
 
-							foundResuableExistingStreamConnection = true;
-							break;
-						}
-					}
-				}
-				catch (la::avdecc::controller::ControlledEntity::Exception const&)
-				{
-				}
+		return result;
+	}
+
+	/**
+	* @param newMappingsTalker Contains mappings that will be created with createChannelConnections method, but are not created yet.
+	* @param newMappingsListener Contains mappings that will be created with createChannelConnections method, but are not created yet.
+	* @return Gets all connection
+	*/
+	std::vector<StreamChannelInfo> findAllUsableStreamChannelsOnStreamConnection(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::UniqueIdentifier const listenerEntityId, StreamConnection const streamConnection, bool isStreamAlreadyConnected, la::avdecc::entity::model::ClusterIndex const talkerClusterOffset, uint16_t const talkerClusterChannel, la::avdecc::entity::model::ClusterIndex const listenerClusterOffset, uint16_t const listenerClusterChannel, StreamChannelMappings const& newMappingsTalker, StreamChannelMappings const& newMappingsListener) const noexcept
+	{
+		// convenience function to create StreamChannelInfo
+		auto buildStreamChannelInfo = [talkerEntityId, listenerEntityId, streamConnection, isStreamAlreadyConnected, talkerClusterOffset, listenerClusterOffset](uint16_t streamChannel, bool reusesTalkerMapping, bool reusesListenerMapping) -> std::optional<StreamChannelInfo>
+		{
+			auto const& manager = avdecc::ControllerManager::getInstance();
+			auto const talkerEntity = manager.getControlledEntity(talkerEntityId);
+			auto const listenerEntity = manager.getControlledEntity(listenerEntityId);
+			if (!talkerEntity || !listenerEntity)
+			{
+				return std::nullopt;
 			}
 
-			if (!foundResuableExistingStreamConnection)
+			try
 			{
-				auto findStreamConnectionResult = findAvailableStreamConnection(talkerEntityId, listenerEntityId, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newStreamConnections, allowRemovalOfUnusedAudioMappings);
-
-				if (findStreamConnectionResult.unallowedRemovalOfUnusedAudioMappingsNecessary)
+				auto talkerStreamIndex = streamConnection.first;
+				auto listenerStreamIndex = streamConnection.second;
+				auto const* const streamOutputDynamicModel = talkerEntity->getStreamOutputNode(talkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamIndex).dynamicModel;
+				if (!streamOutputDynamicModel)
 				{
-					return CheckChannelCreationsPossibleResult{ ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary };
+					return std::nullopt;
 				}
-				else if (!findStreamConnectionResult.connectionsToCreate.empty())
+				auto const* const streamInputDynamicModel = listenerEntity->getStreamInputNode(listenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamIndex).dynamicModel;
+				if (!streamInputDynamicModel)
 				{
-					// first is the primary:
-					auto const& primaryStreamConnection = findStreamConnectionResult.connectionsToCreate.at(0);
-					auto const connectionStreamSourcePrimaryIndex = std::get<0>(primaryStreamConnection);
-					auto const connectionStreamTargetPrimaryIndex = std::get<1>(primaryStreamConnection);
-					auto connectionStreamChannel = std::get<2>(primaryStreamConnection);
-
-
-					// create all default mappings if the talker stream doesn't have any mappings yet:
-					la::avdecc::entity::model::AudioMappings mappings = controlledTalkerEntity->getStreamPortOutputAudioMappings(*channelPair.second.streamPortIndex);
-					auto streamHasMappingsAssigned{ false };
-					for (auto const& mapping : mappings)
-					{
-						if (mapping.streamIndex == connectionStreamSourcePrimaryIndex)
-						{
-							streamHasMappingsAssigned = true;
-						}
-					}
-
-					if (!streamHasMappingsAssigned)
-					{
-						auto streamChannelCount = getStreamChannelCount(talkerEntityId, connectionStreamSourcePrimaryIndex);
-						auto clusterChannelCount = 0u;
-						// TODO also get cluster count, then use min(streamChannelCount, clusterCount) for the iteration
-						//auto streamChannelCount = .at();
-						for (auto const& audioUnit : controlledTalkerEntity->getCurrentConfigurationNode().audioUnits)
-						{
-							for (auto const& streamPortOutput : audioUnit.second.streamPortOutputs)
-							{
-								// TODO: if not milan compatible, take cluster channels into account too
-								clusterChannelCount += streamPortOutput.second.audioClusters.size();
-							}
-						}
-						auto assignableChannels = qMin(clusterChannelCount, static_cast<uint32_t>(streamChannelCount));
-						for (uint32_t i = 0; i < assignableChannels; i++)
-						{
-							la::avdecc::entity::model::AudioMapping talkerMapping;
-							talkerMapping.clusterChannel = talkerChannelIdentification.clusterChannel;
-							talkerMapping.clusterOffset = i; //talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
-							talkerMapping.streamChannel = i; //connectionStreamChannel;
-							talkerMapping.streamIndex = connectionStreamSourcePrimaryIndex;
-							if (i == talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster)
-							{
-								connectionStreamChannel = i; // reassign the channel for the listener
-							}
-
-							insertAudioMapping(newMappingsTalker, talkerMapping, *channelPair.second.streamPortIndex);
-						}
-					}
-					else
-					{
-						la::avdecc::entity::model::AudioMapping talkerMapping;
-						talkerMapping.clusterChannel = talkerChannelIdentification.clusterChannel;
-						talkerMapping.clusterOffset = talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster;
-						talkerMapping.streamChannel = connectionStreamChannel;
-						talkerMapping.streamIndex = connectionStreamSourcePrimaryIndex;
-
-						insertAudioMapping(newMappingsTalker, talkerMapping, *channelPair.second.streamPortIndex);
-					}
-
-
-					la::avdecc::entity::model::AudioMapping listenerMapping;
-					listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
-					listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
-					listenerMapping.streamChannel = connectionStreamChannel;
-					listenerMapping.streamIndex = connectionStreamTargetPrimaryIndex;
-
-					insertAudioMapping(newMappingsListener, listenerMapping, *channelPair.second.streamPortIndex);
-
-					for (auto const& mappingToRemove : findStreamConnectionResult.listenerDynamicMappingsToRemove)
-					{
-						insertAudioMapping(overriddenMappingsListener, mappingToRemove, *channelPair.second.streamPortIndex);
-					}
-
-					newStreamConnections.push_back(std::make_pair(connectionStreamSourcePrimaryIndex, connectionStreamTargetPrimaryIndex));
-
-					streamDeviceConnections.push_back(std::make_pair(connectionStreamSourcePrimaryIndex, connectionStreamTargetPrimaryIndex));
-
-					auto const& compatibleFormats = findCompatibleStreamPairFormat(talkerEntityId, connectionStreamSourcePrimaryIndex, listenerEntityId, connectionStreamTargetPrimaryIndex, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, channelUsageHint);
-					if (compatibleFormats.first)
-					{
-						streamFormatChangesTalker.emplace(connectionStreamSourcePrimaryIndex, *compatibleFormats.first);
-					}
-					if (compatibleFormats.second)
-					{
-						streamFormatChangesTalker.emplace(connectionStreamTargetPrimaryIndex, *compatibleFormats.second);
-					}
-					// TODOs:
-					// -take stream size adjustments into account when checking the connection possibilites.
-					// this regards connections that are newly created, (resizable because, both talker and listener can have more channels)
-					// + connections where one side has to be adjusted. (to be bigger)
-					// -> findFreeOrReuseChannelOnExistingStreamConnection has to be changed to take into account a different stream format then currently active.
+					return std::nullopt;
 				}
-				else
+				auto talkerStreamFormat = streamOutputDynamicModel->streamInfo.streamFormat;
+				auto listenerStreamFormat = streamInputDynamicModel->streamInfo.streamFormat;
+
+				return StreamChannelInfo{ talkerStreamIndex, listenerStreamIndex, streamChannel, isStreamAlreadyConnected, reusesTalkerMapping, reusesListenerMapping, streamChannel == talkerClusterOffset, talkerStreamFormat, listenerStreamFormat };
+			}
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
+			{
+			}
+			return std::nullopt;
+		};
+
+		std::vector<StreamChannelInfo> result;
+		auto const talkerStreamIndex = streamConnection.first;
+		auto const listenerStreamIndex = streamConnection.second;
+
+		// get the mappings for the cluster channel that are currently existant on the talker
+		auto existingFittingTalkerMappings = getAssignedChannelsOnTalkerStream(talkerEntityId, talkerStreamIndex, talkerClusterOffset, talkerClusterChannel);
+
+		// add the mappings that will be created
+		auto const& newMappingsTalkerIt = newMappingsTalker.find(talkerStreamIndex);
+		if (newMappingsTalkerIt != newMappingsTalker.end())
+		{
+			for (auto const& mappingWrapper : newMappingsTalkerIt->second)
+			{
+				for (auto const& mapping : mappingWrapper.second)
 				{
-					// if one connection can not be created, no connection shall be created.
-					return CheckChannelCreationsPossibleResult{ ChannelConnectResult::Impossible };
+					if (mapping.clusterOffset == talkerClusterOffset && mapping.clusterChannel == talkerClusterChannel)
+					{
+						existingFittingTalkerMappings.insert(mapping.streamChannel);
+					}
 				}
 			}
 		}
 
-		return CheckChannelCreationsPossibleResult{ ChannelConnectResult::NoError, std::move(overriddenMappingsListener), std::move(newMappingsTalker), std::move(newMappingsListener), std::move(newStreamConnections) };
+		// get the mappings for the cluster channel that are currently existant on the listener
+		auto existingFittingListenerMappings = getAssignedChannelsOnListenerStream(listenerEntityId, listenerStreamIndex, listenerClusterOffset, listenerClusterChannel);
+
+		// add the mappings that will be created
+		auto const& newMappingsListenerIt = newMappingsListener.find(listenerStreamIndex);
+		if (newMappingsListenerIt != newMappingsListener.end())
+		{
+			for (auto const& mappingWrapper : newMappingsListenerIt->second)
+			{
+				for (auto const& mapping : mappingWrapper.second)
+				{
+					if (mapping.clusterOffset == listenerClusterOffset && mapping.clusterChannel == listenerClusterChannel)
+					{
+						existingFittingListenerMappings.insert(mapping.streamChannel);
+					}
+				}
+			}
+		}
+
+		for (auto const existantTalkerMapping : existingFittingTalkerMappings)
+		{
+			if (isStreamAlreadyConnected)
+			{
+				auto streamChannelInfo = buildStreamChannelInfo(existantTalkerMapping, true, existingFittingListenerMappings.find(existantTalkerMapping) != existingFittingListenerMappings.end());
+				if (streamChannelInfo)
+				{
+					result.push_back(*streamChannelInfo);
+				}
+			}
+			else
+			{
+				// if the stream is not connected yet, it could be that the listener has mappings on this stream that we need to remove before it can be used.
+				// TODO: !! question is if the mappings that need to be removed should be stored in the StreamChannelInfo as well. !!
+				auto streamChannelInfo = buildStreamChannelInfo(existantTalkerMapping, true, existingFittingListenerMappings.find(existantTalkerMapping) != existingFittingListenerMappings.end());
+				if (streamChannelInfo)
+				{
+					result.push_back(*streamChannelInfo);
+				}
+			}
+		}
+
+		// get all stream channels that are unassigned on the talker side
+		auto freeStreamSlotsSource = getUnassignedChannelsOnTalkerStream(talkerEntityId, talkerStreamIndex);
+		// remove the channels that will be created
+		if (newMappingsTalkerIt != newMappingsTalker.end())
+		{
+			for (auto const& mappingWrapper : newMappingsTalkerIt->second)
+			{
+				for (auto const& mapping : mappingWrapper.second)
+				{
+					auto const& slotIt = freeStreamSlotsSource.find(mapping.streamChannel);
+					if (slotIt != freeStreamSlotsSource.end())
+					{
+						freeStreamSlotsSource.erase(mapping.streamChannel);
+					}
+				}
+			}
+		}
+
+		for (auto const& unassignedTalkerStreamChannel : freeStreamSlotsSource)
+		{
+			// TODO: !! question is if the mappings that need to be removed should be stored in the StreamChannelInfo as well. !!
+			auto streamChannelInfo = buildStreamChannelInfo(unassignedTalkerStreamChannel, false, existingFittingListenerMappings.find(unassignedTalkerStreamChannel) != existingFittingListenerMappings.end());
+			if (streamChannelInfo)
+			{
+				result.push_back(*streamChannelInfo);
+			}
+		}
+
+		return result;
+	}
+
+	la::avdecc::entity::model::AudioMappings getPossibleDefaultMappings(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, StreamChannelMappings const& newMappingsTalker, StreamChannelMappings const& overriddenMappingsListener) const
+	{
+		la::avdecc::entity::model::AudioMappings result;
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
+		if (!controlledTalkerEntity)
+		{
+			return result;
+		}
+
+		// find all unmappable streeam channels (occupied) and count the talker clusters
+		std::set<uint16_t> unmappableStreamChannels;
+		auto talkerStreamChannelCount = getStreamOutputChannelCount(talkerEntityId, talkerStreamIndex);
+		auto talkerClusterCount = 0u;
+		auto const& talkerAudioUnits = controlledTalkerEntity->getCurrentConfigurationNode().audioUnits;
+		for (auto const& audioUnitKV : talkerAudioUnits)
+		{
+			for (auto const& streamPortOutputKV : audioUnitKV.second.streamPortOutputs)
+			{
+				talkerClusterCount += streamPortOutputKV.second.audioClusters.size(); // mapping cluster channels > 0 unsupported
+
+				for (auto const& audioMapKV : streamPortOutputKV.second.audioMaps)
+				{
+					for (auto const& mapping : audioMapKV.second.staticModel->mappings)
+					{
+						if (mapping.streamIndex == talkerStreamIndex)
+						{
+							unmappableStreamChannels.insert(mapping.streamChannel);
+							if (mapping.streamIndex != mapping.clusterOffset)
+							{
+								unmappableStreamChannels.insert(mapping.clusterOffset);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		auto const& newMappingsTalkerIt = newMappingsTalker.find(talkerStreamIndex);
+
+		if (newMappingsTalkerIt != newMappingsTalker.end())
+		{
+			for (auto const& mappingWrapper : newMappingsTalkerIt->second)
+			{
+				for (auto const& mapping : mappingWrapper.second)
+				{
+					unmappableStreamChannels.insert(mapping.streamChannel);
+				}
+			}
+		}
+
+		// filter out channels that would create connections on any listener currently connected to the talker
+		auto streamOutputConnections = getStreamOutputConnections(talkerEntityId, talkerStreamIndex);
+
+		auto const& overriddenMappingsListenerIt = overriddenMappingsListener.find(listenerStreamIndex);
+
+		for (auto const& streamOutputConnection : streamOutputConnections)
+		{
+			auto listenerOccupiedChannels = getAssignedChannelsOnListenerStream(streamOutputConnection.listenerStream.entityID, streamOutputConnection.listenerStream.streamIndex);
+
+			// remove the mappings that will be removed by new stream connections
+			if (streamOutputConnection.listenerStream.entityID == listenerEntityId && streamOutputConnection.listenerStream.streamIndex == listenerStreamIndex)
+			{
+				if (overriddenMappingsListenerIt != overriddenMappingsListener.end())
+				{
+					for (auto const& mappingWrapper : overriddenMappingsListenerIt->second)
+					{
+						for (auto const& mapping : mappingWrapper.second)
+						{
+							listenerOccupiedChannels.erase(mapping.streamChannel);
+						}
+					}
+				}
+			}
+
+			for (auto const& listenerOccupiedChannel : listenerOccupiedChannels)
+			{
+				unmappableStreamChannels.insert(listenerOccupiedChannel);
+			}
+		}
+
+
+		// get the stream channel count and the talker cluster count and use the lower value as maximum
+		auto assignableChannels = qMin(talkerClusterCount, static_cast<uint32_t>(talkerStreamChannelCount));
+
+		// create the i:i mappings where possible
+		for (uint32_t i = 0; i < assignableChannels; i++)
+		{
+			if (unmappableStreamChannels.find(i) != unmappableStreamChannels.end())
+			{
+				continue;
+			}
+			la::avdecc::entity::model::AudioMapping talkerMapping;
+			talkerMapping.clusterChannel = 0;
+			talkerMapping.clusterOffset = i;
+			talkerMapping.streamChannel = i;
+			talkerMapping.streamIndex = talkerStreamIndex;
+
+			result.push_back(talkerMapping);
+		}
+		return result;
 	}
 
 	/**
@@ -1583,12 +1933,12 @@ private:
 	* @param listenerChannelIdentification The identification for the input channel.
 	* @return ChannelConnectResult::NoError if it is theoretically possbile to create the connection. However errors can occur while executing the commands. The errors can be catched from the createChannelConnectionsFinished signal.
 	*/
-	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, avdecc::ChannelIdentification const& talkerChannelIdentification, avdecc::ChannelIdentification const& listenerChannelIdentification, bool allowRemovalOfUnusedAudioMappings) noexcept
+	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, avdecc::ChannelIdentification const& talkerChannelIdentification, avdecc::ChannelIdentification const& listenerChannelIdentification, bool allowTalkerMappingChanges, bool allowRemovalOfUnusedAudioMappings) noexcept
 	{
 		std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> channelsToConnect;
 		channelsToConnect.push_back(std::make_pair(talkerChannelIdentification, listenerChannelIdentification));
 
-		return createChannelConnections(talkerEntityId, listenerEntityId, channelsToConnect, allowRemovalOfUnusedAudioMappings);
+		return createChannelConnections(talkerEntityId, listenerEntityId, channelsToConnect, allowTalkerMappingChanges, allowRemovalOfUnusedAudioMappings);
 	}
 
 	/**
@@ -1600,7 +1950,7 @@ private:
 	* @param listenerChannelIdentification The identification for the input channel.
 	* @return ChannelConnectResult::NoError if it is theoretically possbile to create the connection. However errors can occur while executing the commands. The errors can be catched from the createChannelConnectionsFinished signal.
 	*/
-	virtual ChannelConnectResult createChannelConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool allowRemovalOfUnusedAudioMappings) noexcept
+	virtual ChannelConnectResult createChannelConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool allowTalkerMappingChanges, bool allowRemovalOfUnusedAudioMappings) noexcept
 	{
 		// count the number of channel connections needed (filter doubled talker connections)
 		uint16_t channelUsage = 0;
@@ -1615,7 +1965,7 @@ private:
 			}
 		}
 
-		auto const& result = checkChannelCreationsPossible(talkerEntityId, listenerEntityId, talkerToListenerChannelConnections, allowRemovalOfUnusedAudioMappings, channelUsage);
+		auto const& result = checkChannelCreationsPossible(talkerEntityId, listenerEntityId, talkerToListenerChannelConnections, allowTalkerMappingChanges, allowRemovalOfUnusedAudioMappings, channelUsage);
 		if (result.connectionCheckResult == ChannelConnectResult::NoError)
 		{
 			std::vector<commandChain::AsyncParallelCommandSet*> commands;
@@ -2121,15 +2471,19 @@ private:
 			// only remove the talker channel mapping if it isn't in use by any other channel on any target anymore.
 			if (talkerChannelReceivers <= 1)
 			{
-				la::avdecc::entity::model::AudioMapping mapping;
-				mapping.clusterChannel = talkerClusterChannel;
-				mapping.clusterOffset = talkerClusterIndex - talkerBaseCluster;
-				mapping.streamChannel = *connectionStreamChannel;
-				mapping.streamIndex = *connectionStreamSourceIndex;
-				la::avdecc::entity::model::AudioMappings mappings;
-				mappings.push_back(mapping);
+				// never remove talker mappings, that are default mappings:
+				if (talkerClusterIndex - talkerBaseCluster != *connectionStreamChannel)
+				{
+					la::avdecc::entity::model::AudioMapping mapping;
+					mapping.clusterChannel = talkerClusterChannel;
+					mapping.clusterOffset = talkerClusterIndex - talkerBaseCluster;
+					mapping.streamChannel = *connectionStreamChannel;
+					mapping.streamIndex = *connectionStreamSourceIndex;
+					la::avdecc::entity::model::AudioMappings mappings;
+					mappings.push_back(mapping);
 
-				manager.removeStreamPortOutputAudioMappings(talkerEntityId, talkerStreamPortIndex, mappings);
+					manager.removeStreamPortOutputAudioMappings(talkerEntityId, talkerStreamPortIndex, mappings);
+				}
 			}
 
 			// the listener channel has to be unmapped in any case.
@@ -2192,7 +2546,7 @@ private:
 	/**
 	* Finds the stream indexes of a channel connection if there are any.
 	*/
-	std::vector<StreamConnection> getStreamIndexPairUsedByAudioChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, avdecc::ChannelIdentification const& talkerChannelIdentification, la::avdecc::UniqueIdentifier const& listenerEntityId, avdecc::ChannelIdentification const& listenerChannelIdentification) noexcept
+	std::vector<StreamIdentificationPair> getStreamIndexPairUsedByAudioChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, avdecc::ChannelIdentification const& talkerChannelIdentification, la::avdecc::UniqueIdentifier const& listenerEntityId, avdecc::ChannelIdentification const& listenerChannelIdentification) noexcept
 	{
 		auto connections = getChannelConnectionsReverse(listenerEntityId, listenerChannelIdentification);
 		for (auto const& deviceConnection : connections->targets)
@@ -2203,7 +2557,7 @@ private:
 				{
 					if (deviceConnection->targetAudioUnitIndex == *listenerChannelIdentification.audioUnitIndex && deviceConnection->targetStreamPortIndex == *talkerChannelIdentification.streamPortIndex && targetClusterKV.first == talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster && targetClusterKV.second == talkerChannelIdentification.clusterChannel)
 					{
-						std::vector<StreamConnection> result;
+						std::vector<StreamIdentificationPair> result;
 						for (auto const [talkerStreamIndex, listenerStreamIndex] : deviceConnection->streamPairs)
 						{
 							la::avdecc::entity::model::StreamIdentification streamTalker{ talkerEntityId, talkerStreamIndex };
@@ -2444,7 +2798,7 @@ private:
 		}
 
 		// get the stream channel count:
-		uint16_t channelCount = getStreamChannelCount(entityId, outputStreamIndex);
+		uint16_t channelCount = getStreamOutputChannelCount(entityId, outputStreamIndex);
 		for (int i = 0; i < channelCount; i++)
 		{
 			if (occupiedStreamChannels.find(i) == occupiedStreamChannels.end())
@@ -2501,7 +2855,7 @@ private:
 		}
 
 		// get the stream channel count:
-		uint16_t channelCount = getStreamChannelCount(entityId, inputStreamIndex);
+		uint16_t channelCount = getStreamInputChannelCount(entityId, inputStreamIndex);
 		for (int i = 0; i < channelCount; i++)
 		{
 			if (occupiedStreamChannels.find(i) == occupiedStreamChannels.end())
@@ -2572,16 +2926,6 @@ private:
 			return result;
 		}
 
-		la::avdecc::controller::model::ConfigurationNode configurationNode;
-		try
-		{
-			configurationNode = controlledEntity->getCurrentConfigurationNode();
-		}
-		catch (la::avdecc::controller::ControlledEntity::Exception const&)
-		{
-			return result;
-		}
-
 		auto outputConnections = getAllStreamOutputConnections(talkerEntityId);
 
 		for (auto const& connection : outputConnections)
@@ -2596,271 +2940,70 @@ private:
 		return result;
 	}
 
-	/**
-	* Finds a free or reusable stream connection to setup the channel connection with. (In the case both streams are redundant, multiple will be returned)
-	* If a stream is connected to an other listener, the stream port may still be reused for a different device, if it contains the same cluster channel.
-	*
-	* Example:
-	*
-	*	Entity 1		Entity 2
-	*	C1 - SO  -----> SI - C2
-	*			 \
-	*			  \		Entity 3
-	*			   `--> SI - C4
-	*
-	* C  = Cluster
-	* SO = Stream Output
-	* SI = Stream Input
-	* -  = Cluster to Stream Port Channel Mapping or vice versa
-	* -> = Stream Connection
-	*/
-	FindStreamConnectionResult findAvailableStreamConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::ClusterIndex talkerClusterOffset, uint16_t talkerClusterChannel, la::avdecc::entity::model::ClusterIndex listenerClusterOffset, uint16_t listenerClusterChannel, StreamConnections newStreamConnections, bool allowRemovalOfUnusedAudioMappings) const noexcept
+	StreamConnections getPossibleAudioStreamConnectionsBetweenDevices(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId) const noexcept
 	{
-		FindStreamConnectionResult defaultResult;
+		StreamConnections result;
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
+		auto controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
+
+		if (!controlledTalkerEntity || !controlledListenerEntity)
+		{
+			return result;
+		}
+		if (!controlledTalkerEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) || !controlledListenerEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+		{
+			return result;
+		}
+
+		la::avdecc::controller::model::ConfigurationNode talkerConfigurationNode;
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
-			auto controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
-			if (!controlledTalkerEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
-			{
-				return defaultResult;
-			}
-			if (!controlledListenerEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
-			{
-				return defaultResult;
-			}
-
-			auto const buildResult = [this, talkerEntityId, listenerEntityId](la::avdecc::controller::model::StreamOutputNode talkerStreamOutput, la::avdecc::controller::model::StreamInputNode listenerStreamInput, uint16_t channel) -> FindStreamConnectionResult
-			{
-				FindStreamConnectionResult result;
-				// already included in redundant list:
-				result.connectionsToCreate.push_back(std::make_tuple(talkerStreamOutput.descriptorIndex, listenerStreamInput.descriptorIndex, channel));
-				if (talkerStreamOutput.isRedundant && listenerStreamInput.isRedundant)
-				{
-					auto redundantOutputStreams = getRedundantStreamOutputsForPrimary(talkerEntityId, talkerStreamOutput.descriptorIndex);
-					auto redundantInputStreams = getRedundantStreamInputsForPrimary(listenerEntityId, listenerStreamInput.descriptorIndex);
-
-					auto redundantOutputStreamsIterator = redundantOutputStreams.begin();
-					auto redundantInputStreamsIterator = redundantInputStreams.begin();
-					while (redundantOutputStreamsIterator != redundantOutputStreams.end() && redundantInputStreamsIterator != redundantInputStreams.end())
-					{
-						if (redundantOutputStreamsIterator->second->descriptorIndex != talkerStreamOutput.descriptorIndex && redundantInputStreamsIterator->second->descriptorIndex != listenerStreamInput.descriptorIndex)
-						{
-							result.connectionsToCreate.push_back(std::make_tuple(redundantOutputStreamsIterator->second->descriptorIndex, redundantInputStreamsIterator->second->descriptorIndex, channel));
-						}
-						redundantOutputStreamsIterator++;
-						redundantInputStreamsIterator++;
-					}
-				}
-				return result;
-			};
-
-			if (controlledTalkerEntity && controlledListenerEntity)
-			{
-				auto const& configTalker = controlledTalkerEntity->getCurrentConfigurationNode();
-
-				for (auto const& streamOutputKV : configTalker.streamOutputs)
-				{
-					if (streamOutputKV.second.dynamicModel)
-					{
-						auto const streamFormatTalker = streamOutputKV.second.dynamicModel->streamInfo.streamFormat;
-
-						// check if the stream has the correct format
-						if (supportsStreamFormat(streamOutputKV.second.staticModel->formats, la::avdecc::entity::model::StreamFormatInfo::Type::AAF))
-						{
-							auto const& configListener = controlledListenerEntity->getCurrentConfigurationNode();
-							for (auto const& streamInputKV : configListener.streamInputs) // TODO skip redundant secondary...
-							{
-								if (streamInputKV.second.dynamicModel)
-								{
-									auto const streamFormatListener = streamInputKV.second.dynamicModel->streamInfo.streamFormat;
-									auto streamConfigurationMatches = streamFormatTalker == streamFormatListener;
-									auto compatiblePair = anyStreamFormatCompatible(streamOutputKV.second.staticModel->formats, streamInputKV.second.staticModel->formats, la::avdecc::entity::model::StreamFormatInfo::Type::AAF);
-
-									// check if the stream has the correct format && the stream is not connected yet...
-									// if not check if has compatible formats, so that it could be reconfigured. (commentet out, to wait for state machine implementation: compatiblePair)
-									if ((streamConfigurationMatches || compatiblePair) && streamInputKV.second.dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::NotConnected)
-									{
-										// check if the newly created streams already contain this one.
-										auto const& newStreamConnectionIt = std::find(newStreamConnections.begin(), newStreamConnections.end(), std::make_pair(streamOutputKV.first, streamInputKV.first));
-										if (newStreamConnectionIt != newStreamConnections.end())
-										{
-											// this entity input stream is already connected
-											continue;
-										}
-
-										// find a stream channel that contains the right audio channel already
-										auto fittingChannelsTalker = getAssignedChannelsOnTalkerStream(talkerEntityId, streamOutputKV.first, talkerClusterOffset, talkerClusterChannel);
-										auto fittingChannelsListener = getAssignedChannelsOnListenerStream(listenerEntityId, streamInputKV.first, listenerClusterOffset, listenerClusterChannel);
-
-										// find all unassigned channels on the stream input/output
-										auto freeChannelsTalker = getUnassignedChannelsOnTalkerStream(talkerEntityId, streamOutputKV.first);
-										auto freeChannelsListener = getUnassignedChannelsOnListenerStream(listenerEntityId, streamInputKV.first);
-
-										// also check if we would create an unwanted connection
-										auto assignedChannelsTalker = getAssignedChannelsOnTalkerStream(talkerEntityId, streamOutputKV.first);
-										auto assignedChannelsListener = getAssignedChannelsOnListenerStream(listenerEntityId, streamInputKV.first);
-
-										std::vector<uint16_t> unwantedConnections;
-										set_intersection(assignedChannelsTalker.begin(), assignedChannelsTalker.end(), assignedChannelsListener.begin(), assignedChannelsListener.end(), back_inserter(unwantedConnections));
-
-										// check if there is a talker channel that can be used
-										std::vector<uint16_t> intersectionTalkerReuse;
-										set_intersection(fittingChannelsTalker.begin(), fittingChannelsTalker.end(), freeChannelsListener.begin(), freeChannelsListener.end(), back_inserter(intersectionTalkerReuse));
-
-										// check if there is a listener channel that can be used
-										std::vector<uint16_t> intersectionListenerReuse;
-										set_intersection(fittingChannelsListener.begin(), fittingChannelsListener.end(), freeChannelsTalker.begin(), freeChannelsTalker.end(), back_inserter(intersectionListenerReuse));
-
-										// check if there is a talker & listener channel pair that can be used
-										std::vector<uint16_t> intersectionTalkerAndListenerReuse;
-										set_intersection(fittingChannelsListener.begin(), fittingChannelsListener.end(), fittingChannelsTalker.begin(), fittingChannelsTalker.end(), back_inserter(intersectionTalkerAndListenerReuse));
-
-										if (!intersectionTalkerAndListenerReuse.empty())
-										{
-											// both mappings exist already, only the stream connection is missing
-											unwantedConnections.erase(std::remove(unwantedConnections.begin(), unwantedConnections.end(), intersectionTalkerAndListenerReuse.at(0)), unwantedConnections.end());
-
-											if (unwantedConnections.empty())
-											{
-												if (streamConfigurationMatches)
-												{
-													return buildResult(streamOutputKV.second, streamInputKV.second, intersectionTalkerAndListenerReuse.at(0));
-												}
-												else if (defaultResult.connectionsToCreate.empty())
-												{
-													// iterate over the other options to see if a reconfiguration is really necessary and take this as second option:
-													defaultResult = buildResult(streamOutputKV.second, streamInputKV.second, intersectionTalkerAndListenerReuse.at(0));
-												}
-											}
-										}
-
-										if (!intersectionTalkerReuse.empty() && unwantedConnections.empty())
-										{
-											if (streamConfigurationMatches)
-											{
-												// reuse the talker mapping
-												return buildResult(streamOutputKV.second, streamInputKV.second, intersectionTalkerReuse.at(0));
-											}
-											else if (defaultResult.connectionsToCreate.empty())
-											{
-												// iterate over the other options to see if a reconfiguration is really necessary and take this as second option:
-												defaultResult = buildResult(streamOutputKV.second, streamInputKV.second, intersectionTalkerReuse.at(0));
-											}
-										}
-										else if (!intersectionListenerReuse.empty() && unwantedConnections.empty())
-										{
-											if (streamConfigurationMatches)
-											{
-												// reuse the listener mapping
-												return buildResult(streamOutputKV.second, streamInputKV.second, intersectionListenerReuse.at(0));
-											}
-											else if (defaultResult.connectionsToCreate.empty())
-											{
-												// iterate over the other options to see if a reconfiguration is really necessary and take this as second option:
-												defaultResult = buildResult(streamOutputKV.second, streamInputKV.second, intersectionListenerReuse.at(0));
-											}
-										}
-										else
-										{
-											// no channel is already existant/can be reused, check if we can assign the channels accordingly.
-											std::vector<uint16_t> intersectionFree;
-											set_intersection(freeChannelsListener.begin(), freeChannelsListener.end(), freeChannelsTalker.begin(), freeChannelsTalker.end(), back_inserter(intersectionFree));
-
-											// insert the talker channel connection that would be created:
-											if (!intersectionFree.empty())
-											{
-												assignedChannelsTalker.insert(intersectionFree.at(0));
-											}
-
-											// append the currently existing stream connections to the same device (not in use currently)
-											//if (!allowRemovalOfUnusedAudioMappings)
-											{
-												auto assignedChannelsListenerOnExistingStreamConnections = getAssignedChannelsOnConnectedListenerStreams(talkerEntityId, listenerEntityId, streamOutputKV.first);
-												assignedChannelsListener.insert(assignedChannelsListenerOnExistingStreamConnections.begin(), assignedChannelsListenerOnExistingStreamConnections.end());
-											}
-
-											std::vector<uint16_t> unwantedConnectionsAfterAssignments;
-											set_intersection(assignedChannelsTalker.begin(), assignedChannelsTalker.end(), assignedChannelsListener.begin(), assignedChannelsListener.end(), back_inserter(unwantedConnectionsAfterAssignments));
-
-											if (!intersectionFree.empty() && unwantedConnectionsAfterAssignments.empty())
-											{
-												if (streamConfigurationMatches)
-												{
-													return buildResult(streamOutputKV.second, streamInputKV.second, intersectionFree.at(0));
-												}
-												else if (defaultResult.connectionsToCreate.empty())
-												{
-													defaultResult = buildResult(streamOutputKV.second, streamInputKV.second, intersectionFree.at(0));
-												}
-											}
-											else if (!unwantedConnectionsAfterAssignments.empty())
-											{
-												// check if the unwanted connection - listener dynamic mappings can be removed safely
-												// it can be removed if no other entity is connected to it:
-												bool allListenerMappingsCanBeRemoved = true;
-												if (streamInputKV.second.dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::NotConnected)
-												{
-													allListenerMappingsCanBeRemoved = true;
-												}
-
-												if (allListenerMappingsCanBeRemoved)
-												{
-													if (allowRemovalOfUnusedAudioMappings)
-													{
-														uint16_t streamChannelToUse = 0;
-														if (!fittingChannelsTalker.empty())
-														{
-															streamChannelToUse = *fittingChannelsTalker.begin();
-														}
-														else if (!freeChannelsTalker.empty())
-														{
-															streamChannelToUse = *freeChannelsTalker.begin();
-														}
-
-														auto result = buildResult(streamOutputKV.second, streamInputKV.second, streamChannelToUse);
-														//the mapping can be removed:
-														for (auto unwantedConnectionChannel : unwantedConnectionsAfterAssignments)
-														{
-															auto unwantedMappingsMatch = getMappingsFromStreamInputChannel(listenerEntityId, streamInputKV.first, unwantedConnectionChannel);
-
-															// append the found mappings
-															result.listenerDynamicMappingsToRemove.insert(result.listenerDynamicMappingsToRemove.end(), unwantedMappingsMatch.begin(), unwantedMappingsMatch.end());
-														}
-														if (streamConfigurationMatches)
-														{
-															return result;
-														}
-														else if (defaultResult.connectionsToCreate.empty())
-														{
-															defaultResult = result;
-														}
-													}
-													else if (defaultResult.connectionsToCreate.empty()) // check if we got a stream reconfiguration option
-													{
-														defaultResult.unallowedRemovalOfUnusedAudioMappingsNecessary = true;
-													}
-												}
-											}
-										}
-									}
-									else
-									{
-										// stream already occupied or incompatible (even after reconfiguring)
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+			talkerConfigurationNode = controlledTalkerEntity->getCurrentConfigurationNode();
 		}
-		catch (la::avdecc::Exception e)
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{
+			return result;
 		}
-		// no unconnected stream with an unoccupied channel could be found
-		return defaultResult;
+
+		la::avdecc::controller::model::ConfigurationNode listenerConfigurationNode;
+		try
+		{
+			listenerConfigurationNode = controlledListenerEntity->getCurrentConfigurationNode();
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
+		{
+			return result;
+		}
+
+		// Find all stream output & input combinations that are stream format compatible or can be made compatible (support AAF)
+		// and are not in use already
+		for (auto const& streamOutputKV : talkerConfigurationNode.streamOutputs)
+		{
+			if (!supportsStreamFormat(streamOutputKV.second.staticModel->formats, la::avdecc::entity::model::StreamFormatInfo::Type::AAF))
+			{
+				continue;
+			}
+			for (auto const& streamInputKV : listenerConfigurationNode.streamInputs)
+			{
+				auto const* const streamInputDymaicModel = streamInputKV.second.dynamicModel;
+				if (streamInputDymaicModel)
+				{
+					if (streamInputDymaicModel->connectionState.state != la::avdecc::entity::model::StreamConnectionState::State::NotConnected)
+					{
+						continue; // skip if connected or fast connecting
+					}
+					if (!supportsStreamFormat(streamInputKV.second.staticModel->formats, la::avdecc::entity::model::StreamFormatInfo::Type::AAF))
+					{
+						continue;
+					}
+
+					result.push_back(std::make_pair(streamOutputKV.first, streamInputKV.first));
+				}
+			}
+		}
+
+		return result;
 	}
 
 	/**
@@ -3140,7 +3283,7 @@ private:
 	/**
 	* Returns the count of channels a stream supports.
 	*/
-	uint16_t getStreamChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex streamIndex) const noexcept
+	uint16_t getStreamInputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex streamIndex) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
@@ -3171,174 +3314,36 @@ private:
 	}
 
 	/**
-	* Finds a free or reusable stream connection to setup the channel connection with.
-	* The stream is reused in the case the needed talker cluster is already in use in some stream channel.
-	* @return Tuple with: <uint16_t: the channel to use; bool: the talker channel mapping already exists; bool: the listener channel mapping already exists>
+	* Returns the count of channels a stream supports.
 	*/
-	std::optional<std::tuple<uint16_t, bool, bool>> findFreeOrReuseChannelOnExistingStreamConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex talkerStreamIndex, la::avdecc::entity::model::ClusterIndex talkerClusterOffset, uint16_t talkerClusterChannel, StreamChannelMappings const& newMappingsTalker, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex listenerStreamIndex, la::avdecc::entity::model::ClusterIndex listenerClusterOffset, uint16_t listenerClusterChannel, StreamChannelMappings const& newMappingsListener, std::optional<uint16_t> listenerStreamChannelCountAfterFormatChange = std::nullopt) const noexcept
+	uint16_t getStreamOutputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex streamIndex) const noexcept
 	{
-		auto existingFittingTalkerMappings = getAssignedChannelsOnTalkerStream(talkerEntityId, talkerStreamIndex, talkerClusterOffset, talkerClusterChannel);
-		auto const& newMappingsTalkerIt = newMappingsTalker.find(talkerStreamIndex);
-		auto const& newMappingsListenerIt = newMappingsListener.find(listenerStreamIndex);
-		if (newMappingsTalkerIt != newMappingsTalker.end())
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(entityId);
+
+		if (!controlledEntity)
 		{
-			for (auto const& mappingWrapper : newMappingsTalkerIt->second)
-			{
-				for (auto const& mapping : mappingWrapper.second)
-				{
-					if (mapping.clusterOffset == talkerClusterOffset && mapping.clusterChannel == talkerClusterChannel)
-					{
-						existingFittingTalkerMappings.insert(mapping.streamChannel);
-					}
-				}
-			}
+			return 0;
+		}
+		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+		{
+			return 0;
 		}
 
-		if (!existingFittingTalkerMappings.empty())
+		la::avdecc::controller::model::ConfigurationNode configurationNode;
+		try
 		{
-			// reuse existing channel
-			return std::make_tuple(*existingFittingTalkerMappings.begin(), true, false);
+			configurationNode = controlledEntity->getCurrentConfigurationNode();
 		}
-		else
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{
-			// search for listener channel mapping that could be reused.
-			{
-				auto existingFittingListenerMappings = getAssignedChannelsOnListenerStream(listenerEntityId, listenerStreamIndex, listenerClusterOffset, listenerClusterChannel);
-
-				if (newMappingsListenerIt != newMappingsListener.end())
-				{
-					for (auto const& mappingWrapper : newMappingsListenerIt->second)
-					{
-						for (auto const& mapping : mappingWrapper.second)
-						{
-							if (mapping.clusterOffset == listenerClusterOffset && mapping.clusterChannel == listenerClusterChannel)
-							{
-								existingFittingListenerMappings.insert(mapping.streamChannel);
-							}
-						}
-					}
-				}
-
-				auto unassignedTalkerChannels = getUnassignedChannelsOnTalkerStream(talkerEntityId, talkerStreamIndex);
-				if (!existingFittingListenerMappings.empty())
-				{
-					std::vector<uint16_t> intersectionReuseListenerMapping;
-					set_intersection(existingFittingListenerMappings.begin(), existingFittingListenerMappings.end(), unassignedTalkerChannels.begin(), unassignedTalkerChannels.end(), back_inserter(intersectionReuseListenerMapping));
-					if (!intersectionReuseListenerMapping.empty())
-					{
-						// remove the reusage if another listener is connected to the streamOutput and uses the same stream channel.
-						auto streamOutputConnections = getStreamOutputConnections(talkerEntityId, talkerStreamIndex);
-						for (auto const& streamOutputConnection : streamOutputConnections)
-						{
-							if (streamOutputConnection.listenerStream.entityID == listenerEntityId && streamOutputConnection.listenerStream.streamIndex == listenerStreamIndex)
-							{
-								// it's the connection we're trying to reuse
-								continue;
-							}
-
-							auto listenerOccupiedChannels = getAssignedChannelsOnListenerStream(streamOutputConnection.listenerStream.entityID, streamOutputConnection.listenerStream.streamIndex);
-							for (auto const& listenerOccupiedChannel : listenerOccupiedChannels)
-							{
-								auto it = std::find(intersectionReuseListenerMapping.begin(), intersectionReuseListenerMapping.end(), listenerOccupiedChannel);
-								if (it != intersectionReuseListenerMapping.end() && listenerClusterOffset != *it)
-								{
-									intersectionReuseListenerMapping.erase(it);
-								}
-							}
-						}
-					}
-
-					if (!intersectionReuseListenerMapping.empty())
-					{
-						return std::make_tuple(intersectionReuseListenerMapping.at(0), false, true);
-					}
-				}
-			}
-
-			// if we get here there is no fitting channel mapping on either side (listener or talker).
-			{
-				auto freeStreamSlotsSource = getUnassignedChannelsOnTalkerStream(talkerEntityId, talkerStreamIndex);
-
-				// filter out mappings that will be created
-				if (newMappingsTalkerIt != newMappingsTalker.end())
-				{
-					for (auto const& mappingWrapper : newMappingsTalkerIt->second)
-					{
-						for (auto const& mapping : mappingWrapper.second)
-						{
-							auto const& slotIt = freeStreamSlotsSource.find(mapping.streamChannel);
-							if (slotIt != freeStreamSlotsSource.end())
-							{
-								freeStreamSlotsSource.erase(mapping.streamChannel);
-							}
-						}
-					}
-				}
-
-				if (!freeStreamSlotsSource.empty())
-				{
-					// find new channel
-					// the following has to be adjusted to reflect stream format changes:
-					std::set<uint16_t> freeStreamSlotsTarget;
-
-					if (listenerStreamChannelCountAfterFormatChange) // check optional param
-					{
-						for (int i = 0; i < *listenerStreamChannelCountAfterFormatChange; i++)
-						{
-							freeStreamSlotsTarget.insert(i);
-						}
-					}
-					else
-					{
-						freeStreamSlotsTarget = getUnassignedChannelsOnListenerStream(listenerEntityId, listenerStreamIndex);
-					}
-
-					// filter out mappings that will be created
-					if (newMappingsListenerIt != newMappingsListener.end())
-					{
-						for (auto const& mappingWrapper : newMappingsListenerIt->second)
-						{
-							for (auto const& mapping : mappingWrapper.second)
-							{
-								auto const& slotIt = freeStreamSlotsTarget.find(mapping.streamChannel);
-								if (slotIt != freeStreamSlotsTarget.end())
-								{
-									freeStreamSlotsTarget.erase(mapping.streamChannel);
-								}
-							}
-						}
-					}
-
-					std::vector<uint16_t> intersection;
-					set_intersection(freeStreamSlotsSource.begin(), freeStreamSlotsSource.end(), freeStreamSlotsTarget.begin(), freeStreamSlotsTarget.end(), back_inserter(intersection));
-
-					auto streamOutputConnections = getStreamOutputConnections(talkerEntityId, talkerStreamIndex);
-					for (auto const& streamOutputConnection : streamOutputConnections)
-					{
-						if (intersection.empty())
-						{
-							break;
-						}
-						auto listenerOccupiedChannels = getAssignedChannelsOnListenerStream(streamOutputConnection.listenerStream.entityID, streamOutputConnection.listenerStream.streamIndex);
-						for (auto const& listenerOccupiedChannel : listenerOccupiedChannels)
-						{
-							auto it = std::find(intersection.begin(), intersection.end(), listenerOccupiedChannel);
-							if (it != intersection.end())
-							{
-								intersection.erase(it);
-							}
-						}
-					}
-
-					if (!intersection.empty())
-					{
-						return std::make_tuple(intersection.at(0), false, false);
-					}
-				}
-			}
+			return 0;
 		}
 
-		return std::nullopt;
+		// get the stream channel count:
+		auto const& streamNode = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, streamIndex);
+		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamInfo.streamFormat);
+		return sfi->getChannelsCount();
 	}
 };
 

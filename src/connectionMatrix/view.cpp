@@ -110,20 +110,39 @@ void View::onIntersectionClicked(QModelIndex const& index)
 	auto& manager = avdecc::ControllerManager::getInstance();
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
-	auto const handleChannelCreationResult = [this](avdecc::ChannelConnectionManager::ChannelConnectResult channelConnectResult, std::function<void()> callbackTryAgainElevatedRights)
+	auto const handleChannelCreationResult = [this](avdecc::ChannelConnectionManager::ChannelConnectResult channelConnectResult, bool allowTalkerMappingChanges, bool allowListenerMappingRemoval, std::function<void(bool, bool)> callbackTryAgainElevatedRights)
 	{
 		switch (channelConnectResult)
 		{
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary:
 			{
-				la::avdecc::utils::invokeProtectedHandler(callbackTryAgainElevatedRights);
+				auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
+				if (result == QMessageBox::StandardButton::Yes)
+				{
+					allowListenerMappingRemoval = true;
+					callbackTryAgainElevatedRights(allowTalkerMappingChanges, allowListenerMappingRemoval);
+				}
 				break;
+			}
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::NeedsTalkerMappingAdjustment:
+			{
+				auto result = QMessageBox::question(this, "", "To make the required changes it is necessary to temporarily disconnect streams which might lead to audio interruptions! Continue?");
+				if (result == QMessageBox::StandardButton::Yes)
+				{
+					// yes was chosen, make call again, with force override flag
+					allowTalkerMappingChanges = true;
+					callbackTryAgainElevatedRights(allowTalkerMappingChanges, allowListenerMappingRemoval);
+					break;
+				}
 			}
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::Impossible:
 				QMessageBox::information(this, "", "The connection couldn't be created because all compatible streams are already occupied.");
 				break;
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::Error:
 				QMessageBox::information(this, "", "The connection couldn't be created. Unknown error occured.");
+				break;
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::Unsupported:
+				QMessageBox::information(this, "", "The connection couldn't be created. Unsupported device.");
 				break;
 			default:
 				break;
@@ -259,18 +278,13 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				}
 
 				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-				handleChannelCreationResult(error,
-					[=]()
-					{
-						auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-						auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
-						if (result == QMessageBox::StandardButton::Yes)
-						{
-							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-							handleChannelCreationResult(errorSecondTry, {});
-						}
-					});
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, false, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -321,18 +335,13 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				}
 
 				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-				handleChannelCreationResult(error,
-					[=]()
-					{
-						auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-						auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
-						if (result == QMessageBox::StandardButton::Yes)
-						{
-							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-							handleChannelCreationResult(errorSecondTry, {});
-						}
-					});
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, false, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -348,19 +357,15 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			}
 			else
 			{
-				auto error = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, false);
-				handleChannelCreationResult(error,
-					[=]()
-					{
-						auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-						auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
-						if (result == QMessageBox::StandardButton::Yes)
-						{
-							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, true);
-							handleChannelCreationResult(errorSecondTry, {});
-						}
-					});
+				auto error = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification);
+
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, false, elevatedRightsCallback);
 			}
 			break;
 		}
