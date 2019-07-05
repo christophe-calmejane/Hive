@@ -434,28 +434,28 @@ public:
 				}
 				switch (i->second.errorType)
 				{
-					case avdecc::mediaClock::CommandExecutionError::LockedByOther:
+					case avdecc::commandChain::CommandExecutionError::LockedByOther:
 						errors += "Entity is locked.";
 						break;
-					case avdecc::mediaClock::CommandExecutionError::AcquiredByOther:
+					case avdecc::commandChain::CommandExecutionError::AcquiredByOther:
 						errors += "Entity is aquired by an other controller.";
 						break;
-					case avdecc::mediaClock::CommandExecutionError::Timeout:
+					case avdecc::commandChain::CommandExecutionError::Timeout:
 						errors += "Command timed out. Entity might be offline.";
 						break;
-					case avdecc::mediaClock::CommandExecutionError::EntityError:
+					case avdecc::commandChain::CommandExecutionError::EntityError:
 						errors += "Entity error. Operation might not be supported.";
 						break;
-					case avdecc::mediaClock::CommandExecutionError::NetworkIssue:
+					case avdecc::commandChain::CommandExecutionError::NetworkIssue:
 						errors += "Network error.";
 						break;
-					case avdecc::mediaClock::CommandExecutionError::CommandFailure:
+					case avdecc::commandChain::CommandExecutionError::CommandFailure:
 						errors += "Command failure.";
 						break;
-					case avdecc::mediaClock::CommandExecutionError::NoMediaClockInputAvailable:
+					case avdecc::commandChain::CommandExecutionError::NoMediaClockInputAvailable:
 						errors += "Device does not have any compatible media clock inputs.";
 						break;
-					case avdecc::mediaClock::CommandExecutionError::NoMediaClockOutputAvailable:
+					case avdecc::commandChain::CommandExecutionError::NoMediaClockOutputAvailable:
 						errors += "Device does not have any compatible media clock outputs.";
 						break;
 					default:

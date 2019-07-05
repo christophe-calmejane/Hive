@@ -153,7 +153,7 @@ struct SourceChannelConnections
 
 struct CreateConnectionsInfo
 {
-	mediaClock::CommandExecutionErrors connectionCreationErrors;
+	commandChain::CommandExecutionErrors connectionCreationErrors;
 };
 
 // **************************************************************
