@@ -22,7 +22,7 @@
 #include <QSortFilterProxyModel>
 #include <QScopedPointer>
 
-// Model that wrap and filter an underlying NetworkInterfaceModel filtering interfaces according to the settings
+// Model that wraps, sorts and filters an underlying NetworkInterfaceModel filtering interfaces according to the settings
 class ActiveNetworkInterfaceModelPrivate;
 class ActiveNetworkInterfaceModel : public QSortFilterProxyModel
 {

@@ -214,6 +214,11 @@ QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
 			}
 			case Qt::UserRole:
 				return QString::fromStdString(d->_interfaces.at(idx).id);
+			case Qt::WhatsThisRole:
+			{
+				auto const& intfc = d->_interfaces.at(idx);
+				return QString{ "%1#%2" }.arg(la::avdecc::utils::to_integral(intfc.interfaceType)).arg(intfc.id.c_str());
+			}
 			case Qt::DecorationRole:
 				return avdecc::helper::interfaceTypeIcon(d->_interfaces.at(idx).interfaceType);
 		}

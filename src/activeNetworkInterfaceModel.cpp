@@ -80,7 +80,7 @@ ActiveNetworkInterfaceModel::ActiveNetworkInterfaceModel(QObject* parent)
 
 	setSourceModel(&d_ptr->_model);
 
-	setSortRole(Qt::UserRole);
+	setSortRole(Qt::WhatsThisRole);
 	sort(0, Qt::AscendingOrder);
 }
 
