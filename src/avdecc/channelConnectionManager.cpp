@@ -486,6 +486,36 @@ private:
 	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
 	* Assumes the that the given StreamIdentification is valid.
 	*/
+	virtual bool isOutputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification const& streamIdentification) const noexcept
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
+		if (controlledEntity)
+		{
+			auto const& configNode = controlledEntity->getConfigurationNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex);
+			auto const& streamOutputNode = configNode.streamOutputs.at(streamIdentification.streamIndex);
+			if (!streamOutputNode.isRedundant)
+			{
+				return true;
+			}
+			else
+			{
+				for (auto const& redundantStreamOutput : configNode.redundantStreamOutputs)
+				{
+					if (redundantStreamOutput.second.primaryStream->descriptorIndex == streamIdentification.streamIndex)
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	* Checks if the given stream is the primary of a redundant stream pair or a non redundant stream.
+	* Assumes the that the given StreamIdentification is valid.
+	*/
 	virtual bool isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification const& streamIdentification) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -1536,21 +1566,6 @@ private:
 					}
 				}
 
-				// IF ANOTHER LISTENER'S MAPPINGS WILL BE OVERWRITTEN: remove listener mappings that will be overwritten, but only after user confirmation
-				/*auto connectedListenerStreams = controlledListenerEntity->
-				for (auto const& connectedListenerStream : connectedListenerStreams)
-				{
-					auto assignedStreamChannels = getAssignedChannelsOnConnectedListenerStreams(talkerEntityId, connectedListenerStream.listenerStream.entityID, streamChannelInfoToUse->talkerPrimaryStreamIndex);
-					for (auto assignedChannel : assignedStreamChannels)
-					{
-						auto unwantedMappings = getMappingsFromStreamInputChannel(connectedListenerStream.listenerStream.entityID, connectedListenerStream.listenerStream.streamIndex, assignedChannel);
-						if (!unwantedMappings.empty() && !allowRemovalOfUnusedAudioMappings)
-						{
-							return CheckChannelCreationsPossibleResult{ ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary };
-						}
-					}
-				}*/
-
 				// talker mapping
 				if (!streamChannelInfoToUse->reusesTalkerMapping)
 				{
@@ -1593,20 +1608,13 @@ private:
 						}
 					}
 
-					//if (streamChannelInfoToUse->isTalkerDefaultMapped)
-					{
-						// create the listener mapping
-						la::avdecc::entity::model::AudioMapping listenerMapping;
-						listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
-						listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
-						listenerMapping.streamChannel = streamChannelInfoToUse->streamChannel;
-						listenerMapping.streamIndex = streamChannelInfoToUse->listenerPrimaryStreamIndex;
-						insertAudioMapping(newMappingsListener, listenerMapping, *listenerChannelIdentification.streamPortIndex);
-					}
-					//else
-					//{
-					//	// TODO create mapping ??
-					//}
+					// create the listener mapping
+					la::avdecc::entity::model::AudioMapping listenerMapping;
+					listenerMapping.clusterChannel = listenerChannelIdentification.clusterChannel;
+					listenerMapping.clusterOffset = listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster;
+					listenerMapping.streamChannel = streamChannelInfoToUse->streamChannel;
+					listenerMapping.streamIndex = streamChannelInfoToUse->listenerPrimaryStreamIndex;
+					insertAudioMapping(newMappingsListener, listenerMapping, *listenerChannelIdentification.streamPortIndex);
 				}
 
 				auto const& compatibleFormats = findCompatibleStreamPairFormat(talkerEntityId, streamChannelInfoToUse->talkerPrimaryStreamIndex, listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex, la::avdecc::entity::model::StreamFormatInfo::Type::AAF, channelUsageHint);
@@ -1662,18 +1670,14 @@ private:
 		// check the stream connections that have not been created yet
 		auto possibleStreamConnections = getPossibleAudioStreamConnectionsBetweenDevices(talkerEntityId, listenerEntityId);
 
-		// filter out stream connections that are redundant
-		auto primaryPossibleStreamConnection = StreamConnections{};
-		for (auto const& possibleStreamConnection : possibleStreamConnections)
+		// filter out stream connections that are already being created
+		for (auto const& newStreamConnection : newStreamConnections)
 		{
-			// only add if not redundant and isn't already in newStreamConnections
-			if (std::find(newStreamConnections.begin(), newStreamConnections.end(), possibleStreamConnection) == newStreamConnections.end() && isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification{ listenerEntityId, possibleStreamConnection.second }))
-			{
-				primaryPossibleStreamConnection.push_back(possibleStreamConnection);
-			}
+			auto connectionToRemoveIt = std::find(possibleStreamConnections.begin(), possibleStreamConnections.end(), newStreamConnection);
+			possibleStreamConnections.erase(connectionToRemoveIt);
 		}
 
-		for (auto const& streamConnection : primaryPossibleStreamConnection)
+		for (auto const& streamConnection : possibleStreamConnections)
 		{
 			// get all stream channels that could be used for the connection
 			auto const usableChannels = findAllUsableStreamChannelsOnStreamConnection(talkerEntityId, listenerEntityId, streamConnection, false, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newMappingsTalker, newMappingsListener);
@@ -2984,8 +2988,18 @@ private:
 			{
 				continue;
 			}
+			if (!isOutputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification{ talkerEntityId, streamOutputKV.first }))
+			{
+				// skip secundary streams
+				continue;
+			}
 			for (auto const& streamInputKV : listenerConfigurationNode.streamInputs)
 			{
+				if (!isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification{ listenerEntityId, streamInputKV.first }))
+				{
+					// skip secundary streams
+					continue;
+				}
 				auto const* const streamInputDymaicModel = streamInputKV.second.dynamicModel;
 				if (streamInputDymaicModel)
 				{
