@@ -852,6 +852,7 @@ private:
 											connectionInformation->targetStreamPortIndex = streamPortInputKV.first;
 											connectionInformation->isSourceRedundant = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, stream.first).isRedundant;
 											connectionInformation->isTargetRedundant = targetControlledEntity->getStreamInputNode(targetConfigurationNode.descriptorIndex, mapping.streamIndex).isRedundant;
+
 											result->targets.push_back(connectionInformation);
 										}
 									}
@@ -1087,6 +1088,7 @@ private:
 											connectionInformation->isTargetRedundant = connectionInformation->targetVirtualIndex != std::nullopt;
 
 											result->targets.push_back(connectionInformation);
+											return result; // there can only ever be one channel connected on the listener side
 										}
 									}
 									else
@@ -1096,8 +1098,16 @@ private:
 										{
 											// if we land in here the primary is not connected, but a secundary is.
 											auto primaryTalkerStreamIndex = streamIndex->second;
+
 											if (mapping.streamIndex == connectedTalkerStreamIndex && mapping.streamChannel == sourceStreamChannel)
 											{
+												auto primaryStreamIndex = relevantPrimaryStreamIndexes.find(primaryTalkerStreamIndex);
+												auto redundantIndices = primaryStreamIndex->second;
+												for (auto const redundantIndex : redundantIndices)
+												{
+													relevantRedundantStreamIndexes.erase(redundantIndex);
+												}
+
 												la::avdecc::entity::model::StreamIdentification sourceStreamIdentification{ entityId, stream.first };
 												la::avdecc::entity::model::StreamIdentification targetStreamIdentification{ connectedTalker, connectedTalkerStreamIndex };
 
@@ -1128,6 +1138,7 @@ private:
 												connectionInformation->isTargetRedundant = connectionInformation->targetVirtualIndex != std::nullopt;
 
 												result->targets.push_back(connectionInformation);
+												return result; // there can only ever be one channel connected on the listener side
 											}
 										}
 									}
