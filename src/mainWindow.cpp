@@ -421,11 +421,24 @@ void MainWindowImpl::loadSettings()
 	// Check if currently saved ProtocolInterface is supported
 	auto protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
-	if (!supportedTypes.test(protocolType) && !supportedTypes.empty())
+	if (!supportedTypes.test(protocolType))
 	{
-		// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
-		protocolType = *supportedTypes.begin();
-		settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+		auto const wasConfigured = protocolType != la::avdecc::protocol::ProtocolInterface::Type::None;
+		// Previous ProtocolInterface Type is no longer supported
+		if (wasConfigured)
+		{
+			LOG_HIVE_WARN(QString("Previously configured Network Protocol is no longer supported: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
+		}
+		if (!supportedTypes.empty())
+		{
+			// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
+			protocolType = *supportedTypes.begin();
+			if (wasConfigured)
+			{
+				LOG_HIVE_WARN(QString("Forcing new Network Protocol: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
+			}
+			settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+		}
 	}
 
 	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
