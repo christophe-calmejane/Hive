@@ -760,7 +760,6 @@ private:
 			// one of the given parameters is invalid.
 			return result;
 		}
-
 		std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
 		for (auto const& mapping : mappings)
 		{
@@ -769,6 +768,8 @@ private:
 				sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
 			}
 		}
+
+		std::set<std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex, uint16_t>> processedListenerChannels;
 
 		auto const& streamConnections = getAllStreamOutputConnections(entityId);
 
@@ -795,16 +796,29 @@ private:
 					{
 						auto const& targetConfigurationNode = targetControlledEntity->getConfigurationNode(targetEntityNode.dynamicModel->currentConfiguration);
 
-						std::set<la::avdecc::entity::model::StreamIndex> relevantStreamIndexes;
-						for (auto const& redundantStreamOutput : targetConfigurationNode.redundantStreamInputs)
+						std::map<la::avdecc::entity::model::StreamIndex, std::vector<la::avdecc::entity::model::StreamIndex>> relevantPrimaryStreamIndexes;
+						std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex> relevantRedundantStreamIndexes;
+
+						// if the primary is not connected but the secondary is, the channel connection is still returned
+						for (auto const& redundantStreamInput : targetConfigurationNode.redundantStreamInputs)
 						{
-							relevantStreamIndexes.insert(redundantStreamOutput.second.primaryStream->descriptorIndex);
-						}
-						for (auto const& streamOutput : targetConfigurationNode.streamInputs)
-						{
-							if (!streamOutput.second.isRedundant)
+							auto primaryStreamIndex = redundantStreamInput.second.primaryStream->descriptorIndex;
+							std::vector<la::avdecc::entity::model::StreamIndex> redundantStreams;
+							for (auto const& [redundantStreamIndex, redundantStream] : redundantStreamInput.second.redundantStreams)
 							{
-								relevantStreamIndexes.insert(streamOutput.first);
+								if (redundantStreamIndex != primaryStreamIndex)
+								{
+									redundantStreams.push_back(redundantStreamIndex);
+									relevantRedundantStreamIndexes.emplace(redundantStreamIndex, primaryStreamIndex);
+								}
+							}
+							relevantPrimaryStreamIndexes.emplace(primaryStreamIndex, redundantStreams);
+						}
+						for (auto const& streamInput : targetConfigurationNode.streamInputs)
+						{
+							if (!streamInput.second.isRedundant)
+							{
+								relevantPrimaryStreamIndexes.emplace(streamInput.first, std::vector<la::avdecc::entity::model::StreamIndex>{});
 							}
 						}
 
@@ -818,21 +832,43 @@ private:
 									auto const& targetMappings = streamPortInputKV.second.dynamicModel->dynamicAudioMap;
 									for (auto const& mapping : targetMappings)
 									{
-										if (relevantStreamIndexes.find(mapping.streamIndex) == relevantStreamIndexes.end())
+										auto listenerClusterChannel = std::make_tuple(streamConnection.listenerStream.entityID, mapping.clusterOffset, mapping.clusterChannel);
+										if (processedListenerChannels.find(listenerClusterChannel) != processedListenerChannels.end())
 										{
 											continue;
 										}
+
 										// the source stream channel is connected to the corresponding target stream channel.
 										if (mapping.streamIndex == streamConnection.listenerStream.streamIndex && mapping.streamChannel == sourceStreamChannel)
 										{
 											auto connectionInformation = std::make_shared<TargetConnectionInformation>();
 
-											connectionInformation->targetEntityId = streamConnection.listenerStream.entityID;
-											connectionInformation->streamChannel = sourceStreamChannel;
-											connectionInformation->sourceStreamIndex = streamConnection.talkerStream.streamIndex;
-											connectionInformation->targetStreamIndex = streamConnection.listenerStream.streamIndex;
 											connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(streamConnection.talkerStream);
 											connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(streamConnection.listenerStream);
+
+											auto primaryListenerStreamIndex{ 0u };
+											auto primaryTalkerStreamIndex{ 0u };
+											auto primaryStreamIndexIt = relevantPrimaryStreamIndexes.find(mapping.streamIndex);
+											if (primaryStreamIndexIt != relevantPrimaryStreamIndexes.end())
+											{
+												primaryListenerStreamIndex = primaryStreamIndexIt->first;
+												primaryTalkerStreamIndex = streamConnection.talkerStream.streamIndex;
+											}
+											else
+											{
+												auto streamIndex = relevantRedundantStreamIndexes.find(mapping.streamIndex);
+												if (streamIndex != relevantRedundantStreamIndexes.end())
+												{
+													// if we land in here the primary is not connected, but a secundary is.
+													primaryListenerStreamIndex = streamIndex->second;
+													primaryTalkerStreamIndex = controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
+												}
+											}
+
+											connectionInformation->targetEntityId = streamConnection.listenerStream.entityID;
+											connectionInformation->streamChannel = sourceStreamChannel;
+											connectionInformation->sourceStreamIndex = primaryTalkerStreamIndex;
+											connectionInformation->targetStreamIndex = primaryListenerStreamIndex;
 											if (connectionInformation->sourceVirtualIndex && connectionInformation->targetVirtualIndex)
 											{
 												// both redundant
@@ -853,6 +889,10 @@ private:
 											connectionInformation->isSourceRedundant = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, stream.first).isRedundant;
 											connectionInformation->isTargetRedundant = targetControlledEntity->getStreamInputNode(targetConfigurationNode.descriptorIndex, mapping.streamIndex).isRedundant;
 
+											// prevent doubled entries for redundant connected streams
+											processedListenerChannels.insert(listenerClusterChannel);
+
+											// add connection to the result data
 											result->targets.push_back(connectionInformation);
 										}
 									}
@@ -1045,102 +1085,60 @@ private:
 							{
 								auto const& targetMappings = streamPortOutputKV.second.dynamicModel->dynamicAudioMap;
 								for (auto const& mapping : targetMappings)
-								{
-									auto primaryStreamIndex = relevantPrimaryStreamIndexes.find(mapping.streamIndex);
-									if (primaryStreamIndex != relevantPrimaryStreamIndexes.end())
+								{ // the source stream channel is connected to the corresponding target stream channel.
+									if (mapping.streamIndex == connectedTalkerStreamIndex && mapping.streamChannel == sourceStreamChannel)
 									{
-										// the source stream channel is connected to the corresponding target stream channel.
-										if (mapping.streamIndex == connectedTalkerStreamIndex && mapping.streamChannel == sourceStreamChannel)
+										la::avdecc::entity::model::StreamIdentification sourceStreamIdentification{ entityId, stream.first };
+										la::avdecc::entity::model::StreamIdentification targetStreamIdentification{ connectedTalker, connectedTalkerStreamIndex };
+
+										auto connectionInformation = std::make_shared<TargetConnectionInformation>();
+										connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(targetStreamIdentification);
+										connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(sourceStreamIdentification);
+
+										auto primaryListenerStreamIndex{ 0u };
+										auto primaryTalkerStreamIndex{ 0u };
+										auto primaryStreamIndexIt = relevantPrimaryStreamIndexes.find(mapping.streamIndex);
+										if (primaryStreamIndexIt != relevantPrimaryStreamIndexes.end())
 										{
-											auto redundantIndices = primaryStreamIndex->second;
-											for (auto const redundantIndex : redundantIndices)
-											{
-												relevantRedundantStreamIndexes.erase(redundantIndex);
-											}
-
-											la::avdecc::entity::model::StreamIdentification sourceStreamIdentification{ entityId, stream.first };
-											la::avdecc::entity::model::StreamIdentification targetStreamIdentification{ connectedTalker, connectedTalkerStreamIndex };
-
-											auto connectionInformation = std::make_shared<TargetConnectionInformation>();
-											connectionInformation->targetEntityId = connectedTalker;
-											connectionInformation->sourceStreamIndex = stream.first;
-											connectionInformation->targetStreamIndex = connectedTalkerStreamIndex;
-											connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(sourceStreamIdentification);
-											connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(targetStreamIdentification);
-											if (connectionInformation->sourceVirtualIndex && connectionInformation->targetVirtualIndex)
-											{
-												// both redundant
-												connectionInformation->streamPairs = getRedundantStreamIndexPairs(connectionInformation->targetEntityId, *connectionInformation->targetVirtualIndex, entityId, *connectionInformation->sourceVirtualIndex);
-											}
-											else
-											{
-												connectionInformation->streamPairs = { std::make_pair(connectionInformation->targetStreamIndex, connectionInformation->sourceStreamIndex) };
-											}
-											connectionInformation->streamChannel = sourceStreamChannel;
-											connectionInformation->targetClusterChannels.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
-											connectionInformation->targetAudioUnitIndex = audioUnitKV.first;
-											if (streamPortOutputKV.second.staticModel)
-											{
-												connectionInformation->targetBaseCluster = streamPortOutputKV.second.staticModel->baseCluster;
-											}
-											connectionInformation->targetStreamPortIndex = streamPortOutputKV.first;
-											connectionInformation->isSourceRedundant = streamInput.isRedundant;
-											connectionInformation->isTargetRedundant = connectionInformation->targetVirtualIndex != std::nullopt;
-
-											result->targets.push_back(connectionInformation);
-											return result; // there can only ever be one channel connected on the listener side
+											primaryTalkerStreamIndex = primaryStreamIndexIt->first;
+											primaryListenerStreamIndex = stream.first;
 										}
-									}
-									else
-									{
-										auto streamIndex = relevantRedundantStreamIndexes.find(mapping.streamIndex);
-										if (streamIndex != relevantRedundantStreamIndexes.end())
+										else
 										{
-											// if we land in here the primary is not connected, but a secundary is.
-											auto primaryTalkerStreamIndex = streamIndex->second;
-
-											if (mapping.streamIndex == connectedTalkerStreamIndex && mapping.streamChannel == sourceStreamChannel)
+											auto streamIndex = relevantRedundantStreamIndexes.find(mapping.streamIndex);
+											if (streamIndex != relevantRedundantStreamIndexes.end())
 											{
-												auto primaryStreamIndex = relevantPrimaryStreamIndexes.find(primaryTalkerStreamIndex);
-												auto redundantIndices = primaryStreamIndex->second;
-												for (auto const redundantIndex : redundantIndices)
-												{
-													relevantRedundantStreamIndexes.erase(redundantIndex);
-												}
-
-												la::avdecc::entity::model::StreamIdentification sourceStreamIdentification{ entityId, stream.first };
-												la::avdecc::entity::model::StreamIdentification targetStreamIdentification{ connectedTalker, connectedTalkerStreamIndex };
-
-												auto connectionInformation = std::make_shared<TargetConnectionInformation>();
-												connectionInformation->targetEntityId = connectedTalker;
-												connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(sourceStreamIdentification);
-												connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(targetStreamIdentification);
-												connectionInformation->sourceStreamIndex = controlledEntity->getRedundantStreamInputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
-												connectionInformation->targetStreamIndex = primaryTalkerStreamIndex;
-												if (connectionInformation->sourceVirtualIndex && connectionInformation->targetVirtualIndex)
-												{
-													// both redundant
-													connectionInformation->streamPairs = getRedundantStreamIndexPairs(connectionInformation->targetEntityId, *connectionInformation->targetVirtualIndex, entityId, *connectionInformation->sourceVirtualIndex);
-												}
-												else
-												{
-													connectionInformation->streamPairs = { std::make_pair(connectionInformation->targetStreamIndex, connectionInformation->sourceStreamIndex) };
-												}
-												connectionInformation->streamChannel = sourceStreamChannel;
-												connectionInformation->targetClusterChannels.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
-												connectionInformation->targetAudioUnitIndex = audioUnitKV.first;
-												if (streamPortOutputKV.second.staticModel)
-												{
-													connectionInformation->targetBaseCluster = streamPortOutputKV.second.staticModel->baseCluster;
-												}
-												connectionInformation->targetStreamPortIndex = streamPortOutputKV.first;
-												connectionInformation->isSourceRedundant = streamInput.isRedundant;
-												connectionInformation->isTargetRedundant = connectionInformation->targetVirtualIndex != std::nullopt;
-
-												result->targets.push_back(connectionInformation);
-												return result; // there can only ever be one channel connected on the listener side
+												// if we land in here the primary is not connected, but a secundary is.
+												primaryTalkerStreamIndex = streamIndex->second;
+												primaryListenerStreamIndex = controlledEntity->getRedundantStreamInputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
 											}
 										}
+
+										connectionInformation->targetEntityId = connectedTalker;
+										connectionInformation->sourceStreamIndex = primaryListenerStreamIndex;
+										connectionInformation->targetStreamIndex = primaryListenerStreamIndex;
+										if (connectionInformation->sourceVirtualIndex && connectionInformation->targetVirtualIndex)
+										{
+											// both redundant
+											connectionInformation->streamPairs = getRedundantStreamIndexPairs(connectionInformation->targetEntityId, *connectionInformation->targetVirtualIndex, entityId, *connectionInformation->sourceVirtualIndex);
+										}
+										else
+										{
+											connectionInformation->streamPairs = { std::make_pair(connectionInformation->targetStreamIndex, connectionInformation->sourceStreamIndex) };
+										}
+										connectionInformation->streamChannel = sourceStreamChannel;
+										connectionInformation->targetClusterChannels.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
+										connectionInformation->targetAudioUnitIndex = audioUnitKV.first;
+										if (streamPortOutputKV.second.staticModel)
+										{
+											connectionInformation->targetBaseCluster = streamPortOutputKV.second.staticModel->baseCluster;
+										}
+										connectionInformation->targetStreamPortIndex = streamPortOutputKV.first;
+										connectionInformation->isSourceRedundant = streamInput.isRedundant;
+										connectionInformation->isTargetRedundant = connectionInformation->targetVirtualIndex != std::nullopt;
+
+										result->targets.push_back(connectionInformation);
+										return result; // there can only ever be one channel connected on the listener side
 									}
 								}
 							}
