@@ -622,6 +622,40 @@ private:
 		return std::nullopt;
 	}
 
+	std::optional<la::avdecc::entity::model::StreamIndex> getPrimaryOutputStreamIndexFromVirtualIndex(la::avdecc::UniqueIdentifier entityID, la::avdecc::controller::model::VirtualIndex virtualIndex) const noexcept
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(entityID);
+		if (controlledEntity)
+		{
+			try
+			{
+				return controlledEntity->getRedundantStreamOutputNode(entityID, virtualIndex).primaryStream->descriptorIndex;
+			}
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
+			{
+			}
+		}
+		return std::nullopt;
+	}
+
+	std::optional<la::avdecc::entity::model::StreamIndex> getPrimaryInputStreamIndexFromVirtualIndex(la::avdecc::UniqueIdentifier entityID, la::avdecc::controller::model::VirtualIndex virtualIndex) const noexcept
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(entityID);
+		if (controlledEntity)
+		{
+			try
+			{
+				return controlledEntity->getRedundantStreamInputNode(entityID, virtualIndex).primaryStream->descriptorIndex;
+			}
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
+			{
+			}
+		}
+		return std::nullopt;
+	}
+
 	std::vector<std::pair<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>> getRedundantStreamIndexPairs(la::avdecc::UniqueIdentifier talkerEntityId, la::avdecc::controller::model::VirtualIndex talkerStreamVirtualIndex, la::avdecc::UniqueIdentifier listenerEntityId, la::avdecc::controller::model::VirtualIndex listenerStreamVirtualIndex) const noexcept
 	{
 		std::vector<std::pair<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>> result;
@@ -1272,6 +1306,9 @@ private:
 	*/
 	virtual std::shared_ptr<TargetConnectionInformations> getAllChannelConnectionsBetweenDevices(la::avdecc::UniqueIdentifier const& sourceEntityId, la::avdecc::entity::model::StreamPortIndex const sourceStreamPortIndex, la::avdecc::UniqueIdentifier const& targetEntityId) const noexcept
 	{
+		// TODO refactor to utilze getChannelConnectionsReverse?
+
+
 		auto result = std::make_shared<TargetConnectionInformations>();
 		result->sourceEntityId = sourceEntityId;
 
@@ -1351,7 +1388,7 @@ private:
 										{
 											if (relevantStreamIndexes.find(mapping.streamIndex) == relevantStreamIndexes.end())
 											{
-												continue;
+												//continue;
 											}
 
 											// the source stream channel is connected to the corresponding target stream channel.
@@ -1656,20 +1693,38 @@ private:
 		auto streamConnections = getStreamConnectionsBetweenDevices(talkerEntityId, listenerEntityId);
 
 		// filter out streamConnections that are redundant
-		auto primaryStreamConnection = StreamConnections{};
+		auto primaryStreamConnections = StreamConnections{};
 		for (auto const& streamConnection : streamConnections)
 		{
-			if (isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification{ listenerEntityId, streamConnection.second }))
+			la::avdecc::entity::model::StreamIdentification talkerStreamIdentification{ talkerEntityId, streamConnection.first };
+			la::avdecc::entity::model::StreamIdentification listenerStreamIdentification{ listenerEntityId, streamConnection.second };
+
+			auto virtualTalkerIndex = getRedundantVirtualIndexFromOutputStreamIndex(talkerStreamIdentification);
+			auto virtualListenerIndex = getRedundantVirtualIndexFromInputStreamIndex(listenerStreamIdentification);
+
+			if (virtualTalkerIndex && virtualListenerIndex)
 			{
-				primaryStreamConnection.push_back(streamConnection);
+				// convert secundary connected streams to primary connections:
+				auto talkerPimaryStreamIndex = getPrimaryOutputStreamIndexFromVirtualIndex(talkerEntityId, *virtualTalkerIndex);
+				auto listenerPimaryStreamIndex = getPrimaryInputStreamIndexFromVirtualIndex(listenerEntityId, *virtualListenerIndex);
+
+				if (talkerPimaryStreamIndex && listenerPimaryStreamIndex)
+				{
+					primaryStreamConnections.push_back(std::make_pair(*talkerPimaryStreamIndex, *listenerPimaryStreamIndex));
+				}
+			}
+			else
+			{
+				// non redundant connection
+				primaryStreamConnections.push_back(streamConnection);
 			}
 		}
 
 		// also take into account stream connections, that will be batch created with this one:
-		primaryStreamConnection.insert(primaryStreamConnection.end(), newStreamConnections.begin(), newStreamConnections.end());
+		primaryStreamConnections.insert(primaryStreamConnections.end(), newStreamConnections.begin(), newStreamConnections.end());
 
 		// iterate over existing stream connections
-		for (auto const& streamConnection : primaryStreamConnection)
+		for (auto const& streamConnection : primaryStreamConnections)
 		{
 			// get all stream channels that could be used for the connection
 			auto const usableChannels = findAllUsableStreamChannelsOnStreamConnection(talkerEntityId, listenerEntityId, streamConnection, true, talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerChannelIdentification.clusterIndex - *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, newMappingsTalker, newMappingsListener);
@@ -2413,6 +2468,7 @@ private:
 							connectionStreamSourceIndex = deviceConnection->targetStreamIndex;
 							connectionStreamTargetIndex = deviceConnection->sourceStreamIndex;
 							connectionStreamChannel = deviceConnection->streamChannel;
+
 							break;
 						}
 					}
@@ -2429,9 +2485,34 @@ private:
 			bool streamConnectionStillNeeded = false;
 
 			int streamConnectionUsages = 0;
-			for (auto deviceConnection : channelConnectionsOfTalker->targets)
+			for (auto const& deviceConnection : channelConnectionsOfTalker->targets)
 			{
-				if (deviceConnection->targetEntityId == listenerEntityId && deviceConnection->targetStreamIndex == *connectionStreamTargetIndex && deviceConnection->sourceStreamIndex == *connectionStreamSourceIndex)
+				// if this is a redundant connection, we convert the index to the primary:
+				la::avdecc::entity::model::StreamIdentification talkerStreamIdentification{ talkerEntityId, deviceConnection->sourceStreamIndex };
+				la::avdecc::entity::model::StreamIdentification listenerStreamIdentification{ listenerEntityId, deviceConnection->targetStreamIndex };
+
+				auto virtualTalkerIndex = getRedundantVirtualIndexFromOutputStreamIndex(talkerStreamIdentification);
+				auto virtualListenerIndex = getRedundantVirtualIndexFromInputStreamIndex(listenerStreamIdentification);
+
+				if (virtualTalkerIndex)
+				{
+					auto talkerPimaryStreamIndex = getPrimaryOutputStreamIndexFromVirtualIndex(talkerEntityId, *virtualTalkerIndex);
+
+					if (talkerPimaryStreamIndex)
+					{
+						talkerStreamIdentification.streamIndex = *talkerPimaryStreamIndex;
+					}
+				}
+
+				if (virtualListenerIndex)
+				{
+					auto listenerPimaryStreamIndex = getPrimaryInputStreamIndexFromVirtualIndex(listenerEntityId, *virtualListenerIndex);
+					if (listenerPimaryStreamIndex)
+					{
+						listenerStreamIdentification.streamIndex = *listenerPimaryStreamIndex;
+					}
+				}
+				if (deviceConnection->targetEntityId == listenerEntityId && listenerStreamIdentification.streamIndex == *connectionStreamTargetIndex && talkerStreamIdentification.streamIndex == *connectionStreamSourceIndex)
 				{
 					if (!deviceConnection->targetClusterChannels.empty())
 					{
