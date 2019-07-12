@@ -584,8 +584,8 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 									{
 										DeviceDetailsChannelTableModel::ConnectionStatus status{ connectionMatrix::Model::IntersectionData::Type::SingleStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected };
-										auto const& talkerOutputStreamNode = talkerEntity->getStreamOutputNode(talkerConfigurationNode.descriptorIndex, talkerStreamIndex);
-										auto const& listenerInputStreamNode = listenerEntity->getStreamInputNode(listenerConfigurationNode.descriptorIndex, listenerStreamIndex);
+										auto const& talkerOutputStreamNode = talkerEntity->getStreamOutputNode(talkerConfigurationNode.descriptorIndex, itOutputs->first);
+										auto const& listenerInputStreamNode = listenerEntity->getStreamInputNode(listenerConfigurationNode.descriptorIndex, itInputs->first);
 
 										auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
 										auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationNode.descriptorIndex, talkerAvbInterfaceIndex);
@@ -593,7 +593,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 										auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
 										auto talkerGrandMasterDomain = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
 										auto talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
-										auto talkerRunning = talkerEntity->isStreamInputRunning(talkerConfigurationNode.descriptorIndex, talkerStreamIndex);
+										auto talkerRunning = talkerEntity->isStreamInputRunning(talkerConfigurationNode.descriptorIndex, itOutputs->first);
 
 										auto const listenerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
 										auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerConfigurationNode.descriptorIndex, listenerAvbInterfaceIndex);
@@ -601,7 +601,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 										auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
 										auto listenerGrandMasterDomain = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
 										auto listenerInterfaceLinkStatus = listenerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
-										auto listenerRunning = listenerEntity->isStreamInputRunning(listenerConfigurationNode.descriptorIndex, listenerStreamIndex);
+										auto listenerRunning = listenerEntity->isStreamInputRunning(listenerConfigurationNode.descriptorIndex, itInputs->first);
 
 										if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
 										{
