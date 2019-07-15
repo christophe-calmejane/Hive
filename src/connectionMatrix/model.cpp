@@ -1758,7 +1758,15 @@ public:
 				{
 					node->setGrandMasterID(grandMasterID);
 					node->setGrandMasterDomain(grandMasterDomain);
-					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+
+					if (_mode == Model::Mode::Stream)
+					{
+						talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+					}
+					else
+					{
+#pragma message("TODO: Find affected Channels and update Intersections")
+					}
 				});
 		}
 
@@ -1769,7 +1777,15 @@ public:
 				{
 					node->setGrandMasterID(grandMasterID);
 					node->setGrandMasterDomain(grandMasterDomain);
-					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+
+					if (_mode == Model::Mode::Stream)
+					{
+						listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+					}
+					else
+					{
+#pragma message("TODO: Find affected Channels and update Intersections")
+					}
 				});
 		}
 	}
@@ -1816,7 +1832,15 @@ public:
 				[this, linkStatus, dirtyFlags](StreamNode* node)
 				{
 					node->setInterfaceLinkStatus(linkStatus);
-					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+
+					if (_mode == Model::Mode::Stream)
+					{
+						talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+					}
+					else
+					{
+#pragma message("TODO: Find affected Channels and update Intersections")
+					}
 				});
 		}
 
@@ -1826,7 +1850,15 @@ public:
 				[this, linkStatus, dirtyFlags](StreamNode* node)
 				{
 					node->setInterfaceLinkStatus(linkStatus);
-					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+
+					if (_mode == Model::Mode::Stream)
+					{
+						listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+					}
+					else
+					{
+#pragma message("TODO: Find affected Channels and update Intersections")
+					}
 				});
 		}
 	}
@@ -1846,6 +1878,10 @@ public:
 				{
 					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
 				}
+				else
+				{
+#pragma message("TODO: Find affected Channels and update Intersections")
+				}
 			}
 			else
 			{
@@ -1861,6 +1897,10 @@ public:
 				if (_mode == Model::Mode::Stream)
 				{
 					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+				}
+				else
+				{
+#pragma message("TODO: Find affected Channels and update Intersections")
 				}
 			}
 			else
@@ -1918,6 +1958,10 @@ public:
 			if (_mode == Model::Mode::Stream)
 			{
 				listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+			}
+			else
+			{
+#pragma message("TODO: Find affected Channels and update Intersections")
 			}
 		}
 		else
@@ -2074,7 +2118,6 @@ public:
 	}
 
 	// avdecc::ChannelConnectionManager slots
-
 	void handleListenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels)
 	{
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
