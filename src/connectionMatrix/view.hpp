@@ -54,7 +54,9 @@ private:
 
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
-	Q_SLOT void handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo const& info);
+
+	// Slots
+	void handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo const& info);
 
 private:
 	std::unique_ptr<Model> _model;

@@ -146,8 +146,10 @@ public:
 
 	QModelIndex getDomainModelIndex(avdecc::mediaClock::DomainIndex domainIndex) const;
 
-	Q_SLOT void handleClick(QModelIndex const& current, QModelIndex const& previous);
+	// Slots
+	void handleClick(QModelIndex const& current, QModelIndex const& previous);
 
+	// Signals
 	Q_SIGNAL void domainSetupChanged();
 	Q_SIGNAL void expandDomain(QModelIndex const& domainModelIndex);
 	Q_SIGNAL void triggerResizeColumns();

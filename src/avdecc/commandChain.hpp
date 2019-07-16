@@ -47,9 +47,9 @@ enum class CommandExecutionError
 
 struct CommandErrorInfo
 {
-	CommandExecutionError errorType;
-	std::optional<avdecc::ControllerManager::AcmpCommandType> commandTypeAcmp = std::nullopt;
-	std::optional<avdecc::ControllerManager::AecpCommandType> commandTypeAecp = std::nullopt;
+	CommandExecutionError errorType{ CommandExecutionError::NoError };
+	std::optional<avdecc::ControllerManager::AcmpCommandType> commandTypeAcmp{ std::nullopt };
+	std::optional<avdecc::ControllerManager::AecpCommandType> commandTypeAecp{ std::nullopt };
 };
 
 using CommandExecutionErrors = std::unordered_multimap<la::avdecc::UniqueIdentifier, CommandErrorInfo, la::avdecc::UniqueIdentifier::hash>;
@@ -68,35 +68,36 @@ class AsyncParallelCommandSet : public QObject
 	Q_OBJECT
 
 public:
-	using AsyncCommand = std::function<bool(AsyncParallelCommandSet* parentCommandSet, int commandIndex)>;
+	using AsyncCommand = std::function<bool(AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex)>;
 
-	static CommandExecutionError controlStatusToCommandError(la::avdecc::entity::ControllerEntity::ControlStatus status);
-	static CommandExecutionError aemCommandStatusToCommandError(la::avdecc::entity::ControllerEntity::AemCommandStatus status);
+	static CommandExecutionError controlStatusToCommandError(la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept;
+	static CommandExecutionError aemCommandStatusToCommandError(la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept;
 
 public:
-	AsyncParallelCommandSet();
-	AsyncParallelCommandSet(AsyncCommand command);
-	AsyncParallelCommandSet(std::vector<AsyncCommand> commands);
+	AsyncParallelCommandSet() noexcept;
+	AsyncParallelCommandSet(AsyncCommand const& command) noexcept;
+	AsyncParallelCommandSet(std::vector<AsyncCommand> const& commands) noexcept;
 
-	void append(AsyncCommand command);
-	void append(std::vector<AsyncCommand> commands);
+	void append(AsyncCommand const& command) noexcept;
+	void append(std::vector<AsyncCommand> const& commands) noexcept;
 
-	void addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error, avdecc::ControllerManager::AcmpCommandType commandType);
-	void addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error, avdecc::ControllerManager::AecpCommandType commandType);
-	void addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error);
+	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AcmpCommandType const commandType) noexcept;
+	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AecpCommandType const commandType) noexcept;
+	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error) noexcept;
 
 	size_t parallelCommandCount() const noexcept;
 	void exec() noexcept;
 
-	void invokeCommandCompleted(int commandIndex, bool error) noexcept;
+	void invokeCommandCompleted(uint32_t const commandIndex, bool const error) noexcept;
 
+	// Signals
 	Q_SIGNAL void commandSetCompleted(CommandExecutionErrors errors); // emitted after all commands in this command set were executed.
 
 private:
 	CommandExecutionErrors _errors;
 	std::vector<AsyncCommand> _commands;
-	int _commandCompletionCounter = 0;
-	bool _errorOccured = false;
+	uint32_t _commandCompletionCounter{ 0 };
+	bool _errorOccured{ false };
 };
 
 // **************************************************************
@@ -118,21 +119,22 @@ class SequentialAsyncCommandExecuter : public QObject
 {
 	Q_OBJECT
 public:
-	SequentialAsyncCommandExecuter();
+	SequentialAsyncCommandExecuter() noexcept;
 
-	void setCommandChain(std::vector<AsyncParallelCommandSet*> commands);
+	void setCommandChain(std::vector<AsyncParallelCommandSet*> const& commands) noexcept;
 
-	void start();
+	void start() noexcept;
 
-	Q_SIGNAL void progressUpdate(int completedCommands, int totalCommands);
-	Q_SIGNAL void completed(CommandExecutionErrors errors);
+	// Signals
+	Q_SIGNAL void progressUpdate(uint32_t const completedCommands, uint32_t const totalCommands);
+	Q_SIGNAL void completed(CommandExecutionErrors const errors);
 
 private:
 	CommandExecutionErrors _errors;
 	std::vector<AsyncParallelCommandSet*> _commands;
-	int _currentCommandSet = 0;
-	int _totalCommandCount; // includes parallel sub commands
-	int _completedCommandCount; // includes parallel sub commands
+	uint32_t _currentCommandSet{ 0 };
+	uint32_t _totalCommandCount{ 0 }; // includes parallel sub commands
+	uint32_t _completedCommandCount{ 0 }; // includes parallel sub commands
 };
 
 } // namespace commandChain

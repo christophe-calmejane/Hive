@@ -56,7 +56,7 @@ public:
 	QStringList mimeTypes() const;
 	QMimeData* mimeData(QModelIndexList const& indexes) const;
 
-	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
+	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains);
 	QList<la::avdecc::UniqueIdentifier> getSelectedItems(QItemSelection const& itemSelection) const;
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	void addEntity(la::avdecc::UniqueIdentifier const& entityId);
@@ -91,14 +91,16 @@ UnassignedListModelPrivate::~UnassignedListModelPrivate() {}
 * Sets the data this model operates on.
 * @param domains The model.
 */
-void UnassignedListModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains)
+void UnassignedListModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains)
 {
 	Q_Q(UnassignedListModel);
 	q->beginResetModel();
 	_entities.clear();
 
+	auto domainsLocal = domains;
+
 	// code for list model
-	for (auto const& entityDomainKV : domains.getEntityMediaClockMasterMappings())
+	for (auto const& entityDomainKV : domainsLocal.getEntityMediaClockMasterMappings())
 	{
 		if (entityDomainKV.second.empty() && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainKV.first))
 		{
@@ -421,7 +423,7 @@ Qt::ItemFlags UnassignedListModel::flags(QModelIndex const& index) const
 * Sets the data this model operates on.
 * @param domains The model.
 */
-void UnassignedListModel::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains)
+void UnassignedListModel::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains)
 {
 	Q_D(UnassignedListModel);
 	d->setMediaClockDomainModel(domains);

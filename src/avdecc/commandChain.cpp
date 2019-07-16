@@ -30,9 +30,7 @@ namespace avdecc
 {
 namespace commandChain
 {
-/////////////////////////////////////////////////////////////////////////////////////////
-
-CommandExecutionError AsyncParallelCommandSet::controlStatusToCommandError(la::avdecc::entity::ControllerEntity::ControlStatus status)
+CommandExecutionError AsyncParallelCommandSet::controlStatusToCommandError(la::avdecc::entity::ControllerEntity::ControlStatus const status) noexcept
 {
 	switch (status)
 	{
@@ -70,7 +68,7 @@ CommandExecutionError AsyncParallelCommandSet::controlStatusToCommandError(la::a
 	}
 }
 
-CommandExecutionError AsyncParallelCommandSet::aemCommandStatusToCommandError(la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+CommandExecutionError AsyncParallelCommandSet::aemCommandStatusToCommandError(la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 {
 	switch (status)
 	{
@@ -108,12 +106,12 @@ CommandExecutionError AsyncParallelCommandSet::aemCommandStatusToCommandError(la
 /**
 		* Default constructor.
 		*/
-AsyncParallelCommandSet::AsyncParallelCommandSet() {}
+AsyncParallelCommandSet::AsyncParallelCommandSet() noexcept {}
 
 /**
 		* Constructor taking a single command function.
 		*/
-AsyncParallelCommandSet::AsyncParallelCommandSet(AsyncCommand command)
+AsyncParallelCommandSet::AsyncParallelCommandSet(AsyncCommand const& command) noexcept
 {
 	_commands.push_back(command);
 }
@@ -121,7 +119,7 @@ AsyncParallelCommandSet::AsyncParallelCommandSet(AsyncCommand command)
 /**
 		* Constructor taking multiple command functions.
 		*/
-AsyncParallelCommandSet::AsyncParallelCommandSet(std::vector<AsyncCommand> commands)
+AsyncParallelCommandSet::AsyncParallelCommandSet(std::vector<AsyncCommand> const& commands) noexcept
 {
 	_commands.insert(std::end(_commands), std::begin(commands), std::end(commands));
 }
@@ -129,7 +127,7 @@ AsyncParallelCommandSet::AsyncParallelCommandSet(std::vector<AsyncCommand> comma
 /**
 		* Appends a command function to the internal list.
 		*/
-void AsyncParallelCommandSet::append(AsyncCommand command)
+void AsyncParallelCommandSet::append(AsyncCommand const& command) noexcept
 {
 	_commands.push_back(command);
 }
@@ -137,7 +135,7 @@ void AsyncParallelCommandSet::append(AsyncCommand command)
 /**
 		* Appends a command function to the internal list.
 		*/
-void AsyncParallelCommandSet::append(std::vector<AsyncCommand> commands)
+void AsyncParallelCommandSet::append(std::vector<AsyncCommand> const& commands) noexcept
 {
 	_commands.insert(std::end(_commands), std::begin(commands), std::end(commands));
 }
@@ -145,7 +143,7 @@ void AsyncParallelCommandSet::append(std::vector<AsyncCommand> commands)
 /**
 		* Adds error info for acmp commands.
 		*/
-void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error, avdecc::ControllerManager::AcmpCommandType commandType)
+void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AcmpCommandType const commandType) noexcept
 {
 	CommandErrorInfo info{ error };
 	info.commandTypeAcmp = commandType;
@@ -155,7 +153,7 @@ void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier entityId
 /**
 		* Adds error info for aecp commands.
 		*/
-void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error, avdecc::ControllerManager::AecpCommandType commandType)
+void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AecpCommandType const commandType) noexcept
 {
 	CommandErrorInfo info{ error };
 	info.commandTypeAecp = commandType;
@@ -165,7 +163,7 @@ void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier entityId
 /**
 		* Adds general error info (without command relation).
 		*/
-void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier entityId, CommandExecutionError error)
+void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error) noexcept
 {
 	CommandErrorInfo info{ error };
 	_errors.emplace(entityId, info);
@@ -189,7 +187,7 @@ void AsyncParallelCommandSet::exec() noexcept
 		invokeCommandCompleted(0, false);
 		return;
 	}
-	int index = 0;
+	auto index = uint32_t{ 0 };
 	for (auto const& command : _commands)
 	{
 		if (!command(this, index))
@@ -203,7 +201,7 @@ void AsyncParallelCommandSet::exec() noexcept
 /**
 		* After a command was executed, this is called.
 		*/
-void AsyncParallelCommandSet::invokeCommandCompleted(int commandIndex, bool error) noexcept
+void AsyncParallelCommandSet::invokeCommandCompleted(uint32_t const commandIndex, bool const error) noexcept
 {
 	if (error)
 	{
@@ -227,7 +225,7 @@ void AsyncParallelCommandSet::invokeCommandCompleted(int commandIndex, bool erro
 		* Consturctor.
 		* Sets up signla slot connections.
 		*/
-SequentialAsyncCommandExecuter::SequentialAsyncCommandExecuter()
+SequentialAsyncCommandExecuter::SequentialAsyncCommandExecuter() noexcept
 {
 	auto& manager = ControllerManager::getInstance();
 }
@@ -235,9 +233,9 @@ SequentialAsyncCommandExecuter::SequentialAsyncCommandExecuter()
 /**
 		* Sets the commands to be executed.
 		*/
-void SequentialAsyncCommandExecuter::setCommandChain(std::vector<AsyncParallelCommandSet*> commands)
+void SequentialAsyncCommandExecuter::setCommandChain(std::vector<AsyncParallelCommandSet*> const& commands) noexcept
 {
-	int totalCommandCount = 0;
+	auto totalCommandCount = std::uint32_t{ 0 };
 	_commands = commands;
 	for (auto* command : _commands)
 	{
@@ -252,16 +250,16 @@ void SequentialAsyncCommandExecuter::setCommandChain(std::vector<AsyncParallelCo
 /**
 		* Starts or continues the sequence of commands that was set via setCommandChain.
 		*/
-void SequentialAsyncCommandExecuter::start()
+void SequentialAsyncCommandExecuter::start() noexcept
 {
-	if (_currentCommandSet < static_cast<int>(_commands.size()))
+	if (_currentCommandSet < _commands.size())
 	{
 		connect(_commands.at(_currentCommandSet), &AsyncParallelCommandSet::commandSetCompleted, this,
 			[this](CommandExecutionErrors errors)
 			{
 				_errors.insert(errors.begin(), errors.end());
 				_completedCommandCount += _commands.at(_currentCommandSet)->parallelCommandCount();
-				progressUpdate(_completedCommandCount, _totalCommandCount);
+				emit progressUpdate(_completedCommandCount, _totalCommandCount);
 
 				// start next set
 				_currentCommandSet++;

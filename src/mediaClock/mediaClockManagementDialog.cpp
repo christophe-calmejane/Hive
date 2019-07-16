@@ -139,11 +139,56 @@ public:
 		button_AssignToDomain->setText("arrow_back");
 	}
 
+	void refreshModels()
+	{
+		// read out again:
+		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
+		auto domains = mediaClockManager.createMediaClockDomainModel();
+
+		// setup the models:
+		_unassignedListModel.setMediaClockDomainModel(domains);
+		_domainTreeModel.setMediaClockDomainModel(domains);
+		expandAllDomains();
+		resizeMCTreeViewColumns();
+	}
+
+	/**
+	* Gets the has changes state.
+	*/
+	bool hasChanges() const
+	{
+		return _hasChanges;
+	}
+
+	/**
+	* Enables or disables the apply and discard buttons.
+	* @param enabled Set button the given state.
+	*/
+	void adjustButtonStates()
+	{
+		button_ApplyChanges->setEnabled(_hasChanges);
+		button_DiscardChanges->setEnabled(_hasChanges);
+	}
+
+	/**
+	* Expands every item in the domain tree view.
+	*/
+	void expandAllDomains()
+	{
+		auto const& indexes = _domainTreeModel.match(_domainTreeModel.index(0, 0), Qt::DisplayRole, "*", -1, Qt::MatchWildcard | Qt::MatchRecursive);
+		for (auto const& index : indexes)
+		{
+			treeViewMediaClockDomains->expand(index);
+		}
+	}
+
+	// Slots
+
 	/**
 	* Handles the click of the remove assignment button.
 	* Removes the selected entity in the domain tree and adds it to the unassigned list.
 	*/
-	Q_SLOT void button_AssignToDomainClicked(bool checked)
+	void button_AssignToDomainClicked(bool checked)
 	{
 		auto const& entityIds = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
 		for (auto const& entityId : entityIds)
@@ -163,7 +208,7 @@ public:
 	* Handles the click of the remove assignment button.
 	* Removes the selected entity in the domain tree and adds it to the unassigned list.
 	*/
-	Q_SLOT void button_RemoveAssignmentClicked()
+	void button_RemoveAssignmentClicked()
 	{
 		auto selectedEntities = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
 		if (selectedEntities.empty())
@@ -194,7 +239,7 @@ public:
 	* Handles the click of the add button.
 	* Removes the selected domain and moves the assinged entities to the unassigned list.
 	*/
-	Q_SLOT void button_AddClicked()
+	void button_AddClicked()
 	{
 		auto domainIndex = _domainTreeModel.addNewDomain();
 		expandDomain(_domainTreeModel.getDomainModelIndex(domainIndex));
@@ -207,7 +252,7 @@ public:
 	* Handles the click of the remove button.
 	* Removes the selected domain and moves the assinged entities to the unassigned list.
 	*/
-	Q_SLOT void button_RemoveClicked()
+	void button_RemoveClicked()
 	{
 		auto selectedDomains = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
 		if (selectedDomains.empty())
@@ -235,7 +280,7 @@ public:
 	* Handles the click of the clear button.
 	* Removes all domains and moves all entities to the unassigned list.
 	*/
-	Q_SLOT void button_ClearClicked()
+	void button_ClearClicked()
 	{
 		// remove domain
 		auto entities = _domainTreeModel.removeAllDomains();
@@ -254,7 +299,7 @@ public:
 	* Handles the click of the apply changes button.
 	* Gathers the data from the models and calls the applyMediaClockDomainModel in the MediaClockConnectionManager.
 	*/
-	Q_SLOT void button_ApplyChangesClicked()
+	void button_ApplyChangesClicked()
 	{
 		_hasChanges = false;
 		adjustButtonStates();
@@ -278,7 +323,7 @@ public:
 	* Handles the click of the discard changes button.
 	* Loads the domain data again and assigns it to the models.
 	*/
-	Q_SLOT void button_DiscardChangesClicked()
+	void button_DiscardChangesClicked()
 	{
 		_hasChanges = false;
 		adjustButtonStates();
@@ -289,7 +334,7 @@ public:
 	/**
 	* Updates the assign button enabled state.
 	*/
-	Q_SLOT void handleUnassignedListSelectionChanged()
+	void handleUnassignedListSelectionChanged()
 	{
 		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
 		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
@@ -302,7 +347,7 @@ public:
 	/**
 	* Updates the unassign button enabled state.
 	*/
-	Q_SLOT void handleDomainTreeSelectionChanged()
+	void handleDomainTreeSelectionChanged()
 	{
 		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
 		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
@@ -318,7 +363,7 @@ public:
 		button_Remove->setEnabled(!assignedDomainSelections.empty());
 	}
 
-	Q_SLOT void removeMcDomainTreeViewSelections()
+	void removeMcDomainTreeViewSelections()
 	{
 		treeViewMediaClockDomains->clearSelection();
 		const QModelIndex index;
@@ -328,7 +373,7 @@ public:
 	/**
 	* Handles the change of any data inside the media clock domain tree model. Triggers state change of the buttons.
 	*/
-	Q_SLOT void handleDomainTreeDataChanged()
+	void handleDomainTreeDataChanged()
 	{
 		_hasChanges = true;
 		adjustButtonStates();
@@ -337,7 +382,7 @@ public:
 	/**
 	* Triggers a resize of the columns in the media clock domain tree view.
 	*/
-	Q_SLOT void resizeMCTreeViewColumns()
+	void resizeMCTreeViewColumns()
 	{
 		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::Domain);
 		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::MediaClockMaster);
@@ -346,7 +391,7 @@ public:
 	/*
 	* When an entity goes offline while in the dialog it is removed from the models.
 	*/
-	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier entityId)
+	void entityOffline(la::avdecc::UniqueIdentifier entityId)
 	{
 		_unassignedListModel.removeEntity(entityId);
 		_domainTreeModel.removeEntity(entityId);
@@ -356,7 +401,7 @@ public:
 	* Whenever the media clock mappings change while this dialog doesn't have unapplied user changes,
 	* the model is updated.
 	*/
-	Q_SLOT void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds)
+	void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds)
 	{
 		if (!_hasChanges)
 		{
@@ -368,15 +413,15 @@ public:
 	/*
 	* Update the progress dialog.
 	*/
-	Q_SLOT void applyMediaClockDomainModelProgressUpdate(int progress)
+	void applyMediaClockDomainModelProgressUpdate(float_t progress)
 	{
-		_progressDialog->setValue(progress);
+		_progressDialog->setValue(static_cast<int>(progress));
 	}
 
 	/*
 	* Display any error that occurs
 	*/
-	Q_SLOT void applyMediaClockDomainModelFinished(avdecc::mediaClock::ApplyInfo applyInfo)
+	void applyMediaClockDomainModelFinished(avdecc::mediaClock::ApplyInfo applyInfo)
 	{
 		_progressDialog->setValue(100);
 		_progressDialog->close();
@@ -468,53 +513,10 @@ public:
 		}
 	}
 
-	void refreshModels()
-	{
-		// read out again:
-		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
-		auto domains = mediaClockManager.createMediaClockDomainModel();
-
-		// setup the models:
-		_unassignedListModel.setMediaClockDomainModel(domains);
-		_domainTreeModel.setMediaClockDomainModel(domains);
-		expandAllDomains();
-		resizeMCTreeViewColumns();
-	}
-
-	/**
-	* Gets the has changes state.
-	*/
-	bool hasChanges() const
-	{
-		return _hasChanges;
-	}
-
-	/**
-	* Enables or disables the apply and discard buttons.
-	* @param enabled Set button the given state.
-	*/
-	void adjustButtonStates()
-	{
-		button_ApplyChanges->setEnabled(_hasChanges);
-		button_DiscardChanges->setEnabled(_hasChanges);
-	}
-
 	/**
 	* Expands every item in the domain tree view.
 	*/
-	void expandAllDomains()
-	{
-		auto const& indexes = _domainTreeModel.match(_domainTreeModel.index(0, 0), Qt::DisplayRole, "*", -1, Qt::MatchWildcard | Qt::MatchRecursive);
-		for (auto const& index : indexes)
-		{
-			treeViewMediaClockDomains->expand(index);
-		}
-	}
-
-	/**
-	* Expands every item in the domain tree view.
-	*/
-	Q_SLOT void expandDomain(QModelIndex index)
+	void expandDomain(QModelIndex index)
 	{
 		treeViewMediaClockDomains->expand(index);
 	}

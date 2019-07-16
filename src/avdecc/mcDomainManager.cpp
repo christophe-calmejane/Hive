@@ -76,7 +76,7 @@ public:
 			});
 
 		connect(&_sequentialAcmpCommandExecuter, &commandChain::SequentialAsyncCommandExecuter::progressUpdate, this,
-			[this](int completedCommands, int totalCommands)
+			[this](uint32_t const completedCommands, uint32_t const totalCommands)
 			{
 				emit applyMediaClockDomainModelProgressUpdate(roundf(((float)completedCommands) / totalCommands * 100));
 			});
@@ -85,129 +85,6 @@ public:
 	~MCDomainManagerImpl() noexcept {}
 
 private:
-	/**
-	* Removes all entities from the internal list.
-	*/
-	Q_SLOT void onControllerOffline()
-	{
-		_entities.clear();
-		notifyChanges();
-	}
-
-	/**
-	* Adds the entity to the internal list.
-	*/
-	Q_SLOT void onEntityOnline(la::avdecc::UniqueIdentifier const& entityId)
-	{
-		// add entity to the set
-		_entities.insert(entityId);
-		notifyChanges();
-	}
-
-	/**
-	* Removes the entity from the internal list.
-	*/
-	Q_SLOT void onEntityOffline(la::avdecc::UniqueIdentifier const& entityId)
-	{
-		// remove entity from the set
-		_entities.erase(entityId);
-		notifyChanges();
-	}
-
-	/**
-	* Handles the change of a clock source on a stream connection. Checks if the stream is a clock stream and if so emits the mediaClockConnectionsUpdate signal.
-	*/
-	Q_SLOT void onStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
-	{
-		auto affectsMcMaster = false;
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto const& controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
-		if (controlledEntity)
-		{
-			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
-			{
-				try
-				{
-					auto const& configNode = controlledEntity->getCurrentConfigurationNode();
-					auto const activeConfigIndex = configNode.descriptorIndex;
-
-					// find out if the stream connection is set as clock source:
-					for (auto const& clockDomainKV : configNode.clockDomains)
-					{
-						auto const& clockDomain = clockDomainKV.second;
-						if (clockDomain.dynamicModel)
-						{
-							auto const clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
-							auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
-
-							if (!activeClockSourceNode.staticModel)
-							{
-								break;
-							}
-							switch (activeClockSourceNode.staticModel->clockSourceType)
-							{
-								case la::avdecc::entity::model::ClockSourceType::Internal:
-									break;
-								case la::avdecc::entity::model::ClockSourceType::External:
-								case la::avdecc::entity::model::ClockSourceType::InputStream:
-								{
-									if (streamConnectionState.listenerStream.streamIndex == activeClockSourceNode.staticModel->clockSourceLocationIndex)
-									{
-										affectsMcMaster = true;
-									}
-									break;
-								}
-								default: // Unsupported ClockSourceType, ignore it
-									break;
-							}
-						}
-					}
-				}
-				catch (la::avdecc::controller::ControlledEntity::Exception const&)
-				{
-					// ignore
-				}
-			}
-		}
-
-		if (affectsMcMaster)
-		{
-			// potentially changes every other entity...
-			notifyChanges();
-		}
-	}
-
-	/**
-	* Handles the change of a clock source on an entity and emits resulting changes via the mediaClockConnectionsUpdate signal.
-	*/
-	Q_SLOT void onClockSourceChanged(la::avdecc::UniqueIdentifier const /*entityId*/, la::avdecc::entity::model::ClockDomainIndex const /*clockDomainIndex*/, la::avdecc::entity::model::ClockSourceIndex const /*clockSourceIndex*/)
-	{
-		notifyChanges();
-	}
-
-	/**
-	* Handles the change of an entity name and determines if a mc master name is changed therefor.
-	*/
-	Q_SLOT void onEntityNameChanged(la::avdecc::UniqueIdentifier const entityId, QString const& /*entityName*/)
-	{
-		std::vector<la::avdecc::UniqueIdentifier> changedEntities;
-		auto domainIndex = _currentMCDomainMapping.findDomainIndexByMasterEntityId(entityId);
-		if (domainIndex)
-		{
-			for (auto const& entityMcMappingKV : _currentMCDomainMapping.getEntityMediaClockMasterMappings())
-			{
-				if (std::find(entityMcMappingKV.second.begin(), entityMcMappingKV.second.end(), *domainIndex) != entityMcMappingKV.second.end())
-				{
-					changedEntities.push_back(entityMcMappingKV.first);
-				}
-			}
-		}
-		if (!changedEntities.empty())
-		{
-			emit mcMasterNameChanged(changedEntities);
-		}
-	}
-
 	/**
 	* Gets the media clock master for an entity.
 	* If no mc master is available, the corresponding error is returned in second std:pair element.
@@ -769,7 +646,7 @@ private:
 	* @param newMcDomains			The domain index to mc domain data mapping at an more recent timepoint.
 	* @return True if the old entity mc master is different from the new one.
 	*/
-	bool checkMcMasterOfEntityChanged(std::vector<avdecc::mediaClock::DomainIndex> oldEntityDomainMapping, std::vector<avdecc::mediaClock::DomainIndex> newEntityDomainMapping, std::unordered_map<DomainIndex, MCDomain> oldMcDomains, std::unordered_map<DomainIndex, MCDomain> newMcDomains) noexcept
+	bool checkMcMasterOfEntityChanged(std::vector<avdecc::mediaClock::DomainIndex> const& oldEntityDomainMapping, std::vector<avdecc::mediaClock::DomainIndex> const& newEntityDomainMapping, std::unordered_map<DomainIndex, MCDomain> const& oldMcDomains, std::unordered_map<DomainIndex, MCDomain> const& newMcDomains) noexcept
 	{
 		auto sizeOldDomainIndexes = oldEntityDomainMapping.size();
 		auto sizeNewDomainIndexes = newEntityDomainMapping.size();
@@ -821,9 +698,9 @@ private:
 	* Changes the clock source configuration of an entity to an entry with InputStream type.
 	* @param entityId Id of the entity.
 	*/
-	virtual commandChain::AsyncParallelCommandSet::AsyncCommand setEntityClockToCRFInputStream(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorIndex clockDomainIndex) const noexcept
+	virtual commandChain::AsyncParallelCommandSet::AsyncCommand setEntityClockToCRFInputStream(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorIndex const clockDomainIndex) const noexcept
 	{
-		return [=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+		return [=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityId);
@@ -868,9 +745,9 @@ private:
 	* Changes the clock source configuration of an entity to an entry with InputStream type.
 	* @param entityId Id of the entity.
 	*/
-	virtual commandChain::AsyncParallelCommandSet::AsyncCommand setEntityClockToExternal(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorIndex clockDomainIndex) const noexcept
+	virtual commandChain::AsyncParallelCommandSet::AsyncCommand setEntityClockToExternal(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorIndex const clockDomainIndex) const noexcept
 	{
-		return [=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+		return [=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityId);
@@ -916,9 +793,9 @@ private:
 	* Changes the clock source configuration of an entity to an entry with Internal type.
 	* @param entityId Id of the entity.
 	*/
-	virtual commandChain::AsyncParallelCommandSet::AsyncCommand setEntityClockToInternal(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorIndex clockDomainIndex) const noexcept
+	virtual commandChain::AsyncParallelCommandSet::AsyncCommand setEntityClockToInternal(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::DescriptorIndex const clockDomainIndex) const noexcept
 	{
-		return [=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+		return [=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto const controlledEntity = manager.getControlledEntity(entityId);
@@ -986,7 +863,7 @@ private:
 						if (i < inputClockStreamIndexes.size())
 						{
 							tasks.push_back(
-								[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+								[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
 								{
 									auto& manager = avdecc::ControllerManager::getInstance();
 									if (!doesStreamConnectionExist(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i)))
@@ -1033,7 +910,7 @@ private:
 					{
 						// Notify user about the error.
 						tasks.push_back(
-							[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
 							{
 								parentCommandSet->addErrorInfo(entityIdSource, commandChain::CommandExecutionError::NoMediaClockOutputAvailable);
 								return false;
@@ -1043,7 +920,7 @@ private:
 					{
 						// Notify user about the error.
 						tasks.push_back(
-							[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
 							{
 								parentCommandSet->addErrorInfo(entityIdTarget, commandChain::CommandExecutionError::NoMediaClockInputAvailable);
 								return false;
@@ -1085,7 +962,7 @@ private:
 						if (i < inputClockStreamIndexes.size())
 						{
 							tasks.push_back(
-								[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+								[=](commandChain::AsyncParallelCommandSet* parentCommandSet, uint32_t commandIndex) -> bool
 								{
 									// can connect the streams
 									if (doesStreamConnectionExist(entityIdSource, outputClockStreamIndexes.at(i), entityIdTarget, inputClockStreamIndexes.at(i)))
@@ -1142,7 +1019,7 @@ private:
 	* @param streamIndex Index of the stream to check.
 	* @return Returns true if the stream type is set to the given type.
 	*/
-	bool isStreamInputOfType(la::avdecc::UniqueIdentifier entityId, la::avdecc::entity::model::StreamIndex streamIndex, la::avdecc::entity::model::StreamFormatInfo::Type expectedStreamType) const noexcept
+	bool isStreamInputOfType(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormatInfo::Type const expectedStreamType) const noexcept
 	{
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
@@ -1182,7 +1059,7 @@ private:
 	* @param listenerStreamIndex The index of the listener stream to check.
 	* @return True if the connection exists.
 	*/
-	virtual bool doesStreamConnectionExist(la::avdecc::UniqueIdentifier talkerEntityId, la::avdecc::entity::model::StreamIndex talkerStreamIndex, la::avdecc::UniqueIdentifier listenerEntityId, la::avdecc::entity::model::StreamIndex listenerStreamIndex) const noexcept
+	virtual bool doesStreamConnectionExist(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const listenerStreamIndex) const noexcept
 	{
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		auto const controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
@@ -1338,7 +1215,7 @@ private:
 	* @param entityId The id of the entity to check
 	* @return True if in sync.
 	*/
-	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier entityId) noexcept
+	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier const entityId) noexcept
 	{
 		// get the mc clock connection of this entity, then check it's gptp mc id and compare it with the gptp id of the entity.
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1372,7 +1249,7 @@ private:
 	/**
 	* Iterates over the list of known entities and returns all connections that originate from the given talker.
 	*/
-	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier talkerEntityId)
+	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const talkerEntityId)
 	{
 		std::vector<la::avdecc::entity::model::StreamConnectionState> disconnectedStreams;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1411,7 +1288,7 @@ private:
 	/**
 	* Gets all entities that have stream connection to the given listener entity.
 	*/
-	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamInputConnections(la::avdecc::UniqueIdentifier targetEntityId)
+	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamInputConnections(la::avdecc::UniqueIdentifier const targetEntityId)
 	{
 		std::vector<la::avdecc::entity::model::StreamConnectionState> streamsToDisconnect;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1452,7 +1329,7 @@ private:
 	* @param entityId The id of the entity to disconnect the streams from.
 	* @return A list of all streams that were disconnected.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamOutputConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamOutputConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1466,7 +1343,7 @@ private:
 				auto const& targetEntityId = connection.listenerStream.entityID;
 				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
 				commands.push_back(
-					[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
 						if (doesStreamConnectionExist(sourceEntityId, sourceStreamIndex, targetEntityId, targetStreamIndex))
@@ -1514,7 +1391,7 @@ private:
 	* @param entityId The id of the entity to disconnect the streams from.
 	* @return A list of all streams that were disconnected.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamInputConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamInputConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1528,7 +1405,7 @@ private:
 				auto const& targetEntityId = connection.listenerStream.entityID;
 				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
 				commands.push_back(
-					[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
 						if (doesStreamConnectionExist(sourceEntityId, sourceStreamIndex, targetEntityId, targetStreamIndex))
@@ -1577,7 +1454,7 @@ private:
 	* @param sampleRate The sampling rate to apply.
 	* @return The commands to be executed to apply the change.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> adjustAudioUnitSampleRates(la::avdecc::UniqueIdentifier entityId, la::avdecc::entity::model::SamplingRate sampleRate)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> adjustAudioUnitSampleRates(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::SamplingRate const sampleRate)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1595,7 +1472,7 @@ private:
 				{
 					auto audioUnitIndex = audioUnitKV.first;
 					commands.push_back(
-						[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 						{
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
@@ -1639,7 +1516,7 @@ private:
 				auto const& targetEntityId = connection.listenerStream.entityID;
 				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
 				commands.push_back(
-					[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
 						if (!doesStreamConnectionExist(sourceEntityId, sourceStreamIndex, targetEntityId, targetStreamIndex))
@@ -1687,7 +1564,7 @@ private:
 	* @param entityId The id of the entity to connect the streams from.
 	* @param A list of all streams that shall be connected.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> restoreInputStreamConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> restoreInputStreamConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -1701,7 +1578,7 @@ private:
 				auto const& targetEntityId = connection.listenerStream.entityID;
 				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
 				commands.push_back(
-					[=](commandChain::AsyncParallelCommandSet* parentCommandSet, int commandIndex) -> bool
+					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
 						if (!doesStreamConnectionExist(sourceEntityId, sourceStreamIndex, targetEntityId, targetStreamIndex))
@@ -1795,6 +1672,132 @@ private:
 			emit mediaClockConnectionsUpdate(changes);
 		}
 	}
+
+
+	// Slots
+
+	/**
+	* Removes all entities from the internal list.
+	*/
+	void onControllerOffline()
+	{
+		_entities.clear();
+		notifyChanges();
+	}
+
+	/**
+	* Adds the entity to the internal list.
+	*/
+	void onEntityOnline(la::avdecc::UniqueIdentifier const& entityId)
+	{
+		// add entity to the set
+		_entities.insert(entityId);
+		notifyChanges();
+	}
+
+	/**
+	* Removes the entity from the internal list.
+	*/
+	void onEntityOffline(la::avdecc::UniqueIdentifier const& entityId)
+	{
+		// remove entity from the set
+		_entities.erase(entityId);
+		notifyChanges();
+	}
+
+	/**
+	* Handles the change of a clock source on a stream connection. Checks if the stream is a clock stream and if so emits the mediaClockConnectionsUpdate signal.
+	*/
+	void onStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
+	{
+		auto affectsMcMaster = false;
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto const& controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
+		if (controlledEntity)
+		{
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			{
+				try
+				{
+					auto const& configNode = controlledEntity->getCurrentConfigurationNode();
+					auto const activeConfigIndex = configNode.descriptorIndex;
+
+					// find out if the stream connection is set as clock source:
+					for (auto const& clockDomainKV : configNode.clockDomains)
+					{
+						auto const& clockDomain = clockDomainKV.second;
+						if (clockDomain.dynamicModel)
+						{
+							auto const clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
+							auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
+
+							if (!activeClockSourceNode.staticModel)
+							{
+								break;
+							}
+							switch (activeClockSourceNode.staticModel->clockSourceType)
+							{
+								case la::avdecc::entity::model::ClockSourceType::Internal:
+									break;
+								case la::avdecc::entity::model::ClockSourceType::External:
+								case la::avdecc::entity::model::ClockSourceType::InputStream:
+								{
+									if (streamConnectionState.listenerStream.streamIndex == activeClockSourceNode.staticModel->clockSourceLocationIndex)
+									{
+										affectsMcMaster = true;
+									}
+									break;
+								}
+								default: // Unsupported ClockSourceType, ignore it
+									break;
+							}
+						}
+					}
+				}
+				catch (la::avdecc::controller::ControlledEntity::Exception const&)
+				{
+					// ignore
+				}
+			}
+		}
+
+		if (affectsMcMaster)
+		{
+			// potentially changes every other entity...
+			notifyChanges();
+		}
+	}
+
+	/**
+	* Handles the change of a clock source on an entity and emits resulting changes via the mediaClockConnectionsUpdate signal.
+	*/
+	void onClockSourceChanged(la::avdecc::UniqueIdentifier const /*entityId*/, la::avdecc::entity::model::ClockDomainIndex const /*clockDomainIndex*/, la::avdecc::entity::model::ClockSourceIndex const /*clockSourceIndex*/)
+	{
+		notifyChanges();
+	}
+
+	/**
+	* Handles the change of an entity name and determines if a mc master name is changed therefor.
+	*/
+	void onEntityNameChanged(la::avdecc::UniqueIdentifier const entityId, QString const& /*entityName*/)
+	{
+		std::vector<la::avdecc::UniqueIdentifier> changedEntities;
+		auto domainIndex = _currentMCDomainMapping.findDomainIndexByMasterEntityId(entityId);
+		if (domainIndex)
+		{
+			for (auto const& entityMcMappingKV : _currentMCDomainMapping.getEntityMediaClockMasterMappings())
+			{
+				if (std::find(entityMcMappingKV.second.begin(), entityMcMappingKV.second.end(), *domainIndex) != entityMcMappingKV.second.end())
+				{
+					changedEntities.push_back(entityMcMappingKV.first);
+				}
+			}
+		}
+		if (!changedEntities.empty())
+		{
+			emit mcMasterNameChanged(changedEntities);
+		}
+	}
 };
 
 /**
@@ -1859,7 +1862,7 @@ la::avdecc::UniqueIdentifier MCDomain::getMediaClockDomainMaster() const noexcep
 /**
 * Sets the domain index of this domain.
 */
-void MCDomain::setDomainIndex(DomainIndex index) noexcept
+void MCDomain::setDomainIndex(DomainIndex const index) noexcept
 {
 	_domainIndex = index;
 }
@@ -1868,7 +1871,7 @@ void MCDomain::setDomainIndex(DomainIndex index) noexcept
 * Sets the media clock master id.
 * @param entityId Entity id to set as mc master.
 */
-void MCDomain::setMediaClockDomainMaster(la::avdecc::UniqueIdentifier entityId) noexcept
+void MCDomain::setMediaClockDomainMaster(la::avdecc::UniqueIdentifier const entityId) noexcept
 {
 	_mediaClockMasterId = entityId;
 }
@@ -1886,7 +1889,7 @@ la::avdecc::entity::model::SamplingRate MCDomain::getDomainSamplingRate() const 
 * Sets the sampling rate of this domain.
 * @param entityId Entity id to set as mc master.
 */
-void MCDomain::setDomainSamplingRate(la::avdecc::entity::model::SamplingRate samplingRate) noexcept
+void MCDomain::setDomainSamplingRate(la::avdecc::entity::model::SamplingRate const samplingRate) noexcept
 {
 	_samplingRate = samplingRate;
 }
@@ -1898,7 +1901,7 @@ void MCDomain::setDomainSamplingRate(la::avdecc::entity::model::SamplingRate sam
 * @param mediaClockMasterId The media clock master id.
 * @return The index of the domain which mc master matches the given id.
 */
-std::optional<DomainIndex> const MCEntityDomainMapping::findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier mediaClockMasterId) noexcept
+std::optional<DomainIndex> const MCEntityDomainMapping::findDomainIndexByMasterEntityId(la::avdecc::UniqueIdentifier const mediaClockMasterId) noexcept
 {
 	for (auto const& mediaClockDomainKV : _mediaClockDomains)
 	{
