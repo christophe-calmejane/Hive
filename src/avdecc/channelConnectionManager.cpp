@@ -1150,7 +1150,7 @@ private:
 
 										connectionInformation->targetEntityId = connectedTalker;
 										connectionInformation->sourceStreamIndex = primaryListenerStreamIndex;
-										connectionInformation->targetStreamIndex = primaryListenerStreamIndex;
+										connectionInformation->targetStreamIndex = primaryTalkerStreamIndex;
 										if (connectionInformation->sourceVirtualIndex && connectionInformation->targetVirtualIndex)
 										{
 											// both redundant
