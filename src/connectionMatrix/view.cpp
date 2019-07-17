@@ -277,14 +277,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					listenerChannelIt++;
 				}
 
-				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
+				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, false, true);
 				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
 				{
 					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
 					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
 				};
-				handleChannelCreationResult(error, false, false, elevatedRightsCallback);
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -334,14 +334,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					listenerChannelIt++;
 				}
 
-				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
+				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, false, true);
 				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
 				{
 					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
 					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
 				};
-				handleChannelCreationResult(error, false, false, elevatedRightsCallback);
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -357,7 +357,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			}
 			else
 			{
-				auto error = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification);
+				auto error = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, false, true);
 
 				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
 				{
@@ -365,7 +365,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, allowTalkerMappingChanges, allowListenerMappingRemoval);
 					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
 				};
-				handleChannelCreationResult(error, false, false, elevatedRightsCallback);
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
 			break;
 		}
