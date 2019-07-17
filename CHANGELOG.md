@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Utilities toolbar for quick access to Media Clock Management and Settings
 - [WinPcap included in Windows Installer](https://github.com/christophe-calmejane/Hive/issues/14)
 - Device Firmware Update multi-selection window
+- Channel Based Routing (Alternate Connection Matrix)
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity

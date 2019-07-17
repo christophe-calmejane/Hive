@@ -70,6 +70,18 @@ bool Node::isStreamNode() const
 	}
 }
 
+bool Node::isChannelNode() const
+{
+	switch (_type)
+	{
+		case Type::OutputChannel:
+		case Type::InputChannel:
+			return true;
+		default:
+			return false;
+	}
+}
+
 la::avdecc::UniqueIdentifier const& Node::entityID() const
 {
 	return _entityID;
@@ -135,19 +147,6 @@ int Node::childrenCount() const
 	return static_cast<int>(_children.size());
 }
 
-void Node::accept(Visitor const& visitor, bool const onlyChildren) const
-{
-	if (!onlyChildren)
-	{
-		visitor(const_cast<Node*>(this));
-	}
-
-	for (auto const& child : _children)
-	{
-		child->accept(visitor, false);
-	}
-}
-
 Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent)
 	: _type{ type }
 	, _entityID{ entityID }
@@ -165,9 +164,9 @@ void Node::setName(QString const& name)
 	_name = name;
 }
 
-EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID)
+EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan)
 {
-	return new EntityNode{ entityID };
+	return new EntityNode{ entityID, isMilan };
 }
 
 void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const
@@ -186,9 +185,15 @@ void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbIn
 		});
 }
 
-EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID)
+EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan)
 	: Node{ Type::Entity, entityID, nullptr }
+	, _isMilan{ isMilan }
 {
+}
+
+bool EntityNode::isMilan() const noexcept
+{
+	return _isMilan;
 }
 
 RedundantNode* RedundantNode::createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex)
@@ -212,16 +217,6 @@ RedundantNode::RedundantNode(Type const type, EntityNode& parent, la::avdecc::co
 {
 }
 
-StreamNode* StreamNode::createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
-{
-	return new StreamNode{ Type::OutputStream, parent, streamIndex, avbInterfaceIndex };
-}
-
-StreamNode* StreamNode::createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
-{
-	return new StreamNode{ Type::InputStream, parent, streamIndex, avbInterfaceIndex };
-}
-
 StreamNode* StreamNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
 {
 	return new StreamNode{ Type::RedundantOutputStream, parent, streamIndex, avbInterfaceIndex };
@@ -230,6 +225,16 @@ StreamNode* StreamNode::createRedundantOutputNode(RedundantNode& parent, la::avd
 StreamNode* StreamNode::createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
 {
 	return new StreamNode{ Type::RedundantInputStream, parent, streamIndex, avbInterfaceIndex };
+}
+
+StreamNode* StreamNode::createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+{
+	return new StreamNode{ Type::OutputStream, parent, streamIndex, avbInterfaceIndex };
+}
+
+StreamNode* StreamNode::createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+{
+	return new StreamNode{ Type::InputStream, parent, streamIndex, avbInterfaceIndex };
 }
 
 la::avdecc::entity::model::StreamIndex const& StreamNode::streamIndex() const
@@ -307,6 +312,74 @@ void StreamNode::setRunning(bool isRunning)
 void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
 {
 	_streamConnectionState = streamConnectionState;
+}
+
+ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)
+{
+	return new ChannelNode{ Type::OutputChannel, parent, channelIdentification };
+}
+
+ChannelNode* ChannelNode::createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)
+{
+	return new ChannelNode{ Type::InputChannel, parent, channelIdentification };
+}
+
+avdecc::ChannelIdentification const& ChannelNode::channelIdentification() const
+{
+	return _channelIdentification;
+}
+
+la::avdecc::entity::model::ClusterIndex ChannelNode::clusterIndex() const
+{
+	return _channelIdentification.clusterIndex;
+}
+
+std::uint16_t ChannelNode::channelIndex() const
+{
+	return _channelIdentification.clusterChannel;
+}
+
+ChannelNode::ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification)
+	: Node{ type, parent.entityID(), &parent }
+	, _channelIdentification{ channelIdentification }
+{
+}
+
+/* ************************************************************ */
+/* Node Policies                                                */
+/* ************************************************************ */
+bool Node::CompleteHierarchyPolicy::shouldVisit(Node const* const) noexcept
+{
+	return true;
+}
+
+bool Node::StreamHierarchyPolicy::shouldVisit(Node const* const node) noexcept
+{
+	return node->isEntityNode() || node->isRedundantNode() || node->isStreamNode();
+}
+
+bool Node::StreamPolicy::shouldVisit(Node const* const node) noexcept
+{
+	return node->isStreamNode();
+}
+
+bool Node::ChannelHierarchyPolicy::shouldVisit(Node const* const node) noexcept
+{
+	if (node->isEntityNode())
+	{
+		auto const* const entityNode = static_cast<EntityNode const*>(node);
+		// Only accept Milan Entities
+		return entityNode->isMilan();
+	}
+	else
+	{
+		return node->isChannelNode();
+	}
+}
+
+bool Node::ChannelPolicy::shouldVisit(Node const* const node) noexcept
+{
+	return node->isChannelNode();
 }
 
 } // namespace connectionMatrix

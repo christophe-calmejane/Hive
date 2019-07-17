@@ -162,7 +162,7 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 		}
 	};
 
-	node->accept(update);
+	model->accept(node, update, true);
 }
 
 void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
@@ -175,25 +175,28 @@ void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int
 		auto* model = static_cast<Model*>(this->model());
 		auto* node = model->node(section, orientation());
 
-		auto expanded = true;
-		auto visible = true;
-
-		switch (node->type())
+		if (AVDECC_ASSERT_WITH_RET(node, "Node should not be null"))
 		{
-			case Node::Type::RedundantOutput:
-			case Node::Type::RedundantInput:
-				expanded = false;
-				break;
-			case Node::Type::RedundantOutputStream:
-			case Node::Type::RedundantInputStream:
-				visible = false;
-				break;
-			default:
-				break;
-		}
+			auto expanded = true;
+			auto visible = true;
 
-		_sectionState[section] = { expanded, visible };
-		updateSectionVisibility(section);
+			switch (node->type())
+			{
+				case Node::Type::RedundantOutput:
+				case Node::Type::RedundantInput:
+					expanded = false;
+					break;
+				case Node::Type::RedundantOutputStream:
+				case Node::Type::RedundantInputStream:
+					visible = false;
+					break;
+				default:
+					break;
+			}
+
+			_sectionState[section] = { expanded, visible };
+			updateSectionVisibility(section);
+		}
 	}
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
@@ -257,11 +260,11 @@ void HeaderView::applyFilterPattern()
 
 			if (!matches)
 			{
-				node->accept(showVisitor);
+				model->accept(node, showVisitor);
 			}
 			else
 			{
-				node->accept(hideVisitor);
+				model->accept(node, hideVisitor);
 			}
 		}
 	}
@@ -315,7 +318,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
 
-	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	if (!node) //!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
 	{
 		return;
 	}
@@ -334,6 +337,8 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		case Node::Type::RedundantOutput:
 		case Node::Type::InputStream:
 		case Node::Type::OutputStream:
+		case Node::Type::InputChannel:
+		case Node::Type::OutputChannel:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			nodeLevel = 1;

@@ -30,6 +30,7 @@
 #include <QMouseEvent>
 #include <QMessageBox>
 #include <QMenu>
+#include <QApplication>
 
 namespace connectionMatrix
 {
@@ -82,7 +83,12 @@ View::View(QWidget* parent)
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.registerSettingObserver(settings::TransposeConnectionMatrix.name, this);
+	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
 	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
+
+	// react on connection completed signals to show error messages.
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+	connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::createChannelConnectionsFinished, this, &View::handleCreateChannelConnectionsFinished);
 }
 
 View::~View()
@@ -90,6 +96,7 @@ View::~View()
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.unregisterSettingObserver(settings::TransposeConnectionMatrix.name, this);
+	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
 	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
@@ -101,6 +108,46 @@ void View::onIntersectionClicked(QModelIndex const& index)
 	auto const listenerID = intersectionData.listener->entityID();
 
 	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+
+	auto const handleChannelCreationResult = [this](avdecc::ChannelConnectionManager::ChannelConnectResult channelConnectResult, bool allowTalkerMappingChanges, bool allowListenerMappingRemoval, std::function<void(bool, bool)> callbackTryAgainElevatedRights)
+	{
+		switch (channelConnectResult)
+		{
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary:
+			{
+				auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
+				if (result == QMessageBox::StandardButton::Yes)
+				{
+					allowListenerMappingRemoval = true;
+					callbackTryAgainElevatedRights(allowTalkerMappingChanges, allowListenerMappingRemoval);
+				}
+				break;
+			}
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::NeedsTalkerMappingAdjustment:
+			{
+				auto result = QMessageBox::question(this, "", "To make the required changes it is necessary to temporarily disconnect streams which might lead to audio interruptions! Continue?");
+				if (result == QMessageBox::StandardButton::Yes)
+				{
+					// yes was chosen, make call again, with force override flag
+					allowTalkerMappingChanges = true;
+					callbackTryAgainElevatedRights(allowTalkerMappingChanges, allowListenerMappingRemoval);
+					break;
+				}
+			}
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::Impossible:
+				QMessageBox::information(this, "", "The connection couldn't be created because all compatible streams are already occupied.");
+				break;
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::Error:
+				QMessageBox::information(this, "", "The connection couldn't be created. Unknown error occured.");
+				break;
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::Unsupported:
+				QMessageBox::information(this, "", "The connection couldn't be created. Unsupported device.");
+				break;
+			default:
+				break;
+		}
+	};
 
 	switch (intersectionData.type)
 	{
@@ -173,6 +220,152 @@ void View::onIntersectionClicked(QModelIndex const& index)
 						manager.disconnectStream(talkerID, connectableStream.talkerStreamIndex, listenerID, connectableStream.listenerStreamIndex);
 					}
 				}
+			}
+			break;
+		}
+
+		case Model::IntersectionData::Type::Entity_Entity:
+		{
+			if (_model->mode() == Model::Mode::Channel && QApplication::keyboardModifiers().testFlag(Qt::ControlModifier))
+			{
+				// establish diagonal connections
+				// gather all connections to be made:
+				auto talkerControlledEntity = manager.getControlledEntity(talkerID);
+				auto listenerControlledEntity = manager.getControlledEntity(listenerID);
+
+				auto const& talkerConfiguration = talkerControlledEntity->getCurrentConfigurationNode();
+				auto const& listenerConfiguration = listenerControlledEntity->getCurrentConfigurationNode();
+				std::vector<avdecc::ChannelIdentification> talkerChannels;
+				std::vector<avdecc::ChannelIdentification> listenerChannels;
+
+				for (auto const& talkerAudioUnitKV : talkerConfiguration.audioUnits)
+				{
+					for (auto const& talkerStreamPortOutputKV : talkerAudioUnitKV.second.streamPortOutputs)
+					{
+						for (auto const& talkerAudioClusterKV : talkerStreamPortOutputKV.second.audioClusters)
+						{
+							for (uint16_t channel = 0; channel < talkerAudioClusterKV.second.staticModel->channelCount; channel++)
+							{
+								talkerChannels.emplace_back(avdecc::ChannelIdentification{ talkerConfiguration.descriptorIndex, talkerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::OutputToInput, talkerAudioUnitKV.first, talkerStreamPortOutputKV.first, talkerStreamPortOutputKV.second.staticModel->baseCluster });
+							}
+						}
+					}
+				}
+
+				for (auto const& listenerAudioUnitKV : listenerConfiguration.audioUnits)
+				{
+					for (auto const& listenerStreamPortOutputKV : listenerAudioUnitKV.second.streamPortInputs)
+					{
+						for (auto const& listenerAudioClusterKV : listenerStreamPortOutputKV.second.audioClusters)
+						{
+							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel->channelCount; channel++)
+							{
+								listenerChannels.emplace_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::InputToOutput, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster });
+							}
+						}
+					}
+				}
+
+				auto talkerChannelIt = talkerChannels.begin();
+				auto listenerChannelIt = listenerChannels.begin();
+				std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> connectionsToCreate;
+
+				while (talkerChannelIt != talkerChannels.end() && listenerChannelIt != listenerChannels.end())
+				{
+					connectionsToCreate.push_back(std::make_pair(*talkerChannelIt, *listenerChannelIt));
+					talkerChannelIt++;
+					listenerChannelIt++;
+				}
+
+				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, false, true);
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
+			}
+			break;
+		}
+
+		case Model::IntersectionData::Type::Entity_SingleChannel:
+		{
+			if (_model->mode() == Model::Mode::Channel && QApplication::keyboardModifiers().testFlag(Qt::ControlModifier))
+			{
+				// check if a talker channel edge was clicked
+				auto* talkerChannelNode = dynamic_cast<ChannelNode*>(intersectionData.talker);
+				if (!talkerChannelNode)
+				{
+					return;
+				}
+
+				// establish all connections in this row
+				// gather all connections to be made:
+				auto const& talkerChannelIdentification = talkerChannelNode->channelIdentification();
+
+				auto talkerControlledEntity = manager.getControlledEntity(talkerID);
+				auto listenerControlledEntity = manager.getControlledEntity(listenerID);
+
+				auto const& talkerConfiguration = talkerControlledEntity->getCurrentConfigurationNode();
+				auto const& listenerConfiguration = listenerControlledEntity->getCurrentConfigurationNode();
+				std::vector<avdecc::ChannelIdentification> listenerChannels;
+
+				for (auto const& listenerAudioUnitKV : listenerConfiguration.audioUnits)
+				{
+					for (auto const& listenerStreamPortOutputKV : listenerAudioUnitKV.second.streamPortInputs)
+					{
+						for (auto const& listenerAudioClusterKV : listenerStreamPortOutputKV.second.audioClusters)
+						{
+							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel->channelCount; channel++)
+							{
+								listenerChannels.emplace_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::InputToOutput, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster });
+							}
+						}
+					}
+				}
+
+				auto listenerChannelIt = listenerChannels.begin();
+				std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> connectionsToCreate;
+
+				while (listenerChannelIt != listenerChannels.end())
+				{
+					connectionsToCreate.push_back(std::make_pair(talkerChannelIdentification, *listenerChannelIt));
+					listenerChannelIt++;
+				}
+
+				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, false, true);
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
+			}
+			break;
+		}
+
+		case Model::IntersectionData::Type::SingleChannel_SingleChannel:
+		{
+			auto const talkerChannelIdentification = static_cast<ChannelNode*>(intersectionData.talker)->channelIdentification();
+			auto const listenerChannelIdentification = static_cast<ChannelNode*>(intersectionData.listener)->channelIdentification();
+
+			if (intersectionData.state != Model::IntersectionData::State::NotConnected)
+			{
+				channelConnectionManager.removeChannelConnection(talkerID, *talkerChannelIdentification.audioUnitIndex, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.audioUnitIndex, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel);
+			}
+			else
+			{
+				auto error = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, false, true);
+
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -257,6 +450,11 @@ void View::applyFilterPattern(QRegExp const& pattern)
 	_horizontalHeaderView->setFilterPattern(pattern);
 }
 
+void View::forceFilter()
+{
+	applyFilterPattern(QRegExp{ _cornerWidget->filterText() });
+}
+
 void View::mouseMoveEvent(QMouseEvent* event)
 {
 	auto const index = indexAt(event->pos());
@@ -279,7 +477,16 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
-		applyFilterPattern(QRegExp{ _cornerWidget->filterText() });
+		forceFilter();
+	}
+	else if (name == settings::ChannelModeConnectionMatrix.name)
+	{
+		auto const channelMode = value.toBool();
+		auto const mode = channelMode ? Model::Mode::Channel : Model::Mode::Stream;
+
+		_model->setMode(mode);
+
+		forceFilter();
 	}
 	else if (name == settings::ThemeColorIndex.name)
 	{
@@ -287,6 +494,118 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		_verticalHeaderView->setColor(colorName);
 		_horizontalHeaderView->setColor(colorName);
+	}
+}
+
+void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo const& info)
+{
+	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> iteratedEntityIds;
+	for (auto it = info.connectionCreationErrors.begin(), end = info.connectionCreationErrors.end(); it != end; it++) // upper_bound not supported on mac (to iterate over unique keys)
+	{
+		if (iteratedEntityIds.find(it->first) == iteratedEntityIds.end())
+		{
+			iteratedEntityIds.insert(it->first);
+		}
+		else
+		{
+			continue; // entity already displayed.
+		}
+		auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+		auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+		if (controlledEntity)
+		{
+			entityName = avdecc::helper::smartEntityName(*controlledEntity);
+		}
+		auto errorsForEntity = info.connectionCreationErrors.equal_range(it->first);
+		QString errors;
+
+		// if a stream couldn't be stopped we won't show the error. Also the start stream error won't be shown in this case.
+		auto stopStreamFailed{ false };
+		for (auto i = errorsForEntity.first; i != errorsForEntity.second; ++i)
+		{
+			if (i->second.commandTypeAcmp)
+			{
+				switch (*i->second.commandTypeAcmp)
+				{
+					case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+						errors += "Connecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+						errors += "Disconnecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+						errors += "Disconnecting talker stream failed. ";
+						break;
+				}
+			}
+			else if (i->second.commandTypeAecp)
+			{
+				switch (*i->second.commandTypeAecp)
+				{
+					case avdecc::ControllerManager::AecpCommandType::SetStreamFormat:
+						errors += "Setting the stream format failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings:
+						errors += "Adding of dynamic mappings failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::RemoveStreamPortAudioMappings:
+						errors += "Removal of dynamic mappings failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::StartStream:
+						// only show the error if the stop didn't fail
+						if (!stopStreamFailed)
+						{
+							errors += "Starting the stream failed. ";
+						}
+						else
+						{
+							continue; // continue the loop
+						}
+						break;
+					case avdecc::ControllerManager::AecpCommandType::StopStream:
+						stopStreamFailed = true;
+						continue; // never show stop stream failures -> continue the loop
+				}
+			}
+			switch (i->second.errorType)
+			{
+				case avdecc::commandChain::CommandExecutionError::LockedByOther:
+					errors += "Entity is locked.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::AcquiredByOther:
+					errors += "Entity is aquired by an other controller.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::Timeout:
+					errors += "Command timed out. Entity might be offline.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::EntityError:
+					errors += "Entity error. Operation might not be supported.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NetworkIssue:
+					errors += "Network error.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::CommandFailure:
+					errors += "Command failure.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NoMediaClockInputAvailable:
+					errors += "Device does not have any compatible media clock inputs.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NoMediaClockOutputAvailable:
+					errors += "Device does not have any compatible media clock outputs.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NotSupported:
+					errors += "The command is not supported by this device.";
+					break;
+				default:
+					errors += "Unknwon error.";
+					break;
+			}
+			errors += "\n";
+		}
+		if (!errors.isEmpty())
+		{
+			QMessageBox::information(qobject_cast<QWidget*>(this), "Error while applying", QString("Error(s) occured on %1 while applying the configuration:\n\n%2").arg(entityName).arg(errors));
+		}
 	}
 }
 

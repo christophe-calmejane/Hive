@@ -179,7 +179,7 @@ TableRowEntry const& DeviceDetailsChannelTableModelPrivate::tableDataAtRow(int r
 }
 
 /**
-* Gets all user edits. 
+* Gets all user edits.
 * @return The edits in a QMap. The key indicates the node the edit has been made on, the key of the interal QMap is the type of data changed by the user.
 */
 QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> DeviceDetailsChannelTableModelPrivate::getChanges() const
@@ -209,9 +209,9 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 	for (auto& node : _nodes)
 	{
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-		if (node.connectionInformation->sourceClusterChannelInfo.forward)
+		if (node.connectionInformation->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 		{
-			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo.configurationIndex, *node.connectionInformation->sourceClusterChannelInfo.audioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.streamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.clusterIndex, *node.connectionInformation->sourceClusterChannelInfo.baseCluster, *node.connectionInformation->sourceClusterChannelInfo.clusterChannel);
+			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
 			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 			auto end = q->index(static_cast<int>(_nodes.size()), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
 			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
@@ -220,7 +220,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 		{
 			if (node.connectionInformation->sourceEntityId == entityId)
 			{
-				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, la::avdecc::UniqueIdentifier{ *node.connectionInformation->sourceClusterChannelInfo.configurationIndex }, *node.connectionInformation->sourceClusterChannelInfo.audioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.streamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.clusterIndex, *node.connectionInformation->sourceClusterChannelInfo.baseCluster, *node.connectionInformation->sourceClusterChannelInfo.clusterChannel);
+				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
 				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
 				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
@@ -242,11 +242,11 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(std::set<st
 	for (auto& node : _nodes)
 	{
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-		if (node.connectionInformation->sourceClusterChannelInfo.forward)
+		if (node.connectionInformation->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 		{
 			// in the case of the talker we can't know which channels have to be updated without getting the changes from the ChannelConnectionManager
 			// therefor all talkers are updated for now. To improve on this talker connections would need to be cached in the ChannelConnectionManager like the listenerChannelConnections are cached.
-			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo.configurationIndex, *node.connectionInformation->sourceClusterChannelInfo.audioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.streamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.clusterIndex, *node.connectionInformation->sourceClusterChannelInfo.baseCluster, *node.connectionInformation->sourceClusterChannelInfo.clusterChannel);
+			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
 			auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 			q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
 			auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
@@ -254,9 +254,9 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(std::set<st
 		}
 		else
 		{
-			if (channels.find(std::make_pair(node.connectionInformation->sourceEntityId, node.connectionInformation->sourceClusterChannelInfo)) != channels.end())
+			if (channels.find(std::make_pair(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo)) != channels.end())
 			{
-				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, la::avdecc::UniqueIdentifier{ *node.connectionInformation->sourceClusterChannelInfo.configurationIndex }, *node.connectionInformation->sourceClusterChannelInfo.audioUnitIndex, *node.connectionInformation->sourceClusterChannelInfo.streamPortIndex, *node.connectionInformation->sourceClusterChannelInfo.clusterIndex, *node.connectionInformation->sourceClusterChannelInfo.baseCluster, *node.connectionInformation->sourceClusterChannelInfo.clusterChannel);
+				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
 				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
 				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
@@ -277,9 +277,9 @@ void DeviceDetailsChannelTableModelPrivate::updateAudioClusterName(la::avdecc::U
 	int row = 0;
 	for (auto& node : _nodes)
 	{
-		if (!_hasChangesMap.contains(*node.connectionInformation->sourceClusterChannelInfo.clusterIndex) || !_hasChangesMap.value(*node.connectionInformation->sourceClusterChannelInfo.clusterIndex)->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
+		if (!_hasChangesMap.contains(node.connectionInformation->sourceClusterChannelInfo->clusterIndex) || !_hasChangesMap.value(node.connectionInformation->sourceClusterChannelInfo->clusterIndex)->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
 		{
-			if (entityID == node.connectionInformation->sourceEntityId && configurationIndex == node.connectionInformation->sourceClusterChannelInfo.configurationIndex && audioClusterIndex == *node.connectionInformation->sourceClusterChannelInfo.clusterIndex)
+			if (entityID == node.connectionInformation->sourceEntityId && configurationIndex == node.connectionInformation->sourceClusterChannelInfo->configurationIndex && audioClusterIndex == node.connectionInformation->sourceClusterChannelInfo->clusterIndex)
 			{
 				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ChannelName), QModelIndex());
 				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
@@ -322,9 +322,9 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 			auto const& connectionInfo = _nodes.at(index.row()).connectionInformation;
 			if (role == Qt::DisplayRole || role == Qt::EditRole)
 			{
-				if (_hasChangesMap.contains(*connectionInfo->sourceClusterChannelInfo.clusterIndex) && _hasChangesMap.value(*connectionInfo->sourceClusterChannelInfo.clusterIndex)->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
+				if (_hasChangesMap.contains(connectionInfo->sourceClusterChannelInfo->clusterIndex) && _hasChangesMap.value(connectionInfo->sourceClusterChannelInfo->clusterIndex)->contains(DeviceDetailsChannelTableModelColumn::ChannelName))
 				{
-					return _hasChangesMap.value(*connectionInfo->sourceClusterChannelInfo.clusterIndex)->value(DeviceDetailsChannelTableModelColumn::ChannelName);
+					return _hasChangesMap.value(connectionInfo->sourceClusterChannelInfo->clusterIndex)->value(DeviceDetailsChannelTableModelColumn::ChannelName);
 				}
 				else
 				{
@@ -333,17 +333,17 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 						auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo->sourceEntityId);
 						if (controlledEntity)
 						{
-							auto const configurationIndex = connectionInfo->sourceClusterChannelInfo.configurationIndex;
-							auto const streamPortIndex = connectionInfo->sourceClusterChannelInfo.streamPortIndex;
-							auto const clusterIndex = connectionInfo->sourceClusterChannelInfo.clusterIndex;
-							auto const baseCluster = connectionInfo->sourceClusterChannelInfo.baseCluster;
-							if (!connectionInfo->sourceClusterChannelInfo.forward)
+							auto const configurationIndex = connectionInfo->sourceClusterChannelInfo->configurationIndex;
+							auto const streamPortIndex = connectionInfo->sourceClusterChannelInfo->streamPortIndex;
+							auto const clusterIndex = connectionInfo->sourceClusterChannelInfo->clusterIndex;
+							auto const baseCluster = connectionInfo->sourceClusterChannelInfo->baseCluster;
+							if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::InputToOutput)
 							{
-								if (configurationIndex && streamPortIndex && clusterIndex)
+								if (streamPortIndex)
 								{
-									auto const& streamPortInput = controlledEntity->getStreamPortInputNode(*configurationIndex, *streamPortIndex);
+									auto const& streamPortInput = controlledEntity->getStreamPortInputNode(configurationIndex, *streamPortIndex);
 									auto const& audioClusters = streamPortInput.audioClusters;
-									auto audioClusterIt = audioClusters.find(*clusterIndex);
+									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
 										auto const& audioCluster = audioClusterIt->second;
@@ -356,11 +356,11 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							}
 							else
 							{
-								if (configurationIndex && streamPortIndex && clusterIndex)
+								if (streamPortIndex)
 								{
-									auto const& streamPortOutput = controlledEntity->getStreamPortOutputNode(*configurationIndex, *streamPortIndex);
+									auto const& streamPortOutput = controlledEntity->getStreamPortOutputNode(configurationIndex, *streamPortIndex);
 									auto const& audioClusters = streamPortOutput.audioClusters;
-									auto audioClusterIt = audioClusters.find(*clusterIndex);
+									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
 										auto const& audioCluster = audioClusterIt->second;
@@ -380,6 +380,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 					}
 				}
 			}
+			break;
 		}
 		case DeviceDetailsChannelTableModelColumn::Connection:
 		{
@@ -406,13 +407,13 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							{
 								auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
 								QString clusterName;
-								if (connectionInfo->sourceClusterChannelInfo.forward)
+								if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 								{
-									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(*connection->targetAudioUnitIndex).streamPortInputs.at(*connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + *connection->targetBaseCluster)));
+									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 								}
 								else
 								{
-									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(*connection->targetAudioUnitIndex).streamPortOutputs.at(*connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + *connection->targetBaseCluster)));
+									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 								}
 
 								if (connection->isSourceRedundant && connection->isTargetRedundant)
@@ -422,7 +423,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
 									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantInputs;
-									if (connectionInfo->sourceClusterChannelInfo.forward)
+									if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 									{
 										redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
 										redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
@@ -465,6 +466,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 					return {};
 				}
 			}
+			break;
 		}
 		case DeviceDetailsChannelTableModelColumn::ConnectionStatus:
 		{
@@ -483,7 +485,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							auto talkerStreamIndex = la::avdecc::entity::model::StreamIndex{};
 							auto listenerStreamIndex = la::avdecc::entity::model::StreamIndex{};
 
-							if (connectionInfo->sourceClusterChannelInfo.forward)
+							if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 							{
 								talkerEntityId = connectionInfo->sourceEntityId;
 								listenerEntityId = connection->targetEntityId;
@@ -646,6 +648,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 					return {};
 				}
 			}
+			break;
 		}
 		default:
 			break;
@@ -669,12 +672,12 @@ bool DeviceDetailsChannelTableModelPrivate::setData(QModelIndex const& index, QV
 			{
 				if (value.toString() != data(index, role))
 				{
-					auto const sourceClusterIndex = _nodes.at(index.row()).connectionInformation->sourceClusterChannelInfo.clusterIndex;
-					if (!_hasChangesMap.contains(*sourceClusterIndex))
+					auto const sourceClusterIndex = _nodes.at(index.row()).connectionInformation->sourceClusterChannelInfo->clusterIndex;
+					if (!_hasChangesMap.contains(sourceClusterIndex))
 					{
-						_hasChangesMap.insert(*sourceClusterIndex, new QMap<DeviceDetailsChannelTableModelColumn, QVariant>());
+						_hasChangesMap.insert(sourceClusterIndex, new QMap<DeviceDetailsChannelTableModelColumn, QVariant>());
 					}
-					_hasChangesMap.value(*sourceClusterIndex)->insert(DeviceDetailsChannelTableModelColumn::ChannelName, value.toString());
+					_hasChangesMap.value(sourceClusterIndex)->insert(DeviceDetailsChannelTableModelColumn::ChannelName, value.toString());
 					emit q->dataEdited();
 				}
 				break;
@@ -714,7 +717,11 @@ QVariant DeviceDetailsChannelTableModelPrivate::headerData(int section, Qt::Orie
 	{
 		if (role == Qt::DisplayRole)
 		{
-			return *_nodes.at(section).connectionInformation->sourceClusterChannelInfo.clusterIndex - *_nodes.at(section).connectionInformation->sourceClusterChannelInfo.baseCluster + 1; // +1 to make the row count start at 1 instead of 0.
+			if (static_cast<size_t>(section) >= _nodes.size())
+			{
+				return {};
+			}
+			return _nodes.at(section).connectionInformation->sourceClusterChannelInfo->clusterIndex - *_nodes.at(section).connectionInformation->sourceClusterChannelInfo->baseCluster + 1; // +1 to make the row count start at 1 instead of 0.
 		}
 	}
 

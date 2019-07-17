@@ -109,6 +109,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		case Model::IntersectionData::Type::Entity_Redundant:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
 		case Model::IntersectionData::Type::Entity_SingleStream:
+		case Model::IntersectionData::Type::Entity_SingleChannel:
 			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
 			painter->setPen(QPen{ penColor, penWidth });
 			drawSquare(painter, rect);
@@ -141,6 +142,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
+		case Model::IntersectionData::Type::SingleChannel_SingleChannel:
 			painter->setBrush(getConnectionBrushColor(state, flags));
 			painter->setPen(QPen{ penColor, penWidth });
 			drawCircle(painter, rect);

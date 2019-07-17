@@ -113,6 +113,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::LastLaunchedVersion);
 	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
 	settings.registerSetting(settings::TransposeConnectionMatrix);
+	settings.registerSetting(settings::ChannelModeConnectionMatrix);
 	settings.registerSetting(settings::AutomaticCheckForUpdates);
 	settings.registerSetting(settings::CheckForBetaVersions);
 	settings.registerSetting(settings::ThemeColorIndex);

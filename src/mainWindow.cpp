@@ -151,6 +151,7 @@ public:
 	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ _parent };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
 	qt::toolkit::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
+	qt::toolkit::FlatIconButton _channelModeButton{ "Material Icons", "format_align_justify", _parent };
 	qt::toolkit::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
 	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qt::toolkit::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
@@ -312,6 +313,12 @@ void MainWindowImpl::registerMetaTypes()
 
 void MainWindowImpl::createViewMenu()
 {
+	// Exclusive connection matrix modes
+	auto* actionGroup = new QActionGroup{ this };
+	actionGroup->addAction(actionStreamModeRouting);
+	actionGroup->addAction(actionChannelModeRouting);
+	menuView->addSeparator();
+
 	// Toolbars visibility toggle
 	menuView->addAction(controllerToolBar->toggleViewAction());
 	menuView->addAction(utilitiesToolBar->toggleViewAction());
@@ -352,10 +359,16 @@ void MainWindowImpl::createToolbars()
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
+		_channelModeButton.setCheckable(true);
+		_channelModeButton.setToolTip("Toggle Channel Mode");
 
 		// Controller
 		utilitiesToolBar->setMinimumHeight(30);
 		utilitiesToolBar->addWidget(&_refreshControllerButton);
+
+		// View
+		utilitiesToolBar->addSeparator();
+		utilitiesToolBar->addWidget(&_channelModeButton);
 
 		// Tools
 		utilitiesToolBar->addSeparator();
@@ -441,6 +454,12 @@ void MainWindowImpl::loadSettings()
 		}
 	}
 
+	// Configure connectionMatrix mode
+	auto const channelMode = settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
+	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting;
+	action->setChecked(true);
+	_channelModeButton.setChecked(channelMode);
+
 	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
 	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
 	entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
@@ -448,6 +467,7 @@ void MainWindowImpl::loadSettings()
 
 	// Configure settings observers
 	settings.registerSettingObserver(settings::ProtocolType.name, this);
+	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
 	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
 }
 
@@ -460,6 +480,22 @@ void MainWindowImpl::connectSignals()
 	connect(&_openMultiFirmwareUpdateDialogButton, &QPushButton::clicked, actionDeviceFirmwareUpdate, &QAction::trigger);
 
 	connect(&_openSettingsButton, &QPushButton::clicked, actionSettings, &QAction::trigger);
+
+	connect(actionChannelModeRouting, &QAction::toggled, this,
+		[this](bool checked)
+		{
+			// Update settings
+			auto& settings = settings::SettingsManager::getInstance();
+			settings.setValue(settings::ChannelModeConnectionMatrix.name, checked);
+			_channelModeButton.setChecked(checked);
+		});
+
+	connect(&_channelModeButton, &QPushButton::toggled, this,
+		[this](bool checked)
+		{
+			auto* action = checked ? actionChannelModeRouting : actionStreamModeRouting;
+			action->setChecked(true);
+		});
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
@@ -476,17 +512,12 @@ void MainWindowImpl::connectSignals()
 			auto const entityID = _controllerModel->controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
-			auto const& entity = controlledEntity->getEntity();
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
 				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
+				dialog->setAttribute(Qt::WA_DeleteOnClose);
 				dialog->setControlledEntityID(entityID);
 				dialog->show();
-				connect(dialog, &DeviceDetailsDialog::finished, _parent,
-					[this, dialog](int result)
-					{
-						dialog->deleteLater();
-					});
 			}
 		});
 
@@ -610,13 +641,9 @@ void MainWindowImpl::connectSignals()
 					else if (action == deviceView)
 					{
 						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
+						dialog->setAttribute(Qt::WA_DeleteOnClose);
 						dialog->setControlledEntityID(entityID);
 						dialog->show();
-						connect(dialog, &DeviceDetailsDialog::finished, _parent,
-							[this, dialog](int result)
-							{
-								dialog->deleteLater();
-							});
 					}
 					else if (action == inspect)
 					{
@@ -945,6 +972,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
 	// Unregister from settings
 	settings.unregisterSettingObserver(settings::ProtocolType.name, _pImpl);
+	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, _pImpl);
 	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, _pImpl);
 
 	qApp->closeAllWindows();

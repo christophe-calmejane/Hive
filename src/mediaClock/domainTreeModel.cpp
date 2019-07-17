@@ -71,7 +71,7 @@ public:
 	bool dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent);
 	QStringList mimeTypes() const;
 	QMimeData* mimeData(const QModelIndexList& indexes) const;
-	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
+	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains);
 	avdecc::mediaClock::MCEntityDomainMapping createMediaClockMappings();
 	QModelIndex getDomainModelIndex(avdecc::mediaClock::DomainIndex domainIndex) const;
 
@@ -128,7 +128,7 @@ DomainTreeModelPrivate::~DomainTreeModelPrivate()
 * Sets the data this model operates on.
 * @param domains The model.
 */
-void DomainTreeModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains)
+void DomainTreeModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains)
 {
 	Q_Q(DomainTreeModel);
 	q->beginResetModel();
@@ -136,13 +136,15 @@ void DomainTreeModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEnti
 	_rootItem = new RootTreeItem();
 	q->endResetModel();
 
-	for (auto& domainKV : domains.getMediaClockDomains())
+	auto domainModel = domains;
+
+	for (auto& domainKV : domainModel.getMediaClockDomains())
 	{
 		_rootItem->appendChild(new DomainTreeItem(domainKV.second, _rootItem));
 	}
 
 	auto const childCount = _rootItem->childCount();
-	for (auto& entityDomainKV : domains.getEntityMediaClockMasterMappings())
+	for (auto& entityDomainKV : domainModel.getEntityMediaClockMasterMappings())
 	{
 		for (auto i = 0; i < childCount; ++i)
 		{

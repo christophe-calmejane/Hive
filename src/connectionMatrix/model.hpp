@@ -20,7 +20,7 @@
 #pragma once
 
 // Debugging options
-#define ENABLE_CONNECTION_MATRIX_DEBUG 0
+#define ENABLE_CONNECTION_MATRIX_DEBUG 1
 #define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 1
 #define ENABLE_CONNECTION_MATRIX_TOOLTIP 1
 
@@ -48,11 +48,16 @@
 namespace connectionMatrix
 {
 class Node;
-
 class ModelPrivate;
 class Model : public QAbstractTableModel
 {
 public:
+	enum class Mode
+	{
+		Stream,
+		Channel,
+	};
+
 	struct IntersectionData
 	{
 		enum class Type
@@ -64,20 +69,32 @@ public:
 			Entity_Entity, // Summary kind
 			Entity_Redundant, // Summary kind
 			Entity_RedundantStream, // Summary kind
+			Entity_RedundantChannel, // Summary kind
 			Entity_SingleStream, // Summary kind
+			Entity_SingleChannel, // Summary kind
 
 			// Redundant
 			Redundant_Redundant, // Summary kind
 			Redundant_RedundantStream, // Duplicate kind
+			Redundant_RedundantChannel, // Duplicate kind
 			Redundant_SingleStream, // Summary kind
+			Redundant_SingleChannel, // Summary kind
 
 			// RedundantStream
 			RedundantStream_RedundantStream,
 			RedundantStream_RedundantStream_Forbidden,
 			RedundantStream_SingleStream,
 
+			// RedundantChannel
+			RedundantChannel_RedundantChannel,
+			RedundantChannel_RedundantChannel_Forbidden,
+			RedundantChannel_SingleChannel,
+
 			// Stream
 			SingleStream_SingleStream,
+
+			// Channel
+			SingleChannel_SingleChannel,
 		};
 
 		enum class State
@@ -134,11 +151,21 @@ public:
 	// Returns intersection data for the given index
 	IntersectionData const& intersectionData(QModelIndex const& index) const;
 
+	// Set the model mode
+	void setMode(Mode const mode);
+
+	// Returns the mode of the model
+	Mode mode() const;
+
 	// Set the transpose state of the model (default false, rows = talkers, columns = listeners)
 	void setTransposed(bool const transposed);
 
 	// Returns the transpose state of the model
 	bool isTransposed() const;
+
+	// Visitor pattern that performs a hierarchy traversal according with respect of the current mode
+	using Visitor = std::function<void(Node*)>;
+	void accept(Node* node, Visitor const& visitor, bool const childrenOnly = false) const;
 
 private:
 	QScopedPointer<ModelPrivate> d_ptr;

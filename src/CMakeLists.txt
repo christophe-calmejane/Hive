@@ -59,6 +59,7 @@ set(HEADER_FILES_COMMON
 	avdecc/helper.hpp
 	avdecc/hiveLogItems.hpp
 	avdecc/loggerModel.hpp
+	avdecc/commandChain.hpp
 	avdecc/stringValidator.hpp
 	connectionMatrix/cornerWidget.hpp
 	connectionMatrix/headerView.hpp
@@ -144,6 +145,7 @@ set(SOURCE_FILES_COMMON
 	avdecc/channelConnectionManager.cpp
 	avdecc/helper.cpp
 	avdecc/loggerModel.cpp
+	avdecc/commandChain.cpp
 	connectionMatrix/cornerWidget.cpp
 	connectionMatrix/legendDialog.cpp
 	connectionMatrix/headerView.cpp

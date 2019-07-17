@@ -24,6 +24,9 @@ qt--toolkit--FlatIconButton:pressed {
 	margin: 2 0 0 2;
 	color: %1;
 }
+qt--toolkit--material--Button:checked {
+	color: %1;
+}
 NodeTreeWidget .QListWidget {
 	margin-top: 4;
 	margin-bottom: 4;
