@@ -85,6 +85,10 @@ View::View(QWidget* parent)
 	settings.registerSettingObserver(settings::TransposeConnectionMatrix.name, this);
 	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
 	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
+
+	// react on connection completed signals to show error messages.
+	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+	connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::createChannelConnectionsFinished, this, &View::handleCreateChannelConnectionsFinished);
 }
 
 View::~View()
@@ -106,20 +110,39 @@ void View::onIntersectionClicked(QModelIndex const& index)
 	auto& manager = avdecc::ControllerManager::getInstance();
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
-	auto const handleChannelCreationResult = [this](avdecc::ChannelConnectionManager::ChannelConnectResult channelConnectResult, std::function<void()> callbackTryAgainElevatedRights)
+	auto const handleChannelCreationResult = [this](avdecc::ChannelConnectionManager::ChannelConnectResult channelConnectResult, bool allowTalkerMappingChanges, bool allowListenerMappingRemoval, std::function<void(bool, bool)> callbackTryAgainElevatedRights)
 	{
 		switch (channelConnectResult)
 		{
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::RemovalOfListenerDynamicMappingsNecessary:
 			{
-				la::avdecc::utils::invokeProtectedHandler(callbackTryAgainElevatedRights);
+				auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
+				if (result == QMessageBox::StandardButton::Yes)
+				{
+					allowListenerMappingRemoval = true;
+					callbackTryAgainElevatedRights(allowTalkerMappingChanges, allowListenerMappingRemoval);
+				}
 				break;
+			}
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::NeedsTalkerMappingAdjustment:
+			{
+				auto result = QMessageBox::question(this, "", "To make the required changes it is necessary to temporarily disconnect streams which might lead to audio interruptions! Continue?");
+				if (result == QMessageBox::StandardButton::Yes)
+				{
+					// yes was chosen, make call again, with force override flag
+					allowTalkerMappingChanges = true;
+					callbackTryAgainElevatedRights(allowTalkerMappingChanges, allowListenerMappingRemoval);
+					break;
+				}
 			}
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::Impossible:
 				QMessageBox::information(this, "", "The connection couldn't be created because all compatible streams are already occupied.");
 				break;
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::Error:
 				QMessageBox::information(this, "", "The connection couldn't be created. Unknown error occured.");
+				break;
+			case avdecc::ChannelConnectionManager::ChannelConnectResult::Unsupported:
+				QMessageBox::information(this, "", "The connection couldn't be created. Unsupported device.");
 				break;
 			default:
 				break;
@@ -254,19 +277,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					listenerChannelIt++;
 				}
 
-				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-				handleChannelCreationResult(error,
-					[=]()
-					{
-						auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-						auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
-						if (result == QMessageBox::StandardButton::Yes)
-						{
-							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-							handleChannelCreationResult(errorSecondTry, {});
-						}
-					});
+				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, false, true);
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -316,19 +334,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					listenerChannelIt++;
 				}
 
-				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-				handleChannelCreationResult(error,
-					[=]()
-					{
-						auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-						auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
-						if (result == QMessageBox::StandardButton::Yes)
-						{
-							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate);
-							handleChannelCreationResult(errorSecondTry, {});
-						}
-					});
+				auto error = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, false, true);
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnections(talkerID, listenerID, connectionsToCreate, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -344,19 +357,15 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			}
 			else
 			{
-				auto error = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel);
-				handleChannelCreationResult(error,
-					[=]()
-					{
-						auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-						auto result = QMessageBox::question(this, "", "The connection is not possible with the currently existing listener mappings. Allow removing the currently unused dynamic mappings?");
-						if (result == QMessageBox::StandardButton::Yes)
-						{
-							// yes was chosen, make call again, with force override flag
-							auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, *talkerChannelIdentification.streamPortIndex, talkerChannelIdentification.clusterIndex, *talkerChannelIdentification.baseCluster, talkerChannelIdentification.clusterChannel, listenerID, *listenerChannelIdentification.streamPortIndex, listenerChannelIdentification.clusterIndex, *listenerChannelIdentification.baseCluster, listenerChannelIdentification.clusterChannel, true);
-							handleChannelCreationResult(errorSecondTry, {});
-						}
-					});
+				auto error = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, false, true);
+
+				std::function<void(bool, bool)> elevatedRightsCallback = [&](bool allowTalkerMappingChanges, bool allowListenerMappingRemoval)
+				{
+					auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+					auto errorSecondTry = channelConnectionManager.createChannelConnection(talkerID, listenerID, talkerChannelIdentification, listenerChannelIdentification, allowTalkerMappingChanges, allowListenerMappingRemoval);
+					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
+				};
+				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
 			break;
 		}
@@ -485,6 +494,118 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		_verticalHeaderView->setColor(colorName);
 		_horizontalHeaderView->setColor(colorName);
+	}
+}
+
+void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo const& info)
+{
+	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> iteratedEntityIds;
+	for (auto it = info.connectionCreationErrors.begin(), end = info.connectionCreationErrors.end(); it != end; it++) // upper_bound not supported on mac (to iterate over unique keys)
+	{
+		if (iteratedEntityIds.find(it->first) == iteratedEntityIds.end())
+		{
+			iteratedEntityIds.insert(it->first);
+		}
+		else
+		{
+			continue; // entity already displayed.
+		}
+		auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+		auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+		if (controlledEntity)
+		{
+			entityName = avdecc::helper::smartEntityName(*controlledEntity);
+		}
+		auto errorsForEntity = info.connectionCreationErrors.equal_range(it->first);
+		QString errors;
+
+		// if a stream couldn't be stopped we won't show the error. Also the start stream error won't be shown in this case.
+		auto stopStreamFailed{ false };
+		for (auto i = errorsForEntity.first; i != errorsForEntity.second; ++i)
+		{
+			if (i->second.commandTypeAcmp)
+			{
+				switch (*i->second.commandTypeAcmp)
+				{
+					case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+						errors += "Connecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+						errors += "Disconnecting stream failed. ";
+						break;
+					case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+						errors += "Disconnecting talker stream failed. ";
+						break;
+				}
+			}
+			else if (i->second.commandTypeAecp)
+			{
+				switch (*i->second.commandTypeAecp)
+				{
+					case avdecc::ControllerManager::AecpCommandType::SetStreamFormat:
+						errors += "Setting the stream format failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings:
+						errors += "Adding of dynamic mappings failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::RemoveStreamPortAudioMappings:
+						errors += "Removal of dynamic mappings failed. ";
+						break;
+					case avdecc::ControllerManager::AecpCommandType::StartStream:
+						// only show the error if the stop didn't fail
+						if (!stopStreamFailed)
+						{
+							errors += "Starting the stream failed. ";
+						}
+						else
+						{
+							continue; // continue the loop
+						}
+						break;
+					case avdecc::ControllerManager::AecpCommandType::StopStream:
+						stopStreamFailed = true;
+						continue; // never show stop stream failures -> continue the loop
+				}
+			}
+			switch (i->second.errorType)
+			{
+				case avdecc::commandChain::CommandExecutionError::LockedByOther:
+					errors += "Entity is locked.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::AcquiredByOther:
+					errors += "Entity is aquired by an other controller.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::Timeout:
+					errors += "Command timed out. Entity might be offline.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::EntityError:
+					errors += "Entity error. Operation might not be supported.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NetworkIssue:
+					errors += "Network error.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::CommandFailure:
+					errors += "Command failure.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NoMediaClockInputAvailable:
+					errors += "Device does not have any compatible media clock inputs.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NoMediaClockOutputAvailable:
+					errors += "Device does not have any compatible media clock outputs.";
+					break;
+				case avdecc::commandChain::CommandExecutionError::NotSupported:
+					errors += "The command is not supported by this device.";
+					break;
+				default:
+					errors += "Unknwon error.";
+					break;
+			}
+			errors += "\n";
+		}
+		if (!errors.isEmpty())
+		{
+			QMessageBox::information(qobject_cast<QWidget*>(this), "Error while applying", QString("Error(s) occured on %1 while applying the configuration:\n\n%2").arg(entityName).arg(errors));
+		}
 	}
 }
 

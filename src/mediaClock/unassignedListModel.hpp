@@ -46,23 +46,24 @@ public:
 	~UnassignedListModel();
 
 	QStringList mimeTypes() const override;
-	QMimeData* mimeData(const QModelIndexList& indexes) const override;
+	QMimeData* mimeData(QModelIndexList const& indexes) const override;
 
 	QVariant data(QModelIndex const& index, int role) const override;
 	Qt::ItemFlags flags(QModelIndex const& index) const override;
 	int rowCount(QModelIndex const& parent = QModelIndex()) const override;
 	Qt::DropActions supportedDropActions() const override;
-	bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
-	bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
-	bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+	bool canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const override;
+	bool dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) override;
+	bool removeRows(int row, int count, QModelIndex const& parent = QModelIndex()) override;
 
-	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
+	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains);
 
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	void addEntity(la::avdecc::UniqueIdentifier const& entityId);
 	QList<la::avdecc::UniqueIdentifier> getSelectedItems(QItemSelection const& itemSelection) const;
 	QList<la::avdecc::UniqueIdentifier> getAllItems() const;
 
+	// Signals
 	Q_SIGNAL void domainSetupChanged();
 
 private:

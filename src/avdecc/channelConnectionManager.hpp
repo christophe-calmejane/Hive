@@ -25,9 +25,11 @@
 #include <optional>
 #include <QObject>
 
+#include "mcDomainManager.hpp"
+
 namespace avdecc
 {
-using StreamConnection = std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamIdentification>;
+using StreamIdentificationPair = std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamIdentification>;
 
 enum class ChannelConnectionDirection
 {
@@ -149,6 +151,11 @@ struct SourceChannelConnections
 	std::map<ChannelIdentification, std::shared_ptr<TargetConnectionInformations>> channelMappings;
 };
 
+struct CreateConnectionsInfo
+{
+	commandChain::CommandExecutionErrors connectionCreationErrors;
+};
+
 // **************************************************************
 // class ChannelConnectionManager
 // **************************************************************
@@ -171,6 +178,7 @@ public:
 		Impossible,
 		Error,
 		Unsupported,
+		NeedsTalkerMappingAdjustment,
 	};
 
 	enum class ChannelDisconnectResult
@@ -184,26 +192,30 @@ public:
 	/* channel connection management helper functions */
 	virtual std::shared_ptr<TargetConnectionInformations> getAllChannelConnectionsBetweenDevices(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::UniqueIdentifier const& targetEntityId) const noexcept = 0;
 
-	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnections(la::avdecc::UniqueIdentifier const& entityId, ChannelIdentification sourceChannelIdentification) const noexcept = 0;
+	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnections(la::avdecc::UniqueIdentifier const& entityId, ChannelIdentification const sourceChannelIdentification) const noexcept = 0;
 
 	virtual std::shared_ptr<TargetConnectionInformations> getChannelConnectionsReverse(la::avdecc::UniqueIdentifier const& entityId, ChannelIdentification const& sourceChannelIdentification) noexcept = 0;
 
-	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamOutputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex primaryStreamIndex) const noexcept = 0;
+	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamOutputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const primaryStreamIndex) const noexcept = 0;
 
-	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamInputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex primaryStreamIndex) const noexcept = 0;
+	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamInputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const primaryStreamIndex) const noexcept = 0;
 
-	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamPortIndex const talkerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const talkerClusterIndex, la::avdecc::entity::model::ClusterIndex const talkerBaseCluster, std::uint16_t const talkerClusterChannel, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamPortIndex const listenerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const listenerClusterIndex, la::avdecc::entity::model::ClusterIndex const listenerBaseCluster, std::uint16_t const listenerClusterChannel, bool allowRemovalOfUnusedAudioMappings = false, uint16_t streamChannelCountHint = 8) const noexcept = 0;
+	virtual ChannelConnectResult createChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, avdecc::ChannelIdentification const& talkerChannelIdentification, avdecc::ChannelIdentification const& listenerChannelIdentification, bool const allowTalkerMappingChanges = false, bool const allowRemovalOfUnusedAudioMappings = false) noexcept = 0;
 
-	virtual ChannelConnectResult createChannelConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool allowRemovalOfUnusedAudioMappings = false) const noexcept = 0;
+	virtual ChannelConnectResult createChannelConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool const allowTalkerMappingChanges = false, bool const allowRemovalOfUnusedAudioMappings = false) noexcept = 0;
 
 	virtual ChannelDisconnectResult removeChannelConnection(
 		la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::AudioUnitIndex const talkerAudioUnitIndex, la::avdecc::entity::model::StreamPortIndex const talkerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const talkerClusterIndex, la::avdecc::entity::model::ClusterIndex const talkerBaseCluster, std::uint16_t const talkerClusterChannel, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::AudioUnitIndex const listenerAudioUnitIndex, la::avdecc::entity::model::StreamPortIndex const listenerStreamPortIndex, la::avdecc::entity::model::ClusterIndex const listenerClusterIndex, la::avdecc::entity::model::ClusterIndex const listenerBaseCluster, std::uint16_t const listenerClusterChannel) noexcept = 0;
 
-	virtual std::vector<StreamConnection> getStreamIndexPairUsedByAudioChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, ChannelIdentification const& talkerChannelIdentification, la::avdecc::UniqueIdentifier const& listenerEntityId, ChannelIdentification const& listenerChannelIdentification) noexcept = 0;
+	virtual std::vector<StreamIdentificationPair> getStreamIndexPairUsedByAudioChannelConnection(la::avdecc::UniqueIdentifier const& talkerEntityId, ChannelIdentification const& talkerChannelIdentification, la::avdecc::UniqueIdentifier const& listenerEntityId, ChannelIdentification const& listenerChannelIdentification) noexcept = 0;
 
 	virtual bool isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification const& streamIdentification) const noexcept = 0;
 
-	Q_SIGNAL void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, ChannelIdentification>> channels);
+	// SIGNALS:
+	Q_SIGNAL void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, ChannelIdentification>> const& channels);
+
+	/* Invoked after createChannelConnection or createChannelConnections are completed */
+	Q_SIGNAL void createChannelConnectionsFinished(CreateConnectionsInfo const& info);
 };
 
 

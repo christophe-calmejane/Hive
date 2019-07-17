@@ -240,6 +240,122 @@ public:
 	}
 
 	/**
+	* Invoked when the apply button is clicked.
+	* Writes all data via the avdecc::ControllerManager. The avdecc::ControllerManager::endAecpCommand signal is used
+	* to determine the state of the requested commands.
+	*/
+	void applyChanges()
+	{
+		_hasChangesByUser = false;
+		updateButtonStates();
+		_applyRequested = true;
+		_expectedChanges = 0;
+		_gottenChanges = 0;
+
+		auto& manager = avdecc::ControllerManager::getInstance();
+
+		// set all data
+		if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
+		{
+			manager.setEntityName(_entityID, lineEditDeviceName->text());
+			_expectedChanges++;
+		}
+		if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
+		{
+			manager.setEntityGroupName(_entityID, lineEditGroupName->text());
+			_expectedChanges++;
+		}
+
+		//iterate over the changes and write them via avdecc
+		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
+		for (auto e : changesReceive.keys())
+		{
+			auto rxChanges = changesReceive.value(e);
+			for (auto f : rxChanges->keys())
+			{
+				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
+				{
+					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, rxChanges->value(f).toString());
+					_expectedChanges++;
+				}
+			}
+		}
+
+		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
+		for (auto e : changesTransmit.keys())
+		{
+			auto txChanges = changesTransmit.value(e);
+			for (auto f : txChanges->keys())
+			{
+				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
+				{
+					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, txChanges->value(f).toString());
+					_expectedChanges++;
+				}
+			}
+		}
+
+		// apply the new stream info (latency)
+		if (_userSelectedLatency)
+		{
+			auto const controlledEntity = manager.getControlledEntity(_entityID);
+			if (controlledEntity)
+			{
+				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+				for (auto const& streamOutput : configurationNode.streamOutputs)
+				{
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamInfo.streamFormat);
+					auto const streamType = streamFormatInfo->getType();
+					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+					{
+						// skip clock stream
+						continue;
+					}
+					auto streamInfo = streamOutput.second.dynamicModel->streamInfo;
+					if (streamInfo.msrpAccumulatedLatency != *_userSelectedLatency)
+					{
+						streamInfo.streamInfoFlags.clear();
+						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
+						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+
+						// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
+						// TODO: needs update of library:
+						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
+					}
+				}
+			}
+		}
+
+		// applying the new configuration shall be done as the last step, as it may change everything displayed.
+		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
+		if (_previousConfigurationIndex != _activeConfigurationIndex)
+		{
+			manager.setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
+			_expectedChanges++;
+		}
+	}
+
+	/**
+	* Invoked when the cancel button is clicked. Reverts all changes in the dialog.
+	*/
+	void revertChanges()
+	{
+		_hasChangesByUser = false;
+		updateButtonStates();
+		_activeConfigurationIndex = std::nullopt;
+		_userSelectedLatency = std::nullopt;
+
+		_deviceDetailsChannelTableModelTransmit.resetChangedData();
+		_deviceDetailsChannelTableModelTransmit.removeAllNodes();
+		_deviceDetailsChannelTableModelReceive.resetChangedData();
+		_deviceDetailsChannelTableModelReceive.removeAllNodes();
+
+		// read out actual data again
+		loadCurrentControlledEntity(_entityID, false);
+	}
+
+
+	/**
 	* Ignored.
 	*/
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::EntityNode const& /*node*/) noexcept override {}
@@ -368,12 +484,15 @@ public:
 	*/
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::MemoryObjectNode const& /*node*/) noexcept override {}
 
+
+	// Slots
+
 	/**
 	* Invoked whenever the entity name gets changed in the model.
 	* @param entityID   The id of the entity that got updated.
 	* @param entityName The new name.
 	*/
-	Q_SLOT void entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
+	void entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
 	{
 		if (_entityID == entityID && (!_hasChangesMap.contains(lineEditDeviceName) || !_hasChangesMap[lineEditDeviceName]))
 		{
@@ -390,7 +509,7 @@ public:
 	* @param entityID		 The id of the entity that got updated.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void entityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName)
+	void entityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName)
 	{
 		if (_entityID == entityID && (!_hasChangesMap.contains(lineEditGroupName) || !_hasChangesMap[lineEditGroupName]))
 		{
@@ -404,7 +523,7 @@ public:
 	* @param entityID		 The id of the entity that got updated.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void audioClusterNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
+	void audioClusterNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
 	{
 		_deviceDetailsChannelTableModelReceive.updateAudioClusterName(entityID, configurationIndex, audioClusterIndex, audioClusterName);
 		_deviceDetailsChannelTableModelTransmit.updateAudioClusterName(entityID, configurationIndex, audioClusterIndex, audioClusterName);
@@ -414,7 +533,7 @@ public:
 	* Invoked whenever a new item is selected in the configuration combo box.
 	* @param text The selected text.
 	*/
-	Q_SLOT void comboBoxConfigurationChanged(QString text)
+	void comboBoxConfigurationChanged(QString text)
 	{
 		if (_activeConfigurationIndex != comboBoxConfiguration->currentData().toInt())
 		{
@@ -428,7 +547,7 @@ public:
 	/**
 	* If the displayed entity goes offline, this dialog is closed automatically.
 	*/
-	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
+	void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
 		if (_entityID == entityID)
 		{
@@ -443,7 +562,7 @@ public:
 	* @param cmdType		The executed command type.
 	* @param commandStatus  The status of the command.
 	*/
-	Q_SLOT void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
+	void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
 	{
 		// TODO propably show message when a command failed.
 		if (entityID == _entityID)
@@ -473,7 +592,7 @@ public:
 	* Updates the receive table model on changes.
 	* @param channels  All channels of the devices that have changed (listener side only)
 	*/
-	Q_SLOT void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels)
+	void listenerChannelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> const& channels)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(channels);
 
@@ -486,7 +605,7 @@ public:
 	/**
 	* Updates the table models on changes.
 	*/
-	Q_SLOT void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const /*avbInterfaceIndex*/, la::avdecc::UniqueIdentifier const /*grandMasterID*/, std::uint8_t const /*grandMasterDomain*/)
+	void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const /*avbInterfaceIndex*/, la::avdecc::UniqueIdentifier const /*grandMasterID*/, std::uint8_t const /*grandMasterDomain*/)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
@@ -500,7 +619,7 @@ public:
 	/**
 	* Updates the table models on stream connection changes.
 	*/
-	Q_SLOT void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const /*descriptorType*/, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, bool const /*isRunning*/)
+	void streamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const /*descriptorType*/, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, bool const /*isRunning*/)
 	{
 		_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
@@ -514,7 +633,7 @@ public:
 	/**
 	* Updates the latency tab data.
 	*/
-	Q_SLOT void streamInfoChanged(la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, la::avdecc::entity::model::StreamInfo const /*streamInfo*/)
+	void streamInfoChanged(la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, la::avdecc::entity::model::StreamInfo const /*streamInfo*/)
 	{
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
@@ -526,7 +645,7 @@ public:
 	/**
 	* Updates the transmit table model on audio mapping changes.
 	*/
-	Q_SLOT void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const /*streamPortIndex*/)
+	void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const /*streamPortIndex*/)
 	{
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 		{
@@ -542,7 +661,7 @@ public:
 	/**
 	* Updates the transmit table models on stream connection changes.
 	*/
-	Q_SLOT void streamConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& streamIdentification, la::avdecc::entity::model::StreamConnections const&)
+	void streamConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& streamIdentification, la::avdecc::entity::model::StreamConnections const&)
 	{
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(streamIdentification.entityID);
 
@@ -555,7 +674,7 @@ public:
 	/**
 	* Invoked whenever the entity name gets changed in the view.
 	*/
-	Q_SLOT void lineEditDeviceNameChanged(QString const& /*entityName*/)
+	void lineEditDeviceNameChanged(QString const& /*entityName*/)
 	{
 		setModifiedStyleOnWidget(lineEditDeviceName, true);
 		_hasChangesByUser = true;
@@ -566,7 +685,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void lineEditGroupNameChanged(QString const& /*entityGroupName*/)
+	void lineEditGroupNameChanged(QString const& /*entityGroupName*/)
 	{
 		setModifiedStyleOnWidget(lineEditGroupName, true);
 		_hasChangesByUser = true;
@@ -577,7 +696,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void comboBoxPredefinedPTChanged(QString text)
+	void comboBoxPredefinedPTChanged(QString text)
 	{
 		if (radioButton_PredefinedPT->isChecked() && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
 		{
@@ -591,7 +710,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void radioButtonPredefinedPTClicked(bool state)
+	void radioButtonPredefinedPTClicked(bool state)
 	{
 		if (state && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
 		{
@@ -605,126 +724,12 @@ public:
 	* Invoked whenever one of tables on the receive and transmit tabs is edited by the user.
 	* @param entityGroupName The new group name.
 	*/
-	Q_SLOT void tableDataChanged()
+	void tableDataChanged()
 	{
 		_hasChangesByUser = true;
 		updateButtonStates();
 	}
 
-	/**
-	* Invoked when the apply button is clicked.
-	* Writes all data via the avdecc::ControllerManager. The avdecc::ControllerManager::endAecpCommand signal is used
-	* to determine the state of the requested commands.
-	*/
-	Q_SLOT void applyChanges()
-	{
-		_hasChangesByUser = false;
-		updateButtonStates();
-		_applyRequested = true;
-		_expectedChanges = 0;
-		_gottenChanges = 0;
-
-		auto& manager = avdecc::ControllerManager::getInstance();
-
-		// set all data
-		if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
-		{
-			manager.setEntityName(_entityID, lineEditDeviceName->text());
-			_expectedChanges++;
-		}
-		if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
-		{
-			manager.setEntityGroupName(_entityID, lineEditGroupName->text());
-			_expectedChanges++;
-		}
-
-		//iterate over the changes and write them via avdecc
-		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
-		for (auto e : changesReceive.keys())
-		{
-			auto rxChanges = changesReceive.value(e);
-			for (auto f : rxChanges->keys())
-			{
-				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
-				{
-					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, rxChanges->value(f).toString());
-					_expectedChanges++;
-				}
-			}
-		}
-
-		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
-		for (auto e : changesTransmit.keys())
-		{
-			auto txChanges = changesTransmit.value(e);
-			for (auto f : txChanges->keys())
-			{
-				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
-				{
-					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, txChanges->value(f).toString());
-					_expectedChanges++;
-				}
-			}
-		}
-
-		// apply the new stream info (latency)
-		if (_userSelectedLatency)
-		{
-			auto const controlledEntity = manager.getControlledEntity(_entityID);
-			if (controlledEntity)
-			{
-				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-				for (auto const& streamOutput : configurationNode.streamOutputs)
-				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamInfo.streamFormat);
-					auto const streamType = streamFormatInfo->getType();
-					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
-					{
-						// skip clock stream
-						continue;
-					}
-					auto streamInfo = streamOutput.second.dynamicModel->streamInfo;
-					if (streamInfo.msrpAccumulatedLatency != *_userSelectedLatency)
-					{
-						streamInfo.streamInfoFlags.clear();
-						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
-						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
-
-						// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
-						// TODO: needs update of library:
-						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
-					}
-				}
-			}
-		}
-
-		// applying the new configuration shall be done as the last step, as it may change everything displayed.
-		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
-		if (_previousConfigurationIndex != _activeConfigurationIndex)
-		{
-			manager.setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
-			_expectedChanges++;
-		}
-	}
-
-	/**
-	* Invoked when the cancel button is clicked. Reverts all changes in the dialog.
-	*/
-	Q_SLOT void revertChanges()
-	{
-		_hasChangesByUser = false;
-		updateButtonStates();
-		_activeConfigurationIndex = std::nullopt;
-		_userSelectedLatency = std::nullopt;
-
-		_deviceDetailsChannelTableModelTransmit.resetChangedData();
-		_deviceDetailsChannelTableModelTransmit.removeAllNodes();
-		_deviceDetailsChannelTableModelReceive.resetChangedData();
-		_deviceDetailsChannelTableModelReceive.removeAllNodes();
-
-		// read out actual data again
-		loadCurrentControlledEntity(_entityID, false);
-	}
 
 private:
 	/**
