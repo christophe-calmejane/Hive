@@ -843,6 +843,18 @@ void MainWindowImpl::connectSignals()
 	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, _parent };
 	connect(refreshController, &QShortcut::activated, this, &MainWindowImpl::currentControllerChanged);
 
+	auto* toggleMatrixMode = new QShortcut{ QKeySequence{ "Ctrl+M" }, _parent };
+	connect(toggleMatrixMode, &QShortcut::activated, this,
+		[this]()
+		{
+			// Toggle mode (stream based vs. channel based routing matrix) in settings
+			auto& settings = settings::SettingsManager::getInstance();
+			bool channelModeActiveInverted = !settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
+			auto* action = channelModeActiveInverted ? actionChannelModeRouting : actionStreamModeRouting;
+			action->setChecked(true);
+			_channelModeButton.setChecked(channelModeActiveInverted);
+		});
+
 #ifdef DEBUG
 	auto* reloadStyleSheet = new QShortcut{ QKeySequence{ "F5" }, _parent };
 	connect(reloadStyleSheet, &QShortcut::activated, _parent,
