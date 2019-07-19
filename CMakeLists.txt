@@ -1,7 +1,7 @@
 # Root CMake File for Hive
 
 # Minimum CMake version
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 ############ Versioning
 
