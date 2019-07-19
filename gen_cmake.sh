@@ -117,7 +117,11 @@ do
 				echo "ERROR: Missing parameter for -a option, see help (-h)"
 				exit 4
 			fi
-			add_cmake_opt+=("$1")
+			IFS=' ' read -r -a tokens <<< "$1"
+			for token in ${tokens[@]}
+			do
+				add_cmake_opt+=("$token")
+			done
 			;;
 		-b)
 			shift

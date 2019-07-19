@@ -56,6 +56,11 @@ buildConfigOverride=0
 doCleanup=1
 doSign=1
 gen_cmake_additional_options=()
+if [ -z $default_keyDigits ]; then
+	default_keyDigits=2
+fi
+key_digits=$((10#$default_keyDigits))
+key_postfix=""
 
 # First check for .identity file
 if isMac; then
@@ -92,6 +97,8 @@ do
 			fi
 			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
+			echo " -key-digits <Number of digits> -> The number of digits to be used as Key for installation, comprised between 0 and 4 (Default: $default_keyDigits)"
+			echo " -key-postfix <Postfix> -> Postfix string to be added to the Key for installation (Default: "")"
 			exit 3
 			;;
 		-noclean)
@@ -176,6 +183,36 @@ do
 			buildConfig="Debug"
 			buildConfigOverride=1
 			;;
+		-key-digits)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -key-digits option, see help (-h)"
+				exit 4
+			fi
+			numberRegex='^[0-9]$'
+			if ! [[ $1 =~ $numberRegex ]]; then
+				echo "ERROR: Invalid value for -key-digits option (not a number), see help (-h)"
+				exit 4
+			fi
+			key_digits=$((10#$1))
+			if [[ $key_digits -lt 0 || $key_digits -gt 4 ]]; then
+				echo "ERROR: Invalid value for -key-digits option (not comprised between 0 and 4), see help (-h)"
+				exit 4
+			fi
+			;;
+		-key-postfix)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -key-postfix option, see help (-h)"
+				exit 4
+			fi
+			postfixRegex='^[a-zA-Z0-9_+-]+$'
+			if ! [[ $1 =~ $postfixRegex ]]; then
+				echo "ERROR: Invalid value for -key-postfix option (Only alphanum, underscore, plus and minus are allowed), see help (-h)"
+				exit 4
+			fi
+			key_postfix="$1"
+			;;
 		*)
 			echo "ERROR: Unknown option '$1' (use -h for help)"
 			exit 4
@@ -183,6 +220,9 @@ do
 	esac
 	shift
 done
+
+# Build marketing options
+marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
 
 if [ $doSign -eq 1 ]; then
 	gen_cmake_additional_options+=("-sign")
@@ -276,7 +316,7 @@ if [ -f *"${fullInstallerName}" ]; then
 fi
 
 echo -n "Generating cmake files... "
-log=$(./gen_cmake.sh -o "${outputFolder}" -a "-DHIVE_INSTALLER_NAME=${installerBaseName}" "${gen_cmake_additional_options[@]}" $toolset_option -f "$cmake_opt")
+log=$(./gen_cmake.sh -o "${outputFolder}" -a "-DHIVE_INSTALLER_NAME=${installerBaseName} ${marketing_options}" "${gen_cmake_additional_options[@]}" $toolset_option -f "$cmake_opt")
 if [ $? -ne 0 ]; then
 	echo "Failed to generate cmake files ;("
 	echo ""

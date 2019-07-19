@@ -1,7 +1,24 @@
 ############ CPack configuration
 
 # Set Install Key (used to detect if a previous version should be uninstalled first)
-set(HIVE_INSTALL_KEY "${PROJECT_NAME} ${HIVE_MARKETING_VERSION}")
+set(HIVE_INSTALL_KEY "${PROJECT_NAME}")
+if(HIVE_MARKETING_VERSION)
+	string(APPEND HIVE_INSTALL_KEY " ${HIVE_MARKETING_VERSION}")
+endif()
+
+# Compute Install Version in the form 0xXXYYZZWW
+math(EXPR HIVE_INSTALL_VERSION "0" OUTPUT_FORMAT HEXADECIMAL)
+# Start with the first 3 digits
+foreach(index RANGE 0 2)
+	list(GET HIVE_VERSION_SPLIT ${index} LOOP_VERSION)
+	math(EXPR HIVE_INSTALL_VERSION "${HIVE_INSTALL_VERSION} + (${LOOP_VERSION} << (8 * (3 - ${index})))" OUTPUT_FORMAT HEXADECIMAL)
+endforeach()
+# If the last digit is 0 (meaning release version), force it to greatest possible value
+if(${HIVE_VERSION_BETA} STREQUAL "0")
+	math(EXPR HIVE_INSTALL_VERSION "${HIVE_INSTALL_VERSION} + 0xFF" OUTPUT_FORMAT HEXADECIMAL)
+else()
+	math(EXPR HIVE_INSTALL_VERSION "${HIVE_INSTALL_VERSION} + ${HIVE_VERSION_BETA}" OUTPUT_FORMAT HEXADECIMAL)
+endif()
 
 # Use IFW on all platform instead of os-dependant installer
 #set(USE_IFW_GENERATOR ON)
@@ -20,8 +37,19 @@ elseif(APPLE)
 	set(ICON_PATH "${MACOS_RESOURCES_FOLDER}Icon.icns")
 endif()
 
+# Define variables that include the Marketing version
+if(HIVE_MARKETING_VERSION STREQUAL "")
+	set(HIVE_NAME_AND_VERSION "${PROJECT_NAME}")
+	set(HIVE_INSTALL_DISPLAY_NAME "${PROJECT_NAME} ${HIVE_FRIENDLY_VERSION}")
+	set(HIVE_DOT_VERSION "")
+else()
+	set(HIVE_NAME_AND_VERSION "${PROJECT_NAME} ${HIVE_MARKETING_VERSION}")
+	set(HIVE_INSTALL_DISPLAY_NAME "${PROJECT_NAME} ${HIVE_MARKETING_VERSION}")
+	set(HIVE_DOT_VERSION ".${HIVE_MARKETING_VERSION}")
+endif()
+
 # Basic settings
-set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_NAME "${HIVE_NAME_AND_VERSION}")
 set(CPACK_PACKAGE_VENDOR "${PROJECT_COMPANYNAME}")
 set(CPACK_PACKAGE_VERSION "${HIVE_FRIENDLY_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_FULL_NAME}")
@@ -34,7 +62,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_ROOT_DIR}/COPYING.LESSER")
 set(CPACK_PACKAGE_ICON "${ICON_PATH}")
 
 # Advanced settings
-set(CPACK_PACKAGE_EXECUTABLES "${PROJECT_NAME};${PROJECT_NAME} ${HIVE_MARKETING_VERSION}")
+set(CPACK_PACKAGE_EXECUTABLES "${PROJECT_NAME};${HIVE_NAME_AND_VERSION}")
 set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${HIVE_INSTALL_KEY}")
 set(CPACK_CREATE_DESKTOP_LINKS "${PROJECT_NAME}")
 
@@ -58,11 +86,20 @@ else()
 	if(WIN32)
 		set(CPACK_GENERATOR NSIS)
 
+		# Set CMake module path to our own nsis template is used during nsis generation
+		set(CMAKE_MODULE_PATH ${PROJECT_ROOT_DIR}/installer/nsis ${CMAKE_MODULE_PATH})
+
+		# Configure file with custom definitions for NSIS.
+		configure_file(
+			${PROJECT_ROOT_DIR}/installer/nsis/NSIS.definitions.nsh.in
+			${LA_TOP_LEVEL_BINARY_DIR}/NSIS.definitions.nsh
+		)
+
 		# NSIS Common settings
 		set(CPACK_NSIS_COMPRESSOR "/SOLID LZMA")
 		set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
-		set(CPACK_NSIS_PACKAGE_NAME "${PROJECT_FULL_NAME} ${HIVE_MARKETING_VERSION}") # Name to be shown in the title bar of the installer
-		set(CPACK_NSIS_DISPLAY_NAME "${PROJECT_NAME} ${HIVE_MARKETING_VERSION}") # Name to be shown in Windows Add/Remove Program control panel
+		set(CPACK_NSIS_PACKAGE_NAME "${CPACK_PACKAGE_NAME}") # Name to be shown in the title bar of the installer
+		set(CPACK_NSIS_DISPLAY_NAME "${HIVE_INSTALL_DISPLAY_NAME}") # Name to be shown in Windows Add/Remove Program control panel
 		set(CPACK_NSIS_INSTALLED_ICON_NAME "bin/${PROJECT_NAME}.exe") # Icon to be shown in Windows Add/Remove Program control panel
 		set(CPACK_NSIS_HELP_LINK "${PROJECT_URL}")
 		set(CPACK_NSIS_URL_INFO_ABOUT "${PROJECT_URL}")
@@ -106,12 +143,12 @@ else()
 
 		# Add shortcuts during install
 		set(CPACK_NSIS_CREATE_ICONS_EXTRA "\
-			CreateShortCut \\\"$DESKTOP\\\\${PROJECT_NAME} ${HIVE_MARKETING_VERSION}.lnk\\\" \\\"$INSTDIR\\\\bin\\\\${PROJECT_NAME}.exe\\\" \\\"\\\""
+			CreateShortCut \\\"$DESKTOP\\\\${HIVE_NAME_AND_VERSION}.lnk\\\" \\\"$INSTDIR\\\\bin\\\\${PROJECT_NAME}.exe\\\" \\\"\\\""
 		)
 
 		# Remove shortcuts during uninstall
 		set(CPACK_NSIS_DELETE_ICONS_EXTRA "\
-			Delete \\\"$DESKTOP\\\\${PROJECT_NAME} ${HIVE_MARKETING_VERSION}.lnk\\\""
+			Delete \\\"$DESKTOP\\\\${HIVE_NAME_AND_VERSION}.lnk\\\""
 		)
 
 		include(CPack REQUIRED)
