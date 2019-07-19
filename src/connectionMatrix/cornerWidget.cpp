@@ -33,7 +33,6 @@ QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
 CornerWidget::CornerWidget(QWidget* parent)
 	: QWidget{ parent }
 {
-	// Because the legend is child of the
 	_searchLineEdit.setPlaceholderText("Entity Filter (RegEx)");
 
 	_horizontalExpandButton.setToolTip("Expand");
@@ -58,6 +57,7 @@ CornerWidget::CornerWidget(QWidget* parent)
 
 	_buttonContainer.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 	_buttonContainerLayout.setContentsMargins(2, 6, 2, 6);
+	_buttonContainerLayout.addWidget(&_title);
 	_buttonContainerLayout.addStretch();
 	_buttonContainerLayout.addWidget(&_button);
 	_buttonContainerLayout.addWidget(&_searchLineEdit);
@@ -95,6 +95,17 @@ CornerWidget::CornerWidget(QWidget* parent)
 			_searchLineEdit.setFocus(Qt::MouseFocusReason);
 			_searchLineEdit.selectAll();
 		});
+
+	// Configure settings observers
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
+}
+
+CornerWidget::~CornerWidget()
+{
+	// Remove settings observers
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
 }
 
 void CornerWidget::setTransposed(bool const isTransposed)
@@ -157,6 +168,15 @@ void CornerWidget::paintEvent(QPaintEvent*)
 		painter.drawText(drawRect, headerTitle(Qt::Vertical, _isTransposed), options);
 
 		painter.restore();
+	}
+}
+
+void CornerWidget::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
+{
+	if (name == settings::ChannelModeConnectionMatrix.name)
+	{
+		auto const channelMode = value.toBool();
+		_title.setText(channelMode ? "<b>Channel Based Connections</b>" : "<b>Stream Based Connections</b>");
 	}
 }
 

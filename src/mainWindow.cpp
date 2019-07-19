@@ -145,13 +145,12 @@ public:
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
-	// Private memberes
+	// Private members
 	::MainWindow* _parent{ nullptr };
 	qt::toolkit::ComboBox _interfaceComboBox{ _parent };
 	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ _parent };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
 	qt::toolkit::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
-	qt::toolkit::FlatIconButton _channelModeButton{ "Material Icons", "format_align_justify", _parent };
 	qt::toolkit::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
 	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qt::toolkit::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
@@ -359,16 +358,10 @@ void MainWindowImpl::createToolbars()
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
-		_channelModeButton.setCheckable(true);
-		_channelModeButton.setToolTip("Toggle Channel Mode");
 
 		// Controller
 		utilitiesToolBar->setMinimumHeight(30);
 		utilitiesToolBar->addWidget(&_refreshControllerButton);
-
-		// View
-		utilitiesToolBar->addSeparator();
-		utilitiesToolBar->addWidget(&_channelModeButton);
 
 		// Tools
 		utilitiesToolBar->addSeparator();
@@ -458,7 +451,6 @@ void MainWindowImpl::loadSettings()
 	auto const channelMode = settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
 	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting;
 	action->setChecked(true);
-	_channelModeButton.setChecked(channelMode);
 
 	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
 	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
@@ -487,12 +479,7 @@ void MainWindowImpl::connectSignals()
 			// Update settings
 			auto& settings = settings::SettingsManager::getInstance();
 			settings.setValue(settings::ChannelModeConnectionMatrix.name, checked);
-			_channelModeButton.setChecked(checked);
-		});
-
-	connect(&_channelModeButton, &QPushButton::toggled, this,
-		[this](bool checked)
-		{
+			// Toggle
 			auto* action = checked ? actionChannelModeRouting : actionStreamModeRouting;
 			action->setChecked(true);
 		});
@@ -849,10 +836,9 @@ void MainWindowImpl::connectSignals()
 		{
 			// Toggle mode (stream based vs. channel based routing matrix) in settings
 			auto& settings = settings::SettingsManager::getInstance();
-			bool channelModeActiveInverted = !settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
+			auto const channelModeActiveInverted = !settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
 			auto* action = channelModeActiveInverted ? actionChannelModeRouting : actionStreamModeRouting;
 			action->setChecked(true);
-			_channelModeButton.setChecked(channelModeActiveInverted);
 		});
 
 #ifdef DEBUG
@@ -982,7 +968,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings.setValue(settings::MainWindowGeometry, saveGeometry());
 	settings.setValue(settings::MainWindowState, saveState());
 
-	// Unregister from settings
+	// Remove settings observers
 	settings.unregisterSettingObserver(settings::ProtocolType.name, _pImpl);
 	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, _pImpl);
 	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, _pImpl);

@@ -255,6 +255,7 @@ public:
 
 	virtual ~ControllerModelPrivate()
 	{
+		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
 		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
 	}

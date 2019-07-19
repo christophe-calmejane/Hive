@@ -93,7 +93,7 @@ View::View(QWidget* parent)
 
 View::~View()
 {
-	// Configure settings observers
+	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.unregisterSettingObserver(settings::TransposeConnectionMatrix.name, this);
 	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, this);

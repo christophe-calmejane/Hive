@@ -149,6 +149,7 @@ public:
 
 	~UpdaterImpl() noexcept
 	{
+		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
 		settings.unregisterSettingObserver(settings::AutomaticCheckForUpdates.name, this);
 		settings.unregisterSettingObserver(settings::CheckForBetaVersions.name, this);

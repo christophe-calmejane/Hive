@@ -118,6 +118,7 @@ NetworkInterfaceTypeModel::NetworkInterfaceTypeModel(QObject* parent)
 
 NetworkInterfaceTypeModel::~NetworkInterfaceTypeModel()
 {
+	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.unregisterSettingObserver(settings::InterfaceTypeWiFi.name, d_ptr.get());
 	settings.unregisterSettingObserver(settings::InterfaceTypeEthernet.name, d_ptr.get());

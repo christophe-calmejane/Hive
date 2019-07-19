@@ -19,19 +19,23 @@
 
 #pragma once
 
+#include "toolkit/flatIconButton.hpp"
+#include "settingsManager/settings.hpp"
+
 #include <QWidget>
 #include <QLayout>
 #include <QPushButton>
 #include <QLineEdit>
-#include "toolkit/flatIconButton.hpp"
+#include <QLabel>
 
 namespace connectionMatrix
 {
-class CornerWidget : public QWidget
+class CornerWidget : public QWidget, public settings::SettingsManager::Observer
 {
 	Q_OBJECT
 public:
 	CornerWidget(QWidget* parent = nullptr);
+	~CornerWidget();
 
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
@@ -50,9 +54,13 @@ signals:
 private:
 	virtual void paintEvent(QPaintEvent*) override;
 
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
+
 private:
 	QGridLayout _layout{ this };
 	QWidget _buttonContainer{ this };
+	QLabel _title{ &_buttonContainer };
 	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
 	QPushButton _button{ "Show Legend", &_buttonContainer };
 	QLineEdit _searchLineEdit{ &_buttonContainer };

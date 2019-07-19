@@ -50,16 +50,16 @@
      <x>0</x>
      <y>0</y>
      <width>1400</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>&amp;File</string>
     </property>
     <widget class="QMenu" name="menuExport">
      <property name="title">
-      <string>Export</string>
+      <string>&amp;Export</string>
      </property>
      <addaction name="actionExportFullNetworkState"/>
     </widget>
@@ -69,14 +69,14 @@
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
-     <string>View</string>
+     <string>&amp;View</string>
     </property>
     <addaction name="actionStreamModeRouting"/>
     <addaction name="actionChannelModeRouting"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
-     <string>Help</string>
+     <string>&amp;Help</string>
     </property>
     <addaction name="actionAbout"/>
     <addaction name="actionChangeLog"/>
@@ -85,14 +85,14 @@
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
-     <string>Tools</string>
+     <string>&amp;Tools</string>
     </property>
     <addaction name="actionMediaClockManagement"/>
     <addaction name="actionDeviceFirmwareUpdate"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
-     <string>Edit</string>
+     <string>&amp;Edit</string>
     </property>
     <addaction name="actionSettings"/>
    </widget>
@@ -145,7 +145,7 @@
   </widget>
   <action name="actionQuit">
    <property name="text">
-    <string>Quit</string>
+    <string>&amp;Quit</string>
    </property>
   </action>
   <action name="actionAbout">
@@ -160,7 +160,7 @@
   </action>
   <action name="actionMediaClockManagement">
    <property name="text">
-    <string>Media Clock Management...</string>
+    <string>&amp;Media Clock Management...</string>
    </property>
   </action>
   <action name="actionOpenProjectWebPage">
@@ -175,12 +175,12 @@
   </action>
   <action name="actionSettings">
    <property name="text">
-    <string>Settings...</string>
+    <string>&amp;Settings...</string>
    </property>
   </action>
   <action name="actionDeviceFirmwareUpdate">
    <property name="text">
-    <string>Device Firmware Update...</string>
+    <string>&amp;Device Firmware Update...</string>
    </property>
   </action>
   <action name="actionStreamModeRouting">
@@ -188,7 +188,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Stream Mode Routing</string>
+    <string>Stream Based Connections</string>
    </property>
   </action>
   <action name="actionChannelModeRouting">
@@ -196,7 +196,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Channel Mode Routing</string>
+    <string>Channel Based Connections</string>
    </property>
   </action>
  </widget>
