@@ -156,7 +156,7 @@ public:
 			{
 				return;
 			}
-			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::entityName(*controlledEntity));
+			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::smartEntityName(*controlledEntity));
 
 			if (!leaveOutGeneralData)
 			{

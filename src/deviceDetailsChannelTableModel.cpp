@@ -410,7 +410,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 
 								if (connection->isSourceRedundant && connection->isTargetRedundant)
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Prim)"));
+									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())).append(" (Prim)"));
 
 									auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
@@ -437,7 +437,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 
 									while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 									{
-										connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())).append(" (Sec)"));
+										connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())).append(" (Sec)"));
 
 										itOutputs++;
 										itInputs++;
@@ -445,7 +445,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								}
 								else
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::entityName(*controlledEntity.get())));
+									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())));
 								}
 							}
 							innerRow++;
