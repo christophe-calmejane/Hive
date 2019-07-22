@@ -346,11 +346,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										auto const& audioCluster = audioClusterIt->second;
-										if (audioCluster.dynamicModel)
-										{
-											return audioCluster.dynamicModel->objectName.data();
-										}
+										return avdecc::helper::objectName(controlledEntity.get(), audioClusterIt->second);
 									}
 								}
 							}
@@ -363,11 +359,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										auto const& audioCluster = audioClusterIt->second;
-										if (audioCluster.dynamicModel)
-										{
-											return audioCluster.dynamicModel->objectName.data();
-										}
+										return avdecc::helper::objectName(controlledEntity.get(), audioClusterIt->second);
 									}
 								}
 							}
