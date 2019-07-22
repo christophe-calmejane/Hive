@@ -165,7 +165,7 @@ private:
 							auto const row = rowCount();
 							emit q->beginInsertRows({}, row, row);
 
-							_entities.push_back(EntityData{ entityID, avdecc::helper::entityName(*controlledEntity), entityNode.dynamicModel->firmwareVersion.data() });
+							_entities.push_back(EntityData{ entityID, avdecc::helper::smartEntityName(*controlledEntity), entityNode.dynamicModel->firmwareVersion.data() });
 
 							// Update the cache
 							rebuildEntityRowMap();
