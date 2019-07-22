@@ -222,12 +222,20 @@ void AsyncParallelCommandSet::invokeCommandCompleted(uint32_t const commandIndex
 /////////////////////////////////////////////////////////////////////////////////////////
 
 /**
-		* Consturctor.
-		* Sets up signla slot connections.
+		* Constructor.
 		*/
-SequentialAsyncCommandExecuter::SequentialAsyncCommandExecuter() noexcept
+SequentialAsyncCommandExecuter::SequentialAsyncCommandExecuter(QObject* parent) noexcept
+	: QObject(parent)
 {
-	auto& manager = ControllerManager::getInstance();
+}
+
+/**
+		* Destructor.
+		* Destroy child pointers.
+		*/
+SequentialAsyncCommandExecuter::~SequentialAsyncCommandExecuter()
+{
+	qDeleteAll(_commands);
 }
 
 /**

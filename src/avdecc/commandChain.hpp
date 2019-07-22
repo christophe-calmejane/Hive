@@ -119,7 +119,8 @@ class SequentialAsyncCommandExecuter : public QObject
 {
 	Q_OBJECT
 public:
-	SequentialAsyncCommandExecuter() noexcept;
+	SequentialAsyncCommandExecuter(QObject* parent = nullptr) noexcept;
+	~SequentialAsyncCommandExecuter();
 
 	void setCommandChain(std::vector<AsyncParallelCommandSet*> const& commands) noexcept;
 

@@ -36,8 +36,6 @@ private:
 	std::set<la::avdecc::UniqueIdentifier> _entities{}; // No lock required, only read/write in the UI thread
 	std::map<la::avdecc::UniqueIdentifier, std::shared_ptr<SourceChannelConnections>> _listenerChannelMappings;
 
-	commandChain::SequentialAsyncCommandExecuter _sequentialAcmpCommandExecuter{};
-
 public:
 	/**
 	* Constructor.
@@ -51,14 +49,6 @@ public:
 
 		connect(&manager, &ControllerManager::streamConnectionChanged, this, &ChannelConnectionManagerImpl::onStreamConnectionChanged);
 		connect(&manager, &ControllerManager::streamPortAudioMappingsChanged, this, &ChannelConnectionManagerImpl::onStreamPortAudioMappingsChanged);
-
-		connect(&_sequentialAcmpCommandExecuter, &commandChain::SequentialAsyncCommandExecuter::completed, this,
-			[this](commandChain::CommandExecutionErrors const errors)
-			{
-				CreateConnectionsInfo info;
-				info.connectionCreationErrors = errors;
-				emit createChannelConnectionsFinished(info);
-			});
 	}
 
 	/**
@@ -2093,8 +2083,17 @@ private:
 			commands.push_back(commandSetReconnectStreams);
 
 			// execute the command chain
-			_sequentialAcmpCommandExecuter.setCommandChain(commands);
-			_sequentialAcmpCommandExecuter.start();
+			auto* sequentialAcmpCommandExecuter = new commandChain::SequentialAsyncCommandExecuter(this);
+			connect(sequentialAcmpCommandExecuter, &commandChain::SequentialAsyncCommandExecuter::completed, this,
+				[this](commandChain::CommandExecutionErrors const errors)
+				{
+					CreateConnectionsInfo info;
+					info.connectionCreationErrors = errors;
+					emit createChannelConnectionsFinished(info);
+				});
+			connect(sequentialAcmpCommandExecuter, &commandChain::SequentialAsyncCommandExecuter::completed, sequentialAcmpCommandExecuter, &commandChain::SequentialAsyncCommandExecuter::deleteLater);
+			sequentialAcmpCommandExecuter->setCommandChain(commands);
+			sequentialAcmpCommandExecuter->start();
 		}
 
 		return result.connectionCheckResult;
