@@ -39,7 +39,7 @@ public:
 private:
 	void editMappingsButtonClicked();
 	void clearMappingsButtonClicked();
-	void updateMappings(la::avdecc::entity::model::AudioMappings const& mappings);
+	void updateMappings();
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamPortType{ la::avdecc::entity::model::DescriptorType::Entity };

@@ -359,31 +359,9 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		_mappingsList = new QListWidget;
 		_mappingsList->setSelectionMode(QAbstractItemView::NoSelection);
 		parent->setItemWidget(mappingsItem, 1, _mappingsList);
-		try
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto controlledEntity = manager.getControlledEntity(entityID);
-			if (controlledEntity)
-			{
-				auto& entity = *controlledEntity;
-				auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
 
-				auto const& entityNode = entity.getEntityNode();
-				if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
-				{
-					streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-				}
-				else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-				{
-					streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-				}
-				// Update info right now
-				updateMappings(streamPortNode->dynamicModel->dynamicAudioMap);
-			}
-		}
-		catch (...)
-		{
-		}
+		// Update info right now
+		updateMappings();
 
 		auto* clearMappings = new QTreeWidgetItem(this);
 		clearMappings->setText(0, "Clear All Dynamic Mappings");
@@ -397,25 +375,8 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 			{
 				if (entityID == _entityID && descriptorType == _streamPortType && streamPortIndex == _streamPortIndex)
 				{
-					auto& manager = avdecc::ControllerManager::getInstance();
-					auto controlledEntity = manager.getControlledEntity(entityID);
-					if (controlledEntity)
-					{
-						auto& entity = *controlledEntity;
-						auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
-
-						auto const& entityNode = entity.getEntityNode();
-						if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
-						{
-							streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-						}
-						else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-						{
-							streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-						}
-						// Update mappings
-						updateMappings(streamPortNode->dynamicModel->dynamicAudioMap);
-					}
+					// Update mappings
+					updateMappings();
 				}
 			});
 
@@ -541,7 +502,8 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 			if (!outputs.empty() && !inputs.empty())
 			{
-				mappingMatrix::MappingMatrixDialog dialog(outputs, inputs, connections);
+				auto title = QString("%1 - %2.%3 Dynamic Mappings").arg(avdecc::helper::smartEntityName(*entity)).arg(avdecc::helper::descriptorTypeToString(_streamPortType)).arg(_streamPortIndex);
+				auto dialog = mappingMatrix::MappingMatrixDialog{title , outputs, inputs, connections };
 
 				// Release the controlled entity before starting a long operation (dialog.exec)
 				controlledEntity.reset();
@@ -598,13 +560,52 @@ void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 	}
 }
 
-void StreamPortDynamicTreeWidgetItem::updateMappings(la::avdecc::entity::model::AudioMappings const& mappings)
+void StreamPortDynamicTreeWidgetItem::updateMappings()
 {
+	constexpr auto showRedundantMappings = true;
+
 	_mappingsList->clear();
 
-	for (auto const& mapping : mappings)
+	try
 	{
-		_mappingsList->addItem(QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel));
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(_entityID);
+		if (controlledEntity)
+		{
+			auto& entity = *controlledEntity;
+			auto mappings = la::avdecc::entity::model::AudioMappings{};
+
+			if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+			{
+				if (showRedundantMappings)
+				{
+					mappings = controlledEntity->getStreamPortInputAudioMappings(_streamPortIndex);
+				}
+				else
+				{
+					mappings = controlledEntity->getStreamPortInputNonRedundantAudioMappings(_streamPortIndex);
+				}
+			}
+			else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+			{
+				if (showRedundantMappings)
+				{
+					mappings = controlledEntity->getStreamPortOutputAudioMappings(_streamPortIndex);
+				}
+				else
+				{
+					mappings = controlledEntity->getStreamPortOutputNonRedundantAudioMappings(_streamPortIndex);
+				}
+			}
+
+			for (auto const& mapping : mappings)
+			{
+				_mappingsList->addItem(QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel));
+			}
+		}
+	}
+	catch (...)
+	{
 	}
 
 	_mappingsList->sortItems();

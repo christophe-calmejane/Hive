@@ -74,7 +74,7 @@ using Connections = std::vector<Connection>;
 class MappingMatrix : public graph::GraphicsView
 {
 public:
-	MappingMatrix(const Outputs& outputs, const Inputs& inputs, const Connections& connections, QWidget* parent = nullptr)
+	MappingMatrix(Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
 		: graph::GraphicsView(parent)
 		, _connections{ connections }
 	{
@@ -178,7 +178,7 @@ private:
 class MappingMatrixDialog : public QDialog
 {
 public:
-	MappingMatrixDialog(const Outputs& outputs, const Inputs& inputs, const Connections& connections, QWidget* parent = nullptr)
+	MappingMatrixDialog(QString const& title, Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
 #ifdef Q_OS_WIN32
 		: QDialog(parent, Qt::Dialog | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint) // Because Qt::Tool is ugly on windows and '?' needs to be hidden (currently not supported)
 #else
@@ -186,6 +186,8 @@ public:
 #endif
 		, _mappingMatrix{ outputs, inputs, connections, this }
 	{
+		setWindowTitle(title);
+
 		auto* layout = new QGridLayout{ this };
 
 		layout->addWidget(&_mappingMatrix, 0, 0, 1, 2);
