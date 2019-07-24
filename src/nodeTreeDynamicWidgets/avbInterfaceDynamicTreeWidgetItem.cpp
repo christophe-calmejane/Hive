@@ -120,15 +120,14 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		parent->setItemWidget(_asPathItem, 1, _asPath);
 
 		// Update info right now
-		/*if (dynamicModel->asPath)
+		if (dynamicModel->asPath)
 		{
 			updateAsPath(*dynamicModel->asPath);
 		}
 		else
 		{
 			_asPathItem->setHidden(true);
-		}*/
-		updateAsPath(dynamicModel->asPath);
+		}
 
 		// Listen for AsPathChanged
 		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::asPathChanged, this,
