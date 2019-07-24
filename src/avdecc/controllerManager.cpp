@@ -49,14 +49,17 @@ public:
 			// la::avdecc::controller::model::EntityModelVisitor overrides
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
-				for (auto const& counterKV : node.dynamicModel->counters)
+				if (node.dynamicModel->counters)
 				{
-					auto const& flag = counterKV.first;
-					auto const& counter = counterKV.second;
+					for (auto const& counterKV : *node.dynamicModel->counters)
+					{
+						auto const& flag = counterKV.first;
+						auto const& counter = counterKV.second;
 
-					// Initialize internal counter value
-					auto& errorCounter = _errorCounterTracker._streamInputCounter[node.descriptorIndex];
-					errorCounter.counters[flag] = counter;
+						// Initialize internal counter value
+						auto& errorCounter = _errorCounterTracker._streamInputCounter[node.descriptorIndex];
+						errorCounter.counters[flag] = counter;
+					}
 				}
 			}
 

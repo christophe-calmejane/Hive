@@ -287,10 +287,10 @@ private:
 			}
 		}
 
-		// Counters
-		if (!node.dynamicModel->counters.empty())
+		// Counters (if supported by the entity)
+		if (node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
-			auto* countersItem = new EntityCountersTreeWidgetItem(_controlledEntityID, node.dynamicModel->counters, q);
+			auto* countersItem = new EntityCountersTreeWidgetItem(_controlledEntityID, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
 		}
 
@@ -355,10 +355,10 @@ private:
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 
-		// Counters
-		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && !node.dynamicModel->counters.empty())
+		// Counters (if supported by the entity)
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
-			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
@@ -387,10 +387,10 @@ private:
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 
-		// Counters
-		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && !node.dynamicModel->counters.empty())
+		// Counters (if supported by the entity)
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
-			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
@@ -431,10 +431,10 @@ private:
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 
-		// Counters
-		if (!node.dynamicModel->counters.empty())
+		// Counters (if supported by the entity)
+		if (node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
-			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
@@ -663,10 +663,10 @@ private:
 			}
 		}
 
-		// Counters
-		if (!node.dynamicModel->counters.empty())
+		// Counters (if supported by the entity)
+		if (node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
-			auto* countersItem = new ClockDomainCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->counters, q);
+			auto* countersItem = new ClockDomainCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
