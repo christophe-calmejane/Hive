@@ -226,7 +226,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::StreamFormat>("la::avdecc::entity::model::StreamFormat");
 		qRegisterMetaType<la::avdecc::entity::model::OperationID>("la::avdecc::entity::model::OperationID");
 		qRegisterMetaType<la::avdecc::entity::model::StreamInfo>("la::avdecc::entity::model::StreamInfo");
-		qRegisterMetaType<la::avdecc::entity::model::AvbInfo>("la::avdecc::entity::model::AvbInfo");
+		qRegisterMetaType<la::avdecc::entity::model::AvbInterfaceInfo>("la::avdecc::entity::model::AvbInterfaceInfo");
 		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
 		qRegisterMetaType<la::avdecc::entity::model::StreamConnectionState>("la::avdecc::entity::model::StreamConnectionState");
@@ -436,9 +436,9 @@ private:
 	{
 		emit streamRunningChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, false);
 	}
-	virtual void onAvbInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInfo const& info) noexcept override
+	virtual void onAvbInterfaceInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info) noexcept override
 	{
-		emit avbInfoChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, info);
+		emit avbInterfaceInfoChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, info);
 	}
 	virtual void onAsPathChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath) noexcept override
 	{

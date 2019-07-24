@@ -1295,8 +1295,8 @@ public:
 					auto const* const streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(streamNode);
 					redundantOutputStream->setStreamFormat(streamOutputNode->dynamicModel->streamInfo.streamFormat);
 
-					redundantOutputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID);
-					redundantOutputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber);
+					redundantOutputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
+					redundantOutputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
 					redundantOutputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 					redundantOutputStream->setRunning(controlledEntity.isStreamOutputRunning(currentConfigurationIndex, streamIndex));
 				}
@@ -1314,8 +1314,8 @@ public:
 					auto* outputStream = StreamNode::createOutputNode(*entity, streamIndex, avbInterfaceIndex);
 					outputStream->setName(avdecc::helper::outputStreamName(controlledEntity, streamIndex));
 					outputStream->setStreamFormat(streamNode.dynamicModel->streamInfo.streamFormat);
-					outputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID);
-					outputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber);
+					outputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
+					outputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
 					outputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 					outputStream->setRunning(controlledEntity.isStreamOutputRunning(currentConfigurationIndex, streamIndex));
 				}
@@ -1387,8 +1387,8 @@ public:
 					auto const* const streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(streamNode);
 					redundantInputStream->setStreamFormat(streamInputNode->dynamicModel->streamInfo.streamFormat);
 
-					redundantInputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID);
-					redundantInputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber);
+					redundantInputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
+					redundantInputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
 					redundantInputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 					redundantInputStream->setRunning(controlledEntity.isStreamInputRunning(currentConfigurationIndex, streamIndex));
 
@@ -1409,8 +1409,8 @@ public:
 					auto* inputStream = StreamNode::createInputNode(*entity, streamIndex, avbInterfaceIndex);
 					inputStream->setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
 					inputStream->setStreamFormat(streamNode.dynamicModel->streamInfo.streamFormat);
-					inputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID);
-					inputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber);
+					inputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
+					inputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
 					inputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 					inputStream->setRunning(controlledEntity.isStreamInputRunning(currentConfigurationIndex, streamIndex));
 
