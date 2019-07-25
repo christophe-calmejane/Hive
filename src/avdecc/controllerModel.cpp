@@ -776,11 +776,11 @@ private:
 		}
 	}
 
-	void handleStreamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+	void handleStreamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, ControllerManager::StreamInputErrorCounters const& errorCounters)
 	{
 		if (auto const row = entityRow(entityID))
 		{
-			if (!flags.empty())
+			if (!errorCounters.empty())
 			{
 				_entitiesWithErrorCounter[entityID].insert(descriptorIndex);
 			}

@@ -57,14 +57,15 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, this };
 		widget->setText(0, nameKV.second);
 		widget->setHidden(true); // Hide until we get a counter value (so we don't display counters not supported by the entity)
-		_counters[nameKV.first] = widget;
+		_counterWidgets[nameKV.first] = widget;
 	}
 
 	// Update counters right now
+	auto& manager = avdecc::ControllerManager::getInstance();
+	_errorCounters  = manager.getStreamInputErrorCounters(_entityID, _streamIndex);
 	updateCounters(counters);
 
 	// Listen for StreamInputCountersChanged
-	auto& manager = avdecc::ControllerManager::getInstance();
 	connect(&manager, &avdecc::ControllerManager::streamInputCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters)
 		{
@@ -75,42 +76,41 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 		});
 
 	connect(&manager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlags const& flags)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)
 			{
-				setStreamInputErrorCounterFlags(flags);
+				_errorCounters = errorCounters;
+				updateCounters(_counters);
 			}
 		});
-
-	// Initialization
-	setStreamInputErrorCounterFlags(manager.getStreamInputErrorCounterFlags(_entityID, _streamIndex));
-}
-
-void StreamInputCountersTreeWidgetItem::setStreamInputErrorCounterFlags(la::avdecc::entity::StreamInputCounterValidFlags const& flags)
-{
-	for (auto& kv : _counters)
-	{
-		auto const& flag = kv.first;
-		auto* widget = kv.second;
-
-		auto const color = QColor{ flags.test(flag) ? Qt::red : Qt::black };
-
-		widget->setForeground(0, color);
-		widget->setForeground(1, color);
-	}
 }
 
 void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model::StreamInputCounters const& counters)
 {
-	for (auto const counterKV : counters)
+	_counters = counters;
+
+	for (auto const [flag, value] : _counters)
 	{
-		auto const counterFlag = counterKV.first;
-		if (auto const it = _counters.find(counterFlag); it != _counters.end())
+		if (auto const it = _counterWidgets.find(flag); it != _counterWidgets.end())
 		{
 			auto* widget = it->second;
 			AVDECC_ASSERT(widget != nullptr, "If widget is found in the map, it should not be nullptr");
-			widget->setText(1, QString::number(counterKV.second));
+
+			auto color = QColor{ Qt::black };
+			auto text = QString::number(value);
+
+			auto const errorCounterIt = _errorCounters.find(flag);
+			if (errorCounterIt != _errorCounters.end())
+			{
+				color = QColor{ Qt::red };
+				text += QString(" (+%1)").arg(errorCounterIt->second);
+			}
+
+			widget->setForeground(0, color);
+			widget->setForeground(1, color);
+
+			widget->setText(1, text);
 			widget->setHidden(false);
 		}
 	}

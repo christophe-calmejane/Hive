@@ -228,7 +228,7 @@ public:
 		}
 	}
 
-	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters)
 	{
 		if (entityID != _controlledEntityID)
 		{
@@ -237,7 +237,7 @@ public:
 
 		if (auto* item = findItem({ la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex }))
 		{
-			item->setHasError(!flags.empty());
+			item->setHasError(!errorCounters.empty());
 		}
 	}
 
@@ -560,8 +560,8 @@ private:
 		auto* item = addItem(parent, &node, name);
 
 		auto& manager = avdecc::ControllerManager::getInstance();
-		auto const flags = manager.getStreamInputErrorCounterFlags(_controlledEntityID, node.descriptorIndex);
-		item->setHasError(!flags.empty());
+		auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex);
+		item->setHasError(!errorCounters.empty());
 
 		connect(&manager, &avdecc::ControllerManager::streamNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)

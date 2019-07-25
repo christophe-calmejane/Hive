@@ -18,10 +18,12 @@
 */
 
 #include "controllerManager.hpp"
-#include <atomic>
-#include <la/avdecc/logger.hpp>
 #include "avdecc/helper.hpp"
 #include "settingsManager/settings.hpp"
+
+#include <la/avdecc/logger.hpp>
+
+#include <atomic>
 
 #if __cpp_lib_experimental_atomic_smart_pointers
 #	define HAVE_ATOMIC_SMART_POINTERS
@@ -51,14 +53,10 @@ public:
 			{
 				if (node.dynamicModel->counters)
 				{
-					for (auto const& counterKV : *node.dynamicModel->counters)
+					for (auto const [flag, counter] : *node.dynamicModel->counters)
 					{
-						auto const& flag = counterKV.first;
-						auto const& counter = counterKV.second;
-
 						// Initialize internal counter value
-						auto& errorCounter = _errorCounterTracker._streamInputCounter[node.descriptorIndex];
-						errorCounter.counters[flag] = counter;
+						_errorCounterTracker._streamInputCounter[node.descriptorIndex][flag] = ErrorCounterInfo{ counter, counter };
 					}
 				}
 			}
@@ -80,14 +78,12 @@ public:
 			// la::avdecc::controller::model::EntityModelVisitor overrides
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
-				auto& errorCounter = _errorCounterTracker._streamInputCounter[node.descriptorIndex];
-
-				if (!errorCounter.flags.empty())
+				for (auto& counterInfoKV : _errorCounterTracker._streamInputCounter[node.descriptorIndex])
 				{
-					errorCounter.flags.clear();
-
-					/*emit*/ _manager.streamInputErrorCounterChanged(entity->getEntity().getEntityID(), node.descriptorIndex, errorCounter.flags);
+					auto& counterInfo = counterInfoKV.second;
+					counterInfo.lastClearCount = counterInfo.currentCount;
 				}
+				emit _manager.streamInputErrorCounterChanged(entity->getEntity().getEntityID(), node.descriptorIndex, {});
 			}
 
 		private:
@@ -111,39 +107,48 @@ public:
 			}
 		}
 
-		la::avdecc::entity::StreamInputCounterValidFlags getStreamInputCounterValidFlags(la::avdecc::entity::model::StreamIndex const streamIndex) const
+		StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::entity::model::StreamIndex const streamIndex) const
 		{
+			auto counters = StreamInputErrorCounters{};
+
 			auto const streamIt = _streamInputCounter.find(streamIndex);
 			if (streamIt != std::end(_streamInputCounter))
 			{
-				auto const& errorCounter{ streamIt->second };
-				return errorCounter.flags;
+				for (auto const& [flag, errorCounter]: streamIt->second)
+				{
+					if (errorCounter.currentCount != errorCounter.lastClearCount)
+					{
+						counters[flag] = errorCounter.currentCount - errorCounter.lastClearCount;
+					}
+				}
 			}
-			return {};
+
+			return counters;
 		}
 
 		// Set the new counter value, returns true if the counter has changed, false otherwise
 		bool setStreamInputCounter(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag, la::avdecc::entity::model::DescriptorCounter const counter)
 		{
-			auto& errorCounter = _streamInputCounter[streamIndex];
+			// Get or create ErrorCounterInfo
+			auto& errorCounter = _streamInputCounter[streamIndex][flag];
 
-			auto shouldNotify{ false };
+			auto shouldNotify = false;
 
 			// Detect counter reset (or wrap)
-			if (counter < errorCounter.counters[flag])
+			if (counter < errorCounter.currentCount)
 			{
-				errorCounter.counters[flag] = 0;
-				errorCounter.flags.reset(flag);
+				errorCounter.lastClearCount = 0u; // Reset counter error (we accept to loose the error state if it was in error, in the case of wrapping)
 				shouldNotify = true;
 			}
 
-			if (counter > errorCounter.counters[flag])
+			// Detect counter increment
+			if (counter > errorCounter.currentCount)
 			{
-				errorCounter.flags.set(flag);
 				shouldNotify = true;
 			}
 
-			errorCounter.counters[flag] = counter;
+			// Always update counter value
+			errorCounter.currentCount = counter;
 
 			return shouldNotify;
 		}
@@ -151,11 +156,12 @@ public:
 		// Clear the error for a given flag, returns true if the flag has changed, false otherwise
 		bool clearStreamInputCounter(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag)
 		{
-			auto& errorCounter = _streamInputCounter[streamIndex];
+			AVDECC_ASSERT(_streamInputCounter[streamIndex].count(flag) != 0, "Should not be possible to clear an error flag that does not exist");
+			auto& errorCounter = _streamInputCounter[streamIndex][flag];
 
-			if (errorCounter.flags.test(flag))
+			if (errorCounter.lastClearCount != errorCounter.currentCount)
 			{
-				errorCounter.flags.reset(flag);
+				errorCounter.lastClearCount = errorCounter.currentCount;
 				return true;
 			}
 
@@ -176,13 +182,12 @@ public:
 	private:
 		la::avdecc::UniqueIdentifier _entityID{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() };
 
-		struct ErrorCounter
+		struct ErrorCounterInfo
 		{
-			la::avdecc::entity::StreamInputCounterValidFlags flags; // per flag state 1: error, 0: clear
-			std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, la::avdecc::entity::model::DescriptorCounter> counters; // per flag counter value
+			la::avdecc::entity::model::DescriptorCounter currentCount{ 0u }; // Current Counter Value
+			la::avdecc::entity::model::DescriptorCounter lastClearCount{ 0u }; // Value when last Cleared
 		};
-
-		std::unordered_map<la::avdecc::entity::model::StreamIndex, ErrorCounter> _streamInputCounter;
+		std::unordered_map<la::avdecc::entity::model::StreamIndex, std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, ErrorCounterInfo>> _streamInputCounter;
 	};
 
 	ControllerManagerImpl() noexcept
@@ -193,6 +198,7 @@ public:
 		qRegisterMetaType<std::chrono::milliseconds>("std::chrono::milliseconds");
 		qRegisterMetaType<AecpCommandType>("avdecc::ControllerManager::AecpCommandType");
 		qRegisterMetaType<AcmpCommandType>("avdecc::ControllerManager::AcmpCommandType");
+		qRegisterMetaType<StreamInputErrorCounters>("StreamInputErrorCounters");
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
@@ -469,32 +475,27 @@ private:
 
 		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
 		{
-			auto const prevFlags = errorCounterFlags->getStreamInputCounterValidFlags(streamIndex);
+			auto changed = false;
 
-			for (auto const& counterKV : counters)
+			for (auto const [flag, counter] : counters)
 			{
-				auto const& flag = counterKV.first;
-				auto const& counter = counterKV.second;
-
 				switch (flag)
 				{
-					//case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
 					case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
 					case la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch:
 					case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
 					case la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp:
 					case la::avdecc::entity::StreamInputCounterValidFlag::UnsupportedFormat:
-						errorCounterFlags->setStreamInputCounter(streamIndex, flag, counter);
+						changed |= errorCounterFlags->setStreamInputCounter(streamIndex, flag, counter);
 						break;
 					default:
 						break;
 				}
 			}
 
-			auto const newFlags = errorCounterFlags->getStreamInputCounterValidFlags(streamIndex);
-			if (newFlags != prevFlags)
+			if (changed)
 			{
-				emit streamInputErrorCounterChanged(entityID, streamIndex, newFlags);
+				emit streamInputErrorCounterChanged(entityID, streamIndex, errorCounterFlags->getStreamInputErrorCounters(streamIndex));
 			}
 		}
 
@@ -660,11 +661,11 @@ private:
 		return const_cast<ErrorCounterTracker*>(static_cast<ControllerManagerImpl const*>(this)->entityErrorCounterTracker(entityID));
 	}
 
-	virtual la::avdecc::entity::StreamInputCounterValidFlags getStreamInputErrorCounterFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept override
+	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept override
 	{
 		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
 		{
-			return errorCounterTracker->getStreamInputCounterValidFlags(streamIndex);
+			return errorCounterTracker->getStreamInputErrorCounters(streamIndex);
 		}
 		return {};
 	}
@@ -675,8 +676,7 @@ private:
 		{
 			if (errorCounterTracker->clearStreamInputCounter(streamIndex, flag))
 			{
-				auto const flags = errorCounterTracker->getStreamInputCounterValidFlags(streamIndex);
-				emit streamInputErrorCounterChanged(entityID, streamIndex, flags);
+				emit streamInputErrorCounterChanged(entityID, streamIndex, errorCounterTracker->getStreamInputErrorCounters(streamIndex));
 			}
 		}
 	}

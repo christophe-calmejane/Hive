@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <chrono>
+#include <unordered_map>
 
 #include <QObject>
 
@@ -33,6 +34,9 @@ class ControllerManager : public QObject
 	Q_OBJECT
 public:
 	static ControllerManager& getInstance() noexcept;
+
+	/* ControllerManager Types */
+	using StreamInputErrorCounters = std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, la::avdecc::entity::model::DescriptorCounter>;
 
 	enum class AecpCommandType
 	{
@@ -139,7 +143,7 @@ public:
 	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromReadableJson(QString const& filePath, bool const ignoreSanityChecks) noexcept = 0;
 
 	/** Counter error flags */
-	virtual la::avdecc::entity::StreamInputCounterValidFlags getStreamInputErrorCounterFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
+	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 
 	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept = 0;
 	virtual void clearAllStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
@@ -250,7 +254,7 @@ public:
 	Q_SIGNAL void endAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status);
 
 	/* Counter errors signals */
-	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags);
+	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, StreamInputErrorCounters const& errorCounters);
 
 	/* Statistics signals */
 	Q_SIGNAL void aecpRetryCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
