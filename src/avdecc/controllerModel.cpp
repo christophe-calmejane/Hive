@@ -210,7 +210,14 @@ QString computeGptpTooltip(GptpInfoPerAvbInterfaceIndex const& gptp)
 	{
 		if (info.grandmasterID && info.domainNumber)
 		{
-			list << QString{ "gPTP for index %1: %2 / %3" }.arg(avbInterfaceIndex).arg(helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
+			if (avbInterfaceIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex)
+			{
+				list << QString{ "Global gPTP: %1 / %2" }.arg(helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
+			}
+			else
+			{
+				list << QString{ "gPTP for index %1: %2 / %3" }.arg(avbInterfaceIndex).arg(helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
+			}
 		}
 	}
 

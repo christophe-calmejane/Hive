@@ -177,7 +177,7 @@ void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbIn
 			if (node->isStreamNode())
 			{
 				auto* streamNode = static_cast<StreamNode*>(node);
-				if (streamNode->avbInterfaceIndex() == avbInterfaceIndex)
+				if (streamNode->avbInterfaceIndex() == avbInterfaceIndex || avbInterfaceIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex)
 				{
 					visitor(streamNode);
 				}

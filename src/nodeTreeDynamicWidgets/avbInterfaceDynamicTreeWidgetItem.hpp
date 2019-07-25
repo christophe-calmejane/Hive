@@ -37,7 +37,11 @@ public:
 	AvbInterfaceDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceNodeDynamicModel const* const dynamicModel, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus, QTreeWidget* parent = nullptr);
 
 private:
-	void updateAvbInfo(la::avdecc::entity::model::AvbInfo const& avbInfo);
+	void restoreAvbInterfaceInfoVisibility();
+	void restoreLinkStatusVisibility();
+	void restoreAsPathVisibility();
+	void updateGptpInfo(la::avdecc::UniqueIdentifier const& gptpGrandmasterID, std::uint8_t const gptpDomainNumber);
+	void updateAvbInterfaceInfo(la::avdecc::entity::model::AvbInterfaceInfo const& avbInfo);
 	void updateLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus);
 	void updateAsPath(la::avdecc::entity::model::AsPath const& asPath);
 
@@ -50,8 +54,8 @@ private:
 	QTreeWidgetItem* _propagationDelay{ nullptr };
 	QTreeWidgetItem* _flags{ nullptr };
 	QTreeWidgetItem* _linkStatus{ nullptr };
-	//addTextItem(dynamicItem, "Msrp Mappings", node.avbInfo->mappings);
 
 	// AsPath
+	QTreeWidgetItem* _asPathItem{ nullptr };
 	QListWidget* _asPath{ nullptr };
 };

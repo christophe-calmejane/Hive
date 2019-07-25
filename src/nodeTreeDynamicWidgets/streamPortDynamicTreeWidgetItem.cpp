@@ -503,7 +503,7 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 			if (!outputs.empty() && !inputs.empty())
 			{
 				auto title = QString("%1 - %2.%3 Dynamic Mappings").arg(avdecc::helper::smartEntityName(*entity)).arg(avdecc::helper::descriptorTypeToString(_streamPortType)).arg(_streamPortIndex);
-				auto dialog = mappingMatrix::MappingMatrixDialog{title , outputs, inputs, connections };
+				auto dialog = mappingMatrix::MappingMatrixDialog{ title, outputs, inputs, connections };
 
 				// Release the controlled entity before starting a long operation (dialog.exec)
 				controlledEntity.reset();

@@ -52,16 +52,47 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		_linkStatus->setText(0, "Link State");
 
 		// Update info right now
-		updateAvbInfo(dynamicModel->avbInfo);
-		updateLinkStatus(linkStatus);
+		updateGptpInfo(dynamicModel->gptpGrandmasterID, dynamicModel->gptpDomainNumber);
 
-		// Listen for AvbInfoChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInfoChanged, this,
-			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInfo const& info)
+		if (dynamicModel->avbInterfaceInfo)
+		{
+			updateAvbInterfaceInfo(*dynamicModel->avbInterfaceInfo);
+		}
+		else
+		{
+			_propagationDelay->setHidden(true);
+			_flags->setHidden(true);
+		}
+
+		if (linkStatus != la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown)
+		{
+			updateLinkStatus(linkStatus);
+		}
+		else
+		{
+			_linkStatus->setHidden(true);
+		}
+
+		// Listen for onGptpChanged
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::gptpChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
+			{
+				if (entityID == _entityID && (avbInterfaceIndex == _avbInterfaceIndex || avbInterfaceIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex))
+				{
+					updateGptpInfo(grandMasterID, grandMasterDomain);
+				}
+			});
+		// Listen for AvbInterfaceInfoChanged
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceInfoChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info)
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
 				{
-					updateAvbInfo(info);
+					if (_propagationDelay->isHidden())
+					{
+						restoreAvbInterfaceInfoVisibility();
+					}
+					updateAvbInterfaceInfo(info);
 				}
 			});
 		// Listen for avbInterfaceLinkStatusChanged
@@ -70,6 +101,10 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
 				{
+					if (_linkStatus->isHidden())
+					{
+						restoreLinkStatusVisibility();
+					}
 					updateLinkStatus(linkStatus);
 				}
 			});
@@ -78,14 +113,21 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 	// AsPath
 	{
 		// Create fields
-		auto* item = new QTreeWidgetItem(this);
-		item->setText(0, "As Path");
+		_asPathItem = new QTreeWidgetItem(this);
+		_asPathItem->setText(0, "As Path");
 		_asPath = new QListWidget;
 		_asPath->setSelectionMode(QAbstractItemView::NoSelection);
-		parent->setItemWidget(item, 1, _asPath);
+		parent->setItemWidget(_asPathItem, 1, _asPath);
 
 		// Update info right now
-		updateAsPath(dynamicModel->asPath);
+		if (dynamicModel->asPath)
+		{
+			updateAsPath(*dynamicModel->asPath);
+		}
+		else
+		{
+			_asPathItem->setHidden(true);
+		}
 
 		// Listen for AsPathChanged
 		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::asPathChanged, this,
@@ -93,16 +135,64 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
 				{
+					if (_asPathItem->isHidden())
+					{
+						restoreAsPathVisibility();
+					}
 					updateAsPath(asPath);
 				}
 			});
 	}
 }
 
-void AvbInterfaceDynamicTreeWidgetItem::updateAvbInfo(la::avdecc::entity::model::AvbInfo const& avbInfo)
+void AvbInterfaceDynamicTreeWidgetItem::restoreAvbInterfaceInfoVisibility()
 {
-	_gptpGrandmasterID->setText(1, avdecc::helper::uniqueIdentifierToString(avbInfo.gptpGrandmasterID));
-	_gptpDomainNumber->setText(1, QString::number(avbInfo.gptpDomainNumber));
+	// Restore fields visibility
+	_propagationDelay->setHidden(false);
+	_flags->setHidden(false);
+
+	// And parent, if needed
+	if (this->isHidden())
+	{
+		this->setHidden(false);
+		this->setExpanded(true);
+	}
+}
+
+void AvbInterfaceDynamicTreeWidgetItem::restoreLinkStatusVisibility()
+{
+	// Restore fields visibility
+	_linkStatus->setHidden(false);
+
+	// And parent, if needed
+	if (this->isHidden())
+	{
+		this->setHidden(false);
+		this->setExpanded(true);
+	}
+}
+
+void AvbInterfaceDynamicTreeWidgetItem::restoreAsPathVisibility()
+{
+	// Restore fields visibility
+	_asPathItem->setHidden(false);
+
+	// And parent, if needed
+	if (this->isHidden())
+	{
+		this->setHidden(false);
+		this->setExpanded(true);
+	}
+}
+
+void AvbInterfaceDynamicTreeWidgetItem::updateGptpInfo(la::avdecc::UniqueIdentifier const& gptpGrandmasterID, std::uint8_t const gptpDomainNumber)
+{
+	_gptpGrandmasterID->setText(1, avdecc::helper::uniqueIdentifierToString(gptpGrandmasterID));
+	_gptpDomainNumber->setText(1, QString::number(gptpDomainNumber));
+}
+
+void AvbInterfaceDynamicTreeWidgetItem::updateAvbInterfaceInfo(la::avdecc::entity::model::AvbInterfaceInfo const& avbInfo)
+{
 	_propagationDelay->setText(1, QString("%1 nsec").arg(avbInfo.propagationDelay));
 	setFlagsItemText(_flags, la::avdecc::utils::forceNumeric(avbInfo.flags.value()), avdecc::helper::flagsToString(avbInfo.flags));
 }

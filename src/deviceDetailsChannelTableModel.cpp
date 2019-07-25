@@ -515,16 +515,16 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
 								auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationNode.descriptorIndex, talkerAvbInterfaceIndex);
 								auto talkerStreamFormat = talkerOutputStreamNode.dynamicModel->streamInfo.streamFormat;
-								auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-								auto talkerGrandMasterDomain = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+								auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->gptpGrandmasterID;
+								auto talkerGrandMasterDomain = talkerAvbInterfaceNode.dynamicModel->gptpDomainNumber;
 								auto talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
 								auto talkerRunning = talkerEntity->isStreamInputRunning(talkerConfigurationNode.descriptorIndex, talkerStreamIndex);
 
 								auto const listenerAvbInterfaceIndex{ listenerInputStreamNode.staticModel->avbInterfaceIndex };
 								auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerConfigurationNode.descriptorIndex, listenerAvbInterfaceIndex);
 								auto listenerStreamFormat = listenerInputStreamNode.dynamicModel->streamInfo.streamFormat;
-								auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-								auto listenerGrandMasterDomain = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+								auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->gptpGrandmasterID;
+								auto listenerGrandMasterDomain = listenerAvbInterfaceNode.dynamicModel->gptpDomainNumber;
 								auto listenerInterfaceLinkStatus = listenerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
 								auto listenerRunning = listenerEntity->isStreamInputRunning(listenerConfigurationNode.descriptorIndex, listenerStreamIndex);
 
@@ -583,16 +583,16 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 										auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
 										auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationNode.descriptorIndex, talkerAvbInterfaceIndex);
 										auto talkerStreamFormat = talkerOutputStreamNode.dynamicModel->streamInfo.streamFormat;
-										auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-										auto talkerGrandMasterDomain = talkerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+										auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->gptpGrandmasterID;
+										auto talkerGrandMasterDomain = talkerAvbInterfaceNode.dynamicModel->gptpDomainNumber;
 										auto talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
 										auto talkerRunning = talkerEntity->isStreamInputRunning(talkerConfigurationNode.descriptorIndex, itOutputs->first);
 
 										auto const listenerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
 										auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerConfigurationNode.descriptorIndex, listenerAvbInterfaceIndex);
 										auto listenerStreamFormat = talkerOutputStreamNode.dynamicModel->streamInfo.streamFormat;
-										auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpGrandmasterID;
-										auto listenerGrandMasterDomain = listenerAvbInterfaceNode.dynamicModel->avbInfo.gptpDomainNumber;
+										auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->gptpGrandmasterID;
+										auto listenerGrandMasterDomain = listenerAvbInterfaceNode.dynamicModel->gptpDomainNumber;
 										auto listenerInterfaceLinkStatus = listenerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
 										auto listenerRunning = listenerEntity->isStreamInputRunning(listenerConfigurationNode.descriptorIndex, itInputs->first);
 

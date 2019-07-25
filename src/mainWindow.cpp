@@ -205,6 +205,10 @@ void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
 	// Load settings, overriding defaults
 	loadSettings();
 
+	// Configure Widget parameters
+	splitter->setStretchFactor(0, 0); // Entities List has less weight than
+	splitter->setStretchFactor(1, 1); // the Matrix, as far as expand is concerned
+
 	// Connect all signals
 	connectSignals();
 
