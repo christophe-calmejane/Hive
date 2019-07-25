@@ -22,6 +22,8 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 
+#include <optional>
+
 namespace connectionMatrix
 {
 class Node
@@ -46,6 +48,12 @@ public:
 
 		OutputChannel,
 		InputChannel,
+	};
+	enum class TriState
+	{
+		Unknown = 0,
+		False = 1,
+		True = 2,
 	};
 
 	virtual ~Node() = default;
@@ -225,6 +233,8 @@ public:
 	std::uint8_t const& grandMasterDomain() const;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const;
 	bool isRunning() const;
+	TriState lockedState() const; // StreamInput only
+	TriState streamingState() const; // StreamOutput only
 	la::avdecc::entity::model::StreamConnectionState const& streamConnectionState() const;
 
 protected:
@@ -235,6 +245,10 @@ protected:
 	void setGrandMasterDomain(std::uint8_t const grandMasterDomain);
 	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus);
 	void setRunning(bool isRunning);
+	void setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
+	void setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
+	void setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
+	void setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
 	void setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState);
 
 protected:
@@ -245,6 +259,10 @@ protected:
 	std::uint8_t _grandMasterDomain;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus _interfaceLinkStatus{ la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown };
 	bool _isRunning{ true };
+	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaLockedCounter{ std::nullopt }; // StreamInput only
+	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaUnlockedCounter{ std::nullopt }; // StreamInput only
+	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStartCounter{ std::nullopt }; // StreamOutput only
+	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStopCounter{ std::nullopt }; // StreamOutput only
 	la::avdecc::entity::model::StreamConnectionState _streamConnectionState{};
 };
 

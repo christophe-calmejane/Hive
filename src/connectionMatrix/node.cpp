@@ -272,6 +272,38 @@ bool StreamNode::isRunning() const
 	return _isRunning;
 }
 
+Node::TriState StreamNode::lockedState() const
+{
+	// Only if connected
+	if (_streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
+	{
+		// Only if both counters have a valid value
+		if (_mediaLockedCounter && _mediaUnlockedCounter)
+		{
+			if (*_mediaLockedCounter == (*_mediaUnlockedCounter + 1))
+			{
+				return TriState::True;
+			}
+			return TriState::False;
+		}
+	}
+	return TriState::Unknown;
+}
+
+Node::TriState StreamNode::streamingState() const
+{
+	// Only if both counters have a valid value
+	if (_streamStartCounter && _streamStopCounter)
+	{
+		if (*_streamStartCounter == (*_streamStopCounter + 1))
+		{
+			return TriState::True;
+		}
+		return TriState::False;
+	}
+	return TriState::Unknown;
+}
+
 la::avdecc::entity::model::StreamConnectionState const& StreamNode::streamConnectionState() const
 {
 	return _streamConnectionState;
@@ -307,6 +339,26 @@ void StreamNode::setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity
 void StreamNode::setRunning(bool isRunning)
 {
 	_isRunning = isRunning;
+}
+
+void StreamNode::setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
+{
+	_mediaLockedCounter = value;
+}
+
+void StreamNode::setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
+{
+	_mediaUnlockedCounter = value;
+}
+
+void StreamNode::setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value)
+{
+	_streamStartCounter = value;
+}
+
+void StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value)
+{
+	_streamStopCounter = value;
 }
 
 void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)

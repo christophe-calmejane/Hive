@@ -26,6 +26,8 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 
+#include <optional>
+
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #	include <QDebug>
 #endif
@@ -327,7 +329,9 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto foregroundColor = QColor{};
 	auto nodeLevel{ 0 };
 
-	switch (node->type())
+	auto const nodeType = node->type();
+	// First pass for Bar Color
+	switch (nodeType)
 	{
 		case Node::Type::Entity:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
@@ -352,6 +356,58 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		default:
 			AVDECC_ASSERT(false, "NodeType not handled");
 			return;
+	}
+
+	auto stripeColor = std::optional<QColor>{ std::nullopt };
+	// Second pass for Stripe Color
+	switch (nodeType)
+	{
+		case Node::Type::InputStream:
+		{
+			auto const state = static_cast<StreamNode const&>(*node).lockedState();
+			if (state == Node::TriState::False)
+			{
+				stripeColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+			}
+			else if (state == Node::TriState::True)
+			{
+				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
+			}
+			break;
+		}
+		case Node::Type::OutputStream:
+		{
+			auto const state = static_cast<StreamNode const&>(*node).streamingState();
+			if (state == Node::TriState::True)
+			{
+				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
+			}
+			break;
+		}
+		case Node::Type::RedundantInputStream:
+		{
+			auto const state = static_cast<StreamNode const&>(*node).lockedState();
+			if (state == Node::TriState::False)
+			{
+				stripeColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+			}
+			else if (state == Node::TriState::True)
+			{
+				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
+			}
+			break;
+		}
+		case Node::Type::RedundantOutputStream:
+		{
+			auto const state = static_cast<StreamNode const&>(*node).streamingState();
+			if (state == Node::TriState::True)
+			{
+				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
+			}
+			break;
+		}
+		default:
+			break;
 	}
 
 	auto const arrowSize{ 10 };
@@ -389,6 +445,24 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	painter->save();
 	painter->setRenderHint(QPainter::Antialiasing);
+
+	auto const buildStripe = [](auto const& path, auto const orientation)
+	{
+		auto const length = 6.;
+		if (orientation == Qt::Horizontal)
+		{
+			return path.translated({ 0., length });
+		}
+		else
+		{
+			return path.translated({ length, 0. });
+		}
+	};
+
+	if (stripeColor)
+	{
+		painter->fillPath(buildStripe(path, orientation()), *stripeColor);
+	}
 
 	painter->fillPath(path, backgroundColor);
 	painter->translate(rect.topLeft());

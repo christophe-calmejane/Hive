@@ -431,6 +431,8 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamConnectionChanged, this, &ModelPrivate::handleStreamConnectionChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
 
 		// Channel
 		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
@@ -1278,6 +1280,34 @@ public:
 			auto* entity = EntityNode::create(entityID, isMilan);
 			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
 
+			auto const fillStreamOutputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamOutputNode, auto const& avbInterfaceNode)
+			{
+				node.setName(avdecc::helper::outputStreamName(controlledEntity, streamIndex));
+				node.setStreamFormat(streamOutputNode.dynamicModel->streamInfo.streamFormat);
+				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
+				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
+				node.setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
+				node.setRunning(controlledEntity.isStreamOutputRunning(configurationIndex, streamIndex));
+				if (streamOutputNode.dynamicModel->counters)
+				{
+					auto const& counters = *streamOutputNode.dynamicModel->counters;
+					{
+						auto const it = counters.find(la::avdecc::entity::StreamOutputCounterValidFlag::StreamStart);
+						if (it != counters.end())
+						{
+							node.setStreamStartCounter(it->second);
+						}
+					}
+					{
+						auto const it = counters.find(la::avdecc::entity::StreamOutputCounterValidFlag::StreamStop);
+						if (it != counters.end())
+						{
+							node.setStreamStopCounter(it->second);
+						}
+					}
+				}
+			};
+
 			// Redundant streams
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamOutputs)
 			{
@@ -1290,15 +1320,8 @@ public:
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(currentConfigurationIndex, avbInterfaceIndex);
 
 					auto* redundantOutputStream = StreamNode::createRedundantOutputNode(*redundantOutput, streamIndex, avbInterfaceIndex);
-					redundantOutputStream->setName(avdecc::helper::outputStreamName(controlledEntity, streamIndex));
-
 					auto const* const streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(streamNode);
-					redundantOutputStream->setStreamFormat(streamOutputNode->dynamicModel->streamInfo.streamFormat);
-
-					redundantOutputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
-					redundantOutputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
-					redundantOutputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
-					redundantOutputStream->setRunning(controlledEntity.isStreamOutputRunning(currentConfigurationIndex, streamIndex));
+					fillStreamOutputNode(*redundantOutputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, *streamOutputNode, avbInterfaceNode);
 				}
 			}
 
@@ -1312,12 +1335,7 @@ public:
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(currentConfigurationIndex, avbInterfaceIndex);
 
 					auto* outputStream = StreamNode::createOutputNode(*entity, streamIndex, avbInterfaceIndex);
-					outputStream->setName(avdecc::helper::outputStreamName(controlledEntity, streamIndex));
-					outputStream->setStreamFormat(streamNode.dynamicModel->streamInfo.streamFormat);
-					outputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
-					outputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
-					outputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
-					outputStream->setRunning(controlledEntity.isStreamOutputRunning(currentConfigurationIndex, streamIndex));
+					fillStreamOutputNode(*outputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 
@@ -1370,6 +1388,35 @@ public:
 			auto* entity = EntityNode::create(entityID, isMilan);
 			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
 
+			auto const fillStreamInputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamInputNode, auto const& avbInterfaceNode)
+			{
+				node.setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
+				node.setStreamFormat(streamInputNode.dynamicModel->streamInfo.streamFormat);
+				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
+				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
+				node.setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
+				node.setRunning(controlledEntity.isStreamInputRunning(configurationIndex, streamIndex));
+				node.setStreamConnectionState(streamInputNode.dynamicModel->connectionState);
+				if (streamInputNode.dynamicModel->counters)
+				{
+					auto const& counters = *streamInputNode.dynamicModel->counters;
+					{
+						auto const it = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked);
+						if (it != counters.end())
+						{
+							node.setMediaLockedCounter(it->second);
+						}
+					}
+					{
+						auto const it = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked);
+						if (it != counters.end())
+						{
+							node.setMediaUnlockedCounter(it->second);
+						}
+					}
+				}
+			};
+
 			// Redundant streams
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamInputs)
 			{
@@ -1385,15 +1432,7 @@ public:
 					redundantInputStream->setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
 
 					auto const* const streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(streamNode);
-					redundantInputStream->setStreamFormat(streamInputNode->dynamicModel->streamInfo.streamFormat);
-
-					redundantInputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
-					redundantInputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
-					redundantInputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
-					redundantInputStream->setRunning(controlledEntity.isStreamInputRunning(currentConfigurationIndex, streamIndex));
-
-					// Only for listeners
-					redundantInputStream->setStreamConnectionState(streamInputNode->dynamicModel->connectionState);
+					fillStreamInputNode(*redundantInputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, *streamInputNode, avbInterfaceNode);
 				}
 			}
 
@@ -1407,15 +1446,7 @@ public:
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(currentConfigurationIndex, avbInterfaceIndex);
 
 					auto* inputStream = StreamNode::createInputNode(*entity, streamIndex, avbInterfaceIndex);
-					inputStream->setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
-					inputStream->setStreamFormat(streamNode.dynamicModel->streamInfo.streamFormat);
-					inputStream->setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
-					inputStream->setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
-					inputStream->setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
-					inputStream->setRunning(controlledEntity.isStreamInputRunning(currentConfigurationIndex, streamIndex));
-
-					// Only for listeners
-					inputStream->setStreamConnectionState(streamNode.dynamicModel->connectionState);
+					fillStreamInputNode(*inputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 
@@ -1958,6 +1989,7 @@ public:
 			if (_mode == Model::Mode::Stream)
 			{
 				listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+				listenerHeaderDataChanged(listener);
 			}
 			else
 			{
@@ -2014,6 +2046,108 @@ public:
 					{
 						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 					}
+				}
+			}
+		}
+		catch (...)
+		{
+			// Uncaught exception
+			AVDECC_ASSERT(false, "Uncaught exception");
+		}
+	}
+
+	void handleStreamInputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters)
+	{
+		// Event affecting a single stream node (Input)
+		try
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+			if (controlledEntity)
+			{
+				if (auto* node = listenerStreamNode(entityID, streamIndex))
+				{
+					auto changed = false;
+
+					for (auto const [flag, counter] : counters)
+					{
+						switch (flag)
+						{
+							case la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked:
+								node->setMediaLockedCounter(counter);
+								changed = true;
+								break;
+							case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
+								node->setMediaUnlockedCounter(counter);
+								changed = true;
+								break;
+							default:
+								break;
+						}
+					}
+
+					if (changed)
+					{
+						if (_mode == Model::Mode::Stream)
+						{
+							listenerHeaderDataChanged(node);
+						}
+					}
+				}
+				else
+				{
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInputCountersChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+				}
+			}
+		}
+		catch (...)
+		{
+			// Uncaught exception
+			AVDECC_ASSERT(false, "Uncaught exception");
+		}
+	}
+
+	void handleStreamOutputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters)
+	{
+		// Event affecting a single stream node (Output)
+		try
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+			if (controlledEntity)
+			{
+				if (auto* node = talkerStreamNode(entityID, streamIndex))
+				{
+					auto changed = false;
+
+					for (auto const [flag, counter] : counters)
+					{
+						switch (flag)
+						{
+							case la::avdecc::entity::StreamOutputCounterValidFlag::StreamStart:
+								node->setStreamStartCounter(counter);
+								changed = true;
+								break;
+							case la::avdecc::entity::StreamOutputCounterValidFlag::StreamStop:
+								node->setStreamStopCounter(counter);
+								changed = true;
+								break;
+							default:
+								break;
+						}
+					}
+
+					if (changed)
+					{
+						if (_mode == Model::Mode::Stream)
+						{
+							talkerHeaderDataChanged(node);
+						}
+					}
+				}
+				else
+				{
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamOutputCountersChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 				}
 			}
 		}
