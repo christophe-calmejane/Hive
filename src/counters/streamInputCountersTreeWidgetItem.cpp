@@ -62,7 +62,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 
 	// Update counters right now
 	auto& manager = avdecc::ControllerManager::getInstance();
-	_errorCounters  = manager.getStreamInputErrorCounters(_entityID, _streamIndex);
+	_errorCounters = manager.getStreamInputErrorCounters(_entityID, _streamIndex);
 	updateCounters(counters);
 
 	// Listen for StreamInputCountersChanged

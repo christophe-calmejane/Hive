@@ -32,6 +32,24 @@
 #include <QLabel>
 #include <QHBoxLayout>
 
+class EntityStatisticTreeWidgetItem : public QTreeWidgetItem
+{
+public:
+	EntityStatisticTreeWidgetItem(avdecc::ControllerManager::StatisticsErrorCounterFlag const flag, QTreeWidgetItem* parent)
+		: QTreeWidgetItem{ parent }
+		, _counterFlag{ flag }
+	{
+	}
+
+	avdecc::ControllerManager::StatisticsErrorCounterFlag counterFlag() const
+	{
+		return _counterFlag;
+	}
+
+private:
+	avdecc::ControllerManager::StatisticsErrorCounterFlag const _counterFlag;
+};
+
 class EntityStatisticsTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
@@ -42,6 +60,7 @@ public:
 	}
 
 private:
+	void setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, avdecc::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept;
 	void updateAecpRetryCounter(std::uint64_t const value) noexcept;
 	void updateAecpTimeoutCounter(std::uint64_t const value) noexcept;
 	void updateAecpUnexpectedResponseCounter(std::uint64_t const value) noexcept;
@@ -51,10 +70,12 @@ private:
 	la::avdecc::UniqueIdentifier const _entityID{};
 
 	// Statistics
-	QTreeWidgetItem _aecpRetryCounterItem{ this };
-	QTreeWidgetItem _aecpTimeoutCounterItem{ this };
-	QTreeWidgetItem _aecpUnexpectedResponseCounterItem{ this };
+	EntityStatisticTreeWidgetItem _aecpRetryCounterItem{ avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries, this };
+	EntityStatisticTreeWidgetItem _aecpTimeoutCounterItem{ avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts, this };
+	EntityStatisticTreeWidgetItem _aecpUnexpectedResponseCounterItem{ avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses, this };
 	QTreeWidgetItem _aecpResponseAverageTimeItem{ this };
 	QTreeWidgetItem _aemAecpUnsolicitedCounterItem{ this };
 	QTreeWidgetItem _enumerationTimeItem{ this };
+	avdecc::ControllerManager::StatisticsErrorCounters _counters{};
+	avdecc::ControllerManager::StatisticsErrorCounters _errorCounters{};
 };

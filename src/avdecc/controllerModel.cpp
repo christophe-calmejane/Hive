@@ -245,6 +245,7 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ControllerModelPrivate::handleCompatibilityFlagsChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
 
 		// Connect avdecc::mediaClock::MCDomainManager signals
 		auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
@@ -322,10 +323,9 @@ public:
 				auto const it = _entitiesWithErrorCounter.find(entityID);
 				if (it != std::end(_entitiesWithErrorCounter))
 				{
-					auto const& streamsWithErrorCounter{ it->second };
-					if (!streamsWithErrorCounter.empty())
+					auto const& entityWithErrorCounter{ it->second };
+					if (entityWithErrorCounter.hasError())
 					{
-						// At least one stream contains a counter error
 						return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
 					}
 				}
@@ -640,6 +640,9 @@ private:
 				// Update the cache
 				rebuildEntityRowMap();
 
+				// Initialize EntityWithError (only need to initialize Statistics which might change during enumeration and not trigger an event, contrary to Counters)
+				_entitiesWithErrorCounter[entityID].statisticsError = !manager.getStatisticsCounters(entityID).empty();
+
 				emit q->endInsertRows();
 			}
 		}
@@ -782,12 +785,22 @@ private:
 		{
 			if (!errorCounters.empty())
 			{
-				_entitiesWithErrorCounter[entityID].insert(descriptorIndex);
+				_entitiesWithErrorCounter[entityID].streamsWithErrorCounter.insert(descriptorIndex);
 			}
 			else
 			{
-				_entitiesWithErrorCounter[entityID].erase(descriptorIndex);
+				_entitiesWithErrorCounter[entityID].streamsWithErrorCounter.erase(descriptorIndex);
 			}
+
+			dataChanged(*row, ControllerModel::Column::EntityID);
+		}
+	}
+
+	void handleStatisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, ControllerManager::StatisticsErrorCounters const& errorCounters)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			_entitiesWithErrorCounter[entityID].statisticsError = !errorCounters.empty();
 
 			dataChanged(*row, ControllerModel::Column::EntityID);
 		}
@@ -888,8 +901,16 @@ private:
 	Entities _entities{};
 	EntityRowMap _entityRowMap{};
 
-	using StreamsWithErrorCounter = std::set<la::avdecc::entity::model::StreamIndex>;
-	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, StreamsWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
+	struct EntityWithErrorCounter
+	{
+		bool statisticsError{ false };
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
+		constexpr bool hasError() const noexcept
+		{
+			return statisticsError || !streamsWithErrorCounter.empty();
+		}
+	};
+	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
 	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
 	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _identifingEntities;
 

@@ -49,6 +49,22 @@ public:
 
 		protected:
 			// la::avdecc::controller::model::EntityModelVisitor overrides
+			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityNode const& node) noexcept override
+			{
+				// Initialize internal counter value, always setting lastClearCount to 0 (Statistics counters always start at 0 in the Controller, contrary to endpoint Counters) so that we directly see any error during enumeration
+				{
+					auto const counter = entity->getAecpRetryCounter();
+					_errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpRetries] = StatisticsCounterInfo{ counter, 0u };
+				}
+				{
+					auto const counter = entity->getAecpTimeoutCounter();
+					_errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpTimeouts] = StatisticsCounterInfo{ counter, 0u };
+				}
+				{
+					auto const counter = entity->getAecpUnexpectedResponseCounter();
+					_errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses] = StatisticsCounterInfo{ counter, 0u };
+				}
+			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
 				if (node.dynamicModel->counters)
@@ -56,7 +72,7 @@ public:
 					for (auto const [flag, counter] : *node.dynamicModel->counters)
 					{
 						// Initialize internal counter value
-						_errorCounterTracker._streamInputCounter[node.descriptorIndex][flag] = ErrorCounterInfo{ counter, counter };
+						_errorCounterTracker._streamInputCounters[node.descriptorIndex][flag] = ErrorCounterInfo{ counter, counter };
 					}
 				}
 			}
@@ -76,9 +92,25 @@ public:
 
 		protected:
 			// la::avdecc::controller::model::EntityModelVisitor overrides
+			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityNode const& node) noexcept override
+			{
+				{
+					auto& counterInfo = _errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpRetries];
+					counterInfo.lastClearCount = counterInfo.currentCount;
+				}
+				{
+					auto& counterInfo = _errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpTimeouts];
+					counterInfo.lastClearCount = counterInfo.currentCount;
+				}
+				{
+					auto& counterInfo = _errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses];
+					counterInfo.lastClearCount = counterInfo.currentCount;
+				}
+				emit _manager.statisticsErrorCounterChanged(entity->getEntity().getEntityID(), {});
+			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
-				for (auto& counterInfoKV : _errorCounterTracker._streamInputCounter[node.descriptorIndex])
+				for (auto& counterInfoKV : _errorCounterTracker._streamInputCounters[node.descriptorIndex])
 				{
 					auto& counterInfo = counterInfoKV.second;
 					counterInfo.lastClearCount = counterInfo.currentCount;
@@ -107,14 +139,17 @@ public:
 			}
 		}
 
+		/* ************************************************************ */
+		/* StreamInput Error Counters                                   */
+		/* ************************************************************ */
 		StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::entity::model::StreamIndex const streamIndex) const
 		{
 			auto counters = StreamInputErrorCounters{};
 
-			auto const streamIt = _streamInputCounter.find(streamIndex);
-			if (streamIt != std::end(_streamInputCounter))
+			auto const streamIt = _streamInputCounters.find(streamIndex);
+			if (streamIt != std::end(_streamInputCounters))
 			{
-				for (auto const& [flag, errorCounter]: streamIt->second)
+				for (auto const& [flag, errorCounter] : streamIt->second)
 				{
 					if (errorCounter.currentCount != errorCounter.lastClearCount)
 					{
@@ -130,7 +165,7 @@ public:
 		bool setStreamInputCounter(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag, la::avdecc::entity::model::DescriptorCounter const counter)
 		{
 			// Get or create ErrorCounterInfo
-			auto& errorCounter = _streamInputCounter[streamIndex][flag];
+			auto& errorCounter = _streamInputCounters[streamIndex][flag];
 
 			auto shouldNotify = false;
 
@@ -156,8 +191,8 @@ public:
 		// Clear the error for a given flag, returns true if the flag has changed, false otherwise
 		bool clearStreamInputCounter(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag)
 		{
-			AVDECC_ASSERT(_streamInputCounter[streamIndex].count(flag) != 0, "Should not be possible to clear an error flag that does not exist");
-			auto& errorCounter = _streamInputCounter[streamIndex][flag];
+			AVDECC_ASSERT(_streamInputCounters[streamIndex].count(flag) != 0, "Should not be possible to clear an error flag that does not exist");
+			auto& errorCounter = _streamInputCounters[streamIndex][flag];
 
 			if (errorCounter.lastClearCount != errorCounter.currentCount)
 			{
@@ -179,15 +214,92 @@ public:
 			}
 		}
 
-	private:
-		la::avdecc::UniqueIdentifier _entityID{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() };
+		/* ************************************************************ */
+		/* Statistics Error Counters                                    */
+		/* ************************************************************ */
+		StatisticsErrorCounters getStatisticsErrorCounters() const
+		{
+			auto counters = StatisticsErrorCounters{};
 
+			for (auto const& [flag, errorCounter] : _statisticsCounters)
+			{
+				if (errorCounter.currentCount != errorCounter.lastClearCount)
+				{
+					counters[flag] = errorCounter.currentCount - errorCounter.lastClearCount;
+				}
+			}
+
+			return counters;
+		}
+
+		// Set the new counter value, returns true if the counter has changed, false otherwise
+		bool setStatisticsCounter(StatisticsErrorCounterFlag const flag, std::uint64_t const counter)
+		{
+			// Get or create StatisticsCounterInfo
+			auto& errorCounter = _statisticsCounters[flag];
+
+			auto shouldNotify = false;
+
+			// Detect counter reset (or wrap)
+			if (counter < errorCounter.currentCount)
+			{
+				errorCounter.lastClearCount = 0u; // Reset counter error (we accept to loose the error state if it was in error, in the case of wrapping)
+				shouldNotify = true;
+			}
+
+			// Detect counter increment
+			if (counter > errorCounter.currentCount)
+			{
+				shouldNotify = true;
+			}
+
+			// Always update counter value
+			errorCounter.currentCount = counter;
+
+			return shouldNotify;
+		}
+
+		// Clear the error for a given flag, returns true if the flag has changed, false otherwise
+		bool clearStatisticsCounter(StatisticsErrorCounterFlag const flag)
+		{
+			AVDECC_ASSERT(_statisticsCounters.count(flag) != 0, "Should not be possible to clear an error flag that does not exist");
+			auto& errorCounter = _statisticsCounters[flag];
+
+			if (errorCounter.lastClearCount != errorCounter.currentCount)
+			{
+				errorCounter.lastClearCount = errorCounter.currentCount;
+				return true;
+			}
+
+			return false;
+		}
+
+		// Clear all the error flags
+		void clearAllStatisticsCounters()
+		{
+			auto& manager = ControllerManager::getInstance();
+			ClearCounterVisitor visitor{ manager, *this };
+			if (auto entity = manager.getControlledEntity(_entityID))
+			{
+				entity->accept(&visitor);
+			}
+		}
+
+	private:
 		struct ErrorCounterInfo
 		{
 			la::avdecc::entity::model::DescriptorCounter currentCount{ 0u }; // Current Counter Value
 			la::avdecc::entity::model::DescriptorCounter lastClearCount{ 0u }; // Value when last Cleared
 		};
-		std::unordered_map<la::avdecc::entity::model::StreamIndex, std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, ErrorCounterInfo>> _streamInputCounter;
+		struct StatisticsCounterInfo
+		{
+			std::uint64_t currentCount{ 0u }; // Current Counter Value
+			std::uint64_t lastClearCount{ 0u }; // Value when last Cleared
+		};
+
+		la::avdecc::UniqueIdentifier _entityID{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() };
+		std::unordered_map<la::avdecc::entity::model::StreamIndex, std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, ErrorCounterInfo>> _streamInputCounters{};
+		std::unordered_map<StatisticsErrorCounterFlag, StatisticsCounterInfo> _statisticsCounters{};
 	};
 
 	ControllerManagerImpl() noexcept
@@ -198,7 +310,8 @@ public:
 		qRegisterMetaType<std::chrono::milliseconds>("std::chrono::milliseconds");
 		qRegisterMetaType<AecpCommandType>("avdecc::ControllerManager::AecpCommandType");
 		qRegisterMetaType<AcmpCommandType>("avdecc::ControllerManager::AcmpCommandType");
-		qRegisterMetaType<StreamInputErrorCounters>("StreamInputErrorCounters");
+		qRegisterMetaType<StreamInputErrorCounters>("avdecc::ControllerManager::StreamInputErrorCounters");
+		qRegisterMetaType<StatisticsErrorCounters>("avdecc::ControllerManager::StatisticsErrorCounters");
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
@@ -471,7 +584,7 @@ private:
 	}
 	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept override
 	{
-		auto const entityID{ entity->getEntity().getEntityID() };
+		auto const entityID = entity->getEntity().getEntityID();
 
 		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
 		{
@@ -528,14 +641,44 @@ private:
 	// Statistics
 	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
-		emit aecpRetryCounterChanged(entity->getEntity().getEntityID(), value);
+		auto const entityID = entity->getEntity().getEntityID();
+
+		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+		{
+			if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpRetries, value))
+			{
+				emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+			}
+		}
+
+		emit aecpRetryCounterChanged(entityID, value);
 	}
 	virtual void onAecpTimeoutCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
+		auto const entityID = entity->getEntity().getEntityID();
+
+		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+		{
+			if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpTimeouts, value))
+			{
+				emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+			}
+		}
+
 		emit aecpTimeoutCounterChanged(entity->getEntity().getEntityID(), value);
 	}
 	virtual void onAecpUnexpectedResponseCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
+		auto const entityID = entity->getEntity().getEntityID();
+
+		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+		{
+			if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpUnexpectedResponses, value))
+			{
+				emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+			}
+		}
+
 		emit aecpUnexpectedResponseCounterChanged(entity->getEntity().getEntityID(), value);
 	}
 	virtual void onAecpResponseAverageTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::chrono::milliseconds const& value) noexcept override
@@ -686,6 +829,34 @@ private:
 		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
 		{
 			errorCounterTracker->clearAllStreamInputCounters();
+		}
+	}
+
+	virtual StatisticsErrorCounters getStatisticsCounters(la::avdecc::UniqueIdentifier const entityID) const noexcept override
+	{
+		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		{
+			return errorCounterTracker->getStatisticsErrorCounters();
+		}
+		return {};
+	}
+
+	virtual void clearStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, StatisticsErrorCounterFlag const flag) noexcept override
+	{
+		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		{
+			if (errorCounterTracker->clearStatisticsCounter(flag))
+			{
+				emit statisticsErrorCounterChanged(entityID, errorCounterTracker->getStatisticsErrorCounters());
+			}
+		}
+	}
+
+	virtual void clearAllStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept override
+	{
+		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		{
+			errorCounterTracker->clearAllStatisticsCounters();
 		}
 	}
 
