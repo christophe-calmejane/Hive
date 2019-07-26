@@ -198,6 +198,7 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ControlledEntityTreeWidgetPrivate::entityOnline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ControlledEntityTreeWidgetPrivate::entityOffline);
 		connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::streamInputErrorCounterChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::statisticsErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::statisticsErrorCounterChanged);
 	}
 
 	Q_SLOT void controllerOffline()
@@ -228,16 +229,29 @@ public:
 		}
 	}
 
-	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags)
+	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters)
 	{
 		if (entityID != _controlledEntityID)
 		{
 			return;
 		}
 
-		if (auto* item = findItem({ la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex }))
+		if (auto* item = findItem({ la::avdecc::entity::model::DescriptorType::Entity, descriptorIndex }))
 		{
-			item->setHasError(!flags.empty());
+			item->setHasError(!errorCounters.empty());
+		}
+	}
+
+	Q_SLOT void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::StatisticsErrorCounters const& errorCounters)
+	{
+		if (entityID != _controlledEntityID)
+		{
+			return;
+		}
+
+		if (auto* item = findItem({ la::avdecc::entity::model::DescriptorType::Entity, la::avdecc::entity::model::DescriptorIndex{ 0u } }))
+		{
+			item->setHasError(!errorCounters.empty());
 		}
 	}
 
@@ -473,7 +487,11 @@ private:
 		};
 		auto* item = addItem<la::avdecc::controller::model::Node const*>(nullptr, &node, genName(node.dynamicModel->entityName.data()));
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::entityNameChanged, item,
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto const errorCounters = manager.getStatisticsCounters(_controlledEntityID);
+		item->setHasError(!errorCounters.empty());
+
+		connect(&manager, &avdecc::ControllerManager::entityNameChanged, item,
 			[genName, item](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
 			{
 				auto name = genName(entityName);
@@ -560,8 +578,8 @@ private:
 		auto* item = addItem(parent, &node, name);
 
 		auto& manager = avdecc::ControllerManager::getInstance();
-		auto const flags = manager.getStreamInputErrorCounterFlags(_controlledEntityID, node.descriptorIndex);
-		item->setHasError(!flags.empty());
+		auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex);
+		item->setHasError(!errorCounters.empty());
 
 		connect(&manager, &avdecc::ControllerManager::streamNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)

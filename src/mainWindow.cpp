@@ -651,6 +651,7 @@ void MainWindowImpl::connectSignals()
 					else if (action == clearErrorFlags)
 					{
 						manager.clearAllStreamInputCounterValidFlags(entityID);
+						manager.clearAllStatisticsCounterValidFlags(entityID);
 					}
 					else if (action == dumpEntity)
 					{

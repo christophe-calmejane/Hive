@@ -159,6 +159,12 @@ public:
 
 			avdecc::ControllerManager::getInstance().clearStreamInputCounterValidFlags(_controlledEntityID, streamIndex, flag);
 		}
+		else if (auto* entityItem = dynamic_cast<EntityStatisticTreeWidgetItem*>(item))
+		{
+			auto const flag = entityItem->counterFlag();
+
+			avdecc::ControllerManager::getInstance().clearStatisticsCounterValidFlags(_controlledEntityID, flag);
+		}
 	}
 
 	void setNode(la::avdecc::UniqueIdentifier const entityID, AnyNode const& node)

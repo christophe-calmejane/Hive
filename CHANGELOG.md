@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Device Firmware Update multi-selection window
 - Channel Based Routing (Alternate Connection Matrix), with CTRL-M shortcut to switch routing modes
 - Main Menu shortcuts
+- [_Error Counters_ now display the count since last acknowledge](https://github.com/christophe-calmejane/Hive/issues/62)
+- [_Statistics Error Counters_ are displayed as errors](https://github.com/christophe-calmejane/Hive/issues/62)
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity

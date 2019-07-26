@@ -23,6 +23,8 @@
 
 #include <memory>
 #include <chrono>
+#include <unordered_map>
+#include <cstdint>
 
 #include <QObject>
 
@@ -33,6 +35,18 @@ class ControllerManager : public QObject
 	Q_OBJECT
 public:
 	static ControllerManager& getInstance() noexcept;
+
+	/* ControllerManager Types */
+	enum class StatisticsErrorCounterFlag : std::uint32_t
+	{
+		None = 0u,
+		AecpRetries = 1u << 0,
+		AecpTimeouts = 1u << 1,
+		AecpUnexpectedResponses = 1u << 2,
+	};
+
+	using StreamInputErrorCounters = std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, la::avdecc::entity::model::DescriptorCounter>;
+	using StatisticsErrorCounters = std::unordered_map<StatisticsErrorCounterFlag, std::uint64_t>;
 
 	enum class AecpCommandType
 	{
@@ -139,10 +153,12 @@ public:
 	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromReadableJson(QString const& filePath, bool const ignoreSanityChecks) noexcept = 0;
 
 	/** Counter error flags */
-	virtual la::avdecc::entity::StreamInputCounterValidFlags getStreamInputErrorCounterFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
-
+	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept = 0;
 	virtual void clearAllStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+	virtual StatisticsErrorCounters getStatisticsCounters(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	virtual void clearStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, StatisticsErrorCounterFlag const flag) noexcept = 0;
+	virtual void clearAllStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
 
 	/* Enumeration and Control Protocol (AECP) */
 	virtual void acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent, AcquireEntityHandler const& handler = {}) noexcept = 0;
@@ -250,7 +266,7 @@ public:
 	Q_SIGNAL void endAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status);
 
 	/* Counter errors signals */
-	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::StreamInputCounterValidFlags const flags);
+	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters);
 
 	/* Statistics signals */
 	Q_SIGNAL void aecpRetryCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
@@ -258,6 +274,7 @@ public:
 	Q_SIGNAL void aecpUnexpectedResponseCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
 	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::StatisticsErrorCounters const& errorCounters);
 
 }; // namespace avdecc
 

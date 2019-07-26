@@ -34,6 +34,8 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 	_enumerationTimeItem.setText(0, "Enumeration Time");
 
 	// Update statistics right now
+	auto& manager = avdecc::ControllerManager::getInstance();
+	_errorCounters = manager.getStatisticsCounters(_entityID);
 	updateAecpRetryCounter(aecpRetryCounter);
 	updateAecpTimeoutCounter(aecpTimeoutCounter);
 	updateAecpUnexpectedResponseCounter(aecpUnexpectedResponseCounter);
@@ -42,7 +44,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 	_enumerationTimeItem.setText(1, QString::number(enumerationTime.count()) + " msec");
 
 	// Listen for signals
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::aecpRetryCounterChanged, this,
+	connect(&manager, &avdecc::ControllerManager::aecpRetryCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -50,7 +52,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpRetryCounter(value);
 			}
 		});
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::aecpTimeoutCounterChanged, this,
+	connect(&manager, &avdecc::ControllerManager::aecpTimeoutCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -58,7 +60,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpTimeoutCounter(value);
 			}
 		});
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::aecpUnexpectedResponseCounterChanged, this,
+	connect(&manager, &avdecc::ControllerManager::aecpUnexpectedResponseCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -66,7 +68,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpUnexpectedResponseCounter(value);
 			}
 		});
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::aecpResponseAverageTimeChanged, this,
+	connect(&manager, &avdecc::ControllerManager::aecpResponseAverageTimeChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value)
 		{
 			if (entityID == _entityID)
@@ -74,7 +76,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpResponseAverageTime(value);
 			}
 		});
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::aemAecpUnsolicitedCounterChanged, this,
+	connect(&manager, &avdecc::ControllerManager::aemAecpUnsolicitedCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -82,21 +84,54 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAemAecpUnsolicitedCounter(value);
 			}
 		});
+	connect(&manager, &avdecc::ControllerManager::statisticsErrorCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::StatisticsErrorCounters const& errorCounters)
+		{
+			if (entityID == _entityID)
+			{
+				_errorCounters = errorCounters;
+				updateAecpRetryCounter(_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries]);
+				updateAecpTimeoutCounter(_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts]);
+				updateAecpUnexpectedResponseCounter(_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses]);
+			}
+		});
+}
+
+void EntityStatisticsTreeWidgetItem::setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, avdecc::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept
+{
+	auto color = QColor{ Qt::black };
+	auto text = QString::number(value);
+
+	auto const errorCounterIt = _errorCounters.find(flag);
+	if (errorCounterIt != _errorCounters.end())
+	{
+		color = QColor{ Qt::red };
+		text += QString(" (+%1)").arg(errorCounterIt->second);
+	}
+
+	widget.setForeground(0, color);
+	widget.setForeground(1, color);
+
+	widget.setText(1, text);
+	widget.setHidden(false);
 }
 
 void EntityStatisticsTreeWidgetItem::updateAecpRetryCounter(std::uint64_t const value) noexcept
 {
-	_aecpRetryCounterItem.setText(1, QString::number(value));
+	_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries] = value;
+	setWidgetTextAndColor(_aecpRetryCounterItem, value, avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries);
 }
 
 void EntityStatisticsTreeWidgetItem::updateAecpTimeoutCounter(std::uint64_t const value) noexcept
 {
-	_aecpTimeoutCounterItem.setText(1, QString::number(value));
+	_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts] = value;
+	setWidgetTextAndColor(_aecpTimeoutCounterItem, value, avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts);
 }
 
 void EntityStatisticsTreeWidgetItem::updateAecpUnexpectedResponseCounter(std::uint64_t const value) noexcept
 {
-	_aecpUnexpectedResponseCounterItem.setText(1, QString::number(value));
+	_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses] = value;
+	setWidgetTextAndColor(_aecpUnexpectedResponseCounterItem, value, avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses);
 }
 
 void EntityStatisticsTreeWidgetItem::updateAecpResponseAverageTime(std::chrono::milliseconds const& value) noexcept
