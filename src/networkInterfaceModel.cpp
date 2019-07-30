@@ -20,6 +20,7 @@
 #include "networkInterfaceModel.hpp"
 #include "toolkit/material/color.hpp"
 #include "avdecc/helper.hpp"
+#include "errorItemDelegate.hpp"
 
 class NetworkInterfaceModelPrivate : public QObject, private la::avdecc::networkInterface::NetworkInterfaceObserver
 {
@@ -196,6 +197,11 @@ QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
 		{
 			case Qt::DisplayRole:
 				return QString::fromStdString(d->_interfaces.at(idx).name);
+			case ErrorItemDelegate::ErrorRole:
+			{
+				auto const& intfc = d->_interfaces.at(idx);
+				return intfc.isEnabled && !intfc.isConnected;
+			}
 			case Qt::ForegroundRole:
 			{
 				auto const& intfc = d->_interfaces.at(idx);
