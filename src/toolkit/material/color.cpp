@@ -407,13 +407,13 @@ QColor foregroundValue(Name const name, Shade const shade)
 	return QColor{ l == Luminance::Light ? Qt::black : Qt::white };
 }
 
-QColor complementatyValue(Name const name, Shade const shade)
+QColor complementaryValue(Name const name, Shade const shade)
 {
 	auto const baseColor = value(name, shade);
 	return complementary(baseColor);
 }
 
-QColor foregroundComplementatyValue(Name const name, Shade const shade)
+QColor foregroundComplementaryValue(Name const name, Shade const shade)
 {
 	auto const baseColor = foregroundValue(name, shade);
 	return complementary(baseColor);

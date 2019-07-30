@@ -18,12 +18,12 @@
 */
 
 #include "controlledEntityTreeWidget.hpp"
-
-#include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
-
+#include "errorItemDelegate.hpp"
 #include "nodeVisitor.hpp"
+
+#include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 
 #include <QHeaderView>
 #include <QMenu>
@@ -54,6 +54,7 @@ public:
 	void setHasError(bool const hasError)
 	{
 		_hasError = hasError;
+		setData(0, ErrorItemDelegate::ErrorRole, _hasError);
 		setForeground(0, _hasError ? Qt::red : Qt::black);
 
 		// Also update the parent node
@@ -236,7 +237,7 @@ public:
 			return;
 		}
 
-		if (auto* item = findItem({ la::avdecc::entity::model::DescriptorType::Entity, descriptorIndex }))
+		if (auto* item = findItem({ la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex }))
 		{
 			item->setHasError(!errorCounters.empty());
 		}

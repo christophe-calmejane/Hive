@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - [Splashscreen displayed on the same screen than Hive will be shown](https://github.com/christophe-calmejane/Hive/issues/20)
 - Refresh issue when gPTP changes for some non-milan devices
+- [Red text no longer applied when item is selected (fixed by using a colored box around the item)](https://github.com/christophe-calmejane/Hive/issues/68)
 
 ## [1.1.0] - 2019-05-21
 ### Added

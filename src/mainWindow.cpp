@@ -54,7 +54,7 @@
 #include "aboutDialog.hpp"
 #include "deviceDetailsDialog.hpp"
 #include "entityLogoCache.hpp"
-#include "highlightForegroundItemDelegate.hpp"
+#include "errorItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "nodeVisitor.hpp"
 #include "settingsDialog.hpp"
@@ -344,6 +344,10 @@ void MainWindowImpl::createToolbars()
 		_interfaceComboBox.setMinimumWidth(100);
 		_interfaceComboBox.setModel(&_activeNetworkInterfaceModel);
 
+		// The combobox takes ownership of the item delegate
+		auto* interfaceComboBoxItemDelegate = new ErrorItemDelegate{};
+		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
+
 		auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
 		controllerEntityIDLabel->setMinimumWidth(50);
 		_controllerEntityIDLabel.setMinimumWidth(100);
@@ -395,14 +399,16 @@ void MainWindowImpl::createControllerView()
 	// Disable row resizing
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
+	// The table view does not take ownership on the item delegate
 	auto* imageItemDelegate{ new ImageItemDelegate{ _parent } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
-	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ _parent } };
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), highlightForegroundItemDelegate);
+	// The table view does not take ownership on the item delegate
+	auto* errorItemDelegate{ new ErrorItemDelegate{ _parent } };
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), errorItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));

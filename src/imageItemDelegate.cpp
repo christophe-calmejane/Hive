@@ -24,7 +24,7 @@ void ImageItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 {
 	QStyledItemDelegate::paint(painter, option, index);
 
-	auto const userData{ index.data(Qt::UserRole) };
+	auto const userData{ index.data(ImageRole) };
 	if (!userData.canConvert<QImage>())
 	{
 		return;

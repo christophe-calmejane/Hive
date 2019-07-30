@@ -25,6 +25,7 @@ class ImageItemDelegate : public QStyledItemDelegate
 {
 public:
 	using QStyledItemDelegate::QStyledItemDelegate;
+	static constexpr auto ImageRole = Qt::UserRole + 1;
 
 protected:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;

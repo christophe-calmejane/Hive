@@ -383,8 +383,8 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	if (isSelected)
 	{
-		backgroundColor = qt::toolkit::material::color::complementatyValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
-		foregroundColor = qt::toolkit::material::color::foregroundComplementatyValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
+		backgroundColor = qt::toolkit::material::color::complementaryValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
+		foregroundColor = qt::toolkit::material::color::foregroundComplementaryValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
 	}
 
 	painter->save();

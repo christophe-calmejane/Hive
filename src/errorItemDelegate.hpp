@@ -19,14 +19,26 @@
 
 #pragma once
 
+#include "settingsManager/settings.hpp"
+
 #include <QStyledItemDelegate>
 
-// This custom delegate allows to keep the Qt::ForegroundRole visible even when a cell is highlighted
-class HighlightForegroundItemDelegate : public QStyledItemDelegate
+// This custom delegate allows to indicate a cell is on error
+class ErrorItemDelegate : public QStyledItemDelegate, private settings::SettingsManager::Observer
 {
 public:
-	using QStyledItemDelegate::QStyledItemDelegate;
+	static constexpr auto ErrorRole = Qt::UserRole + 1;
+
+	explicit ErrorItemDelegate(QObject* parent = nullptr) noexcept;
+	~ErrorItemDelegate() noexcept;
 
 protected:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+
+private:
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
+
+	// Private members
+	qt::toolkit::material::color::Name _colorName{ qt::toolkit::material::color::DefaultColor };
 };
