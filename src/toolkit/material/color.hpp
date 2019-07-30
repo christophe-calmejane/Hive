@@ -103,11 +103,11 @@ QColor foregroundValue(Name const name, Shade const shade = DefaultShade);
 
 // Return the complementary color value for given name + shade
 // May throw invalid_argument for non existing combinations
-QColor complementatyValue(Name const name, Shade const shade = DefaultShade);
+QColor complementaryValue(Name const name, Shade const shade = DefaultShade);
 
 // Return the foreground complementary color value for given name + shade
 // May throw invalid_argument for non existing combinations
-QColor foregroundComplementatyValue(Name const name, Shade const shade = DefaultShade);
+QColor foregroundComplementaryValue(Name const name, Shade const shade = DefaultShade);
 
 // Return the luminance for a given name + shade
 // May throw invalid_argument for non existing combinations

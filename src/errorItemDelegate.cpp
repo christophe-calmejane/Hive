@@ -43,7 +43,7 @@ void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 	{
 		if (option.state & QStyle::StateFlag::State_Selected)
 		{
-			painter->setPen(QPen{ qt::toolkit::material::color::complementatyValue(_colorName, qt::toolkit::material::color::Shade::Shade600), 2 });
+			painter->setPen(QPen{ qt::toolkit::material::color::complementaryValue(_colorName, qt::toolkit::material::color::Shade::Shade600), 2 });
 			painter->drawRect(option.rect.adjusted(1, 1, -1, -1));
 		}
 		else
