@@ -53,4 +53,5 @@ private:
 	QSplitter _splitter{ Qt::Vertical, this };
 	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
 	NodeTreeWidget _nodeTreeWiget{ this };
+	ErrorItemDelegate _itemDelegate{ this };
 };

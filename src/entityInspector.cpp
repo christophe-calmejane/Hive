@@ -31,11 +31,13 @@ EntityInspector::EntityInspector(QWidget* parent)
 	_layout.setContentsMargins(0, 0, 0, 0);
 	_layout.addWidget(&_splitter);
 
+	_controlledEntityTreeWiget.setItemDelegate(&_itemDelegate);
+	_nodeTreeWiget.setItemDelegate(&_itemDelegate);
+
 	_splitter.addWidget(&_controlledEntityTreeWiget);
 	_splitter.addWidget(&_nodeTreeWiget);
 	_splitter.setStretchFactor(0, 0); // Descriptors List has less weight than
 	_splitter.setStretchFactor(1, 1); // the Descriptor itself, as far as expand is concerned
-
 
 	_nodeTreeWiget.setColumnCount(2);
 	_nodeTreeWiget.setHeaderLabels({ "", "" });

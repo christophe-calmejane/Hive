@@ -54,7 +54,7 @@
 #include "aboutDialog.hpp"
 #include "deviceDetailsDialog.hpp"
 #include "entityLogoCache.hpp"
-#include "highlightForegroundItemDelegate.hpp"
+#include "errorItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 #include "nodeVisitor.hpp"
 #include "settingsDialog.hpp"
@@ -401,8 +401,8 @@ void MainWindowImpl::createControllerView()
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
-	auto* highlightForegroundItemDelegate{ new HighlightForegroundItemDelegate{ _parent } };
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), highlightForegroundItemDelegate);
+	auto* errorItemDelegate{ new ErrorItemDelegate{ _parent } };
+	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), errorItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));

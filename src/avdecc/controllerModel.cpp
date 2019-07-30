@@ -19,16 +19,21 @@
 
 #include "controllerModel.hpp"
 #include "helper.hpp"
-#include <la/avdecc/utils.hpp>
-#include <la/avdecc/logger.hpp>
+#include "entityLogoCache.hpp"
+#include "imageItemDelegate.hpp"
+#include "errorItemDelegate.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
-#include "entityLogoCache.hpp"
 #include "settingsManager/settings.hpp"
 #include "toolkit/material/color.hpp"
+
+#include <la/avdecc/utils.hpp>
+#include <la/avdecc/logger.hpp>
+
+#include <QFont>
+
 #include <algorithm>
 #include <array>
-#include <QFont>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -318,7 +323,7 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityID)
 		{
-			if (role == Qt::ForegroundRole)
+			if (role == ErrorItemDelegate::ErrorRole || role == Qt::ForegroundRole)
 			{
 				auto const it = _entitiesWithErrorCounter.find(entityID);
 				if (it != std::end(_entitiesWithErrorCounter))
@@ -326,7 +331,14 @@ public:
 					auto const& entityWithErrorCounter{ it->second };
 					if (entityWithErrorCounter.hasError())
 					{
-						return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
+						if (role == ErrorItemDelegate::ErrorRole)
+						{
+							return true;
+						}
+						else if (role == Qt::ForegroundRole)
+						{
+							return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
+						}
 					}
 				}
 			}
@@ -339,7 +351,7 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityLogo)
 		{
-			if (role == Qt::UserRole)
+			if (role == ImageItemDelegate::ImageRole)
 			{
 				if (data.aemSupported)
 				{
@@ -356,7 +368,7 @@ public:
 		{
 			switch (role)
 			{
-				case Qt::UserRole:
+				case ImageItemDelegate::ImageRole:
 				{
 					try
 					{
@@ -389,7 +401,7 @@ public:
 		{
 			switch (role)
 			{
-				case Qt::UserRole:
+				case ImageItemDelegate::ImageRole:
 				{
 					try
 					{
@@ -411,7 +423,7 @@ public:
 		{
 			switch (role)
 			{
-				case Qt::UserRole:
+				case ImageItemDelegate::ImageRole:
 				{
 					try
 					{
@@ -722,7 +734,7 @@ private:
 			data.acquireState = computeAcquireState(acquireState);
 			data.acquireStateTooltip = helper::acquireStateToString(acquireState, owningEntity);
 
-			dataChanged(*row, ControllerModel::Column::AcquireState, { Qt::UserRole });
+			dataChanged(*row, ControllerModel::Column::AcquireState, { ImageItemDelegate::ImageRole });
 		}
 	}
 
@@ -735,7 +747,7 @@ private:
 			data.lockState = computeLockState(lockState);
 			data.lockStateTooltip = helper::lockStateToString(lockState, lockingEntity);
 
-			dataChanged(*row, ControllerModel::Column::LockState, { Qt::UserRole });
+			dataChanged(*row, ControllerModel::Column::LockState, { ImageItemDelegate::ImageRole });
 		}
 	}
 
@@ -847,7 +859,7 @@ private:
 		{
 			if (auto const row = entityRow(entityID))
 			{
-				dataChanged(*row, ControllerModel::Column::EntityLogo, { Qt::UserRole });
+				dataChanged(*row, ControllerModel::Column::EntityLogo, { ImageItemDelegate::ImageRole });
 			}
 		}
 	}
@@ -866,7 +878,7 @@ private:
 				auto const topLeft = q->createIndex(0, column, nullptr);
 				auto const bottomRight = q->createIndex(rowCount(), column, nullptr);
 
-				emit q->dataChanged(topLeft, bottomRight, { Qt::UserRole });
+				emit q->dataChanged(topLeft, bottomRight, { ImageItemDelegate::ImageRole });
 			}
 		}
 	}

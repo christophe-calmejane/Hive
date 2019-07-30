@@ -127,7 +127,7 @@ set(HEADER_FILES_COMMON
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	entityLogoCache.hpp
-	highlightForegroundItemDelegate.hpp
+	errorItemDelegate.hpp
 	imageItemDelegate.hpp
 	mappingMatrix.hpp
 	activeNetworkInterfaceModel.hpp
@@ -206,7 +206,7 @@ set(SOURCE_FILES_COMMON
 	settingsDialog.cpp
 	aecpCommandComboBox.cpp
 	entityLogoCache.cpp
-	highlightForegroundItemDelegate.cpp
+	errorItemDelegate.cpp
 	imageItemDelegate.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
