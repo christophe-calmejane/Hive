@@ -19,11 +19,12 @@
 
 #pragma once
 
-#include <QSplitter>
-#include <QLayout>
 #include "controlledEntityTreeWidget.hpp"
 #include "nodeTreeWidget.hpp"
+#include "errorItemDelegate.hpp"
 
+#include <QSplitter>
+#include <QLayout>
 
 class EntityInspector : public QWidget
 {
