@@ -277,14 +277,18 @@ Node::TriState StreamNode::lockedState() const
 	// Only if connected
 	if (_streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
 	{
-		// Only if both counters have a valid value
-		if (_mediaLockedCounter && _mediaUnlockedCounter)
+		// If we have ProbingStatus it must be Completed
+		if (!_probingStatus || (*_probingStatus == la::avdecc::entity::model::ProbingStatus::Completed))
 		{
-			if (*_mediaLockedCounter == (*_mediaUnlockedCounter + 1))
+			// Only if both counters have a valid value
+			if (_mediaLockedCounter && _mediaUnlockedCounter)
 			{
-				return TriState::True;
+				if (*_mediaLockedCounter == (*_mediaUnlockedCounter + 1))
+				{
+					return TriState::True;
+				}
+				return TriState::False;
 			}
-			return TriState::False;
 		}
 	}
 	return TriState::Unknown;
@@ -339,6 +343,17 @@ void StreamNode::setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity
 void StreamNode::setRunning(bool isRunning)
 {
 	_isRunning = isRunning;
+}
+
+bool StreamNode::setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus)
+{
+	if (_probingStatus != probingStatus)
+	{
+		_probingStatus = probingStatus;
+		return true;
+	}
+
+	return false;
 }
 
 void StreamNode::setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value)

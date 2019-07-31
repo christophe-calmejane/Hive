@@ -320,7 +320,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
 
-	if (!node) //!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	if (!node)
 	{
 		return;
 	}
@@ -358,51 +358,33 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			return;
 	}
 
-	auto stripeColor = std::optional<QColor>{ std::nullopt };
-	// Second pass for Stripe Color
+	// Second pass for Arrow Color
+	auto arrowColor = std::optional<QColor>{ std::nullopt };
 	switch (nodeType)
 	{
+		case Node::Type::RedundantInput:
 		case Node::Type::InputStream:
-		{
-			auto const state = static_cast<StreamNode const&>(*node).lockedState();
-			if (state == Node::TriState::False)
-			{
-				stripeColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
-			}
-			else if (state == Node::TriState::True)
-			{
-				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
-			}
-			break;
-		}
-		case Node::Type::OutputStream:
-		{
-			auto const state = static_cast<StreamNode const&>(*node).streamingState();
-			if (state == Node::TriState::True)
-			{
-				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
-			}
-			break;
-		}
 		case Node::Type::RedundantInputStream:
 		{
 			auto const state = static_cast<StreamNode const&>(*node).lockedState();
 			if (state == Node::TriState::False)
 			{
-				stripeColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+				arrowColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
 			}
 			else if (state == Node::TriState::True)
 			{
-				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
+				arrowColor = backgroundColor;
 			}
 			break;
 		}
+		case Node::Type::RedundantOutput:
+		case Node::Type::OutputStream:
 		case Node::Type::RedundantOutputStream:
 		{
 			auto const state = static_cast<StreamNode const&>(*node).streamingState();
 			if (state == Node::TriState::True)
 			{
-				stripeColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
+				arrowColor = backgroundColor;
 			}
 			break;
 		}
@@ -410,30 +392,14 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			break;
 	}
 
-	auto const arrowSize{ 10 };
-	auto const arrowOffset{ 20 * nodeLevel };
-
 	auto isSelected{ false };
 
-	QPainterPath path;
 	if (orientation() == Qt::Horizontal)
 	{
-		path.moveTo(rect.topLeft());
-		path.lineTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset });
-		path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
-		path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
-		path.lineTo(rect.topRight());
-
 		isSelected = selectionModel()->isColumnSelected(logicalIndex, {});
 	}
 	else
 	{
-		path.moveTo(rect.topLeft());
-		path.lineTo(rect.topRight() - QPoint{ arrowSize + arrowOffset, 0 });
-		path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
-		path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
-		path.lineTo(rect.bottomLeft());
-
 		isSelected = selectionModel()->isRowSelected(logicalIndex, {});
 	}
 
@@ -446,25 +412,86 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	painter->save();
 	painter->setRenderHint(QPainter::Antialiasing);
 
-	auto const buildStripe = [](auto const& path, auto const orientation)
+	auto const arrowSize{ 10 };
+	auto const arrowOffset{ 20 * nodeLevel };
+
+	auto const buildArrowPath = [orientation = orientation(), rect, nodeLevel, arrowSize, arrowOffset](auto const width)
 	{
-		auto const length = 6.;
+		auto path = QPainterPath{};
+
 		if (orientation == Qt::Horizontal)
 		{
-			return path.translated({ 0., length });
+			if (width == 0)
+			{
+				path.moveTo(rect.topLeft());
+			}
+			else
+			{
+				path.moveTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset + width });
+			}
+
+			path.lineTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset });
+			path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
+			path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
+
+			if (width == 0)
+			{
+				path.lineTo(rect.topRight());
+			}
+			else
+			{
+				path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset + width });
+				path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset - width });
+			}
 		}
 		else
 		{
-			return path.translated({ length, 0. });
+			if (width == 0)
+			{
+				path.moveTo(rect.topLeft());
+			}
+			else
+			{
+				path.moveTo(rect.topRight() - QPoint{ arrowSize + arrowOffset + width, 0 });
+			}
+
+			path.lineTo(rect.topRight() - QPoint{ arrowSize + arrowOffset, 0 });
+			path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
+			path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
+
+			if (width == 0)
+			{
+				path.lineTo(rect.bottomLeft());
+			}
+			else
+			{
+				path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset + width, 0 });
+				path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset - width, 0 });
+			}
 		}
+
+		return path;
 	};
 
-	if (stripeColor)
+	// Draw the main background arrow
+	painter->fillPath(buildArrowPath(0), backgroundColor);
+
+	// Draw the small arrow, if needed
+	if (arrowColor)
 	{
-		painter->fillPath(buildStripe(path, orientation()), *stripeColor);
+		auto path = buildArrowPath(5);
+		if (orientation() == Qt::Horizontal)
+		{
+			path.translate(0, 10);
+		}
+		else
+		{
+			path.translate(10, 0);
+		}
+
+		painter->fillPath(path, *arrowColor);
 	}
 
-	painter->fillPath(path, backgroundColor);
 	painter->translate(rect.topLeft());
 
 	auto r = QRect(0, 0, rect.width(), rect.height());

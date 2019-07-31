@@ -419,6 +419,7 @@ public:
 		: q_ptr{ q }
 	{
 		auto& controllerManager = avdecc::ControllerManager::getInstance();
+		// Common signals
 		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
 		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
@@ -426,15 +427,16 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
-
-		// Stream
 		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamConnectionChanged, this, &ModelPrivate::handleStreamConnectionChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamInfoChanged, this, &ModelPrivate::handleStreamInfoChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
 
-		// Channel
+		// Stream Mode specific signals
+		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
+
+		// Channel Mode specific signals
 		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
 
@@ -1415,6 +1417,10 @@ public:
 						}
 					}
 				}
+				if (streamInputNode.dynamicModel->streamInfo.probingStatus)
+				{
+					node.setProbingStatus(*streamInputNode.dynamicModel->streamInfo.probingStatus);
+				}
 			};
 
 			// Redundant streams
@@ -2045,6 +2051,44 @@ public:
 					else
 					{
 						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					}
+				}
+			}
+		}
+		catch (...)
+		{
+			// Uncaught exception
+			AVDECC_ASSERT(false, "Uncaught exception");
+		}
+	}
+
+	void handleStreamInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& info)
+	{
+		// Event affecting a single stream node (Input)
+		try
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+			if (controlledEntity)
+			{
+				if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+				{
+					if (auto* node = listenerStreamNode(entityID, streamIndex))
+					{
+						if (info.probingStatus)
+						{
+							if (node->setProbingStatus(*info.probingStatus))
+							{
+								if (_mode == Model::Mode::Stream)
+								{
+									listenerHeaderDataChanged(node);
+								}
+							}
+						}
+					}
+					else
+					{
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInfoChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 					}
 				}
 			}

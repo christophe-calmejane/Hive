@@ -58,7 +58,7 @@ private:
 LegendDialog::LegendDialog(QWidget* parent)
 	: QDialog{ parent }
 {
-	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection matrix legend");
+	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection Matrix Legend");
 
 	using Section = std::tuple<QString, Model::IntersectionData::Type, Model::IntersectionData::State, Model::IntersectionData::Flags>;
 	using Sections = std::vector<Section>;

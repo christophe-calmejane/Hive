@@ -245,6 +245,7 @@ protected:
 	void setGrandMasterDomain(std::uint8_t const grandMasterDomain);
 	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus);
 	void setRunning(bool isRunning);
+	bool setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus); // StreamInput only
 	void setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
 	void setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
 	void setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
@@ -259,6 +260,7 @@ protected:
 	std::uint8_t _grandMasterDomain;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus _interfaceLinkStatus{ la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown };
 	bool _isRunning{ true };
+	std::optional<la::avdecc::entity::model::ProbingStatus> _probingStatus{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaLockedCounter{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaUnlockedCounter{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStartCounter{ std::nullopt }; // StreamOutput only
