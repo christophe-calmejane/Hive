@@ -211,6 +211,26 @@ la::avdecc::controller::model::VirtualIndex const& RedundantNode::redundantIndex
 	return _redundantIndex;
 }
 
+Node::TriState RedundantNode::lockedState() const
+{
+	return _lockedState;
+}
+
+bool RedundantNode::isStreaming() const
+{
+	return _isStreaming;
+}
+
+void RedundantNode::setLockedState(TriState const lockedState) noexcept
+{
+	_lockedState = lockedState;
+}
+
+void RedundantNode::setIsStreaming(bool const isStreaming) noexcept
+{
+	_isStreaming = isStreaming;
+}
+
 RedundantNode::RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex)
 	: Node{ type, parent.entityID(), &parent }
 	, _redundantIndex{ redundantIndex }
@@ -274,38 +294,12 @@ bool StreamNode::isRunning() const
 
 Node::TriState StreamNode::lockedState() const
 {
-	// Only if connected
-	if (_streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
-	{
-		// If we have ProbingStatus it must be Completed
-		if (!_probingStatus || (*_probingStatus == la::avdecc::entity::model::ProbingStatus::Completed))
-		{
-			// Only if both counters have a valid value
-			if (_mediaLockedCounter && _mediaUnlockedCounter)
-			{
-				if (*_mediaLockedCounter == (*_mediaUnlockedCounter + 1))
-				{
-					return TriState::True;
-				}
-				return TriState::False;
-			}
-		}
-	}
-	return TriState::Unknown;
+	return _lockedState;
 }
 
-Node::TriState StreamNode::streamingState() const
+bool StreamNode::isStreaming() const
 {
-	// Only if both counters have a valid value
-	if (_streamStartCounter && _streamStopCounter)
-	{
-		if (*_streamStartCounter == (*_streamStopCounter + 1))
-		{
-			return TriState::True;
-		}
-		return TriState::False;
-	}
-	return TriState::Unknown;
+	return _isStreaming;
 }
 
 la::avdecc::entity::model::StreamConnectionState const& StreamNode::streamConnectionState() const
@@ -379,6 +373,48 @@ void StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCount
 void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
 {
 	_streamConnectionState = streamConnectionState;
+}
+
+void StreamNode::computeLockedState() noexcept
+{
+	// Only if connected
+	if (_streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
+	{
+		// If we have ProbingStatus it must be Completed
+		if (!_probingStatus || (*_probingStatus == la::avdecc::entity::model::ProbingStatus::Completed))
+		{
+			// Only if both counters have a valid value
+			if (_mediaLockedCounter && _mediaUnlockedCounter)
+			{
+				if (*_mediaLockedCounter == (*_mediaUnlockedCounter + 1))
+				{
+					_lockedState = TriState::True;
+					return;
+				}
+				_lockedState = TriState::False;
+				return;
+			}
+		}
+	}
+
+	_lockedState = TriState::Unknown;
+	return;
+}
+
+void StreamNode::computeIsStreaming() noexcept
+{
+	// Only if both counters have a valid value
+	if (_streamStartCounter && _streamStopCounter)
+	{
+		if (*_streamStartCounter == (*_streamStopCounter + 1))
+		{
+			_isStreaming = true;
+			return;
+		}
+	}
+
+	_isStreaming = false;
+	return;
 }
 
 ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)

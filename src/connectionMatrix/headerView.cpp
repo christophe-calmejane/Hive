@@ -363,6 +363,18 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	switch (nodeType)
 	{
 		case Node::Type::RedundantInput:
+		{
+			auto const state = static_cast<RedundantNode const&>(*node).lockedState();
+			if (state == Node::TriState::False)
+			{
+				arrowColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+			}
+			else if (state == Node::TriState::True)
+			{
+				arrowColor = backgroundColor;
+			}
+			break;
+		}
 		case Node::Type::InputStream:
 		case Node::Type::RedundantInputStream:
 		{
@@ -378,11 +390,17 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			break;
 		}
 		case Node::Type::RedundantOutput:
+		{
+			if (static_cast<RedundantNode const&>(*node).isStreaming())
+			{
+				arrowColor = backgroundColor;
+			}
+			break;
+		}
 		case Node::Type::OutputStream:
 		case Node::Type::RedundantOutputStream:
 		{
-			auto const state = static_cast<StreamNode const&>(*node).streamingState();
-			if (state == Node::TriState::True)
+			if (static_cast<StreamNode const&>(*node).isStreaming())
 			{
 				arrowColor = backgroundColor;
 			}

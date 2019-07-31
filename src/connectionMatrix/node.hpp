@@ -203,13 +203,23 @@ public:
 	static RedundantNode* createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
 	static RedundantNode* createInputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
 
+	// Static entity model data
 	la::avdecc::controller::model::VirtualIndex const& redundantIndex() const;
+
+	// Cached data from the controller
+	TriState lockedState() const; // StreamInput only
+	bool isStreaming() const; // StreamOutput only
 
 protected:
 	RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
 
+	void setLockedState(TriState const lockedState) noexcept; // StreamInput only
+	void setIsStreaming(bool const isStreaming) noexcept; // StreamOutput only
+
 protected:
 	la::avdecc::controller::model::VirtualIndex const _redundantIndex;
+	Node::TriState _lockedState{ Node::TriState::Unknown }; // StreamInput only
+	bool _isStreaming{ false }; // StreamOutput only
 };
 
 class StreamNode : public Node
@@ -234,7 +244,7 @@ public:
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const;
 	bool isRunning() const;
 	TriState lockedState() const; // StreamInput only
-	TriState streamingState() const; // StreamOutput only
+	bool isStreaming() const; // StreamOutput only
 	la::avdecc::entity::model::StreamConnectionState const& streamConnectionState() const;
 
 protected:
@@ -251,6 +261,8 @@ protected:
 	void setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
 	void setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
 	void setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState);
+	void computeLockedState() noexcept;
+	void computeIsStreaming() noexcept;
 
 protected:
 	la::avdecc::entity::model::StreamIndex const _streamIndex;
@@ -266,6 +278,8 @@ protected:
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStartCounter{ std::nullopt }; // StreamOutput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStopCounter{ std::nullopt }; // StreamOutput only
 	la::avdecc::entity::model::StreamConnectionState _streamConnectionState{};
+	Node::TriState _lockedState{ Node::TriState::Unknown }; // StreamInput only
+	bool _isStreaming{ false }; // StreamOutput only
 };
 
 class ChannelNode : public Node

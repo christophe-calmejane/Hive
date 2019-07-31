@@ -616,6 +616,13 @@ public:
 		}
 	}
 
+	enum class HeaderDirtyFlag
+	{
+		UpdateLockedState = 1u << 0, /**< Update the Stream Locked State (Stream Input only), or the summary if this is a parent node */
+		UpdateIsStreaming = 1u << 1, /**<  Update the Is Streaming State (Stream Output only), or the summary if this is a parent node */
+	};
+	using HeaderDirtyFlags = la::avdecc::utils::EnumBitfield<HeaderDirtyFlag>;
+
 	enum class IntersectionDirtyFlag
 	{
 		UpdateConnected = 1u << 0, /**< Update the connected status, or the summary if this is a parent node */
@@ -751,11 +758,105 @@ public:
 		intersectionData.flags = {};
 
 		// Compute everything for initial state
-		computeIntersectionFlags(intersectionData, allIntersectionDirtyFlags());
+		computeIntersectionData(intersectionData, allIntersectionDirtyFlags());
+	}
+
+	// Updates header data for the given dirtyFlags
+	void computeHeaderData(Node* const node, HeaderDirtyFlags const dirtyFlags)
+	{
+		if (dirtyFlags.test(HeaderDirtyFlag::UpdateLockedState))
+		{
+			switch (node->type())
+			{
+				case Node::Type::Entity:
+					// Nothing to do, for now
+					break;
+				case Node::Type::RedundantInput:
+				{
+					auto summaryLockedState = Node::TriState::Unknown;
+					node->accept(
+						[&summaryLockedState](Node* node)
+						{
+							AVDECC_ASSERT(node->isRedundantStreamNode(), "Should be a RedundantStreamNode");
+							auto const state = static_cast<StreamNode&>(*node).lockedState();
+							switch (state)
+							{
+								case Node::TriState::Unknown: // Don't change summary value if we don't know this state
+									break;
+								case Node::TriState::False: // Summary should display UnLock if at least one node is not Locked
+									summaryLockedState = state;
+									break;
+								case Node::TriState::True: // Summary should display Lock if all nodes are Locked
+									// Only force to False is summary is currently False. If it's True or Unknown, force to True
+									summaryLockedState = (summaryLockedState == Node::TriState::False) ? Node::TriState::False : Node::TriState::True;
+									break;
+								default:
+									AVDECC_ASSERT(false, "Unknown State");
+									break;
+							}
+						},
+						true);
+					AVDECC_ASSERT(node->isRedundantNode(), "Should be a RedundantNode");
+					static_cast<RedundantNode&>(*node).setLockedState(summaryLockedState);
+					break;
+				}
+				case Node::Type::InputStream:
+				case Node::Type::RedundantInputStream:
+				{
+					AVDECC_ASSERT(node->isStreamNode(), "Should be a StreamNode");
+					static_cast<StreamNode&>(*node).computeLockedState();
+					break;
+				}
+				case Node::Type::InputChannel:
+					// Nothing to do, for now
+					break;
+				default:
+					AVDECC_ASSERT(false, "UpdateLockedState flag should not be set for other types");
+					break;
+			}
+		}
+		if (dirtyFlags.test(HeaderDirtyFlag::UpdateIsStreaming))
+		{
+			switch (node->type())
+			{
+				case Node::Type::Entity:
+					// Nothing to do, for now
+					break;
+				case Node::Type::RedundantOutput:
+				{
+					auto summaryStreaming = false;
+					node->accept(
+						[&summaryStreaming](Node* node)
+						{
+							AVDECC_ASSERT(node->isRedundantStreamNode(), "Should be a RedundantStreamNode");
+							auto const isStreaming = static_cast<StreamNode&>(*node).isStreaming();
+							// Summary should display as Streaming if at least one node is Streaming
+							summaryStreaming |= isStreaming;
+						},
+						true);
+					AVDECC_ASSERT(node->isRedundantNode(), "Should be a RedundantNode");
+					static_cast<RedundantNode&>(*node).setIsStreaming(summaryStreaming);
+					break;
+				}
+				case Node::Type::OutputStream:
+				case Node::Type::RedundantOutputStream:
+				{
+					AVDECC_ASSERT(node->isStreamNode(), "Should be a StreamNode");
+					static_cast<StreamNode&>(*node).computeIsStreaming();
+					break;
+				}
+				case Node::Type::OutputChannel:
+					// Nothing to do, for now
+					break;
+				default:
+					AVDECC_ASSERT(false, "UpdateIsStreaming flag should not be set for other types");
+					break;
+			}
+		}
 	}
 
 	// Updates intersection data for the given dirtyFlags
-	void computeIntersectionFlags(Model::IntersectionData& intersectionData, IntersectionDirtyFlags const dirtyFlags)
+	void computeIntersectionData(Model::IntersectionData& intersectionData, IntersectionDirtyFlags const dirtyFlags)
 	{
 		try
 		{
@@ -1841,13 +1942,17 @@ public:
 				if (auto* node = talkerNodeFromEntityID(entityID))
 				{
 					node->setName(name);
-					talkerHeaderDataChanged(node);
+
+					// Always notify the view, EntityName is displayed in CBR and SBR modes
+					talkerHeaderDataChanged(node, true, false, {});
 				}
 
 				if (auto* node = listenerNodeFromEntityID(entityID))
 				{
 					node->setName(name);
-					listenerHeaderDataChanged(node);
+
+					// Always notify the view, EntityName is displayed in CBR and SBR modes
+					listenerHeaderDataChanged(node, true, false, {});
 				}
 			}
 		}
@@ -1956,10 +2061,9 @@ public:
 			{
 				node->setRunning(isRunning);
 
-				if (_mode == Model::Mode::Stream)
-				{
-					talkerHeaderDataChanged(node);
-				}
+				// Notify view based on current mode, since we have a StreamNode here
+				talkerHeaderDataChanged(node, _mode == Model::Mode::Stream, false, {});
+#pragma message("TODO: Find affected Channels and for each, call talkerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateStreamRunning});")
 			}
 			else
 			{
@@ -1972,10 +2076,9 @@ public:
 			{
 				node->setRunning(isRunning);
 
-				if (_mode == Model::Mode::Stream)
-				{
-					listenerHeaderDataChanged(node);
-				}
+				// Notify view based on current mode, since we have a StreamNode here
+				listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, false, {});
+#pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateStreamRunning});")
 			}
 			else
 			{
@@ -1995,12 +2098,15 @@ public:
 			if (_mode == Model::Mode::Stream)
 			{
 				listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
-				listenerHeaderDataChanged(listener);
 			}
 			else
 			{
 #pragma message("TODO: Find affected Channels and update Intersections")
 			}
+
+			// Notify view based on current mode, since we have a StreamNode here
+			listenerHeaderDataChanged(listener, _mode == Model::Mode::Stream, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
+#pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateLockedState});")
 		}
 		else
 		{
@@ -2025,10 +2131,8 @@ public:
 					{
 						node->setName(name);
 
-						if (_mode == Model::Mode::Stream)
-						{
-							talkerHeaderDataChanged(node);
-						}
+						// Only notify the view in SBR mode, StreamName is not displayed in CBR mode
+						talkerHeaderDataChanged(node, _mode == Model::Mode::Stream, false, {});
 					}
 					else
 					{
@@ -2043,10 +2147,8 @@ public:
 					{
 						node->setName(name);
 
-						if (_mode == Model::Mode::Stream)
-						{
-							listenerHeaderDataChanged(node);
-						}
+						// Only notify the view in SBR mode, StreamName is not displayed in CBR mode
+						listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, false, {});
 					}
 					else
 					{
@@ -2079,10 +2181,9 @@ public:
 						{
 							if (node->setProbingStatus(*info.probingStatus))
 							{
-								if (_mode == Model::Mode::Stream)
-								{
-									listenerHeaderDataChanged(node);
-								}
+								// Notify view based on current mode, since we have a StreamNode here
+								listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
+#pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateLockedState});")
 							}
 						}
 					}
@@ -2132,10 +2233,9 @@ public:
 
 					if (changed)
 					{
-						if (_mode == Model::Mode::Stream)
-						{
-							listenerHeaderDataChanged(node);
-						}
+						// Notify view based on current mode, since we have a StreamNode here
+						listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
+#pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateLockedState});")
 					}
 				}
 				else
@@ -2183,10 +2283,9 @@ public:
 
 					if (changed)
 					{
-						if (_mode == Model::Mode::Stream)
-						{
-							talkerHeaderDataChanged(node);
-						}
+						// Notify view based on current mode, since we have a StreamNode here
+						talkerHeaderDataChanged(node, _mode == Model::Mode::Stream, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateIsStreaming });
+#pragma message("TODO: Find affected Channels and for each, call talkerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateIsStreaming});")
 					}
 				}
 				else
@@ -2267,10 +2366,8 @@ public:
 					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
-					if (_mode == Model::Mode::Channel)
-					{
-						talkerHeaderDataChanged(channelNode);
-					}
+					// Only notify the view in SBR mode, ClusterName is not displayed in CBR mode
+					talkerHeaderDataChanged(channelNode, _mode == Model::Mode::Channel, false, {});
 				}
 			}
 
@@ -2281,10 +2378,8 @@ public:
 					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
-					if (_mode == Model::Mode::Channel)
-					{
-						listenerHeaderDataChanged(channelNode);
-					}
+					// Only notify the view in SBR mode, ClusterName is not displayed in CBR mode
+					listenerHeaderDataChanged(channelNode, _mode == Model::Mode::Channel, false, {});
 				}
 			}
 		}
@@ -2435,13 +2530,13 @@ private:
 	}
 
 	// Recomputes (according to dirtyFlags) intersection data for talkerSection and listenerSection and notifies that it has changed
-	void intersectionDataChanged(int const talkerSection, int const listenerSection, IntersectionDirtyFlags dirtyFlags)
+	void intersectionDataChanged(int const talkerSection, int const listenerSection, IntersectionDirtyFlags const dirtyFlags)
 	{
 		Q_Q(Model);
 
 		auto& data = _intersectionData[talkerSection][listenerSection];
 
-		computeIntersectionFlags(data, dirtyFlags);
+		computeIntersectionData(data, dirtyFlags);
 
 		auto const index = createIndex(talkerSection, listenerSection);
 		emit q->dataChanged(index, index);
@@ -2451,9 +2546,9 @@ private:
 #endif
 	}
 
-	// Recomputes talker intersection data, possibily recomputing its parent and/or children according desired dirtyFlags
+	// Recomputes talker intersection data, possibily recomputing its parent and/or children according to desired dirtyFlags
 	// Children are updated first, then the node, then the parents
-	void talkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
+	void talkerIntersectionDataChanged(Node* talker, bool const andParents, bool const andChildren, IntersectionDirtyFlags const dirtyFlags)
 	{
 		if (!AVDECC_ASSERT_WITH_RET(talker, "Invalid talker"))
 		{
@@ -2490,9 +2585,9 @@ private:
 		}
 	}
 
-	// Recomputes listener intersection data, possibily recomputing its parent and/or children according desired dirtyFlags
+	// Recomputes listener intersection data, possibily recomputing its parent and/or children according to desired dirtyFlags
 	// Children are updated first, then the node, then the parents
-	void listenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags dirtyFlags)
+	void listenerIntersectionDataChanged(Node* listener, bool const andParents, bool const andChildren, IntersectionDirtyFlags const dirtyFlags)
 	{
 		if (!AVDECC_ASSERT_WITH_RET(listener, "Invalid listener"))
 		{
@@ -2529,32 +2624,78 @@ private:
 		}
 	}
 
-	// Notifies that talker header data has changed
-	void talkerHeaderDataChanged(Node* const node)
+	// Recomputes talker header data, possibily recomputing its parent according to desired dirtyFlags
+	// The node is updated first, then the parents
+	void talkerHeaderDataChanged(Node* const talker, bool const notifyView, bool const andParents, HeaderDirtyFlags const dirtyFlags)
 	{
-		Q_Q(Model);
+		// Compute header flags
+		if (!dirtyFlags.empty())
+		{
+			computeHeaderData(talker, dirtyFlags);
+		}
 
-		auto section = talkerNodeSection(node);
+		// Notifies that talker header data has changed
+		if (notifyView)
+		{
+			Q_Q(Model);
+
+			// Update the node header
+			auto section = talkerNodeSection(talker);
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
-		qDebug() << "talkerHeaderDataChanged(" << section << ")";
+			qDebug() << "talkerHeaderDataChanged(" << section << ")";
 #endif
 
-		emit q->headerDataChanged(talkerOrientation(), section, section);
+			emit q->headerDataChanged(talkerOrientation(), section, section);
+		}
+
+		// Finally, recursively update the parents
+		if (andParents)
+		{
+			auto* node = talker;
+			while (auto* parent = node->parent())
+			{
+				talkerHeaderDataChanged(parent, notifyView, andParents, dirtyFlags);
+				node = parent;
+			}
+		}
 	}
 
-	// Notifies that listener header data has changed
-	void listenerHeaderDataChanged(Node* const node)
+	// Recomputes listener header data, possibily recomputing its parent according to desired dirtyFlags
+	// The node is updated first, then the parents
+	void listenerHeaderDataChanged(Node* const listener, bool const notifyView, bool const andParents, HeaderDirtyFlags const dirtyFlags)
 	{
-		Q_Q(Model);
+		// Compute header flags
+		if (!dirtyFlags.empty())
+		{
+			computeHeaderData(listener, dirtyFlags);
+		}
 
-		auto section = listenerNodeSection(node);
+		// Notifies that listener header data has changed
+		if (notifyView)
+		{
+			Q_Q(Model);
+
+			// Update the node header
+			auto section = listenerNodeSection(listener);
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
-		qDebug() << "listenerHeaderDataChanged(" << section << ")";
+			qDebug() << "listenerHeaderDataChanged(" << section << ")";
 #endif
 
-		emit q->headerDataChanged(listenerOrientation(), section, section);
+			emit q->headerDataChanged(listenerOrientation(), section, section);
+		}
+
+		// Finally, recursively update the parents
+		if (andParents)
+		{
+			auto* node = listener;
+			while (auto* parent = node->parent())
+			{
+				listenerHeaderDataChanged(parent, notifyView, andParents, dirtyFlags);
+				node = parent;
+			}
+		}
 	}
 
 	// Returns talker header orientation
