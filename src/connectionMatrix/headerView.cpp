@@ -450,7 +450,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto const arrowSize{ 10 };
 	auto const arrowOffset{ 20 * nodeLevel };
 
-	auto const buildArrowPath = [this, rect, nodeLevel, arrowSize, arrowOffset](auto const width)
+	auto const buildArrowPath = [this, rect, arrowSize, arrowOffset](auto const width)
 	{
 		auto path = QPainterPath{};
 

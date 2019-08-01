@@ -20,6 +20,8 @@
 #include "errorItemDelegate.hpp"
 #include "toolkit/material/color.hpp"
 
+#include <QPainter>
+
 ErrorItemDelegate::ErrorItemDelegate(QObject* parent) noexcept
 	: QStyledItemDelegate(parent)
 {

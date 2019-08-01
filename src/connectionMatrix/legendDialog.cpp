@@ -29,6 +29,34 @@
 namespace connectionMatrix
 {
 // We use a widget over a simple pixmap so that the device pixel ratio is handled automatically
+class HeaderArrowLabel : public QLabel
+{
+public:
+	HeaderArrowLabel(QColor const& color, Qt::Orientation const orientation, bool const isTransposed, QWidget* parent = nullptr)
+		: QLabel{ parent }
+		, _color{ color }
+		, _orientation{ orientation }
+		, _isTransposed{ isTransposed }
+	{
+		setFixedSize(20, 20);
+	}
+
+private:
+	virtual void paintEvent(QPaintEvent* event) override
+	{
+		Q_UNUSED(event);
+		QPainter painter{ this };
+		auto const path = paintHelper::buildHeaderArrowPath(rect(), _orientation, _isTransposed, false, false, 3, 10, 5);
+		painter.fillPath(path, _color);
+	}
+
+private:
+	QColor const _color{};
+	Qt::Orientation const _orientation{ Qt::Orientation::Horizontal };
+	bool const _isTransposed{ false };
+};
+
+// We use a widget over a simple pixmap so that the device pixel ratio is handled automatically
 class CapabilitiesLabel : public QLabel
 {
 public:
@@ -55,7 +83,7 @@ private:
 	Model::IntersectionData::Flags const _flags;
 };
 
-LegendDialog::LegendDialog(QWidget* parent)
+LegendDialog::LegendDialog(qt::toolkit::material::color::Name const& colorName, bool const isTransposed, QWidget* parent)
 	: QDialog{ parent }
 {
 	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection Matrix Legend");
@@ -63,7 +91,7 @@ LegendDialog::LegendDialog(QWidget* parent)
 	using Section = std::tuple<QString, Model::IntersectionData::Type, Model::IntersectionData::State, Model::IntersectionData::Flags>;
 	using Sections = std::vector<Section>;
 
-	// Add section
+	// Add section helper lambda
 	auto const addSection = [this](QString const& title, Sections const& sections)
 	{
 		auto* sectionGroupBox = new QGroupBox{ title, this };
@@ -110,9 +138,58 @@ LegendDialog::LegendDialog(QWidget* parent)
 		{ "Partially connected Redundant Stream Pair", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::PartiallyConnected, Model::IntersectionData::Flags{} },
 	};
 
-	addSection("Shapes", shapeSections);
-	addSection("Color codes", colorCodeSections);
+	// Add a section for the Arrows
+	{
+		auto* sectionGroupBox = new QGroupBox{ "Header Small Arrows", this };
+		sectionGroupBox->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Maximum);
 
+		auto* sectionLayout = new QGridLayout{ sectionGroupBox };
+
+		auto const arrowColor = qt::toolkit::material::color::value(colorName, qt::toolkit::material::color::Shade::Shade600);
+		auto const errorArrowColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+		auto const talkerOrientation = isTransposed ? Qt::Orientation::Horizontal : Qt::Orientation::Vertical;
+		auto const listenerOrientation = isTransposed ? Qt::Orientation::Vertical : Qt::Orientation::Horizontal;
+
+		// Output Stream "isStreaming"
+		{
+			auto const row = sectionLayout->rowCount();
+			auto* arrowLabel = new HeaderArrowLabel{ arrowColor, talkerOrientation, isTransposed };
+			sectionLayout->addWidget(arrowLabel, row, 0);
+
+			auto* descriptionLabel = new QLabel{ "[Output Stream Only] Currently Streaming", sectionGroupBox };
+			sectionLayout->addWidget(descriptionLabel, row, 1);
+		}
+
+		// Input Stream "lockedState == false"
+		{
+			auto const row = sectionLayout->rowCount();
+			auto* arrowLabel = new HeaderArrowLabel{ errorArrowColor, listenerOrientation, isTransposed };
+			sectionLayout->addWidget(arrowLabel, row, 0);
+
+			auto* descriptionLabel = new QLabel{ "[Input Stream Only] Connected but not Media Locked", sectionGroupBox };
+			sectionLayout->addWidget(descriptionLabel, row, 1);
+		}
+
+		// Input Stream "lockedState == true"
+		{
+			auto const row = sectionLayout->rowCount();
+			auto* arrowLabel = new HeaderArrowLabel{ arrowColor, listenerOrientation, isTransposed };
+			sectionLayout->addWidget(arrowLabel, row, 0);
+
+			auto* descriptionLabel = new QLabel{ "[Input Stream Only] Connected and Media Locked", sectionGroupBox };
+			sectionLayout->addWidget(descriptionLabel, row, 1);
+		}
+
+		_layout.addWidget(sectionGroupBox);
+	}
+
+	// Add a section for the Shapes
+	addSection("Intersection Shapes", shapeSections);
+
+	// Add a section for the Colors
+	addSection("Intersection Color codes", colorCodeSections);
+
+	// Add a Close Button
 	connect(&_closeButton, &QPushButton::clicked, this, &QDialog::accept);
 	_layout.addWidget(&_closeButton);
 }

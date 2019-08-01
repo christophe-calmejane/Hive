@@ -74,9 +74,9 @@ CornerWidget::CornerWidget(QWidget* parent)
 
 	// Connect button
 	connect(&_button, &QPushButton::clicked, this,
-		[]()
+		[this]()
 		{
-			LegendDialog dialog;
+			auto dialog = LegendDialog{ _colorName, _isTransposed };
 			dialog.exec();
 		});
 
@@ -106,6 +106,12 @@ CornerWidget::~CornerWidget()
 	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+}
+
+void CornerWidget::setColor(qt::toolkit::material::color::Name const name)
+{
+	_colorName = name;
+	update();
 }
 
 void CornerWidget::setTransposed(bool const isTransposed)

@@ -510,6 +510,7 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 	{
 		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 
+		_cornerWidget->setColor(colorName);
 		_verticalHeaderView->setColor(colorName);
 		_horizontalHeaderView->setColor(colorName);
 	}
