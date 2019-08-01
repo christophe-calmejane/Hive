@@ -366,7 +366,7 @@ public:
 
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	}
 
 	~ControllerManagerImpl() noexcept
@@ -379,7 +379,7 @@ public:
 
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	}
 
 private:
@@ -717,7 +717,7 @@ private:
 
 			// Trigger setting observers
 			auto& settings = settings::SettingsManager::getInstance();
-			settings.triggerSettingObserver(settings::AemCacheEnabled.name, this);
+			settings.triggerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 		}
 	}
 

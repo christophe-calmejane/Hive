@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>471</width>
-    <height>527</height>
+    <width>377</width>
+    <height>604</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -116,16 +116,6 @@
         </item>
        </layout>
       </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="transposeConnectionMatrixLabel">
-        <property name="text">
-         <string>Show Talkers Vertically</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QCheckBox" name="transposeConnectionMatrixCheckBox"/>
-      </item>
       <item row="5" column="0">
        <widget class="QLabel" name="automaticCheckForUpdatesLabel">
         <property name="text">
@@ -155,6 +145,51 @@
       </item>
       <item row="7" column="1">
        <widget class="QComboBox" name="themeColorComboBox"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="title">
+      <string>Connection Matrix</string>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout_4">
+      <item row="0" column="0">
+       <widget class="QLabel" name="transposeConnectionMatrixLabel">
+        <property name="text">
+         <string>Show Talkers On Top</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="transposeConnectionMatrixCheckBox"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="alwaysShowArrowTipConnectionMatrixLabel">
+        <property name="text">
+         <string>Always Show Arrow Tip</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="alwaysShowArrowTipConnectionMatrixCheckBox"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="alwaysShowArrowEndConnectionMatrixLabel">
+        <property name="text">
+         <string>Always Show Arrow End</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="alwaysShowArrowEndConnectionMatrixCheckBox"/>
       </item>
      </layout>
     </widget>
@@ -297,7 +332,6 @@
   <tabstop>secondarilyPreferredLocaleComboBox</tabstop>
   <tabstop>automaticPNGDownloadCheckBox</tabstop>
   <tabstop>clearLogoCacheButton</tabstop>
-  <tabstop>transposeConnectionMatrixCheckBox</tabstop>
   <tabstop>automaticCheckForUpdatesCheckBox</tabstop>
   <tabstop>checkForBetaVersionsCheckBox</tabstop>
   <tabstop>themeColorComboBox</tabstop>

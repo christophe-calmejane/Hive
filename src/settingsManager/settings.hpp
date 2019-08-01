@@ -32,20 +32,24 @@ static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVers
 static SettingsManager::SettingDefault UserProfile = { "userProfile", la::avdecc::utils::to_integral(profiles::ProfileType::None) };
 
 // General settings
-static SettingsManager::SettingDefault AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
-static SettingsManager::SettingDefault TransposeConnectionMatrix = { "avdecc/general/transposeConnectionMatrix", false };
-static SettingsManager::SettingDefault ChannelModeConnectionMatrix = { "avdecc/general/channelModeConnectionMatrix", false };
-static SettingsManager::SettingDefault AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
-static SettingsManager::SettingDefault CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
-static SettingsManager::SettingDefault ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };
+static SettingsManager::SettingDefault General_AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
+static SettingsManager::SettingDefault General_AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
+static SettingsManager::SettingDefault General_CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
+static SettingsManager::SettingDefault General_ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };
+
+// Connection matrix settings
+static SettingsManager::SettingDefault ConnectionMatrix_Transpose = { "avdecc/connectionMatrix/transpose", false };
+static SettingsManager::SettingDefault ConnectionMatrix_ChannelMode = { "avdecc/connectionMatrix/channelMode", false };
+static SettingsManager::SettingDefault ConnectionMatrix_AlwaysShowArrowTip = { "avdecc/connectionMatrix/alwaysShowArrowTip", false };
+static SettingsManager::SettingDefault ConnectionMatrix_AlwaysShowArrowEnd = { "avdecc/connectionMatrix/alwaysShowArrowEnd", false };
 
 // Network settings
-static SettingsManager::SettingDefault ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
-static SettingsManager::SettingDefault InterfaceTypeEthernet = { "avdecc/network/interfaceType/ethernet", true };
-static SettingsManager::SettingDefault InterfaceTypeWiFi = { "avdecc/network/interfaceType/wifi", false };
+static SettingsManager::SettingDefault Network_ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
+static SettingsManager::SettingDefault Network_InterfaceTypeEthernet = { "avdecc/network/interfaceType/ethernet", true };
+static SettingsManager::SettingDefault Network_InterfaceTypeWiFi = { "avdecc/network/interfaceType/wifi", false };
 
 // Controller settings
-static SettingsManager::SettingDefault AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
+static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
 static SettingsManager::Setting InterfaceID = { "interfaceID" };

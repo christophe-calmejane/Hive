@@ -263,14 +263,14 @@ public:
 
 		// Register to settings::SettingsManager
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	}
 
 	virtual ~ControllerModelPrivate()
 	{
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	}
 
 	int rowCount() const
@@ -357,7 +357,7 @@ public:
 				{
 					// TODO, cache the setting value in the model?
 					auto& settings = settings::SettingsManager::getInstance();
-					auto const& forceDownload = settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool();
+					auto const& forceDownload = settings.getValue(settings::General_AutomaticPNGDownloadEnabled.name).toBool();
 
 					auto& logoCache = EntityLogoCache::getInstance();
 					return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, forceDownload);
@@ -867,7 +867,7 @@ private:
 	// settings::SettingsManager overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
-		if (name == settings::AutomaticPNGDownloadEnabled.name)
+		if (name == settings::General_AutomaticPNGDownloadEnabled.name)
 		{
 			if (value.toBool())
 			{

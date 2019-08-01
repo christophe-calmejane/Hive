@@ -39,10 +39,14 @@ private:
 	// General
 	Q_SLOT void on_automaticPNGDownloadCheckBox_toggled(bool checked);
 	Q_SLOT void on_clearLogoCacheButton_clicked();
-	Q_SLOT void on_transposeConnectionMatrixCheckBox_toggled(bool checked);
 	Q_SLOT void on_automaticCheckForUpdatesCheckBox_toggled(bool checked);
 	Q_SLOT void on_checkForBetaVersionsCheckBox_toggled(bool checked);
 	Q_SLOT void on_themeColorComboBox_currentIndexChanged(int index);
+
+	// Connection Matrix
+	Q_SLOT void on_transposeConnectionMatrixCheckBox_toggled(bool checked);
+	Q_SLOT void on_alwaysShowArrowTipConnectionMatrixCheckBox_toggled(bool checked);
+	Q_SLOT void on_alwaysShowArrowEndConnectionMatrixCheckBox_toggled(bool checked);
 
 	// Controller
 	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);

@@ -50,6 +50,23 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
 }
 
+void HeaderView::setAlwaysShowArrowTip(bool const show)
+{
+	_alwaysShowArrowTip = show;
+	update();
+}
+void HeaderView::setAlwaysShowArrowEnd(bool const show)
+{
+	_alwaysShowArrowEnd = show;
+	update();
+}
+
+void HeaderView::setTransposed(bool const isTransposed)
+{
+	_isTransposed = isTransposed;
+	update();
+}
+
 void HeaderView::setColor(qt::toolkit::material::color::Name const name)
 {
 	_colorName = name;
@@ -433,58 +450,93 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto const arrowSize{ 10 };
 	auto const arrowOffset{ 20 * nodeLevel };
 
-	auto const buildArrowPath = [orientation = orientation(), rect, nodeLevel, arrowSize, arrowOffset](auto const width)
+	auto const buildArrowPath = [this, rect, nodeLevel, arrowSize, arrowOffset](auto const width)
 	{
 		auto path = QPainterPath{};
 
-		if (orientation == Qt::Horizontal)
+		auto const topLeft = rect.topLeft();
+		auto const topRight = rect.topRight();
+		auto const bottomLeft = rect.bottomLeft();
+		auto const bottomRight = rect.bottomRight();
+
+		if (orientation() == Qt::Horizontal)
 		{
-			if (width == 0)
+			if (_isTransposed)
 			{
-				path.moveTo(rect.topLeft());
+				// Arrow towards the matrix
+				auto const minXPos = topLeft.x();
+				auto const maxXPos = bottomRight.x();
+				auto const intermediateXPos = minXPos + (maxXPos - minXPos) / 2;
+				auto const minYPos = (width == 0) ? topLeft.y() : bottomLeft.y() - (arrowOffset + arrowSize + width);
+				auto const maxYPos = bottomLeft.y() - arrowOffset;
+				auto const intermediateYPos = maxYPos - arrowSize;
+
+				path.moveTo(minXPos, minYPos);
+				path.lineTo(minXPos, intermediateYPos);
+				path.lineTo(intermediateXPos, maxYPos);
+				path.lineTo(maxXPos, intermediateYPos);
+				path.lineTo(maxXPos, minYPos);
+				if (_alwaysShowArrowEnd || width != 0)
+				{
+					path.lineTo(intermediateXPos, minYPos + arrowSize);
+				}
 			}
 			else
 			{
-				path.moveTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset + width });
-			}
+				// Arrow away from the matrix
+				auto const minXPos = topLeft.x();
+				auto const maxXPos = bottomRight.x();
+				auto const intermediateXPos = minXPos + (maxXPos - minXPos) / 2;
+				auto const minYPos = (width == 0) ? topLeft.y() + (_alwaysShowArrowTip ? arrowSize : 0) : bottomLeft.y() - (arrowOffset + width);
+				auto const maxYPos = bottomLeft.y() - arrowOffset;
+				auto const intermediateYPos = maxYPos - arrowSize;
 
-			path.lineTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset });
-			path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
-			path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
-
-			if (width == 0)
-			{
-				path.lineTo(rect.topRight());
-			}
-			else
-			{
-				path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset + width });
-				path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset - width });
+				path.moveTo(minXPos, minYPos);
+				path.lineTo(minXPos, maxYPos);
+				path.lineTo(intermediateXPos, intermediateYPos);
+				path.lineTo(maxXPos, maxYPos);
+				path.lineTo(maxXPos, minYPos);
+				path.lineTo(intermediateXPos, minYPos - arrowSize);
 			}
 		}
 		else
 		{
-			if (width == 0)
+			if (_isTransposed)
 			{
-				path.moveTo(rect.topLeft());
+				// Arrow away from the matrix
+				auto const minXPos = (width == 0) ? topLeft.x() + (_alwaysShowArrowTip ? arrowSize : 0) : topRight.x() - (arrowOffset + width);
+				auto const maxXPos = topRight.x() - arrowOffset;
+				auto const intermediateXPos = maxXPos - arrowSize;
+				auto const minYPos = topLeft.y();
+				auto const maxYPos = bottomLeft.y();
+				auto const intermediateYPos = minYPos + (maxYPos - minYPos) / 2;
+
+				path.moveTo(minXPos, minYPos);
+				path.lineTo(maxXPos, minYPos);
+				path.lineTo(intermediateXPos, intermediateYPos);
+				path.lineTo(maxXPos, maxYPos);
+				path.lineTo(minXPos, maxYPos);
+				path.lineTo(minXPos - arrowSize, intermediateYPos);
 			}
 			else
 			{
-				path.moveTo(rect.topRight() - QPoint{ arrowSize + arrowOffset + width, 0 });
-			}
+				// Arrow towards the matrix
+				auto const minXPos = (width == 0) ? topLeft.x() : topRight.x() - (arrowOffset + arrowSize + width);
+				auto const maxXPos = topRight.x() - arrowOffset;
+				auto const intermediateXPos = maxXPos - arrowSize;
+				auto const minYPos = topLeft.y();
+				auto const maxYPos = bottomLeft.y();
+				auto const intermediateYPos = minYPos + (maxYPos - minYPos) / 2;
 
-			path.lineTo(rect.topRight() - QPoint{ arrowSize + arrowOffset, 0 });
-			path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
-			path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
-
-			if (width == 0)
-			{
-				path.lineTo(rect.bottomLeft());
-			}
-			else
-			{
-				path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset + width, 0 });
-				path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset - width, 0 });
+				path.moveTo(minXPos, minYPos);
+				path.lineTo(intermediateXPos, minYPos);
+				path.lineTo(maxXPos, intermediateYPos);
+				path.lineTo(intermediateXPos, maxYPos);
+				path.lineTo(minXPos, maxYPos);
+				if (_alwaysShowArrowEnd || width != 0)
+				{
+					path.lineTo(minXPos + arrowSize, intermediateYPos);
+				}
 			}
 		}
 
@@ -512,6 +564,8 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	painter->translate(rect.topLeft());
 
+	auto textLeftOffset = 0;
+	auto textRightOffset = 0;
 	auto r = QRect(0, 0, rect.width(), rect.height());
 	if (orientation() == Qt::Horizontal)
 	{
@@ -521,11 +575,19 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		painter->rotate(-90);
 		painter->translate(-r.width(), 0);
 
-		r.translate(arrowSize + arrowOffset, 0);
+		r.translate(arrowOffset, 0);
+
+		textLeftOffset = arrowSize;
+		textRightOffset = _isTransposed ? (_alwaysShowArrowEnd ? arrowSize : 0) : (_alwaysShowArrowTip ? arrowSize : 0);
+	}
+	else
+	{
+		textLeftOffset = _isTransposed ? (_alwaysShowArrowTip ? arrowSize : 0) : (_alwaysShowArrowEnd ? arrowSize : 0);
+		textRightOffset = arrowSize;
 	}
 
-	auto const padding{ 4 };
-	auto textRect = r.adjusted(padding, 0, -(padding + arrowSize + arrowOffset), 0);
+	auto const padding{ 2 };
+	auto textRect = r.adjusted(padding + textLeftOffset, 0, -(padding + textRightOffset + arrowOffset), 0);
 
 	auto const elidedText = painter->fontMetrics().elidedText(node->name(), Qt::ElideMiddle, textRect.width());
 

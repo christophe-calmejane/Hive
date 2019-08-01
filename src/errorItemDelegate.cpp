@@ -25,14 +25,14 @@ ErrorItemDelegate::ErrorItemDelegate(QObject* parent) noexcept
 {
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
 ErrorItemDelegate::~ErrorItemDelegate() noexcept
 {
 	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
 void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
@@ -56,7 +56,7 @@ void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 
 void ErrorItemDelegate::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
 {
-	if (name == settings::ThemeColorIndex.name)
+	if (name == settings::General_ThemeColorIndex.name)
 	{
 		_colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 	}
