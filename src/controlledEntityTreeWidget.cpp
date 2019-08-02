@@ -399,6 +399,27 @@ public:
 		return it->first;
 	}
 
+	void showSetDescriptorAsCurrentMenu(QPoint const& pos, NodeItem const* item, QString const& actionText, bool const isEnabled, std::function<void()> const& onActionTriggered)
+	{
+		Q_Q(ControlledEntityTreeWidget);
+
+		QMenu menu;
+
+		auto* setAsCurrentAction = menu.addAction(actionText);
+		setAsCurrentAction->setEnabled(isEnabled);
+
+		menu.addSeparator();
+		menu.addAction("Cancel");
+
+		if (auto* action = menu.exec(q->mapToGlobal(pos)))
+		{
+			if (action == setAsCurrentAction)
+			{
+				onActionTriggered();
+			}
+		}
+	}
+
 	void customContextMenuRequested(QPoint const& pos)
 	{
 		Q_Q(ControlledEntityTreeWidget);
@@ -410,26 +431,46 @@ public:
 		}
 
 		auto const nodeIdentifier = findNodeIdentifier(item);
-		if (nodeIdentifier.type == la::avdecc::entity::model::DescriptorType::Configuration)
+		switch (nodeIdentifier.type)
 		{
-			auto const& anyNode = item->data(0, Qt::UserRole).value<AnyNode>().getNode();
-			auto const* configurationNode = std::any_cast<la::avdecc::controller::model::ConfigurationNode const*>(anyNode);
-
-			QMenu menu;
-
-			auto* setAsCurrentConfigurationAction = menu.addAction("Set As Current Configuration");
-			menu.addSeparator();
-			menu.addAction("Cancel");
-
-			setAsCurrentConfigurationAction->setEnabled(!configurationNode->dynamicModel->isActiveConfiguration);
-
-			if (auto* action = menu.exec(q->mapToGlobal(pos)))
+			case la::avdecc::entity::model::DescriptorType::Configuration:
 			{
-				if (action == setAsCurrentConfigurationAction)
-				{
-					avdecc::ControllerManager::getInstance().setConfiguration(_controlledEntityID, configurationNode->descriptorIndex);
-				}
+				auto const& anyNode = item->data(0, Qt::UserRole).value<AnyNode>().getNode();
+				auto const* configurationNode = std::any_cast<la::avdecc::controller::model::ConfigurationNode const*>(anyNode);
+				auto const isEnabled = !configurationNode->dynamicModel->isActiveConfiguration;
+
+				showSetDescriptorAsCurrentMenu(pos, item, "Set As Current Configuration", isEnabled,
+					[this, configurationIndex = nodeIdentifier.index]()
+					{
+						avdecc::ControllerManager::getInstance().setConfiguration(_controlledEntityID, configurationIndex);
+					});
+				break;
 			}
+			case la::avdecc::entity::model::DescriptorType::ClockSource:
+			{
+				if (auto* parentItem = static_cast<NodeItem*>(item->QTreeWidgetItem::parent()))
+				{
+					auto const parentNodeIdentifier = findNodeIdentifier(parentItem);
+					if (parentNodeIdentifier.type == la::avdecc::entity::model::DescriptorType::ClockDomain)
+					{
+						auto const& anyNode = parentItem->data(0, Qt::UserRole).value<AnyNode>().getNode();
+						auto const* clockDomainNode = std::any_cast<la::avdecc::controller::model::ClockDomainNode const*>(anyNode);
+
+						auto const clockDomainIndex = clockDomainNode->descriptorIndex;
+						auto const clockSourceIndex = nodeIdentifier.index;
+						auto const isEnabled = clockDomainNode->dynamicModel->clockSourceIndex != clockSourceIndex;
+
+						showSetDescriptorAsCurrentMenu(pos, item, "Set As Current Clock Source", isEnabled,
+							[this, clockDomainIndex, clockSourceIndex]()
+							{
+								avdecc::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, clockSourceIndex);
+							});
+					}
+				}
+				break;
+			}
+			default:
+				break;
 		}
 	}
 
