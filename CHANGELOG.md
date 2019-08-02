@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Display of StreamOutput _Streaming State_](https://github.com/christophe-calmejane/Hive/issues/66)
 - [Display of SteramInput _Media Locked State_](https://github.com/christophe-calmejane/Hive/issues/66)
 - Displaying the currently active ClockSource in the AEM Tree
+- Considering MediaUnlocked StreamInput counter changes as errors (only when the stream is connected)
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity

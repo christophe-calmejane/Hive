@@ -597,6 +597,31 @@ private:
 			{
 				switch (flag)
 				{
+					case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
+					{
+						try
+						{
+							auto const& entityNode = entity->getEntityNode();
+							auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+							if (streamNode.dynamicModel->connectionState.state != la::avdecc::entity::model::StreamConnectionState::State::Connected)
+							{
+								// Only consider MediaUnlocked as an error if the stream is connected, otherwise juste ignore this
+								break;
+							}
+						}
+						catch (la::avdecc::controller::ControlledEntity::Exception const&)
+						{
+							// Ignore exception
+							break;
+						}
+						catch (...)
+						{
+							// Uncaught exception
+							AVDECC_ASSERT(false, "Uncaught exception");
+							break;
+						}
+						[[fallthrough]];
+					}
 					case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
 					case la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch:
 					case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
