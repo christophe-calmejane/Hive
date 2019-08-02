@@ -92,7 +92,7 @@
       <item row="3" column="0">
        <widget class="QLabel" name="automaticPNGDownloadLabel">
         <property name="text">
-         <string>Automatic PNG Download</string>
+         <string>Automatic Entity Logo Download</string>
         </property>
        </widget>
       </item>

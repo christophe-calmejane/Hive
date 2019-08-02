@@ -263,14 +263,14 @@ public:
 
 		// Register to settings::SettingsManager
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+		settings.registerSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
 	}
 
 	virtual ~ControllerModelPrivate()
 	{
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+		settings.unregisterSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
 	}
 
 	int rowCount() const
@@ -355,12 +355,8 @@ public:
 			{
 				if (data.aemSupported)
 				{
-					// TODO, cache the setting value in the model?
-					auto& settings = settings::SettingsManager::getInstance();
-					auto const& forceDownload = settings.getValue(settings::General_AutomaticPNGDownloadEnabled.name).toBool();
-
 					auto& logoCache = EntityLogoCache::getInstance();
-					return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, forceDownload);
+					return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, _automaticEntityLogoDownload);
 				}
 			}
 		}
@@ -869,7 +865,8 @@ private:
 	{
 		if (name == settings::General_AutomaticPNGDownloadEnabled.name)
 		{
-			if (value.toBool())
+			_automaticEntityLogoDownload = value.toBool();
+			if (_automaticEntityLogoDownload)
 			{
 				Q_Q(ControllerModel);
 
@@ -912,6 +909,7 @@ private:
 
 	Entities _entities{};
 	EntityRowMap _entityRowMap{};
+	bool _automaticEntityLogoDownload{ false };
 
 	struct EntityWithErrorCounter
 	{
