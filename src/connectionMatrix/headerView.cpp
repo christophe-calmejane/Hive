@@ -20,6 +20,7 @@
 #include "connectionMatrix/headerView.hpp"
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
+#include "connectionMatrix/paintHelper.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "toolkit/material/color.hpp"
 #include <QPainter>
@@ -450,106 +451,13 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto const arrowSize{ 10 };
 	auto const arrowOffset{ 20 * nodeLevel };
 
-	auto const buildArrowPath = [this, rect, arrowSize, arrowOffset](auto const width)
-	{
-		auto path = QPainterPath{};
-
-		auto const topLeft = rect.topLeft();
-		auto const topRight = rect.topRight();
-		auto const bottomLeft = rect.bottomLeft();
-		auto const bottomRight = rect.bottomRight();
-
-		if (orientation() == Qt::Horizontal)
-		{
-			if (_isTransposed)
-			{
-				// Arrow towards the matrix
-				auto const minXPos = topLeft.x();
-				auto const maxXPos = bottomRight.x();
-				auto const intermediateXPos = minXPos + (maxXPos - minXPos) / 2;
-				auto const minYPos = (width == 0) ? topLeft.y() : bottomLeft.y() - (arrowOffset + arrowSize + width);
-				auto const maxYPos = bottomLeft.y() - arrowOffset;
-				auto const intermediateYPos = maxYPos - arrowSize;
-
-				path.moveTo(minXPos, minYPos);
-				path.lineTo(minXPos, intermediateYPos);
-				path.lineTo(intermediateXPos, maxYPos);
-				path.lineTo(maxXPos, intermediateYPos);
-				path.lineTo(maxXPos, minYPos);
-				if (_alwaysShowArrowEnd || width != 0)
-				{
-					path.lineTo(intermediateXPos, minYPos + arrowSize);
-				}
-			}
-			else
-			{
-				// Arrow away from the matrix
-				auto const minXPos = topLeft.x();
-				auto const maxXPos = bottomRight.x();
-				auto const intermediateXPos = minXPos + (maxXPos - minXPos) / 2;
-				auto const minYPos = (width == 0) ? topLeft.y() + (_alwaysShowArrowTip ? arrowSize : 0) : bottomLeft.y() - (arrowOffset + width);
-				auto const maxYPos = bottomLeft.y() - arrowOffset;
-				auto const intermediateYPos = maxYPos - arrowSize;
-
-				path.moveTo(minXPos, minYPos);
-				path.lineTo(minXPos, maxYPos);
-				path.lineTo(intermediateXPos, intermediateYPos);
-				path.lineTo(maxXPos, maxYPos);
-				path.lineTo(maxXPos, minYPos);
-				path.lineTo(intermediateXPos, minYPos - arrowSize);
-			}
-		}
-		else
-		{
-			if (_isTransposed)
-			{
-				// Arrow away from the matrix
-				auto const minXPos = (width == 0) ? topLeft.x() + (_alwaysShowArrowTip ? arrowSize : 0) : topRight.x() - (arrowOffset + width);
-				auto const maxXPos = topRight.x() - arrowOffset;
-				auto const intermediateXPos = maxXPos - arrowSize;
-				auto const minYPos = topLeft.y();
-				auto const maxYPos = bottomLeft.y();
-				auto const intermediateYPos = minYPos + (maxYPos - minYPos) / 2;
-
-				path.moveTo(minXPos, minYPos);
-				path.lineTo(maxXPos, minYPos);
-				path.lineTo(intermediateXPos, intermediateYPos);
-				path.lineTo(maxXPos, maxYPos);
-				path.lineTo(minXPos, maxYPos);
-				path.lineTo(minXPos - arrowSize, intermediateYPos);
-			}
-			else
-			{
-				// Arrow towards the matrix
-				auto const minXPos = (width == 0) ? topLeft.x() : topRight.x() - (arrowOffset + arrowSize + width);
-				auto const maxXPos = topRight.x() - arrowOffset;
-				auto const intermediateXPos = maxXPos - arrowSize;
-				auto const minYPos = topLeft.y();
-				auto const maxYPos = bottomLeft.y();
-				auto const intermediateYPos = minYPos + (maxYPos - minYPos) / 2;
-
-				path.moveTo(minXPos, minYPos);
-				path.lineTo(intermediateXPos, minYPos);
-				path.lineTo(maxXPos, intermediateYPos);
-				path.lineTo(intermediateXPos, maxYPos);
-				path.lineTo(minXPos, maxYPos);
-				if (_alwaysShowArrowEnd || width != 0)
-				{
-					path.lineTo(minXPos + arrowSize, intermediateYPos);
-				}
-			}
-		}
-
-		return path;
-	};
-
 	// Draw the main background arrow
-	painter->fillPath(buildArrowPath(0), backgroundColor);
+	painter->fillPath(paintHelper::buildHeaderArrowPath(rect, orientation(), _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 0), backgroundColor);
 
 	// Draw the small arrow, if needed
 	if (arrowColor)
 	{
-		auto path = buildArrowPath(5);
+		auto path = paintHelper::buildHeaderArrowPath(rect, orientation(), _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 5);
 		if (orientation() == Qt::Horizontal)
 		{
 			path.translate(0, 10);
