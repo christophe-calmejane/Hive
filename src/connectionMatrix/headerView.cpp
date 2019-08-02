@@ -345,6 +345,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	auto backgroundColor = QColor{};
 	auto foregroundColor = QColor{};
+	auto foregroundErrorColor = QColor{};
 	auto nodeLevel{ 0 };
 
 	auto const nodeType = node->type();
@@ -354,6 +355,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		case Node::Type::Entity:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade900);
+			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade900);
 			break;
 		case Node::Type::RedundantInput:
 		case Node::Type::RedundantOutput:
@@ -363,12 +365,14 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		case Node::Type::OutputChannel:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
+			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			nodeLevel = 1;
 			break;
 		case Node::Type::RedundantInputStream:
 		case Node::Type::RedundantOutputStream:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
+			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			nodeLevel = 2;
 			break;
 		default:
@@ -385,7 +389,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			auto const state = static_cast<RedundantNode const&>(*node).lockedState();
 			if (state == Node::TriState::False)
 			{
-				arrowColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+				arrowColor = foregroundErrorColor;
 			}
 			else if (state == Node::TriState::True)
 			{
@@ -399,7 +403,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			auto const state = static_cast<StreamNode const&>(*node).lockedState();
 			if (state == Node::TriState::False)
 			{
-				arrowColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+				arrowColor = foregroundErrorColor;
 			}
 			else if (state == Node::TriState::True)
 			{
@@ -501,7 +505,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	if (node->isStreamNode() && !static_cast<StreamNode*>(node)->isRunning())
 	{
-		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
+		painter->setPen(foregroundErrorColor);
 	}
 	else
 	{

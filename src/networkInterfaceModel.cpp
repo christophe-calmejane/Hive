@@ -211,7 +211,8 @@ QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
 				}
 				else if (!intfc.isConnected)
 				{
-					return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
+					//return qt::toolkit::material::color::foregroundErrorColorValue(colorName, qt::toolkit::material::color::Shade::ShadeA700);
+					return qt::toolkit::material::color::foregroundErrorColorValue(qt::toolkit::material::color::DefaultColor, qt::toolkit::material::color::DefaultShade); // Right now, always use default value, as we draw on white background
 				}
 				else
 				{

@@ -146,7 +146,7 @@ LegendDialog::LegendDialog(qt::toolkit::material::color::Name const& colorName, 
 		auto* sectionLayout = new QGridLayout{ sectionGroupBox };
 
 		auto const arrowColor = qt::toolkit::material::color::value(colorName, qt::toolkit::material::color::Shade::Shade600);
-		auto const errorArrowColor = qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+		auto const errorArrowColor = qt::toolkit::material::color::foregroundErrorColorValue(colorName, qt::toolkit::material::color::Shade::Shade600);
 		auto const talkerOrientation = isTransposed ? Qt::Orientation::Horizontal : Qt::Orientation::Vertical;
 		auto const listenerOrientation = isTransposed ? Qt::Orientation::Vertical : Qt::Orientation::Horizontal;
 
