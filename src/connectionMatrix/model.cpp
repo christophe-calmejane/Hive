@@ -1471,10 +1471,16 @@ public:
 
 			return entity;
 		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const& e)
+		{
+			LOG_HIVE_ERROR(QString("Cannot build TalkerNode for EntityID=%1: %2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(e.what()));
+			return nullptr;
+		}
 		catch (...)
 		{
 			// Uncaught exception
 			AVDECC_ASSERT(false, "Uncaught exception");
+			LOG_HIVE_ERROR(QString("Cannot build TalkerNode for EntityID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
 			return nullptr;
 		}
 	}
@@ -1586,10 +1592,16 @@ public:
 
 			return entity;
 		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const& e)
+		{
+			LOG_HIVE_ERROR(QString("Cannot build ListenerNode for EntityID=%1: %2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(e.what()));
+			return nullptr;
+		}
 		catch (...)
 		{
 			// Uncaught exception
 			AVDECC_ASSERT(false, "Uncaught exception");
+			LOG_HIVE_ERROR(QString("Cannot build ListenerNode for EntityID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
 			return nullptr;
 		}
 	}
@@ -1825,28 +1837,30 @@ public:
 				// Talker
 				if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
 				{
-					auto* node = buildTalkerNode(*controlledEntity, entityID, configurationNode);
+					if (auto * node = buildTalkerNode(*controlledEntity, entityID, configurationNode))
+					{
+						_talkerNodeMap.insert(std::make_pair(entityID, node));
 
-					_talkerNodeMap.insert(std::make_pair(entityID, node));
+						priv::insertStreamNodes(_talkerStreamNodeMap, node);
+						priv::insertChannelNodes(_talkerChannelNodeMap, node);
 
-					priv::insertStreamNodes(_talkerStreamNodeMap, node);
-					priv::insertChannelNodes(_talkerChannelNodeMap, node);
-
-					insertTalkerNode(node);
+						insertTalkerNode(node);
+					}
 				}
 
 				// Listener
 				if (controlledEntity->getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty())
 				{
-					auto* node = buildListenerNode(*controlledEntity, entityID, configurationNode);
+					if (auto * node = buildListenerNode(*controlledEntity, entityID, configurationNode))
+					{
+						// Insert nodes in cache for quick access
+						_listenerNodeMap.insert(std::make_pair(entityID, node));
 
-					// Insert nodes in cache for quick access
-					_listenerNodeMap.insert(std::make_pair(entityID, node));
+						priv::insertStreamNodes(_listenerStreamNodeMap, node);
+						priv::insertChannelNodes(_listenerChannelNodeMap, node);
 
-					priv::insertStreamNodes(_listenerStreamNodeMap, node);
-					priv::insertChannelNodes(_listenerChannelNodeMap, node);
-
-					insertListenerNode(node);
+						insertListenerNode(node);
+					}
 				}
 			}
 		}
