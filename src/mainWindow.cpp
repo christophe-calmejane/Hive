@@ -252,7 +252,7 @@ void MainWindowImpl::currentControllerChanged()
 {
 	auto& settings = settings::SettingsManager::getInstance();
 
-	auto const protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	// Clear the current controller
@@ -435,7 +435,7 @@ void MainWindowImpl::loadSettings()
 	}
 
 	// Check if currently saved ProtocolInterface is supported
-	auto protocolType = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
 	if (!supportedTypes.test(protocolType))
 	{
@@ -453,12 +453,12 @@ void MainWindowImpl::loadSettings()
 			{
 				LOG_HIVE_WARN(QString("Forcing new Network Protocol: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
 			}
-			settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+			settings.setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
 		}
 	}
 
 	// Configure connectionMatrix mode
-	auto const channelMode = settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
+	auto const channelMode = settings.getValue(settings::ConnectionMatrix_ChannelMode.name).toBool();
 	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting;
 	action->setChecked(true);
 
@@ -468,9 +468,9 @@ void MainWindowImpl::loadSettings()
 	splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
 
 	// Configure settings observers
-	settings.registerSettingObserver(settings::ProtocolType.name, this);
-	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
-	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.registerSettingObserver(settings::Network_ProtocolType.name, this);
+	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
 void MainWindowImpl::connectSignals()
@@ -488,7 +488,7 @@ void MainWindowImpl::connectSignals()
 		{
 			// Update settings
 			auto& settings = settings::SettingsManager::getInstance();
-			settings.setValue(settings::ChannelModeConnectionMatrix.name, checked);
+			settings.setValue(settings::ConnectionMatrix_ChannelMode.name, checked);
 			// Toggle
 			auto* action = checked ? actionChannelModeRouting : actionStreamModeRouting;
 			action->setChecked(true);
@@ -847,7 +847,7 @@ void MainWindowImpl::connectSignals()
 		{
 			// Toggle mode (stream based vs. channel based routing matrix) in settings
 			auto& settings = settings::SettingsManager::getInstance();
-			auto const channelModeActiveInverted = !settings.getValue(settings::ChannelModeConnectionMatrix.name).toBool();
+			auto const channelModeActiveInverted = !settings.getValue(settings::ConnectionMatrix_ChannelMode.name).toBool();
 			auto* action = channelModeActiveInverted ? actionChannelModeRouting : actionStreamModeRouting;
 			action->setChecked(true);
 		});
@@ -858,7 +858,7 @@ void MainWindowImpl::connectSignals()
 		[this]()
 		{
 			auto& settings = settings::SettingsManager::getInstance();
-			auto const themeColorIndex = settings.getValue(settings::ThemeColorIndex.name).toInt();
+			auto const themeColorIndex = settings.getValue(settings::General_ThemeColorIndex.name).toInt();
 			auto const colorName = qt::toolkit::material::color::Palette::name(themeColorIndex);
 			updateStyleSheet(colorName, QString{ RESOURCES_ROOT_DIR } + "/style.qss");
 			LOG_HIVE_DEBUG("StyleSheet reloaded");
@@ -980,9 +980,9 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings.setValue(settings::MainWindowState, saveState());
 
 	// Remove settings observers
-	settings.unregisterSettingObserver(settings::ProtocolType.name, _pImpl);
-	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, _pImpl);
-	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, _pImpl);
+	settings.unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
+	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
 
 	qApp->closeAllWindows();
 
@@ -1105,11 +1105,11 @@ void MainWindowImpl::updateStyleSheet(qt::toolkit::material::color::Name const c
 
 void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
 {
-	if (name == settings::ProtocolType.name)
+	if (name == settings::Network_ProtocolType.name)
 	{
 		currentControllerChanged();
 	}
-	else if (name == settings::ThemeColorIndex.name)
+	else if (name == settings::General_ThemeColorIndex.name)
 	{
 		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 		updateStyleSheet(colorName, ":/style.qss");

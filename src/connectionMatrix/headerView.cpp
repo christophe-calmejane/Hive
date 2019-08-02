@@ -20,11 +20,14 @@
 #include "connectionMatrix/headerView.hpp"
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
+#include "connectionMatrix/paintHelper.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "toolkit/material/color.hpp"
 #include <QPainter>
 #include <QContextMenuEvent>
 #include <QMenu>
+
+#include <optional>
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 #	include <QDebug>
@@ -46,6 +49,23 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	setAttribute(Qt::WA_Hover);
 
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
+}
+
+void HeaderView::setAlwaysShowArrowTip(bool const show)
+{
+	_alwaysShowArrowTip = show;
+	update();
+}
+void HeaderView::setAlwaysShowArrowEnd(bool const show)
+{
+	_alwaysShowArrowEnd = show;
+	update();
+}
+
+void HeaderView::setTransposed(bool const isTransposed)
+{
+	_isTransposed = isTransposed;
+	update();
 }
 
 void HeaderView::setColor(qt::toolkit::material::color::Name const name)
@@ -318,20 +338,24 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto* model = static_cast<Model*>(this->model());
 	auto* node = model->node(logicalIndex, orientation());
 
-	if (!node) //!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	if (!node)
 	{
 		return;
 	}
 
 	auto backgroundColor = QColor{};
 	auto foregroundColor = QColor{};
+	auto foregroundErrorColor = QColor{};
 	auto nodeLevel{ 0 };
 
-	switch (node->type())
+	auto const nodeType = node->type();
+	// First pass for Bar Color
+	switch (nodeType)
 	{
 		case Node::Type::Entity:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade900);
+			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade900);
 			break;
 		case Node::Type::RedundantInput:
 		case Node::Type::RedundantOutput:
@@ -341,12 +365,14 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		case Node::Type::OutputChannel:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
+			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
 			nodeLevel = 1;
 			break;
 		case Node::Type::RedundantInputStream:
 		case Node::Type::RedundantOutputStream:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
+			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
 			nodeLevel = 2;
 			break;
 		default:
@@ -354,30 +380,66 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			return;
 	}
 
-	auto const arrowSize{ 10 };
-	auto const arrowOffset{ 20 * nodeLevel };
+	// Second pass for Arrow Color
+	auto arrowColor = std::optional<QColor>{ std::nullopt };
+	switch (nodeType)
+	{
+		case Node::Type::RedundantInput:
+		{
+			auto const state = static_cast<RedundantNode const&>(*node).lockedState();
+			if (state == Node::TriState::False)
+			{
+				arrowColor = foregroundErrorColor;
+			}
+			else if (state == Node::TriState::True)
+			{
+				arrowColor = backgroundColor;
+			}
+			break;
+		}
+		case Node::Type::InputStream:
+		case Node::Type::RedundantInputStream:
+		{
+			auto const state = static_cast<StreamNode const&>(*node).lockedState();
+			if (state == Node::TriState::False)
+			{
+				arrowColor = foregroundErrorColor;
+			}
+			else if (state == Node::TriState::True)
+			{
+				arrowColor = backgroundColor;
+			}
+			break;
+		}
+		case Node::Type::RedundantOutput:
+		{
+			if (static_cast<RedundantNode const&>(*node).isStreaming())
+			{
+				arrowColor = backgroundColor;
+			}
+			break;
+		}
+		case Node::Type::OutputStream:
+		case Node::Type::RedundantOutputStream:
+		{
+			if (static_cast<StreamNode const&>(*node).isStreaming())
+			{
+				arrowColor = backgroundColor;
+			}
+			break;
+		}
+		default:
+			break;
+	}
 
 	auto isSelected{ false };
 
-	QPainterPath path;
 	if (orientation() == Qt::Horizontal)
 	{
-		path.moveTo(rect.topLeft());
-		path.lineTo(rect.bottomLeft() - QPoint{ 0, arrowSize + arrowOffset });
-		path.lineTo(rect.center() + QPoint{ 0, rect.height() / 2 - arrowOffset });
-		path.lineTo(rect.bottomRight() - QPoint{ 0, arrowSize + arrowOffset });
-		path.lineTo(rect.topRight());
-
 		isSelected = selectionModel()->isColumnSelected(logicalIndex, {});
 	}
 	else
 	{
-		path.moveTo(rect.topLeft());
-		path.lineTo(rect.topRight() - QPoint{ arrowSize + arrowOffset, 0 });
-		path.lineTo(rect.center() + QPoint{ rect.width() / 2 - arrowOffset, 0 });
-		path.lineTo(rect.bottomRight() - QPoint{ arrowSize + arrowOffset, 0 });
-		path.lineTo(rect.bottomLeft());
-
 		isSelected = selectionModel()->isRowSelected(logicalIndex, {});
 	}
 
@@ -390,9 +452,32 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	painter->save();
 	painter->setRenderHint(QPainter::Antialiasing);
 
-	painter->fillPath(path, backgroundColor);
+	auto const arrowSize{ 10 };
+	auto const arrowOffset{ 20 * nodeLevel };
+
+	// Draw the main background arrow
+	painter->fillPath(paintHelper::buildHeaderArrowPath(rect, orientation(), _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 0), backgroundColor);
+
+	// Draw the small arrow, if needed
+	if (arrowColor)
+	{
+		auto path = paintHelper::buildHeaderArrowPath(rect, orientation(), _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 5);
+		if (orientation() == Qt::Horizontal)
+		{
+			path.translate(0, 10);
+		}
+		else
+		{
+			path.translate(10, 0);
+		}
+
+		painter->fillPath(path, *arrowColor);
+	}
+
 	painter->translate(rect.topLeft());
 
+	auto textLeftOffset = 0;
+	auto textRightOffset = 0;
 	auto r = QRect(0, 0, rect.width(), rect.height());
 	if (orientation() == Qt::Horizontal)
 	{
@@ -402,17 +487,25 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		painter->rotate(-90);
 		painter->translate(-r.width(), 0);
 
-		r.translate(arrowSize + arrowOffset, 0);
+		r.translate(arrowOffset, 0);
+
+		textLeftOffset = arrowSize;
+		textRightOffset = _isTransposed ? (_alwaysShowArrowEnd ? arrowSize : 0) : (_alwaysShowArrowTip ? arrowSize : 0);
+	}
+	else
+	{
+		textLeftOffset = _isTransposed ? (_alwaysShowArrowTip ? arrowSize : 0) : (_alwaysShowArrowEnd ? arrowSize : 0);
+		textRightOffset = arrowSize;
 	}
 
-	auto const padding{ 4 };
-	auto textRect = r.adjusted(padding, 0, -(padding + arrowSize + arrowOffset), 0);
+	auto const padding{ 2 };
+	auto textRect = r.adjusted(padding + textLeftOffset, 0, -(padding + textRightOffset + arrowOffset), 0);
 
 	auto const elidedText = painter->fontMetrics().elidedText(node->name(), Qt::ElideMiddle, textRect.width());
 
 	if (node->isStreamNode() && !static_cast<StreamNode*>(node)->isRunning())
 	{
-		painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
+		painter->setPen(foregroundErrorColor);
 	}
 	else
 	{

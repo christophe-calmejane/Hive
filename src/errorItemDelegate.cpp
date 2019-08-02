@@ -20,19 +20,21 @@
 #include "errorItemDelegate.hpp"
 #include "toolkit/material/color.hpp"
 
+#include <QPainter>
+
 ErrorItemDelegate::ErrorItemDelegate(QObject* parent) noexcept
 	: QStyledItemDelegate(parent)
 {
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
 ErrorItemDelegate::~ErrorItemDelegate() noexcept
 {
 	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
 void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
@@ -48,7 +50,8 @@ void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 		}
 		else
 		{
-			painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
+			//painter->setPen(qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::ShadeA700));
+			painter->setPen(qt::toolkit::material::color::foregroundErrorColorValue(qt::toolkit::material::color::DefaultColor, qt::toolkit::material::color::Shade::ShadeA700)); // Right now, always use default value, as we draw on white background
 			painter->drawRect(option.rect.adjusted(0, 0, -1, -1));
 		}
 	}
@@ -56,7 +59,7 @@ void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 
 void ErrorItemDelegate::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
 {
-	if (name == settings::ThemeColorIndex.name)
+	if (name == settings::General_ThemeColorIndex.name)
 	{
 		_colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 	}

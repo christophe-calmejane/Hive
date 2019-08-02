@@ -19,8 +19,11 @@
 
 #pragma once
 
+#include "toolkit/material/color.hpp"
+
 #include <QDialog>
 #include <QLayout>
+#include <QColor>
 #include <QPushButton>
 
 namespace connectionMatrix
@@ -29,7 +32,7 @@ class LegendDialog : public QDialog
 {
 	Q_OBJECT
 public:
-	LegendDialog(QWidget* parent = nullptr);
+	LegendDialog(qt::toolkit::material::color::Name const& colorName, bool const isTransposed, QWidget* parent = nullptr);
 
 private:
 	QVBoxLayout _layout{ this };

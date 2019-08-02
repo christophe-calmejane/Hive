@@ -30,16 +30,17 @@ ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
 	setWindowTitle("Please Choose The Default User Profile");
 	_layout.setSpacing(20);
 
-	// Handle profile widget mapping
-	connect(&_signalMapper, SIGNAL(mapped(int)), this, SLOT(onProfileSelected(int)));
-
 	auto const addProfile = [this](QString const& title, QString const& description, QString const& icon, ProfileType const profile)
 	{
 		auto* widget = new ProfileWidget{ title, description, icon, this };
 		_layout.addWidget(widget);
 
-		connect(widget, SIGNAL(clicked()), &_signalMapper, SLOT(map()));
-		_signalMapper.setMapping(widget, static_cast<int>(profile));
+		connect(widget, &ProfileWidget::clicked, this,
+			[this, profile]()
+			{
+				_selectedProfile = profile;
+				accept();
+			});
 	};
 
 	// Describe and add profiles
@@ -52,9 +53,4 @@ ProfileType ProfileSelectionDialog::selectedProfile() const
 	return _selectedProfile;
 }
 
-void ProfileSelectionDialog::onProfileSelected(int profile)
-{
-	_selectedProfile = static_cast<ProfileType>(profile);
-	accept();
-}
 } // namespace profiles

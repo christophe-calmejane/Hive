@@ -35,7 +35,7 @@ namespace color
 // Color name definition
 enum class Name
 {
-	Red,
+	Red = 0,
 	Pink,
 	Purple,
 	DeepPurple,
@@ -61,7 +61,7 @@ enum class Name
 // Color shade definition
 enum class Shade
 {
-	Shade50,
+	Shade50 = 0,
 	Shade100,
 	Shade200,
 	Shade300,
@@ -108,6 +108,10 @@ QColor complementaryValue(Name const name, Shade const shade = DefaultShade);
 // Return the foreground complementary color value for given name + shade
 // May throw invalid_argument for non existing combinations
 QColor foregroundComplementaryValue(Name const name, Shade const shade = DefaultShade);
+
+// Return the foreground error color value for given name + shade
+// May throw invalid_argument for non existing combinations
+QColor foregroundErrorColorValue(Name const name, Shade const shade);
 
 // Return the luminance for a given name + shade
 // May throw invalid_argument for non existing combinations

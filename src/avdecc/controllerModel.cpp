@@ -263,14 +263,16 @@ public:
 
 		// Register to settings::SettingsManager
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.registerSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
+		settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 	}
 
 	virtual ~ControllerModelPrivate()
 	{
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.unregisterSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
+		settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 	}
 
 	int rowCount() const
@@ -337,7 +339,7 @@ public:
 						}
 						else if (role == Qt::ForegroundRole)
 						{
-							return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red);
+							return _errorColorValue;
 						}
 					}
 				}
@@ -355,12 +357,8 @@ public:
 			{
 				if (data.aemSupported)
 				{
-					// TODO, cache the setting value in the model?
-					auto& settings = settings::SettingsManager::getInstance();
-					auto const& forceDownload = settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool();
-
 					auto& logoCache = EntityLogoCache::getInstance();
-					return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, forceDownload);
+					return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, _automaticEntityLogoDownload);
 				}
 			}
 		}
@@ -867,9 +865,10 @@ private:
 	// settings::SettingsManager overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
-		if (name == settings::AutomaticPNGDownloadEnabled.name)
+		if (name == settings::General_AutomaticPNGDownloadEnabled.name)
 		{
-			if (value.toBool())
+			_automaticEntityLogoDownload = value.toBool();
+			if (_automaticEntityLogoDownload)
 			{
 				Q_Q(ControllerModel);
 
@@ -880,6 +879,21 @@ private:
 
 				emit q->dataChanged(topLeft, bottomRight, { ImageItemDelegate::ImageRole });
 			}
+		}
+		else if (name == settings::General_ThemeColorIndex.name)
+		{
+			auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+			//_errorColorValue = qt::toolkit::material::color::foregroundErrorColorValue(colorName, qt::toolkit::material::color::Shade::ShadeA700);
+			_errorColorValue = qt::toolkit::material::color::foregroundErrorColorValue(qt::toolkit::material::color::DefaultColor, qt::toolkit::material::color::DefaultShade); // Right now, always use default value, as we draw on white background
+
+			Q_Q(ControllerModel);
+
+			auto constexpr column = la::avdecc::utils::to_integral(ControllerModel::Column::EntityID);
+
+			auto const topLeft = q->createIndex(0, column, nullptr);
+			auto const bottomRight = q->createIndex(rowCount(), column, nullptr);
+
+			emit q->dataChanged(topLeft, bottomRight, { Qt::ForegroundRole });
 		}
 	}
 
@@ -912,6 +926,8 @@ private:
 
 	Entities _entities{};
 	EntityRowMap _entityRowMap{};
+	bool _automaticEntityLogoDownload{ false };
+	QColor _errorColorValue{ Qt::red };
 
 	struct EntityWithErrorCounter
 	{

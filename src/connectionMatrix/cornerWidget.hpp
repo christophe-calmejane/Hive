@@ -37,6 +37,7 @@ public:
 	CornerWidget(QWidget* parent = nullptr);
 	~CornerWidget();
 
+	void setColor(qt::toolkit::material::color::Name const name);
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
 
@@ -75,6 +76,7 @@ private:
 	QWidget _verticalPlaceholder{ this };
 	qt::toolkit::FlatIconButton _verticalExpandButton{ "Material Icons", "chevron_right" };
 
+	qt::toolkit::material::color::Name _colorName{ qt::toolkit::material::color::DefaultColor };
 	bool _isTransposed{ false };
 };
 

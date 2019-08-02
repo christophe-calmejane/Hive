@@ -111,20 +111,24 @@ int main(int argc, char* argv[])
 
 	// General
 	settings.registerSetting(settings::LastLaunchedVersion);
-	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
-	settings.registerSetting(settings::TransposeConnectionMatrix);
-	settings.registerSetting(settings::ChannelModeConnectionMatrix);
-	settings.registerSetting(settings::AutomaticCheckForUpdates);
-	settings.registerSetting(settings::CheckForBetaVersions);
-	settings.registerSetting(settings::ThemeColorIndex);
+	settings.registerSetting(settings::General_AutomaticPNGDownloadEnabled);
+	settings.registerSetting(settings::General_AutomaticCheckForUpdates);
+	settings.registerSetting(settings::General_CheckForBetaVersions);
+	settings.registerSetting(settings::General_ThemeColorIndex);
+
+	// Connection matrix
+	settings.registerSetting(settings::ConnectionMatrix_Transpose);
+	settings.registerSetting(settings::ConnectionMatrix_ChannelMode);
+	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowTip);
+	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowEnd);
 
 	// Network
-	settings.registerSetting(settings::ProtocolType);
-	settings.registerSetting(settings::InterfaceTypeEthernet);
-	settings.registerSetting(settings::InterfaceTypeWiFi);
+	settings.registerSetting(settings::Network_ProtocolType);
+	settings.registerSetting(settings::Network_InterfaceTypeEthernet);
+	settings.registerSetting(settings::Network_InterfaceTypeWiFi);
 
 	// Controller
-	settings.registerSetting(settings::AemCacheEnabled);
+	settings.registerSetting(settings::Controller_AemCacheEnabled);
 
 	// Load fonts
 	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/

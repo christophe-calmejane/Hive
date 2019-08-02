@@ -366,7 +366,7 @@ public:
 
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	}
 
 	~ControllerManagerImpl() noexcept
@@ -379,23 +379,26 @@ public:
 
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::AemCacheEnabled.name, this);
+		settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	}
 
 private:
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
-		auto ctrl = getController();
-		if (ctrl)
+		if (name == settings::Controller_AemCacheEnabled.name)
 		{
-			if (value.toBool())
+			auto ctrl = getController();
+			if (ctrl)
 			{
-				ctrl->enableEntityModelCache();
-			}
-			else
-			{
-				ctrl->disableEntityModelCache();
+				if (value.toBool())
+				{
+					ctrl->enableEntityModelCache();
+				}
+				else
+				{
+					ctrl->disableEntityModelCache();
+				}
 			}
 		}
 	}
@@ -715,9 +718,9 @@ private:
 			ctrl->registerObserver(this);
 			//ctrl->enableEntityAdvertising(10);
 
-			// Trigger setting observers
+			// Trigger setting observers (because the controller wasn't created when onSettingChanged was first triggered during registration)
 			auto& settings = settings::SettingsManager::getInstance();
-			settings.triggerSettingObserver(settings::AemCacheEnabled.name, this);
+			settings.triggerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 		}
 	}
 

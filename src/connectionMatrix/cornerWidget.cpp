@@ -74,9 +74,9 @@ CornerWidget::CornerWidget(QWidget* parent)
 
 	// Connect button
 	connect(&_button, &QPushButton::clicked, this,
-		[]()
+		[this]()
 		{
-			LegendDialog dialog;
+			auto dialog = LegendDialog{ _colorName, _isTransposed };
 			dialog.exec();
 		});
 
@@ -98,20 +98,26 @@ CornerWidget::CornerWidget(QWidget* parent)
 
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
+	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 }
 
 CornerWidget::~CornerWidget()
 {
 	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+}
+
+void CornerWidget::setColor(qt::toolkit::material::color::Name const name)
+{
+	_colorName = name;
+	update();
 }
 
 void CornerWidget::setTransposed(bool const isTransposed)
 {
 	_isTransposed = isTransposed;
-	repaint();
+	update();
 }
 
 bool CornerWidget::isTransposed() const
@@ -173,7 +179,7 @@ void CornerWidget::paintEvent(QPaintEvent*)
 
 void CornerWidget::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
 {
-	if (name == settings::ChannelModeConnectionMatrix.name)
+	if (name == settings::ConnectionMatrix_ChannelMode.name)
 	{
 		auto const channelMode = value.toBool();
 		_title.setText(channelMode ? "<b>Channel Based Connections</b>" : "<b>Stream Based Connections</b>");

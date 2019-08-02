@@ -21,7 +21,6 @@
 
 #include <QDialog>
 #include <QGridLayout>
-#include <QSignalMapper>
 
 #include "profiles.hpp"
 
@@ -37,12 +36,9 @@ public:
 
 	ProfileType selectedProfile() const;
 
-private Q_SLOTS:
-	void onProfileSelected(int profile);
-
 private:
 	QGridLayout _layout{ this };
 	ProfileType _selectedProfile{ ProfileType::Default };
-	QSignalMapper _signalMapper{};
 };
+
 } // namespace profiles

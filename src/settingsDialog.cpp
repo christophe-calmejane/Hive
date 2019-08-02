@@ -40,6 +40,7 @@ public:
 
 		// Initialize settings (blocking signals)
 		loadGeneralSettings();
+		loadConnectionMatrixSettings();
 		loadControllerSettings();
 		loadNetworkSettings();
 	}
@@ -52,19 +53,13 @@ private:
 		// Automatic PNG Download
 		{
 			auto const lock = QSignalBlocker{ automaticPNGDownloadCheckBox };
-			automaticPNGDownloadCheckBox->setChecked(settings.getValue(settings::AutomaticPNGDownloadEnabled.name).toBool());
-		}
-
-		// Transpose Connection Matrix
-		{
-			auto const lock = QSignalBlocker{ transposeConnectionMatrixCheckBox };
-			transposeConnectionMatrixCheckBox->setChecked(settings.getValue(settings::TransposeConnectionMatrix.name).toBool());
+			automaticPNGDownloadCheckBox->setChecked(settings.getValue(settings::General_AutomaticPNGDownloadEnabled.name).toBool());
 		}
 
 		// Automatic Check For Updates
 		{
 			auto const lock = QSignalBlocker{ automaticCheckForUpdatesCheckBox };
-			automaticCheckForUpdatesCheckBox->setChecked(settings.getValue(settings::AutomaticCheckForUpdates.name).toBool());
+			automaticCheckForUpdatesCheckBox->setChecked(settings.getValue(settings::General_AutomaticCheckForUpdates.name).toBool());
 		}
 
 		// Theme Color
@@ -72,7 +67,30 @@ private:
 			auto const lock = QSignalBlocker{ themeColorComboBox };
 			themeColorComboBox->setModel(&_themeColorModel);
 			themeColorComboBox->setModelColumn(_themeColorModel.index(qt::toolkit::material::color::DefaultShade));
-			themeColorComboBox->setCurrentIndex(settings.getValue(settings::ThemeColorIndex.name).toInt());
+			themeColorComboBox->setCurrentIndex(settings.getValue(settings::General_ThemeColorIndex.name).toInt());
+		}
+	}
+
+	void loadConnectionMatrixSettings()
+	{
+		auto& settings = settings::SettingsManager::getInstance();
+
+		// Transpose
+		{
+			auto const lock = QSignalBlocker{ transposeConnectionMatrixCheckBox };
+			transposeConnectionMatrixCheckBox->setChecked(settings.getValue(settings::ConnectionMatrix_Transpose.name).toBool());
+		}
+
+		// Always Show Arrow Tip
+		{
+			auto const lock = QSignalBlocker{ alwaysShowArrowTipConnectionMatrixCheckBox };
+			alwaysShowArrowTipConnectionMatrixCheckBox->setChecked(settings.getValue(settings::ConnectionMatrix_AlwaysShowArrowTip.name).toBool());
+		}
+
+		// Always Show Arrow End
+		{
+			auto const lock = QSignalBlocker{ alwaysShowArrowEndConnectionMatrixCheckBox };
+			alwaysShowArrowEndConnectionMatrixCheckBox->setChecked(settings.getValue(settings::ConnectionMatrix_AlwaysShowArrowEnd.name).toBool());
 		}
 	}
 
@@ -83,7 +101,7 @@ private:
 		// Check For Beta Updates
 		{
 			auto const lock = QSignalBlocker{ checkForBetaVersionsCheckBox };
-			checkForBetaVersionsCheckBox->setChecked(settings.getValue(settings::CheckForBetaVersions.name).toBool());
+			checkForBetaVersionsCheckBox->setChecked(settings.getValue(settings::General_CheckForBetaVersions.name).toBool());
 			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
 			checkForBetaVersionsLabel->setEnabled(enabled);
 			checkForBetaVersionsCheckBox->setEnabled(enabled);
@@ -92,7 +110,7 @@ private:
 		// AEM Cache
 		{
 			auto const lock = QSignalBlocker{ enableAEMCacheCheckBox };
-			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::AemCacheEnabled.name).toBool());
+			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::Controller_AemCacheEnabled.name).toBool());
 		}
 	}
 
@@ -105,7 +123,7 @@ private:
 			auto const lock = QSignalBlocker{ protocolComboBox };
 			populateProtocolComboBox();
 
-			auto const type = settings.getValue(settings::ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+			auto const type = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 			auto const index = protocolComboBox->findData(QVariant::fromValue(type));
 			protocolComboBox->setCurrentIndex(index);
 		}
@@ -158,7 +176,7 @@ SettingsDialog::~SettingsDialog() noexcept
 void SettingsDialog::on_automaticPNGDownloadCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::AutomaticPNGDownloadEnabled.name, checked);
+	settings.setValue(settings::General_AutomaticPNGDownloadEnabled.name, checked);
 }
 
 void SettingsDialog::on_clearLogoCacheButton_clicked()
@@ -167,16 +185,10 @@ void SettingsDialog::on_clearLogoCacheButton_clicked()
 	logoCache.clear();
 }
 
-void SettingsDialog::on_transposeConnectionMatrixCheckBox_toggled(bool checked)
-{
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::TransposeConnectionMatrix.name, checked);
-}
-
 void SettingsDialog::on_automaticCheckForUpdatesCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::AutomaticCheckForUpdates.name, checked);
+	settings.setValue(settings::General_AutomaticCheckForUpdates.name, checked);
 
 	_pImpl->checkForBetaVersionsLabel->setEnabled(checked);
 	_pImpl->checkForBetaVersionsCheckBox->setEnabled(checked);
@@ -185,24 +197,42 @@ void SettingsDialog::on_automaticCheckForUpdatesCheckBox_toggled(bool checked)
 void SettingsDialog::on_checkForBetaVersionsCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::CheckForBetaVersions.name, checked);
+	settings.setValue(settings::General_CheckForBetaVersions.name, checked);
 }
 
 void SettingsDialog::on_themeColorComboBox_currentIndexChanged(int index)
 {
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::ThemeColorIndex.name, index);
+	settings.setValue(settings::General_ThemeColorIndex.name, index);
+}
+
+void SettingsDialog::on_transposeConnectionMatrixCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ConnectionMatrix_Transpose.name, checked);
+}
+
+void SettingsDialog::on_alwaysShowArrowTipConnectionMatrixCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ConnectionMatrix_AlwaysShowArrowTip.name, checked);
+}
+
+void SettingsDialog::on_alwaysShowArrowEndConnectionMatrixCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, checked);
 }
 
 void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::AemCacheEnabled.name, checked);
+	settings.setValue(settings::Controller_AemCacheEnabled.name, checked);
 }
 
 void SettingsDialog::on_protocolComboBox_currentIndexChanged(int index)
 {
 	auto& settings = settings::SettingsManager::getInstance();
 	auto const type = _pImpl->protocolComboBox->currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
-	settings.setValue(settings::ProtocolType.name, la::avdecc::utils::to_integral(type));
+	settings.setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(type));
 }

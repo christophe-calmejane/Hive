@@ -20,6 +20,8 @@
 #include "imageItemDelegate.hpp"
 #include "painterHelper.hpp"
 
+#include <QPainter>
+
 void ImageItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	QStyledItemDelegate::paint(painter, option, index);

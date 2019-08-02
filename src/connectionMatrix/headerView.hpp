@@ -36,6 +36,9 @@ public:
 
 	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
 
+	void setAlwaysShowArrowTip(bool const show);
+	void setAlwaysShowArrowEnd(bool const show);
+	void setTransposed(bool const isTransposed);
 	void setColor(qt::toolkit::material::color::Name const name);
 
 	// Retrieves the current sectionState for each section
@@ -75,6 +78,9 @@ private:
 	QVector<SectionState> _sectionState;
 	QRegExp _pattern;
 
+	bool _alwaysShowArrowTip{ false };
+	bool _alwaysShowArrowEnd{ false };
+	bool _isTransposed{ false };
 	qt::toolkit::material::color::Name _colorName{ qt::toolkit::material::color::DefaultColor };
 };
 

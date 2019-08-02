@@ -35,11 +35,11 @@ private:
 	{
 		auto type = la::avdecc::networkInterface::Interface::Type::None;
 
-		if (name == settings::InterfaceTypeEthernet.name)
+		if (name == settings::Network_InterfaceTypeEthernet.name)
 		{
 			type = la::avdecc::networkInterface::Interface::Type::Ethernet;
 		}
-		else if (name == settings::InterfaceTypeWiFi.name)
+		else if (name == settings::Network_InterfaceTypeWiFi.name)
 		{
 			type = la::avdecc::networkInterface::Interface::Type::WiFi;
 		}
@@ -75,8 +75,8 @@ ActiveNetworkInterfaceModel::ActiveNetworkInterfaceModel(QObject* parent)
 	, d_ptr{ new ActiveNetworkInterfaceModelPrivate{ this } }
 {
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::InterfaceTypeEthernet.name, d_ptr.get());
-	settings.registerSettingObserver(settings::InterfaceTypeWiFi.name, d_ptr.get());
+	settings.registerSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
+	settings.registerSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
 
 	setSourceModel(&d_ptr->_model);
 
@@ -88,8 +88,8 @@ ActiveNetworkInterfaceModel::~ActiveNetworkInterfaceModel()
 {
 	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::InterfaceTypeWiFi.name, d_ptr.get());
-	settings.unregisterSettingObserver(settings::InterfaceTypeEthernet.name, d_ptr.get());
+	settings.unregisterSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
+	settings.unregisterSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
 }
 
 bool ActiveNetworkInterfaceModel::isEnabled(QString const& id) const noexcept

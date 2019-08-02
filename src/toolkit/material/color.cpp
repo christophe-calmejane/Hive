@@ -18,6 +18,9 @@
 */
 
 #include "toolkit/material/color.hpp"
+
+#include <la/avdecc/utils.hpp>
+
 #include <unordered_map>
 
 namespace qt
@@ -366,7 +369,173 @@ static const ColorMap g_colorMap = {
 		} },
 };
 
-ShadeMap const& shadeMap(Name const name)
+static const std::unordered_map<Name, std::unordered_map<Shade, QColor>> g_errorMap = {
+	{ Name::Red,
+		{
+			{ Shade::Shade50, 0x000000 },
+			{ Shade::Shade100, 0x000000 },
+			{ Shade::Shade200, 0x000000 },
+			{ Shade::Shade300, 0x000000 },
+			{ Shade::Shade400, 0x000000 },
+			{ Shade::Shade500, 0x000000 },
+			{ Shade::Shade600, 0x000000 },
+			{ Shade::Shade700, 0x000000 },
+			{ Shade::Shade800, 0x000000 },
+			{ Shade::Shade900, 0x000000 },
+			{ Shade::ShadeA100, 0x000000 },
+			{ Shade::ShadeA200, 0x000000 },
+			{ Shade::ShadeA400, 0x000000 },
+			{ Shade::ShadeA700, 0x000000 },
+		} },
+	{ Name::Pink,
+		{
+			{ Shade::Shade50, 0x000000 },
+			{ Shade::Shade100, 0x000000 },
+			{ Shade::Shade200, 0x000000 },
+			{ Shade::Shade300, 0x000000 },
+			{ Shade::Shade400, 0x000000 },
+			{ Shade::Shade500, 0x000000 },
+			{ Shade::Shade600, 0x000000 },
+			{ Shade::Shade700, 0x000000 },
+			{ Shade::Shade800, 0x000000 },
+			{ Shade::Shade900, 0x000000 },
+			{ Shade::ShadeA100, 0x000000 },
+			{ Shade::ShadeA200, 0x000000 },
+			{ Shade::ShadeA400, 0x000000 },
+			{ Shade::ShadeA700, 0x000000 },
+		} },
+	{ Name::Purple,
+		{
+			{ Shade::Shade300, 0xEF5350 },
+			{ Shade::Shade500, 0xEF5350 },
+			{ Shade::Shade600, 0xEF5350 },
+			{ Shade::Shade900, 0xEF5350 },
+		} },
+	{ Name::DeepPurple,
+		{
+			{ Shade::Shade300, 0xEF5350 },
+			{ Shade::Shade500, 0xEF5350 },
+			{ Shade::Shade600, 0xEF5350 },
+			{ Shade::Shade900, 0xEF5350 },
+		} },
+	{ Name::Indigo,
+		{
+			{ Shade::Shade300, 0xEF5350 },
+			{ Shade::Shade500, 0xEF5350 },
+			{ Shade::Shade600, 0xEF5350 },
+			{ Shade::Shade900, 0xEF5350 },
+		} },
+	//{ Name::Blue,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	//{ Name::LightBlue,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	//{ Name::Cyan,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	{ Name::Teal,
+		{
+			{ Shade::Shade300, 0xEF5350 },
+			{ Shade::Shade500, 0xEF5350 },
+			{ Shade::Shade600, 0xEF5350 },
+			{ Shade::Shade900, 0xEF5350 },
+		} },
+	//{ Name::Green,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	//{ Name::LightGreen,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	//{ Name::Lime,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	//{ Name::Yellow,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	//{ Name::Amber,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	//{ Name::Orange,
+	//	{
+	//		{ Shade::Shade300, 0xD50000 },
+	//		{ Shade::Shade500, 0xD50000 },
+	//		{ Shade::Shade600, 0xD50000 },
+	//		{ Shade::Shade900, 0xD50000 },
+	//	} },
+	{ Name::DeepOrange,
+		{
+			{ Shade::Shade50, 0x000000 },
+			{ Shade::Shade100, 0x000000 },
+			{ Shade::Shade200, 0x000000 },
+			{ Shade::Shade300, 0x000000 },
+			{ Shade::Shade400, 0x000000 },
+			{ Shade::Shade500, 0x000000 },
+			{ Shade::Shade600, 0x000000 },
+			{ Shade::Shade700, 0x000000 },
+			{ Shade::Shade800, 0x000000 },
+			{ Shade::Shade900, 0x000000 },
+			{ Shade::ShadeA100, 0x000000 },
+			{ Shade::ShadeA200, 0x000000 },
+			{ Shade::ShadeA400, 0x000000 },
+			{ Shade::ShadeA700, 0x000000 },
+		} },
+	{ Name::Brown,
+		{
+			{ Shade::Shade300, 0xEF5350 },
+			{ Shade::Shade500, 0xEF5350 },
+			{ Shade::Shade600, 0xEF5350 },
+			{ Shade::Shade900, 0xEF5350 },
+		} },
+	{ Name::Gray,
+		{
+			{ Shade::Shade300, 0xFF5252 },
+			{ Shade::Shade500, 0xFF5252 },
+			{ Shade::Shade600, 0xFF5252 },
+			{ Shade::Shade900, 0xFF5252 },
+		} },
+	{ Name::BlueGray,
+		{
+			{ Shade::Shade300, 0xFF5252 },
+			{ Shade::Shade500, 0xFF5252 },
+			{ Shade::Shade600, 0xFF5252 },
+			{ Shade::Shade900, 0xFF5252 },
+		} },
+};
+
+static ShadeMap const& shadeMap(Name const name)
 {
 	auto const it = g_colorMap.find(name);
 	if (it == std::end(g_colorMap))
@@ -376,7 +545,7 @@ ShadeMap const& shadeMap(Name const name)
 	return it->second;
 }
 
-ColorData const& colorData(Name const name, Shade const shade)
+static ColorData const& colorData(Name const name, Shade const shade)
 {
 	auto const& map = shadeMap(name);
 	auto const jt = map.find(shade);
@@ -417,6 +586,22 @@ QColor foregroundComplementaryValue(Name const name, Shade const shade)
 {
 	auto const baseColor = foregroundValue(name, shade);
 	return complementary(baseColor);
+}
+
+QColor foregroundErrorColorValue(Name const name, Shade const shade)
+{
+	auto errorColor = value(Name::Red, qt::toolkit::material::color::Shade::ShadeA700);
+
+	if (auto const nameMapIt = g_errorMap.find(name); nameMapIt != g_errorMap.end())
+	{
+		auto const& map = nameMapIt->second;
+		if (auto const shadeMapIt = map.find(shade); shadeMapIt != map.end())
+		{
+			errorColor = shadeMapIt->second;
+		}
+	}
+
+	return errorColor;
 }
 
 Luminance luminance(Name const name, Shade const shade)

@@ -82,9 +82,11 @@ View::View(QWidget* parent)
 
 	// Configure settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::TransposeConnectionMatrix.name, this);
-	settings.registerSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
-	settings.registerSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.registerSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowTip.name, this);
+	settings.registerSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
+	settings.registerSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
+	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 
 	// react on connection completed signals to show error messages.
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
@@ -95,9 +97,11 @@ View::~View()
 {
 	// Remove settings observers
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::TransposeConnectionMatrix.name, this);
-	settings.unregisterSettingObserver(settings::ChannelModeConnectionMatrix.name, this);
-	settings.unregisterSettingObserver(settings::ThemeColorIndex.name, this);
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowTip.name, this);
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
 void View::onIntersectionClicked(QModelIndex const& index)
@@ -464,7 +468,19 @@ void View::mouseMoveEvent(QMouseEvent* event)
 
 void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
 {
-	if (name == settings::TransposeConnectionMatrix.name)
+	if (name == settings::ConnectionMatrix_AlwaysShowArrowTip.name)
+	{
+		auto const alwaysShow = value.toBool();
+		_verticalHeaderView->setAlwaysShowArrowTip(alwaysShow);
+		_horizontalHeaderView->setAlwaysShowArrowTip(alwaysShow);
+	}
+	else if (name == settings::ConnectionMatrix_AlwaysShowArrowEnd.name)
+	{
+		auto const alwaysShow = value.toBool();
+		_verticalHeaderView->setAlwaysShowArrowEnd(alwaysShow);
+		_horizontalHeaderView->setAlwaysShowArrowEnd(alwaysShow);
+	}
+	else if (name == settings::ConnectionMatrix_Transpose.name)
 	{
 		auto const transposed = value.toBool();
 
@@ -473,13 +489,15 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		_model->setTransposed(transposed);
 		_cornerWidget->setTransposed(transposed);
+		_verticalHeaderView->setTransposed(transposed);
+		_horizontalHeaderView->setTransposed(transposed);
 
 		_verticalHeaderView->restoreSectionState(horizontalSectionState);
 		_horizontalHeaderView->restoreSectionState(verticalSectionState);
 
 		forceFilter();
 	}
-	else if (name == settings::ChannelModeConnectionMatrix.name)
+	else if (name == settings::ConnectionMatrix_ChannelMode.name)
 	{
 		auto const channelMode = value.toBool();
 		auto const mode = channelMode ? Model::Mode::Channel : Model::Mode::Stream;
@@ -488,10 +506,11 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 
 		forceFilter();
 	}
-	else if (name == settings::ThemeColorIndex.name)
+	else if (name == settings::General_ThemeColorIndex.name)
 	{
 		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 
+		_cornerWidget->setColor(colorName);
 		_verticalHeaderView->setColor(colorName);
 		_horizontalHeaderView->setColor(colorName);
 	}
