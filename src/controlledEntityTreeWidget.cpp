@@ -30,6 +30,17 @@
 
 #include <unordered_set>
 
+namespace priv
+{
+void useBoldFont(QTreeWidgetItem* item, bool const bold)
+{
+	auto font = item->data(0, Qt::FontRole).value<QFont>();
+	font.setBold(bold);
+	item->setData(0, Qt::FontRole, font);
+}
+
+} // namespace priv
+
 // Base node item
 class NodeItem : public QObject, public QTreeWidgetItem
 {
@@ -529,9 +540,7 @@ private:
 
 		if (node.dynamicModel->isActiveConfiguration)
 		{
-			QFont boldFont;
-			boldFont.setBold(true);
-			item->setData(0, Qt::FontRole, boldFont);
+			priv::useBoldFont(item, true);
 
 			Q_Q(ControlledEntityTreeWidget);
 			q->setItemExpanded(item, true);
@@ -690,6 +699,18 @@ private:
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex);
 			});
+
+		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceChanged, item,
+			[this, item, node, parentIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex)
+			{
+				if (entityID == _controlledEntityID && clockDomainIndex == parentIndex)
+				{
+					priv::useBoldFont(item, node.descriptorIndex == clockSourceIndex);
+				}
+			});
+
+		auto const isCurrentClockSource = (node.descriptorIndex == parent->dynamicModel->clockSourceIndex);
+		priv::useBoldFont(item, isCurrentClockSource);
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
