@@ -120,7 +120,8 @@ LegendDialog::LegendDialog(qt::toolkit::material::color::Name const& colorName, 
 
 	Sections shapeSections = {
 		{ "Entity connection summary (Not working yet)", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
-		{ "Connection status for a Simple or Redundant stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
+		{ "Connection status for a Simple stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
+		{ "Redundant Stream Pair connection summary", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
 		{ "Connection status for the individual stream of a Redundant Stream Pair", Model::IntersectionData::Type::RedundantStream_RedundantStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
 	};
 

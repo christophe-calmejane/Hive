@@ -47,7 +47,7 @@ static inline void drawCircle(QPainter* painter, QRect const& rect)
 	painter->drawEllipse(rect.adjusted(2, 2, -3, -3));
 }
 
-static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
+static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const wrongFormatHasPriorityOverInterfaceDown)
 {
 	static auto const White = color::value(color::Name::Gray, color::Shade::Shade300);
 	static auto const Green = color::value(color::Name::Green, color::Shade::Shade500);
@@ -72,7 +72,14 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	{
 		if (interfaceDown)
 		{
-			brushColor = Blue;
+			if (wrongFormat && wrongFormatHasPriorityOverInterfaceDown)
+			{
+				brushColor = Yellow;
+			}
+			else
+			{
+				brushColor = Blue;
+			}
 		}
 		else if (wrongDomain)
 		{
@@ -195,6 +202,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 
 	auto const penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);
 	auto penWidth = qreal{ 1.5 };
+	auto wrongFormatHasPriorityOverInterfaceDown = false;
 
 	switch (type)
 	{
@@ -209,7 +217,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			break;
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
-			painter->setBrush(getConnectionBrushColor(state, flags));
+			painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
 			penWidth = qreal{ 1.0 };
 			painter->setPen(QPen{ penColor, penWidth });
 			drawDiamond(painter, rect);
@@ -223,7 +231,7 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			else
 			{
 				// But if the connection is made using another controller, we might have a connection we want to kill
-				painter->setBrush(getConnectionBrushColor(state, flags));
+				painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
 				penWidth = qreal{ 1.0 };
 				painter->setPen(QPen{ penColor, penWidth });
 				drawDiamond(painter, rect);
@@ -231,12 +239,13 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			break;
 		case Model::IntersectionData::Type::Redundant_Redundant:
 			penWidth = qreal{ 2.0 };
+			wrongFormatHasPriorityOverInterfaceDown = true; // For summary, we want the WrongFormat error flag to have priority over InterfaceDown (more meaningful information)
 			[[fallthrough]];
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
 		case Model::IntersectionData::Type::SingleChannel_SingleChannel:
-			painter->setBrush(getConnectionBrushColor(state, flags));
+			painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
 			painter->setPen(QPen{ penColor, penWidth });
 			drawCircle(painter, rect);
 			break;
