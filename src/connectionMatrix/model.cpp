@@ -1837,7 +1837,7 @@ public:
 				// Talker
 				if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
 				{
-					if (auto * node = buildTalkerNode(*controlledEntity, entityID, configurationNode))
+					if (auto* node = buildTalkerNode(*controlledEntity, entityID, configurationNode))
 					{
 						_talkerNodeMap.insert(std::make_pair(entityID, node));
 
@@ -1851,7 +1851,7 @@ public:
 				// Listener
 				if (controlledEntity->getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty())
 				{
-					if (auto * node = buildListenerNode(*controlledEntity, entityID, configurationNode))
+					if (auto* node = buildListenerNode(*controlledEntity, entityID, configurationNode))
 					{
 						// Insert nodes in cache for quick access
 						_listenerNodeMap.insert(std::make_pair(entityID, node));

@@ -60,6 +60,7 @@
 #include "settingsDialog.hpp"
 #include "multiFirmwareUpdateDialog.hpp"
 #include "defaults.hpp"
+#include "windowsNpfHelper.hpp"
 
 #include <la/avdecc/networkInterfaceHelper.hpp>
 
@@ -137,6 +138,7 @@ public:
 	void createViewMenu();
 	void createToolbars();
 	void createControllerView();
+	void checkNpfStatus();
 	void loadSettings();
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
@@ -157,6 +159,7 @@ public:
 	QLabel _controllerEntityIDLabel{ _parent };
 	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
+	bool _shown{ false };
 };
 
 void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
@@ -254,6 +257,12 @@ void MainWindowImpl::currentControllerChanged()
 
 	auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
+
+	// Check for WinPcap driver
+	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::PCap && _shown)
+	{
+		checkNpfStatus();
+	}
 
 	// Clear the current controller
 	auto& manager = avdecc::ControllerManager::getInstance();
@@ -413,6 +422,46 @@ void MainWindowImpl::createControllerView()
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
+}
+
+void MainWindowImpl::checkNpfStatus()
+{
+#ifdef _WIN32
+	static std::once_flag once;
+	std::call_once(once,
+		[this]()
+		{
+			auto const npfStatus = npf::getStatus();
+			switch (npfStatus)
+			{
+				case npf::Status::NotInstalled:
+					QMessageBox::warning(_parent, "", "The WinPcap library is required for Hive to communicate with AVB Entities on the network.\nIt looks like you uninstalled it, or didn't choose to install it when running Hive installation.\n\nYou need to rerun the installer and follow the instructions to install WinPcap.");
+					break;
+				case npf::Status::NotStarted:
+				{
+					auto choice = QMessageBox::warning(_parent, "", "The WinPcap library must be started for Hive to communicate with AVB Entities on the network.\n\nDo you want to start WinPcap now?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+					if (choice == QMessageBox::StandardButton::Yes)
+					{
+						npf::startService();
+						choice = QMessageBox::question(_parent, "", "Do you want to configure the library to automatically start when Windows boots (recommended)?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+						if (choice == QMessageBox::StandardButton::Yes)
+						{
+							npf::setServiceAutoStart();
+						}
+						// Postpone Controller Refresh
+						QTimer::singleShot(0,
+							[this]()
+							{
+								currentControllerChanged();
+							});
+					}
+					break;
+				}
+				default:
+					break;
+			}
+		});
+#endif // _WIN32
 }
 
 void MainWindowImpl::loadSettings()
@@ -929,6 +978,7 @@ void MainWindow::showEvent(QShowEvent* event)
 	std::call_once(once,
 		[this]()
 		{
+			_pImpl->_shown = true;
 			auto& settings = settings::SettingsManager::getInstance();
 
 			// Time to check for new version
@@ -952,6 +1002,21 @@ void MainWindow::showEvent(QShowEvent* event)
 						});
 				}
 			}
+#ifdef _WIN32
+			// Check for WinPcap
+			{
+				auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+				if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::PCap)
+				{
+					// Postpone check (because of possible dialog creation)
+					QTimer::singleShot(0,
+						[this]()
+						{
+							_pImpl->checkNpfStatus();
+						});
+				}
+			}
+#endif // _WIN32
 			// Check if this is the first time we launch a new Hive version
 			{
 				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
