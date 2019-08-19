@@ -163,6 +163,9 @@ public:
 	// Returns the transpose state of the model
 	bool isTransposed() const;
 
+	// Force a refresh of the model (actually only force a UI refresh)
+	void forceRefresh();
+
 	// Visitor pattern that performs a hierarchy traversal according with respect of the current mode
 	using Visitor = std::function<void(Node*)>;
 	void accept(Node* node, Visitor const& visitor, bool const childrenOnly = false) const;

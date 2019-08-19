@@ -473,12 +473,18 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		auto const alwaysShow = value.toBool();
 		_verticalHeaderView->setAlwaysShowArrowTip(alwaysShow);
 		_horizontalHeaderView->setAlwaysShowArrowTip(alwaysShow);
+
+		// Manually force a model refresh so the header views are repaint in case the Settings Modal Dialog is opened (otherwise the repaint is only triggered when Modal Dialog is closed and we want an immediate preview of the new setting)
+		_model->forceRefresh();
 	}
 	else if (name == settings::ConnectionMatrix_AlwaysShowArrowEnd.name)
 	{
 		auto const alwaysShow = value.toBool();
 		_verticalHeaderView->setAlwaysShowArrowEnd(alwaysShow);
 		_horizontalHeaderView->setAlwaysShowArrowEnd(alwaysShow);
+
+		// Manually force a model refresh so the header views are repaint in case the Settings Modal Dialog is opened (otherwise the repaint is only triggered when Modal Dialog is closed and we want an immediate preview of the new setting)
+		_model->forceRefresh();
 	}
 	else if (name == settings::ConnectionMatrix_Transpose.name)
 	{
@@ -513,6 +519,9 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_cornerWidget->setColor(colorName);
 		_verticalHeaderView->setColor(colorName);
 		_horizontalHeaderView->setColor(colorName);
+
+		// Manually force a model refresh, although it does not seem necessary for this setting (for some undefined reason!!??)
+		_model->forceRefresh();
 	}
 }
 

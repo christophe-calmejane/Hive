@@ -3039,6 +3039,14 @@ bool Model::isTransposed() const
 	return d->_transposed;
 }
 
+void Model::forceRefresh()
+{
+	Q_D(Model);
+
+	emit beginResetModel();
+	emit endResetModel();
+}
+
 void Model::accept(Node* node, Visitor const& visitor, bool const childrenOnly) const
 {
 	Q_D(const Model);

@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Refresh issue when gPTP changes for some non-milan devices
 - [Red text no longer applied when item is selected (fixed by using a colored box around the item)](https://github.com/christophe-calmejane/Hive/issues/68)
 - [Possible crash when failed to properly enumerate a device](https://github.com/christophe-calmejane/Hive/issues/71)
+- [_Arrow Settings_ immediately refresh the Connection Matrix when changed from the Settings Window](https://github.com/christophe-calmejane/Hive/issues/72)
 
 ## [1.1.0] - 2019-05-21
 ### Added
