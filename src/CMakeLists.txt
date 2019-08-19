@@ -136,6 +136,7 @@ set(HEADER_FILES_COMMON
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	painterHelper.hpp
+	windowsNpfHelper.hpp
 )
 
 set(SOURCE_FILES_COMMON
@@ -216,6 +217,7 @@ set(SOURCE_FILES_COMMON
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	painterHelper.cpp
+	windowsNpfHelper.cpp
 )
 
 set(UI_FILES_COMMON
