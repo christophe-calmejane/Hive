@@ -22,10 +22,11 @@
 #include <map>
 #include <QMenu>
 
-StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters, QTreeWidget* parent)
+StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isConnected, la::avdecc::entity::model::StreamInputCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamIndex(streamIndex)
+	, _isConnected{ isConnected }
 {
 	static std::map<la::avdecc::entity::StreamInputCounterValidFlag, QString> s_counterNames{
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked, "Media Locked" },
@@ -84,6 +85,16 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 				updateCounters(_counters);
 			}
 		});
+
+	connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this,
+		[this](la::avdecc::entity::model::StreamConnectionState const& state)
+		{
+			if (state.listenerStream.entityID == _entityID && state.listenerStream.streamIndex == _streamIndex)
+			{
+				_isConnected = state.state == la::avdecc::entity::model::StreamConnectionState::State::Connected;
+				updateCounters(_counters);
+			}
+		});
 }
 
 void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model::StreamInputCounters const& counters)
@@ -97,7 +108,7 @@ void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model
 			auto* widget = it->second;
 			AVDECC_ASSERT(widget != nullptr, "If widget is found in the map, it should not be nullptr");
 
-			auto color = QColor{ Qt::black };
+			auto color = QColor{ _isConnected ? Qt::black : Qt::gray };
 			auto text = QString::number(value);
 
 			auto const errorCounterIt = _errorCounters.find(flag);

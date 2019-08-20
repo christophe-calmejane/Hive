@@ -364,7 +364,7 @@ private:
 		// Counters (if supported by the entity)
 		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
-			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
+			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}

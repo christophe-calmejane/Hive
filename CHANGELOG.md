@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Displaying the currently active ClockSource in the AEM Tree
 - Considering MediaUnlocked StreamInput counter changes as errors (only when the stream is connected)
 - [Detection for WinPcap driver to be installed and started](https://github.com/christophe-calmejane/Hive/issues/69)
+- [Grey out stream input counters if there is no connection](https://github.com/christophe-calmejane/Hive/issues/57)
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity
