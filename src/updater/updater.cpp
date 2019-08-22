@@ -86,7 +86,7 @@ public:
 			if (lhs._preleaseTag.has_value() && !rhs._preleaseTag.has_value())
 				return true;
 			// Both have a pre-release tag, but lhs is < to rhs
-			if (lhs._preleaseTag.has_value() && rhs._preleaseTag.has_value() && *lhs._preleaseTag < *rhs._preleaseTag)
+			if (lhs._preleaseTag && rhs._preleaseTag && *lhs._preleaseTag < *rhs._preleaseTag)
 				return true;
 
 			return false;

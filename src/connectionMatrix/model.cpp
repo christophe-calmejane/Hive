@@ -429,7 +429,7 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamConnectionChanged, this, &ModelPrivate::handleStreamConnectionChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInfoChanged, this, &ModelPrivate::handleStreamInfoChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &ModelPrivate::handleStreamDynamicInfoChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
 
@@ -1386,7 +1386,7 @@ public:
 			auto const fillStreamOutputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamOutputNode, auto const& avbInterfaceNode)
 			{
 				node.setName(avdecc::helper::outputStreamName(controlledEntity, streamIndex));
-				node.setStreamFormat(streamOutputNode.dynamicModel->streamInfo.streamFormat);
+				node.setStreamFormat(streamOutputNode.dynamicModel->streamFormat);
 				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
 				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
 				node.setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
@@ -1500,7 +1500,7 @@ public:
 			auto const fillStreamInputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamInputNode, auto const& avbInterfaceNode)
 			{
 				node.setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
-				node.setStreamFormat(streamInputNode.dynamicModel->streamInfo.streamFormat);
+				node.setStreamFormat(streamInputNode.dynamicModel->streamFormat);
 				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
 				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
 				node.setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
@@ -1524,9 +1524,9 @@ public:
 						}
 					}
 				}
-				if (streamInputNode.dynamicModel->streamInfo.probingStatus)
+				if (streamInputNode.dynamicModel->streamDynamicInfo && (*streamInputNode.dynamicModel->streamDynamicInfo).probingStatus)
 				{
-					node.setProbingStatus(*streamInputNode.dynamicModel->streamInfo.probingStatus);
+					node.setProbingStatus(*(*streamInputNode.dynamicModel->streamDynamicInfo).probingStatus);
 				}
 			};
 
@@ -2178,7 +2178,7 @@ public:
 		}
 	}
 
-	void handleStreamInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& info)
+	void handleStreamDynamicInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info)
 	{
 		// Event affecting a single stream node (Input)
 		try

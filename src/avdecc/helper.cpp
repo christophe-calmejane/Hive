@@ -448,6 +448,22 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 		concatenateFlags(str, "SupportsEncrypted");
 	if (flags.test(la::avdecc::entity::StreamInfoFlag::EncryptedPdu))
 		concatenateFlags(str, "EncryptedPdu");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::TalkerFailed))
+		concatenateFlags(str, "TalkerFailed");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamVlanIDValid))
+		concatenateFlags(str, "StreamVlanIDValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::Connected))
+		concatenateFlags(str, "Connected");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::MsrpFailureValid))
+		concatenateFlags(str, "MsrpFailureValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamDestMacValid))
+		concatenateFlags(str, "StreamDestMacValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid))
+		concatenateFlags(str, "MsrpAccLatValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamIDValid))
+		concatenateFlags(str, "StreamIDValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamFormatValid))
+		concatenateFlags(str, "StreamFormatValid");
 
 	if (str.isEmpty())
 		str = "None";

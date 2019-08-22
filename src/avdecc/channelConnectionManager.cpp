@@ -1475,8 +1475,8 @@ private:
 				{
 					return std::nullopt;
 				}
-				auto talkerStreamFormat = streamOutputDynamicModel->streamInfo.streamFormat;
-				auto listenerStreamFormat = streamInputDynamicModel->streamInfo.streamFormat;
+				auto talkerStreamFormat = streamOutputDynamicModel->streamFormat;
+				auto listenerStreamFormat = streamInputDynamicModel->streamFormat;
 
 				return StreamChannelInfo{ talkerStreamIndex, listenerStreamIndex, streamChannel, isStreamAlreadyConnected, reusesTalkerMapping, reusesListenerMapping, streamChannel == talkerClusterOffset, talkerStreamFormat, listenerStreamFormat };
 			}
@@ -2969,7 +2969,7 @@ private:
 			return std::make_pair(std::nullopt, std::nullopt);
 		}
 
-		auto const& currentStreamOutputFormat = streamOutputNode.dynamicModel->streamInfo.streamFormat;
+		auto const& currentStreamOutputFormat = streamOutputNode.dynamicModel->streamFormat;
 		auto const currentStreamOutputFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(currentStreamOutputFormat);
 
 		la::avdecc::controller::model::StreamInputNode streamInputNode;
@@ -2981,7 +2981,7 @@ private:
 		{
 			return std::make_pair(std::nullopt, std::nullopt);
 		}
-		auto const& currentStreamInputFormat = streamInputNode.dynamicModel->streamInfo.streamFormat;
+		auto const& currentStreamInputFormat = streamInputNode.dynamicModel->streamFormat;
 
 		auto compatibleFormatOptions = std::vector<std::pair<la::avdecc::entity::model::StreamFormat, la::avdecc::entity::model::StreamFormat>>{};
 
@@ -3109,7 +3109,7 @@ private:
 
 		// get the stream channel count:
 		auto const& streamNode = controlledEntity->getStreamInputNode(configurationNode.descriptorIndex, streamIndex);
-		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamInfo.streamFormat);
+		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamFormat);
 		return sfi->getChannelsCount();
 	}
 
@@ -3142,7 +3142,7 @@ private:
 
 		// get the stream channel count:
 		auto const& streamNode = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, streamIndex);
-		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamInfo.streamFormat);
+		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamFormat);
 		return sfi->getChannelsCount();
 	}
 

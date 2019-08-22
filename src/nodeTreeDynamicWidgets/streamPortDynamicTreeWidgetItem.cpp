@@ -78,7 +78,7 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildStreamMappings(la::avdecc::co
 	for (auto const* streamNode : streamNodes)
 	{
 		auto streamName = avdecc::helper::objectName(controlledEntity, *streamNode).toStdString();
-		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamInfo.streamFormat);
+		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
 		NodeMapping nodeMapping{ streamNode->descriptorIndex };
 		mappingMatrix::Node node{ streamName };
 
@@ -408,7 +408,7 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 			auto const isValidStream = [](auto const* const streamNode)
 			{
-				auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamInfo.streamFormat);
+				auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
 				auto const formatType = sfi->getType();
 
 				if (formatType == la::avdecc::entity::model::StreamFormatInfo::Type::None || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::Unsupported || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)

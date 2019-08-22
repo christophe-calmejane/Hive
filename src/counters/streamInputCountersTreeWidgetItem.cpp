@@ -125,4 +125,6 @@ void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model
 			widget->setHidden(false);
 		}
 	}
+
+	setText(0, _isConnected ? "Counters" : "Counters (Frozen)");
 }

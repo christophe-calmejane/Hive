@@ -1036,7 +1036,7 @@ private:
 
 				if (streamInput.dynamicModel)
 				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel->streamInfo.streamFormat);
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel->streamFormat);
 					auto const streamType = streamFormatInfo->getType();
 					if (expectedStreamType == streamType)
 					{
@@ -1145,7 +1145,7 @@ private:
 		{
 			if (streamOutput.second.dynamicModel)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamInfo.streamFormat);
+				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
 				auto const streamType = streamFormatInfo->getType();
 				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 				{
@@ -1197,7 +1197,7 @@ private:
 		{
 			if (streamInput.second.dynamicModel)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel->streamInfo.streamFormat);
+				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel->streamFormat);
 				auto const streamType = streamFormatInfo->getType();
 				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 				{

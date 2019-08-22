@@ -119,7 +119,7 @@ public:
 		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
 		connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this, &DeviceDetailsDialogImpl::streamConnectionsChanged);
 		connect(&manager, &avdecc::ControllerManager::streamPortAudioMappingsChanged, this, &DeviceDetailsDialogImpl::streamPortAudioMappingsChanged);
-		connect(&manager, &avdecc::ControllerManager::streamInfoChanged, this, &DeviceDetailsDialogImpl::streamInfoChanged);
+		connect(&manager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &DeviceDetailsDialogImpl::streamDynamicInfoChanged);
 		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &DeviceDetailsDialogImpl::listenerChannelConnectionsUpdate);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
@@ -303,21 +303,21 @@ public:
 				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
 				for (auto const& streamOutput : configurationNode.streamOutputs)
 				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamInfo.streamFormat);
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
 					auto const streamType = streamFormatInfo->getType();
 					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
 					{
 						// skip clock stream
 						continue;
 					}
-					auto streamInfo = streamOutput.second.dynamicModel->streamInfo;
-					if (streamInfo.msrpAccumulatedLatency != *_userSelectedLatency)
+					auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
+					if (streamLatency != *_userSelectedLatency)
 					{
-						streamInfo.streamInfoFlags.clear();
+						auto streamInfo = la::avdecc::entity::model::StreamInfo{};
 						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
 						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
 
-						// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
+						// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
 						// TODO: needs update of library:
 						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
 					}
@@ -632,7 +632,7 @@ public:
 	/**
 	* Updates the latency tab data.
 	*/
-	void streamInfoChanged(la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, la::avdecc::entity::model::StreamInfo const /*streamInfo*/)
+	void streamDynamicInfoChanged(la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, la::avdecc::entity::model::StreamDynamicInfo const /*streamDynamicInfo*/)
 	{
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
@@ -769,16 +769,20 @@ private:
 				return;
 			}
 			// latency tab data
-			std::optional<uint32_t> latency = std::nullopt;
+			auto latency = decltype(la::avdecc::entity::model::StreamDynamicInfo::msrpAccumulatedLatency){ std::nullopt };
 			for (auto const& streamOutput : configurationNode.streamOutputs)
 			{
-				if (latency != std::nullopt && *latency != streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency)
+				if (streamOutput.second.dynamicModel->streamDynamicInfo)
 				{
-					// unequal values
-					latency = std::nullopt;
-					break;
+					auto const streamLatency = (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency;
+					if (latency != streamLatency)
+					{
+						// unequal values
+						latency = std::nullopt;
+						break;
+					}
+					latency = streamLatency;
 				}
-				latency = streamOutput.second.dynamicModel->streamInfo.msrpAccumulatedLatency;
 			}
 
 			const QSignalBlocker blocker(comboBox_PredefinedPT);
