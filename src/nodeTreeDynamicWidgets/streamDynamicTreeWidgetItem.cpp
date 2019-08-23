@@ -216,7 +216,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	{
 		_streamID->setForeground(0, QColor{ Qt::black });
 		_streamID->setForeground(1, QColor{ Qt::black });
-		_streamID->setText(1, avdecc::helper::toHexQString(*streamDynamicInfo.streamID, true, true));
+		_streamID->setText(1, avdecc::helper::uniqueIdentifierToString(*streamDynamicInfo.streamID));
 	}
 	if (streamDynamicInfo.streamDestMac)
 	{
