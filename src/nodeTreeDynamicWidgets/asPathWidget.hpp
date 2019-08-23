@@ -32,11 +32,11 @@
 class AsPathWidget : public QWidget
 {
 public:
-	AsPathWidget(la::avdecc::UniqueIdentifier const bridgeID, QString const& vendorName, QWidget* parent = nullptr);
+	AsPathWidget(la::avdecc::UniqueIdentifier const clockID, QString const& vendorName, QWidget* parent = nullptr);
 
 private:
 	QHBoxLayout _layout{ this };
 
-	QLabel _bridgeIDLabel{ this };
+	QLabel _clockIDLabel{ this };
 	QLabel _vendorNameLabel{ this };
 };

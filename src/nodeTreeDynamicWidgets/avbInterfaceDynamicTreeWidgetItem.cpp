@@ -221,9 +221,9 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAsPath(la::avdecc::entity::model::
 {
 	_asPath->clear();
 
-	for (auto const& bridgeID : asPath.sequence)
+	for (auto const& clockID : asPath.sequence)
 	{
-		auto* widget = new AsPathWidget{ bridgeID, avdecc::helper::getVendorName(bridgeID) };
+		auto* widget = new AsPathWidget{ clockID, avdecc::helper::getVendorName(clockID) };
 		auto* item = new QListWidgetItem(_asPath);
 		item->setSizeHint(widget->sizeHint());
 
