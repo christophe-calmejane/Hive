@@ -178,8 +178,8 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 			return "Not Supported";
 		case la::avdecc::controller::model::AcquireState::NotAcquired:
 			return "Not Acquired";
-		case la::avdecc::controller::model::AcquireState::TryAcquire:
-			return "Try Acquire";
+		case la::avdecc::controller::model::AcquireState::AcquireInProgress:
+			return "Acquire In Progress";
 		case la::avdecc::controller::model::AcquireState::Acquired:
 			return "Acquired";
 		case la::avdecc::controller::model::AcquireState::AcquiredByOther:
@@ -197,6 +197,8 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 			}
 			return text;
 		}
+		case la::avdecc::controller::model::AcquireState::ReleaseInProgress:
+			return "Release In Progress";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return {};
@@ -213,8 +215,8 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 			return "Not Supported";
 		case la::avdecc::controller::model::LockState::NotLocked:
 			return "Not Locked";
-		case la::avdecc::controller::model::LockState::TryLock:
-			return "Try Lock";
+		case la::avdecc::controller::model::LockState::LockInProgress:
+			return "Lock In Progress";
 		case la::avdecc::controller::model::LockState::Locked:
 			return "Locked";
 		case la::avdecc::controller::model::LockState::LockedByOther:
@@ -232,6 +234,8 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 			}
 			return text;
 		}
+		case la::avdecc::controller::model::LockState::UnlockInProgress:
+			return "Unlock In Progress";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return {};

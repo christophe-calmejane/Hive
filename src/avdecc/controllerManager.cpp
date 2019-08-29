@@ -1646,6 +1646,20 @@ private:
 		}
 	}
 
+	virtual void requestExclusiveAccess(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType const type, RequestExclusiveAccessHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			controller->requestExclusiveAccess(entityID, type,
+				[this, entityID, handler](auto const* const /*entity*/, auto const status, auto&& token) noexcept
+				{
+					la::avdecc::utils::invokeProtectedHandler(handler, entityID, status, std::move(token));
+				});
+		}
+	}
+
+
 	virtual void foreachEntity(ControlledEntityCallback const& callback) noexcept override
 	{
 		auto controller = getController();

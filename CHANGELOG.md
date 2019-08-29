@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity
 - [Moved ProtocolInterface selection to the Settings](https://github.com/christophe-calmejane/Hive/issues/58)
+- Automatically Locking the Entity when opening the Dynamic Mappings Editor
 
 ### Fixed
 - [Splashscreen displayed on the same screen than Hive will be shown](https://github.com/christophe-calmejane/Hive/issues/20)

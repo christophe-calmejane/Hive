@@ -12,7 +12,7 @@ cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
-qtVersion="5.12.1"
+qtVersion="5.12.4"
 
 # Default values
 default_VisualGenerator="Visual Studio 15 2017"

@@ -386,10 +386,6 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 
 void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 {
-	// TODO: Avoir access au controller pour faire un acquire de l'entite (sans utiliser les callbacks du ControllerManager, car sinon ca lance une popup globale si le acquire echoue)
-	// Si acquire echoue, alors on indique un message comme quoi il est necessaire de pouvoir acquire l'entite afin de changer le mapping sans etre derange
-	// Si acquire reussi, alors on peut ouvrir la fenetre et faire le mapping
-	// TODO: Plus tard, il faudra faire un Lock, au lieu de Acquire (ou mieux faire une fonction "GetExclusiveToken" qui acquire ou lock en fonction du type d'entite, une fois le token relache et si c'est le dernier, ca release l'entite). Peut etre le mettre dans la lib controller comme ca on gere directement le resend du lock !!
 	try
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -502,23 +498,47 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 			if (!outputs.empty() && !inputs.empty())
 			{
-				auto title = QString("%1 - %2.%3 Dynamic Mappings").arg(avdecc::helper::smartEntityName(*entity)).arg(avdecc::helper::descriptorTypeToString(_streamPortType)).arg(_streamPortIndex);
-				auto dialog = mappingMatrix::MappingMatrixDialog{ title, outputs, inputs, connections };
+				auto smartName = avdecc::helper::smartEntityName(*entity);
 
 				// Release the controlled entity before starting a long operation (dialog.exec)
 				controlledEntity.reset();
 
-				if (dialog.exec() == QDialog::Accepted)
-				{
-					if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+				// Get exclusive access
+				manager.requestExclusiveAccess(_entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType::Lock,
+					[this, streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections)](auto const entityID, auto const status, auto&& token)
 					{
-						processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
-					}
-					else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-					{
-						processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
-					}
-				}
+						// Moving the token to the capture will effectively extend the lifetime of the token, keeping the entity locked until the lambda completes (meaning the dialog has been closed and mappings changed)
+						QMetaObject::invokeMethod(this,
+							[this, status, token = std::move(token), streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections)]()
+							{
+								// Failed to get the exclusive access
+								if (!status || !token)
+								{
+									// If the device does not support the exclusive access, still proceed
+									if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotImplemented && status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotSupported)
+									{
+										QMessageBox::warning(nullptr, QString(""), QString("Failed to get Exclusive Access on %1:<br>%2").arg(smartName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
+										return;
+									}
+								}
+
+								// Create the dialog
+								auto title = QString("%1 - %2.%3 Dynamic Mappings").arg(smartName).arg(avdecc::helper::descriptorTypeToString(_streamPortType)).arg(_streamPortIndex);
+								auto dialog = mappingMatrix::MappingMatrixDialog{ title, outputs, inputs, connections };
+
+								if (dialog.exec() == QDialog::Accepted)
+								{
+									if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+									{
+										processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+									}
+									else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+									{
+										processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+									}
+								}
+							});
+					});
 			}
 		}
 	}
@@ -529,10 +549,6 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 {
-	// TODO: Avoir access au controller pour faire un acquire de l'entite (sans utiliser les callbacks du ControllerManager, car sinon ca lance une popup globale si le acquire echoue)
-	// Si acquire echoue, alors on indique un message comme quoi il est necessaire de pouvoir acquire l'entite afin de changer le mapping sans etre derange
-	// Si acquire reussi, alors on peut ouvrir la fenetre et faire le mapping
-	// TODO: Plus tard, il faudra faire un Lock, au lieu de Acquire (ou mieux faire une fonction "GetExclusiveToken" qui acquire ou lock en fonction du type d'entite, une fois le token relache et si c'est le dernier, ca release l'entite). Peut etre le mettre dans la lib controller comme ca on gere directement le resend du lock !!
 	try
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
