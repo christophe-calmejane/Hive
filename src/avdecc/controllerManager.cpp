@@ -763,6 +763,11 @@ private:
 			std::atomic_store(&_controller, SharedController{ nullptr });
 #endif // HAVE_ATOMIC_SMART_POINTERS
 
+			// Wipe all entities
+			_entities.clear();
+			_entityErrorCounterTrackers.clear();
+
+			// Notify
 			emit controllerOffline();
 		}
 	}
@@ -1666,10 +1671,14 @@ private:
 		if (controller)
 		{
 			// Build a vector of all locked entities
-			std::vector<la::avdecc::controller::ControlledEntityGuard> controlledEntities;
+			auto controlledEntities = std::vector<la::avdecc::controller::ControlledEntityGuard>{};
 			for (auto& entityID : _entities)
 			{
-				controlledEntities.emplace_back(getControlledEntity(entityID));
+				auto ceg = getControlledEntity(entityID);
+				if (AVDECC_ASSERT_WITH_RET(!!ceg, "ControllerManager model not up-to-date with avdecc::controller"))
+				{
+					controlledEntities.push_back(std::move(ceg));
+				}
 			}
 
 			for (auto const& controlledEntity : controlledEntities)
