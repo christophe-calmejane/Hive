@@ -24,6 +24,7 @@
 #include <la/avdecc/logger.hpp>
 
 #include <atomic>
+#include <thread>
 
 #if __cpp_lib_experimental_atomic_smart_pointers
 #	define HAVE_ATOMIC_SMART_POINTERS
@@ -417,15 +418,25 @@ private:
 	virtual void onEntityOnline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
-		_entities.insert(entityID);
-		_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
+
+		{
+			auto const lg = std::lock_guard{ _lock };
+			_entities.insert(entityID);
+			_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
+		}
+
 		emit entityOnline(entityID, entity->getEnumerationTime());
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const entityID{ entity->getEntity().getEntityID() };
-		_entities.erase(entityID);
-		_entityErrorCounterTrackers.erase(entityID);
+
+		{
+			auto const lg = std::lock_guard{ _lock };
+			_entities.erase(entityID);
+			_entityErrorCounterTrackers.erase(entityID);
+		}
+
 		emit entityOffline(entityID);
 	}
 	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/) noexcept override
@@ -764,8 +775,11 @@ private:
 #endif // HAVE_ATOMIC_SMART_POINTERS
 
 			// Wipe all entities
-			_entities.clear();
-			_entityErrorCounterTrackers.clear();
+			{
+				auto const lg = std::lock_guard{ _lock };
+				_entities.clear();
+				_entityErrorCounterTrackers.clear();
+			}
 
 			// Notify
 			emit controllerOffline();
@@ -824,11 +838,14 @@ private:
 
 	ErrorCounterTracker const* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{
+		auto const lg = std::lock_guard{ _lock };
+
 		auto const it = _entityErrorCounterTrackers.find(entityID);
 		if (it != std::end(_entityErrorCounterTrackers))
 		{
 			return &it->second;
 		}
+
 		return nullptr;
 	}
 
@@ -1672,12 +1689,16 @@ private:
 		{
 			// Build a vector of all locked entities
 			auto controlledEntities = std::vector<la::avdecc::controller::ControlledEntityGuard>{};
-			for (auto& entityID : _entities)
+
 			{
-				auto ceg = getControlledEntity(entityID);
-				if (AVDECC_ASSERT_WITH_RET(!!ceg, "ControllerManager model not up-to-date with avdecc::controller"))
+				auto const lg = std::lock_guard{ _lock };
+				for (auto& entityID : _entities)
 				{
-					controlledEntities.push_back(std::move(ceg));
+					auto ceg = getControlledEntity(entityID);
+					if (AVDECC_ASSERT_WITH_RET(!!ceg, "ControllerManager model not up-to-date with avdecc::controller"))
+					{
+						controlledEntities.push_back(std::move(ceg));
+					}
 				}
 			}
 
@@ -1714,10 +1735,9 @@ private:
 	SharedController _controller{ nullptr };
 #endif // HAVE_ATOMIC_SMART_POINTERS
 
-	std::set<la::avdecc::UniqueIdentifier> _entities;
-
-	// Store per entity error counter flags
-	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterTracker, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterTrackers;
+	mutable std::mutex _lock{}; // Data members exclusive access
+	std::set<la::avdecc::UniqueIdentifier> _entities; // Online entities
+	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterTracker, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterTrackers; // Entities error counter flags
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept
