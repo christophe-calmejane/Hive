@@ -3039,12 +3039,10 @@ bool Model::isTransposed() const
 	return d->_transposed;
 }
 
-void Model::forceRefresh()
+void Model::forceRefreshHeaders()
 {
-	Q_D(Model);
-
-	emit beginResetModel();
-	emit endResetModel();
+	emit headerDataChanged(Qt::Horizontal, 0, columnCount());
+	emit headerDataChanged(Qt::Vertical, 0, rowCount());
 }
 
 void Model::accept(Node* node, Visitor const& visitor, bool const childrenOnly) const
