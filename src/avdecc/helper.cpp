@@ -246,10 +246,14 @@ QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::Sampli
 {
 	switch (samplingRate)
 	{
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Hz_500:
+			return "500Hz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_8:
 			return "8kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_16:
 			return "16kHz";
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_24:
+			return "24kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_32:
 			return "32kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_44_1:
@@ -264,8 +268,6 @@ QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::Sampli
 			return "176.4kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_192:
 			return "192kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_24:
-			return "24kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::UserDefined:
 			return "UserDefinedFreq";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Unknown:
