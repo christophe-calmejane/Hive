@@ -36,7 +36,7 @@ class EntityStatisticTreeWidgetItem : public QTreeWidgetItem
 {
 public:
 	EntityStatisticTreeWidgetItem(avdecc::ControllerManager::StatisticsErrorCounterFlag const flag, QTreeWidgetItem* parent)
-		: QTreeWidgetItem{ parent }
+		: QTreeWidgetItem{ parent, la::avdecc::utils::to_integral(NodeTreeWidget::TreeWidgetItemType::EntityStatistic) }
 		, _counterFlag{ flag }
 	{
 	}

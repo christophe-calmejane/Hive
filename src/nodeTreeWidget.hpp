@@ -28,6 +28,12 @@ class NodeTreeWidget : public QTreeWidget
 {
 	Q_OBJECT
 public:
+	enum class TreeWidgetItemType : int
+	{
+		EntityStatistic = QTreeWidgetItem::UserType + 1,
+		StreamInputCounter,
+	};
+
 	NodeTreeWidget(QWidget* parent = nullptr);
 	~NodeTreeWidget();
 

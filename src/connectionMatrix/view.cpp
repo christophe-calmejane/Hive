@@ -298,11 +298,13 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			if (_model->mode() == Model::Mode::Channel && QApplication::keyboardModifiers().testFlag(Qt::ControlModifier))
 			{
 				// check if a talker channel edge was clicked
-				auto* talkerChannelNode = dynamic_cast<ChannelNode*>(intersectionData.talker);
-				if (!talkerChannelNode)
+				if (!intersectionData.talker->isChannelNode())
 				{
 					return;
 				}
+
+				auto* talkerChannelNode = static_cast<ChannelNode*>(intersectionData.talker);
+				AVDECC_ASSERT(talkerChannelNode->type() == Node::Type::OutputChannel, "Invalid node type");
 
 				// establish all connections in this row
 				// gather all connections to be made:

@@ -152,15 +152,19 @@ public:
 
 	Q_SLOT void itemClicked(QTreeWidgetItem* item)
 	{
-		if (auto* inputStreamItem = dynamic_cast<StreamInputCounterTreeWidgetItem*>(item))
+		auto const type = static_cast<NodeTreeWidget::TreeWidgetItemType>(item->type());
+
+		if (type == NodeTreeWidget::TreeWidgetItemType::StreamInputCounter)
 		{
+			auto* inputStreamItem = static_cast<StreamInputCounterTreeWidgetItem*>(item);
 			auto const streamIndex = inputStreamItem->streamIndex();
 			auto const flag = inputStreamItem->counterValidFlag();
 
 			avdecc::ControllerManager::getInstance().clearStreamInputCounterValidFlags(_controlledEntityID, streamIndex, flag);
 		}
-		else if (auto* entityItem = dynamic_cast<EntityStatisticTreeWidgetItem*>(item))
+		else if (type == NodeTreeWidget::TreeWidgetItemType::EntityStatistic)
 		{
+			auto* entityItem = static_cast<EntityStatisticTreeWidgetItem*>(item);
 			auto const flag = entityItem->counterFlag();
 
 			avdecc::ControllerManager::getInstance().clearStatisticsCounterValidFlags(_controlledEntityID, flag);
