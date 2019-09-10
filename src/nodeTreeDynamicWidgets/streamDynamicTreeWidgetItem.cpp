@@ -24,6 +24,13 @@
 
 #include <QMenu>
 
+static inline void setNoValue(QTreeWidgetItem* const widget)
+{
+	widget->setText(1, "No Value");
+	widget->setForeground(0, QColor{ Qt::gray });
+	widget->setForeground(1, QColor{ Qt::gray });
+}
+
 StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::entity::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
@@ -203,6 +210,13 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 		widget->setText(1, value ? "Yes" : "No");
 	};
 
+	auto const setStringValue = [](auto* const widget, QString const value)
+	{
+		widget->setForeground(0, QColor{ Qt::black });
+		widget->setForeground(1, QColor{ Qt::black });
+		widget->setText(1, value);
+	};
+
 	setBoolValue(_isClassB, streamDynamicInfo.isClassB);
 	setBoolValue(_hasSavedState, streamDynamicInfo.hasSavedState);
 	setBoolValue(_doesSupportEncrypted, streamDynamicInfo.doesSupportEncrypted);
@@ -214,36 +228,45 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 
 	if (streamDynamicInfo.streamID)
 	{
-		_streamID->setForeground(0, QColor{ Qt::black });
-		_streamID->setForeground(1, QColor{ Qt::black });
-		_streamID->setText(1, avdecc::helper::uniqueIdentifierToString(*streamDynamicInfo.streamID));
+		setStringValue(_streamID, avdecc::helper::uniqueIdentifierToString(*streamDynamicInfo.streamID));
+	}
+	else
+	{
+		setNoValue(_streamID);
 	}
 	if (streamDynamicInfo.streamDestMac)
 	{
-		_streamDestMac->setForeground(0, QColor{ Qt::black });
-		_streamDestMac->setForeground(1, QColor{ Qt::black });
-		_streamDestMac->setText(1, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(*streamDynamicInfo.streamDestMac, true)));
+		setStringValue(_streamDestMac, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(*streamDynamicInfo.streamDestMac, true)));
+	}
+	else
+	{
+		setNoValue(_streamDestMac);
 	}
 	if (streamDynamicInfo.streamVlanID)
 	{
-		_streamVlanID->setForeground(0, QColor{ Qt::black });
-		_streamVlanID->setForeground(1, QColor{ Qt::black });
-		_streamVlanID->setText(1, QString::number(*streamDynamicInfo.streamVlanID));
+		setStringValue(_streamVlanID, QString::number(*streamDynamicInfo.streamVlanID));
+	}
+	else
+	{
+		setNoValue(_streamVlanID);
 	}
 	if (streamDynamicInfo.msrpAccumulatedLatency)
 	{
-		_msrpAccumulatedLatency->setForeground(0, QColor{ Qt::black });
-		_msrpAccumulatedLatency->setForeground(1, QColor{ Qt::black });
-		_msrpAccumulatedLatency->setText(1, QString::number(*streamDynamicInfo.msrpAccumulatedLatency));
+		setStringValue(_msrpAccumulatedLatency, QString::number(*streamDynamicInfo.msrpAccumulatedLatency));
+	}
+	else
+	{
+		setNoValue(_msrpAccumulatedLatency);
 	}
 	if (streamDynamicInfo.msrpFailureCode && streamDynamicInfo.msrpFailureBridgeID)
 	{
-		_msrpFailureCode->setForeground(0, QColor{ Qt::black });
-		_msrpFailureCode->setForeground(1, QColor{ Qt::black });
-		_msrpFailureBridgeID->setForeground(0, QColor{ Qt::black });
-		_msrpFailureBridgeID->setForeground(1, QColor{ Qt::black });
-		_msrpFailureCode->setText(1, QString::number(*streamDynamicInfo.msrpFailureCode));
-		_msrpFailureBridgeID->setText(1, avdecc::helper::toHexQString(*streamDynamicInfo.msrpFailureBridgeID, true, true));
+		setStringValue(_msrpFailureCode, QString::number(*streamDynamicInfo.msrpFailureCode));
+		setStringValue(_msrpFailureBridgeID, avdecc::helper::toHexQString(*streamDynamicInfo.msrpFailureBridgeID, true, true));
+	}
+	else
+	{
+		setNoValue(_msrpFailureCode);
+		setNoValue(_msrpFailureBridgeID);
 	}
 	// Milan extension information
 	if (streamDynamicInfo.streamInfoFlagsEx)
@@ -253,19 +276,27 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 		_streamFlagsEx->setForeground(1, QColor{ Qt::black });
 		setFlagsItemText(_streamFlagsEx, la::avdecc::utils::forceNumeric(flagsEx.value()), avdecc::helper::flagsToString(flagsEx));
 	}
+	else
+	{
+		setNoValue(_streamFlagsEx);
+	}
 	if (streamDynamicInfo.probingStatus)
 	{
 		auto const probingStatus = *streamDynamicInfo.probingStatus;
-		_probingStatus->setForeground(0, QColor{ Qt::black });
-		_probingStatus->setForeground(1, QColor{ Qt::black });
-		_probingStatus->setText(1, QString("%1 (%2)").arg(avdecc::helper::toHexQString(la::avdecc::utils::to_integral(probingStatus), true, true)).arg(avdecc::helper::probingStatusToString(probingStatus)));
+		setStringValue(_probingStatus, QString("%1 (%2)").arg(avdecc::helper::toHexQString(la::avdecc::utils::to_integral(probingStatus), true, true)).arg(avdecc::helper::probingStatusToString(probingStatus)));
+	}
+	else
+	{
+		setNoValue(_probingStatus);
 	}
 	if (streamDynamicInfo.acmpStatus)
 	{
 		auto const acmpStatus = *streamDynamicInfo.acmpStatus;
-		_acmpStatus->setForeground(0, QColor{ Qt::black });
-		_acmpStatus->setForeground(1, QColor{ Qt::black });
-		_acmpStatus->setText(1, QString("%1 (%2)").arg(avdecc::helper::toHexQString(acmpStatus.getValue(), true, true)).arg(avdecc::helper::toUpperCamelCase(static_cast<std::string>(acmpStatus))));
+		setStringValue(_acmpStatus, QString("%1 (%2)").arg(avdecc::helper::toHexQString(acmpStatus.getValue(), true, true)).arg(avdecc::helper::toUpperCamelCase(static_cast<std::string>(acmpStatus))));
+	}
+	else
+	{
+		setNoValue(_acmpStatus);
 	}
 }
 
