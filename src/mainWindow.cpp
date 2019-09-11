@@ -580,6 +580,7 @@ void MainWindowImpl::connectSignals()
 			{
 				QMenu menu;
 				auto const& entity = controlledEntity->getEntity();
+				auto const entityModelID = entity.getEntityModelID();
 
 				auto* acquireAction{ static_cast<QAction*>(nullptr) };
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
@@ -589,7 +590,8 @@ void MainWindowImpl::connectSignals()
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
-				auto* dumpEntity{ static_cast<QAction*>(nullptr) };
+				auto* dumpFullEntity{ static_cast<QAction*>(nullptr) };
+				auto* dumpEntityModel{ static_cast<QAction*>(nullptr) };
 
 				if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 				{
@@ -602,9 +604,13 @@ void MainWindowImpl::connectSignals()
 
 						{
 							if (isAcquiredByOther)
+							{
 								acquireText = "Try to acquire";
+							}
 							else
+							{
 								acquireText = "Acquire";
+							}
 							acquireAction = menu.addAction(acquireText);
 							acquireAction->setEnabled(!isAcquired);
 						}
@@ -621,9 +627,13 @@ void MainWindowImpl::connectSignals()
 
 						{
 							if (isLockedByOther)
+							{
 								lockText = "Try to lock";
+							}
 							else
+							{
 								lockText = "Lock";
+							}
 							lockAction = menu.addAction(lockText);
 							lockAction->setEnabled(!isLocked);
 						}
@@ -655,7 +665,9 @@ void MainWindowImpl::connectSignals()
 
 				// Dump Entity
 				{
-					dumpEntity = menu.addAction("Export Entity...");
+					dumpFullEntity = menu.addAction("Export Full Entity...");
+					dumpEntityModel = menu.addAction("Export Entity Model...");
+					dumpEntityModel->setEnabled(entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && entityModelID);
 				}
 
 				menu.addSeparator();
@@ -708,24 +720,46 @@ void MainWindowImpl::connectSignals()
 						manager.clearAllStreamInputCounterValidFlags(entityID);
 						manager.clearAllStatisticsCounterValidFlags(entityID);
 					}
-					else if (action == dumpEntity)
+					else if (action == dumpFullEntity || action == dumpEntityModel)
 					{
-						auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/Entity_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)), "*.json");
+						auto fileName = QString{};
+						auto ext = QString{};
+						if (action == dumpFullEntity)
+						{
+							ext = "ave";
+							fileName = QString("%1/Entity_%2.%3").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(ext);
+						}
+						else
+						{
+							ext = "aemjson";
+							fileName = QString("%1/EntityModel_%2.%3").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityModelID)).arg(ext);
+						}
+						auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", fileName, "*." + ext);
 						if (!filename.isEmpty())
 						{
-							auto [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename, false);
+							auto flags = la::avdecc::entity::model::jsonSerializer::Flags{};
+							if (action == dumpFullEntity)
+							{
+								flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+							}
+							else
+							{
+								flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel };
+							}
+							auto [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename, flags);
 							if (!error)
 							{
 								QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
 							}
 							else
 							{
-								if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex)
+								if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex && action == dumpFullEntity)
 								{
 									auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
 									if (choice == QMessageBox::StandardButton::Yes)
 									{
-										auto const result = manager.serializeControlledEntityAsReadableJson(entityID, filename, true);
+										flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+										auto const result = manager.serializeControlledEntityAsReadableJson(entityID, filename, flags);
 										error = std::get<0>(result);
 										message = std::get<1>(result);
 										if (!error)
@@ -791,11 +825,12 @@ void MainWindowImpl::connectSignals()
 	connect(actionExportFullNetworkState, &QAction::triggered, this,
 		[this]()
 		{
-			auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/FullDump_%2.json").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "*.json");
+			auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/FullDump_%2.ans").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "*.ans");
 			if (!filename.isEmpty())
 			{
 				auto& manager = avdecc::ControllerManager::getInstance();
-				auto [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename, false);
+				auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+				auto [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename, flags);
 				if (!error)
 				{
 					QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
@@ -1060,7 +1095,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "json")
+		if (ext == "ave" /* || ext == "ans"*/)
 		{
 			event->acceptProposedAction();
 			return;
@@ -1072,9 +1107,9 @@ void MainWindow::dropEvent(QDropEvent* event)
 {
 	auto& manager = avdecc::ControllerManager::getInstance();
 
-	auto const loadEntity = [&manager](auto const& filePath, auto const ignoreSanityChecks)
+	auto const loadEntity = [&manager](auto const& filePath, auto const flags)
 	{
-		auto const [error, message] = manager.loadVirtualEntityFromReadableJson(filePath, ignoreSanityChecks);
+		auto const [error, message] = manager.loadVirtualEntityFromReadableJson(filePath, flags);
 		auto msg = QString{};
 		if (!!error)
 		{
@@ -1127,9 +1162,12 @@ void MainWindow::dropEvent(QDropEvent* event)
 		auto const f = u.toLocalFile();
 		auto const fi = QFileInfo{ f };
 		auto const ext = fi.suffix();
-		if (ext == "json")
+
+		// AVDECC Virtual Entity
+		if (ext == "ave")
 		{
-			auto [error, message] = loadEntity(u.toLocalFile(), false);
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			auto [error, message] = loadEntity(u.toLocalFile(), flags);
 			if (!!error)
 			{
 				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
@@ -1137,7 +1175,8 @@ void MainWindow::dropEvent(QDropEvent* event)
 					auto const choice = QMessageBox::question(this, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
 					if (choice == QMessageBox::StandardButton::Yes)
 					{
-						auto const result = loadEntity(u.toLocalFile(), true);
+						flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+						auto const result = loadEntity(u.toLocalFile(), flags);
 						error = std::get<0>(result);
 						message = std::get<1>(result);
 						// Fallthrough to warning message
@@ -1149,6 +1188,11 @@ void MainWindow::dropEvent(QDropEvent* event)
 				}
 			}
 		}
+
+		// AVDECC Network State
+		//else if (ext == "ans")
+		//{
+		//}
 	}
 }
 

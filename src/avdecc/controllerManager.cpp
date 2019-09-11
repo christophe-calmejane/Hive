@@ -806,32 +806,32 @@ private:
 		return {};
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath, bool const ignoreSanityChecks) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString(), ignoreSanityChecks, true);
+			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString(), flags, true);
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, bool const ignoreSanityChecks) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString(), ignoreSanityChecks);
+			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString(), flags);
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromReadableJson(QString const& filePath, bool const ignoreSanityChecks) noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromReadableJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->loadVirtualEntityFromReadableJson(filePath.toStdString(), ignoreSanityChecks);
+			return controller->loadVirtualEntityFromReadableJson(filePath.toStdString(), flags);
 		}
 		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
 	}
