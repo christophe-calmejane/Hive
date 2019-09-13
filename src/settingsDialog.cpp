@@ -112,6 +112,12 @@ private:
 			auto const lock = QSignalBlocker{ enableAEMCacheCheckBox };
 			enableAEMCacheCheckBox->setChecked(settings.getValue(settings::Controller_AemCacheEnabled.name).toBool());
 		}
+
+		// Full Static Model
+		{
+			auto const lock = QSignalBlocker{ fullAEMEnumerationCheckBox };
+			fullAEMEnumerationCheckBox->setChecked(settings.getValue(settings::Controller_FullStaticModelEnabled.name).toBool());
+		}
 	}
 
 	void loadNetworkSettings()
@@ -228,6 +234,12 @@ void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 {
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.setValue(settings::Controller_AemCacheEnabled.name, checked);
+}
+
+void SettingsDialog::on_fullAEMEnumerationCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::Controller_FullStaticModelEnabled.name, checked);
 }
 
 void SettingsDialog::on_protocolComboBox_currentIndexChanged(int index)

@@ -145,13 +145,13 @@ public:
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 
 	/** Serialize all known ControlledEntities */
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept = 0;
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept = 0;
 
 	/** Serialize a ControlledEntity */
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept = 0;
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept = 0;
 
-	/** Deserializes a readable JSON file representing an entity, and loads it as a virtual ControlledEntity. */
-	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromReadableJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept = 0;
+	/** Deserializes a JSON file representing an entity, and loads it as a virtual ControlledEntity. */
+	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept = 0;
 
 	/** Counter error flags */
 	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;

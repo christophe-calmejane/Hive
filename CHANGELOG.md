@@ -28,12 +28,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Considering MediaUnlocked StreamInput counter changes as errors (only when the stream is connected)
 - [Detection for WinPcap driver to be installed and started](https://github.com/christophe-calmejane/Hive/issues/69)
 - [Grey out stream input counters if there is no connection](https://github.com/christophe-calmejane/Hive/issues/57)
-- Option to export the json EntityModel of a device (aemjson file)
+- Option to export the json EntityModel of a device (.aem file)
 
 ### Changed
 - Always reselecting the last selected Descriptor when reinspecting an Entity
 - [Moved ProtocolInterface selection to the Settings](https://github.com/christophe-calmejane/Hive/issues/58)
 - Automatically Locking the Entity when opening the Dynamic Mappings Editor
+- All exported files are now using MessagePack (JSON binary) file format
+- Using SHIFT modifier while choosing one of the Export feature will dump the file in readable JSON format
 
 ### Fixed
 - [Splashscreen displayed on the same screen than Hive will be shown](https://github.com/christophe-calmejane/Hive/issues/20)

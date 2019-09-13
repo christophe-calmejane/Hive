@@ -368,6 +368,7 @@ public:
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
 		settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+		settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
 
 	~ControllerManagerImpl() noexcept
@@ -381,6 +382,7 @@ public:
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
 		settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+		settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
 
 private:
@@ -389,18 +391,11 @@ private:
 	{
 		if (name == settings::Controller_AemCacheEnabled.name)
 		{
-			auto ctrl = getController();
-			if (ctrl)
-			{
-				if (value.toBool())
-				{
-					ctrl->enableEntityModelCache();
-				}
-				else
-				{
-					ctrl->disableEntityModelCache();
-				}
-			}
+			_enableAemCache = value.toBool();
+		}
+		else if (name == settings::Controller_FullStaticModelEnabled.name)
+		{
+			_fullAemEnumeration = value.toBool();
 		}
 	}
 
@@ -754,9 +749,23 @@ private:
 			ctrl->registerObserver(this);
 			//ctrl->enableEntityAdvertising(10);
 
-			// Trigger setting observers (because the controller wasn't created when onSettingChanged was first triggered during registration)
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.triggerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+			if (_enableAemCache)
+			{
+				ctrl->enableEntityModelCache();
+			}
+			else
+			{
+				ctrl->disableEntityModelCache();
+			}
+
+			if (_fullAemEnumeration)
+			{
+				ctrl->enableFullStaticEntityModelEnumeration();
+			}
+			else
+			{
+				ctrl->disableFullStaticEntityModelEnumeration();
+			}
 		}
 	}
 
@@ -806,32 +815,32 @@ private:
 		return {};
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsReadableJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeAllControlledEntitiesAsReadableJson(filePath.toStdString(), flags, true);
+			return controller->serializeAllControlledEntitiesAsJson(filePath.toStdString(), flags, true);
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsReadableJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeControlledEntityAsReadableJson(entityID, filePath.toStdString(), flags);
+			return controller->serializeControlledEntityAsJson(entityID, filePath.toStdString(), flags);
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromReadableJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->loadVirtualEntityFromReadableJson(filePath.toStdString(), flags);
+			return controller->loadVirtualEntityFromJson(filePath.toStdString(), flags);
 		}
 		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
 	}
@@ -1738,6 +1747,8 @@ private:
 	mutable std::mutex _lock{}; // Data members exclusive access
 	std::set<la::avdecc::UniqueIdentifier> _entities; // Online entities
 	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterTracker, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterTrackers; // Entities error counter flags
+	bool _enableAemCache{ false };
+	bool _fullAemEnumeration{ false };
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept

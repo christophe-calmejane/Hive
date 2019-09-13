@@ -182,6 +182,9 @@ endif()
 # Add main project
 add_subdirectory(src)
 
+# Add tools
+add_subdirectory(tools)
+
 # Add tests
 if(BUILD_HIVE_TESTS)
 	message(STATUS "Building Hive tests")

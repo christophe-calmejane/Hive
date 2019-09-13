@@ -17,6 +17,8 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <la/avdecc/utils.hpp>
+
 #include <QApplication>
 #include <QFontDatabase>
 
@@ -41,11 +43,22 @@
 #	define SPLASH_DELAY 1250
 #endif // DEBUG
 
+static QtMessageHandler previousHandler = nullptr;
+static void qtMessageHandler(QtMsgType msgType, QMessageLogContext const& logContext, QString const& message)
+{
+	if (msgType == QtMsgType::QtFatalMsg)
+	{
+		AVDECC_ASSERT_WITH_RET(false, message.toStdString());
+	}
+	previousHandler(msgType, logContext, message);
+}
+
 // Setup BugTrap on windows (win32 only right now)
 #if defined(Q_OS_WIN32) && defined(HAVE_BUGTRAP)
 #	define BUGREPORTER_CATCH_EXCEPTIONS
 #	include <Windows.h>
 #	include "BugTrap.h"
+
 void setupBugReporter()
 {
 	BT_InstallSehFilter();
@@ -64,6 +77,9 @@ int main(int argc, char* argv[])
 {
 	// Setup Bug Reporter
 	setupBugReporter();
+
+	// Replace Qt Message Handler
+	previousHandler = qInstallMessageHandler(&qtMessageHandler);
 
 	// Configure QT Application
 	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
@@ -129,6 +145,7 @@ int main(int argc, char* argv[])
 
 	// Controller
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
+	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
 
 	// Load fonts
 	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/

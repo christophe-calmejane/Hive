@@ -518,8 +518,33 @@ void MainWindowImpl::loadSettings()
 
 	// Configure settings observers
 	settings.registerSettingObserver(settings::Network_ProtocolType.name, this);
+	settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+	settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
+}
+
+static inline bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept
+{
+	if (entityModelID)
+	{
+		auto const [vendorID, deviceID, modelID] = la::avdecc::entity::model::splitEntityModelID(entityModelID);
+		return vendorID != 0x00000000 && vendorID != 0x00FFFFFF;
+	}
+	return false;
+}
+
+static inline bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept
+{
+	auto& manager = avdecc::ControllerManager::getInstance();
+	auto controlledEntity = manager.getControlledEntity(entityID);
+
+	if (controlledEntity)
+	{
+		return controlledEntity->isEntityModelValidForCaching();
+	}
+
+	return true;
 }
 
 void MainWindowImpl::connectSignals()
@@ -722,58 +747,84 @@ void MainWindowImpl::connectSignals()
 					}
 					else if (action == dumpFullEntity || action == dumpEntityModel)
 					{
-						auto fileName = QString{};
-						auto ext = QString{};
+						auto baseFileName = QString{};
+						auto binaryFilterName = QString{};
 						if (action == dumpFullEntity)
 						{
-							ext = "ave";
-							fileName = QString("%1/Entity_%2.%3").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(ext);
+							binaryFilterName = "AVDECC Virtual Entity Files (*.ave)";
+							baseFileName = QString("%1/Entity_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID));
 						}
 						else
 						{
-							ext = "aemjson";
-							fileName = QString("%1/EntityModel_%2.%3").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityModelID)).arg(ext);
+							// Do some validation
+							if (!isValidEntityModelID(entityModelID))
+							{
+								QMessageBox::warning(_parent, "", "EntityModelID is not valid (invalid Vendor OUI-24), cannot same the Model of this Entity.");
+								return;
+							}
+							if (!isEntityModelComplete(entityID))
+							{
+								QMessageBox::warning(_parent, "", "'Full AEM Enumeration' option must be Enabled in order to export Model of a multi-configuration Entity.");
+								return;
+							}
+							binaryFilterName = "AVDECC Entity Model Files (*.aem)";
+							baseFileName = QString("%1/EntityModel_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityModelID));
 						}
-						auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", fileName, "*." + ext);
-						if (!filename.isEmpty())
+						auto const dumpFile = [this, &entityID, &manager, isFullEntity = (action == dumpFullEntity)](auto const& baseFileName, auto const& binaryFilterName, auto const isBinary)
 						{
-							auto flags = la::avdecc::entity::model::jsonSerializer::Flags{};
-							if (action == dumpFullEntity)
+							auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", baseFileName, binaryFilterName);
+							if (!filename.isEmpty())
 							{
-								flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
-							}
-							else
-							{
-								flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel };
-							}
-							auto [error, message] = manager.serializeControlledEntityAsReadableJson(entityID, filename, flags);
-							if (!error)
-							{
-								QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
-							}
-							else
-							{
-								if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex && action == dumpFullEntity)
+								auto flags = la::avdecc::entity::model::jsonSerializer::Flags{};
+								if (isFullEntity)
 								{
-									auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
-									if (choice == QMessageBox::StandardButton::Yes)
+									flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+								}
+								else
+								{
+									flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel };
+								}
+								if (isBinary)
+								{
+									flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+								}
+								auto [error, message] = manager.serializeControlledEntityAsJson(entityID, filename, flags);
+								if (!error)
+								{
+									QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
+								}
+								else
+								{
+									if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex && isFullEntity)
 									{
-										flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-										auto const result = manager.serializeControlledEntityAsReadableJson(entityID, filename, flags);
-										error = std::get<0>(result);
-										message = std::get<1>(result);
-										if (!error)
+										auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+										if (choice == QMessageBox::StandardButton::Yes)
 										{
-											QMessageBox::information(_parent, "", "Export completed but with warnings:\n" + filename);
+											flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags);
+											error = std::get<0>(result);
+											message = std::get<1>(result);
+											if (!error)
+											{
+												QMessageBox::information(_parent, "", "Export completed but with warnings:\n" + filename);
+											}
+											// Fallthrough to warning message
 										}
-										// Fallthrough to warning message
+									}
+									if (!!error)
+									{
+										QMessageBox::warning(_parent, "", QString("Export of EntityID %1 failed:\n%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
 									}
 								}
-								if (!!error)
-								{
-									QMessageBox::warning(_parent, "", QString("Export of EntityID %1 failed:\n%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
-								}
 							}
+						};
+						if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier))
+						{
+							dumpFile(baseFileName, "JSON Files (*.json)", false);
+						}
+						else
+						{
+							dumpFile(baseFileName, binaryFilterName, true);
 						}
 					}
 				}
@@ -825,12 +876,22 @@ void MainWindowImpl::connectSignals()
 	connect(actionExportFullNetworkState, &QAction::triggered, this,
 		[this]()
 		{
-			auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/FullDump_%2.ans").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "*.ans");
+			auto filterName = QString{};
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier))
+			{
+				filterName = "JSON Files (*.json)";
+			}
+			else
+			{
+				filterName = "AVDECC Network State Files (*.ans)";
+				flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+			}
+			auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/FullDump_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), filterName);
 			if (!filename.isEmpty())
 			{
 				auto& manager = avdecc::ControllerManager::getInstance();
-				auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
-				auto [error, message] = manager.serializeAllControlledEntitiesAsReadableJson(filename, flags);
+				auto [error, message] = manager.serializeAllControlledEntitiesAsJson(filename, flags);
 				if (!error)
 				{
 					QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
@@ -1081,6 +1142,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
 	// Remove settings observers
 	settings.unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
+	settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
+	settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
 	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
 
@@ -1109,7 +1172,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 
 	auto const loadEntity = [&manager](auto const& filePath, auto const flags)
 	{
-		auto const [error, message] = manager.loadVirtualEntityFromReadableJson(filePath, flags);
+		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
 		auto msg = QString{};
 		if (!!error)
 		{
@@ -1117,6 +1180,9 @@ void MainWindow::dropEvent(QDropEvent* event)
 			{
 				case la::avdecc::jsonSerializer::DeserializationError::AccessDenied:
 					msg = "Access Denied";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::FileReadError:
+					msg = "Error Reading File";
 					break;
 				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
 					msg = "Unsupported Dump Version";
@@ -1167,6 +1233,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 		if (ext == "ave")
 		{
 			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
 			auto [error, message] = loadEntity(u.toLocalFile(), flags);
 			if (!!error)
 			{
@@ -1217,6 +1284,13 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	if (name == settings::Network_ProtocolType.name)
 	{
 		currentControllerChanged();
+	}
+	else if (name == settings::Controller_AemCacheEnabled.name || name == settings::Controller_FullStaticModelEnabled.name)
+	{
+		if (_shown)
+		{
+			currentControllerChanged();
+		}
 	}
 	else if (name == settings::General_ThemeColorIndex.name)
 	{
