@@ -23,6 +23,7 @@
 
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "nodeTreeWidget.hpp"
 
 #include <map>
 
