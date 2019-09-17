@@ -46,9 +46,10 @@ EntityInspector::EntityInspector(QWidget* parent)
 		[this](QModelIndex const& index, QModelIndex const&)
 		{
 			auto const entityID = _controlledEntityTreeWiget.controlledEntityID();
-			auto const anyNode = index.data(Qt::UserRole).value<AnyNode>();
+			auto const anyNode = index.data(la::avdecc::utils::to_integral(EntityInspector::RoleInfo::NodeType)).value<AnyNode>();
+			auto const isActiveConfiguration = index.data(la::avdecc::utils::to_integral(EntityInspector::RoleInfo::IsActiveConfiguration)).toBool();
 
-			_nodeTreeWiget.setNode(entityID, anyNode);
+			_nodeTreeWiget.setNode(entityID, isActiveConfiguration, anyNode);
 		});
 
 	connect(&_splitter, &QSplitter::splitterMoved, this, &EntityInspector::stateChanged);

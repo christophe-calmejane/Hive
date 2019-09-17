@@ -136,7 +136,7 @@ public:
 			InitCounterVisitor visitor{ *this };
 			if (auto entity = ControllerManager::getInstance().getControlledEntity(_entityID))
 			{
-				entity->accept(&visitor);
+				entity->accept(&visitor, false);
 			}
 		}
 
@@ -211,7 +211,7 @@ public:
 			ClearCounterVisitor visitor{ manager, *this };
 			if (auto entity = manager.getControlledEntity(_entityID))
 			{
-				entity->accept(&visitor);
+				entity->accept(&visitor, false);
 			}
 		}
 
@@ -282,7 +282,7 @@ public:
 			ClearCounterVisitor visitor{ manager, *this };
 			if (auto entity = manager.getControlledEntity(_entityID))
 			{
-				entity->accept(&visitor);
+				entity->accept(&visitor, false);
 			}
 		}
 

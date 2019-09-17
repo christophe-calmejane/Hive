@@ -30,6 +30,13 @@ class EntityInspector : public QWidget
 {
 	Q_OBJECT
 public:
+	enum class RoleInfo
+	{
+		NodeType = Qt::UserRole,
+		ErrorRole = ErrorItemDelegate::ErrorRole,
+		IsActiveConfiguration,
+	};
+
 	EntityInspector(QWidget* parent = nullptr);
 
 	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);

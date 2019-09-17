@@ -30,10 +30,8 @@
 #include "ui_deviceDetailsDialog.h"
 #include "deviceDetailsChannelTableModel.hpp"
 #include "internals/config.hpp"
-#include "settingsManager/settings.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
-#include "entityLogoCache.hpp"
 
 // **************************************************************
 // class DeviceDetailsDialogImpl
@@ -197,7 +195,7 @@ public:
 			if (controlledEntity)
 			{
 				// invokes various visit methods.
-				controlledEntity->accept(this);
+				controlledEntity->accept(this, false);
 				if (_activeConfigurationIndex)
 				{
 					comboBoxConfiguration->setCurrentIndex(*_activeConfigurationIndex);

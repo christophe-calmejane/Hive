@@ -26,11 +26,11 @@
 template<typename NodeType, typename std::enable_if_t<std::is_pointer<NodeType>::value && std::is_base_of<la::avdecc::controller::model::Node, std::remove_pointer_t<NodeType>>::value, int> = 0>
 auto createNodeVisitDispatchFunctor() noexcept
 {
-	return [](NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, std::any const& node)
+	return [](NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, std::any const& node)
 	{
 		try
 		{
-			visitor->visit(entity, *std::any_cast<NodeType>(node));
+			visitor->visit(entity, isActiveConfiguration, *std::any_cast<NodeType>(node));
 		}
 		catch (std::bad_any_cast const&)
 		{
@@ -42,9 +42,9 @@ auto createNodeVisitDispatchFunctor() noexcept
 	};
 }
 
-void NodeVisitor::accept(NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, AnyNode const& node) noexcept
+void NodeVisitor::accept(NodeVisitor* const visitor, la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, AnyNode const& node) noexcept
 {
-	static std::unordered_map<std::type_index, std::function<void(NodeVisitor*, la::avdecc::controller::ControlledEntity const*, std::any const&)>> s_visitDispatch{};
+	static std::unordered_map<std::type_index, std::function<void(NodeVisitor*, la::avdecc::controller::ControlledEntity const*, bool const, std::any const&)>> s_visitDispatch{};
 	if (s_visitDispatch.empty())
 	{
 		// Create the validator dispatch table
@@ -91,5 +91,5 @@ void NodeVisitor::accept(NodeVisitor* const visitor, la::avdecc::controller::Con
 		return;
 	}
 	auto const& visitHandler = it->second;
-	visitHandler(visitor, entity, nodeAny);
+	visitHandler(visitor, entity, isActiveConfiguration, nodeAny);
 }

@@ -37,7 +37,7 @@ public:
 	NodeTreeWidget(QWidget* parent = nullptr);
 	~NodeTreeWidget();
 
-	void setNode(la::avdecc::UniqueIdentifier const entityID, AnyNode const& node);
+	void setNode(la::avdecc::UniqueIdentifier const entityID, bool const isActiveConfiguration, AnyNode const& node);
 
 private:
 	NodeTreeWidgetPrivate* d_ptr{ nullptr };
