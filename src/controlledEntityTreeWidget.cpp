@@ -23,6 +23,7 @@
 #include "settingsManager/settings.hpp"
 #include "errorItemDelegate.hpp"
 #include "nodeVisitor.hpp"
+#include "entityInspector.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 
