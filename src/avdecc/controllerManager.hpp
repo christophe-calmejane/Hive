@@ -28,6 +28,8 @@
 
 #include <QObject>
 
+#define ASSERT_QT_MAIN_THREAD AVDECC_ASSERT(QApplication::instance()->thread() == QThread::currentThread(), "Should be in Qt Main Thread")
+
 namespace avdecc
 {
 class ControllerManager : public QObject

@@ -626,6 +626,7 @@ private:
 
 		q->beginResetModel();
 		_entities.clear();
+		_entityRowMap.clear();
 		_entitiesWithErrorCounter.clear();
 		_identifingEntities.clear();
 		q->endResetModel();
@@ -637,6 +638,7 @@ private:
 		{
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
+			// Check if the entity is actually online (it might happen that the entity quickly switched from online to offline)
 			if (controlledEntity)
 			{
 				Q_Q(ControllerModel);
@@ -912,8 +914,8 @@ private:
 	// Returns the entity row if found in the model
 	std::optional<int> entityRow(la::avdecc::UniqueIdentifier const& entityID) const
 	{
-		auto const it = _entityRowMap.find(entityID);
-		if (AVDECC_ASSERT_WITH_RET(it != std::end(_entityRowMap), "Invalid entityID"))
+		// Check if the entity is still online
+		if (auto const it = _entityRowMap.find(entityID); it != std::end(_entityRowMap))
 		{
 			return it->second;
 		}

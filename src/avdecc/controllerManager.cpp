@@ -424,15 +424,16 @@ private:
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
-		auto const entityID{ entity->getEntity().getEntityID() };
-
-		{
-			auto const lg = std::lock_guard{ _lock };
-			_entities.erase(entityID);
-			_entityErrorCounterTrackers.erase(entityID);
-		}
-
-		emit entityOffline(entityID);
+		// We absolutely want Entity Removal to be processed in the main thread, so that _entities and _entityErrorCounterTrackers still contain this entity
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID()]()
+			{
+				ASSERT_QT_MAIN_THREAD;
+				auto const lg = std::lock_guard{ _lock };
+				_entities.erase(entityID);
+				_entityErrorCounterTrackers.erase(entityID);
+				emit entityOffline(entityID);
+			});
 	}
 	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const /*entity*/) noexcept override
 	{
