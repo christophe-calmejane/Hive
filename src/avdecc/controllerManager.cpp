@@ -451,7 +451,7 @@ private:
 	// Global entity notifications
 	virtual void onUnsolicitedRegistrationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, bool const /*isSubscribed*/) noexcept override
 	{
-#pragma message("TODO: Listen to the signal")
+#pragma message("TODO: Listen to the Qt signal somewhere and act accordingly")
 		emit unsolicitedRegistrationChanged(entity->getEntity().getEntityID());
 	}
 	virtual void onCompatibilityFlagsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags) noexcept override
