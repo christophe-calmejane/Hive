@@ -429,9 +429,12 @@ private:
 			[this, entityID = entity->getEntity().getEntityID()]()
 			{
 				ASSERT_QT_MAIN_THREAD;
-				auto const lg = std::lock_guard{ _lock };
-				_entities.erase(entityID);
-				_entityErrorCounterTrackers.erase(entityID);
+				{
+					auto const lg = std::lock_guard{ _lock };
+					_entities.erase(entityID);
+					_entityErrorCounterTrackers.erase(entityID);
+				}
+
 				emit entityOffline(entityID);
 			});
 	}
