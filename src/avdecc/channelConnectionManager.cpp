@@ -325,7 +325,7 @@ private:
 		{
 			try
 			{
-				return controlledEntity->getRedundantStreamOutputNode(entityID, virtualIndex).primaryStream->descriptorIndex;
+				return controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, virtualIndex).primaryStream->descriptorIndex;
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
@@ -342,7 +342,7 @@ private:
 		{
 			try
 			{
-				return controlledEntity->getRedundantStreamInputNode(entityID, virtualIndex).primaryStream->descriptorIndex;
+				return controlledEntity->getRedundantStreamInputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, virtualIndex).primaryStream->descriptorIndex;
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
