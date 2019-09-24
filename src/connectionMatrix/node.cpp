@@ -191,9 +191,75 @@ EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const 
 {
 }
 
+void EntityNode::setStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept
+{
+	_streamPortInputClusterOffset[streamPortIndex] = clusterOffset;
+}
+
+void EntityNode::setStreamPortOutputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept
+{
+	_streamPortOutputClusterOffset[streamPortIndex] = clusterOffset;
+}
+
+void EntityNode::setInputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortInputIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept
+{
+	_inputMappings[streamPortInputIndex] = mappings;
+}
+
+void EntityNode::setOutputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortOutputIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept
+{
+	_outputMappings[streamPortOutputIndex] = mappings;
+}
+
 bool EntityNode::isMilan() const noexcept
 {
 	return _isMilan;
+}
+
+la::avdecc::entity::model::ClusterIndex EntityNode::getStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const
+{
+	if (auto const it = _streamPortInputClusterOffset.find(streamPortIndex); it != _streamPortInputClusterOffset.end())
+	{
+		return it->second;
+	}
+	throw std::invalid_argument("Invalid StreamPortIndex");
+}
+
+la::avdecc::entity::model::ClusterIndex EntityNode::getStreamPortOutputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const
+{
+	if (auto const it = _streamPortOutputClusterOffset.find(streamPortIndex); it != _streamPortOutputClusterOffset.end())
+	{
+		return it->second;
+	}
+	throw std::invalid_argument("Invalid StreamPortIndex");
+}
+
+la::avdecc::entity::model::AudioMappings const& EntityNode::getInputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortInputIndex) const
+{
+	if (auto const it = _inputMappings.find(streamPortInputIndex); it != _inputMappings.end())
+	{
+		return it->second;
+	}
+	throw std::invalid_argument("Invalid StreamPortIndex");
+}
+
+la::avdecc::entity::model::AudioMappings const& EntityNode::getOutputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortOutputIndex) const
+{
+	if (auto const it = _outputMappings.find(streamPortOutputIndex); it != _outputMappings.end())
+	{
+		return it->second;
+	}
+	throw std::invalid_argument("Invalid StreamPortIndex");
+}
+
+std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> EntityNode::getInputAudioMappings() const noexcept
+{
+	return _inputMappings;
+}
+
+std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> EntityNode::getOutputAudioMappings() const noexcept
+{
+	return _outputMappings;
 }
 
 RedundantNode* RedundantNode::createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex)

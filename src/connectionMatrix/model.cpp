@@ -432,6 +432,7 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &ModelPrivate::handleStreamDynamicInfoChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamPortAudioMappingsChanged, this, &ModelPrivate::handleStreamPortAudioMappingsChanged);
 
 		// Stream Mode specific signals
 		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
@@ -1451,6 +1452,13 @@ public:
 					{
 						if (streamPortNode.staticModel->hasDynamicAudioMap)
 						{
+							// Save ChannelOffset for this StreamPort
+							entity->setStreamPortOutputClusterOffset(streamPortIndex, streamPortNode.staticModel->baseCluster);
+
+							// Save current mappings (we want all mappings, including redundant)
+							entity->setOutputAudioMappings(streamPortIndex, streamPortNode.dynamicModel->dynamicAudioMap);
+
+							// Process all Clusters
 							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
 							{
 								auto const* const staticModel = clusterNode.staticModel;
@@ -1572,6 +1580,13 @@ public:
 					{
 						if (streamPortNode.staticModel->hasDynamicAudioMap)
 						{
+							// Save ChannelOffset for this StreamPort
+							entity->setStreamPortInputClusterOffset(streamPortIndex, streamPortNode.staticModel->baseCluster);
+
+							// Save current mappings (we want all mappings, including redundant)
+							entity->setInputAudioMappings(streamPortIndex, streamPortNode.dynamicModel->dynamicAudioMap);
+
+							// Process all Clusters
 							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
 							{
 								auto const* const staticModel = clusterNode.staticModel;
@@ -1906,7 +1921,7 @@ public:
 		if (auto* talker = talkerNodeFromEntityID(entityID))
 		{
 			talker->accept(avbInterfaceIndex,
-				[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
+				[this, grandMasterID, grandMasterDomain, dirtyFlags, talker, entityID](StreamNode* node)
 				{
 					node->setGrandMasterID(grandMasterID);
 					node->setGrandMasterDomain(grandMasterDomain);
@@ -1917,7 +1932,7 @@ public:
 					}
 					else
 					{
-#pragma message("TODO: Find affected Channels and update Intersections")
+						updateTalkerIntersectionChannels(entityID, dirtyFlags, talker, node);
 					}
 				});
 		}
@@ -1925,7 +1940,7 @@ public:
 		if (auto* listener = listenerNodeFromEntityID(entityID))
 		{
 			listener->accept(avbInterfaceIndex,
-				[this, grandMasterID, grandMasterDomain, dirtyFlags](StreamNode* node)
+				[this, grandMasterID, grandMasterDomain, dirtyFlags, listener, entityID](StreamNode* node)
 				{
 					node->setGrandMasterID(grandMasterID);
 					node->setGrandMasterDomain(grandMasterDomain);
@@ -1936,7 +1951,7 @@ public:
 					}
 					else
 					{
-#pragma message("TODO: Find affected Channels and update Intersections")
+						updateListenerIntersectionChannels(entityID, dirtyFlags, listener, node);
 					}
 				});
 		}
@@ -1965,8 +1980,7 @@ public:
 				{
 					node->setName(name);
 
-					// Always notify the view, EntityName is displayed in CBR and SBR modes
-					listenerHeaderDataChanged(node, true, false, {});
+					listenerHeaderDataChanged(node, false, {});
 				}
 			}
 		}
@@ -1985,7 +1999,7 @@ public:
 		if (auto* talker = talkerNodeFromEntityID(entityID))
 		{
 			talker->accept(avbInterfaceIndex,
-				[this, linkStatus, dirtyFlags](StreamNode* node)
+				[this, linkStatus, dirtyFlags, talker, entityID](StreamNode* node)
 				{
 					node->setInterfaceLinkStatus(linkStatus);
 
@@ -1995,7 +2009,7 @@ public:
 					}
 					else
 					{
-#pragma message("TODO: Find affected Channels and update Intersections")
+						updateTalkerIntersectionChannels(entityID, dirtyFlags, talker, node);
 					}
 				});
 		}
@@ -2003,7 +2017,7 @@ public:
 		if (auto* listener = listenerNodeFromEntityID(entityID))
 		{
 			listener->accept(avbInterfaceIndex,
-				[this, linkStatus, dirtyFlags](StreamNode* node)
+				[this, linkStatus, dirtyFlags, listener, entityID](StreamNode* node)
 				{
 					node->setInterfaceLinkStatus(linkStatus);
 
@@ -2013,7 +2027,7 @@ public:
 					}
 					else
 					{
-#pragma message("TODO: Find affected Channels and update Intersections")
+						updateListenerIntersectionChannels(entityID, dirtyFlags, listener, node);
 					}
 				});
 		}
@@ -2026,42 +2040,50 @@ public:
 
 		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 		{
-			if (auto* node = talkerStreamNode(entityID, streamIndex))
+			if (auto* talker = talkerNodeFromEntityID(entityID))
 			{
-				node->setStreamFormat(streamFormat);
-
-				if (_mode == Model::Mode::Stream)
+				if (auto* node = talkerStreamNode(entityID, streamIndex))
 				{
-					talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+					node->setStreamFormat(streamFormat);
+
+					if (_mode == Model::Mode::Stream)
+					{
+						talkerIntersectionDataChanged(node, true, false, dirtyFlags);
+					}
+					else
+					{
+						AVDECC_ASSERT(false, "If this assert is triggered someday (I'm not even sure it's possible), check the code works correctly (then remove this assert)");
+						updateTalkerIntersectionChannels(entityID, dirtyFlags, talker, node);
+					}
 				}
 				else
 				{
-#pragma message("TODO: Find affected Channels and update Intersections")
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 				}
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 			}
 		}
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 		{
-			if (auto* node = listenerStreamNode(entityID, streamIndex))
+			if (auto* listener = listenerNodeFromEntityID(entityID))
 			{
-				node->setStreamFormat(streamFormat);
-
-				if (_mode == Model::Mode::Stream)
+				if (auto* node = listenerStreamNode(entityID, streamIndex))
 				{
-					listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+					node->setStreamFormat(streamFormat);
+
+					if (_mode == Model::Mode::Stream)
+					{
+						listenerIntersectionDataChanged(node, true, false, dirtyFlags);
+					}
+					else
+					{
+						AVDECC_ASSERT(false, "If this assert is triggered someday (I'm not even sure it's possible), check the code works correctly (then remove this assert)");
+						updateListenerIntersectionChannels(entityID, dirtyFlags, listener, node);
+					}
 				}
 				else
 				{
-#pragma message("TODO: Find affected Channels and update Intersections")
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 				}
-			}
-			else
-			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 			}
 		}
 	}
@@ -2090,8 +2112,7 @@ public:
 			{
 				node->setRunning(isRunning);
 
-				// Notify view based on current mode, since we have a StreamNode here
-				listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, false, {});
+				listenerHeaderDataChanged(node, false, {});
 #pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateStreamRunning});")
 			}
 			else
@@ -2104,27 +2125,31 @@ public:
 	void handleStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& state)
 	{
 		// Event affecting a single stream intersection, but having repercussion on parent intersection "summary" nodes
+		auto const entityID = state.listenerStream.entityID;
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
-		if (auto* listener = listenerStreamNode(state.listenerStream.entityID, state.listenerStream.streamIndex))
-		{
-			listener->setStreamConnectionState(state);
 
-			if (_mode == Model::Mode::Stream)
+		if (auto* listener = listenerNodeFromEntityID(entityID))
+		{
+			if (auto* node = listenerStreamNode(entityID, state.listenerStream.streamIndex))
 			{
-				listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+				node->setStreamConnectionState(state);
+
+				if (_mode == Model::Mode::Stream)
+				{
+					listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+				}
+				else
+				{
+					updateListenerIntersectionChannels(entityID, dirtyFlags, listener, node);
+				}
+
+				listenerHeaderDataChanged(node, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
+#pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateLockedState});")
 			}
 			else
 			{
-#pragma message("TODO: Find affected Channels and update Intersections")
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(state.listenerStream.streamIndex));
 			}
-
-			// Notify view based on current mode, since we have a StreamNode here
-			listenerHeaderDataChanged(listener, _mode == Model::Mode::Stream, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
-#pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateLockedState});")
-		}
-		else
-		{
-			LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(state.listenerStream.entityID)).arg(state.listenerStream.streamIndex));
 		}
 	}
 
@@ -2161,8 +2186,7 @@ public:
 					{
 						node->setName(name);
 
-						// Only notify the view in SBR mode, StreamName is not displayed in CBR mode
-						listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, false, {});
+						listenerHeaderDataChanged(node, false, {});
 					}
 					else
 					{
@@ -2195,8 +2219,7 @@ public:
 						{
 							if (node->setProbingStatus(*info.probingStatus))
 							{
-								// Notify view based on current mode, since we have a StreamNode here
-								listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
+								listenerHeaderDataChanged(node, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
 #pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateLockedState});")
 							}
 						}
@@ -2247,8 +2270,7 @@ public:
 
 					if (changed)
 					{
-						// Notify view based on current mode, since we have a StreamNode here
-						listenerHeaderDataChanged(node, _mode == Model::Mode::Stream, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
+						listenerHeaderDataChanged(node, true, HeaderDirtyFlags{ HeaderDirtyFlag::UpdateLockedState });
 #pragma message("TODO: Find affected Channels and for each, call listenerHeaderDataChanged(node, _mode == Model::Mode::Channel, false, {UpdateLockedState});")
 					}
 				}
@@ -2305,6 +2327,44 @@ public:
 				else
 				{
 					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamOutputCountersChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+				}
+			}
+		}
+		catch (...)
+		{
+			// Uncaught exception
+			AVDECC_ASSERT(false, "Uncaught exception");
+		}
+	}
+
+	void handleStreamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
+	{
+		// Event affecting multiple channel nodes (either Input or Output)
+		try
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+			if (controlledEntity)
+			{
+				auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected, IntersectionDirtyFlag::UpdateFormat, IntersectionDirtyFlag::UpdateGptp, IntersectionDirtyFlag::UpdateLinkStatus };
+
+				if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+				{
+					if (auto* talker = talkerNodeFromEntityID(entityID))
+					{
+						// Save current mappings (we want all mappings, including redundant)
+						talker->setOutputAudioMappings(streamPortIndex, controlledEntity->getStreamPortOutputAudioMappings(streamPortIndex));
+						// No need to trigger a refresh here, the same event is already handled by ChannelConnectionManager
+					}
+				}
+				else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+				{
+					if (auto* listener = listenerNodeFromEntityID(entityID))
+					{
+						// Save current mappings (we want all mappings, including redundant)
+						listener->setInputAudioMappings(streamPortIndex, controlledEntity->getStreamPortInputAudioMappings(streamPortIndex));
+						// No need to trigger a refresh here, the same event is already handled by ChannelConnectionManager
+					}
 				}
 			}
 		}
@@ -2373,6 +2433,8 @@ public:
 				return;
 			}
 
+			// ClusterIndex numbering is shared among all STREAM_PORTS (including input/output), meaning we have to check for which kind (input or output) it belongs to
+
 			if (hasTalkerCluster(entityID, audioClusterIndex))
 			{
 				if (auto* channelNode = talkerChannelNode(entityID, audioClusterIndex))
@@ -2380,7 +2442,7 @@ public:
 					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
-					// Only notify the view in SBR mode, ClusterName is not displayed in CBR mode
+					// Only notify the view in CBR mode, ClusterName is not displayed in SBR mode
 					talkerHeaderDataChanged(channelNode, _mode == Model::Mode::Channel, false, {});
 				}
 			}
@@ -2392,8 +2454,7 @@ public:
 					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
-					// Only notify the view in SBR mode, ClusterName is not displayed in CBR mode
-					listenerHeaderDataChanged(channelNode, _mode == Model::Mode::Channel, false, {});
+					listenerHeaderDataChanged(channelNode, false, {});
 				}
 			}
 		}
@@ -2421,6 +2482,50 @@ public:
 	}
 
 private:
+	void updateTalkerIntersectionChannels(la::avdecc::UniqueIdentifier const entityID, IntersectionDirtyFlags const dirtyFlags, EntityNode* const talker, StreamNode* const node)
+	{
+		auto const& mappings = talker->getOutputAudioMappings();
+		for (auto const& [streamPortIndex, audioUnitMappings] : mappings)
+		{
+			auto const clusterOffset = talker->getStreamPortOutputClusterOffset(streamPortIndex);
+
+			// One stream can have multiple Channels
+			for (auto const& mapping : audioUnitMappings)
+			{
+				if (mapping.streamIndex == node->streamIndex())
+				{
+					if (auto* channelNode = talkerChannelNode(entityID, clusterOffset + mapping.clusterOffset))
+					{
+						talkerIntersectionDataChanged(channelNode, true, false, dirtyFlags);
+						qDebug() << "updateTalkerIntersectionChannels: Update Channel #" << (clusterOffset + mapping.clusterOffset);
+					}
+				}
+			}
+		}
+	}
+
+	void updateListenerIntersectionChannels(la::avdecc::UniqueIdentifier const entityID, IntersectionDirtyFlags const dirtyFlags, EntityNode* const listener, StreamNode* const node)
+	{
+		auto const& mappings = listener->getInputAudioMappings();
+		for (auto const& [streamPortIndex, audioUnitMappings] : mappings)
+		{
+			auto const clusterOffset = listener->getStreamPortInputClusterOffset(streamPortIndex);
+
+			// One stream can have multiple Channels
+			for (auto const& mapping : audioUnitMappings)
+			{
+				if (mapping.streamIndex == node->streamIndex())
+				{
+					if (auto* channelNode = listenerChannelNode(entityID, clusterOffset + mapping.clusterOffset))
+					{
+						listenerIntersectionDataChanged(channelNode, true, false, dirtyFlags);
+						qDebug() << "updateListenerIntersectionChannels: Update Channel #" << (clusterOffset + mapping.clusterOffset);
+					}
+				}
+			}
+		}
+	}
+
 	// Returns talker section for node
 	int talkerNodeSection(Node* const node) const
 	{
@@ -2503,7 +2608,7 @@ private:
 		return it != std::end(_listenerChannelNodeMap);
 	}
 
-	// Returns talker ChannelNode for a given entityID + configurationIndex
+	// Returns talker ChannelNode for a given entityID + audioClusterIndex
 	ChannelNode* talkerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const
 	{
 		auto const key = std::make_pair(entityID, audioClusterIndex);
@@ -2515,7 +2620,7 @@ private:
 		return it->second;
 	}
 
-	// Returns listener ChannelNode for a given entityID + streamIndex
+	// Returns listener ChannelNode for a given entityID + audioClusterIndex
 	ChannelNode* listenerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const
 	{
 		auto const key = std::make_pair(entityID, audioClusterIndex);
@@ -2685,7 +2790,6 @@ private:
 			computeHeaderData(listener, dirtyFlags);
 		}
 
-		// Notifies that listener header data has changed
 		if (notifyView)
 		{
 			Q_Q(Model);
@@ -2710,6 +2814,39 @@ private:
 				node = parent;
 			}
 		}
+	}
+
+	template<class NodeType>
+	void listenerHeaderDataChanged(NodeType* const listener, bool const andParents, HeaderDirtyFlags const dirtyFlags)
+	{
+		// Notifies that listener header data has changed
+		auto notifyView = false;
+
+		// Always notify the view, EntityNode is available in CBR and SBR modes
+		if constexpr (std::is_same_v<NodeType, EntityNode>)
+		{
+			notifyView = true;
+		}
+
+		// In SBR mode, only notify view if we have a StreamNode
+		if (_mode == Model::Mode::Stream)
+		{
+			if constexpr (std::is_same_v<NodeType, StreamNode>)
+			{
+				notifyView = true;
+			}
+		}
+
+		// In CBR mode, only notify view if we have a ChannelNode
+		if (_mode == Model::Mode::Channel)
+		{
+			if constexpr (std::is_same_v<NodeType, ChannelNode>)
+			{
+				notifyView = true;
+			}
+		}
+
+		listenerHeaderDataChanged(listener, notifyView, andParents, dirtyFlags);
 	}
 
 	// Returns talker header orientation

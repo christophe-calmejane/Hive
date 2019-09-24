@@ -187,12 +187,26 @@ public:
 	void accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const;
 
 	bool isMilan() const noexcept;
+	la::avdecc::entity::model::ClusterIndex getStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const;
+	la::avdecc::entity::model::ClusterIndex getStreamPortOutputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const;
+	la::avdecc::entity::model::AudioMappings const& getInputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortInputIndex) const;
+	la::avdecc::entity::model::AudioMappings const& getOutputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortOutputIndex) const;
+	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> getInputAudioMappings() const noexcept;
+	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> getOutputAudioMappings() const noexcept;
 
 protected:
 	EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan);
+	void setStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept;
+	void setStreamPortOutputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept;
+	void setInputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortInputIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept;
+	void setOutputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortOutputIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept;
 
 protected:
 	bool _isMilan{ false };
+	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::ClusterIndex> _streamPortInputClusterOffset{};
+	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::ClusterIndex> _streamPortOutputClusterOffset{};
+	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> _inputMappings{};
+	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> _outputMappings{};
 };
 
 class RedundantNode : public Node
