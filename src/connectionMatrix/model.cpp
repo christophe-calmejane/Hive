@@ -2052,7 +2052,6 @@ public:
 					}
 					else
 					{
-						AVDECC_ASSERT(false, "If this assert is triggered someday (I'm not even sure it's possible), check the code works correctly (then remove this assert)");
 						updateTalkerIntersectionChannels(entityID, dirtyFlags, talker, node);
 					}
 				}
@@ -2076,7 +2075,6 @@ public:
 					}
 					else
 					{
-						AVDECC_ASSERT(false, "If this assert is triggered someday (I'm not even sure it's possible), check the code works correctly (then remove this assert)");
 						updateListenerIntersectionChannels(entityID, dirtyFlags, listener, node);
 					}
 				}
