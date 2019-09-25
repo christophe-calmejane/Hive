@@ -2136,7 +2136,7 @@ public:
 
 				if (_mode == Model::Mode::Stream)
 				{
-					listenerIntersectionDataChanged(listener, true, true, dirtyFlags);
+					listenerIntersectionDataChanged(node, true, true, dirtyFlags);
 				}
 				else
 				{
