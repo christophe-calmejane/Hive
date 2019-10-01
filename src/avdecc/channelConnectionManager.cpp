@@ -1801,7 +1801,7 @@ private:
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
-						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 						{
 							// notify SequentialAsyncCommandExecuter that the command completed.
 							auto error = commandChain::AsyncParallelCommandSet::controlStatusToCommandError(status);
@@ -1844,7 +1844,7 @@ private:
 							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 							{
 								auto& manager = avdecc::ControllerManager::getInstance();
-								auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+								auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 								{
 									// notify SequentialAsyncCommandExecuter that the command completed.
 									auto error = commandChain::AsyncParallelCommandSet::controlStatusToCommandError(status);
@@ -1921,7 +1921,7 @@ private:
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
-						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 						{
 							// notify SequentialAsyncCommandExecuter that the command completed.
 							auto error = commandChain::AsyncParallelCommandSet::controlStatusToCommandError(status);
@@ -1963,7 +1963,7 @@ private:
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
-						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 						{
 							// notify SequentialAsyncCommandExecuter that the command completed.
 							auto error = commandChain::AsyncParallelCommandSet::controlStatusToCommandError(status);

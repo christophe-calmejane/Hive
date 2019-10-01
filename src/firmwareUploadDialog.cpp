@@ -222,7 +222,7 @@ std::tuple<size_t, size_t, size_t> FirmwareUploadDialog::getCounts() const noexc
 	for (auto row = 0; row < total; ++row)
 	{
 		auto* item = _ui->listWidget->item(row);
-		auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
+		//auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
 
 		auto const state = item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>();
 		switch (state)
@@ -346,7 +346,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 									// Not the cleanest code, we directly access item's data in another thread without locking (should be fine though)
 									return item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>() == UpdateState::Failed;
 								},
-								[widget, this, entityName, item, entityID, descriptorIndex](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
+								[widget, this, entityName, item, entityID, descriptorIndex](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
 								{
 									// Upload complete
 									QMetaObject::invokeMethod(widget,

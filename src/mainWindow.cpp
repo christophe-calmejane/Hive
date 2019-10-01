@@ -855,7 +855,7 @@ void MainWindowImpl::connectSignals()
 	// Connect ControllerManager events
 	auto& manager = avdecc::ControllerManager::getInstance();
 	connect(&manager, &avdecc::ControllerManager::endAecpCommand, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+		[this](la::avdecc::UniqueIdentifier const /*entityID*/, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
 			{
@@ -863,7 +863,7 @@ void MainWindowImpl::connectSignals()
 			}
 		});
 	connect(&manager, &avdecc::ControllerManager::endAcmpCommand, this,
-		[this](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+		[this](la::avdecc::UniqueIdentifier const /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::ControlStatus::Success)
 			{

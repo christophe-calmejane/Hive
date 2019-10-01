@@ -339,7 +339,7 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 /* ************************************************************ */
 /* StreamPortDynamicTreeWidgetItem                              */
 /* ************************************************************ */
-StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
+StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const /*staticModel*/, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const /*dynamicModel*/, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamPortType(streamPortType)
@@ -505,7 +505,7 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 				// Get exclusive access
 				manager.requestExclusiveAccess(_entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType::Lock,
-					[this, streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections)](auto const entityID, auto const status, auto&& token)
+					[this, streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections)](auto const /*entityID*/, auto const status, auto&& token)
 					{
 						// Moving the token to the capture will effectively extend the lifetime of the token, keeping the entity locked until the lambda completes (meaning the dialog has been closed and mappings changed)
 						QMetaObject::invokeMethod(this,
@@ -595,22 +595,22 @@ void StreamPortDynamicTreeWidgetItem::updateMappings()
 			{
 				if (showRedundantMappings)
 				{
-					mappings = controlledEntity->getStreamPortInputAudioMappings(_streamPortIndex);
+					mappings = entity.getStreamPortInputAudioMappings(_streamPortIndex);
 				}
 				else
 				{
-					mappings = controlledEntity->getStreamPortInputNonRedundantAudioMappings(_streamPortIndex);
+					mappings = entity.getStreamPortInputNonRedundantAudioMappings(_streamPortIndex);
 				}
 			}
 			else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 			{
 				if (showRedundantMappings)
 				{
-					mappings = controlledEntity->getStreamPortOutputAudioMappings(_streamPortIndex);
+					mappings = entity.getStreamPortOutputAudioMappings(_streamPortIndex);
 				}
 				else
 				{
-					mappings = controlledEntity->getStreamPortOutputNonRedundantAudioMappings(_streamPortIndex);
+					mappings = entity.getStreamPortOutputNonRedundantAudioMappings(_streamPortIndex);
 				}
 			}
 

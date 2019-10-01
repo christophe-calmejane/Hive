@@ -478,7 +478,7 @@ public:
 		intersectionData.animation->start();
 
 		connect(intersectionData.animation, &QVariantAnimation::valueChanged,
-			[this, talkerSection, listenerSection](QVariant const& value)
+			[this, talkerSection, listenerSection](QVariant const& /*value*/)
 			{
 				Q_Q(Model);
 				auto const index = q->index(talkerSection, listenerSection);
@@ -1170,8 +1170,8 @@ public:
 				case Model::IntersectionData::Type::RedundantStream_SingleStream:
 				case Model::IntersectionData::Type::SingleStream_SingleStream:
 				{
-					auto const* const talkerStreamNode = static_cast<StreamNode*>(intersectionData.talker);
-					auto const* const listenerStreamNode = static_cast<StreamNode*>(intersectionData.listener);
+					auto const* talkerStreamNode = static_cast<StreamNode*>(intersectionData.talker);
+					auto const* listenerStreamNode = static_cast<StreamNode*>(intersectionData.listener);
 
 					auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
 					auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
@@ -1186,8 +1186,7 @@ public:
 					// Connected
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
 					{
-						StreamNode* talkerStreamNode = nullptr;
-
+						// If TalkerNode is RedundantOutput, get the real StreamNode
 						if (talkerType == Node::Type::RedundantOutput)
 						{
 							auto const listenerRedundantStreamOrder = intersectionData.listener->index();
@@ -1195,18 +1194,13 @@ public:
 							talkerStreamNode = static_cast<StreamNode*>(talkerRedundantNode->childAt(listenerRedundantStreamOrder));
 							AVDECC_ASSERT(talkerStreamNode->isRedundantStreamNode(), "Should be a redundant node");
 						}
-						else if (talkerType == Node::Type::OutputStream || talkerType == Node::Type::RedundantOutputStream)
-						{
-							talkerStreamNode = static_cast<StreamNode*>(intersectionData.talker);
-						}
-						else
+						else if (talkerType != Node::Type::OutputStream && talkerType != Node::Type::RedundantOutputStream)
 						{
 							AVDECC_ASSERT(false, "Unhandled");
 							return;
 						}
 
-						StreamNode* listenerStreamNode = nullptr;
-
+						// If ListenerNode is RedundantInput, get the real StreamNode
 						if (listenerType == Node::Type::RedundantInput)
 						{
 							auto const talkerRedundantStreamOrder = intersectionData.talker->index();
@@ -1214,19 +1208,10 @@ public:
 							listenerStreamNode = static_cast<StreamNode*>(listenerRedundantNode->childAt(talkerRedundantStreamOrder));
 							AVDECC_ASSERT(listenerStreamNode->isRedundantStreamNode(), "Should be a redundant node");
 						}
-						else if (listenerType == Node::Type::InputStream || listenerType == Node::Type::RedundantInputStream)
-						{
-							listenerStreamNode = static_cast<StreamNode*>(intersectionData.listener);
-						}
-						else
+						else if (listenerType != Node::Type::InputStream && listenerType != Node::Type::RedundantInputStream)
 						{
 							AVDECC_ASSERT(false, "Unhandled");
 							return;
-						}
-
-						if (!AVDECC_ASSERT_WITH_RET(talkerStreamNode, "Invalid talker node") || !AVDECC_ASSERT_WITH_RET(listenerStreamNode, "Invalid listener node"))
-						{
-							break;
 						}
 
 						auto const& streamConnectionState = listenerStreamNode->streamConnectionState();
@@ -1377,8 +1362,7 @@ public:
 	{
 		try
 		{
-			auto const& entityNode = controlledEntity.getEntityNode();
-			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
+			auto const configurationIndex = configurationNode.descriptorIndex;
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
 			auto* entity = EntityNode::create(entityID, isMilan);
@@ -1421,11 +1405,11 @@ public:
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
 					auto const avbInterfaceIndex{ streamNode->staticModel->avbInterfaceIndex };
-					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(currentConfigurationIndex, avbInterfaceIndex);
+					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* redundantOutputStream = StreamNode::createRedundantOutputNode(*redundantOutput, streamIndex, avbInterfaceIndex);
 					auto const* const streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(streamNode);
-					fillStreamOutputNode(*redundantOutputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, *streamOutputNode, avbInterfaceNode);
+					fillStreamOutputNode(*redundantOutputStream, configurationIndex, streamIndex, avbInterfaceIndex, *streamOutputNode, avbInterfaceNode);
 				}
 			}
 
@@ -1435,11 +1419,10 @@ public:
 				if (!streamNode.isRedundant)
 				{
 					auto const avbInterfaceIndex{ streamNode.staticModel->avbInterfaceIndex };
-					auto const& streamNode = controlledEntity.getStreamOutputNode(currentConfigurationIndex, streamIndex);
-					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(currentConfigurationIndex, avbInterfaceIndex);
+					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* outputStream = StreamNode::createOutputNode(*entity, streamIndex, avbInterfaceIndex);
-					fillStreamOutputNode(*outputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
+					fillStreamOutputNode(*outputStream, configurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 
@@ -1498,8 +1481,7 @@ public:
 	{
 		try
 		{
-			auto const& entityNode = controlledEntity.getEntityNode();
-			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
+			auto const configurationIndex = configurationNode.descriptorIndex;
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
 			auto* entity = EntityNode::create(entityID, isMilan);
@@ -1547,13 +1529,13 @@ public:
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
 					auto const avbInterfaceIndex{ streamNode->staticModel->avbInterfaceIndex };
-					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(currentConfigurationIndex, avbInterfaceIndex);
+					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* redundantInputStream = StreamNode::createRedundantInputNode(*redundantInput, streamIndex, avbInterfaceIndex);
 					redundantInputStream->setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
 
 					auto const* const streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(streamNode);
-					fillStreamInputNode(*redundantInputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, *streamInputNode, avbInterfaceNode);
+					fillStreamInputNode(*redundantInputStream, configurationIndex, streamIndex, avbInterfaceIndex, *streamInputNode, avbInterfaceNode);
 				}
 			}
 
@@ -1563,11 +1545,10 @@ public:
 				if (!streamNode.isRedundant)
 				{
 					auto const avbInterfaceIndex{ streamNode.staticModel->avbInterfaceIndex };
-					auto const& streamNode = controlledEntity.getStreamInputNode(currentConfigurationIndex, streamIndex);
-					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(currentConfigurationIndex, avbInterfaceIndex);
+					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* inputStream = StreamNode::createInputNode(*entity, streamIndex, avbInterfaceIndex);
-					fillStreamInputNode(*inputStream, currentConfigurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
+					fillStreamInputNode(*inputStream, configurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 
@@ -2151,7 +2132,7 @@ public:
 		}
 	}
 
-	void handleStreamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
+	void handleStreamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const /*configurationIndex*/, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex)
 	{
 		// Event affecting a single stream node (either Input or Output)
 		try
@@ -2423,10 +2404,9 @@ public:
 			auto& manager = avdecc::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			auto const& entityNode = controlledEntity->getEntityNode();
-			auto const currentConfigurationIndex = entityNode.dynamicModel->currentConfiguration;
 
 			// We're only interested in the current configuration
-			if (currentConfigurationIndex != configurationIndex)
+			if (entityNode.dynamicModel->currentConfiguration != configurationIndex)
 			{
 				return;
 			}

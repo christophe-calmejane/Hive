@@ -118,7 +118,7 @@ public:
 		return {};
 	}
 
-	Qt::ItemFlags flags(QModelIndex const& index) const
+	Qt::ItemFlags flags(QModelIndex const& /*index*/) const
 	{
 		return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 	}
@@ -209,13 +209,13 @@ LoggerModel::~LoggerModel()
 	delete d_ptr;
 }
 
-int LoggerModel::rowCount(QModelIndex const& parent) const
+int LoggerModel::rowCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const LoggerModel);
 	return d->rowCount();
 }
 
-int LoggerModel::columnCount(QModelIndex const& parent) const
+int LoggerModel::columnCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const LoggerModel);
 	return d->columnCount();

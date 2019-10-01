@@ -242,7 +242,7 @@ void SettingsDialog::on_fullAEMEnumerationCheckBox_toggled(bool checked)
 	settings.setValue(settings::Controller_FullStaticModelEnabled.name, checked);
 }
 
-void SettingsDialog::on_protocolComboBox_currentIndexChanged(int index)
+void SettingsDialog::on_protocolComboBox_currentIndexChanged(int /*index*/)
 {
 	auto& settings = settings::SettingsManager::getInstance();
 	auto const type = _pImpl->protocolComboBox->currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();

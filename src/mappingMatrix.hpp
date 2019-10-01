@@ -154,7 +154,7 @@ public:
 				_connections.erase(std::remove_if(_connections.begin(), _connections.end(),
 														 [connection](Connection const& item)
 														 {
-															 return (item.first.first == connection->output()->nodeId() && item.first.second == connection->output()->index()) && (item.second.first == connection->input()->nodeId() && item.second.second == connection->input()->index());
+															 return (static_cast<int>(item.first.first) == connection->output()->nodeId() && static_cast<int>(item.first.second) == connection->output()->index()) && (static_cast<int>(item.second.first) == connection->input()->nodeId() && static_cast<int>(item.second.second) == connection->input()->index());
 														 }),
 					_connections.end());
 			});

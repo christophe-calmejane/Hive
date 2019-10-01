@@ -23,7 +23,7 @@ namespace qt
 {
 namespace toolkit
 {
-void TickableMenu::mouseReleaseEvent(QMouseEvent* event)
+void TickableMenu::mouseReleaseEvent(QMouseEvent* /*event*/)
 {
 	if (auto* action = activeAction())
 	{

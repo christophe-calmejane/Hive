@@ -149,7 +149,7 @@ public:
 	virtual std::pair<la::avdecc::UniqueIdentifier, McDeterminationError> getMediaClockMaster(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
 	virtual MCEntityDomainMapping createMediaClockDomainModel() noexcept = 0;
 	virtual void applyMediaClockDomainModel(MCEntityDomainMapping const& domains) noexcept = 0;
-	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier entityId) noexcept = 0;
+	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
 	virtual bool isMediaClockDomainManageable(la::avdecc::UniqueIdentifier const& entityId) noexcept = 0;
 
 

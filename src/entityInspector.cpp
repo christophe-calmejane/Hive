@@ -75,25 +75,25 @@ la::avdecc::UniqueIdentifier EntityInspector::controlledEntityID() const
 	return _controlledEntityTreeWiget.controlledEntityID();
 }
 
-QByteArray EntityInspector::saveState(int version) const
+QByteArray EntityInspector::saveState(int /*version*/) const
 {
 	QMap<int, QByteArray> map;
 	map[0] = _splitter.saveState();
 	map[1] = _nodeTreeWiget.header()->saveState();
 
-	QByteArray data;
-	QDataStream stream(&data, QIODevice::WriteOnly);
+	QByteArray buffer;
+	QDataStream stream(&buffer, QIODevice::WriteOnly);
 	stream << map;
 
-	return data;
+	return buffer;
 }
 
-bool EntityInspector::restoreState(QByteArray const& state, int version)
+bool EntityInspector::restoreState(QByteArray const& state, int /*version*/)
 {
 	QMap<int, QByteArray> map;
-	QByteArray data{ state };
+	QByteArray buffer{ state };
 
-	QDataStream stream(&data, QIODevice::ReadOnly);
+	QDataStream stream(&buffer, QIODevice::ReadOnly);
 	stream >> map;
 
 	_splitter.restoreState(map[0]);
@@ -128,7 +128,7 @@ void EntityInspector::entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	}
 }
 
-void EntityInspector::entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& name)
+void EntityInspector::entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& /*name*/)
 {
 	if (entityID == _controlledEntityTreeWiget.controlledEntityID())
 	{

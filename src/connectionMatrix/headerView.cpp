@@ -33,6 +33,10 @@
 #	include <QDebug>
 #endif
 
+#ifdef _WIN32
+#	pragma warning(disable : 4127) // "conditional expression is constant" due to QVector compilation warning
+#endif // _WIN32
+
 namespace connectionMatrix
 {
 HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
@@ -185,7 +189,7 @@ void HeaderView::handleSectionClicked(int logicalIndex)
 	model->accept(node, update, true);
 }
 
-void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int last)
+void HeaderView::handleSectionInserted(QModelIndex const& /*parent*/, int first, int last)
 {
 	auto const it = std::next(std::begin(_sectionState), first);
 	_sectionState.insert(it, last - first + 1, {});
@@ -224,7 +228,7 @@ void HeaderView::handleSectionInserted(QModelIndex const& parent, int first, int
 #endif
 }
 
-void HeaderView::handleSectionRemoved(QModelIndex const& parent, int first, int last)
+void HeaderView::handleSectionRemoved(QModelIndex const& /*parent*/, int first, int last)
 {
 	_sectionState.remove(first, last - first + 1);
 

@@ -22,6 +22,8 @@
 #include "avdecc/helper.hpp"
 #include "errorItemDelegate.hpp"
 
+#include <vector>
+
 class NetworkInterfaceModelPrivate : public QObject, private la::avdecc::networkInterface::NetworkInterfaceObserver
 {
 public:
@@ -79,7 +81,7 @@ private:
 					// Remove it
 					auto const idx = index.row();
 					emit q->beginRemoveRows({}, idx, idx);
-					_interfaces.remove(idx);
+					_interfaces.erase(_interfaces.begin() + idx);
 					emit q->endRemoveRows();
 				}
 			});
@@ -98,7 +100,6 @@ private:
 					// Change data and emit signal
 					auto const idx = index.row();
 					_interfaces[idx].isEnabled = isEnabled;
-					auto const index = q->createIndex(idx, 0);
 					emit q->dataChanged(index, index);
 				}
 			},
@@ -118,7 +119,6 @@ private:
 					// Change data and emit signal
 					auto const idx = index.row();
 					_interfaces[idx].isConnected = isConnected;
-					auto const index = q->createIndex(idx, 0);
 					emit q->dataChanged(index, index);
 				}
 			},
@@ -138,7 +138,7 @@ private:
 	};
 
 	// Private Members
-	QVector<Data> _interfaces{};
+	std::vector<Data> _interfaces{};
 	DECLARE_AVDECC_OBSERVER_GUARD(NetworkInterfaceModelPrivate);
 };
 
@@ -180,10 +180,10 @@ la::avdecc::networkInterface::Interface::Type NetworkInterfaceModel::interfaceTy
 	return la::avdecc::networkInterface::Interface::Type::None;
 }
 
-int NetworkInterfaceModel::rowCount(QModelIndex const& parent) const
+int NetworkInterfaceModel::rowCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const NetworkInterfaceModel);
-	return d->_interfaces.count();
+	return d->_interfaces.size();
 }
 
 QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const

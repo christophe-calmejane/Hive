@@ -705,8 +705,6 @@ private:
 	{
 		if (auto const row = entityRow(entityID))
 		{
-			Q_Q(ControllerModel);
-
 			auto& data = _entities[*row];
 			data.name = entityName;
 
@@ -967,13 +965,13 @@ ControllerModel::ControllerModel(QObject* parent)
 
 ControllerModel::~ControllerModel() = default;
 
-int ControllerModel::rowCount(QModelIndex const& parent) const
+int ControllerModel::rowCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const ControllerModel);
 	return d->rowCount();
 }
 
-int ControllerModel::columnCount(QModelIndex const& parent) const
+int ControllerModel::columnCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const ControllerModel);
 	return d->columnCount();

@@ -377,8 +377,6 @@ public:
 			return;
 		}
 
-		Q_Q(ControlledEntityTreeWidget);
-
 		if (_controlledEntityID)
 		{
 			saveUserTreeWidgetState();
@@ -411,7 +409,7 @@ public:
 		return it->first;
 	}
 
-	void showSetDescriptorAsCurrentMenu(QPoint const& pos, NodeItem const* item, QString const& actionText, bool const isEnabled, std::function<void()> const& onActionTriggered)
+	void showSetDescriptorAsCurrentMenu(QPoint const& pos, NodeItem const* /*item*/, QString const& actionText, bool const isEnabled, std::function<void()> const& onActionTriggered)
 	{
 		Q_Q(ControlledEntityTreeWidget);
 
@@ -497,7 +495,7 @@ private:
 	}
 
 	template<typename NodeType>
-	NodeIdentifier makeIdentifier(la::avdecc::entity::model::ConfigurationIndex const configurationIndex, NodeType const* node) const noexcept
+	NodeIdentifier makeIdentifier([[maybe_unused]] la::avdecc::entity::model::ConfigurationIndex const configurationIndex, NodeType const* node) const noexcept
 	{
 		if constexpr (std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, NodeType>)
 		{
@@ -568,7 +566,7 @@ private:
 		return item;
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		_currentConfigurationIndex = node.dynamicModel->currentConfiguration;
 
@@ -584,7 +582,7 @@ private:
 		item->setHasError(!errorCounters.empty());
 
 		connect(&manager, &avdecc::ControllerManager::entityNameChanged, item,
-			[genName, item](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
+			[genName, item](la::avdecc::UniqueIdentifier const /*entityID*/, QString const& entityName)
 			{
 				auto name = genName(entityName);
 				item->setData(0, Qt::DisplayRole, name);
@@ -728,19 +726,19 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::LocaleNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::LocaleNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), node.staticModel->localeID.data());
 		addItem(parent->descriptorIndex, parent, &node, name);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::LocaleNode const* const parent, la::avdecc::controller::model::StringsNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::LocaleNode const* const parent, la::avdecc::controller::model::StringsNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
 		addItem(grandParent->descriptorIndex, parent, &node, name);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::AudioUnitNode const* const parent, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::AudioUnitNode const* const parent, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
 		addItem(grandParent->descriptorIndex, parent, &node, name);
@@ -758,7 +756,7 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandGrandParent, la::avdecc::controller::model::AudioUnitNode const* const /*grandParent*/, la::avdecc::controller::model::StreamPortNode const* const parent, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const grandGrandParent, la::avdecc::controller::model::AudioUnitNode const* const /*grandParent*/, la::avdecc::controller::model::StreamPortNode const* const parent, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
 		addItem(grandGrandParent->descriptorIndex, parent, &node, name);
@@ -816,7 +814,7 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
 	{
 		auto const name = QString("REDUNDANT_%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.virtualIndex));
 		addItem(parent->descriptorIndex, parent, &node, name);

@@ -119,8 +119,6 @@ LoggerView::LoggerView(QWidget* parent)
 	connect(actionSave, &QAction::triggered, this,
 		[this]()
 		{
-			auto applyFilter{ false };
-
 			auto search = QRegExp{ searchLineEdit->text() };
 			auto level = _levelFilterProxyModel.filterRegExp();
 			auto layer = _layerFilterProxyModel.filterRegExp();

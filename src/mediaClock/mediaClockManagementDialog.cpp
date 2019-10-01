@@ -188,7 +188,7 @@ public:
 	* Handles the click of the remove assignment button.
 	* Removes the selected entity in the domain tree and adds it to the unassigned list.
 	*/
-	void button_AssignToDomainClicked(bool checked)
+	void button_AssignToDomainClicked(bool /*checked*/)
 	{
 		auto const& entityIds = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
 		for (auto const& entityId : entityIds)
@@ -337,7 +337,7 @@ public:
 	void handleUnassignedListSelectionChanged()
 	{
 		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
-		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
+		//auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
 		auto const& unassignedEntitySelections = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
 
 		// update assign button
@@ -401,7 +401,7 @@ public:
 	* Whenever the media clock mappings change while this dialog doesn't have unapplied user changes,
 	* the model is updated.
 	*/
-	void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds)
+	void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& /*entityIds*/)
 	{
 		if (!_hasChanges)
 		{

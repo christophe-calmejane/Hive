@@ -296,7 +296,7 @@ private:
 		}
 	}
 
-	Entities _entities;
+	Entities _entities{};
 	EntityRowMap _entityRowMap{};
 };
 
@@ -345,6 +345,8 @@ la::avdecc::UniqueIdentifier Model::controlledEntityID(QModelIndex const& index)
 	Q_D(const Model);
 	return d->controlledEntityID(index);
 }
+
+/***********************************************/
 
 MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(QWidget* parent)
 	: QDialog{ parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint }

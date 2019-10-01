@@ -910,7 +910,7 @@ private:
 					{
 						// Notify user about the error.
 						tasks.push_back(
-							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
+							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const /*commandIndex*/) -> bool
 							{
 								parentCommandSet->addErrorInfo(entityIdSource, commandChain::CommandExecutionError::NoMediaClockOutputAvailable);
 								return false;
@@ -920,7 +920,7 @@ private:
 					{
 						// Notify user about the error.
 						tasks.push_back(
-							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const commandIndex) -> bool
+							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, int const /*commandIndex*/) -> bool
 							{
 								parentCommandSet->addErrorInfo(entityIdTarget, commandChain::CommandExecutionError::NoMediaClockInputAvailable);
 								return false;

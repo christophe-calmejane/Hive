@@ -138,7 +138,7 @@ public:
 		q->clearSelection();
 	}
 
-	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const entityID) {}
+	Q_SLOT void entityOnline(la::avdecc::UniqueIdentifier const /*entityID*/) {}
 
 	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
@@ -478,7 +478,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::LocaleNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::LocaleNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -495,7 +495,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::StringsNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::StringsNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -524,7 +524,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const isActiveConfiguration, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -576,7 +576,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -635,8 +635,8 @@ private:
 			{
 				try
 				{
-					auto const& node = controlledEntity->getClockSourceNode(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, sourceIndex);
-					auto const name = QString::number(sourceIndex) + ": '" + avdecc::helper::objectName(controlledEntity, node) + "' (" + avdecc::helper::clockSourceToString(node) + ")";
+					auto const& clockSourceNode = controlledEntity->getClockSourceNode(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, sourceIndex);
+					auto const name = QString::number(sourceIndex) + ": '" + avdecc::helper::objectName(controlledEntity, clockSourceNode) + "' (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
 					sourceComboBox->addItem(name, QVariant::fromValue(sourceIndex));
 				}
 				catch (...)
@@ -687,7 +687,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& /*node*/) noexcept override
 	{
 		//createIdItem(&node);
 		//createNameItem(controlledEntity, isActiveConfiguration, node.clockDomainDescriptor, avdecc::ControllerManager::CommandType::None, {}); // SetName not supported yet
@@ -1034,7 +1034,7 @@ private:
 			});
 
 		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::endAecpCommand, textEntry,
-			[this, commandType, textEntry](la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+			[this, commandType, textEntry](la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
 			{
 				if (entityID == _controlledEntityID && cmdType == commandType)
 					textEntry->setEnabled(true);

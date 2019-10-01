@@ -201,7 +201,7 @@ void AsyncParallelCommandSet::exec() noexcept
 /**
 		* After a command was executed, this is called.
 		*/
-void AsyncParallelCommandSet::invokeCommandCompleted(uint32_t const commandIndex, bool const error) noexcept
+void AsyncParallelCommandSet::invokeCommandCompleted(uint32_t const /*commandIndex*/, bool const error) noexcept
 {
 	if (error)
 	{

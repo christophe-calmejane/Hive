@@ -38,7 +38,7 @@ public:
 		auto const it = _typeInfo.find(type);
 		if (it != std::end(_typeInfo))
 		{
-			auto& [type, info] = *it;
+			auto& info = it->second;
 
 			// Update the model
 			info.active = active;
@@ -82,8 +82,6 @@ public:
 private:
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
-		Q_Q(NetworkInterfaceTypeModel);
-
 		if (name == settings::Network_InterfaceTypeEthernet.name)
 		{
 			setActive(la::avdecc::networkInterface::Interface::Type::Ethernet, value.toBool(), false);
@@ -136,7 +134,7 @@ bool NetworkInterfaceTypeModel::isActive(la::avdecc::networkInterface::Interface
 	return d->isActive(type);
 }
 
-int NetworkInterfaceTypeModel::rowCount(QModelIndex const& parent) const
+int NetworkInterfaceTypeModel::rowCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const NetworkInterfaceTypeModel);
 	return static_cast<int>(d->_typeInfo.size());
@@ -187,6 +185,5 @@ bool NetworkInterfaceTypeModel::setData(QModelIndex const& index, QVariant const
 
 Qt::ItemFlags NetworkInterfaceTypeModel::flags(QModelIndex const&) const
 {
-	Q_D(const NetworkInterfaceTypeModel);
 	return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsUserCheckable;
 }

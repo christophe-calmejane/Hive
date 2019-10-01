@@ -129,7 +129,6 @@ void DomainTreeItem::reevaluateDomainSampleRate()
 		}
 		std::optional<QPair<la::avdecc::entity::model::SamplingRate, QString>> referenceSampleRate;
 
-		int i = 0;
 		for (auto* item : m_childItems)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(item);
