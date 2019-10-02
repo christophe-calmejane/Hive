@@ -540,11 +540,13 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 		{
 			continue; // entity already displayed.
 		}
-		auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
 		auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
-		if (controlledEntity)
 		{
-			entityName = avdecc::helper::smartEntityName(*controlledEntity);
+			auto const controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+			if (controlledEntity)
+			{
+				entityName = avdecc::helper::smartEntityName(*controlledEntity);
+			}
 		}
 		auto errorsForEntity = info.connectionCreationErrors.equal_range(it->first);
 		QString errors;
