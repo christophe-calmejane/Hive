@@ -569,13 +569,13 @@ public:
 
 			switch (cmdType)
 			{
-				case avdecc::ControllerManager::AecpCommandType::SetEntityName:
-				case avdecc::ControllerManager::AecpCommandType::SetEntityGroupName:
-				case avdecc::ControllerManager::AecpCommandType::SetAudioClusterName:
-					_gottenChanges++;
-					break;
-				default:
-					break;
+			case avdecc::ControllerManager::AecpCommandType::SetEntityName:
+			case avdecc::ControllerManager::AecpCommandType::SetEntityGroupName:
+			case avdecc::ControllerManager::AecpCommandType::SetAudioClusterName:
+				_gottenChanges++;
+				break;
+			default:
+				break;
 			}
 		}
 		if (_applyRequested && _gottenChanges >= _expectedChanges)
