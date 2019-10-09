@@ -770,10 +770,17 @@ private:
 			auto latency = decltype(la::avdecc::entity::model::StreamDynamicInfo::msrpAccumulatedLatency){ std::nullopt };
 			for (auto const& streamOutput : configurationNode.streamOutputs)
 			{
+				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+				auto const streamType = streamFormatInfo->getType();
+				if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+				{
+					// skip clock stream
+					continue;
+				}
 				if (streamOutput.second.dynamicModel->streamDynamicInfo)
 				{
 					auto const streamLatency = (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency;
-					if (latency != streamLatency)
+					if (latency != streamLatency && latency != std::nullopt)
 					{
 						// unequal values
 						latency = std::nullopt;
