@@ -1044,7 +1044,7 @@ private:
 					}
 				}
 			}
-			catch (la::avdecc::controller::ControlledEntity::Exception)
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
 			}
 		}
@@ -1490,7 +1490,7 @@ private:
 						});
 				}
 			}
-			catch (la::avdecc::controller::ControlledEntity::Exception e)
+			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
 			}
 		}

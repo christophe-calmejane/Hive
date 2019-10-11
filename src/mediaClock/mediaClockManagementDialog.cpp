@@ -463,6 +463,8 @@ public:
 						case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
 							errors += "Disconnecting talker stream failed. ";
 							break;
+						default:
+							break;
 					}
 				}
 				else if (i->second.commandTypeAecp)
@@ -474,6 +476,8 @@ public:
 							break;
 						case avdecc::ControllerManager::AecpCommandType::SetSamplingRate:
 							errors += "Setting the sampling rate failed. ";
+							break;
+						default:
 							break;
 					}
 				}

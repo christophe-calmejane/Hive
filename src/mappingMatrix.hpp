@@ -36,7 +36,7 @@ namespace mappingMatrix
 struct Node
 {
 	std::string name{};
-	std::vector<std::string> sockets;
+	std::vector<std::string> sockets{};
 };
 
 using Nodes = std::vector<Node>;

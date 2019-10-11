@@ -70,7 +70,7 @@ std::optional<QPair<la::avdecc::entity::model::SamplingRate, QString>> EntityTre
 				return qMakePair(samplingRate, QString::number(samplingRate / 1000) + " kHz");
 			}
 		}
-		catch (la::avdecc::controller::ControlledEntity::Exception)
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{
 			// ignore
 		}

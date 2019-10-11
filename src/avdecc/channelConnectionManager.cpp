@@ -3409,7 +3409,7 @@ private:
 					}
 				}
 			}
-			catch (la::avdecc::Exception e)
+			catch (la::avdecc::Exception const&)
 			{
 			}
 		}

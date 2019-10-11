@@ -169,6 +169,9 @@ MediaClockInfo computeMediaClockInfo(la::avdecc::UniqueIdentifier const& entityI
 				case mediaClock::McDeterminationError::UnknownEntity:
 					info.masterID = "Unknown Entity";
 					break;
+				default:
+					AVDECC_ASSERT(false, "Unhandled case");
+					break;
 			}
 		}
 		else
@@ -882,7 +885,7 @@ private:
 		}
 		else if (name == settings::General_ThemeColorIndex.name)
 		{
-			auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+			//auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 			//_errorColorValue = qt::toolkit::material::color::foregroundErrorColorValue(colorName, qt::toolkit::material::color::Shade::ShadeA700);
 			_errorColorValue = qt::toolkit::material::color::foregroundErrorColorValue(qt::toolkit::material::color::DefaultColor, qt::toolkit::material::color::DefaultShade); // Right now, always use default value, as we draw on white background
 

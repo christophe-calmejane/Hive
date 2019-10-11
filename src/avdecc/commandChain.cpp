@@ -213,7 +213,7 @@ void AsyncParallelCommandSet::invokeCommandCompleted(uint32_t const /*commandInd
 		_commandCompletionCounter++;
 	}
 
-	if (_commandCompletionCounter >= static_cast<int>(_commands.size()))
+	if (_commandCompletionCounter >= static_cast<decltype(_commandCompletionCounter)>(_commands.size()))
 	{
 		emit commandSetCompleted(_errors);
 	}

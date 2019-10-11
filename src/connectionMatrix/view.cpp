@@ -138,6 +138,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					callbackTryAgainElevatedRights(allowTalkerMappingChanges, allowListenerMappingRemoval);
 					break;
 				}
+				break;
 			}
 			case avdecc::ChannelConnectionManager::ChannelConnectResult::Impossible:
 				QMessageBox::information(this, "", "The connection couldn't be created because all compatible streams are already occupied.");
@@ -568,6 +569,8 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 					case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
 						errors += "Disconnecting talker stream failed. ";
 						break;
+					default:
+						break;
 				}
 			}
 			else if (i->second.commandTypeAecp)
@@ -597,6 +600,8 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 					case avdecc::ControllerManager::AecpCommandType::StopStream:
 						stopStreamFailed = true;
 						continue; // never show stop stream failures -> continue the loop
+					default:
+						break;
 				}
 			}
 			switch (i->second.errorType)
