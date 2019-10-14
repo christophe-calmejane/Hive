@@ -327,7 +327,7 @@ echo "done"
 
 pushd "${outputFolder}" &> /dev/null
 echo -n "Building project... "
-log=$("$cmake_path" --build . --clean-first --config "${buildConfig}" --target Hive)
+log=$("$cmake_path" --build . -j 4 --clean-first --config "${buildConfig}" --target Hive)
 if [ $? -ne 0 ]; then
 	echo "Failed:"
 	echo ""
