@@ -12,6 +12,90 @@ cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
+getSignatureHash()
+{
+	local filePath="$1"
+	local privKey="$2"
+	local _retval="$3"
+	local result=""
+
+	if isWindows;
+	then
+		result=$(openssl dgst -sha1 -binary < "$filePath" | openssl dgst -sha1 -sign "$privKey" | openssl enc -base64)
+
+	elif isMac;
+	then
+		echo "TODO"
+		exit 1
+
+	else
+		echo "TODO"
+		exit 1
+	fi
+
+	eval $_retval="'${result}'"
+}
+
+generateAppcast()
+{
+	local fileName="$1"
+	local marketingVersion="$2"
+	local isRelease=$3
+
+	local appcastFile="appcastItem-${marketingVersion}.xml"
+	local baseURL="http://localhost/hive/"
+	local subPath="release"
+
+	local fileSize
+	getFileSize "$fileName" fileSize
+
+	local fileSignature
+	getSignatureHash "$fileName" "resources/dsa_priv.pem" fileSignature
+
+	if [ "x$fileSignature" == "x" ];
+	then
+		echo "Failed to generate Appcast: Cannot sign file"
+		exit 1
+	fi
+
+	if [ $is_release -eq 0 ];
+	then
+		subPath="beta"
+	fi
+
+	if isWindows;
+	then
+		echo "<item>" > "$appcastFile"
+		echo "	<title>Version $marketingVersion</title>" >> "$appcastFile"
+		echo "	<sparkle:releaseNotesLink>" >> "$appcastFile"
+		echo "		${baseURL}changelog.php?lastKnownVersion=next" >> "$appcastFile"
+		echo "	</sparkle:releaseNotesLink>" >> "$appcastFile"
+		echo "	<pubDate>`date -R`</pubDate>" >> "$appcastFile"
+		echo "	<enclosure url=\"${baseURL}${subPath}/${fileName}\"" >> "$appcastFile"
+		echo "		sparkle:dsaSignature=\"${fileSignature}\"" >> "$appcastFile"
+		echo "		sparkle:version=\"${marketingVersion}\"" >> "$appcastFile"
+		echo "		sparkle:installerArguments=\"/S /NOPCAP\"" >> "$appcastFile"
+		echo "		length=\"${fileSize}\"" >> "$appcastFile"
+		echo "		sparkle:os=\"windows\"" >> "$appcastFile"
+		echo "		type=\"application/octet-stream\"" >> "$appcastFile"
+		echo "	/>" >> "$appcastFile"
+		echo "</item>" >> "$appcastFile"
+
+	elif isMac;
+	then
+		#echo "		sparkle:edSignature=\"7cLALFUHSwvEJWSkV8aMrfdseoBe4fhRa4FncC5NoThKxwThL6FDR7hTiPJh1fo2uagnPogisnQsgFgq6mGkt2RBw==\"" >> "$appcastFile"
+		#echo "		sparkle:os=\"macos\"" >> "$appcastFile"
+		echo "TODO"
+		return;
+
+	else
+		echo "Appcast generation not support on this OS"
+		return;
+	fi
+
+	echo "Appcast item generated to file: $appcastFile"
+}
+
 # Default values
 default_VisualGenerator="Visual Studio 15 2017"
 default_VisualToolset="v141"
@@ -388,10 +472,12 @@ if [ ! -z "${symbolsFile}" ]; then
 	echo "Symbols generated: ${symbolsFile}"
 fi
 
-if [ $is_release -eq 1 ]; then
-	echo "${cmakeHiveVersion}" > "LatestVersion-${latestVersionOSName}.txt"
-else
-	echo "${cmakeHiveVersion}" > "LatestVersion-beta-${latestVersionOSName}.txt"
-fi
+generateAppcast "${fullInstallerName}" "${releaseVersion}${beta_tag}" $is_release
+
+echo ""
+echo "Do not forget to upload:"
+echo " - CHANGELOG.MD"
+echo " - Installer file"
+echo " - Updated appcast file"
 
 exit 0

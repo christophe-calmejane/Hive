@@ -3,8 +3,9 @@
 # Declare project
 setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
 
-# Find Qt dependencies
+# Find dependencies
 find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+find_package(Sparkle REQUIRED)
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -113,7 +114,6 @@ set(HEADER_FILES_COMMON
 	toolkit/graph/outputSocket.hpp
 	toolkit/graph/socket.hpp
 	toolkit/graph/view.hpp
-	updater/updater.hpp
 	settingsDialog.hpp
 	defaults.hpp
 	deviceDetailsDialog.hpp
@@ -136,6 +136,7 @@ set(HEADER_FILES_COMMON
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	painterHelper.hpp
+	sparkle.hpp
 	windowsNpfHelper.hpp
 )
 
@@ -196,7 +197,6 @@ set(SOURCE_FILES_COMMON
 	toolkit/graph/outputSocket.cpp
 	toolkit/graph/socket.cpp
 	toolkit/graph/view.cpp
-	updater/updater.cpp
 	aboutDialog.cpp
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
@@ -263,7 +263,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown sparkle)
 
 # Include directories
 target_include_directories(${PROJECT_NAME}_static

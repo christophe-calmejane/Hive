@@ -151,6 +151,9 @@ else()
 			Delete \\\"$DESKTOP\\\\${HIVE_NAME_AND_VERSION}.lnk\\\""
 		)
 
+		# Add a finish page to run the program
+		set(CPACK_NSIS_MUI_FINISHPAGE_RUN "${PROJECT_NAME}.exe")
+
 		include(CPack REQUIRED)
 
 		# Setup components

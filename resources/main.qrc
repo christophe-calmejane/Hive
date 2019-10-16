@@ -14,5 +14,6 @@
         <file>not_compliant.png</file>
         <file>misbehaving.png</file>
         <file>style.qss</file>
+        <file>dsa_pub.pem</file>
     </qresource>
 </RCC>

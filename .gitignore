@@ -16,6 +16,13 @@ ehthumbs.db
 # TMP "local" module
 /3rdparty/avdecc-local
 
+# WinSparkle
+/3rdparty/winsparkle/bin
+/3rdparty/winsparkle/include
+/3rdparty/winsparkle/lib
+
 # Ignore .identity file
 /.identity
 
+# Ignore PEM files
+/resources/*.pem
