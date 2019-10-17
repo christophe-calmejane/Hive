@@ -818,8 +818,8 @@ private:
 										la::avdecc::entity::model::StreamIdentification targetStreamIdentification{ connectedTalker, connectedTalkerStreamIndex };
 
 										auto connectionInformation = std::make_shared<TargetConnectionInformation>();
-										connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(targetStreamIdentification);
-										connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(sourceStreamIdentification);
+										connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(sourceStreamIdentification);
+										connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(targetStreamIdentification);
 
 										auto primaryListenerStreamIndex{ 0u };
 										auto primaryTalkerStreamIndex{ 0u };
@@ -1402,7 +1402,11 @@ private:
 
 				if (talkerPimaryStreamIndex && listenerPimaryStreamIndex)
 				{
-					primaryStreamConnections.push_back(std::make_pair(*talkerPimaryStreamIndex, *listenerPimaryStreamIndex));
+					auto const connection = std::make_pair(*talkerPimaryStreamIndex, *listenerPimaryStreamIndex);
+					if (std::find(primaryStreamConnections.begin(), primaryStreamConnections.end(), connection) == primaryStreamConnections.end())
+					{
+						primaryStreamConnections.push_back(connection);
+					}
 				}
 			}
 			else
