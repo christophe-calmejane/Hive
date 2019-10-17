@@ -25,6 +25,7 @@
 
 class DomainTreeItem;
 
+
 // **************************************************************
 // class AbstractTreeItem
 // **************************************************************
@@ -35,6 +36,14 @@ class DomainTreeItem;
 */
 class AbstractTreeItem
 {
+public:
+	enum TreeItemType
+	{
+		Root, 
+		Domain,
+		Entity
+	};
+
 public:
 	AbstractTreeItem();
 	virtual ~AbstractTreeItem();
@@ -47,6 +56,7 @@ public:
 	virtual int indexOf(AbstractTreeItem* child) const;
 	virtual bool removeChildAt(int row);
 	virtual AbstractTreeItem* childAt(int row);
+	virtual TreeItemType type() const = 0;
 
 protected:
 	QList<AbstractTreeItem*> m_childItems;
@@ -66,4 +76,5 @@ class RootTreeItem : public AbstractTreeItem
 public:
 	DomainTreeItem* findDomainWithIndex(avdecc::mediaClock::DomainIndex const domainIndex) const;
 	QList<DomainTreeItem*> findDomainsWithEntity(la::avdecc::UniqueIdentifier entityId);
+	virtual AbstractTreeItem::TreeItemType type() const;
 };

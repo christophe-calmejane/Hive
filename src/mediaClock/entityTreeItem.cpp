@@ -95,3 +95,8 @@ bool EntityTreeItem::isMediaClockDomainManageableEntity() const
 {
 	return avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(m_entityID);
 }
+
+AbstractTreeItem::TreeItemType EntityTreeItem::type() const
+{
+	return AbstractTreeItem::TreeItemType::Entity;
+}

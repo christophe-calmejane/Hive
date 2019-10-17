@@ -45,6 +45,8 @@ public:
 
 	bool isMediaClockDomainManageableEntity() const;
 
+	virtual AbstractTreeItem::TreeItemType type() const;
+
 private:
 	la::avdecc::UniqueIdentifier m_entityID;
 };

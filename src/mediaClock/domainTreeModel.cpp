@@ -216,10 +216,12 @@ QModelIndex DomainTreeModelPrivate::getDomainModelIndex(avdecc::mediaClock::Doma
 bool DomainTreeModelPrivate::addEntityToSelection(QModelIndex const& currentIndex, la::avdecc::UniqueIdentifier const& entityId)
 {
 	Q_Q(DomainTreeModel);
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(currentIndex.internalPointer()));
+	auto* treeItem = static_cast<AbstractTreeItem*>(currentIndex.internalPointer());
 
-	if (domainTreeItem != nullptr)
+	if (treeItem->type() == AbstractTreeItem::Domain)
 	{
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
+
 		// add to selected domain
 		q->beginInsertRows(currentIndex, domainTreeItem->childCount(), domainTreeItem->childCount());
 		domainTreeItem->appendChild(new EntityTreeItem(entityId, domainTreeItem));
@@ -233,11 +235,11 @@ bool DomainTreeModelPrivate::addEntityToSelection(QModelIndex const& currentInde
 		return true;
 	}
 
-	auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(currentIndex.internalPointer()));
-	if (entityTreeItem != nullptr)
+	if (treeItem->type() == AbstractTreeItem::Entity)
 	{
+		auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
 		// add to parent domain
-		auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+		auto* parentDomainTreeItem = static_cast<DomainTreeItem*>(entityTreeItem->parentItem());
 		q->beginInsertRows(currentIndex.parent(), parentDomainTreeItem->childCount(), parentDomainTreeItem->childCount());
 		parentDomainTreeItem->appendChild(new EntityTreeItem(entityId, parentDomainTreeItem));
 		q->endInsertRows();
@@ -284,9 +286,10 @@ bool DomainTreeModelPrivate::addEntityToDomain(avdecc::mediaClock::DomainIndex c
 
 std::optional<avdecc::mediaClock::DomainIndex> DomainTreeModelPrivate::getSelectedDomain(QModelIndex const& currentIndex) const
 {
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(currentIndex.internalPointer()));
-	if (domainTreeItem)
+	auto* treeItem = static_cast<AbstractTreeItem*>(currentIndex.internalPointer());
+	if (treeItem->type() == AbstractTreeItem::Domain)
 	{
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 		return domainTreeItem->domain().getDomainIndex();
 	}
 
@@ -299,10 +302,12 @@ std::optional<avdecc::mediaClock::DomainIndex> DomainTreeModelPrivate::getSelect
 */
 QPair<std::optional<avdecc::mediaClock::DomainIndex>, la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::getSelectedEntity(QModelIndex const& currentIndex) const
 {
-	auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(currentIndex.internalPointer()));
-	if (entityTreeItem)
+	auto* treeItem = static_cast<AbstractTreeItem*>(currentIndex.internalPointer());
+
+	if (treeItem->type() == AbstractTreeItem::Entity)
 	{
-		auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+		auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+		auto* parentDomainTreeItem = static_cast<DomainTreeItem*>(entityTreeItem->parentItem());
 		return qMakePair(parentDomainTreeItem->domain().getDomainIndex(), entityTreeItem->entityId());
 	}
 	return qMakePair(std::nullopt, la::avdecc::UniqueIdentifier());
@@ -321,10 +326,11 @@ QList<QPair<avdecc::mediaClock::DomainIndex, la::avdecc::UniqueIdentifier>> Doma
 		auto const& selectionIndexIt = selectionIndexes.begin();
 		if (selectionIndexIt != selectionIndexes.end())
 		{
-			auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(selectionIndexIt->internalPointer()));
-			if (entityTreeItem)
+			auto* treeItem = static_cast<AbstractTreeItem*>(selectionIndexIt->internalPointer());
+			if (treeItem->type() == AbstractTreeItem::Entity)
 			{
-				auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+				auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+				auto* parentDomainTreeItem = static_cast<DomainTreeItem*>(entityTreeItem->parentItem());
 				result.append(qMakePair(parentDomainTreeItem->domain().getDomainIndex(), entityTreeItem->entityId()));
 			}
 		}
@@ -346,9 +352,10 @@ QList<avdecc::mediaClock::DomainIndex> DomainTreeModelPrivate::getSelectedDomain
 		auto const& selectionIndexIt = selectionIndexes.begin();
 		if (selectionIndexIt != selectionIndexes.end())
 		{
-			auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(selectionIndexIt->internalPointer()));
-			if (domainTreeItem)
+			auto* treeItem = static_cast<AbstractTreeItem*>(selectionIndexIt->internalPointer());
+			if (treeItem->type() == AbstractTreeItem::Domain)
 			{
+				auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 				result.append(domainTreeItem->domain().getDomainIndex());
 			}
 		}
@@ -428,9 +435,10 @@ avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::getNextDomainIndex()
 	auto const childCount = _rootItem->childCount();
 	for (auto i = 0; i < childCount; ++i)
 	{
-		auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(_rootItem->childAt(i));
-		if (domainTreeItem)
+		auto* treeItem = _rootItem->childAt(i);
+		if (treeItem->type() == AbstractTreeItem::Domain)
 		{
+			auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 			existingDomainIndices.push_back(domainTreeItem->domain().getDomainIndex());
 		}
 	}
@@ -472,32 +480,37 @@ avdecc::mediaClock::DomainIndex DomainTreeModelPrivate::addNewDomain()
 QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeSelectedDomain(QModelIndex const& currentIndex)
 {
 	Q_Q(DomainTreeModel);
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(currentIndex.internalPointer()));
-	int domainRowIndex = _rootItem->indexOf(domainTreeItem);
 
-	// after deleting the domain all entities should be returned to the unassigned list.
 	QList<la::avdecc::UniqueIdentifier> entities;
-	auto const childCount = _rootItem->childCount();
-	for (auto i = 0; i < childCount; ++i)
+
+	auto* treeItem = static_cast<AbstractTreeItem*>(currentIndex.internalPointer());
+	if (treeItem->type() == AbstractTreeItem::Domain)
 	{
-		auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
-		if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
+
+		// after deleting the domain all entities should be returned to the unassigned list.
+		auto const childCount = _rootItem->childCount();
+		for (auto i = 0; i < childCount; ++i)
 		{
-			entities.append(entityTreeItem->entityId());
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
+			if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
+			{
+				entities.append(entityTreeItem->entityId());
+			}
+		}
+		int domainRowIndex = _rootItem->indexOf(domainTreeItem);
+
+		q->beginRemoveRows(QModelIndex(), domainRowIndex, domainRowIndex);
+		_rootItem->removeChildAt(domainRowIndex);
+		q->endRemoveRows();
+
+		// all following domain indices have to corrected.
+		for (auto i = _rootItem->childCount() - 1; i >= domainRowIndex; --i)
+		{
+			auto* subsequentDomainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
+			subsequentDomainTreeItem->domain().setDomainIndex(i);
 		}
 	}
-
-	q->beginRemoveRows(QModelIndex(), domainRowIndex, domainRowIndex);
-	_rootItem->removeChildAt(domainRowIndex);
-	q->endRemoveRows();
-
-	// all following domain indices have to corrected.
-	for (auto i = _rootItem->childCount() - 1; i >= domainRowIndex; --i)
-	{
-		auto* subsequentDomainTreeItem = static_cast<DomainTreeItem*>(_rootItem->childAt(i));
-		subsequentDomainTreeItem->domain().setDomainIndex(i);
-	}
-
 	return entities;
 }
 
@@ -512,22 +525,27 @@ QList<la::avdecc::UniqueIdentifier> DomainTreeModelPrivate::removeDomain(avdecc:
 	QList<la::avdecc::UniqueIdentifier> entities;
 	for (auto i = _rootItem->childCount() - 1; i >= 0; --i)
 	{
-		auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(_rootItem->childAt(i)));
-		if (domainTreeItem && domainTreeItem->domain().getDomainIndex() == domainIndex)
+		auto* treeItem = static_cast<AbstractTreeItem*>(_rootItem->childAt(i));
+
+		if (treeItem->type() == AbstractTreeItem::Domain)
 		{
-			// after deleting the domain all entities should be returned to the unassigned list.
-			auto const itemChildCount = _rootItem->childAt(i)->childCount();
-			for (auto j = 0; j < itemChildCount; ++j)
+			auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
+			if (domainTreeItem->domain().getDomainIndex() == domainIndex)
 			{
-				auto* entityTreeItem = static_cast<EntityTreeItem*>(_rootItem->childAt(i)->childAt(j));
-				if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
+				// after deleting the domain all entities should be returned to the unassigned list.
+				auto const itemChildCount = domainTreeItem->childCount();
+				for (auto j = 0; j < itemChildCount; ++j)
 				{
-					entities.append(entityTreeItem->entityId());
+					auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(j));
+					if (entityTreeItem->isMediaClockDomainManageableEntity()) // via audio stream connected entities are not shown in the unassigned list.
+					{
+						entities.append(entityTreeItem->entityId());
+					}
 				}
+				q->beginRemoveRows(QModelIndex(), i, i);
+				_rootItem->removeChildAt(i);
+				q->endRemoveRows();
 			}
-			q->beginRemoveRows(QModelIndex(), i, i);
-			_rootItem->removeChildAt(i);
-			q->endRemoveRows();
 		}
 	}
 
@@ -598,11 +616,12 @@ void DomainTreeModelPrivate::handleClick(QModelIndex const& current, QModelIndex
 
 	if (current.column() == static_cast<int>(DomainTreeModelColumn::MediaClockMaster))
 	{
-		auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(current.internalPointer()));
+		auto* treeItem = static_cast<AbstractTreeItem*>(current.internalPointer());
 
-		if (entityTreeItem != nullptr)
+		if (treeItem->type() == AbstractTreeItem::Entity)
 		{
-			auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+			auto* parentDomainTreeItem = static_cast<DomainTreeItem*>(entityTreeItem->parentItem());
 			bool isMediaClockDomainManageableEntity = entityTreeItem->isMediaClockDomainManageableEntity();
 			bool entityIsMCMaster = entityTreeItem->entityId() == parentDomainTreeItem->domain().getMediaClockDomainMaster();
 			if (!entityIsMCMaster && isMediaClockDomainManageableEntity)
@@ -686,10 +705,11 @@ bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& v
 	Q_Q(DomainTreeModel);
 	if (index.column() == static_cast<int>(DomainTreeModelColumn::Domain))
 	{
-		auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
+		auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
 
-		if (domainTreeItem != nullptr)
+		if (treeItem->type() == AbstractTreeItem::Domain)
 		{
+			auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 			if (*domainTreeItem->domainSamplingRate().first != value.toUInt())
 			{
 				domainTreeItem->setDomainSamplingRate(la::avdecc::entity::model::SamplingRate(value.toUInt()));
@@ -734,7 +754,7 @@ Qt::ItemFlags DomainTreeModelPrivate::flags(QModelIndex const& index) const
 	Q_Q(const DomainTreeModel);
 	if (!index.isValid())
 		return Qt::ItemIsDropEnabled; // enable drop into empty space
-	if (dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer())) != nullptr)
+	if (static_cast<AbstractTreeItem*>(index.internalPointer())->type() == AbstractTreeItem::Domain)
 	{
 		// it's a domain entry
 		auto flags = q->QAbstractItemModel::flags(index) | Qt::ItemIsDropEnabled;
@@ -764,14 +784,18 @@ bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& p
 	else
 		parentItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
 
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(parentItem);
-	if (!domainTreeItem)
+	DomainTreeItem* domainTreeItem = nullptr;
+	if (parentItem->type() == AbstractTreeItem::Entity)
 	{
-		auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(parentItem);
+		auto* entityTreeItem = static_cast<EntityTreeItem*>(parentItem);
 		if (entityTreeItem)
 		{
-			domainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+			domainTreeItem = static_cast<DomainTreeItem*>(entityTreeItem->parentItem());
 		}
+	}
+	else if (parentItem->Domain)
+	{
+		domainTreeItem = static_cast<DomainTreeItem*>(parentItem);
 	}
 
 	if (!domainTreeItem)
@@ -786,7 +810,7 @@ bool DomainTreeModelPrivate::removeRows(int row, int count, QModelIndex const& p
 
 	for (auto i = row + count - 1; i >= row; --i)
 	{
-		auto entityItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
+		auto entityItem = static_cast<EntityTreeItem*>(domainTreeItem->childAt(i));
 		removeEntity(domainTreeItem->domain().getDomainIndex(), entityItem->entityId());
 	}
 	if (!domainTreeItem->domain().getMediaClockDomainMaster())
@@ -840,14 +864,19 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 
 	auto jsonFormattedDataEntries = jsonFormattedData.value("data").toArray();
 
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
-	if (!domainTreeItem)
+	DomainTreeItem* domainTreeItem = nullptr;
+	auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
+	if (treeItem->type() == AbstractTreeItem::Entity)
 	{
-		auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
+		auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
 		if (entityTreeItem)
 		{
-			domainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+			domainTreeItem = static_cast<DomainTreeItem*>(entityTreeItem->parentItem());
 		}
+	}
+	else if (treeItem->type() == AbstractTreeItem::Domain)
+	{
+		domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 	}
 	if (!domainTreeItem)
 	{
@@ -860,7 +889,7 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 		auto const itemChildCount = domainTreeItem->childCount();
 		for (auto i = 0; i < itemChildCount; ++i)
 		{
-			auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(domainTreeItem->child(i));
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainTreeItem->child(i));
 			if (entityTreeItem && entityTreeItem->entityId() == entityId)
 			{
 				return false;
@@ -902,18 +931,20 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction,
 	}
 	auto jsonFormattedDataEntries = jsonFormattedData.value("data").toArray();
 
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
+	auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
 	std::optional<avdecc::mediaClock::DomainIndex> domainIndex = std::nullopt;
-	if (domainTreeItem)
+	if (treeItem->type() == AbstractTreeItem::Domain)
 	{
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 		domainIndex = domainTreeItem->domain().getDomainIndex();
 	}
 	else
 	{
-		auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(parent.internalPointer()));
-		if (entityTreeItem)
+		auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
+		if (treeItem)
 		{
-			domainIndex = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem())->domain().getDomainIndex();
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+			domainIndex = static_cast<DomainTreeItem*>(entityTreeItem->parentItem())->domain().getDomainIndex();
 		}
 	}
 	if (!domainIndex)
@@ -957,9 +988,10 @@ QMimeData* DomainTreeModelPrivate::mimeData(QModelIndexList const& indexes) cons
 	{
 		if (index.isValid())
 		{
-			auto const* entityItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
-			if (entityItem)
+			auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
+			if (treeItem->type() == AbstractTreeItem::Entity)
 			{
+				auto* entityItem = static_cast<EntityTreeItem*>(treeItem);
 				QJsonValue entityIdJsonVal((qint64)entityItem->entityId());
 				if (entityItem && !jsonFormattedDataEntries.contains(entityIdJsonVal))
 				{
@@ -1321,10 +1353,11 @@ SampleRateDomainDelegate::SampleRateDomainDelegate(QTreeView* parent)
 */
 QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
+	auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
 
-	if (domainTreeItem != nullptr)
+	if (treeItem->type() == AbstractTreeItem::Domain)
 	{
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(index.internalPointer());
 		auto const& sampleRates = domainTreeItem->sampleRates();
 		auto const& selectedSampleRate = domainTreeItem->domainSamplingRate();
 		if (sampleRates.size() < 2)
@@ -1386,8 +1419,8 @@ QWidget* SampleRateDomainDelegate::createEditor(QWidget* parent, QStyleOptionVie
 */
 void SampleRateDomainDelegate::setModelData(QWidget* editor, QAbstractItemModel* model, QModelIndex const& index) const
 {
-	auto* edit = dynamic_cast<DomainTreeDomainEditDelegate*>(editor);
-	if (edit != nullptr && !edit->getComboBox()->currentData().isNull() && edit->getComboBox()->currentData().isValid())
+	auto* edit = static_cast<DomainTreeDomainEditDelegate*>(editor);
+	if (editor != nullptr && !edit->getComboBox()->currentData().isNull() && edit->getComboBox()->currentData().isValid())
 	{
 		if (edit->getComboBox()->currentData().toUInt() != 0)
 		{
@@ -1411,11 +1444,11 @@ void SampleRateDomainDelegate::paint(QPainter* painter, QStyleOptionViewItem con
 {
 	QStyledItemDelegate::paint(painter, option, index);
 
-	auto* domainTreeItem = dynamic_cast<DomainTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
-	auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
+	auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
 
-	if (domainTreeItem != nullptr)
+	if (treeItem->type() == AbstractTreeItem::Domain)
 	{
+		auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 		if (option.state.testFlag(QStyle::State_Editing)) // not beeing set: QTBUG-68947
 		{
 			return;
@@ -1452,8 +1485,9 @@ void SampleRateDomainDelegate::paint(QPainter* painter, QStyleOptionViewItem con
 		painter->restore();
 	}
 
-	if (entityTreeItem != nullptr)
+	if (treeItem->type() == AbstractTreeItem::Entity)
 	{
+		auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
 		auto const& entityName = entityTreeItem->entityName();
 		auto const& entitySampleRate = entityTreeItem->sampleRate();
 		auto selectedSampleRate = entitySampleRate ? (*entitySampleRate).second : "";
@@ -1525,11 +1559,12 @@ void MCMasterSelectionDelegate::paint(QPainter* painter, QStyleOptionViewItem co
 {
 	QStyledItemDelegate::paint(painter, option, index);
 
-	auto* entityTreeItem = dynamic_cast<EntityTreeItem*>(static_cast<AbstractTreeItem*>(index.internalPointer()));
+	auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
 
-	if (entityTreeItem != nullptr)
+	if (treeItem->type() == AbstractTreeItem::Entity)
 	{
-		auto* parentDomainTreeItem = dynamic_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+		auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+		auto* parentDomainTreeItem = static_cast<DomainTreeItem*>(treeItem->parentItem());
 
 		bool entityIsMCMaster = entityTreeItem->entityId() == parentDomainTreeItem->domain().getMediaClockDomainMaster();
 		bool isMediaClockDomainManageableEntity = entityTreeItem->isMediaClockDomainManageableEntity();

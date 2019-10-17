@@ -50,6 +50,9 @@ public:
 
 	void setDefaultMcMaster();
 
+	virtual AbstractTreeItem::TreeItemType type() const;
+	
+
 private:
 	avdecc::mediaClock::MCDomain m_itemData;
 	bool m_sampleRateSet;

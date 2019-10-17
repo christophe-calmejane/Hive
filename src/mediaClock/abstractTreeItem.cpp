@@ -157,3 +157,8 @@ QList<DomainTreeItem*> RootTreeItem::findDomainsWithEntity(la::avdecc::UniqueIde
 	}
 	return result;
 }
+
+AbstractTreeItem::TreeItemType RootTreeItem::type() const
+{
+	return AbstractTreeItem::TreeItemType::Root;
+}

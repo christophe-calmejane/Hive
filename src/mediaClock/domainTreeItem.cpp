@@ -187,3 +187,8 @@ void DomainTreeItem::setDefaultMcMaster()
 		}
 	}
 }
+
+AbstractTreeItem::TreeItemType DomainTreeItem::type() const
+{
+	return AbstractTreeItem::TreeItemType::Domain;
+}
