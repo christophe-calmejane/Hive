@@ -137,7 +137,8 @@ function(target_setup_deploy TARGET_NAME)
 					message(WARNING "Cannot deploy Qt dependencies on non-bundle application target ${TARGET_NAME}")
 				else()
 					string(APPEND DEPLOY_SCRIPT_CONTENT
-						"execute_process(COMMAND \"${DEPLOY_QT_COMMAND}\" \"$<TARGET_BUNDLE_DIR:${TARGET_NAME}>\" -verbose=0 -qmldir=${DEPLOY_QML_DIR})\n")
+						"execute_process(COMMAND \"${DEPLOY_QT_COMMAND}\" \"$<TARGET_BUNDLE_DIR:${TARGET_NAME}>\" -verbose=0 -qmldir=${DEPLOY_QML_DIR} \"-codesign=${LA_TEAM_IDENTIFIER}\")\n"
+						)
 				endif()
 			endif()
 		endif()
