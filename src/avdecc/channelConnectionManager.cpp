@@ -119,7 +119,7 @@ private:
 				{
 					if (streamChannelInfo1.streamAlreadyConnected == streamChannelInfo2.streamAlreadyConnected)
 					{
-						if ((streamChannelInfo1.talkerStreamFormat == streamChannelInfo1.listenerStreamFormat) == (streamChannelInfo2.talkerStreamFormat == streamChannelInfo2.listenerStreamFormat))
+						if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(streamChannelInfo1.listenerStreamFormat, streamChannelInfo1.talkerStreamFormat) == la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(streamChannelInfo2.listenerStreamFormat, streamChannelInfo2.talkerStreamFormat))
 						{
 							if (streamChannelInfo1.reusesListenerMapping == streamChannelInfo2.reusesListenerMapping)
 							{
@@ -139,7 +139,7 @@ private:
 								return false;
 							}
 						}
-						else if (streamChannelInfo1.talkerStreamFormat == streamChannelInfo1.listenerStreamFormat && streamChannelInfo2.talkerStreamFormat != streamChannelInfo2.listenerStreamFormat)
+						else if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(streamChannelInfo1.listenerStreamFormat, streamChannelInfo1.talkerStreamFormat) && !la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(streamChannelInfo2.listenerStreamFormat, streamChannelInfo2.talkerStreamFormat))
 						{
 							return true;
 						}
@@ -2987,6 +2987,12 @@ private:
 		}
 		auto const& currentStreamInputFormat = streamInputNode.dynamicModel->streamFormat;
 
+		if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(currentStreamInputFormat, currentStreamOutputFormat))
+		{
+			// formats match already, no action necessary.
+			return std::make_pair(std::nullopt, std::nullopt);
+		}
+
 		auto compatibleFormatOptions = std::vector<std::pair<la::avdecc::entity::model::StreamFormat, la::avdecc::entity::model::StreamFormat>>{};
 
 		auto const& streamOutputFormats = streamOutputNode.staticModel->formats;
@@ -3029,7 +3035,7 @@ private:
 		bool optionFound = false;
 		for (auto const& compatibleFormatOption : compatibleFormatOptions)
 		{
-			if (compatibleFormatOption.first == currentStreamOutputFormat)
+			if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(compatibleFormatOption.first, currentStreamOutputFormat))
 			{
 				resultingListenerStreamFormat = compatibleFormatOption.second;
 				resultingListenerStreamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(*resultingListenerStreamFormat);
@@ -3041,7 +3047,7 @@ private:
 		{
 			for (auto const& compatibleFormatOption : compatibleFormatOptions)
 			{
-				if (compatibleFormatOption.second == currentStreamInputFormat)
+				if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(currentStreamInputFormat, compatibleFormatOption.second))
 				{
 					resultingTalkerStreamFormat = compatibleFormatOption.first;
 					resultingTalkerStreamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(*resultingTalkerStreamFormat);
@@ -3071,6 +3077,9 @@ private:
 		return std::make_pair(resultingTalkerStreamFormat, resultingListenerStreamFormat);
 	}
 
+	/**
+	* Adjusts the stream formats of the given stream pair.
+	*/
 	void adjustStreamPairFormats(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex const streamOutputIndex, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex const streamInputIndex, std::pair<std::optional<la::avdecc::entity::model::StreamFormat>, std::optional<la::avdecc::entity::model::StreamFormat>> const streamFormats) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
