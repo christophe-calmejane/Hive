@@ -121,8 +121,9 @@ setupEnv()
 		else
 			local wspkloutputFile="_WinSparkle.zip"
 			rm -f "$wspkloutputFile"
-			local spklVersion="WinSparkle-0.6.0"
-			local log=$("$result" https://github.com/vslavik/winsparkle/releases/download/v0.6.0/${spklVersion}.zip -O "$wspkloutputFile" 2>&1)
+			local spklVersion="0.6.0"
+			local spklZipName="WinSparkle-${spklVersion}"
+			local log=$("$result" https://github.com/vslavik/winsparkle/releases/download/v${spklVersion}/${spklZipName}.zip -O "$wspkloutputFile" 2>&1)
 			if [ $? -ne 0 ];
 			then
 				echo "failed!"
@@ -158,13 +159,65 @@ setupEnv()
 				mkdir -p "${baseSparkleFolder}/bin/x64"
 				mkdir -p "${baseSparkleFolder}/lib/x86"
 				mkdir -p "${baseSparkleFolder}/lib/x64"
-				mv "${wspklOutputFolder}/${spklVersion}/include" "${baseSparkleFolder}/"
-				mv "${wspklOutputFolder}/${spklVersion}/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x86"
-				mv "${wspklOutputFolder}/${spklVersion}/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x86"
-				mv "${wspklOutputFolder}/${spklVersion}/x64/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x64"
-				mv "${wspklOutputFolder}/${spklVersion}/x64/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x64"
+				mv "${wspklOutputFolder}/${spklZipName}/include" "${baseSparkleFolder}/"
+				mv "${wspklOutputFolder}/${spklZipName}/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x86"
+				mv "${wspklOutputFolder}/${spklZipName}/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x86"
+				mv "${wspklOutputFolder}/${spklZipName}/x64/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x64"
+				mv "${wspklOutputFolder}/${spklZipName}/x64/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x64"
 				rm -f "$wspkloutputFile"
 				rm -rf "$wspklOutputFolder"
+				echo "done"
+			fi
+		fi
+	elif [[ $osName == "mac" ]];
+	then
+		echo -n "Downloading Sparkle... "
+		local baseSparkleFolder="3rdparty/sparkle"
+		local result
+		result=$(which wget 2>&1)
+		if [ $? -ne 0 ];
+		then
+			echo "failed, wget not found (see ${baseSparkleFolder}/README.me for manually installation instructions)"
+		else
+			local spkloutputFile="_Sparkle.tar.bz2"
+			rm -f "$spkloutputFile"
+			local spklVersion="1.22.0"
+			local log=$("$result" https://github.com/sparkle-project/Sparkle/releases/download/${spklVersion}/Sparkle-${spklVersion}.tar.bz2 -O "$spkloutputFile" 2>&1)
+			if [ $? -ne 0 ];
+			then
+				echo "failed!"
+				echo ""
+				echo "Error log:"
+				echo $log
+				rm -f "$spkloutputFile"
+				exit 1
+			fi
+			echo "done"
+
+			echo -n "Installing Sparkle... "
+			result=$(which tar 2>&1)
+			if [ $? -ne 0 ];
+			then
+				echo "failed, tar not found (see ${baseSparkleFolder}/README.me for manually installation instructions)"
+				rm -f "$spkloutputFile"
+			else
+				local spklOutputFolder="_Sparkle"
+				rm -rf "$spklOutputFolder"
+				mkdir -p "$spklOutputFolder"
+				local log=$("$result" xvjf "$spkloutputFile" --directory "$spklOutputFolder" 2>&1)
+				if [ $? -ne 0 ];
+				then
+					echo "failed!"
+					echo ""
+					echo "Error log:"
+					echo $log
+					rm -f "$spkloutputFile"
+					rm -rf "$spklOutputFolder"
+					exit 1
+				fi
+				mv "${spklOutputFolder}/Sparkle.framework" "${baseSparkleFolder}/"
+				rm -f "$spkloutputFile"
+				rm -rf "$spklOutputFolder"
 				echo "done"
 			fi
 		fi

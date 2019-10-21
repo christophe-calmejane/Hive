@@ -32,7 +32,7 @@
 #include <chrono>
 
 #include "mainWindow.hpp"
-#include "sparkle.hpp"
+#include "sparkleHelper/sparkleHelper.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"

@@ -21,6 +21,9 @@ ehthumbs.db
 /3rdparty/winsparkle/include
 /3rdparty/winsparkle/lib
 
+# Sparkle
+/3rdparty/sparkle/Sparkle.framework
+
 # Ignore .identity file
 /.identity
 

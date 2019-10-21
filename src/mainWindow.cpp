@@ -44,6 +44,7 @@
 #include "internals/config.hpp"
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
+#include "sparkleHelper/sparkleHelper.hpp"
 #include "toolkit/comboBox.hpp"
 #include "toolkit/flatIconButton.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
@@ -60,7 +61,6 @@
 #include "multiFirmwareUpdateDialog.hpp"
 #include "defaults.hpp"
 #include "windowsNpfHelper.hpp"
-#include "sparkle.hpp"
 
 #include <la/avdecc/networkInterfaceHelper.hpp>
 

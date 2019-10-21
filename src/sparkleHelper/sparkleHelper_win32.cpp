@@ -26,6 +26,7 @@
 #	include <winsparkle.h>
 #	include <Windows.h>
 #else
+#include <Sparkle.h>
 #	error "TODO"
 #endif
 

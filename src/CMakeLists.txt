@@ -98,6 +98,7 @@ set(HEADER_FILES_COMMON
 	settingsManager/settingsManager.hpp
 	settingsManager/settingsManager.hpp
 	settingsManager/settings.hpp
+	sparkleHelper/sparkleHelper.hpp
 	statistics/entityStatisticsTreeWidgetItem.hpp
 	toolkit/comboBox.hpp
 	toolkit/dynamicHeaderView.hpp
@@ -136,7 +137,6 @@ set(HEADER_FILES_COMMON
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	painterHelper.hpp
-	sparkle.hpp
 	windowsNpfHelper.hpp
 )
 
@@ -237,6 +237,20 @@ set(SOURCE_FILES_APP
 	main.cpp
 )
 
+if(WIN32)
+	list(APPEND SOURCE_FILES_COMMON
+		sparkleHelper/sparkleHelper_win32.hpp
+	)
+elseif(APPLE)
+	list(APPEND SOURCE_FILES_COMMON
+		sparkleHelper/sparkleHelper_mac.mm
+	)
+else()
+	list(APPEND SOURCE_FILES_COMMON
+		sparkleHelper/sparkleHelper_unix.cpp
+	)
+endif()
+
 # Group source files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
 source_group("Header Files" FILES ${HEADER_FILES_GENERATED})
@@ -263,7 +277,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown sparkle)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown Sparkle::lib)
 
 # Include directories
 target_include_directories(${PROJECT_NAME}_static
