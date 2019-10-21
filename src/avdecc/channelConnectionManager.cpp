@@ -3018,7 +3018,7 @@ private:
 					// check if compatible (after size adaptations)
 					if (expectedStreamFormatType == streamFormatTypeListener && streamFormatSamplingRateTalker == streamFormatSamplingRateListener && streamFormatSampleFormatTalker == streamFormatSampleFormatListener && (streamFormatSynchronousClockTalker || !streamFormatSynchronousClockListener) && (streamFormatInfoTalker->getChannelsCount() == streamFormatInfoListener->getChannelsCount() || (streamFormatInfoTalker->isUpToChannelsCount() && streamFormatInfoListener->isUpToChannelsCount()) || (streamFormatInfoTalker->isUpToChannelsCount() && streamFormatInfoTalker->getChannelsCount() >= streamFormatInfoListener->getChannelsCount()) || (streamFormatInfoListener->isUpToChannelsCount() && streamFormatInfoTalker->getChannelsCount() <= streamFormatInfoListener->getChannelsCount())))
 					{
-						compatibleFormatOptions.push_back(std::make_pair(streamOutputFormat, streamInputFormat));
+						compatibleFormatOptions.push_back(la::avdecc::entity::model::StreamFormatInfo::getAdaptedCompatibleFormats(streamInputFormat, streamOutputFormat));
 					}
 				}
 			}
