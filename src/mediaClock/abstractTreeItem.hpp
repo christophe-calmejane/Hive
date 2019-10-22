@@ -39,7 +39,7 @@ class AbstractTreeItem
 public:
 	enum TreeItemType
 	{
-		Root, 
+		Root,
 		Domain,
 		Entity
 	};
