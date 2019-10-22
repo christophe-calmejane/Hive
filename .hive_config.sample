@@ -1,0 +1,11 @@
+# This is a sample configuration file for Hive Installer build
+# Rename this file to .hive_config
+
+# Signing identity to be used, defaults to "-" which let Xcode autodetect appropriate signing identity
+identity=-
+
+# Appcast URL for Hive Releases - Only use https URLs (except for debugging when using localhost)
+appcast_releases=https://www.kikisoft.com/Hive/appcast-release.xml
+
+# Appcast URL for Hive Betas - Only use https URLs (except for debugging when using localhost)
+appcast_betas=https://www.kikisoft.com/Hive/appcast-beta.xml

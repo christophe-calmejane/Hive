@@ -17,176 +17,113 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "sparkleHelper.hpp"
+#include <winsparkle.h>
+#include <Windows.h>
 
-#include <memory>
-#include <string>
-
-#ifdef _WIN32
-#	include <winsparkle.h>
-#	include <Windows.h>
-#else
-#include <Sparkle.h>
-#	error "TODO"
-#endif
-
-class Sparkle final
+void Sparkle::init(std::string const& signature) noexcept
 {
-public:
-	static Sparkle& getInstance() noexcept
+	try
 	{
-		static auto s_Instance = Sparkle{};
-		return s_Instance;
-	}
+		// Set Language ID
+		win_sparkle_set_langid(::GetThreadUILanguage());
+		// Set our DSA public key
+		win_sparkle_set_dsa_pub_pem(signature.c_str());
 
-	void init(std::string const& signature) noexcept
-	{
-		try
-		{
-#ifdef _WIN32
-			// Set Language ID
-			win_sparkle_set_langid(::GetThreadUILanguage());
-			// Set our DSA public key
-			win_sparkle_set_dsa_pub_pem(signature.c_str());
-
-			// Set callbacks to handle application shutdown when an update is starting
-			win_sparkle_set_can_shutdown_callback(
-				[]() -> int
-				{
-					return 1;
-				});
-			win_sparkle_set_shutdown_request_callback(
-				[]()
-				{
-					QCoreApplication::postEvent(qApp, new QEvent{ QEvent::Type::Close });
-				});
-
-			// Get current Check For Updates value
-			_checkForUpdates = static_cast<bool>(win_sparkle_get_automatic_check_for_updates());
-#else
-#	error "TODO"
-#endif
-			_initialized = true;
-		}
-		catch (...)
-		{
-		}
-	}
-
-	void setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
-	{
-		if (!_initialized)
-		{
-			return;
-		}
-
-		try
-		{
-#ifdef _WIN32
-			// Set Automatic Check For Updates
-			win_sparkle_set_automatic_check_for_updates(static_cast<int>(checkForUpdates));
-
-			// If switching to CheckForUpdates, check right now
-			if (checkForUpdates && _started)
+		// Set callbacks to handle application shutdown when an update is starting
+		win_sparkle_set_can_shutdown_callback(
+			[]() -> int
 			{
-				win_sparkle_check_update_without_ui();
-			}
-#else
-#	error "TODO"
-#endif
-			_checkForUpdates = checkForUpdates;
-		}
-		catch (...)
-		{
-		}
-	}
-
-	void setAppcastUrl(std::string const& appcastUrl) noexcept
-	{
-		if (!_initialized)
-		{
-			return;
-		}
-
-		try
-		{
-#ifdef _WIN32
-			// Set Appcast URL
-			win_sparkle_set_appcast_url(appcastUrl.c_str());
-			if (appcastUrl != _appcastUrl && _started && _checkForUpdates)
+				return 1;
+			});
+		win_sparkle_set_shutdown_request_callback(
+			[]()
 			{
-				win_sparkle_check_update_without_ui();
-			}
-#else
-#	error "TODO"
-#endif
-			_appcastUrl = appcastUrl;
-		}
-		catch (...)
-		{
-		}
-	}
+				QCoreApplication::postEvent(qApp, new QEvent{ QEvent::Type::Close });
+			});
 
-	void start() noexcept
+		// Get current Check For Updates value
+		_checkForUpdates = static_cast<bool>(win_sparkle_get_automatic_check_for_updates());
+
+		_initialized = true;
+	}
+	catch (...)
 	{
-		if (!_initialized)
-		{
-			return;
-		}
-
-		try
-		{
-#ifdef _WIN32
-			win_sparkle_init();
-#else
-#	error "TODO"
-#endif
-			_started = true;
-		}
-		catch (...)
-		{
-		}
 	}
+}
 
-	void manualCheckForUpdate() noexcept
+void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
+{
+	if (!_initialized)
 	{
-		if (!_initialized)
-		{
-			return;
-		}
-
-#ifdef _WIN32
-		if (_started)
-		{
-			win_sparkle_check_update_with_ui();
-		}
-#else
-#	error "TODO"
-#endif
+		return;
 	}
 
-	// Deleted compiler auto-generated methods
-	Sparkle(Sparkle&&) = delete;
-	Sparkle(Sparkle const&) = delete;
-	Sparkle& operator=(Sparkle const&) = delete;
-	Sparkle& operator=(Sparkle&&) = delete;
-
-private:
-	/** Constructor */
-	Sparkle() noexcept = default;
-
-	/** Destructor */
-	~Sparkle() noexcept
+	try
 	{
-#ifdef _WIN32
-		win_sparkle_cleanup();
-#else
-#	error "TODO"
-#endif
+		// Set Automatic Check For Updates
+		win_sparkle_set_automatic_check_for_updates(static_cast<int>(checkForUpdates));
+
+		// If switching to CheckForUpdates, check right now
+		if (checkForUpdates && _started)
+		{
+			win_sparkle_check_update_without_ui();
+		}
+
+		_checkForUpdates = checkForUpdates;
+	}
+	catch (...)
+	{
+	}
+}
+
+void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
+{
+	if (!_initialized)
+	{
+		return;
 	}
 
-	bool _initialized{ false };
-	bool _started{ false };
-	bool _checkForUpdates{ false };
-	std::string _appcastUrl{};
-};
+	try
+	{
+		// Set Appcast URL
+		win_sparkle_set_appcast_url(appcastUrl.c_str());
+		if (appcastUrl != _appcastUrl && _started && _checkForUpdates)
+		{
+			win_sparkle_check_update_without_ui();
+		}
+
+		_appcastUrl = appcastUrl;
+	}
+	catch (...)
+	{
+	}
+}
+
+void Sparkle::start() noexcept
+{
+	if (!_initialized)
+	{
+		return;
+	}
+
+	_started = true;
+}
+
+void Sparkle::manualCheckForUpdate() noexcept
+{
+	if (!_initialized)
+	{
+		return;
+	}
+
+	if (_started)
+	{
+		win_sparkle_check_update_with_ui();
+	}
+}
+
+Sparkle::~Sparkle() noexcept
+{
+	win_sparkle_cleanup();
+}

@@ -1273,11 +1273,11 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	{
 		if (value.toBool())
 		{
-			Sparkle::getInstance().setAppcastUrl("http://localhost/hive/appcast-beta.xml");
+			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastBetasUrl);
 		}
 		else
 		{
-			Sparkle::getInstance().setAppcastUrl("http://localhost/hive/appcast-release.xml");
+			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesUrl);
 		}
 	}
 }

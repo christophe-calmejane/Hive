@@ -19,50 +19,51 @@
 
 #include "sparkleHelper.hpp"
 #import <Sparkle/Sparkle.h>
-//#include <Sparkle.h>
 
-void Sparkle::init(std::string const& signature) noexcept
+void Sparkle::init(std::string const& /*signature*/) noexcept
 {
+	//
 }
 
-void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
+void Sparkle::setAutomaticCheckForUpdates(bool const /*checkForUpdates*/) noexcept
 {
-		if (!_initialized)
-		{
-			return;
-		}
+	if (!_initialized)
+	{
+		return;
+	}
 
-			_checkForUpdates = checkForUpdates;
+	_checkForUpdates = checkForUpdates;
 }
 
-	void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
+void Sparkle::setAppcastUrl(std::string const& /*appcastUrl*/) noexcept
+{
+	if (!_initialized)
 	{
-		if (!_initialized)
-		{
-			return;
-		}
-
-			_appcastUrl = appcastUrl;
+		return;
 	}
 
-	void Sparkle::start() noexcept
-	{
-		if (!_initialized)
-		{
-			return;
-		}
+	_appcastUrl = appcastUrl;
+}
 
-			_started = true;
+void Sparkle::start() noexcept
+{
+	if (!_initialized)
+	{
+		return;
 	}
 
-	void Sparkle::manualCheckForUpdate() noexcept
-	{
-		if (!_initialized)
-		{
-			return;
-		}
+	_started = true;
+}
 
-	}
-	Sparkle::~Sparkle() noexcept
+void Sparkle::manualCheckForUpdate() noexcept
+{
+	if (!_initialized)
 	{
+		return;
 	}
+}
+
+Sparkle::~Sparkle() noexcept
+{
+	//
+}

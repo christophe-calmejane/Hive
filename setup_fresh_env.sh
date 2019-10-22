@@ -245,9 +245,18 @@ setupEnv()
 			echo "done"
 		fi
 	fi
+
+	echo -n "Copying .hive_config file... "
+	if [ -f ".hive_config" ];
+	then
+		echo "already found, not overriding"
+	else
+		cp -f ".hive_config.sample" ".hive_config"
+	fi
+	echo "done"
 }
 
 setupEnv
-echo "All done!"
+echo "All done! Feel free to edit the .hive_config file to customize your installer."
 
 exit 0

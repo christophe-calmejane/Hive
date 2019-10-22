@@ -24,8 +24,8 @@ ehthumbs.db
 # Sparkle
 /3rdparty/sparkle/Sparkle.framework
 
-# Ignore .identity file
-/.identity
+# Ignore .hive_config file
+/.hive_config
 
 # Ignore PEM files
 /resources/*.pem

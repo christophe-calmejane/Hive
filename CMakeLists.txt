@@ -22,6 +22,18 @@ option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." TRUE)
 # Signing options
 option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
 
+############ Override from command line "CMake -D<PARAM>=<VALUE>"
+
+# Configuration options
+if(NOT HIVE_APPCAST_RELEASES_URL)
+	set(HIVE_APPCAST_RELEASES_URL "http://localhost/hive/appcast-release.xml" CACHE STRING "Appcast URL for Hive Releases" FORCE)
+endif()
+message(STATUS "Appcast URL for Hive Releases defined to: ${HIVE_APPCAST_RELEASES_URL}")
+if(NOT HIVE_APPCAST_BETAS_URL)
+	set(HIVE_APPCAST_BETAS_URL "http://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
+endif()
+message(STATUS "Appcast URL for Hive Betas defined to: ${HIVE_APPCAST_BETAS_URL}")
+
 ############ CMake Configuration
 
 project(Hive)

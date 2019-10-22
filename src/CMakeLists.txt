@@ -239,7 +239,7 @@ set(SOURCE_FILES_APP
 
 if(WIN32)
 	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_win32.hpp
+		sparkleHelper/sparkleHelper_win32.cpp
 	)
 elseif(APPLE)
 	list(APPEND SOURCE_FILES_COMMON
