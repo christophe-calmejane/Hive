@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-    <channel>
-        <title>Hive Beta Updates</title>
-        <description>AppCast for Hive Release and Beta Updates</description>
-        <language>en</language>
-        <!-- Insert generated item nodes here (both beta AND release items), in chronological descending order -->
-    </channel>
+	<channel>
+		<title>Hive Beta Updates</title>
+		<description>AppCast for Hive Release and Beta Updates</description>
+		<language>en</language>
+		<!-- Insert generated item nodes here (both beta AND release items), in chronological descending order -->
+	</channel>
 </rss>

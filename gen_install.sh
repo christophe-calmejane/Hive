@@ -64,28 +64,29 @@ generateAppcast()
 		baseURL="${params["appcast_betas"]}"
 	fi
 
+	# Get URL of folder containing appcast file
+	baseURL="${baseURL%/*}/"
+
+	# Common Appcast Item header
+	echo "		<item>" > "$appcastFile"
+	echo "			<title>Version $marketingVersion</title>" >> "$appcastFile"
+	echo "			<sparkle:releaseNotesLink>" >> "$appcastFile"
+	echo "				${baseURL}changelog.php?lastKnownVersion=next" >> "$appcastFile"
+	echo "			</sparkle:releaseNotesLink>" >> "$appcastFile"
+	echo "			<pubDate>`date -R`</pubDate>" >> "$appcastFile"
+	echo "			<enclosure url=\"${baseURL}${subPath}/${fileName}\"" >> "$appcastFile"
+
+	# OS-dependant Item values
 	if isWindows;
 	then
-		echo "<item>" > "$appcastFile"
-		echo "	<title>Version $marketingVersion</title>" >> "$appcastFile"
-		echo "	<sparkle:releaseNotesLink>" >> "$appcastFile"
-		echo "		${baseURL}changelog.php?lastKnownVersion=next" >> "$appcastFile"
-		echo "	</sparkle:releaseNotesLink>" >> "$appcastFile"
-		echo "	<pubDate>`date -R`</pubDate>" >> "$appcastFile"
-		echo "	<enclosure url=\"${baseURL}${subPath}/${fileName}\"" >> "$appcastFile"
-		echo "		sparkle:dsaSignature=\"${fileSignature}\"" >> "$appcastFile"
-		echo "		sparkle:version=\"${marketingVersion}\"" >> "$appcastFile"
-		echo "		sparkle:installerArguments=\"/S /NOPCAP\"" >> "$appcastFile"
-		echo "		length=\"${fileSize}\"" >> "$appcastFile"
-		echo "		sparkle:os=\"windows\"" >> "$appcastFile"
-		echo "		type=\"application/octet-stream\"" >> "$appcastFile"
-		echo "	/>" >> "$appcastFile"
-		echo "</item>" >> "$appcastFile"
+		echo "				sparkle:dsaSignature=\"${fileSignature}\"" >> "$appcastFile"
+		echo "				sparkle:installerArguments=\"/S /NOPCAP\"" >> "$appcastFile"
+		echo "				sparkle:os=\"windows\"" >> "$appcastFile"
 
 	elif isMac;
 	then
-		#echo "		sparkle:edSignature=\"7cLALFUHSwvEJWSkV8aMrfdseoBe4fhRa4FncC5NoThKxwThL6FDR7hTiPJh1fo2uagnPogisnQsgFgq6mGkt2RBw==\"" >> "$appcastFile"
-		#echo "		sparkle:os=\"macos\"" >> "$appcastFile"
+		#echo "				sparkle:edSignature=\"7cLALFUHSwvEJWSkV8aMrfdseoBe4fhRa4FncC5NoThKxwThL6FDR7hTiPJh1fo2uagnPogisnQsgFgq6mGkt2RBw==\"" >> "$appcastFile"
+		#echo "				sparkle:os=\"macos\"" >> "$appcastFile"
 		echo "TODO"
 		return;
 
@@ -94,7 +95,15 @@ generateAppcast()
 		return;
 	fi
 
-	echo "Appcast item generated to file: $appcastFile"
+	# Common Appcast Item footer
+	echo "				sparkle:version=\"${marketingVersion}\"" >> "$appcastFile"
+	echo "				length=\"${fileSize}\"" >> "$appcastFile"
+	echo "				type=\"application/octet-stream\"" >> "$appcastFile"
+	echo "			/>" >> "$appcastFile"
+	echo "		</item>" >> "$appcastFile"
+
+	# Done
+	echo "Appcast item generated to file: $appcastFile (add it to tools/webserver/appcast-${subPath}.xml)"
 }
 
 parseFile()
@@ -446,7 +455,7 @@ fi
 fullInstallerName="${installerBaseName}.${installerExtension}"
 
 if [ -f *"${fullInstallerName}" ]; then
-	echo "Installer already exists for version ${version}, please remove it first."
+	echo "Installer already exists for version ${releaseVersion}, please remove it first."
 	exit 1
 fi
 

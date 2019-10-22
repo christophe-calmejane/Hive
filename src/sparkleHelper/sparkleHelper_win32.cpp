@@ -107,6 +107,8 @@ void Sparkle::start() noexcept
 		return;
 	}
 
+	win_sparkle_init();
+
 	_started = true;
 }
 
