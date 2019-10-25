@@ -866,6 +866,11 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 
 	DomainTreeItem* domainTreeItem = nullptr;
 	auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
+	if (treeItem == nullptr)
+	{
+		// return true if no parent could be determined, this leads to the creation of a new domain
+		return true;
+	}
 	if (treeItem->type() == AbstractTreeItem::Entity)
 	{
 		auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
@@ -933,7 +938,7 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction,
 
 	auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
 	std::optional<avdecc::mediaClock::DomainIndex> domainIndex = std::nullopt;
-	if (treeItem->type() == AbstractTreeItem::Domain)
+	if (treeItem != nullptr && treeItem->type() == AbstractTreeItem::Domain)
 	{
 		auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 		domainIndex = domainTreeItem->domain().getDomainIndex();
@@ -941,7 +946,7 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction,
 	else
 	{
 		auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
-		if (treeItem)
+		if (treeItem && treeItem->type() == AbstractTreeItem::Entity)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
 			domainIndex = static_cast<DomainTreeItem*>(entityTreeItem->parentItem())->domain().getDomainIndex();
