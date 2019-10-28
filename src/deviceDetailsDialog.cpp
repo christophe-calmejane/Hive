@@ -386,36 +386,28 @@ public:
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		for (auto const& streamPortInputKV : node.streamPortInputs)
 		{
-			auto supportsDynamicMapping = streamPortInputKV.second.staticModel->hasDynamicAudioMap;
-			if (supportsDynamicMapping)
+			for (auto const& inputAudioClusterKV : streamPortInputKV.second.audioClusters)
 			{
-				for (auto const& inputAudioClusterKV : streamPortInputKV.second.audioClusters)
+				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 				{
-					for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
-					{
-						auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, inputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortInputKV.first, streamPortInputKV.second.staticModel->baseCluster };
-						auto connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, sourceChannelIdentification);
+					auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, inputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortInputKV.first, streamPortInputKV.second.staticModel->baseCluster };
+					auto connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, sourceChannelIdentification);
 
-						_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
-					}
+					_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
 				}
 			}
 		}
 
 		for (auto const& streamPortOutputKV : node.streamPortOutputs)
 		{
-			auto supportsDynamicMapping = streamPortOutputKV.second.staticModel->hasDynamicAudioMap;
-			if (supportsDynamicMapping)
+			for (auto const& outputAudioClusterKV : streamPortOutputKV.second.audioClusters)
 			{
-				for (auto const& outputAudioClusterKV : streamPortOutputKV.second.audioClusters)
+				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
 				{
-					for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
-					{
-						auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, outputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::OutputToInput, audioUnitIndex, streamPortOutputKV.first, streamPortOutputKV.second.staticModel->baseCluster };
-						auto connectionInformation = channelConnectionManager.getChannelConnections(_entityID, sourceChannelIdentification);
+					auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, outputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::OutputToInput, audioUnitIndex, streamPortOutputKV.first, streamPortOutputKV.second.staticModel->baseCluster };
+					auto connectionInformation = channelConnectionManager.getChannelConnections(_entityID, sourceChannelIdentification);
 
-						_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
-					}
+					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 				}
 			}
 		}
