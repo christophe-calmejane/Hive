@@ -260,7 +260,15 @@ setupEnv()
 				echo "failed, $generateKeys not found"
 			else
 				echo -n "Keychain access might be requested, accept it... "
-				"$generateKeys" 2>&1
+				log=$("$generateKeys" 2>&1)
+				if [ $? -ne 0 ];
+				then
+					echo "failed!"
+					echo ""
+					echo "Error log:"
+					echo $log
+					exit 1
+				fi
 				local ed25519PubKey="$("$generateKeys" | head -n 6 | tail -n 1)"
 				echo "$ed25519PubKey" > "$dsa_pub_key"
 				echo "done"
