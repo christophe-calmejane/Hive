@@ -169,6 +169,30 @@ setupEnv()
 				echo "done"
 			fi
 		fi
+
+		echo -n "Generating DSA keys... "
+		local dsa_params="resources/dsa_param.pem"
+		local dsa_pub_key="resources/dsa_pub.pem"
+		local dsa_priv_key="resources/dsa_priv.pem"
+		if [ -f "$dsa_pub_key" ];
+		then
+			echo "already found in resources, not generating new ones"
+		else
+			result=$(which openssl 2>&1)
+			if [ $? -ne 0 ];
+			then
+				echo "failed, openssl not found"
+			else
+				openssl dsaparam 1024 < /dev/random > "$dsa_params" 2>&1
+				openssl gendsa "$dsa_params" -out "$dsa_priv_key" 2>&1
+				openssl dsa -in "$dsa_priv_key" -pubout -out "$dsa_pub_key" 2>&1
+				chmod 600 "$dsa_priv_key" 2>&1
+				chmod 644 "$dsa_pub_key" 2>&1
+				rm -f "$dsa_params" 2>&1
+				echo "done"
+			fi
+		fi
+
 	elif [[ $osName == "mac" ]];
 	then
 		echo -n "Downloading Sparkle... "
@@ -216,34 +240,33 @@ setupEnv()
 					exit 1
 				fi
 				mv "${spklOutputFolder}/Sparkle.framework" "${baseSparkleFolder}/"
+				mv "${spklOutputFolder}/bin/generate_keys" "${baseSparkleFolder}/"
+				mv "${spklOutputFolder}/bin/sign_update" "${baseSparkleFolder}/"
 				rm -f "$spkloutputFile"
 				rm -rf "$spklOutputFolder"
 				echo "done"
 			fi
 		fi
-	fi
 
-	echo -n "Generating DSA keys... "
-	local dsa_params="resources/dsa_param.pem"
-	local dsa_pub_key="resources/dsa_pub.pem"
-	local dsa_priv_key="resources/dsa_priv.pem"
-	if [ -f "$dsa_pub_key" ];
-	then
-		echo "already found in resources, not generating new ones"
-	else
-		result=$(which openssl 2>&1)
-		if [ $? -ne 0 ];
+		echo -n "Generating DSA keys... "
+		local dsa_pub_key="resources/dsa_pub.pem"
+		if [ -f "$dsa_pub_key" ];
 		then
-			echo "failed, openssl not found"
+			echo "already found in resources, not generating new ones"
 		else
-			openssl dsaparam 1024 < /dev/random > "$dsa_params" 2>&1
-			openssl gendsa "$dsa_params" -out "$dsa_priv_key" 2>&1
-			openssl dsa -in "$dsa_priv_key" -pubout -out "$dsa_pub_key" 2>&1
-			chmod 600 "$dsa_priv_key" 2>&1
-			chmod 644 "$dsa_pub_key" 2>&1
-			rm -f "$dsa_params" 2>&1
-			echo "done"
+			local generateKeys="3rdparty/sparkle/generate_keys"
+			if [ ! -f "$generateKeys" ];
+			then
+				echo "failed, $generateKeys not found"
+			else
+				echo -n "Keychain access might be requested, accept it... "
+				"$generateKeys" 2>&1
+				local ed25519PubKey="$("$generateKeys" | head -n 6 | tail -n 1)"
+				echo "$ed25519PubKey" > "$dsa_pub_key"
+				echo "done"
+			fi
 		fi
+
 	fi
 
 	echo -n "Copying .hive_config file... "

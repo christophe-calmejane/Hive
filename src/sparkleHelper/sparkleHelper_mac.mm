@@ -19,27 +19,129 @@
 
 #include "sparkleHelper.hpp"
 #import <Sparkle/Sparkle.h>
+#import <Foundation/Foundation.h>
 
-void Sparkle::init(std::string const& /*signature*/) noexcept
-{
-	//
+@interface SparkleDelegate<SUUpdaterDelegate> : NSObject
++ (SparkleDelegate*)getInstance;
+@end
+
+@implementation SparkleDelegate
+
++ (SparkleDelegate*)getInstance {
+	static SparkleDelegate* s_Instance = nil;
+
+	@synchronized(self)
+	{
+		if (s_Instance == nil)
+		{
+			s_Instance = [[self alloc] init];
+		}
+	}
+
+	return s_Instance;
 }
 
-void Sparkle::setAutomaticCheckForUpdates(bool const /*checkForUpdates*/) noexcept
+- (BOOL)updaterMayCheckForUpdates:(SUUpdater*)updater {
+	return TRUE;
+}
+
+- (BOOL)updaterShouldPromptForPermissionToCheckForUpdates:(SUUpdater*)updater {
+	return TRUE;
+}
+
+- (void)updater:(SUUpdater*)updater didFindValidUpdate:(SUAppcastItem*)item {
+}
+
+- (void)updaterDidNotFindUpdate:(SUUpdater*)updater {
+}
+
+- (BOOL)updaterShouldShowUpdateAlertForScheduledUpdate:(SUUpdater*)updater forItem:(SUAppcastItem*)item {
+	return TRUE;
+}
+
+- (void)updater:(SUUpdater*)updater willDownloadUpdate:(SUAppcastItem*)item withRequest:(NSMutableURLRequest*)request {
+}
+
+- (void)updater:(SUUpdater*)updater didDownloadUpdate:(SUAppcastItem*)item {
+}
+
+- (void)updater:(SUUpdater*)updater failedToDownloadUpdate:(SUAppcastItem*)item error:(NSError*)error {
+}
+
+- (void)updaterWillShowModalAlert:(SUUpdater*)updater {
+}
+
+- (void)updater:(SUUpdater*)updater willExtractUpdate:(SUAppcastItem*)item {
+}
+
+- (void)updater:(SUUpdater*)updater didExtractUpdate:(SUAppcastItem*)item {
+}
+
+- (void)updater:(SUUpdater*)updater willInstallUpdate:(SUAppcastItem*)item {
+}
+
+- (void)updater:(SUUpdater*)updater didAbortWithError:(NSError*)error {
+}
+
+- (void)updater:(SUUpdater*)updater willInstallUpdateOnQuit:(SUAppcastItem*)item immediateInstallationInvocation:(NSInvocation*)invocation {
+}
+
+@end
+
+/** std::string to NSString conversion */
+static inline NSString* getNSString(std::string const& cString)
+{
+	return [NSString stringWithCString:cString.c_str() encoding:NSUTF8StringEncoding];
+}
+
+void Sparkle::init(std::string const& signature) noexcept
+{
+	auto* const updater = [SUUpdater sharedUpdater];
+
+	updater.delegate = [SparkleDelegate getInstance];
+
+	// Get current Check For Updates value
+	_checkForUpdates = updater.automaticallyChecksForUpdates;
+
+	_initialized = true;
+}
+
+void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
 {
 	if (!_initialized)
 	{
 		return;
 	}
 
+	// Set Automatic Check For Updates
+	auto* const updater = [SUUpdater sharedUpdater];
+	updater.automaticallyChecksForUpdates = checkForUpdates;
+
+	// If switching to CheckForUpdates, check right now
+	if (checkForUpdates && _started)
+	{
+		[updater resetUpdateCycle];
+		[updater checkForUpdatesInBackground];
+	}
+
 	_checkForUpdates = checkForUpdates;
 }
 
-void Sparkle::setAppcastUrl(std::string const& /*appcastUrl*/) noexcept
+void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 {
 	if (!_initialized)
 	{
 		return;
+	}
+
+	// Set Appcast URL
+	auto* const updater = [SUUpdater sharedUpdater];
+	updater.feedURL = [NSURL URLWithString:getNSString(appcastUrl)];
+
+	if (appcastUrl != _appcastUrl && _started && _checkForUpdates)
+	{
+		[updater resetUpdateCycle];
+		[updater checkForUpdatesInBackground];
 	}
 
 	_appcastUrl = appcastUrl;
@@ -51,6 +153,11 @@ void Sparkle::start() noexcept
 	{
 		return;
 	}
+
+	// Start updater
+	auto* const updater = [SUUpdater sharedUpdater];
+	[updater resetUpdateCycle];
+	[updater checkForUpdatesInBackground];
 
 	_started = true;
 }
@@ -65,5 +172,5 @@ void Sparkle::manualCheckForUpdate() noexcept
 
 Sparkle::~Sparkle() noexcept
 {
-	//
+	// Nothing to do
 }

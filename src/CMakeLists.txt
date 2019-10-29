@@ -13,6 +13,7 @@ configure_file(
 	${CMAKE_CURRENT_BINARY_DIR}/internals/config.hpp
 )
 
+set(ADD_LINK_LIBS "")
 set(PCH_HEADER_NAME "pch.hpp")
 set(PCH_SOURCE_NAME "pch.cpp")
 
@@ -245,6 +246,7 @@ elseif(APPLE)
 	list(APPEND SOURCE_FILES_COMMON
 		sparkleHelper/sparkleHelper_mac.mm
 	)
+	list(APPEND ADD_LINK_LIBS "-framework Foundation")
 else()
 	list(APPEND SOURCE_FILES_COMMON
 		sparkleHelper/sparkleHelper_unix.cpp
@@ -278,6 +280,9 @@ target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown Sparkle::lib)
+if(ADD_LINK_LIBS)
+	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
+endif()
 
 # Include directories
 target_include_directories(${PROJECT_NAME}_static

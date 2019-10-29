@@ -261,6 +261,16 @@ if [ $doSign -eq 1 ]; then
 	add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
 fi
 
+# Get DSA public key (macOS needs it in the plist)
+if isMac; then
+	if [ ! -f "resources/dsa_pub.pem" ]; then
+		echo "ERROR: Sparkle requires a DSA pub/priv pair to be setup. Re-run setup_fresh_env.sh if you just upgraded the project."
+		exit 4
+	fi
+	dsaPubKey="$(< resources/dsa_pub.pem)"
+	add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
+fi
+
 # Check if at least a -debug or -release option has been passed on linux
 if isLinux; then
 	if [ -z $cmake_config ]; then

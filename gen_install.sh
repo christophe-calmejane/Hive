@@ -12,6 +12,17 @@ cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
+# Sanity checks
+if [[ ${BASH_VERSINFO[0]} < 5 && (${BASH_VERSINFO[0]} < 4 || ${BASH_VERSINFO[1]} < 1) ]];
+then
+	echo "bash 4.1 or later required"
+	if isMac;
+	then
+		echo "Try invoking the script with 'bash $0' instead of just '$0'"
+	fi
+	exit 127
+fi
+
 getSignatureHash()
 {
 	local filePath="$1"
@@ -25,12 +36,16 @@ getSignatureHash()
 
 	elif isMac;
 	then
-		echo "TODO"
-		exit 1
+		local signUpdateFile="3rdparty/sparkle/sign_update"
+		if [ ! -f "$signUpdateFile" ];
+		then
+			echo "ERROR: $signUpdateFile not found"
+			exit 1
+		fi
+		result=$(3rdparty/sparkle/sign_update "$filePath" | cut -d '"' -f 2)
 
 	else
-		echo "TODO"
-		exit 1
+		echo "getSignatureHash: TODO"
 	fi
 
 	eval $_retval="'${result}'"
@@ -85,10 +100,8 @@ generateAppcast()
 
 	elif isMac;
 	then
-		#echo "				sparkle:edSignature=\"7cLALFUHSwvEJWSkV8aMrfdseoBe4fhRa4FncC5NoThKxwThL6FDR7hTiPJh1fo2uagnPogisnQsgFgq6mGkt2RBw==\"" >> "$appcastFile"
-		#echo "				sparkle:os=\"macos\"" >> "$appcastFile"
-		echo "TODO"
-		return;
+		echo "				sparkle:edSignature=\"${fileSignature}\"" >> "$appcastFile"
+		echo "				sparkle:os=\"macos\"" >> "$appcastFile"
 
 	else
 		echo "Appcast generation not support on this OS"

@@ -38,5 +38,7 @@
 		<string>????</string>
 		<key>CFBundleIconFile</key>
 		<string>${MACOSX_BUNDLE_ICON_FILE}</string>
+		<key>SUPublicEDKey</key>
+		<string>${HIVE_DSA_PUB_KEY}</string>
 	</dict>
 </plist>

@@ -33,6 +33,9 @@ if(NOT HIVE_APPCAST_BETAS_URL)
 	set(HIVE_APPCAST_BETAS_URL "http://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
 endif()
 message(STATUS "Appcast URL for Hive Betas defined to: ${HIVE_APPCAST_BETAS_URL}")
+if(APPLE AND NOT HIVE_DSA_PUB_KEY)
+	message(FATAL_ERROR "DSA Public Key not set in HIVE_DSA_PUB_KEY CMake Variable")
+endif()
 
 ############ CMake Configuration
 
