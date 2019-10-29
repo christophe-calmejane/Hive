@@ -26,11 +26,11 @@ option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
 
 # Configuration options
 if(NOT HIVE_APPCAST_RELEASES_URL)
-	set(HIVE_APPCAST_RELEASES_URL "http://localhost/hive/appcast-release.xml" CACHE STRING "Appcast URL for Hive Releases" FORCE)
+	set(HIVE_APPCAST_RELEASES_URL "https://localhost/hive/appcast-release.xml" CACHE STRING "Appcast URL for Hive Releases" FORCE)
 endif()
 message(STATUS "Appcast URL for Hive Releases defined to: ${HIVE_APPCAST_RELEASES_URL}")
 if(NOT HIVE_APPCAST_BETAS_URL)
-	set(HIVE_APPCAST_BETAS_URL "http://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
+	set(HIVE_APPCAST_BETAS_URL "https://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
 endif()
 message(STATUS "Appcast URL for Hive Betas defined to: ${HIVE_APPCAST_BETAS_URL}")
 if(APPLE AND NOT HIVE_DSA_PUB_KEY)

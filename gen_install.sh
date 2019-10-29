@@ -177,8 +177,8 @@ default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
 params["identity"]="-"
-params["appcast_releases"]="http://localhost/hive/appcast-release.xml"
-params["appcast_betas"]="http://localhost/hive/appcast-beta.xml"
+params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
+params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
 
 # 
 if isMac; then
