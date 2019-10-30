@@ -65,6 +65,9 @@ public:
 	void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const;
 	QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const;
 
+public slots:
+	bool helpEvent(QHelpEvent* e, QAbstractItemView* view, const QStyleOptionViewItem& option, const QModelIndex& index);
+
 private:
 	QTreeView* _treeView;
 };

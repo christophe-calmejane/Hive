@@ -1537,6 +1537,38 @@ QSize SampleRateDomainDelegate::sizeHint(QStyleOptionViewItem const& /*option*/,
 	return QSize(340, 22);
 }
 
+bool SampleRateDomainDelegate::helpEvent(QHelpEvent* e, QAbstractItemView* view, const QStyleOptionViewItem& option, const QModelIndex& index)
+{
+	if (!e || !view)
+		return false;
+
+	if (e->type() == QEvent::ToolTip)
+	{
+		auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
+		if (treeItem->type() == AbstractTreeItem::Entity)
+		{
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+			bool gptpInSync = entityTreeItem->isGPTPInSync();
+			bool isDoubledEntity = static_cast<DomainTreeModel const*>(index.model())->isEntityDoubled(entityTreeItem->entityId());
+
+			if (!gptpInSync)
+			{
+				QToolTip::showText(e->globalPos(), QString("GPTP sync error"), view);
+				return true;
+			}
+
+			if (isDoubledEntity)
+			{
+				QToolTip::showText(e->globalPos(), QString("Entity is part of multiple Media Clock Domains."), view);
+				return true;
+			}
+		}
+
+	}
+
+	return QStyledItemDelegate::helpEvent(e, view, option, index);
+}
+
 ////////////////////////////////////////////////////////////////
 
 /**
