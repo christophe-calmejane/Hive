@@ -191,6 +191,9 @@ void Sparkle::manualCheckForUpdate() noexcept
 	{
 		return;
 	}
+
+	auto* const updater = [SUUpdater sharedUpdater];
+	[updater checkForUpdatesInBackground];
 }
 
 Sparkle::~Sparkle() noexcept
