@@ -953,6 +953,14 @@ void MainWindowImpl::connectSignals()
 			QDesktopServices::openUrl(hive::internals::projectURL);
 		});
 
+	//
+
+	connect(actionCheckForUpdates, &QAction::triggered, this,
+		[]()
+		{
+			Sparkle::getInstance().manualCheckForUpdate();
+		});
+
 
 	// Connect keyboard shortcuts
 

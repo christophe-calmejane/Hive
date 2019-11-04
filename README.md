@@ -46,3 +46,4 @@ Hive uses the following 3rd party resources:
 - [Material Icons](https://material.io/icons/)
 - [Discount Markdown](http://www.pell.portland.or.us/~orc/Code/markdown/)
 - [BugTrap](https://github.com/bchavez/BugTrap)
+- [Sparkle](https://sparkle-project.org) and [WinSparkle](https://github.com/vslavik/winsparkle)

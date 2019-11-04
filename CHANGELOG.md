@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Automatically Locking the Entity when opening the Dynamic Mappings Editor
 - All exported files are now using MessagePack (JSON binary) file format
 - Using SHIFT modifier while choosing one of the Export feature will dump the file in readable JSON format
+- Improved software update with automatic download and install
 
 ### Fixed
 - [Splashscreen displayed on the same screen than Hive will be shown](https://github.com/christophe-calmejane/Hive/issues/20)
