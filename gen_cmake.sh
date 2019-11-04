@@ -15,9 +15,9 @@ cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
 qtVersion="5.12.4"
 
 # Default values
-default_VisualGenerator="Visual Studio 15 2017"
+default_VisualGenerator="Visual Studio 16 2019"
 default_VisualGeneratorArch="Win32"
-default_VisualToolset="v141"
+default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
@@ -25,6 +25,10 @@ default_VisualSdk="8.1"
 # 
 cmake_generator=""
 generator_arch=""
+arch=""
+toolset=""
+cmake_config=""
+outputFolderBasePath="_build"
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
 	# CMake.app not found, use cmake from the path
@@ -33,6 +37,7 @@ if isMac; then
 	fi
 	generator="Xcode"
 	getCcArch arch
+	defaultOutputFolder="${outputFolderBasePath}_<arch>"
 else
 	# Use cmake from the path
 	cmake_path="cmake"
@@ -43,9 +48,11 @@ else
 		toolchain="$default_VisualToolchain"
 		platformSdk="$default_VisualSdk"
 		arch="$default_VisualArch"
+		defaultOutputFolder="${outputFolderBasePath}_<arch>_<toolset>"
 	else
 		generator="Unix Makefiles"
 		getCcArch arch
+		defaultOutputFolder="${outputFolderBasePath}_<arch>_<config>"
 	fi
 fi
 
@@ -55,12 +62,11 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-outputFolder="./_build"
-cmake_config=""
-add_cmake_opt=()
+outputFolder=""
 outputFolderForced=0
+add_cmake_opt=()
 useVSclang=0
-useVS2019=0
+useVS2017=0
 signingId="-"
 doSign=0
 useSources=0
@@ -71,7 +77,7 @@ do
 		-h)
 			echo "Usage: gen_cmake.sh [options]"
 			echo " -h -> Display this help"
-			echo " -o <folder> -> Output folder (Default: ${outputFolder}_${arch})"
+			echo " -o <folder> -> Output folder (Default: ${defaultOutputFolder})"
 			echo " -f <flags> -> Force all cmake flags (Default: $cmake_opt)"
 			echo " -a <flags> -> Add cmake flags to default ones (or to forced ones with -f option)"
 			echo " -b <cmake path> -> Force cmake binary path (Default: $cmake_path)"
@@ -80,7 +86,7 @@ do
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
-				echo " -vs2019 -> Compile using VS 2019 compiler instead of the default one"
+				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 				echo " -clang -> Compile using clang for VisualStudio (if predefined toolset do not work, override with -t option INSTEAD of -clang)"
 			fi
 			if isMac; then
@@ -180,11 +186,11 @@ do
 				exit 4
 			fi
 			;;
-		-vs2019)
+		-vs2017)
 			if isWindows; then
-				useVS2019=1
+				useVS2017=1
 			else
-				echo "ERROR: -vs2019 option is only supported on Windows platform"
+				echo "ERROR: -vs2017 option is only supported on Windows platform"
 				exit 4
 			fi
 			;;
@@ -211,7 +217,8 @@ do
 			;;
 		-debug)
 			if isLinux; then
-				cmake_config="-DCMAKE_BUILD_TYPE=Debug"
+				cmake_config="Debug"
+				add_cmake_opt+=("-DCMAKE_BUILD_TYPE=${cmake_config}")
 			else
 				echo "ERROR: -debug option is only supported on Linux platform"
 				exit 4
@@ -219,7 +226,8 @@ do
 			;;
 		-release)
 			if isLinux; then
-				cmake_config="-DCMAKE_BUILD_TYPE=Release"
+				cmake_config="Release"
+				add_cmake_opt+=("-DCMAKE_BUILD_TYPE=${cmake_config}")
 			else
 				echo "ERROR: -release option is only supported on Linux platform"
 				exit 4
@@ -238,10 +246,6 @@ do
 	esac
 	shift
 done
-
-if [ $outputFolderForced -eq 0 ]; then
-	outputFolder="${outputFolder}_${arch}"
-fi
 
 if [ ! -z "$cmake_generator" ]; then
 	echo "Overriding default cmake generator ($generator) with: $cmake_generator"
@@ -279,15 +283,19 @@ if isLinux; then
 	fi
 fi
 
-# Using -vs2019 option
-if [ $useVS2019 -eq 1 ]; then
-	generator="Visual Studio 16 2019"
-	toolset="v142"
+# Using -vs2017 option
+if [ $useVS2017 -eq 1 ]; then
+	generator="Visual Studio 15 2017"
+	toolset="v141"
 fi
 
 # Using -clang option (shortcut to auto-define the toolset)
 if [ $useVSclang -eq 1 ]; then
 	toolset="v141_clang_c2"
+fi
+
+if [ $outputFolderForced -eq 0 ]; then
+	getOutputFolder outputFolder "${outputFolderBasePath}" "${arch}" "${toolset}" "${cmake_config}"
 fi
 
 # Clang on windows does not properly compile using Sdk8.1, we have to force Sdk10.0
@@ -374,7 +382,7 @@ then
 fi
 
 echo "Generating cmake project..."
-"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $generator_arch_option $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}" $cmake_config
+"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $generator_arch_option $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}"
 
 echo ""
 echo "All done, generated project lies in ${outputFolder}"
