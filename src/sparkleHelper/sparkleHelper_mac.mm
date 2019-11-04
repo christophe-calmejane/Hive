@@ -104,7 +104,7 @@ static inline QString getQString(NSString* nsString)
 }
 
 - (void)updater:(SUUpdater*)updater didAbortWithError:(NSError*)error {
-	LOG_HIVE_WARN(QString("Failed to automatically update Hive: %s").arg(getQString([error description])));
+	LOG_HIVE_WARN(QString("Failed to automatically update Hive: %1").arg(getQString([error description])));
 }
 
 - (void)updater:(SUUpdater*)updater willInstallUpdateOnQuit:(SUAppcastItem*)item immediateInstallationInvocation:(NSInvocation*)invocation {
