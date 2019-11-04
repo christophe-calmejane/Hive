@@ -18,6 +18,8 @@
 */
 
 #include "sparkleHelper.hpp"
+#include "avdecc/hiveLogItems.hpp"
+
 #include <winsparkle.h>
 #include <Windows.h>
 

@@ -18,8 +18,12 @@
 */
 
 #include "sparkleHelper.hpp"
+#include "avdecc/hiveLogItems.hpp"
+
 #import <Sparkle/Sparkle.h>
 #import <Foundation/Foundation.h>
+
+#include <QString>
 
 /** std::string to NSString conversion */
 static inline NSString* getNSString(std::string const& cString)
@@ -31,6 +35,12 @@ static inline NSString* getNSString(std::string const& cString)
 static inline std::string getStdString(NSString* nsString)
 {
 	return std::string{ [nsString UTF8String] };
+}
+
+/** NSString to QString conversion */
+static inline QString getQString(NSString* nsString)
+{
+	return QString{ [nsString UTF8String] };
 }
 
 @interface SparkleDelegate<SUUpdaterDelegate> : NSObject
@@ -94,7 +104,7 @@ static inline std::string getStdString(NSString* nsString)
 }
 
 - (void)updater:(SUUpdater*)updater didAbortWithError:(NSError*)error {
-	LOG_HIVE_WARN("Failed to automatically update Hive: " + getStdString([error description]));
+	LOG_HIVE_WARN(QString("Failed to automatically update Hive: %s").arg(getQString([error description])));
 }
 
 - (void)updater:(SUUpdater*)updater willInstallUpdateOnQuit:(SUAppcastItem*)item immediateInstallationInvocation:(NSInvocation*)invocation {
