@@ -21,6 +21,18 @@
 #import <Sparkle/Sparkle.h>
 #import <Foundation/Foundation.h>
 
+/** std::string to NSString conversion */
+static inline NSString* getNSString(std::string const& cString)
+{
+	return [NSString stringWithCString:cString.c_str() encoding:NSUTF8StringEncoding];
+}
+
+/** NSString to std::string conversion */
+static inline std::string getStdString(NSString* nsString)
+{
+	return std::string{ [nsString UTF8String] };
+}
+
 @interface SparkleDelegate<SUUpdaterDelegate> : NSObject
 + (SparkleDelegate*)getInstance;
 @end
@@ -50,6 +62,7 @@
 }
 
 - (void)updater:(SUUpdater*)updater didFindValidUpdate:(SUAppcastItem*)item {
+	LOG_HIVE_INFO("A new update has been found");
 }
 
 - (void)updaterDidNotFindUpdate:(SUUpdater*)updater {
@@ -81,18 +94,13 @@
 }
 
 - (void)updater:(SUUpdater*)updater didAbortWithError:(NSError*)error {
+	LOG_HIVE_WARN("Failed to automatically update Hive: " + getStdString([error description]));
 }
 
 - (void)updater:(SUUpdater*)updater willInstallUpdateOnQuit:(SUAppcastItem*)item immediateInstallationInvocation:(NSInvocation*)invocation {
 }
 
 @end
-
-/** std::string to NSString conversion */
-static inline NSString* getNSString(std::string const& cString)
-{
-	return [NSString stringWithCString:cString.c_str() encoding:NSUTF8StringEncoding];
-}
 
 void Sparkle::init(std::string const& signature) noexcept
 {
@@ -104,6 +112,21 @@ void Sparkle::init(std::string const& signature) noexcept
 	_checkForUpdates = updater.automaticallyChecksForUpdates;
 
 	_initialized = true;
+}
+
+void Sparkle::start() noexcept
+{
+	if (!_initialized)
+	{
+		return;
+	}
+
+	// Start updater
+	auto* const updater = [SUUpdater sharedUpdater];
+	[updater resetUpdateCycle];
+	[updater checkForUpdatesInBackground];
+
+	_started = true;
 }
 
 void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
@@ -147,19 +170,9 @@ void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 	_appcastUrl = appcastUrl;
 }
 
-void Sparkle::start() noexcept
+void Sparkle::setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
 {
-	if (!_initialized)
-	{
-		return;
-	}
-
-	// Start updater
-	auto* const updater = [SUUpdater sharedUpdater];
-	[updater resetUpdateCycle];
-	[updater checkForUpdatesInBackground];
-
-	_started = true;
+	_isShutdownAllowedHandler = isShutdownAllowedHandler;
 }
 
 void Sparkle::manualCheckForUpdate() noexcept

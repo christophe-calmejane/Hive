@@ -953,6 +953,9 @@ void MainWindowImpl::connectSignals()
 			QDesktopServices::openUrl(hive::internals::projectURL);
 		});
 
+
+	// Connect keyboard shortcuts
+
 	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, _parent };
 	connect(refreshController, &QShortcut::activated, this, &MainWindowImpl::currentControllerChanged);
 
@@ -979,6 +982,14 @@ void MainWindowImpl::connectSignals()
 			LOG_HIVE_DEBUG("StyleSheet reloaded");
 		});
 #endif
+
+	// Connect Sparkle events
+	auto& sparkle = Sparkle::getInstance();
+	sparkle.setIsShutdownAllowedHandler(
+		[]()
+		{
+			return true;
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)

@@ -25,7 +25,17 @@ void Sparkle::init(std::string const& /*signature*/) noexcept
 	//
 }
 
-void Sparkle::setAutomaticCheckForUpdates(bool const /*checkForUpdates*/) noexcept
+void Sparkle::start() noexcept
+{
+	if (!_initialized)
+	{
+		return;
+	}
+
+	_started = true;
+}
+
+void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
 {
 	if (!_initialized)
 	{
@@ -35,7 +45,7 @@ void Sparkle::setAutomaticCheckForUpdates(bool const /*checkForUpdates*/) noexce
 	_checkForUpdates = checkForUpdates;
 }
 
-void Sparkle::setAppcastUrl(std::string const& /*appcastUrl*/) noexcept
+void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 {
 	if (!_initialized)
 	{
@@ -45,14 +55,9 @@ void Sparkle::setAppcastUrl(std::string const& /*appcastUrl*/) noexcept
 	_appcastUrl = appcastUrl;
 }
 
-void Sparkle::start() noexcept
+void Sparkle::setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
 {
-	if (!_initialized)
-	{
-		return;
-	}
-
-	_started = true;
+	_isShutdownAllowedHandler = isShutdownAllowedHandler;
 }
 
 void Sparkle::manualCheckForUpdate() noexcept

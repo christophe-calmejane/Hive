@@ -20,24 +20,29 @@
 #pragma once
 
 #include <string>
+#include <functional>
 
 class Sparkle final
 {
 public:
+	using IsShutdownAllowedHandler = std::function<bool()>;
+
 	static Sparkle& getInstance() noexcept
 	{
 		static auto s_Instance = Sparkle{};
 		return s_Instance;
 	}
 
+	/* Initialization methods */
 	void init(std::string const& signature) noexcept;
-
-	void setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept;
-
-	void setAppcastUrl(std::string const& appcastUrl) noexcept;
-
 	void start() noexcept;
 
+	/* Configuration methods */
+	void setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept;
+	void setAppcastUrl(std::string const& appcastUrl) noexcept;
+	void setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept;
+
+	/* Requests methods */
 	void manualCheckForUpdate() noexcept;
 
 	// Deleted compiler auto-generated methods
@@ -58,4 +63,5 @@ private:
 	bool _started{ false };
 	bool _checkForUpdates{ false };
 	std::string _appcastUrl{};
+	IsShutdownAllowedHandler _isShutdownAllowedHandler{ nullptr };
 };

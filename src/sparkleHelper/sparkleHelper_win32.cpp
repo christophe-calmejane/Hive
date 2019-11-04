@@ -34,12 +34,27 @@ void Sparkle::init(std::string const& signature) noexcept
 		win_sparkle_set_can_shutdown_callback(
 			[]() -> int
 			{
+				auto const& sparkle = getInstance();
+				if (sparkle._isShutdownAllowedHandler)
+				{
+					return static_cast<int>(sparkle._isShutdownAllowedHandler());
+				}
 				return 1;
 			});
 		win_sparkle_set_shutdown_request_callback(
 			[]()
 			{
 				QCoreApplication::postEvent(qApp, new QEvent{ QEvent::Type::Close });
+			});
+		win_sparkle_set_did_find_update_callback(
+			[]()
+			{
+				LOG_HIVE_INFO("A new update has been found");
+			});
+		win_sparkle_set_error_callback(
+			[]()
+			{
+				LOG_HIVE_WARN("Failed to automatically update Hive");
 			});
 
 		// Get current Check For Updates value
@@ -50,6 +65,18 @@ void Sparkle::init(std::string const& signature) noexcept
 	catch (...)
 	{
 	}
+}
+
+void Sparkle::start() noexcept
+{
+	if (!_initialized)
+	{
+		return;
+	}
+
+	win_sparkle_init();
+
+	_started = true;
 }
 
 void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
@@ -100,16 +127,9 @@ void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 	}
 }
 
-void Sparkle::start() noexcept
+void Sparkle::setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
 {
-	if (!_initialized)
-	{
-		return;
-	}
-
-	win_sparkle_init();
-
-	_started = true;
+	_isShutdownAllowedHandler = isShutdownAllowedHandler;
 }
 
 void Sparkle::manualCheckForUpdate() noexcept
