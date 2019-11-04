@@ -61,7 +61,7 @@ add_cmake_opt=()
 outputFolderForced=0
 useVSclang=0
 useVS2019=0
-hasTeamId=0
+signingId="-"
 doSign=0
 useSources=0
 
@@ -90,7 +90,9 @@ do
 				echo " -debug -> Force debug configuration (Linux only)"
 				echo " -release -> Force release configuration (Linux only)"
 			fi
-			echo " -sign -> Sign binaries (Default: No signing)"
+			if [[ isMac -eq 1 ]]; then
+				echo " -sign -> Sign binaries (Default: No signing)"
+			fi
 			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources)"
 			exit 3
 			;;
@@ -201,8 +203,7 @@ do
 					echo "ERROR: Missing parameter for -id option, see help (-h)"
 					exit 4
 				fi
-				add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$1")
-				hasTeamId=1
+				signingId="$1"
 			else
 				echo "ERROR: -id option is only supported on macOS platform"
 				exit 4
@@ -225,7 +226,6 @@ do
 			fi
 			;;
 		-sign)
-			add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
 			doSign=1
 			;;
 		-source)
@@ -248,12 +248,27 @@ if [ ! -z "$cmake_generator" ]; then
 	generator="$cmake_generator"
 fi
 
-# Check TeamIdentifier specified is signing enabled on macOS
+# Signing is now mandatory for macOS
 if isMac; then
-	if [[ $hasTeamId -eq 0 && $doSign -eq 1 ]]; then
-		echo "ERROR: macOS requires either iTunes TeamIdentifier to be specified using -id option, or -no-signing to disable binary signing"
+	if [ $doSign -eq 0 ]; then
+		echo "Binary signing is mandatory starting with macOS Catalina, forcing it using ID '$signingId'"
+		doSign=1
+	fi
+	add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$signingId")
+fi
+
+if [ $doSign -eq 1 ]; then
+	add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
+fi
+
+# Get DSA public key (macOS needs it in the plist)
+if isMac; then
+	if [ ! -f "resources/dsa_pub.pem" ]; then
+		echo "ERROR: Sparkle requires a DSA pub/priv pair to be setup. Re-run setup_fresh_env.sh if you just upgraded the project."
 		exit 4
 	fi
+	dsaPubKey="$(< resources/dsa_pub.pem)"
+	add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
 fi
 
 # Check if at least a -debug or -release option has been passed on linux

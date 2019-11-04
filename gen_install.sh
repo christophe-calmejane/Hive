@@ -12,12 +12,173 @@ cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
+# Sanity checks
+if [[ ${BASH_VERSINFO[0]} < 5 && (${BASH_VERSINFO[0]} < 4 || ${BASH_VERSINFO[1]} < 1) ]];
+then
+	echo "bash 4.1 or later required"
+	if isMac;
+	then
+		echo "Try invoking the script with 'bash $0' instead of just '$0'"
+	fi
+	exit 127
+fi
+
+getSignatureHash()
+{
+	local filePath="$1"
+	local privKey="$2"
+	local _retval="$3"
+	local result=""
+
+	if isWindows;
+	then
+		result=$(openssl dgst -sha1 -binary < "$filePath" | openssl dgst -sha1 -sign "$privKey" | openssl enc -base64)
+
+	elif isMac;
+	then
+		local signUpdateFile="3rdparty/sparkle/sign_update"
+		if [ ! -f "$signUpdateFile" ];
+		then
+			echo "ERROR: $signUpdateFile not found"
+			exit 1
+		fi
+		result=$(3rdparty/sparkle/sign_update "$filePath" | cut -d '"' -f 2)
+
+	else
+		echo "getSignatureHash: TODO"
+	fi
+
+	eval $_retval="'${result}'"
+}
+
+generateAppcast()
+{
+	local fileName="$1"
+	local marketingVersion="$2"
+	local isRelease=$3
+
+	local appcastFile="appcastItem-${marketingVersion}.xml"
+	local baseURL="${params["appcast_releases"]}"
+	local subPath="release"
+
+	local fileSize
+	getFileSize "$fileName" fileSize
+
+	local fileSignature
+	getSignatureHash "$fileName" "resources/dsa_priv.pem" fileSignature
+
+	if [ "x$fileSignature" == "x" ];
+	then
+		echo "Failed to generate Appcast: Cannot sign file"
+		exit 1
+	fi
+
+	if [ $is_release -eq 0 ];
+	then
+		subPath="beta"
+		baseURL="${params["appcast_betas"]}"
+	fi
+
+	# Get URL of folder containing appcast file
+	baseURL="${baseURL%/*}/"
+
+	# Common Appcast Item header
+	echo "		<item>" > "$appcastFile"
+	echo "			<title>Version $marketingVersion</title>" >> "$appcastFile"
+	echo "			<sparkle:releaseNotesLink>" >> "$appcastFile"
+	echo "				${baseURL}changelog.php?lastKnownVersion=next" >> "$appcastFile"
+	echo "			</sparkle:releaseNotesLink>" >> "$appcastFile"
+	echo "			<pubDate>`date -R`</pubDate>" >> "$appcastFile"
+	echo "			<enclosure url=\"${baseURL}${subPath}/${fileName}\"" >> "$appcastFile"
+
+	# OS-dependant Item values
+	if isWindows;
+	then
+		echo "				sparkle:dsaSignature=\"${fileSignature}\"" >> "$appcastFile"
+		echo "				sparkle:installerArguments=\"/S /NOPCAP\"" >> "$appcastFile"
+		echo "				sparkle:os=\"windows\"" >> "$appcastFile"
+
+	elif isMac;
+	then
+		echo "				sparkle:edSignature=\"${fileSignature}\"" >> "$appcastFile"
+		echo "				sparkle:os=\"macos\"" >> "$appcastFile"
+
+	else
+		echo "Appcast generation not support on this OS"
+		return;
+	fi
+
+	# Common Appcast Item footer
+	echo "				sparkle:version=\"${marketingVersion}\"" >> "$appcastFile"
+	echo "				length=\"${fileSize}\"" >> "$appcastFile"
+	echo "				type=\"application/octet-stream\"" >> "$appcastFile"
+	echo "			/>" >> "$appcastFile"
+	echo "		</item>" >> "$appcastFile"
+
+	# Done
+	echo "Appcast item generated to file: $appcastFile (add it to tools/webserver/appcast-${subPath}.xml)"
+}
+
+parseFile()
+{
+	local configFile="$1"
+	declare -n _params="$2"
+
+	if [ ! -f "$configFile" ]; then
+		return
+	fi
+
+	while IFS=$'\r\n' read -r -a line || [ -n "$line" ]; do
+		# Only process lines with something
+		if [ "${line}" != "" ]; then
+			IFS='=' read -a lineSplit <<< "${line}"
+
+			local key="${lineSplit[0]}"
+			local value="${lineSplit[1]}"
+
+			# Don't parse commented lines
+			if [ "${key:0:1}" = "#" ]; then
+				continue
+			fi
+
+			# Switch on key
+			case "$key" in
+				identity)
+					_params["$key"]="$value"
+					if isMac; then
+						# Quick check for identity in keychain
+						security find-identity -v -p codesigning | grep "$value" &> /dev/null
+						if [ $? -ne 0 ]; then
+							echo "Invalid identity value '${configFile}' file (not found in keychain, or not valid for codesigning): $value"
+							exit 1
+						fi
+					fi
+					;;
+				appcast_releases)
+					_params["$key"]="$value"
+					;;
+				appcast_betas)
+					_params["$key"]="$value"
+					;;
+				*)
+					echo "Ignoring unknown key '$key' in '${configFile}' file"
+					;;
+			esac
+		fi
+	done < "${configFile}"
+}
+
+declare -A params=()
+
 # Default values
 default_VisualGenerator="Visual Studio 15 2017"
 default_VisualToolset="v141"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
+params["identity"]="-"
+params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
+params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
 
 # 
 if isMac; then
@@ -62,22 +223,6 @@ fi
 key_digits=$((10#$default_keyDigits))
 key_postfix=""
 
-# First check for .identity file
-if isMac; then
-	if [ -f ".identity" ]; then
-		identityString="$(< .identity)"
-		# Quick check for identity in keychain
-		security find-identity -v -p codesigning | grep "$identityString" &> /dev/null
-		if [ $? -ne 0 ]; then
-			echo "Invalid .identity file content (identity not found in keychain, or not valid for codesigning): $identityString"
-			exit 1
-		fi
-		gen_cmake_additional_options+=("-id")
-		gen_cmake_additional_options+=("$identityString")
-		hasTeamId=1
-	fi
-fi
-
 while [ $# -gt 0 ]
 do
 	case "$1" in
@@ -91,9 +236,6 @@ do
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
-			fi
-			if isMac; then
-				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing (or content of .identity file)."
 			fi
 			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
@@ -161,20 +303,8 @@ do
 			fi
 			;;
 		-id)
-			if isMac; then
-				shift
-				if [ $# -lt 1 ]; then
-					echo "ERROR: Missing parameter for -id option, see help (-h)"
-					exit 4
-				fi
-				gen_cmake_additional_options+=("-id")
-				gen_cmake_additional_options+=("$1")
-				identityString="$1"
-				hasTeamId=1
-			else
-				echo "ERROR: -id option is only supported on macOS platform"
-				exit 4
-			fi
+			echo "ERROR: -id option is deprecated, please use the new .hive_config file (see .hive_config.sample for an example config file)"
+			exit 1
 			;;
 		-no-signing)
 			doSign=0
@@ -221,20 +351,44 @@ do
 	shift
 done
 
-# Build marketing options
-marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
+# Parse config file
+parseFile ".hive_config" params
 
+# Check for signing
 if [ $doSign -eq 1 ]; then
 	gen_cmake_additional_options+=("-sign")
 
 	# Check if TeamIdentifier is specified on macOS
 	if isMac; then
-		if [ $hasTeamId -eq 0 ]; then
-			echo "ERROR: macOS requires either iTunes TeamIdentifier to be specified using -id option, or -no-signing to disable binary signing"
+		identityString=${params["identity"]}
+
+		if [ "x$identityString" == "x" ]; then
+			echo "ERROR: macOS requires either iTunes TeamIdentifier. Specify it in the .hive_config file"
 			exit 4
 		fi
+
+		gen_cmake_additional_options+=("-id")
+		gen_cmake_additional_options+=("$identityString")
 	fi
 fi
+
+# Additional options from .hive_config file
+if [ "x${params["appcast_releases"]}" == "x" ]; then
+	echo "ERROR: appcast_releases must not be empty in .hive_config file"
+	exit 4
+fi
+gen_cmake_additional_options+=("-a")
+gen_cmake_additional_options+=("-DHIVE_APPCAST_RELEASES_URL=${params["appcast_releases"]}")
+
+if [ "x${params["appcast_betas"]}" == "x" ]; then
+	echo "ERROR: appcast_betas must not be empty in .hive_config file"
+	exit 4
+fi
+gen_cmake_additional_options+=("-a")
+gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas"]}")
+
+# Build marketing options
+marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
 
 toolset_option=""
 if [ ! -z "${toolset}" ]; then
@@ -311,7 +465,7 @@ fi
 fullInstallerName="${installerBaseName}.${installerExtension}"
 
 if [ -f *"${fullInstallerName}" ]; then
-	echo "Installer already exists for version ${version}, please remove it first."
+	echo "Installer already exists for version ${releaseVersion}, please remove it first."
 	exit 1
 fi
 
@@ -371,13 +525,20 @@ if [ ! -f "$installerFile" ]; then
 fi
 
 if [ $doSign -eq 1 ]; then
-	echo "Signing Package"
+	echo -n "Signing Package..."
 	if isMac; then
-		codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}"
+		log=$(codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}")
 	else
-		signtool sign /a /sm /q /fd sha1 /t http://timestamp.verisign.com/scripts/timstamp.dll "${installerFile}"
-		signtool sign /a /sm /as /q /fd sha256 /tr http://sha256timestamp.ws.symantec.com/sha256/timestamp "${installerFile}"
+		log=$(signtool sign /a /sm /q /fd sha1 /t http://timestamp.digicert.com "${installerFile}")
+		log=$(signtool sign /a /sm /as /q /fd sha256 /tr http://timestamp.digicert.com "${installerFile}")
 	fi
+	if [ $? -ne 0 ]; then
+		echo "Failed to sign package ;("
+		echo ""
+		echo $log
+		exit 1
+	fi
+	echo "done"
 fi
 
 mv "${installerFile}" .
@@ -388,10 +549,12 @@ if [ ! -z "${symbolsFile}" ]; then
 	echo "Symbols generated: ${symbolsFile}"
 fi
 
-if [ $is_release -eq 1 ]; then
-	echo "${cmakeHiveVersion}" > "LatestVersion-${latestVersionOSName}.txt"
-else
-	echo "${cmakeHiveVersion}" > "LatestVersion-beta-${latestVersionOSName}.txt"
-fi
+generateAppcast "${fullInstallerName}" "${releaseVersion}${beta_tag}" $is_release
+
+echo ""
+echo "Do not forget to upload:"
+echo " - CHANGELOG.MD"
+echo " - Installer file"
+echo " - Updated appcast file"
 
 exit 0

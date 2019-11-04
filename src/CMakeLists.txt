@@ -3,8 +3,9 @@
 # Declare project
 setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
 
-# Find Qt dependencies
+# Find dependencies
 find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+find_package(Sparkle REQUIRED)
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -12,6 +13,7 @@ configure_file(
 	${CMAKE_CURRENT_BINARY_DIR}/internals/config.hpp
 )
 
+set(ADD_LINK_LIBS "")
 set(PCH_HEADER_NAME "pch.hpp")
 set(PCH_SOURCE_NAME "pch.cpp")
 
@@ -97,6 +99,7 @@ set(HEADER_FILES_COMMON
 	settingsManager/settingsManager.hpp
 	settingsManager/settingsManager.hpp
 	settingsManager/settings.hpp
+	sparkleHelper/sparkleHelper.hpp
 	statistics/entityStatisticsTreeWidgetItem.hpp
 	toolkit/comboBox.hpp
 	toolkit/dynamicHeaderView.hpp
@@ -113,7 +116,6 @@ set(HEADER_FILES_COMMON
 	toolkit/graph/outputSocket.hpp
 	toolkit/graph/socket.hpp
 	toolkit/graph/view.hpp
-	updater/updater.hpp
 	settingsDialog.hpp
 	defaults.hpp
 	deviceDetailsDialog.hpp
@@ -196,7 +198,6 @@ set(SOURCE_FILES_COMMON
 	toolkit/graph/outputSocket.cpp
 	toolkit/graph/socket.cpp
 	toolkit/graph/view.cpp
-	updater/updater.cpp
 	aboutDialog.cpp
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
@@ -237,6 +238,21 @@ set(SOURCE_FILES_APP
 	main.cpp
 )
 
+if(WIN32)
+	list(APPEND SOURCE_FILES_COMMON
+		sparkleHelper/sparkleHelper_win32.cpp
+	)
+elseif(APPLE)
+	list(APPEND SOURCE_FILES_COMMON
+		sparkleHelper/sparkleHelper_mac.mm
+	)
+	list(APPEND ADD_LINK_LIBS "-framework Foundation")
+else()
+	list(APPEND SOURCE_FILES_COMMON
+		sparkleHelper/sparkleHelper_unix.cpp
+	)
+endif()
+
 # Group source files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
 source_group("Header Files" FILES ${HEADER_FILES_GENERATED})
@@ -263,7 +279,10 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown Sparkle::lib)
+if(ADD_LINK_LIBS)
+	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
+endif()
 
 # Include directories
 target_include_directories(${PROJECT_NAME}_static

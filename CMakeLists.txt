@@ -22,6 +22,21 @@ option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." TRUE)
 # Signing options
 option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
 
+############ Override from command line "CMake -D<PARAM>=<VALUE>"
+
+# Configuration options
+if(NOT HIVE_APPCAST_RELEASES_URL)
+	set(HIVE_APPCAST_RELEASES_URL "https://localhost/hive/appcast-release.xml" CACHE STRING "Appcast URL for Hive Releases" FORCE)
+endif()
+message(STATUS "Appcast URL for Hive Releases defined to: ${HIVE_APPCAST_RELEASES_URL}")
+if(NOT HIVE_APPCAST_BETAS_URL)
+	set(HIVE_APPCAST_BETAS_URL "https://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
+endif()
+message(STATUS "Appcast URL for Hive Betas defined to: ${HIVE_APPCAST_BETAS_URL}")
+if(APPLE AND NOT HIVE_DSA_PUB_KEY)
+	message(FATAL_ERROR "DSA Public Key not set in HIVE_DSA_PUB_KEY CMake Variable")
+endif()
+
 ############ CMake Configuration
 
 project(Hive)
@@ -51,7 +66,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # Include our internal macros
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required for find_package(BugTrap REQUIRED)
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required to find_package 3rd party modules that don't provide their CMake Config files
 include(cmake/TargetSetupDeploy.cmake)
 
 # Avdecc project location

@@ -744,6 +744,17 @@ Function InstallOptionsPage
   !insertmacro MUI_HEADER_TEXT "Install Options" "Choose options for installing @CPACK_NSIS_PACKAGE_NAME@"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "NSIS.InstallOptions.ini"
 
+	; Unselect WinPcap if "/NOPCAP" is passed in command line
+	!include FileFunc.nsh
+	!include LogicLib.nsh
+	!insertmacro GetParameters
+	!insertmacro GetOptions
+	${GetParameters} $R0
+	ClearErrors
+	${GetOptions} $R0 /NOPCAP $0
+	IfErrors defaultPcap
+	!insertmacro UnselectSection ${WinPcap}
+	defaultPcap:
 FunctionEnd
 
 ;--------------------------------

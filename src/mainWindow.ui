@@ -81,6 +81,8 @@
     <addaction name="actionAbout"/>
     <addaction name="actionChangeLog"/>
     <addaction name="separator"/>
+    <addaction name="actionCheckForUpdates"/>
+    <addaction name="separator"/>
     <addaction name="actionOpenProjectWebPage"/>
    </widget>
    <widget class="QMenu" name="menuTools">
@@ -197,6 +199,11 @@
    </property>
    <property name="text">
     <string>Channel Based Connections</string>
+   </property>
+  </action>
+  <action name="actionCheckForUpdates">
+   <property name="text">
+    <string>Check For Updates...</string>
    </property>
   </action>
  </widget>

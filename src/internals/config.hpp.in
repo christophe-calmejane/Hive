@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QString>
+#include <string>
 
 namespace hive
 {
@@ -44,6 +45,8 @@ namespace internals
 #else // !DEBUG
 	QString const buildConfiguration{ "Release" };
 #endif // DEBUG
+	std::string const appcastReleasesUrl{ "@HIVE_APPCAST_RELEASES_URL@" };
+	std::string const appcastBetasUrl{ "@HIVE_APPCAST_BETAS_URL@" };
 
 } // namespace internals
 } // namespace hive

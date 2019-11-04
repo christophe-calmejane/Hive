@@ -32,6 +32,7 @@
 #include <chrono>
 
 #include "mainWindow.hpp"
+#include "sparkleHelper/sparkleHelper.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
@@ -188,6 +189,16 @@ int main(int argc, char* argv[])
 
 	/* Load everything we need */
 	std::chrono::time_point<std::chrono::system_clock> start{ std::chrono::system_clock::now() };
+
+	// Initialize Sparkle
+	{
+		QFile signatureFile(":/dsa_pub.pem");
+		if (signatureFile.open(QIODevice::ReadOnly))
+		{
+			auto content = QString(signatureFile.readAll());
+			Sparkle::getInstance().init(content.toStdString());
+		}
+	}
 
 	// Load main window
 	auto window = MainWindow{};

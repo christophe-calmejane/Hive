@@ -44,12 +44,12 @@
 #include "internals/config.hpp"
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
+#include "sparkleHelper/sparkleHelper.hpp"
 #include "toolkit/comboBox.hpp"
 #include "toolkit/flatIconButton.hpp"
 #include "toolkit/dynamicHeaderView.hpp"
 #include "toolkit/material/color.hpp"
 #include "toolkit/material/colorPalette.hpp"
-#include "updater/updater.hpp"
 #include "activeNetworkInterfaceModel.hpp"
 #include "aboutDialog.hpp"
 #include "deviceDetailsDialog.hpp"
@@ -522,6 +522,8 @@ void MainWindowImpl::loadSettings()
 	settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
+	settings.registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
+	settings.registerSettingObserver(settings::General_CheckForBetaVersions.name, this);
 }
 
 static inline bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept
@@ -951,37 +953,16 @@ void MainWindowImpl::connectSignals()
 			QDesktopServices::openUrl(hive::internals::projectURL);
 		});
 
-	// Connect updater signals
-	auto const& updater = Updater::getInstance();
-	connect(&updater, &Updater::newReleaseVersionAvailable, this,
-		[](QString version, QString downloadURL)
-		{
-			QString message{ "New version (" + version + ") available.\nDo you want to open the download page?" };
+	//
 
-			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
-			if (result == QMessageBox::StandardButton::Open)
-			{
-				QDesktopServices::openUrl(downloadURL);
-			}
-			LOG_HIVE_INFO(message);
-		});
-	connect(&updater, &Updater::newBetaVersionAvailable, this,
-		[](QString version, QString downloadURL)
+	connect(actionCheckForUpdates, &QAction::triggered, this,
+		[]()
 		{
-			QString message{ "New BETA version (" + version + ") available.\nDo you want to open the download page?" };
+			Sparkle::getInstance().manualCheckForUpdate();
+		});
 
-			auto const result = QMessageBox::information(nullptr, "", message, QMessageBox::StandardButton::Open, QMessageBox::StandardButton::Cancel);
-			if (result == QMessageBox::StandardButton::Open)
-			{
-				QDesktopServices::openUrl(downloadURL);
-			}
-			LOG_HIVE_INFO(message);
-		});
-	connect(&updater, &Updater::checkFailed, this,
-		[](QString reason)
-		{
-			LOG_HIVE_WARN("Failed to check for new version: " + reason);
-		});
+
+	// Connect keyboard shortcuts
 
 	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, _parent };
 	connect(refreshController, &QShortcut::activated, this, &MainWindowImpl::currentControllerChanged);
@@ -1009,6 +990,14 @@ void MainWindowImpl::connectSignals()
 			LOG_HIVE_DEBUG("StyleSheet reloaded");
 		});
 #endif
+
+	// Connect Sparkle events
+	auto& sparkle = Sparkle::getInstance();
+	sparkle.setIsShutdownAllowedHandler(
+		[]()
+		{
+			return true;
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
@@ -1077,13 +1066,9 @@ void MainWindow::showEvent(QShowEvent* event)
 			_pImpl->_shown = true;
 			auto& settings = settings::SettingsManager::getInstance();
 
-			// Time to check for new version
+			// Start Sparkle
 			{
-				auto& updater = Updater::getInstance();
-				if (updater.isAutomaticCheckForNewVersion())
-				{
-					updater.checkForNewVersion();
-				}
+				Sparkle::getInstance().start();
 			}
 			// Check if we have a network interface selected
 			{
@@ -1146,6 +1131,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
 	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
+	settings.unregisterSettingObserver(settings::General_AutomaticCheckForUpdates.name, _pImpl);
+	settings.unregisterSettingObserver(settings::General_CheckForBetaVersions.name, _pImpl);
 
 	qApp->closeAllWindows();
 
@@ -1296,6 +1283,21 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	{
 		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
 		updateStyleSheet(colorName, ":/style.qss");
+	}
+	else if (name == settings::General_AutomaticCheckForUpdates.name)
+	{
+		Sparkle::getInstance().setAutomaticCheckForUpdates(value.toBool());
+	}
+	else if (name == settings::General_CheckForBetaVersions.name)
+	{
+		if (value.toBool())
+		{
+			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastBetasUrl);
+		}
+		else
+		{
+			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesUrl);
+		}
 	}
 }
 
