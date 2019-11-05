@@ -364,6 +364,7 @@ if [ $overrideQt5dir -eq 0 ]; then
 		if [ "x${QT_BASE_PATH}" != "x" ]; then
 			if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
 				echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
+				echo "Maybe try the -qt5dir option, see help (-h)"
 				exit 1
 			fi
 
@@ -371,7 +372,7 @@ if [ $overrideQt5dir -eq 0 ]; then
 			qtArch="gcc_64"
 		else
 			echo "Using cmake's auto-detection of Qt headers and libraries"
-			echo "QT_BASE_PATH env variable can be defined to the root folder of Qt installation (where MaintenanceTool resides)"
+			echo "QT_BASE_PATH env variable can be defined to the root folder of Qt installation (where MaintenanceTool resides), or the -qt5dir option. See help (-h) for more details."
 		fi
 	else
 		echo "Unsupported platform"
