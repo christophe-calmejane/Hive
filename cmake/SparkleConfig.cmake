@@ -33,5 +33,7 @@ elseif(APPLE)
 	add_library(Sparkle::lib ALIAS sparkle)
 
 else()
-	message(FATAL_ERROR "TODO: Sparkle for unix")
+	add_library(dummySparkle INTERFACE IMPORTED GLOBAL)
+	add_library(Sparkle::lib ALIAS dummySparkle)
+
 endif()
