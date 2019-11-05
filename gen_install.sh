@@ -171,8 +171,8 @@ parseFile()
 declare -A params=()
 
 # Default values
-default_VisualGenerator="Visual Studio 15 2017"
-default_VisualToolset="v141"
+default_VisualGenerator="Visual Studio 16 2019"
+default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
@@ -181,6 +181,9 @@ params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
 params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
 
 # 
+arch=""
+toolset=""
+outputFolderBasePath="_install"
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
 	# CMake.app not found, use cmake from the path
@@ -189,6 +192,7 @@ if isMac; then
 	fi
 	generator="Xcode"
 	getCcArch arch
+	defaultOutputFolder="${outputFolderBasePath}_<arch>"
 else
 	# Use cmake from the path
 	cmake_path="cmake"
@@ -198,9 +202,11 @@ else
 		toolchain="$default_VisualToolchain"
 		platformSdk="$default_VisualSdk"
 		arch="$default_VisualArch"
+		defaultOutputFolder="${outputFolderBasePath}_<arch>_<toolset>"
 	else
 		generator="Unix Makefiles"
 		getCcArch arch
+		defaultOutputFolder="${outputFolderBasePath}_<arch>_<config>"
 	fi
 fi
 
@@ -210,8 +216,7 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-outputFolder="./_install_${arch}"
-installSubFolder="/Install"
+outputFolder=""
 buildConfig="Release"
 buildConfigOverride=0
 doCleanup=1
@@ -236,6 +241,7 @@ do
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
+				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 			fi
 			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
@@ -299,6 +305,15 @@ do
 				gen_cmake_additional_options+=("-64")
 			else
 				echo "ERROR: -64 option is only supported on Windows platform"
+				exit 4
+			fi
+			;;
+		-vs2017)
+			if isWindows; then
+				toolset="v141"
+				gen_cmake_additional_options+=("-vs2017")
+			else
+				echo "ERROR: -vs2017 option is only supported on Windows platform"
 				exit 4
 			fi
 			;;
@@ -389,6 +404,8 @@ gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas
 
 # Build marketing options
 marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
+
+getOutputFolder outputFolder "${outputFolderBasePath}" "${arch}" "${toolset}" ""
 
 toolset_option=""
 if [ ! -z "${toolset}" ]; then
