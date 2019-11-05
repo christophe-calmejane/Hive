@@ -247,6 +247,7 @@ do
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
 			echo " -key-digits <Number of digits> -> The number of digits to be used as Key for installation, comprised between 0 and 4 (Default: $default_keyDigits)"
 			echo " -key-postfix <Postfix> -> Postfix string to be added to the Key for installation (Default: "")"
+			echo " -qt5dir <Qt5 CMake Folder> -> Override automatic Qt5_DIR detection with the full path to the folder containing Qt5Config.cmake file (either binary or source)"
 			exit 3
 			;;
 		-noclean)
@@ -357,6 +358,15 @@ do
 				exit 4
 			fi
 			key_postfix="$1"
+			;;
+		-qt5dir)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -qt5dir option, see help (-h)"
+				exit 4
+			fi
+			gen_cmake_additional_options+=("-qt5dir")
+			gen_cmake_additional_options+=("$1")
 			;;
 		*)
 			echo "ERROR: Unknown option '$1' (use -h for help)"
