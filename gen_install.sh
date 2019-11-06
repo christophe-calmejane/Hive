@@ -22,6 +22,25 @@ then
 	fi
 	exit 127
 fi
+if isMac;
+then
+	which grep &> /dev/null
+	if [ $? -ne 0 ];
+	then
+		echo "GNU grep required. Install it via HomeBrew"
+		exit 127
+	fi
+	grep --version | grep BSD &> /dev/null
+	if [ $? -eq 0 ];
+	then
+		echo "GNU grep required (not macOS native grep version). Install it via HomeBrew:"
+		echo " - Install HomeBrew with the following command: /usr/bin/ruby -e \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)\""
+		echo " - Install coreutils and grep with the following command: brew install coreutils grep"
+		echo " - Export brew path with the following command: export PATH=\"\$(brew --prefix coreutils)/libexec/gnubin:\$(brew --prefix grep)/libexec/gnubin:/usr/local/bin:\$PATH\""
+		echo " - Optionally set this path command in your .bashrc"
+		exit 127
+	fi
+fi
 
 getSignatureHash()
 {
@@ -145,7 +164,7 @@ parseFile()
 			case "$key" in
 				identity)
 					_params["$key"]="$value"
-					if isMac; then
+					if [[ isMac && ! "$value" == "-" ]]; then
 						# Quick check for identity in keychain
 						security find-identity -v -p codesigning | grep "$value" &> /dev/null
 						if [ $? -ne 0 ]; then
