@@ -1433,27 +1433,36 @@ public:
 				{
 					for (auto const& [streamPortIndex, streamPortNode] : audioUnitNode.streamPortOutputs)
 					{
+						// Save ChannelOffset for this StreamPort
+						entity->setStreamPortOutputClusterOffset(streamPortIndex, streamPortNode.staticModel->baseCluster);
+
 						if (streamPortNode.staticModel->hasDynamicAudioMap)
 						{
-							// Save ChannelOffset for this StreamPort
-							entity->setStreamPortOutputClusterOffset(streamPortIndex, streamPortNode.staticModel->baseCluster);
-
 							// Save current mappings (we want all mappings, including redundant)
 							entity->setOutputAudioMappings(streamPortIndex, streamPortNode.dynamicModel->dynamicAudioMap);
-
-							// Process all Clusters
-							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
+						}
+						else
+						{
+							la::avdecc::entity::model::AudioMappings staticMappings;
+							for (auto const& mapKV : streamPortNode.audioMaps)
 							{
-								auto const* const staticModel = clusterNode.staticModel;
-								for (auto channel = (uint16_t)0u; channel < staticModel->channelCount; ++channel)
-								{
-									auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
+								staticMappings.insert(staticMappings.end(), mapKV.second.staticModel->mappings.begin(), mapKV.second.staticModel->mappings.end());
+							}
+							entity->setOutputAudioMappings(streamPortIndex, staticMappings);
+						}
 
-									auto* outputChannel = ChannelNode::createOutputNode(*entity, channelIdentification);
-									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
-									auto const channelName = priv::clusterChannelName(clusterName, channel);
-									outputChannel->setName(channelName);
-								}
+						// Process all Clusters
+						for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
+						{
+							auto const* const staticModel = clusterNode.staticModel;
+							for (auto channel = (uint16_t)0u; channel < staticModel->channelCount; ++channel)
+							{
+								auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
+
+								auto* outputChannel = ChannelNode::createOutputNode(*entity, channelIdentification);
+								auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
+								auto const channelName = priv::clusterChannelName(clusterName, channel);
+								outputChannel->setName(channelName);
 							}
 						}
 					}

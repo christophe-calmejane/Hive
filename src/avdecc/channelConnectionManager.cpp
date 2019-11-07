@@ -480,6 +480,12 @@ private:
 			{
 				mappings = streamPortOutputDynamicModel->dynamicAudioMap;
 			}
+
+			// add the static mappings
+			for (auto const& audioMap : streamPortOutputNode.audioMaps)
+			{
+				mappings.insert(mappings.end(), audioMap.second.staticModel->mappings.begin(), audioMap.second.staticModel->mappings.end());
+			}
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{
@@ -494,6 +500,7 @@ private:
 				sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
 			}
 		}
+
 
 		std::set<std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex, uint16_t>> processedListenerChannels;
 
@@ -809,7 +816,16 @@ private:
 						{
 							if (streamPortOutputKV.second.dynamicModel)
 							{
-								auto const& targetMappings = streamPortOutputKV.second.dynamicModel->dynamicAudioMap;
+								// get dynamic mappings
+								auto targetMappings = streamPortOutputKV.second.dynamicModel->dynamicAudioMap;
+
+								// add the static mappings
+								for (auto const& audioMap : streamPortOutputKV.second.audioMaps)
+								{
+									targetMappings.insert(targetMappings.end(), audioMap.second.staticModel->mappings.begin(), audioMap.second.staticModel->mappings.end());
+								}
+
+								// iterate over mappings to find the channel connections
 								for (auto const& mapping : targetMappings)
 								{ // the source stream channel is connected to the corresponding target stream channel.
 									if (mapping.streamIndex == connectedTalkerStreamIndex && mapping.streamChannel == sourceStreamChannel)
@@ -1000,9 +1016,9 @@ private:
 	{
 		// TODO refactor to utilze getChannelConnectionsReverse?
 
-
 		auto result = std::make_shared<TargetConnectionInformations>();
 		result->sourceEntityId = sourceEntityId;
+
 
 		// find channel connections via connection matrix + stream connections.
 		// an output channel can be connected to one or multiple input channels on different devices or to none.
@@ -1021,16 +1037,44 @@ private:
 
 		std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>> sourceStreams;
 
-		auto const& streamPortOutputAudioMappings = controlledEntity->getStreamPortOutputAudioMappings(sourceStreamPortIndex);
-		for (auto const& mapping : streamPortOutputAudioMappings)
-		{
-			sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
-		}
-
-		auto const& streamConnections = getAllStreamOutputConnections(sourceEntityId);
 
 		try
 		{
+			auto const& streamPortOutput = controlledEntity->getStreamPortOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, sourceStreamPortIndex);
+			auto streamPortOutputAudioMappings = la::avdecc::entity::model::AudioMappings{};
+			if (streamPortOutput.staticModel->hasDynamicAudioMap)
+			{
+				streamPortOutputAudioMappings = controlledEntity->getStreamPortOutputAudioMappings(sourceStreamPortIndex);
+			}
+			else
+			{
+				for (auto const& audioMap : streamPortOutput.audioMaps)
+				{
+					auto const& mappings = audioMap.second.staticModel->mappings;
+					streamPortOutputAudioMappings.insert(streamPortOutputAudioMappings.end(), mappings.begin(), mappings.end());
+				}
+			}
+
+			// add the static mappings
+			for (auto const& audioUnit : controlledEntity->getCurrentConfigurationNode().audioUnits)
+			{
+				for (auto const& streamPortOutput : audioUnit.second.streamPortOutputs)
+				{
+					for (auto const& audioMap : streamPortOutput.second.audioMaps)
+					{
+						streamPortOutputAudioMappings.insert(streamPortOutputAudioMappings.end(), audioMap.second.staticModel->mappings.begin(), audioMap.second.staticModel->mappings.end());
+					}
+				}
+			}
+
+			for (auto const& mapping : streamPortOutputAudioMappings)
+			{
+				sourceStreams.push_back(std::make_pair(mapping.streamIndex, mapping.streamChannel));
+			}
+
+			auto const& streamConnections = getAllStreamOutputConnections(sourceEntityId);
+
+
 			// find out the connected streams:
 			for (auto const& stream : sourceStreams)
 			{
@@ -1220,6 +1264,7 @@ private:
 		{
 			return {};
 		}
+
 
 		// store all connection, format and mapping changes, that will be applied as batch command chain
 		StreamChannelMappings overriddenMappingsListener;
@@ -2181,13 +2226,14 @@ private:
 			}
 		}
 
-		if (connectionStreamSourceIndex)
+		if (connectionStreamSourceIndex.has_value())
 		{
 			// determine the amount of channels that are used on this stream connection.
 			// If the connection to remove isn't the only one on the stream, streamConnectionStillNeeded is set to true and the stream will stay connected.
 			auto unassignedChannels = getUnassignedChannelsOnTalkerStream(talkerEntityId, *connectionStreamSourceIndex);
 			auto const channelConnectionsOfTalker = getAllChannelConnectionsBetweenDevices(talkerEntityId, talkerStreamPortIndex, listenerEntityId);
 			bool streamConnectionStillNeeded = false;
+			std::set<std::tuple<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::ClusterIndex, uint16_t>> listenerClusterChannels;
 
 			auto streamConnectionUsages = uint32_t{ 0 };
 			for (auto const& deviceConnection : channelConnectionsOfTalker->targets)
@@ -2214,9 +2260,30 @@ private:
 					auto listenerPimaryStreamIndex = getPrimaryInputStreamIndexFromVirtualIndex(listenerEntityId, *virtualListenerIndex);
 					if (listenerPimaryStreamIndex)
 					{
+						bool alreadyHandledConnection = false;
+						for (auto const& [clusterIndex, channel] : deviceConnection->targetClusterChannels)
+						{
+							auto const listenerClusterChannel = std::make_tuple(*listenerPimaryStreamIndex, clusterIndex, channel);
+							if (listenerClusterChannels.find(listenerClusterChannel) == listenerClusterChannels.end())
+							{
+								listenerClusterChannels.insert(listenerClusterChannel);
+							}
+							else
+							{
+								alreadyHandledConnection = true;
+							}
+						}
+
+						if (alreadyHandledConnection)
+						{
+							// skip secondary if primary was alread handled
+							continue;
+						}
 						listenerStreamIdentification.streamIndex = *listenerPimaryStreamIndex;
 					}
 				}
+
+
 				if (deviceConnection->targetEntityId == listenerEntityId && listenerStreamIdentification.streamIndex == *connectionStreamTargetIndex && talkerStreamIdentification.streamIndex == *connectionStreamSourceIndex)
 				{
 					if (!deviceConnection->targetClusterChannels.empty())
@@ -2268,7 +2335,9 @@ private:
 			}
 
 			// only remove the talker channel mapping if it isn't in use by any other channel on any target anymore.
-			if (talkerChannelReceivers <= 1)
+			// also static mappings can't be removed
+			auto const& streamPortOutput = controlledTalkerEntity->getStreamPortOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamPortIndex);
+			if (talkerChannelReceivers <= 1 && streamPortOutput.staticModel->hasDynamicAudioMap)
 			{
 				// never remove talker mappings, that are default mappings:
 				if (talkerClusterIndex - talkerBaseCluster != *connectionStreamChannel)
@@ -2407,6 +2476,7 @@ private:
 		{
 			for (auto const& streamPortOutput : audioUnit.second.streamPortOutputs)
 			{
+				// add dynamic mappings
 				for (auto const& mapping : streamPortOutput.second.dynamicModel->dynamicAudioMap)
 				{
 					if (mapping.streamIndex == outputStreamIndex)
@@ -2422,6 +2492,29 @@ private:
 						else
 						{
 							result.emplace(mapping.streamChannel);
+						}
+					}
+				}
+
+				// add static mappings
+				for (auto const& audioMap : streamPortOutput.second.audioMaps)
+				{
+					for (auto const& mapping : audioMap.second.staticModel->mappings)
+					{
+						if (mapping.streamIndex == outputStreamIndex)
+						{
+							if (clusterOffset && clusterChannel)
+							{
+								// only search for the given cluster channel
+								if (mapping.clusterOffset == *clusterOffset && mapping.clusterChannel == *clusterChannel)
+								{
+									result.emplace(mapping.streamChannel);
+								}
+							}
+							else
+							{
+								result.emplace(mapping.streamChannel);
+							}
 						}
 					}
 				}
@@ -2586,11 +2679,24 @@ private:
 		{
 			for (auto const& streamPortOutput : audioUnit.second.streamPortOutputs)
 			{
+				// dynamic mappings
 				for (auto const& mapping : streamPortOutput.second.dynamicModel->dynamicAudioMap)
 				{
 					if (mapping.streamIndex == outputStreamIndex)
 					{
 						occupiedStreamChannels.insert(mapping.streamChannel);
+					}
+				}
+
+				// add static mappings
+				for (auto const& audioMap : streamPortOutput.second.audioMaps)
+				{
+					for (auto const& mapping : audioMap.second.staticModel->mappings)
+					{
+						if (mapping.streamIndex == outputStreamIndex)
+						{
+							occupiedStreamChannels.insert(mapping.streamChannel);
+						}
 					}
 				}
 			}

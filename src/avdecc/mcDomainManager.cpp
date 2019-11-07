@@ -1229,20 +1229,26 @@ private:
 			auto& listenerEntityInfo = listenerEntity->getEntity();
 
 			auto const& listenerInterfaces = listenerEntityInfo.getInterfacesInformation();
-			for (auto const& talkerInterfaceInfoKV : talkerEntityInfo.getInterfacesInformation())
+			auto const& talkerInterfaces = talkerEntityInfo.getInterfacesInformation();
+			bool allGPTPIdsMatch = true;
+			for (auto const& talkerInterfaceInfoKV : talkerInterfaces)
 			{
-				if (!listenerInterfaces.count(talkerInterfaceInfoKV.first))
+				bool gptpMathForTalker = false;
+				for (auto const& listenerInterfaceInfoKV : listenerInterfaces)
 				{
-					return false;
+					if (listenerInterfaceInfoKV.second.gptpGrandmasterID == talkerInterfaceInfoKV.second.gptpGrandmasterID)
+					{
+						gptpMathForTalker = true;
+					}
 				}
-				if (listenerInterfaces.at(talkerInterfaceInfoKV.first).gptpGrandmasterID != talkerInterfaceInfoKV.second.gptpGrandmasterID)
+				if (!gptpMathForTalker)
 				{
-					return false;
+					allGPTPIdsMatch = false;
+					break;
 				}
 			}
-			return true;
+			return allGPTPIdsMatch;
 		}
-
 		return false;
 	}
 

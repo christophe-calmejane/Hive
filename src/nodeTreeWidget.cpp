@@ -447,7 +447,7 @@ private:
 		}
 
 		// Counters (if supported by the entity)
-		if (isActiveConfiguration, node.dynamicModel->counters && !node.dynamicModel->counters->empty())
+		if (isActiveConfiguration && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
 			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");

@@ -28,6 +28,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QToolTip>
 
 #include "mediaClock/domainTreeModel.hpp"
 #include "avdecc/mcDomainManager.hpp"
@@ -866,6 +867,11 @@ bool DomainTreeModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropActi
 
 	DomainTreeItem* domainTreeItem = nullptr;
 	auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
+	if (treeItem == nullptr)
+	{
+		// return true if no parent could be determined, this leads to the creation of a new domain
+		return true;
+	}
 	if (treeItem->type() == AbstractTreeItem::Entity)
 	{
 		auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
@@ -933,7 +939,7 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction,
 
 	auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
 	std::optional<avdecc::mediaClock::DomainIndex> domainIndex = std::nullopt;
-	if (treeItem->type() == AbstractTreeItem::Domain)
+	if (treeItem != nullptr && treeItem->type() == AbstractTreeItem::Domain)
 	{
 		auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
 		domainIndex = domainTreeItem->domain().getDomainIndex();
@@ -941,7 +947,7 @@ bool DomainTreeModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction,
 	else
 	{
 		auto* treeItem = static_cast<AbstractTreeItem*>(parent.internalPointer());
-		if (treeItem)
+		if (treeItem && treeItem->type() == AbstractTreeItem::Entity)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
 			domainIndex = static_cast<DomainTreeItem*>(entityTreeItem->parentItem())->domain().getDomainIndex();
@@ -1530,6 +1536,37 @@ void SampleRateDomainDelegate::paint(QPainter* painter, QStyleOptionViewItem con
 QSize SampleRateDomainDelegate::sizeHint(QStyleOptionViewItem const& /*option*/, QModelIndex const& /*index*/) const
 {
 	return QSize(340, 22);
+}
+
+bool SampleRateDomainDelegate::helpEvent(QHelpEvent* e, QAbstractItemView* view, const QStyleOptionViewItem& option, const QModelIndex& index)
+{
+	if (!e || !view)
+		return false;
+
+	if (e->type() == QEvent::ToolTip)
+	{
+		auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
+		if (treeItem->type() == AbstractTreeItem::Entity)
+		{
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+			bool gptpInSync = entityTreeItem->isGPTPInSync();
+			bool isDoubledEntity = static_cast<DomainTreeModel const*>(index.model())->isEntityDoubled(entityTreeItem->entityId());
+
+			if (!gptpInSync)
+			{
+				QToolTip::showText(e->globalPos(), QString("GPTP sync error"), view);
+				return true;
+			}
+
+			if (isDoubledEntity)
+			{
+				QToolTip::showText(e->globalPos(), QString("Entity is part of multiple Media Clock Domains."), view);
+				return true;
+			}
+		}
+	}
+
+	return QStyledItemDelegate::helpEvent(e, view, option, index);
 }
 
 ////////////////////////////////////////////////////////////////
