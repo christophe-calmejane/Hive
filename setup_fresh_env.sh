@@ -275,6 +275,11 @@ setupEnv()
 			fi
 		fi
 
+	elif [[ $osName == "mac" ]];
+	then
+		local dsa_pub_key="resources/dsa_pub.pem"
+		touch "$dsa_pub_key"
+
 	fi
 
 	echo -n "Copying .hive_config file... "

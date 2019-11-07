@@ -18,7 +18,6 @@
 */
 
 #include "sparkleHelper.hpp"
-#import <Sparkle/Sparkle.h>
 
 void Sparkle::init(std::string const& /*signature*/) noexcept
 {

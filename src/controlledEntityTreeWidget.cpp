@@ -97,9 +97,9 @@ protected:
 	virtual void updateHasError() {}
 
 private:
+	bool const _isVirtual{ false };
 	la::avdecc::entity::model::DescriptorType const _descriptorType{ la::avdecc::entity::model::DescriptorType::Invalid };
 	la::avdecc::entity::model::DescriptorIndex const _descriptorIndex{ 0u };
-	bool const _isVirtual{ false };
 	bool _hasError{ false };
 };
 
@@ -495,7 +495,7 @@ private:
 	}
 
 	template<typename NodeType>
-	NodeIdentifier makeIdentifier([[maybe_unused]] la::avdecc::entity::model::ConfigurationIndex const configurationIndex, NodeType const* node) const noexcept
+	NodeIdentifier makeIdentifier([[maybe_unused]] la::avdecc::entity::model::ConfigurationIndex const configurationIndex, [[maybe_unused]] NodeType const* node) const noexcept
 	{
 		if constexpr (std::is_base_of_v<la::avdecc::controller::model::EntityModelNode, NodeType>)
 		{

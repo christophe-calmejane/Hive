@@ -75,7 +75,7 @@ QRectF NodeItem::boundingRect() const
 	return QRectF{ 0, 0, _width, _height };
 }
 
-void NodeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
+void NodeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/)
 {
 	painter->setPen(Qt::NoPen);
 	painter->setBrush(NodeItemColor);

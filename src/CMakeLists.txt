@@ -329,9 +329,14 @@ endif()
 ################
 ################
 # Temporarily reduce warning level
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR APPLE OR VS_USE_CLANG)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
 	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-everything)
-elseif(MSVC)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Don't use Wall on MSVC, it prints too many stupid warnings
 	target_compile_options(${PROJECT_NAME}_static PRIVATE /W3)
+else()
+	message(FATAL_ERROR "Unsupported Compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()
+

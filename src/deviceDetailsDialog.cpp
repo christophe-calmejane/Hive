@@ -522,7 +522,7 @@ public:
 	* Invoked whenever a new item is selected in the configuration combo box.
 	* @param text The selected text.
 	*/
-	void comboBoxConfigurationChanged(QString text)
+	void comboBoxConfigurationChanged(QString const& /*text*/)
 	{
 		if (_activeConfigurationIndex != comboBoxConfiguration->currentData().toInt())
 		{
@@ -685,7 +685,7 @@ public:
 	* Invoked whenever the entity group name gets changed in the view.
 	* @param entityGroupName The new group name.
 	*/
-	void comboBoxPredefinedPTChanged(QString text)
+	void comboBoxPredefinedPTChanged(QString const& /*text*/)
 	{
 		if (radioButton_PredefinedPT->isChecked() && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
 		{
