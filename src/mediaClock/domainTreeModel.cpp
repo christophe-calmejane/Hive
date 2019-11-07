@@ -1563,7 +1563,6 @@ bool SampleRateDomainDelegate::helpEvent(QHelpEvent* e, QAbstractItemView* view,
 				return true;
 			}
 		}
-
 	}
 
 	return QStyledItemDelegate::helpEvent(e, view, option, index);
