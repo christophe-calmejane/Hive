@@ -195,6 +195,7 @@
 #include <QTextStream>
 #include <QThread>
 #include <QTime>
+#include <QToolTip>
 #include <QTreeView>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
