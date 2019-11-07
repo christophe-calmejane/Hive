@@ -22,6 +22,25 @@ then
 	fi
 	exit 127
 fi
+if isMac;
+then
+	which grep &> /dev/null
+	if [ $? -ne 0 ];
+	then
+		echo "GNU grep required. Install it via HomeBrew"
+		exit 127
+	fi
+	grep --version | grep BSD &> /dev/null
+	if [ $? -eq 0 ];
+	then
+		echo "GNU grep required (not macOS native grep version). Install it via HomeBrew:"
+		echo " - Install HomeBrew with the following command: /usr/bin/ruby -e \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)\""
+		echo " - Install coreutils and grep with the following command: brew install coreutils grep"
+		echo " - Export brew path with the following command: export PATH=\"\$(brew --prefix coreutils)/libexec/gnubin:\$(brew --prefix grep)/libexec/gnubin:/usr/local/bin:\$PATH\""
+		echo " - Optionally set this path command in your .bashrc"
+		exit 127
+	fi
+fi
 
 getSignatureHash()
 {
@@ -145,7 +164,7 @@ parseFile()
 			case "$key" in
 				identity)
 					_params["$key"]="$value"
-					if isMac; then
+					if [[ isMac && ! "$value" == "-" ]]; then
 						# Quick check for identity in keychain
 						security find-identity -v -p codesigning | grep "$value" &> /dev/null
 						if [ $? -ne 0 ]; then
@@ -247,6 +266,7 @@ do
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
 			echo " -key-digits <Number of digits> -> The number of digits to be used as Key for installation, comprised between 0 and 4 (Default: $default_keyDigits)"
 			echo " -key-postfix <Postfix> -> Postfix string to be added to the Key for installation (Default: "")"
+			echo " -qt5dir <Qt5 CMake Folder> -> Override automatic Qt5_DIR detection with the full path to the folder containing Qt5Config.cmake file (either binary or source)"
 			exit 3
 			;;
 		-noclean)
@@ -357,6 +377,15 @@ do
 				exit 4
 			fi
 			key_postfix="$1"
+			;;
+		-qt5dir)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -qt5dir option, see help (-h)"
+				exit 4
+			fi
+			gen_cmake_additional_options+=("-qt5dir")
+			gen_cmake_additional_options+=("$1")
 			;;
 		*)
 			echo "ERROR: Unknown option '$1' (use -h for help)"

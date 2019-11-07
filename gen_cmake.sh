@@ -70,6 +70,8 @@ useVS2017=0
 signingId="-"
 doSign=0
 useSources=0
+overrideQt5dir=0
+Qt5dir=""
 
 while [ $# -gt 0 ]
 do
@@ -99,7 +101,8 @@ do
 			if [[ isMac -eq 1 ]]; then
 				echo " -sign -> Sign binaries (Default: No signing)"
 			fi
-			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources)"
+			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources). Do not use with -qt5dir option."
+			echo " -qt5dir <Qt5 CMake Folder> -> Override automatic Qt5_DIR detection with the full path to the folder containing Qt5Config.cmake file (either binary or source)"
 			exit 3
 			;;
 		-o)
@@ -239,6 +242,15 @@ do
 		-source)
 			useSources=1
 			;;
+		-qt5dir)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -qt5dir option, see help (-h)"
+				exit 4
+			fi
+			overrideQt5dir=1
+			Qt5dir="$1"
+			;;
 		*)
 			echo "ERROR: Unknown option '$1' (use -h for help)"
 			exit 4
@@ -246,6 +258,12 @@ do
 	esac
 	shift
 done
+
+if [[ $useSources -eq 1 && $overrideQt5dir -eq 1 ]]; then
+	echo "ERROR: Cannot use -source and -qt5dir options at the same time."
+	echo "If you want to use a custom source folder, just set -qt5dir to <Qt Source Root Folder>/qtbase/lib/cmake/Qt5"
+	exit 4
+fi
 
 if [ ! -z "$cmake_generator" ]; then
 	echo "Overriding default cmake generator ($generator) with: $cmake_generator"
@@ -330,36 +348,37 @@ if [ -d "3rdparty/avdecc-local" ]; then
 fi
 add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc")
 
-if isWindows; then
-	qtBasePath="c:/Qt/${qtVersion}"
-	if [ "$arch" == "x64" ]; then
-		qtArch="msvc2017_64"
-	else
-		qtArch="msvc2017"
-	fi
-elif isMac; then
-	qtBasePath="/Applications/Qt/${qtVersion}"
-	qtArch="clang_64"
-elif isLinux; then
-	if [ "x${QT_BASE_PATH}" != "x" ]; then
-		if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
-			echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
-			exit 1
+# Using automatic Qt5_DIR detection
+if [ $overrideQt5dir -eq 0 ]; then
+	if isWindows; then
+		qtBasePath="c:/Qt/${qtVersion}"
+		if [ "$arch" == "x64" ]; then
+			qtArch="msvc2017_64"
+		else
+			qtArch="msvc2017"
 		fi
+	elif isMac; then
+		qtBasePath="/Applications/Qt/${qtVersion}"
+		qtArch="clang_64"
+	elif isLinux; then
+		if [ "x${QT_BASE_PATH}" != "x" ]; then
+			if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
+				echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
+				echo "Maybe try the -qt5dir option, see help (-h)"
+				exit 1
+			fi
 
-		qtBasePath="${QT_BASE_PATH}/${qtVersion}"
-		qtArch="gcc_64"
+			qtBasePath="${QT_BASE_PATH}/${qtVersion}"
+			qtArch="gcc_64"
+		else
+			echo "Using cmake's auto-detection of Qt headers and libraries"
+			echo "QT_BASE_PATH env variable can be defined to the root folder of Qt installation (where MaintenanceTool resides), or the -qt5dir option. See help (-h) for more details."
+		fi
 	else
-		echo "Using cmake's auto-detection of Qt headers and libraries"
-		echo "QT_BASE_PATH env variable can be defined to the root folder of Qt installation (where MaintenanceTool resides)"
+		echo "Unsupported platform"
+		exit 1
 	fi
-else
-	echo "Unsupported platform"
-	exit 1
-fi
 
-if [ -n "${qtBasePath}" ];
-then
 	# Check specified Qt version is available
 	if [ ! -d "${qtBasePath}" ];
 	then
@@ -378,8 +397,16 @@ then
 		qtArch="Src/qtbase"
 		echo "Using Qt source instead of precompiled libraries"
 	fi
-	add_cmake_opt+=("-DQt5_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5")
+	Qt5dir="${qtBasePath}/${qtArch}/lib/cmake/Qt5"
 fi
+
+# Validate Qt5dir
+if [ ! -f "${Qt5dir}/Qt5Config.cmake" ]; then
+	echo "Invalid Qt5_DIR folder (${Qt5dir}): Qt5Config.cmake not found in the folder"
+	exit 1
+fi
+
+add_cmake_opt+=("-DQt5_DIR=${Qt5dir}")
 
 echo "Generating cmake project..."
 "$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $generator_arch_option $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}"

@@ -239,9 +239,10 @@ setupEnv()
 					rm -rf "$spklOutputFolder"
 					exit 1
 				fi
-				mv "${spklOutputFolder}/Sparkle.framework" "${baseSparkleFolder}/"
-				mv "${spklOutputFolder}/bin/generate_keys" "${baseSparkleFolder}/"
-				mv "${spklOutputFolder}/bin/sign_update" "${baseSparkleFolder}/"
+				rm -rf "${baseSparkleFolder}/Sparkle.framework"
+				mv -f "${spklOutputFolder}/Sparkle.framework" "${baseSparkleFolder}/"
+				mv -f "${spklOutputFolder}/bin/generate_keys" "${baseSparkleFolder}/"
+				mv -f "${spklOutputFolder}/bin/sign_update" "${baseSparkleFolder}/"
 				rm -f "$spkloutputFile"
 				rm -rf "$spklOutputFolder"
 				echo "done"
@@ -260,16 +261,15 @@ setupEnv()
 				echo "failed, $generateKeys not found"
 			else
 				echo -n "Keychain access might be requested, accept it... "
-				log=$("$generateKeys" 2>&1)
-				if [ $? -ne 0 ];
+				"$generateKeys" &> /dev/null
+				# Run it a second time as only the second successfull run will print the public key
+				local generateKeysResult="$("$generateKeys")"
+				if [ `echo "$generateKeysResult" | wc -l` -ne 6 ];
 				then
-					echo "failed!"
-					echo ""
-					echo "Error log:"
-					echo $log
+					echo "failed, unexpected result from $generateKeys command, have you accepted keychain access?"
 					exit 1
 				fi
-				local ed25519PubKey="$("$generateKeys" | head -n 6 | tail -n 1)"
+				local ed25519PubKey="$(echo "$generateKeysResult" | head -n 6 | tail -n 1)"
 				echo "$ed25519PubKey" > "$dsa_pub_key"
 				echo "done"
 			fi
