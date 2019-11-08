@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - All exported files are now using MessagePack (JSON binary) file format
 - Using SHIFT modifier while choosing one of the Export feature will dump the file in readable JSON format
 - Improved software update with automatic download and install
+- Entities in a Full Network State dump are always sorted by descending EntityID
 
 ### Fixed
 - [Splashscreen displayed on the same screen than Hive will be shown](https://github.com/christophe-calmejane/Hive/issues/20)
