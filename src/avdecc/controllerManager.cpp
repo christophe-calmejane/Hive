@@ -819,22 +819,22 @@ private:
 		return {};
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeAllControlledEntitiesAsJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags, QString const& dumpSource) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeAllControlledEntitiesAsJson(filePath.toStdString(), flags, true);
+			return controller->serializeAllControlledEntitiesAsJson(filePath.toStdString(), flags, dumpSource.toStdString(), true);
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
-	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) const noexcept override
+	virtual std::tuple<la::avdecc::jsonSerializer::SerializationError, std::string> serializeControlledEntityAsJson(la::avdecc::UniqueIdentifier const entityID, QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags, QString const& dumpSource) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->serializeControlledEntityAsJson(entityID, filePath.toStdString(), flags);
+			return controller->serializeControlledEntityAsJson(entityID, filePath.toStdString(), flags, dumpSource.toStdString());
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}

@@ -143,6 +143,7 @@ public:
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
 	void updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename);
+	static QString generateDumpSourceString() noexcept;
 
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
@@ -790,7 +791,7 @@ void MainWindowImpl::connectSignals()
 								{
 									flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
 								}
-								auto [error, message] = manager.serializeControlledEntityAsJson(entityID, filename, flags);
+								auto [error, message] = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
 								if (!error)
 								{
 									QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
@@ -803,7 +804,7 @@ void MainWindowImpl::connectSignals()
 										if (choice == QMessageBox::StandardButton::Yes)
 										{
 											flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags);
+											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
 											error = std::get<0>(result);
 											message = std::get<1>(result);
 											if (!error)
@@ -893,7 +894,7 @@ void MainWindowImpl::connectSignals()
 			if (!filename.isEmpty())
 			{
 				auto& manager = avdecc::ControllerManager::getInstance();
-				auto [error, message] = manager.serializeAllControlledEntitiesAsJson(filename, flags);
+				auto [error, message] = manager.serializeAllControlledEntitiesAsJson(filename, flags, generateDumpSourceString());
 				if (!error)
 				{
 					QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
@@ -1264,6 +1265,13 @@ void MainWindowImpl::updateStyleSheet(qt::toolkit::material::color::Name const c
 
 		qApp->setStyleSheet(styleSheet);
 	}
+}
+
+QString MainWindowImpl::generateDumpSourceString() noexcept
+{
+	static auto s_DumpSource = QString{ "%1 v%2 using L-Acoustics AVDECC Controller v%3" }.arg(hive::internals::applicationShortName).arg(hive::internals::versionString).arg(la::avdecc::controller::getVersion().c_str());
+
+	return s_DumpSource;
 }
 
 void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
