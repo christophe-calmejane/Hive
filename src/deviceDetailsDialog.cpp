@@ -645,6 +645,16 @@ public:
 			tableViewTransmit->resizeColumnsToContents();
 			tableViewTransmit->resizeRowsToContents();
 		}
+
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+		{
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
+
+			tableViewReceive->resizeColumnsToContents();
+			tableViewReceive->resizeRowsToContents();
+			tableViewTransmit->resizeColumnsToContents();
+			tableViewTransmit->resizeRowsToContents();
+		}
 	}
 
 	/**
