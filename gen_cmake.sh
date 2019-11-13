@@ -89,7 +89,7 @@ do
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
 				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
-				echo " -clang -> Compile using clang for VisualStudio (if predefined toolset do not work, override with -t option INSTEAD of -clang)"
+				echo " -clang -> Compile using clang for VisualStudio"
 			fi
 			if isMac; then
 				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing."
@@ -309,17 +309,11 @@ fi
 
 # Using -clang option (shortcut to auto-define the toolset)
 if [ $useVSclang -eq 1 ]; then
-	toolset="v141_clang_c2"
+	toolset="ClangCL"
 fi
 
 if [ $outputFolderForced -eq 0 ]; then
 	getOutputFolder outputFolder "${outputFolderBasePath}" "${arch}" "${toolset}" "${cmake_config}"
-fi
-
-# Clang on windows does not properly compile using Sdk8.1, we have to force Sdk10.0
-shopt -s nocasematch
-if [[ isWindows && $toolset =~ clang ]]; then
-	platformSdk="10.0"
 fi
 
 generator_arch_option=""
