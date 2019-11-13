@@ -5,7 +5,9 @@ setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
 
 # Find dependencies
 find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
-find_package(Sparkle REQUIRED)
+if(ENABLE_HIVE_FEATURE_SPARKLE)
+	find_package(Sparkle REQUIRED)
+endif()
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -238,7 +240,11 @@ set(SOURCE_FILES_APP
 	main.cpp
 )
 
-if(WIN32)
+if(NOT ENABLE_HIVE_FEATURE_SPARKLE)
+	list(APPEND SOURCE_FILES_COMMON
+		sparkleHelper/sparkleHelper_dummy.cpp
+	)
+elseif(WIN32)
 	list(APPEND SOURCE_FILES_COMMON
 		sparkleHelper/sparkleHelper_win32.cpp
 	)
@@ -279,9 +285,13 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown Sparkle::lib)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
+endif()
+if(ENABLE_HIVE_FEATURE_SPARKLE)
+	target_compile_options(${PROJECT_NAME}_static PUBLIC -DUSE_SPARKLE)
+	target_link_libraries(${PROJECT_NAME}_static PUBLIC Sparkle::lib)
 endif()
 
 # Include directories

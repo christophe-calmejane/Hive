@@ -21,6 +21,8 @@ option(BUILD_HIVE_APPLICATION "Build Hive main application." TRUE)
 option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." TRUE)
 # Signing options
 option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
+# Enable features
+option(ENABLE_HIVE_FEATURE_SPARKLE "Use Sparkle for Hive auto-update" TRUE)
 
 ############ Override from command line "CMake -D<PARAM>=<VALUE>"
 
