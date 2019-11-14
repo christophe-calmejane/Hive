@@ -1322,6 +1322,10 @@ private:
 						auto unwantedMappings = getMappingsFromStreamInputChannel(listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex, unwantedStreamConnectionChannel);
 						for (auto const& unwantedMapping : unwantedMappings)
 						{
+							if (unwantedMapping.clusterOffset == listenerChannelIdentification.clusterIndex + *listenerChannelIdentification.baseCluster)
+							{
+								continue;
+							}
 							insertAudioMapping(overriddenMappingsListener, unwantedMapping, *listenerChannelIdentification.streamPortIndex);
 						}
 					}
