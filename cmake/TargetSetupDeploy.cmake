@@ -64,28 +64,30 @@ function(target_setup_deploy TARGET_NAME)
 	if(_LIBRARY_DEPENDENCIES_OUTPUT)
 		list(REMOVE_DUPLICATES _LIBRARY_DEPENDENCIES_OUTPUT)
 		foreach(_LIBRARY ${_LIBRARY_DEPENDENCIES_OUTPUT})
+			# If install deployement is requested
 			if(DEPLOY_INSTALL)
-				if(APPLE AND _IS_BUNDLE)
-					install(
-						FILES $<TARGET_FILE:${_LIBRARY}>
-						DESTINATION ./$<TARGET_FILE_NAME:${TARGET_NAME}>.app/Contents/Frameworks)
-				elseif(WIN32)
+				if(WIN32)
 					install(
 						FILES $<TARGET_FILE:${_LIBRARY}>
 						DESTINATION bin)
-				else()
+				elseif(NOT _IS_BUNDLE)
+					# Don't use the install rule for macOS bundles, as we want to copy the files directly in the bundle during compilation phase. The install rule of the bundle itself will copy the full bundle including all copied files in it
 					install(
 						FILES $<TARGET_FILE:${_LIBRARY}>
 						DESTINATION lib)
 				endif()
 			endif()
+			# Copy shared library to the output build folder for easy debug
 			if(APPLE AND _IS_BUNDLE)
+				# For macOS bundle, we want to copy the file directly inside the bundle. Don't forget to copy the SONAME symlink
 				string(APPEND DEPLOY_SCRIPT_CONTENT
-					"file(COPY \"$<TARGET_FILE:${_LIBRARY}>\" DESTINATION \"$<TARGET_BUNDLE_CONTENT_DIR:${TARGET_NAME}>/Frameworks/\")\n")
+					"file(COPY \"$<TARGET_FILE:${_LIBRARY}>\" \"$<TARGET_SONAME_FILE:${_LIBRARY}>\" DESTINATION \"$<TARGET_BUNDLE_CONTENT_DIR:${TARGET_NAME}>/Frameworks/\")\n")
 			elseif(WIN32)
+				# For windows, we copy in the same folder than the binary
 				string(APPEND DEPLOY_SCRIPT_CONTENT
 					"file(COPY \"$<TARGET_FILE:${_LIBRARY}>\" DESTINATION \"$<TARGET_FILE_DIR:${TARGET_NAME}>\")\n")
 			else()
+				# For macOS non-bundle and linux, we copy in the lib folder
 				string(APPEND DEPLOY_SCRIPT_CONTENT
 					"file(COPY \"$<TARGET_FILE:${_LIBRARY}>\" DESTINATION \"$<TARGET_FILE_DIR:${TARGET_NAME}>/../lib\")\n")
 			endif()
