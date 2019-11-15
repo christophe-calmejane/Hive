@@ -141,7 +141,7 @@ LegendDialog::LegendDialog(qt::toolkit::material::color::Name const& colorName, 
 
 	// Add a section for the Arrows
 	{
-		auto* sectionGroupBox = new QGroupBox{ "Header Small Arrows", this };
+		auto* sectionGroupBox = new QGroupBox{ "Header Small Arrows (Milan devices only)", this };
 		sectionGroupBox->setSizePolicy(QSizePolicy::Policy::Preferred, QSizePolicy::Policy::Maximum);
 
 		auto* sectionLayout = new QGridLayout{ sectionGroupBox };

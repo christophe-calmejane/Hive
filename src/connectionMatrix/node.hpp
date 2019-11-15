@@ -26,6 +26,8 @@
 
 namespace connectionMatrix
 {
+class EntityNode;
+
 class Node
 {
 	friend class ModelPrivate;
@@ -80,7 +82,16 @@ public:
 	la::avdecc::UniqueIdentifier const& entityID() const;
 
 	// Returns the parent node
-	Node* parent() const;
+	Node const* parent() const;
+
+	// Returns the parent node
+	Node* parent();
+
+	// Returns the EntityNode (top ancestor)
+	EntityNode const* entityNode() const;
+
+	// Returns the EntityNode (top ancestor)
+	EntityNode* entityNode();
 
 	// Returns true if this node has a parent (false for an entity)
 	bool hasParent() const;
@@ -92,7 +103,7 @@ public:
 	int index() const;
 
 	// Returns the index child in this node children list, -1 if the child is not related
-	int indexOf(Node* child) const;
+	int indexOf(Node const* child) const;
 
 	// Returns the child node at index, null if not found
 	Node* childAt(int index);

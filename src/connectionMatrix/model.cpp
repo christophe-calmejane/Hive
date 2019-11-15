@@ -765,7 +765,10 @@ public:
 	// Updates header data for the given dirtyFlags
 	void computeHeaderData(Node* const node, HeaderDirtyFlags const dirtyFlags)
 	{
-		if (dirtyFlags.test(HeaderDirtyFlag::UpdateLockedState))
+		auto const isMilan = node->entityNode()->isMilan();
+
+		// LockedState is only valid for Milan devices
+		if (isMilan && dirtyFlags.test(HeaderDirtyFlag::UpdateLockedState))
 		{
 			switch (node->type())
 			{
@@ -816,7 +819,9 @@ public:
 					break;
 			}
 		}
-		if (dirtyFlags.test(HeaderDirtyFlag::UpdateIsStreaming))
+
+		// IsStreaming is only valid for Milan devices
+		if (isMilan && dirtyFlags.test(HeaderDirtyFlag::UpdateIsStreaming))
 		{
 			switch (node->type())
 			{

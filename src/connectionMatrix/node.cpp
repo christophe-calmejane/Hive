@@ -87,9 +87,32 @@ la::avdecc::UniqueIdentifier const& Node::entityID() const
 	return _entityID;
 }
 
-Node* Node::parent() const
+Node const* Node::parent() const
 {
-	return const_cast<Node*>(_parent);
+	return _parent;
+}
+
+Node* Node::parent()
+{
+	return _parent;
+}
+
+EntityNode const* Node::entityNode() const
+{
+	auto* node = this;
+
+	while (node->_parent != nullptr)
+	{
+		node = node->_parent;
+	}
+
+	return static_cast<EntityNode const*>(node);
+}
+
+EntityNode* Node::entityNode()
+{
+	// Implemented over entityNode() const overload
+	return const_cast<EntityNode*>(static_cast<Node const*>(this)->entityNode());
 }
 
 bool Node::hasParent() const
@@ -104,10 +127,10 @@ QString const& Node::name() const
 
 int Node::index() const
 {
-	return _parent ? _parent->indexOf(const_cast<Node*>(this)) : 0;
+	return _parent ? _parent->indexOf(this) : 0;
 }
 
-int Node::indexOf(Node* child) const
+int Node::indexOf(Node const* child) const
 {
 	auto const predicate = [child](auto const& item)
 	{
