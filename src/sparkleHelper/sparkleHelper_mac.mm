@@ -18,12 +18,9 @@
 */
 
 #include "sparkleHelper.hpp"
-#include "avdecc/hiveLogItems.hpp"
 
 #import <Sparkle/Sparkle.h>
 #import <Foundation/Foundation.h>
-
-#include <QString>
 
 /** std::string to NSString conversion */
 static inline NSString* getNSString(std::string const& cString)
@@ -35,12 +32,6 @@ static inline NSString* getNSString(std::string const& cString)
 static inline std::string getStdString(NSString* nsString)
 {
 	return std::string{ [nsString UTF8String] };
-}
-
-/** NSString to QString conversion */
-static inline QString getQString(NSString* nsString)
-{
-	return QString{ [nsString UTF8String] };
 }
 
 @interface SparkleDelegate<SUUpdaterDelegate> : NSObject
@@ -72,7 +63,11 @@ static inline QString getQString(NSString* nsString)
 }
 
 - (void)updater:(SUUpdater*)updater didFindValidUpdate:(SUAppcastItem*)item {
-	LOG_HIVE_INFO("A new update has been found");
+	auto const& handler = Sparkle::getInstance().getLogHandler();
+	if (handler)
+	{
+		handler("A new update has been found", Sparkle::LogLevel::Info);
+	}
 }
 
 - (void)updaterDidNotFindUpdate:(SUUpdater*)updater {
@@ -104,7 +99,11 @@ static inline QString getQString(NSString* nsString)
 }
 
 - (void)updater:(SUUpdater*)updater didAbortWithError:(NSError*)error {
-	LOG_HIVE_WARN(QString("Failed to automatically update Hive: %1").arg(getQString([error description])));
+	auto const& handler = Sparkle::getInstance().getLogHandler();
+	if (handler)
+	{
+		handler(std::string{ "Automatic update failed: " } + getStdString([error description]), Sparkle::LogLevel::Warn);
+	}
 }
 
 - (void)updater:(SUUpdater*)updater willInstallUpdateOnQuit:(SUAppcastItem*)item immediateInstallationInvocation:(NSInvocation*)invocation {
@@ -178,11 +177,6 @@ void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 	}
 
 	_appcastUrl = appcastUrl;
-}
-
-void Sparkle::setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
-{
-	_isShutdownAllowedHandler = isShutdownAllowedHandler;
 }
 
 void Sparkle::manualCheckForUpdate() noexcept

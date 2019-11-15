@@ -999,6 +999,26 @@ void MainWindowImpl::connectSignals()
 		{
 			return true;
 		});
+	sparkle.setLogHandler(
+		[this](auto const& message, auto const level)
+		{
+			auto const qMessage = QString::fromStdString(message);
+			switch (level)
+			{
+				case Sparkle::LogLevel::Info:
+					LOG_HIVE_INFO(qMessage);
+					break;
+				case Sparkle::LogLevel::Warn:
+					LOG_HIVE_WARN(qMessage);
+					break;
+				case Sparkle::LogLevel::Error:
+					LOG_HIVE_ERROR(qMessage);
+					break;
+				default:
+					LOG_HIVE_DEBUG(qMessage);
+					break;
+			}
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)

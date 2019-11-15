@@ -18,7 +18,6 @@
 */
 
 #include "sparkleHelper.hpp"
-#include "avdecc/hiveLogItems.hpp"
 
 #include <winsparkle.h>
 #include <Windows.h>
@@ -51,12 +50,20 @@ void Sparkle::init(std::string const& signature) noexcept
 		win_sparkle_set_did_find_update_callback(
 			[]()
 			{
-				LOG_HIVE_INFO("A new update has been found");
+				auto const& sparkle = getInstance();
+				if (sparkle._logHandler)
+				{
+					sparkle._logHandler("A new update has been found", LogLevel::Info);
+				}
 			});
 		win_sparkle_set_error_callback(
 			[]()
 			{
-				LOG_HIVE_WARN("Failed to automatically update Hive");
+				auto const& sparkle = getInstance();
+				if (sparkle._logHandler)
+				{
+					sparkle._logHandler("Automatic update failed", LogLevel::Warn);
+				}
 			});
 
 		// Get current Check For Updates value
@@ -127,11 +134,6 @@ void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 	catch (...)
 	{
 	}
-}
-
-void Sparkle::setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
-{
-	_isShutdownAllowedHandler = isShutdownAllowedHandler;
 }
 
 void Sparkle::manualCheckForUpdate() noexcept

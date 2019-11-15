@@ -54,11 +54,6 @@ void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 	_appcastUrl = appcastUrl;
 }
 
-void Sparkle::setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
-{
-	_isShutdownAllowedHandler = isShutdownAllowedHandler;
-}
-
 void Sparkle::manualCheckForUpdate() noexcept
 {
 	if (!_initialized)

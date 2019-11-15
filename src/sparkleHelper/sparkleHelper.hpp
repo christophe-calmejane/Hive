@@ -25,7 +25,15 @@
 class Sparkle final
 {
 public:
+	enum class LogLevel
+	{
+		Info = 0,
+		Warn = 1,
+		Error = 2,
+	};
+
 	using IsShutdownAllowedHandler = std::function<bool()>;
+	using LogHandler = std::function<void(std::string const& message, LogLevel const level)>;
 
 	static Sparkle& getInstance() noexcept
 	{
@@ -34,13 +42,26 @@ public:
 	}
 
 	/* Initialization methods */
+	// Must be called before any other methods, and as soon as possible
 	void init(std::string const& signature) noexcept;
+	// Must be called to start the background check process, but not before the UI is visible and configuration methods have been called
 	void start() noexcept;
 
 	/* Configuration methods */
 	void setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept;
 	void setAppcastUrl(std::string const& appcastUrl) noexcept;
-	void setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept;
+	void setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
+	{
+		_isShutdownAllowedHandler = isShutdownAllowedHandler;
+	}
+	void setLogHandler(LogHandler const& logHandler) noexcept
+	{
+		_logHandler = logHandler;
+	}
+	LogHandler const& getLogHandler() const noexcept
+	{
+		return _logHandler;
+	}
 
 	/* Requests methods */
 	void manualCheckForUpdate() noexcept;
@@ -64,4 +85,5 @@ private:
 	bool _checkForUpdates{ false };
 	std::string _appcastUrl{};
 	IsShutdownAllowedHandler _isShutdownAllowedHandler{ nullptr };
+	LogHandler _logHandler{ nullptr };
 };

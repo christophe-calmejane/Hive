@@ -18,7 +18,6 @@
 */
 
 #include "sparkleHelper.hpp"
-#include "avdecc/hiveLogItems.hpp"
 
 void Sparkle::init(std::string const& /*signature*/) noexcept
 {
@@ -33,7 +32,10 @@ void Sparkle::start() noexcept
 	}
 
 	_started = true;
-	LOG_HIVE_INFO("Automatic check for new version not supported (not compiled)");
+	if (_logHandler)
+	{
+		_logHandler("Automatic check for new version not supported (not compiled)", LogLevel::Info);
+	}
 }
 
 void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
@@ -54,11 +56,6 @@ void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
 	}
 
 	_appcastUrl = appcastUrl;
-}
-
-void Sparkle::setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
-{
-	_isShutdownAllowedHandler = isShutdownAllowedHandler;
 }
 
 void Sparkle::manualCheckForUpdate() noexcept
