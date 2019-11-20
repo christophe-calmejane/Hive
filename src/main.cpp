@@ -67,7 +67,7 @@ void setupBugReporter()
 	BT_SetTerminate();
 	BT_SetSupportEMail("christophe.calmejane@l-acoustics.com");
 	BT_SetFlags(BTF_DETAILEDMODE | BTF_ATTACHREPORT | BTF_SHOWADVANCEDUI | BTF_DESCRIBEERROR);
-	BT_SetSupportServer("localhost", 9999);
+	BT_SetSupportServer("hive-crash-reports.changeip.org", 9999);
 }
 
 #else // Nothing on other OS right now
