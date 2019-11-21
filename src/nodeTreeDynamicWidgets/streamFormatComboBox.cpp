@@ -29,7 +29,7 @@ StreamFormatComboBox::StreamFormatComboBox(la::avdecc::UniqueIdentifier const en
 {
 	// Send changes
 	connect(this, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-		[this](int index)
+		[this](int /*index*/)
 		{
 			auto streamFormat = currentData().value<StreamFormat>();
 			auto streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);

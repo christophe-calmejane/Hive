@@ -36,11 +36,13 @@
 class StreamDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::controller::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent = nullptr);
+	StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::entity::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent = nullptr);
 
 private:
-	void updateStreamInfo(la::avdecc::entity::model::StreamInfo const& streamInfo);
-	void updateConnections(la::avdecc::controller::model::StreamConnections const& connections);
+	void updateStreamFormat(la::avdecc::entity::model::StreamFormat const& streamFormat);
+	void updateStreamIsRunning(bool const isRunning);
+	void updateStreamDynamicInfo(la::avdecc::entity::model::StreamDynamicInfo const& streamDynamicInfo);
+	void updateConnections(la::avdecc::entity::model::StreamConnections const& connections);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamType{ la::avdecc::entity::model::DescriptorType::Entity };
@@ -49,6 +51,12 @@ private:
 	// StreamInfo
 	QTreeWidgetItem* _streamFormat{ nullptr };
 	QTreeWidgetItem* _streamFlags{ nullptr };
+	QTreeWidgetItem* _streamWait{ nullptr };
+	QTreeWidgetItem* _isClassB{ nullptr };
+	QTreeWidgetItem* _hasSavedState{ nullptr };
+	QTreeWidgetItem* _doesSupportEncrypted{ nullptr };
+	QTreeWidgetItem* _arePdusEncrypted{ nullptr };
+	QTreeWidgetItem* _hasTalkerFailed{ nullptr };
 	QTreeWidgetItem* _streamDestMac{ nullptr };
 	QTreeWidgetItem* _streamID{ nullptr };
 	QTreeWidgetItem* _streamVlanID{ nullptr };

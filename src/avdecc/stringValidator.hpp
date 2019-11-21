@@ -27,7 +27,7 @@ namespace avdecc
 class StringValidator : public QValidator
 {
 public:
-	virtual State validate(QString& input, int& pos) const override
+	virtual State validate(QString& input, int& /*pos*/) const override
 	{
 		return input.toUtf8().length() <= la::avdecc::entity::model::AvdeccFixedString::MaxLength ? State::Acceptable : State::Invalid;
 	}

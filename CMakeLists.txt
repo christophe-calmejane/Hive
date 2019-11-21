@@ -1,7 +1,7 @@
-# Hive - Pro Audio Avdecc Controller
+# Root CMake File for Hive
 
 # Minimum CMake version
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 ############ Versioning
 
@@ -10,23 +10,45 @@ cmake_minimum_required(VERSION 3.12)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.1.0)
+set(HIVE_VERSION 1.2.1)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
 # Build options
+option(BUILD_HIVE_TESTS "Build Hive tests." TRUE)
+option(BUILD_HIVE_APPLICATION "Build Hive main application." TRUE)
 # Install options
 option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." TRUE)
 # Signing options
 option(ENABLE_HIVE_SIGNING "Enable binaries signing." FALSE)
+# Enable features
+option(ENABLE_HIVE_FEATURE_SPARKLE "Use Sparkle for Hive auto-update" TRUE)
 
-############ CMake configuration
+############ Override from command line "CMake -D<PARAM>=<VALUE>"
+
+# Configuration options
+if(NOT HIVE_APPCAST_RELEASES_URL)
+	set(HIVE_APPCAST_RELEASES_URL "https://localhost/hive/appcast-release.xml" CACHE STRING "Appcast URL for Hive Releases" FORCE)
+endif()
+message(STATUS "Appcast URL for Hive Releases defined to: ${HIVE_APPCAST_RELEASES_URL}")
+if(NOT HIVE_APPCAST_BETAS_URL)
+	set(HIVE_APPCAST_BETAS_URL "https://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
+endif()
+message(STATUS "Appcast URL for Hive Betas defined to: ${HIVE_APPCAST_BETAS_URL}")
+if(APPLE AND NOT HIVE_DSA_PUB_KEY)
+	message(FATAL_ERROR "DSA Public Key not set in HIVE_DSA_PUB_KEY CMake Variable")
+endif()
+
+############ CMake Configuration
 
 project(Hive)
 
 # Using c++17 standard for all targets
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+# Default Component
+set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "Hive")
 
 # Set minimum OSX version
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "Force the target to be at least a Mac OS X 10.9" FORCE)
@@ -45,12 +67,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Specifies the build type." FORCE)
 endif()
 
-# Add our cmake modules & packages
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-
-# Find Qt dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+# Include our internal macros
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required to find_package 3rd party modules that don't provide their CMake Config files
+include(cmake/TargetSetupDeploy.cmake)
 
 # Avdecc project location
 if(NOT AVDECC_BASE_FOLDER)
@@ -115,13 +134,14 @@ if(ENABLE_AVDECC_USE_FMTLIB)
 	set_target_properties(fmt PROPERTIES FOLDER "Libraries")
 endif()
 
-############ Define some variables (most to be removed when reworking cmake files and using setup_project macro)
+############ Define some variables
 
 string(TIMESTAMP CURRENT_YEAR "%Y")
 set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")
 set(PROJECT_FULL_NAME "${PROJECT_NAME} - Pro Audio Avdecc Controller")
 set(PROJECT_COMPANYNAME "KikiSoft")
 set(PROJECT_AUTHORS "Emilien Vallot, Christophe Calmejane and other contributors")
+set(PROJECT_CONTACT "christophe.calmejane@l-acoustics.com")
 set(PROJECT_REVERSE_DOMAINNAME "fr.${PROJECT_COMPANYNAME}")
 set(PROJECT_DOMAINNAME "${PROJECT_COMPANYNAME}.fr")
 set(PROJECT_URL "https://github.com/christophe-calmejane/Hive")
@@ -133,13 +153,67 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(PROJECT_ARCH "64-bit")
 endif()
 
+# Split HIVE_VERSION string
+string(REGEX MATCHALL "([0-9]+)" HIVE_VERSION_SPLIT "${HIVE_VERSION}")
+list(LENGTH HIVE_VERSION_SPLIT HIVE_VERSION_SPLIT_LENGTH)
+if(${HIVE_VERSION_SPLIT_LENGTH} LESS 3)
+	message(FATAL_ERROR "Cannot parse version string")
+endif()
+list(GET HIVE_VERSION_SPLIT 0 HIVE_VERSION_MAJOR)
+list(GET HIVE_VERSION_SPLIT 1 HIVE_VERSION_MINOR)
+list(GET HIVE_VERSION_SPLIT 2 HIVE_VERSION_PATCH)
+if(${HIVE_VERSION_SPLIT_LENGTH} EQUAL 4)
+	list(GET HIVE_VERSION_SPLIT 3 HIVE_VERSION_BETA)
+else()
+	set(HIVE_VERSION_BETA "0")
+endif()
+
+# Compute Marketing Version String (Visible)
+if(NOT DEFINED MARKETING_VERSION_DIGITS)
+	set(MARKETING_VERSION_DIGITS 2)
+endif()
+set(HIVE_MARKETING_VERSION "")
+if(${MARKETING_VERSION_DIGITS} GREATER 0)
+	set(HIVE_MARKETING_VERSION "${HIVE_VERSION_MAJOR}")
+	if(${MARKETING_VERSION_DIGITS} GREATER 1)
+		math(EXPR LOOP_COUNT "${MARKETING_VERSION_DIGITS} - 1")
+		foreach(index RANGE 1 ${LOOP_COUNT})
+			list(GET HIVE_VERSION_SPLIT ${index} LOOP_VERSION)
+			string(APPEND HIVE_MARKETING_VERSION ".${LOOP_VERSION}")
+		endforeach()
+	endif()
+endif()
+if(${MARKETING_VERSION_POSTFIX})
+	string(APPEND HIVE_MARKETING_VERSION "${MARKETING_VERSION_POSTFIX}")
+endif()
+
+# Compute Full Friendly Version String (Visible)
+if(${HIVE_VERSION_BETA} STREQUAL "0")
+	set(HIVE_FRIENDLY_VERSION "${HIVE_VERSION_MAJOR}.${HIVE_VERSION_MINOR}.${HIVE_VERSION_PATCH}")
+else()
+	set(HIVE_FRIENDLY_VERSION "${HIVE_VERSION_MAJOR}.${HIVE_VERSION_MINOR}.${HIVE_VERSION_PATCH}-beta${HIVE_VERSION_BETA}")
+endif()
+
 ############ Add projects
 
 # Add main project
 add_subdirectory(src)
 
+# Add tools
+add_subdirectory(tools)
+
 # Add tests
-add_subdirectory(tests/src)
+if(BUILD_HIVE_TESTS)
+	message(STATUS "Building Hive tests")
+	# Setup gtest options
+	set(gtest_force_shared_crt ON CACHE BOOL "For shared crt for gtest" FORCE)
+	set(BUILD_GMOCK OFF CACHE BOOL "Don't build the googlemock subproject" FORCE)
+	set(INSTALL_GTEST OFF CACHE BOOL "Disable installation of googletest. (Projects embedding googletest may want to turn this OFF.)" FORCE)
+	# Include gtest framework
+	add_subdirectory(${AVDECC_BASE_FOLDER}/externals/3rdparty/gtest)
+	# Include our unit tests
+	add_subdirectory(tests)
+endif()
 
 # Force Project as visual default target
 set_directory_properties(PROPERTIES VS_STARTUP_PROJECT ${PROJECT_NAME})

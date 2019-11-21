@@ -86,7 +86,7 @@ public:
 			if (lhs._preleaseTag.has_value() && !rhs._preleaseTag.has_value())
 				return true;
 			// Both have a pre-release tag, but lhs is < to rhs
-			if (lhs._preleaseTag.has_value() && rhs._preleaseTag.has_value() && *lhs._preleaseTag < *rhs._preleaseTag)
+			if (lhs._preleaseTag && rhs._preleaseTag && *lhs._preleaseTag < *rhs._preleaseTag)
 				return true;
 
 			return false;
@@ -142,23 +142,24 @@ public:
 
 		// Register to settings::SettingsManager
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::AutomaticCheckForUpdates.name, this, false);
-		settings.registerSettingObserver(settings::CheckForBetaVersions.name, this, false);
-		_automaticCheckNewVersion = settings.getValue(settings::AutomaticCheckForUpdates.name).toBool();
+		settings.registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this, false);
+		settings.registerSettingObserver(settings::General_CheckForBetaVersions.name, this, false);
+		_automaticCheckNewVersion = settings.getValue(settings::General_AutomaticCheckForUpdates.name).toBool();
 	}
 
 	~UpdaterImpl() noexcept
 	{
+		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::AutomaticCheckForUpdates.name, this);
-		settings.unregisterSettingObserver(settings::CheckForBetaVersions.name, this);
+		settings.unregisterSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
+		settings.unregisterSettingObserver(settings::General_CheckForBetaVersions.name, this);
 	}
 
 private:
 	// settings::SettingsManager overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
-		if (name == settings::AutomaticCheckForUpdates.name)
+		if (name == settings::General_AutomaticCheckForUpdates.name)
 		{
 			_automaticCheckNewVersion = value.toBool();
 			if (_automaticCheckNewVersion)
@@ -166,7 +167,7 @@ private:
 				checkForNewVersion();
 			}
 		}
-		else if (name == settings::CheckForBetaVersions.name)
+		else if (name == settings::General_CheckForBetaVersions.name)
 		{
 			if (_automaticCheckNewVersion)
 			{
@@ -181,7 +182,7 @@ private:
 		if (!_checkInProgress && !VersionUrlPath.isEmpty())
 		{
 			auto& settings = settings::SettingsManager::getInstance();
-			_checkBetaVersion = settings.getValue(settings::CheckForBetaVersions.name).toBool();
+			_checkBetaVersion = settings.getValue(settings::General_CheckForBetaVersions.name).toBool();
 			_newReleaseVersionString = "";
 			_newBetaVersionString = "";
 

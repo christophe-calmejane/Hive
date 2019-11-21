@@ -17,6 +17,8 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <la/avdecc/utils.hpp>
+
 #include <QApplication>
 #include <QFontDatabase>
 
@@ -24,14 +26,17 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QSplashScreen>
+#include <QDesktopWidget>
 
 #include <iostream>
 #include <chrono>
 
 #include "mainWindow.hpp"
+#include "sparkleHelper/sparkleHelper.hpp"
 #include "avdecc/controllerManager.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
+#include "profiles/profileSelectionDialog.hpp"
 
 #ifdef DEBUG
 #	define SPLASH_DELAY 0
@@ -39,11 +44,22 @@
 #	define SPLASH_DELAY 1250
 #endif // DEBUG
 
+static QtMessageHandler previousHandler = nullptr;
+static void qtMessageHandler(QtMsgType msgType, QMessageLogContext const& logContext, QString const& message)
+{
+	if (msgType == QtMsgType::QtFatalMsg)
+	{
+		AVDECC_ASSERT_WITH_RET(false, message.toStdString());
+	}
+	previousHandler(msgType, logContext, message);
+}
+
 // Setup BugTrap on windows (win32 only right now)
 #if defined(Q_OS_WIN32) && defined(HAVE_BUGTRAP)
 #	define BUGREPORTER_CATCH_EXCEPTIONS
 #	include <Windows.h>
 #	include "BugTrap.h"
+
 void setupBugReporter()
 {
 	BT_InstallSehFilter();
@@ -51,7 +67,7 @@ void setupBugReporter()
 	BT_SetTerminate();
 	BT_SetSupportEMail("christophe.calmejane@l-acoustics.com");
 	BT_SetFlags(BTF_DETAILEDMODE | BTF_ATTACHREPORT | BTF_SHOWADVANCEDUI | BTF_DESCRIBEERROR);
-	BT_SetSupportServer("localhost", 9999);
+	BT_SetSupportServer("hive-crash-reports.changeip.org", 9999);
 }
 
 #else // Nothing on other OS right now
@@ -63,28 +79,21 @@ int main(int argc, char* argv[])
 	// Setup Bug Reporter
 	setupBugReporter();
 
+	// Replace Qt Message Handler
+	previousHandler = qInstallMessageHandler(&qtMessageHandler);
+
 	// Configure QT Application
-#if defined(Q_OS_WIN)
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
+	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
 	QCoreApplication::setOrganizationDomain(hive::internals::organizationDomain);
 	QCoreApplication::setOrganizationName(hive::internals::organizationName);
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
 
-	// We want to propagate style sheet styles to all widgets
-	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
-
 	// Create the Qt Application
 	QApplication app(argc, argv);
-
-	// Load and apply the stylesheet
-	QFile styleFile{ ":/style.qss" };
-	if (styleFile.open(QFile::ReadOnly))
-	{
-		app.setStyleSheet(styleFile.readAll());
-	}
 
 	// Runtime sanity check on Avdecc Library compilation options
 	{
@@ -116,27 +125,83 @@ int main(int argc, char* argv[])
 
 	// Register settings (creating default value if none was saved before)
 	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSetting(settings::LastLaunchedVersion);
-	settings.registerSetting(settings::AutomaticPNGDownloadEnabled);
-	settings.registerSetting(settings::TransposeConnectionMatrix);
-	settings.registerSetting(settings::AutomaticCheckForUpdates);
-	settings.registerSetting(settings::CheckForBetaVersions);
-	settings.registerSetting(settings::AemCacheEnabled);
 
-	QPixmap logo(":/Logo.png");
-	QSplashScreen splash(logo, Qt::WindowStaysOnTopHint);
+	// General
+	settings.registerSetting(settings::LastLaunchedVersion);
+	settings.registerSetting(settings::General_AutomaticPNGDownloadEnabled);
+	settings.registerSetting(settings::General_AutomaticCheckForUpdates);
+	settings.registerSetting(settings::General_CheckForBetaVersions);
+	settings.registerSetting(settings::General_ThemeColorIndex);
+
+	// Connection matrix
+	settings.registerSetting(settings::ConnectionMatrix_Transpose);
+	settings.registerSetting(settings::ConnectionMatrix_ChannelMode);
+	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowTip);
+	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowEnd);
+
+	// Network
+	settings.registerSetting(settings::Network_ProtocolType);
+	settings.registerSetting(settings::Network_InterfaceTypeEthernet);
+	settings.registerSetting(settings::Network_InterfaceTypeWiFi);
+
+	// Controller
+	settings.registerSetting(settings::Controller_AemCacheEnabled);
+	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
+
+	// Load fonts
+	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/
+	{
+		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
+		return 1;
+	}
+	if (QFontDatabase::addApplicationFont(":/Hive.ttf") == -1) // Our own made font
+	{
+		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
+		return 1;
+	}
+
+	// Read saved profile
+	auto const userProfile = settings.getValue(settings::UserProfile.name).value<profiles::ProfileType>();
+
+	// First time launch, ask the user to choose a profile
+	if (userProfile == profiles::ProfileType::None)
+	{
+		auto profileSelectionDialog = profiles::ProfileSelectionDialog{};
+		profileSelectionDialog.exec();
+		auto const profile = profileSelectionDialog.selectedProfile();
+		settings.setValue(settings::UserProfile.name, la::avdecc::utils::to_integral(profile));
+	}
+
+	auto const logo = QPixmap{ ":/Logo.png" };
+	auto splash = QSplashScreen{ logo, Qt::WindowStaysOnTopHint };
+
+	// Use MainWindow geometry on a dummy widget to get the target screen (i.e, where the main window will appear)
+	QWidget dummy;
+	auto const mainWindowGeometry = settings.getValue(settings::MainWindowGeometry).toByteArray();
+	dummy.restoreGeometry(mainWindowGeometry);
+	auto const availableScreenGeometry = QApplication::desktop()->screenGeometry(&dummy);
+
+	// Center our splash screen on this target screen
+	splash.move(availableScreenGeometry.center() - logo.rect().center());
+
 	splash.show();
 	app.processEvents();
 
 	/* Load everything we need */
 	std::chrono::time_point<std::chrono::system_clock> start{ std::chrono::system_clock::now() };
 
-	// Load fonts
-	// https://material.io/icons/
-	QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf");
+	// Initialize Sparkle
+	{
+		QFile signatureFile(":/dsa_pub.pem");
+		if (signatureFile.open(QIODevice::ReadOnly))
+		{
+			auto content = QString(signatureFile.readAll());
+			Sparkle::getInstance().init(content.toStdString());
+		}
+	}
 
 	// Load main window
-	MainWindow window;
+	auto window = MainWindow{};
 	//window.show(); // This forces the creation of the window // Don't try to show it, it blinks sometimes (and window.hide() seems to create the window too)
 	window.hide(); // Immediately hides it (even though it was not actually shown since processEvents was not called)
 

@@ -36,7 +36,7 @@ public:
 		connect(q, &QLineEdit::returnPressed, q, &QLineEdit::clearFocus);
 	}
 
-	virtual bool eventFilter(QObject* object, QEvent* event) override
+	virtual bool eventFilter(QObject* /*object*/, QEvent* event) override
 	{
 		Q_Q(TextEntry);
 

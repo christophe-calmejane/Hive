@@ -19,16 +19,24 @@
 
 #pragma once
 
-#include <QSplitter>
-#include <QLayout>
 #include "controlledEntityTreeWidget.hpp"
 #include "nodeTreeWidget.hpp"
+#include "errorItemDelegate.hpp"
 
+#include <QSplitter>
+#include <QLayout>
 
 class EntityInspector : public QWidget
 {
 	Q_OBJECT
 public:
+	enum class RoleInfo
+	{
+		NodeType = Qt::UserRole,
+		ErrorRole = ErrorItemDelegate::ErrorRole,
+		IsActiveConfiguration,
+	};
+
 	EntityInspector(QWidget* parent = nullptr);
 
 	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
@@ -52,4 +60,5 @@ private:
 	QSplitter _splitter{ Qt::Vertical, this };
 	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
 	NodeTreeWidget _nodeTreeWiget{ this };
+	ErrorItemDelegate _itemDelegate{ this };
 };

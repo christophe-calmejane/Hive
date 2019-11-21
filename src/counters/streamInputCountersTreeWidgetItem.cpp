@@ -22,10 +22,11 @@
 #include <map>
 #include <QMenu>
 
-StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget* parent)
+StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isConnected, la::avdecc::entity::model::StreamInputCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamIndex(streamIndex)
+	, _isConnected{ isConnected }
 {
 	static std::map<la::avdecc::entity::StreamInputCounterValidFlag, QString> s_counterNames{
 		{ la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked, "Media Locked" },
@@ -57,16 +58,17 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, this };
 		widget->setText(0, nameKV.second);
 		widget->setHidden(true); // Hide until we get a counter value (so we don't display counters not supported by the entity)
-		_counters[nameKV.first] = widget;
+		_counterWidgets[nameKV.first] = widget;
 	}
 
 	// Update counters right now
+	auto& manager = avdecc::ControllerManager::getInstance();
+	_errorCounters = manager.getStreamInputErrorCounters(_entityID, _streamIndex);
 	updateCounters(counters);
 
 	// Listen for StreamInputCountersChanged
-	auto& manager = avdecc::ControllerManager::getInstance();
 	connect(&manager, &avdecc::ControllerManager::streamInputCountersChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)
 			{
@@ -75,43 +77,54 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 		});
 
 	connect(&manager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlags const& flags)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)
 			{
-				setStreamInputErrorCounterFlags(flags);
+				_errorCounters = errorCounters;
+				updateCounters(_counters);
 			}
 		});
 
-	// Initialization
-	setStreamInputErrorCounterFlags(manager.getStreamInputErrorCounterFlags(_entityID, _streamIndex));
+	connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this,
+		[this](la::avdecc::entity::model::StreamConnectionState const& state)
+		{
+			if (state.listenerStream.entityID == _entityID && state.listenerStream.streamIndex == _streamIndex)
+			{
+				_isConnected = state.state == la::avdecc::entity::model::StreamConnectionState::State::Connected;
+				updateCounters(_counters);
+			}
+		});
 }
 
-void StreamInputCountersTreeWidgetItem::setStreamInputErrorCounterFlags(la::avdecc::entity::StreamInputCounterValidFlags const& flags)
+void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model::StreamInputCounters const& counters)
 {
-	for (auto& kv : _counters)
+	_counters = counters;
+
+	for (auto const [flag, value] : _counters)
 	{
-		auto const& flag = kv.first;
-		auto* widget = kv.second;
-
-		auto const color = flags.test(flag) ? Qt::red : Qt::black;
-
-		widget->setForeground(0, color);
-		widget->setForeground(1, color);
-	}
-}
-
-void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::StreamInputCounters const& counters)
-{
-	for (auto const counterKV : counters)
-	{
-		auto const counterFlag = counterKV.first;
-		if (auto const it = _counters.find(counterFlag); it != _counters.end())
+		if (auto const it = _counterWidgets.find(flag); it != _counterWidgets.end())
 		{
 			auto* widget = it->second;
 			AVDECC_ASSERT(widget != nullptr, "If widget is found in the map, it should not be nullptr");
-			widget->setText(1, QString::number(counterKV.second));
+
+			auto color = QColor{ _isConnected ? Qt::black : Qt::gray };
+			auto text = QString::number(value);
+
+			auto const errorCounterIt = _errorCounters.find(flag);
+			if (errorCounterIt != _errorCounters.end())
+			{
+				color = QColor{ Qt::red };
+				text += QString(" (+%1)").arg(errorCounterIt->second);
+			}
+
+			widget->setForeground(0, color);
+			widget->setForeground(1, color);
+
+			widget->setText(1, text);
 			widget->setHidden(false);
 		}
 	}
+
+	setText(0, _isConnected ? "Counters" : "Counters (Frozen)");
 }

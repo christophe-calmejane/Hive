@@ -18,341 +18,243 @@
 */
 
 #include "connectionMatrix/paintHelper.hpp"
+#include "toolkit/material/color.hpp"
+
+namespace color = qt::toolkit::material::color;
 
 namespace connectionMatrix
 {
-static inline void drawCircle(QPainter* painter, QRect const& rect)
+namespace paintHelper
 {
-	painter->drawEllipse(rect.adjusted(3, 3, -3, -3));
-}
-
-static inline void drawLozenge(QPainter* painter, QRect const& rect)
-{
-	auto r = rect.adjusted(4, 4, -4, -4);
-	painter->translate(r.center());
-	r.moveCenter({});
-	painter->rotate(45.0);
-	painter->drawRect(r);
-}
-
 static inline void drawSquare(QPainter* painter, QRect const& rect)
 {
-	painter->drawRect(rect.adjusted(3, 3, -3, -3));
+	painter->drawRect(rect.adjusted(2, 2, -3, -3));
 }
 
-static inline void drawEntitySummaryFigure(QPainter* painter, QRect const& rect, QColor const& color)
+static inline void drawDiamond(QPainter* painter, QRect const& rect)
 {
+	auto const r = rect.translated(-rect.center()).adjusted(3, 3, -4, -4);
+
 	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
-	painter->setPen(QPen(QColor("#9E9E9E"), 1));
-	painter->setBrush(color);
-	drawSquare(painter, rect);
-
+	painter->translate(rect.center());
+	painter->rotate(45);
+	painter->drawRect(r);
 	painter->restore();
 }
 
-static inline void drawConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+static inline void drawCircle(QPainter* painter, QRect const& rect)
 {
-	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
-	painter->setPen(QPen(Qt::black, 2));
-	painter->setBrush(color);
-	drawCircle(painter, rect);
-
-	painter->restore();
+	painter->drawEllipse(rect.adjusted(2, 2, -3, -3));
 }
 
-static inline void drawNotConnectedStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
+static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const wrongFormatHasPriorityOverInterfaceDown)
 {
-	painter->save();
+	static auto const White = color::value(color::Name::Gray, color::Shade::Shade300);
+	static auto const Green = color::value(color::Name::Green, color::Shade::Shade500);
+	static auto const Red = color::value(color::Name::Red, color::Shade::Shade800);
+	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
+	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
+	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
+	//static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
-	painter->setRenderHint(QPainter::Antialiasing, true);
+	auto brushColor = QColor{ White };
 
-	painter->setPen(QPen(QColor("#9E9E9E"), 2));
-	painter->setBrush(color);
-	drawCircle(painter, rect);
+	auto const connected = state != Model::IntersectionData::State::NotConnected;
+	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
+	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
+	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
 
-	painter->restore();
-}
-
-static inline void drawFastConnectingStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
-{
-	constexpr auto startAngle = 90;
-
-	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
-	painter->setPen(QPen(QColor("#9E9E9E"), 2));
-	painter->setBrush(colorConnected);
-	painter->drawPie(rect.adjusted(3, 3, -3, -3), startAngle * 16, 180 * 16);
-	painter->setBrush(colorNotConnected);
-	painter->drawPie(rect.adjusted(3, 3, -3, -3), (startAngle + 180) * 16, 180 * 16);
-
-	painter->restore();
-}
-
-static inline void drawConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
-{
-	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
-	painter->setPen(QPen(Qt::black, 1));
-	painter->setBrush(color);
-	drawLozenge(painter, rect);
-
-	painter->restore();
-}
-
-static inline void drawNotConnectedRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& color)
-{
-	painter->save();
-
-	painter->setRenderHint(QPainter::Antialiasing, true);
-
-	painter->setPen(QPen(QColor("#9E9E9E"), 1));
-	painter->setBrush(color);
-	drawLozenge(painter, rect);
-
-	painter->restore();
-}
-
-static inline void drawFastConnectingRedundantStreamFigure(QPainter* painter, QRect const& rect, QColor const& colorConnected, QColor const& colorNotConnected)
-{
-	drawNotConnectedRedundantStreamFigure(painter, rect, colorNotConnected); // TODO: Try to draw a lozenge split in 2, like the circle
-}
-
-// QColor(0xF5F5F5); // White-ish
-// QColor(0x4CAF50); // Green
-// QColor(0xFFD600); // Yellow
-// QColor(0xFFF9C4); // Light Yellow
-// QColor(0xC83028); // Red
-// QColor(0xFFCDD2); // Light Red
-// QColor(0xD251F1); // Purple
-// QColor(0xFFC1FF); // Light Purple
-// QColor(0x2196F3); // Blue
-// QColor(0x8EE1FF); // Light Blue
-// QColor(0xF56D0D); // Orange
-
-static inline QColor getConnectedColor()
-{
-	return QColor(0x4CAF50); // Green
-}
-static inline QColor getConnectedWrongDomainColor()
-{
-	return QColor(0xC83028); // Red
-}
-
-static inline QColor getConnectedWrongFormatColor()
-{
-	return QColor(0xFFD600); // Yellow
-}
-
-static inline QColor getPartiallyConnectedColor()
-{
-	return QColor(0xF56D0D); // Orange
-}
-
-static inline QColor getConnectedInterfaceDownColor()
-{
-	return QColor(0x2196F3); // Blue
-}
-
-static inline QColor getNotConnectedInterfaceDownColor()
-{
-	return QColor(0x8EE1FF); // Light Blue
-}
-
-static inline QColor getNotConnectedColor()
-{
-	return QColor(0xF5F5F5); // White-ish
-}
-
-static inline QColor getNotConnectedWrongDomainColor()
-{
-	return QColor(0xFFCDD2); // Light Red
-}
-
-static inline QColor getNotConnectedWrongFormatColor()
-{
-	return QColor(0xFFF9C4); // Light Yellow
-}
-
-static inline QColor getNotConnectedAtLeastOneErrorColor()
-{
-	return QColor(0xFFC1FF); // Light Purple
-}
-
-static inline QColor getConnectedAtLeastOneErrorColor()
-{
-	return QColor(0xD251F1); // Purple
-}
-
-void drawConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
+	if (state == Model::IntersectionData::State::PartiallyConnected)
 	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedColor());
+		brushColor = Purple;
 	}
 	else
 	{
-		drawConnectedStreamFigure(painter, rect, getConnectedColor());
+		if (interfaceDown)
+		{
+			if (wrongFormat && wrongFormatHasPriorityOverInterfaceDown)
+			{
+				brushColor = Yellow;
+			}
+			else
+			{
+				brushColor = Blue;
+			}
+		}
+		else if (wrongDomain)
+		{
+			brushColor = Red;
+		}
+		else if (wrongFormat)
+		{
+			brushColor = Yellow;
+		}
+		else
+		{
+			brushColor = connected ? Green : White;
+		}
 	}
+
+	brushColor.setAlphaF(connected ? 1.0 : 0.25);
+
+	return brushColor;
 }
 
-void drawWrongDomainConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
+QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orientation, bool const isTransposed, bool const alwaysShowArrowTip, bool const alwaysShowArrowEnd, int const arrowOffset, int const arrowSize, int const width)
 {
-	if (isRedundant)
+	auto path = QPainterPath{};
+
+	auto const topLeft = rect.topLeft();
+	auto const topRight = rect.topRight();
+	auto const bottomLeft = rect.bottomLeft();
+	auto const bottomRight = rect.bottomRight();
+
+	if (orientation == Qt::Horizontal)
 	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedWrongDomainColor());
+		if (isTransposed)
+		{
+			// Arrow towards the matrix
+			auto const minXPos = topLeft.x();
+			auto const maxXPos = bottomRight.x();
+			auto const intermediateXPos = minXPos + (maxXPos - minXPos) / 2;
+			auto const minYPos = (width == 0) ? topLeft.y() : bottomLeft.y() - (arrowOffset + arrowSize + width);
+			auto const maxYPos = bottomLeft.y() - arrowOffset;
+			auto const intermediateYPos = maxYPos - arrowSize;
+
+			path.moveTo(minXPos, minYPos);
+			path.lineTo(minXPos, intermediateYPos);
+			path.lineTo(intermediateXPos, maxYPos);
+			path.lineTo(maxXPos, intermediateYPos);
+			path.lineTo(maxXPos, minYPos);
+			if (alwaysShowArrowEnd || width != 0)
+			{
+				path.lineTo(intermediateXPos, minYPos + arrowSize);
+			}
+		}
+		else
+		{
+			// Arrow away from the matrix
+			auto const minXPos = topLeft.x();
+			auto const maxXPos = bottomRight.x();
+			auto const intermediateXPos = minXPos + (maxXPos - minXPos) / 2;
+			auto const minYPos = (width == 0) ? topLeft.y() + (alwaysShowArrowTip ? arrowSize : 0) : bottomLeft.y() - (arrowOffset + width);
+			auto const maxYPos = bottomLeft.y() - arrowOffset;
+			auto const intermediateYPos = maxYPos - arrowSize;
+
+			path.moveTo(minXPos, minYPos);
+			path.lineTo(minXPos, maxYPos);
+			path.lineTo(intermediateXPos, intermediateYPos);
+			path.lineTo(maxXPos, maxYPos);
+			path.lineTo(maxXPos, minYPos);
+			path.lineTo(intermediateXPos, minYPos - arrowSize);
+		}
 	}
 	else
 	{
-		drawConnectedStreamFigure(painter, rect, getConnectedWrongDomainColor());
+		if (isTransposed)
+		{
+			// Arrow away from the matrix
+			auto const minXPos = (width == 0) ? topLeft.x() + (alwaysShowArrowTip ? arrowSize : 0) : topRight.x() - (arrowOffset + width);
+			auto const maxXPos = topRight.x() - arrowOffset;
+			auto const intermediateXPos = maxXPos - arrowSize;
+			auto const minYPos = topLeft.y();
+			auto const maxYPos = bottomLeft.y();
+			auto const intermediateYPos = minYPos + (maxYPos - minYPos) / 2;
+
+			path.moveTo(minXPos, minYPos);
+			path.lineTo(maxXPos, minYPos);
+			path.lineTo(intermediateXPos, intermediateYPos);
+			path.lineTo(maxXPos, maxYPos);
+			path.lineTo(minXPos, maxYPos);
+			path.lineTo(minXPos - arrowSize, intermediateYPos);
+		}
+		else
+		{
+			// Arrow towards the matrix
+			auto const minXPos = (width == 0) ? topLeft.x() : topRight.x() - (arrowOffset + arrowSize + width);
+			auto const maxXPos = topRight.x() - arrowOffset;
+			auto const intermediateXPos = maxXPos - arrowSize;
+			auto const minYPos = topLeft.y();
+			auto const maxYPos = bottomLeft.y();
+			auto const intermediateYPos = minYPos + (maxYPos - minYPos) / 2;
+
+			path.moveTo(minXPos, minYPos);
+			path.lineTo(intermediateXPos, minYPos);
+			path.lineTo(maxXPos, intermediateYPos);
+			path.lineTo(intermediateXPos, maxYPos);
+			path.lineTo(minXPos, maxYPos);
+			if (alwaysShowArrowEnd || width != 0)
+			{
+				path.lineTo(minXPos + arrowSize, intermediateYPos);
+			}
+		}
 	}
+
+	return path;
 }
 
-void drawWrongFormatConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
 {
-	if (isRedundant)
+	painter->setRenderHint(QPainter::Antialiasing);
+	painter->setRenderHint(QPainter::HighQualityAntialiasing);
+
+	auto const connected = state != Model::IntersectionData::State::NotConnected;
+
+	auto const penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);
+	auto penWidth = qreal{ 1.5 };
+	auto wrongFormatHasPriorityOverInterfaceDown = false;
+
+	switch (type)
 	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedWrongFormatColor());
-	}
-	else
-	{
-		drawConnectedStreamFigure(painter, rect, getConnectedWrongFormatColor());
+		case Model::IntersectionData::Type::Entity_Entity:
+		case Model::IntersectionData::Type::Entity_Redundant:
+		case Model::IntersectionData::Type::Entity_RedundantStream:
+		case Model::IntersectionData::Type::Entity_SingleStream:
+		case Model::IntersectionData::Type::Entity_SingleChannel:
+			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
+			painter->setPen(QPen{ penColor, penWidth });
+			drawSquare(painter, rect);
+			break;
+		case Model::IntersectionData::Type::Redundant_RedundantStream:
+		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
+			painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
+			penWidth = qreal{ 1.0 };
+			painter->setPen(QPen{ penColor, penWidth });
+			drawDiamond(painter, rect);
+			break;
+		case Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden:
+			// Nominal case, not connected (since it's forbidden by Milan)
+			if (state == Model::IntersectionData::State::NotConnected)
+			{
+				painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+			}
+			else
+			{
+				// But if the connection is made using another controller, we might have a connection we want to kill
+				painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
+				penWidth = qreal{ 1.0 };
+				painter->setPen(QPen{ penColor, penWidth });
+				drawDiamond(painter, rect);
+			}
+			break;
+		case Model::IntersectionData::Type::Redundant_Redundant:
+			penWidth = qreal{ 2.0 };
+			wrongFormatHasPriorityOverInterfaceDown = true; // For summary, we want the WrongFormat error flag to have priority over InterfaceDown (more meaningful information)
+			[[fallthrough]];
+		case Model::IntersectionData::Type::RedundantStream_SingleStream:
+		case Model::IntersectionData::Type::Redundant_SingleStream:
+		case Model::IntersectionData::Type::SingleStream_SingleStream:
+		case Model::IntersectionData::Type::SingleChannel_SingleChannel:
+			painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
+			painter->setPen(QPen{ penColor, penWidth });
+			drawCircle(painter, rect);
+			break;
+		case Model::IntersectionData::Type::None:
+		default:
+			painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+			break;
 	}
 }
 
-void drawFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawFastConnectingRedundantStreamFigure(painter, rect, getConnectedColor(), getNotConnectedColor());
-	}
-	else
-	{
-		drawFastConnectingStreamFigure(painter, rect, getConnectedColor(), getNotConnectedColor());
-	}
-}
-
-void drawWrongDomainFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawFastConnectingRedundantStreamFigure(painter, rect, getConnectedWrongDomainColor(), getNotConnectedWrongDomainColor());
-	}
-	else
-	{
-		drawFastConnectingStreamFigure(painter, rect, getConnectedWrongDomainColor(), getNotConnectedWrongDomainColor());
-	}
-}
-
-void drawWrongFormatFastConnectingStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawFastConnectingRedundantStreamFigure(painter, rect, getConnectedWrongFormatColor(), getNotConnectedWrongFormatColor());
-	}
-	else
-	{
-		drawFastConnectingStreamFigure(painter, rect, getConnectedWrongFormatColor(), getNotConnectedWrongFormatColor());
-	}
-}
-
-void drawConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawConnectedRedundantStreamFigure(painter, rect, getConnectedInterfaceDownColor());
-	}
-	else
-	{
-		drawConnectedStreamFigure(painter, rect, getConnectedInterfaceDownColor());
-	}
-}
-
-void drawNotConnectedInterfaceDownStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedInterfaceDownColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedInterfaceDownColor());
-	}
-}
-
-void drawNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedColor());
-	}
-}
-
-void drawWrongDomainNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedWrongDomainColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedWrongDomainColor());
-	}
-}
-
-void drawWrongFormatNotConnectedStream(QPainter* painter, QRect const& rect, bool const isRedundant)
-{
-	if (isRedundant)
-	{
-		drawNotConnectedRedundantStreamFigure(painter, rect, getNotConnectedWrongFormatColor());
-	}
-	else
-	{
-		drawNotConnectedStreamFigure(painter, rect, getNotConnectedWrongFormatColor());
-	}
-}
-
-void drawErrorNotConnectedRedundantNode(QPainter* painter, QRect const& rect)
-{
-	drawNotConnectedStreamFigure(painter, rect, getNotConnectedAtLeastOneErrorColor());
-}
-
-void drawErrorConnectedRedundantNode(QPainter* painter, QRect const& rect)
-{
-	drawConnectedStreamFigure(painter, rect, getConnectedAtLeastOneErrorColor());
-}
-
-void drawPartiallyConnectedRedundantNode(QPainter* painter, QRect const& rect)
-{
-	drawConnectedStreamFigure(painter, rect, getPartiallyConnectedColor());
-}
-
-void drawEntityConnection(QPainter* painter, QRect const& rect)
-{
-	drawEntitySummaryFigure(painter, rect, QColor("0x4CAF50"));
-}
-
-void drawEntityNoConnection(QPainter* painter, QRect const& rect)
-{
-	drawEntitySummaryFigure(painter, rect, QColor("#EEEEEE"));
-}
-
-void drawNotApplicable(QPainter* painter, QRect const& rect)
-{
-	painter->fillRect(rect, QBrush{ QColor("#E1E1E1"), Qt::BDiagPattern });
-}
-
+} // namespace paintHelper
 } // namespace connectionMatrix

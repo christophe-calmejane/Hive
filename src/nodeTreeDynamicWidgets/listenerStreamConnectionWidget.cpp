@@ -22,7 +22,7 @@
 #include <QMenu>
 #include <QStyle>
 
-ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::controller::model::StreamConnectionState const& state, QWidget* parent)
+ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamConnectionState const& state, QWidget* parent)
 	: QWidget(parent)
 	, _state(state)
 {
@@ -44,7 +44,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::contr
 
 	// Listen for Connection changed signals
 	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionChanged, this,
-		[this](la::avdecc::controller::model::StreamConnectionState const& state)
+		[this](la::avdecc::entity::model::StreamConnectionState const& state)
 		{
 			if (state.listenerStream == _state.listenerStream)
 			{
@@ -90,7 +90,7 @@ void ListenerStreamConnectionWidget::updateData()
 
 	switch (_state.state)
 	{
-		case la::avdecc::controller::model::StreamConnectionState::State::NotConnected:
+		case la::avdecc::entity::model::StreamConnectionState::State::NotConnected:
 			if (listenerEntity && listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 			{
 				stateText = "Unbound";
@@ -101,11 +101,11 @@ void ListenerStreamConnectionWidget::updateData()
 			}
 			haveTalker = false;
 			break;
-		case la::avdecc::controller::model::StreamConnectionState::State::FastConnecting:
+		case la::avdecc::entity::model::StreamConnectionState::State::FastConnecting:
 			stateText = "Fast Connecting to ";
 			haveTalker = true;
 			break;
-		case la::avdecc::controller::model::StreamConnectionState::State::Connected:
+		case la::avdecc::entity::model::StreamConnectionState::State::Connected:
 			if (listenerEntity && listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 			{
 				stateText = "Bound to ";

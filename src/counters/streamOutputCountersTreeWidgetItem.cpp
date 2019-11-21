@@ -23,7 +23,7 @@
 
 #include <QMenu>
 
-StreamOutputCountersTreeWidgetItem::StreamOutputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters, QTreeWidget* parent)
+StreamOutputCountersTreeWidgetItem::StreamOutputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamIndex(streamIndex)
@@ -50,7 +50,7 @@ StreamOutputCountersTreeWidgetItem::StreamOutputCountersTreeWidgetItem(la::avdec
 
 	// Listen for StreamOutputCountersChanged
 	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamOutputCountersChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamOutputCounters const& counters)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)
 			{
@@ -59,7 +59,7 @@ StreamOutputCountersTreeWidgetItem::StreamOutputCountersTreeWidgetItem(la::avdec
 		});
 }
 
-void StreamOutputCountersTreeWidgetItem::updateCounters(la::avdecc::controller::model::StreamOutputCounters const& counters)
+void StreamOutputCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model::StreamOutputCounters const& counters)
 {
 	for (auto const counterKV : counters)
 	{

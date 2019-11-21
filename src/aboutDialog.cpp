@@ -54,7 +54,7 @@ public:
 };
 
 AboutDialog::AboutDialog(QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 	, _pImpl(new AboutDialogImpl(this))
 {
 	setWindowTitle(QCoreApplication::applicationName() + " - Version " + QCoreApplication::applicationVersion());

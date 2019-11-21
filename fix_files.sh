@@ -1,3 +1,3 @@
 #!/bin/bash
 
-. 3rdparty/avdecc/fix_files.sh "$@"
+. 3rdparty/avdecc/scripts/fix_files.sh "$@"

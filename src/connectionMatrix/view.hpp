@@ -20,55 +20,50 @@
 #pragma once
 
 #include <QTableView>
-#include <QSortFilterProxyModel>
 #include "settingsManager/settings.hpp"
-#include "toolkit/transposeProxyModel.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 
 namespace connectionMatrix
 {
 class Model;
 class HeaderView;
 class ItemDelegate;
-class Legend;
-class Filter;
+class CornerWidget;
 
 class View final : public QTableView, private settings::SettingsManager::Observer
 {
 	Q_OBJECT
 
 	using QTableView::setModel;
-	using QTableView::setVerticalHeader;
 	using QTableView::setHorizontalHeader;
+	using QTableView::setVerticalHeader;
 
 public:
 	View(QWidget* parent = nullptr);
 	virtual ~View();
 
-protected:
+private:
+	void onIntersectionClicked(QModelIndex const& index);
+	void onCustomContextMenuRequested(QPoint const& pos);
+	void onFilterChanged(QString const& filter);
+	void applyFilterPattern(QRegExp const& pattern);
+	void forceFilter();
+
 	// QTableView overrides
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
-	Q_SLOT void onClicked(QModelIndex const& index);
-	Q_SLOT void onCustomContextMenuRequested(QPoint const& pos);
-	Q_SLOT void onHeaderCustomContextMenuRequested(QPoint const& pos);
-	Q_SLOT void onLegendGeometryChanged();
-
-	QVariant talkerData(QModelIndex const& index, int role) const;
-	QVariant listenerData(QModelIndex const& index, int role) const;
+	// Slots
+	void handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo const& info);
 
 private:
 	std::unique_ptr<Model> _model;
-	std::unique_ptr<HeaderView> _verticalHeaderView;
 	std::unique_ptr<HeaderView> _horizontalHeaderView;
+	std::unique_ptr<HeaderView> _verticalHeaderView;
 	std::unique_ptr<ItemDelegate> _itemDelegate;
-	std::unique_ptr<Legend> _legend;
-
-	qt::toolkit::TransposeProxyModel _proxy;
-	std::unique_ptr<Filter> _filterProxy;
-	bool _isTransposed{ false };
+	std::unique_ptr<CornerWidget> _cornerWidget;
 };
 
 } // namespace connectionMatrix

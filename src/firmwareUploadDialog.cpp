@@ -1,3 +1,22 @@
+/*
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "firmwareUploadDialog.hpp"
 #include "ui_firmwareUploadDialog.h"
 #include "avdecc/controllerManager.hpp"
@@ -66,7 +85,7 @@ private:
 };
 
 FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::DeviceMemoryBuffer&& firmwareData, QString const& name, std::vector<EntityInfo> entitiesToUpdate, QWidget* parent)
-	: QDialog(parent)
+	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 	, _ui(new Ui::FirmwareUploadDialog)
 	, _firmwareData(firmwareData)
 {
@@ -203,7 +222,7 @@ std::tuple<size_t, size_t, size_t> FirmwareUploadDialog::getCounts() const noexc
 	for (auto row = 0; row < total; ++row)
 	{
 		auto* item = _ui->listWidget->item(row);
-		auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
+		//auto* widget = static_cast<UploadWidget*>(_ui->listWidget->itemWidget(item));
 
 		auto const state = item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>();
 		switch (state)
@@ -327,7 +346,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 									// Not the cleanest code, we directly access item's data in another thread without locking (should be fine though)
 									return item->data(la::avdecc::utils::to_integral(ItemRole::UpdateState)).value<UpdateState>() == UpdateState::Failed;
 								},
-								[widget, this, entityName, item, entityID, descriptorIndex](la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
+								[widget, this, entityName, item, entityID, descriptorIndex](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status)
 								{
 									// Upload complete
 									QMetaObject::invokeMethod(widget,

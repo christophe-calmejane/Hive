@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -26,6 +26,7 @@
 
 #include "avdecc/controllerManager.hpp"
 #include "avdecc/channelConnectionManager.hpp"
+#include "connectionMatrix/paintHelper.hpp"
 
 class DeviceDetailsChannelTableModelPrivate;
 
@@ -128,13 +129,11 @@ public:
 	DeviceDetailsChannelTableModel(QObject* parent = nullptr);
 	~DeviceDetailsChannelTableModel();
 
-	enum class ConnectionStatus
+	struct ConnectionStatus
 	{
-		None = 0,
-		WrongDomain = 1u << 0,
-		WrongFormat = 1u << 1,
-		Connected = 1u << 2, /**< Stream is connected (Mutually exclusive with FastConnecting and PartiallyConnected) */
-		FastConnecting = 1u << 3, /**< Stream is fast connecting (Mutually exclusive with Connected) */
+		connectionMatrix::Model::IntersectionData::Type type{ connectionMatrix::Model::IntersectionData::Type::None };
+		connectionMatrix::Model::IntersectionData::State state{ connectionMatrix::Model::IntersectionData::State::NotConnected };
+		connectionMatrix::Model::IntersectionData::Flags flags{};
 	};
 
 	virtual int rowCount(QModelIndex const& parent = QModelIndex()) const override;
@@ -166,10 +165,3 @@ private:
 };
 
 Q_DECLARE_METATYPE(DeviceDetailsChannelTableModel::ConnectionStatus)
-
-// Define bitfield enum traits for ConnectionStatus
-template<>
-struct la::avdecc::utils::enum_traits<DeviceDetailsChannelTableModel::ConnectionStatus>
-{
-	static constexpr bool is_bitfield = true;
-};

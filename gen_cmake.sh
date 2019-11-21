@@ -12,12 +12,12 @@ cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
-qtVersion="5.12.1"
+qtVersion="5.12.4"
 
 # Default values
-default_VisualGenerator="Visual Studio 15 2017"
+default_VisualGenerator="Visual Studio 16 2019"
 default_VisualGeneratorArch="Win32"
-default_VisualToolset="v141"
+default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
@@ -25,6 +25,10 @@ default_VisualSdk="8.1"
 # 
 cmake_generator=""
 generator_arch=""
+arch=""
+toolset=""
+cmake_config=""
+outputFolderBasePath="_build"
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
 	# CMake.app not found, use cmake from the path
@@ -33,6 +37,7 @@ if isMac; then
 	fi
 	generator="Xcode"
 	getCcArch arch
+	defaultOutputFolder="${outputFolderBasePath}_<arch>"
 else
 	# Use cmake from the path
 	cmake_path="cmake"
@@ -43,9 +48,11 @@ else
 		toolchain="$default_VisualToolchain"
 		platformSdk="$default_VisualSdk"
 		arch="$default_VisualArch"
+		defaultOutputFolder="${outputFolderBasePath}_<arch>_<toolset>"
 	else
 		generator="Unix Makefiles"
 		getCcArch arch
+		defaultOutputFolder="${outputFolderBasePath}_<arch>_<config>"
 	fi
 fi
 
@@ -55,15 +62,16 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-outputFolder="./_build"
-cmake_config=""
-add_cmake_opt=()
+outputFolder=""
 outputFolderForced=0
+add_cmake_opt=()
 useVSclang=0
-useVS2019=0
-hasTeamId=0
+useVS2017=0
+signingId="-"
 doSign=0
 useSources=0
+overrideQt5dir=0
+Qt5dir=""
 
 while [ $# -gt 0 ]
 do
@@ -71,7 +79,7 @@ do
 		-h)
 			echo "Usage: gen_cmake.sh [options]"
 			echo " -h -> Display this help"
-			echo " -o <folder> -> Output folder (Default: ${outputFolder}_${arch})"
+			echo " -o <folder> -> Output folder (Default: ${defaultOutputFolder})"
 			echo " -f <flags> -> Force all cmake flags (Default: $cmake_opt)"
 			echo " -a <flags> -> Add cmake flags to default ones (or to forced ones with -f option)"
 			echo " -b <cmake path> -> Force cmake binary path (Default: $cmake_path)"
@@ -80,8 +88,8 @@ do
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
-				echo " -vs2019 -> Compile using VS 2019 compiler instead of the default one"
-				echo " -clang -> Compile using clang for VisualStudio (if predefined toolset do not work, override with -t option INSTEAD of -clang)"
+				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
+				echo " -clang -> Compile using clang for VisualStudio"
 			fi
 			if isMac; then
 				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing."
@@ -90,8 +98,11 @@ do
 				echo " -debug -> Force debug configuration (Linux only)"
 				echo " -release -> Force release configuration (Linux only)"
 			fi
-			echo " -sign -> Sign binaries (Default: No signing)"
-			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources)"
+			if [[ isMac -eq 1 ]]; then
+				echo " -sign -> Sign binaries (Default: No signing)"
+			fi
+			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources). Do not use with -qt5dir option."
+			echo " -qt5dir <Qt5 CMake Folder> -> Override automatic Qt5_DIR detection with the full path to the folder containing Qt5Config.cmake file (either binary or source)"
 			exit 3
 			;;
 		-o)
@@ -117,7 +128,11 @@ do
 				echo "ERROR: Missing parameter for -a option, see help (-h)"
 				exit 4
 			fi
-			add_cmake_opt+=("$1")
+			IFS=' ' read -r -a tokens <<< "$1"
+			for token in ${tokens[@]}
+			do
+				add_cmake_opt+=("$token")
+			done
 			;;
 		-b)
 			shift
@@ -174,11 +189,11 @@ do
 				exit 4
 			fi
 			;;
-		-vs2019)
+		-vs2017)
 			if isWindows; then
-				useVS2019=1
+				useVS2017=1
 			else
-				echo "ERROR: -vs2019 option is only supported on Windows platform"
+				echo "ERROR: -vs2017 option is only supported on Windows platform"
 				exit 4
 			fi
 			;;
@@ -197,8 +212,7 @@ do
 					echo "ERROR: Missing parameter for -id option, see help (-h)"
 					exit 4
 				fi
-				add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$1")
-				hasTeamId=1
+				signingId="$1"
 			else
 				echo "ERROR: -id option is only supported on macOS platform"
 				exit 4
@@ -206,7 +220,8 @@ do
 			;;
 		-debug)
 			if isLinux; then
-				cmake_config="-DCMAKE_BUILD_TYPE=Debug"
+				cmake_config="Debug"
+				add_cmake_opt+=("-DCMAKE_BUILD_TYPE=${cmake_config}")
 			else
 				echo "ERROR: -debug option is only supported on Linux platform"
 				exit 4
@@ -214,18 +229,27 @@ do
 			;;
 		-release)
 			if isLinux; then
-				cmake_config="-DCMAKE_BUILD_TYPE=Release"
+				cmake_config="Release"
+				add_cmake_opt+=("-DCMAKE_BUILD_TYPE=${cmake_config}")
 			else
 				echo "ERROR: -release option is only supported on Linux platform"
 				exit 4
 			fi
 			;;
 		-sign)
-			add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
 			doSign=1
 			;;
 		-source)
 			useSources=1
+			;;
+		-qt5dir)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -qt5dir option, see help (-h)"
+				exit 4
+			fi
+			overrideQt5dir=1
+			Qt5dir="$1"
 			;;
 		*)
 			echo "ERROR: Unknown option '$1' (use -h for help)"
@@ -235,8 +259,10 @@ do
 	shift
 done
 
-if [ $outputFolderForced -eq 0 ]; then
-	outputFolder="${outputFolder}_${arch}"
+if [[ $useSources -eq 1 && $overrideQt5dir -eq 1 ]]; then
+	echo "ERROR: Cannot use -source and -qt5dir options at the same time."
+	echo "If you want to use a custom source folder, just set -qt5dir to <Qt Source Root Folder>/qtbase/lib/cmake/Qt5"
+	exit 4
 fi
 
 if [ ! -z "$cmake_generator" ]; then
@@ -244,12 +270,27 @@ if [ ! -z "$cmake_generator" ]; then
 	generator="$cmake_generator"
 fi
 
-# Check TeamIdentifier specified is signing enabled on macOS
+# Signing is now mandatory for macOS
 if isMac; then
-	if [[ $hasTeamId -eq 0 && $doSign -eq 1 ]]; then
-		echo "ERROR: macOS requires either iTunes TeamIdentifier to be specified using -id option, or -no-signing to disable binary signing"
+	if [ $doSign -eq 0 ]; then
+		echo "Binary signing is mandatory starting with macOS Catalina, forcing it using ID '$signingId'"
+		doSign=1
+	fi
+	add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$signingId")
+fi
+
+if [ $doSign -eq 1 ]; then
+	add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
+fi
+
+# Get DSA public key (macOS needs it in the plist)
+if isMac; then
+	if [ ! -f "resources/dsa_pub.pem" ]; then
+		echo "ERROR: Sparkle requires a DSA pub/priv pair to be setup. Re-run setup_fresh_env.sh if you just upgraded the project."
 		exit 4
 	fi
+	dsaPubKey="$(< resources/dsa_pub.pem)"
+	add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
 fi
 
 # Check if at least a -debug or -release option has been passed on linux
@@ -260,21 +301,19 @@ if isLinux; then
 	fi
 fi
 
-# Using -vs2019 option
-if [ $useVS2019 -eq 1 ]; then
-	generator="Visual Studio 16 2019"
-	toolset="v142"
+# Using -vs2017 option
+if [ $useVS2017 -eq 1 ]; then
+	generator="Visual Studio 15 2017"
+	toolset="v141"
 fi
 
 # Using -clang option (shortcut to auto-define the toolset)
 if [ $useVSclang -eq 1 ]; then
-	toolset="v141_clang_c2"
+	toolset="ClangCL"
 fi
 
-# Clang on windows does not properly compile using Sdk8.1, we have to force Sdk10.0
-shopt -s nocasematch
-if [[ isWindows && $toolset =~ clang ]]; then
-	platformSdk="10.0"
+if [ $outputFolderForced -eq 0 ]; then
+	getOutputFolder outputFolder "${outputFolderBasePath}" "${arch}" "${toolset}" "${cmake_config}"
 fi
 
 generator_arch_option=""
@@ -296,74 +335,75 @@ if [ ! -z "${platformSdk}" ]; then
 	sdk_option="-DCMAKE_SYSTEM_VERSION=$platformSdk"
 fi
 
-hiveVersion=$(grep "HIVE_VERSION" CMakeLists.txt | perl -nle 'print $& if m{VERSION[ ]+\K[^ )]+}')
-if [[ $hiveVersion == "" ]]; then
-	echo "Cannot detect project version"
+# Check for legacy 'avdecc-local' folder
+if [ -d "3rdparty/avdecc-local" ]; then
+	echo "Legacy '3rdparty/avdecc-local' no longer used, please remove this folder/link"
 	exit 1
 fi
-hiveVersion="${hiveVersion//[$'\t\r\n']}"
+add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc")
 
-# Check if we have a release or devel version
-oldIFS="$IFS"
-IFS='.' read -a versionSplit <<< "$hiveVersion"
-IFS="$oldIFS"
+# Using automatic Qt5_DIR detection
+if [ $overrideQt5dir -eq 0 ]; then
+	if isWindows; then
+		qtBasePath="c:/Qt/${qtVersion}"
+		if [ "$arch" == "x64" ]; then
+			qtArch="msvc2017_64"
+		else
+			qtArch="msvc2017"
+		fi
+	elif isMac; then
+		qtBasePath="/Applications/Qt/${qtVersion}"
+		qtArch="clang_64"
+	elif isLinux; then
+		if [ "x${QT_BASE_PATH}" != "x" ]; then
+			if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
+				echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
+				echo "Maybe try the -qt5dir option, see help (-h)"
+				exit 1
+			fi
 
-if [ ${#versionSplit[*]} -eq 4 ]; then
-	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc-local")
-	echo "Development version, using local avdecc copy"
-else
-	add_cmake_opt+=("-DAVDECC_BASE_FOLDER=3rdparty/avdecc")
-	echo "Release version, using offical avdecc"
-fi
-
-if isWindows; then
-	qtBasePath="c:/Qt/${qtVersion}"
-	if [ "$arch" == "x64" ]; then
-		qtArch="msvc2017_64"
+			qtBasePath="${QT_BASE_PATH}/${qtVersion}"
+			qtArch="gcc_64"
+		else
+			echo "Using cmake's auto-detection of Qt headers and libraries"
+			echo "QT_BASE_PATH env variable can be defined to the root folder of Qt installation (where MaintenanceTool resides), or the -qt5dir option. See help (-h) for more details."
+		fi
 	else
-		qtArch="msvc2017"
-	fi
-elif isMac; then
-	qtBasePath="/Applications/Qt/${qtVersion}"
-	qtArch="clang_64"
-elif isLinux; then
-	if [ "x${QT_BASE_PATH}" == "x" ]; then
-		echo "QT_BASE_PATH env variable should be defined to the root folder of Qt installation (where MaintenanceTool resides)"
+		echo "Unsupported platform"
 		exit 1
 	fi
-	if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
-		echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
+
+	# Check specified Qt version is available
+	if [ ! -d "${qtBasePath}" ];
+	then
+		echo "Cannot find Qt v$qtVersion installation path."
 		exit 1
 	fi
-	qtBasePath="${QT_BASE_PATH}/${qtVersion}"
-	qtArch="gcc_64"
-else
-	echo "Unsupported platform"
+
+	# Check specified Qt arch is available
+	if [ ! -d "${qtBasePath}/${qtArch}" ]; then
+		echo "Cannot find Qt arch '${qtArch}' for Qt v${qtVersion}"
+		exit 1
+	fi
+
+	if [ $useSources -eq 1 ]; then
+		# Override qtArch path with Source path
+		qtArch="Src/qtbase"
+		echo "Using Qt source instead of precompiled libraries"
+	fi
+	Qt5dir="${qtBasePath}/${qtArch}/lib/cmake/Qt5"
+fi
+
+# Validate Qt5dir
+if [ ! -f "${Qt5dir}/Qt5Config.cmake" ]; then
+	echo "Invalid Qt5_DIR folder (${Qt5dir}): Qt5Config.cmake not found in the folder"
 	exit 1
 fi
 
-# Check specified Qt version is available
-if [ ! -d "${qtBasePath}" ];
-then
-	echo "Cannot find Qt v$qtVersion installation path."
-	exit 1
-fi
-
-# Check specified Qt arch is available
-if [ ! -d "${qtBasePath}/${qtArch}" ]; then
-	echo "Cannot find Qt arch '${qtArch}' for Qt v${qtVersion}"
-	exit 1
-fi
-
-if [ $useSources -eq 1 ]; then
-	# Override qtArch path with Source path
-	qtArch="Src/qtbase"
-	echo "Using Qt source instead of precompiled libraries"
-fi
-add_cmake_opt+=("-DQt5_DIR=${qtBasePath}/${qtArch}/lib/cmake/Qt5")
+add_cmake_opt+=("-DQt5_DIR=${Qt5dir}")
 
 echo "Generating cmake project..."
-"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $generator_arch_option $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}" $cmake_config
+"$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $generator_arch_option $toolset_option $sdk_option $cmake_opt "${add_cmake_opt[@]}"
 
 echo ""
 echo "All done, generated project lies in ${outputFolder}"

@@ -34,12 +34,12 @@
 class StreamPortDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::controller::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
+	StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
 
 private:
 	void editMappingsButtonClicked();
 	void clearMappingsButtonClicked();
-	void updateMappings(la::avdecc::entity::model::AudioMappings const& mappings);
+	void updateMappings();
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::DescriptorType const _streamPortType{ la::avdecc::entity::model::DescriptorType::Entity };

@@ -1,40 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>English</string>
-	<key>CFBundleExecutable</key>
-	<string>${PROJECT_NAME}</string>
-	<key>CFBundleGetInfoString</key>
-	<string>${PROJECT_NAME} version ${LA_PROJECT_VERSION_STRING} ${PROJECT_READABLE_COPYRIGHT}</string>
-	<key>CFBundleIconFile</key>
-	<string>${MACOSX_BUNDLE_ICON_FILE}</string>
-	<key>CFBundleIdentifier</key>
-	<string>${PROJECT_REVERSE_DOMAINNAME}.${PROJECT_NAME}</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleLongVersionString</key>
-	<string>${LA_PROJECT_VERSION_STRING}</string>
-	<key>CFBundleName</key>
-	<string>${PROJECT_NAME}</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>${LA_PROJECT_PRODUCTVERSION}</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>${LA_PROJECT_VERSION_STRING}</string>
-	<key>CSResourcesFileMapped</key>
-	<true/>
-	<key>NSHumanReadableCopyright</key>
-	<string>${PROJECT_READABLE_COPYRIGHT}</string>
-	<key>NSHighResolutionCapable</key>
-	<string>True</string>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.utilities</string>
-	<key>NSRequiresAquaSystemAppearance</key>
-	<true/>
-</dict>
+	<dict>
+		<key>CFBundleInfoDictionaryVersion</key>
+		<string>6.0</string>
+		<key>CFBundleIdentifier</key>
+		<string>${PROJECT_REVERSE_DOMAINNAME}.${PROJECT_NAME}</string>
+		<key>CFBundleDevelopmentRegion</key>
+		<string>English</string>
+		<key>CFBundlePackageType</key>
+		<string>APPL</string>
+		<key>LSApplicationCategoryType</key>
+		<string>public.app-category.utilities</string>
+		<key>CFBundleName</key>
+		<string>${PROJECT_NAME}</string>
+		<key>CFBundleDisplayName</key>
+		<string>${PROJECT_FULL_NAME}</string>
+		<key>CFBundleExecutable</key>
+		<string>${PROJECT_NAME}</string>
+		<key>CFBundleGetInfoString</key>
+		<string>${PROJECT_NAME} version ${LA_PROJECT_VERSION_STRING} ${PROJECT_READABLE_COPYRIGHT}</string>
+		<key>CFBundleLongVersionString</key>
+		<string>${LA_PROJECT_VERSION_STRING}</string>
+		<key>CFBundleShortVersionString</key>
+		<string>${LA_PROJECT_VERSION_STRING}</string>
+		<key>CFBundleVersion</key>
+		<string>${LA_PROJECT_VERSION_STRING}</string>
+		<key>NSHumanReadableCopyright</key>
+		<string>${PROJECT_READABLE_COPYRIGHT}</string>
+		<key>NSHighResolutionCapable</key>
+		<string>True</string>
+		<key>NSRequiresAquaSystemAppearance</key>
+		<true/>
+		<key>CSResourcesFileMapped</key>
+		<true/>
+		<key>CFBundleSignature</key>
+		<string>????</string>
+		<key>CFBundleIconFile</key>
+		<string>${MACOSX_BUNDLE_ICON_FILE}</string>
+		<key>SUPublicEDKey</key>
+		<string>${HIVE_DSA_PUB_KEY}</string>
+	</dict>
 </plist>

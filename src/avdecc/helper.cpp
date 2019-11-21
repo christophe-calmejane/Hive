@@ -19,6 +19,7 @@
 
 #include "helper.hpp"
 #include "controllerManager.hpp"
+#include "toolkit/material/helper.hpp"
 #include <la/avdecc/utils.hpp>
 #include <cctype>
 
@@ -54,18 +55,6 @@ QString configurationName(la::avdecc::controller::ControlledEntity const* const 
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.descriptorIndex, node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
 
-QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
-{
-	QString name;
-
-	name = entityName(controlledEntity);
-
-	if (name.isEmpty())
-		name = uniqueIdentifierToString(controlledEntity.getEntity().getEntityID());
-
-	return name;
-}
-
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
 {
 	try
@@ -87,6 +76,18 @@ QString entityName(la::avdecc::controller::ControlledEntity const& controlledEnt
 		AVDECC_ASSERT(false, "Uncaught exception");
 	}
 	return {};
+}
+
+QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
+{
+	QString name;
+
+	name = entityName(controlledEntity);
+
+	if (name.isEmpty())
+		name = uniqueIdentifierToString(controlledEntity.getEntity().getEntityID());
+
+	return name;
 }
 
 QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
@@ -112,6 +113,56 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 	return {};
 }
 
+QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+{
+	try
+	{
+		auto const& entityNode = controlledEntity.getEntityNode();
+		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		return objectName(&controlledEntity, streamNode);
+	}
+	catch (la::avdecc::controller::ControlledEntity::Exception const&)
+	{
+		// Ignore exception
+	}
+	catch (...)
+	{
+		// Uncaught exception
+		AVDECC_ASSERT(false, "Uncaught exception");
+	}
+	return {};
+}
+
+QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+{
+	try
+	{
+		auto const& entityNode = controlledEntity.getEntityNode();
+		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		return objectName(&controlledEntity, streamNode);
+	}
+	catch (la::avdecc::controller::ControlledEntity::Exception const&)
+	{
+		// Ignore exception
+	}
+	catch (...)
+	{
+		// Uncaught exception
+		AVDECC_ASSERT(false, "Uncaught exception");
+	}
+	return {};
+}
+
+QString redundantOutputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept
+{
+	return QString{ "Redundant Stream Output %1" }.arg(QString::number(redundantIndex));
+}
+
+QString redundantInputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept
+{
+	return QString{ "Redundant Stream Input %1" }.arg(QString::number(redundantIndex));
+}
+
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept
 {
 	return QString::fromStdString(la::avdecc::entity::model::descriptorTypeToString(descriptorType));
@@ -127,8 +178,8 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 			return "Not Supported";
 		case la::avdecc::controller::model::AcquireState::NotAcquired:
 			return "Not Acquired";
-		case la::avdecc::controller::model::AcquireState::TryAcquire:
-			return "Try Acquire";
+		case la::avdecc::controller::model::AcquireState::AcquireInProgress:
+			return "Acquire In Progress";
 		case la::avdecc::controller::model::AcquireState::Acquired:
 			return "Acquired";
 		case la::avdecc::controller::model::AcquireState::AcquiredByOther:
@@ -146,6 +197,8 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 			}
 			return text;
 		}
+		case la::avdecc::controller::model::AcquireState::ReleaseInProgress:
+			return "Release In Progress";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return {};
@@ -162,8 +215,8 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 			return "Not Supported";
 		case la::avdecc::controller::model::LockState::NotLocked:
 			return "Not Locked";
-		case la::avdecc::controller::model::LockState::TryLock:
-			return "Try Lock";
+		case la::avdecc::controller::model::LockState::LockInProgress:
+			return "Lock In Progress";
 		case la::avdecc::controller::model::LockState::Locked:
 			return "Locked";
 		case la::avdecc::controller::model::LockState::LockedByOther:
@@ -181,6 +234,8 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 			}
 			return text;
 		}
+		case la::avdecc::controller::model::LockState::UnlockInProgress:
+			return "Unlock In Progress";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return {};
@@ -191,10 +246,14 @@ QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::Sampli
 {
 	switch (samplingRate)
 	{
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Hz_500:
+			return "500Hz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_8:
 			return "8kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_16:
 			return "16kHz";
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_24:
+			return "24kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_32:
 			return "32kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_44_1:
@@ -209,8 +268,6 @@ QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::Sampli
 			return "176.4kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_192:
 			return "192kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_24:
-			return "24kHz";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::UserDefined:
 			return "UserDefinedFreq";
 		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Unknown:
@@ -397,6 +454,22 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 		concatenateFlags(str, "SupportsEncrypted");
 	if (flags.test(la::avdecc::entity::StreamInfoFlag::EncryptedPdu))
 		concatenateFlags(str, "EncryptedPdu");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::TalkerFailed))
+		concatenateFlags(str, "TalkerFailed");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamVlanIDValid))
+		concatenateFlags(str, "StreamVlanIDValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::Connected))
+		concatenateFlags(str, "Connected");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::MsrpFailureValid))
+		concatenateFlags(str, "MsrpFailureValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamDestMacValid))
+		concatenateFlags(str, "StreamDestMacValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid))
+		concatenateFlags(str, "MsrpAccLatValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamIDValid))
+		concatenateFlags(str, "StreamIDValid");
+	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamFormatValid))
+		concatenateFlags(str, "StreamFormatValid");
 
 	if (str.isEmpty())
 		str = "None";
@@ -415,11 +488,11 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcep
 	return str;
 }
 
-QString flagsToString(la::avdecc::protocol::MvuFeaturesFlags const flags) noexcept
+QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) noexcept
 {
 	QString str;
 
-	if ((flags & la::avdecc::protocol::MvuFeaturesFlags::Redundancy) == la::avdecc::protocol::MvuFeaturesFlags::Redundancy)
+	if (flags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
 		concatenateFlags(str, "Redundancy");
 
 	if (str.isEmpty())
@@ -635,15 +708,17 @@ QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept
 		case la::avdecc::logger::Layer::Serialization:
 			return "Serialization";
 		case la::avdecc::logger::Layer::ProtocolInterface:
-			return "ProtocolInterface";
+			return "Protocol Interface";
 		case la::avdecc::logger::Layer::AemPayload:
 			return "AemPayload";
 		case la::avdecc::logger::Layer::ControllerEntity:
-			return "ControllerEntity";
+			return "Controller Entity";
 		case la::avdecc::logger::Layer::ControllerStateMachine:
-			return "ControllerStateMachine";
+			return "Controller State Machine";
 		case la::avdecc::logger::Layer::Controller:
 			return "Controller";
+		case la::avdecc::logger::Layer::JsonSerializer:
+			return "Json Serializer";
 		case la::avdecc::logger::Layer::FirstUserLayer:
 			return "Hive";
 		default:
@@ -768,14 +843,33 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 	return toHexQString(entityID.getVendorID<std::uint32_t>(), true, true);
 }
 
-bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
+QIcon interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept
 {
-	return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
-}
+	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QIcon> s_icon;
 
-bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
-{
-	return (listenerNode->dynamicModel->connectionState.state == la::avdecc::controller::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+	auto const it = s_icon.find(type);
+	if (it == std::end(s_icon))
+	{
+		auto what = QString{};
+
+		switch (type)
+		{
+			case la::avdecc::networkInterface::Interface::Type::Ethernet:
+				what = "settings_ethernet";
+				break;
+			case la::avdecc::networkInterface::Interface::Type::WiFi:
+				what = "wifi";
+				break;
+			default:
+				AVDECC_ASSERT(false, "Unhandled type");
+				what = "error_outline";
+				break;
+		}
+
+		s_icon[type] = qt::toolkit::material::helper::generateIcon(what);
+	}
+
+	return s_icon[type];
 }
 
 } // namespace helper

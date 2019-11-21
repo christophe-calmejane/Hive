@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -17,8 +17,8 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "domaintreeitem.hpp"
-#include "entitytreeitem.hpp"
+#include "domainTreeItem.hpp"
+#include "entityTreeItem.hpp"
 
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
@@ -117,7 +117,7 @@ void DomainTreeItem::setDomainSamplingRate(la::avdecc::entity::model::SamplingRa
 /**
 * Checks all sub entities if they are set to the same sample rate and if not set the domain sample rate to undefined.
 * In the case, the entites do have the same sample rate, sets the sample rate for this domain accordingly.
-* If the user had actively set the domain sample rate, this method does nothing. 
+* If the user had actively set the domain sample rate, this method does nothing.
 */
 void DomainTreeItem::reevaluateDomainSampleRate()
 {
@@ -129,7 +129,6 @@ void DomainTreeItem::reevaluateDomainSampleRate()
 		}
 		std::optional<QPair<la::avdecc::entity::model::SamplingRate, QString>> referenceSampleRate;
 
-		int i = 0;
 		for (auto* item : m_childItems)
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(item);
@@ -187,4 +186,9 @@ void DomainTreeItem::setDefaultMcMaster()
 			}
 		}
 	}
+}
+
+AbstractTreeItem::TreeItemType DomainTreeItem::type() const
+{
+	return AbstractTreeItem::TreeItemType::Domain;
 }

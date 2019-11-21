@@ -36,7 +36,7 @@ namespace mappingMatrix
 struct Node
 {
 	std::string name{};
-	std::vector<std::string> sockets;
+	std::vector<std::string> sockets{};
 };
 
 using Nodes = std::vector<Node>;
@@ -74,7 +74,7 @@ using Connections = std::vector<Connection>;
 class MappingMatrix : public graph::GraphicsView
 {
 public:
-	MappingMatrix(const Outputs& outputs, const Inputs& inputs, const Connections& connections, QWidget* parent = nullptr)
+	MappingMatrix(Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
 		: graph::GraphicsView(parent)
 		, _connections{ connections }
 	{
@@ -130,8 +130,8 @@ public:
 
 			try
 			{
-				item->connectOutput(_outputs.at(outputSlot.first)->outputAt(outputSlot.second));
-				item->connectInput(_inputs.at(inputSlot.first)->inputAt(inputSlot.second));
+				item->connectOutput(_outputs.at(outputSlot.first)->outputAt(static_cast<int>(outputSlot.second)));
+				item->connectInput(_inputs.at(inputSlot.first)->inputAt(static_cast<int>(inputSlot.second)));
 
 				_scene.addItem(item);
 			}
@@ -154,7 +154,7 @@ public:
 				_connections.erase(std::remove_if(_connections.begin(), _connections.end(),
 														 [connection](Connection const& item)
 														 {
-															 return (item.first.first == connection->output()->nodeId() && item.first.second == connection->output()->index()) && (item.second.first == connection->input()->nodeId() && item.second.second == connection->input()->index());
+															 return (static_cast<int>(item.first.first) == connection->output()->nodeId() && static_cast<int>(item.first.second) == connection->output()->index()) && (static_cast<int>(item.second.first) == connection->input()->nodeId() && static_cast<int>(item.second.second) == connection->input()->index());
 														 }),
 					_connections.end());
 			});
@@ -178,14 +178,16 @@ private:
 class MappingMatrixDialog : public QDialog
 {
 public:
-	MappingMatrixDialog(const Outputs& outputs, const Inputs& inputs, const Connections& connections, QWidget* parent = nullptr)
+	MappingMatrixDialog(QString const& title, Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
 #ifdef Q_OS_WIN32
-		: QDialog(parent, Qt::Dialog) // Because Qt::Tool is ugly on windows
+		: QDialog(parent, Qt::Dialog | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint) // Because Qt::Tool is ugly on windows and '?' needs to be hidden (currently not supported)
 #else
-		: QDialog(parent, Qt::Tool)
+		: QDialog(parent, Qt::Tool | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 #endif
 		, _mappingMatrix{ outputs, inputs, connections, this }
 	{
+		setWindowTitle(title);
+
 		auto* layout = new QGridLayout{ this };
 
 		layout->addWidget(&_mappingMatrix, 0, 0, 1, 2);

@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,9 +8,9 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
 
 * You should have received a copy of the GNU Lesser General Public License
@@ -37,7 +37,7 @@
 * [@author  Marius Erlen]
 * [@date    2018-09-21]
 *
-* Holds a list of entity ids to display in a list view. 
+* Holds a list of entity ids to display in a list view.
 */
 class UnassignedListModelPrivate : public QObject
 {
@@ -56,7 +56,7 @@ public:
 	QStringList mimeTypes() const;
 	QMimeData* mimeData(QModelIndexList const& indexes) const;
 
-	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains);
+	void setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains);
 	QList<la::avdecc::UniqueIdentifier> getSelectedItems(QItemSelection const& itemSelection) const;
 	void removeEntity(la::avdecc::UniqueIdentifier const& entityId);
 	void addEntity(la::avdecc::UniqueIdentifier const& entityId);
@@ -91,14 +91,16 @@ UnassignedListModelPrivate::~UnassignedListModelPrivate() {}
 * Sets the data this model operates on.
 * @param domains The model.
 */
-void UnassignedListModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains)
+void UnassignedListModelPrivate::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains)
 {
 	Q_Q(UnassignedListModel);
 	q->beginResetModel();
 	_entities.clear();
 
+	auto domainsLocal = domains;
+
 	// code for list model
-	for (auto const& entityDomainKV : domains.getEntityMediaClockMasterMappings())
+	for (auto const& entityDomainKV : domainsLocal.getEntityMediaClockMasterMappings())
 	{
 		if (entityDomainKV.second.empty() && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityDomainKV.first))
 		{
@@ -172,7 +174,7 @@ QList<la::avdecc::UniqueIdentifier> UnassignedListModelPrivate::getAllItems() co
 /**
 * Gets the row count of the table.
 */
-int UnassignedListModelPrivate::rowCount(QModelIndex const& parent) const
+int UnassignedListModelPrivate::rowCount(QModelIndex const& /*parent*/) const
 {
 	return _entities.size();
 }
@@ -236,7 +238,7 @@ Qt::DropActions UnassignedListModelPrivate::supportedDropActions() const
 /**
 * Checks if the given mime data can be dropped into this model.
 */
-bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent) const
+bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::DropAction, int /*row*/, int /*column*/, QModelIndex const& /*parent*/) const
 {
 	if (!data->hasFormat("application/json"))
 		return false;
@@ -259,7 +261,7 @@ bool UnassignedListModelPrivate::canDropMimeData(QMimeData const* data, Qt::Drop
 /**
 * Adds the given data (entity ids) to this model and returns true if successful.
 */
-bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction action, int row, int column, QModelIndex const& parent)
+bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAction /*action*/, int row, int, QModelIndex const& parent)
 {
 	Q_Q(UnassignedListModel);
 	if (!data->hasFormat("application/json"))
@@ -274,7 +276,6 @@ bool UnassignedListModelPrivate::dropMimeData(QMimeData const* data, Qt::DropAct
 	else
 		beginRow = rowCount(QModelIndex());
 
-	int rows = 0;
 	QJsonParseError parseError;
 	QJsonDocument doc = QJsonDocument::fromJson(data->data("application/json"), &parseError);
 	if (parseError.error != QJsonParseError::NoError)
@@ -422,7 +423,7 @@ Qt::ItemFlags UnassignedListModel::flags(QModelIndex const& index) const
 * Sets the data this model operates on.
 * @param domains The model.
 */
-void UnassignedListModel::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping domains)
+void UnassignedListModel::setMediaClockDomainModel(avdecc::mediaClock::MCEntityDomainMapping const& domains)
 {
 	Q_D(UnassignedListModel);
 	d->setMediaClockDomainModel(domains);

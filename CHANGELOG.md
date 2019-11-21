@@ -4,6 +4,55 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2019-11-21
+### Fixed
+- Windows updater not ignoring winPcap reinstallation
+
+## [1.2.0] - 2019-11-21
+### Added
+- Detection of arriving and departing network interfaces (and link status)
+- [Collapse/Expand all buttons for connection matrix](https://github.com/christophe-calmejane/Hive/issues/51)
+- [Sort connection matrix by EntityID](https://github.com/christophe-calmejane/Hive/issues/59)
+- Major performance improvements
+- Smart connections in Connection Matrix
+- Support for drag&drop of json virtual entity files
+- Color theme selection in Settings
+- Controller Statistics (displayed in Entity Node)
+- Utilities toolbar for quick access to Media Clock Management and Settings
+- [WinPcap included in Windows Installer](https://github.com/christophe-calmejane/Hive/issues/14)
+- Device Firmware Update multi-selection window
+- Channel Based Routing (Alternate Connection Matrix), with CTRL-M shortcut to switch routing modes
+- Main Menu shortcuts
+- [_Error Counters_ now display the count since last acknowledge](https://github.com/christophe-calmejane/Hive/issues/62)
+- [_Statistics Error Counters_ are displayed as errors](https://github.com/christophe-calmejane/Hive/issues/62)
+- A few options to visually configure the connection matrix arrows
+- [Display of StreamOutput _Streaming State_](https://github.com/christophe-calmejane/Hive/issues/66)
+- [Display of SteramInput _Media Locked State_](https://github.com/christophe-calmejane/Hive/issues/66)
+- Displaying the currently active ClockSource in the AEM Tree
+- Considering MediaUnlocked StreamInput counter changes as errors (only when the stream is connected)
+- [Detection for WinPcap driver to be installed and started](https://github.com/christophe-calmejane/Hive/issues/69)
+- [Grey out stream input counters if there is no connection](https://github.com/christophe-calmejane/Hive/issues/57)
+- Option to export the json EntityModel of a device (.aem file)
+- Option to enumerate and display the full Static Model
+
+### Changed
+- Always reselecting the last selected Descriptor when reinspecting an Entity
+- [Moved ProtocolInterface selection to the Settings](https://github.com/christophe-calmejane/Hive/issues/58)
+- Automatically Locking the Entity when opening the Dynamic Mappings Editor
+- All exported files are now using MessagePack (JSON binary) file format
+- Using SHIFT modifier while choosing one of the Export feature will dump the file in readable JSON format
+- Improved software update with automatic download and install
+- Entities in a Full Network State dump are always sorted by descending EntityID
+
+### Fixed
+- [Splashscreen displayed on the same screen than Hive will be shown](https://github.com/christophe-calmejane/Hive/issues/20)
+- Refresh issue when gPTP changes for some non-milan devices
+- [Red text no longer applied when item is selected (fixed by using a colored box around the item)](https://github.com/christophe-calmejane/Hive/issues/68)
+- [Possible crash when failed to properly enumerate a device](https://github.com/christophe-calmejane/Hive/issues/71)
+- [_Arrow Settings_ immediately refresh the Connection Matrix when changed from the Settings Window](https://github.com/christophe-calmejane/Hive/issues/72)
+- [WrongFormat error now has priority over InterfaceDown in Redundant Stream Pair Summary](https://github.com/christophe-calmejane/Hive/issues/73)
+- _Device Details Dialog_ Receive/Transmit tab refresh issues
+
 ## [1.1.0] - 2019-05-21
 ### Added
 - _Device Details Dialog_ for basic device configuration and information

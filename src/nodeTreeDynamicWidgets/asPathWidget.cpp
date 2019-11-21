@@ -19,14 +19,14 @@
 
 #include "asPathWidget.hpp"
 
-AsPathWidget::AsPathWidget(la::avdecc::UniqueIdentifier const bridgeID, QString const& vendorName, QWidget* parent)
+AsPathWidget::AsPathWidget(la::avdecc::UniqueIdentifier const clockID, QString const& vendorName, QWidget* parent)
 	: QWidget(parent)
 {
 	_layout.setContentsMargins(0, 0, 0, 0);
 
-	_layout.addWidget(&_bridgeIDLabel, 1);
+	_layout.addWidget(&_clockIDLabel, 1);
 	_layout.addWidget(&_vendorNameLabel, 2);
 
-	_bridgeIDLabel.setText(avdecc::helper::uniqueIdentifierToString(bridgeID));
+	_clockIDLabel.setText(avdecc::helper::uniqueIdentifierToString(clockID));
 	_vendorNameLabel.setText(vendorName);
 }

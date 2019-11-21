@@ -12,9 +12,9 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 
 ## Minimum requirements for compilation
 
-- CMake 3.12
-- Qt 5.12.0
-- Visual Studio 2017 15.9 (using platform toolset v141, Windows SDK 8.1), Xcode 10, gcc 8.2.1
+- CMake 3.13
+- Qt 5.12.4
+- Visual Studio 2019 16.3 (using platform toolset v142), Xcode 10, gcc 8.2.1
 
 ## Compilation
 
@@ -46,3 +46,4 @@ Hive uses the following 3rd party resources:
 - [Material Icons](https://material.io/icons/)
 - [Discount Markdown](http://www.pell.portland.or.us/~orc/Code/markdown/)
 - [BugTrap](https://github.com/bchavez/BugTrap)
+- [Sparkle](https://sparkle-project.org) and [WinSparkle](https://github.com/vslavik/winsparkle)

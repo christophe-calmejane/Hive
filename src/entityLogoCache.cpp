@@ -132,8 +132,12 @@ private:
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
-		auto const entityModelID = controlledEntity->getEntity().getEntityModelID();
-		return qMakePair(entityID.getValue(), entityModelID.getValue());
+		if (controlledEntity)
+		{
+			auto const entityModelID = controlledEntity->getEntity().getEntityModelID();
+			return qMakePair(entityID.getValue(), entityModelID.getValue());
+		}
+		return {};
 	}
 
 	QString fileName(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept
@@ -177,7 +181,7 @@ private:
 					manager.readDeviceMemory(entityID, model->startAddress, dynamicModel->length, nullptr,
 						[this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
 						{
-							auto image = QImage::fromData(memoryBuffer.data(), memoryBuffer.size());
+							auto image = QImage::fromData(memoryBuffer.data(), static_cast<int>(memoryBuffer.size()));
 
 							// Be sure to run this code in the UI thread so we don't have to lock the cache
 							QMetaObject::invokeMethod(this,

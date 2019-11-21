@@ -31,8 +31,13 @@ EntityInspector::EntityInspector(QWidget* parent)
 	_layout.setContentsMargins(0, 0, 0, 0);
 	_layout.addWidget(&_splitter);
 
+	_controlledEntityTreeWiget.setItemDelegate(&_itemDelegate);
+	_nodeTreeWiget.setItemDelegate(&_itemDelegate);
+
 	_splitter.addWidget(&_controlledEntityTreeWiget);
 	_splitter.addWidget(&_nodeTreeWiget);
+	_splitter.setStretchFactor(0, 0); // Descriptors List has less weight than
+	_splitter.setStretchFactor(1, 1); // the Descriptor itself, as far as expand is concerned
 
 	_nodeTreeWiget.setColumnCount(2);
 	_nodeTreeWiget.setHeaderLabels({ "", "" });
@@ -41,9 +46,10 @@ EntityInspector::EntityInspector(QWidget* parent)
 		[this](QModelIndex const& index, QModelIndex const&)
 		{
 			auto const entityID = _controlledEntityTreeWiget.controlledEntityID();
-			auto const anyNode = index.data(Qt::UserRole).value<AnyNode>();
+			auto const anyNode = index.data(la::avdecc::utils::to_integral(EntityInspector::RoleInfo::NodeType)).value<AnyNode>();
+			auto const isActiveConfiguration = index.data(la::avdecc::utils::to_integral(EntityInspector::RoleInfo::IsActiveConfiguration)).toBool();
 
-			_nodeTreeWiget.setNode(entityID, anyNode);
+			_nodeTreeWiget.setNode(entityID, isActiveConfiguration, anyNode);
 		});
 
 	connect(&_splitter, &QSplitter::splitterMoved, this, &EntityInspector::stateChanged);
@@ -69,25 +75,25 @@ la::avdecc::UniqueIdentifier EntityInspector::controlledEntityID() const
 	return _controlledEntityTreeWiget.controlledEntityID();
 }
 
-QByteArray EntityInspector::saveState(int version) const
+QByteArray EntityInspector::saveState(int /*version*/) const
 {
 	QMap<int, QByteArray> map;
 	map[0] = _splitter.saveState();
 	map[1] = _nodeTreeWiget.header()->saveState();
 
-	QByteArray data;
-	QDataStream stream(&data, QIODevice::WriteOnly);
+	QByteArray buffer;
+	QDataStream stream(&buffer, QIODevice::WriteOnly);
 	stream << map;
 
-	return data;
+	return buffer;
 }
 
-bool EntityInspector::restoreState(QByteArray const& state, int version)
+bool EntityInspector::restoreState(QByteArray const& state, int /*version*/)
 {
 	QMap<int, QByteArray> map;
-	QByteArray data{ state };
+	QByteArray buffer{ state };
 
-	QDataStream stream(&data, QIODevice::ReadOnly);
+	QDataStream stream(&buffer, QIODevice::ReadOnly);
 	stream >> map;
 
 	_splitter.restoreState(map[0]);
@@ -122,7 +128,7 @@ void EntityInspector::entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	}
 }
 
-void EntityInspector::entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& name)
+void EntityInspector::entityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& /*name*/)
 {
 	if (entityID == _controlledEntityTreeWiget.controlledEntityID())
 	{

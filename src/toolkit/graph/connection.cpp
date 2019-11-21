@@ -108,7 +108,7 @@ void ConnectionItem::disconnect()
 	disconnectOutput();
 }
 
-void ConnectionItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)
+void ConnectionItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*option*/, QWidget* /*widget*/)
 {
 	QPen pen;
 

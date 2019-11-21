@@ -1,5 +1,5 @@
 /*
-* Copyright 2017-2018, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -8,7 +8,7 @@
 * the Free Software Foundation, either version 3 of the License, or
 * (at your option) any later version.
 
-* Hive is distributed in the hope that it will be usefu_state,
+* Hive is distributed in the hope that it will be useful,
 * but WITHOUT ANY WARRANTY; without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU Lesser General Public License for more details.
@@ -139,335 +139,6 @@ public:
 		button_AssignToDomain->setText("arrow_back");
 	}
 
-	/**
-	* Handles the click of the remove assignment button.
-	* Removes the selected entity in the domain tree and adds it to the unassigned list.
-	*/
-	Q_SLOT void button_AssignToDomainClicked(bool checked)
-	{
-		auto const& entityIds = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
-		for (auto const& entityId : entityIds)
-		{
-			bool success = _domainTreeModel.addEntityToSelection(treeViewMediaClockDomains->currentIndex(), entityId);
-			if (success)
-			{
-				_unassignedListModel.removeEntity(entityId);
-			}
-		}
-
-		_hasChanges = true;
-		adjustButtonStates();
-	}
-
-	/**
-	* Handles the click of the remove assignment button.
-	* Removes the selected entity in the domain tree and adds it to the unassigned list.
-	*/
-	Q_SLOT void button_RemoveAssignmentClicked()
-	{
-		auto selectedEntities = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
-		if (selectedEntities.empty())
-		{
-			return;
-		}
-
-		for (auto const& selectedEntity : selectedEntities)
-		{
-			auto const domainIndex = selectedEntity.first;
-			auto const entityId = selectedEntity.second;
-
-			// check if this entity occurs on other places in the tree.
-			if (!_domainTreeModel.isEntityDoubled(entityId) && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityId))
-			{
-				// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.
-				// If an entity cannot be added to a domain, the user should not be presented with it and then confused why he cannot use it.
-				_unassignedListModel.addEntity(entityId);
-			}
-			_domainTreeModel.removeEntity(domainIndex, entityId);
-		}
-
-		_hasChanges = true;
-		adjustButtonStates();
-	}
-
-	/**
-	* Handles the click of the add button.
-	* Removes the selected domain and moves the assinged entities to the unassigned list.
-	*/
-	Q_SLOT void button_AddClicked()
-	{
-		auto domainIndex = _domainTreeModel.addNewDomain();
-		expandDomain(_domainTreeModel.getDomainModelIndex(domainIndex));
-
-		_hasChanges = true;
-		adjustButtonStates();
-	}
-
-	/**
-	* Handles the click of the remove button.
-	* Removes the selected domain and moves the assinged entities to the unassigned list.
-	*/
-	Q_SLOT void button_RemoveClicked()
-	{
-		auto selectedDomains = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
-		if (selectedDomains.empty())
-		{
-			return;
-		}
-
-		for (auto const& domainIndex : selectedDomains)
-		{
-			// remove domain
-			auto entities = _domainTreeModel.removeDomain(domainIndex);
-
-			// add domain assigned entities back to the unassigned list.
-			for (const auto& entityId : entities)
-			{
-				_unassignedListModel.addEntity(entityId);
-			}
-		}
-
-		_hasChanges = true;
-		adjustButtonStates();
-	}
-
-	/**
-	* Handles the click of the clear button.
-	* Removes all domains and moves all entities to the unassigned list.
-	*/
-	Q_SLOT void button_ClearClicked()
-	{
-		// remove domain
-		auto entities = _domainTreeModel.removeAllDomains();
-
-		// add domain assigned entities back to the unassigned list.
-		for (const auto& entityId : entities)
-		{
-			_unassignedListModel.addEntity(entityId);
-		}
-
-		_hasChanges = true;
-		adjustButtonStates();
-	}
-
-	/**
-	* Handles the click of the apply changes button.
-	* Gathers the data from the models and calls the applyMediaClockDomainModel in the MediaClockConnectionManager.
-	*/
-	Q_SLOT void button_ApplyChangesClicked()
-	{
-		_hasChanges = false;
-		adjustButtonStates();
-
-		auto mediaClockMappings = _domainTreeModel.createMediaClockMappings();
-		auto unassignedEntities = _unassignedListModel.getAllItems();
-		for (const auto& unassignedEntity : unassignedEntities)
-		{
-			mediaClockMappings.getEntityMediaClockMasterMappings().emplace(unassignedEntity, std::vector<avdecc::mediaClock::DomainIndex>());
-		}
-
-		_progressDialog = new QProgressDialog("Executing commands...", "Abort apply", 0, 100, qobject_cast<QWidget*>(this));
-		_progressDialog->setMinimumWidth(350);
-		_progressDialog->setWindowModality(Qt::WindowModal);
-		_progressDialog->setMinimumDuration(500);
-		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
-		mediaClockManager.applyMediaClockDomainModel(mediaClockMappings);
-	}
-
-	/**
-	* Handles the click of the discard changes button.
-	* Loads the domain data again and assigns it to the models.
-	*/
-	Q_SLOT void button_DiscardChangesClicked()
-	{
-		_hasChanges = false;
-		adjustButtonStates();
-
-		refreshModels();
-	}
-
-	/**
-	* Updates the assign button enabled state.
-	*/
-	Q_SLOT void handleUnassignedListSelectionChanged()
-	{
-		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
-		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
-		auto const& unassignedEntitySelections = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
-
-		// update assign button
-		button_AssignToDomain->setEnabled(assignedDomainSelections.size() == 1 && !unassignedEntitySelections.empty());
-	}
-
-	/**
-	* Updates the unassign button enabled state.
-	*/
-	Q_SLOT void handleDomainTreeSelectionChanged()
-	{
-		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
-		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
-		auto const& unassignedEntitySelections = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
-
-		// update unassign button
-		button_RemoveAssignment->setEnabled(!assignedEntitySelections.empty());
-
-		// update assign button
-		button_AssignToDomain->setEnabled(assignedDomainSelections.size() == 1 && !unassignedEntitySelections.empty());
-
-		// update remove button
-		button_Remove->setEnabled(!assignedDomainSelections.empty());
-	}
-
-	Q_SLOT void removeMcDomainTreeViewSelections()
-	{
-		treeViewMediaClockDomains->clearSelection();
-		const QModelIndex index;
-		treeViewMediaClockDomains->selectionModel()->setCurrentIndex(index, QItemSelectionModel::Select);
-	}
-
-	/**
-	* Handles the change of any data inside the media clock domain tree model. Triggers state change of the buttons.
-	*/
-	Q_SLOT void handleDomainTreeDataChanged()
-	{
-		_hasChanges = true;
-		adjustButtonStates();
-	}
-
-	/**
-	* Triggers a resize of the columns in the media clock domain tree view.
-	*/
-	Q_SLOT void resizeMCTreeViewColumns()
-	{
-		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::Domain);
-		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::MediaClockMaster);
-	}
-
-	/*
-	* When an entity goes offline while in the dialog it is removed from the models.
-	*/
-	Q_SLOT void entityOffline(la::avdecc::UniqueIdentifier entityId)
-	{
-		_unassignedListModel.removeEntity(entityId);
-		_domainTreeModel.removeEntity(entityId);
-	}
-
-	/*
-	* Whenever the media clock mappings change while this dialog doesn't have unapplied user changes,
-	* the model is updated.
-	*/
-	Q_SLOT void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds)
-	{
-		if (!_hasChanges)
-		{
-			refreshModels();
-			resizeMCTreeViewColumns();
-		}
-	}
-
-	/*
-	* Update the progress dialog.
-	*/
-	Q_SLOT void applyMediaClockDomainModelProgressUpdate(int progress)
-	{
-		_progressDialog->setValue(progress);
-	}
-
-	/*
-	* Display any error that occurs
-	*/
-	Q_SLOT void applyMediaClockDomainModelFinished(avdecc::mediaClock::ApplyInfo applyInfo)
-	{
-		_progressDialog->setValue(100);
-		_progressDialog->close();
-		refreshModels();
-
-		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> iteratedEntityIds;
-		for (auto it = applyInfo.entityApplyErrors.begin(), end = applyInfo.entityApplyErrors.end(); it != end; it++) // upper_bound not supported on mac (to iterate over unique keys)
-		{
-			if (iteratedEntityIds.find(it->first) == iteratedEntityIds.end())
-			{
-				iteratedEntityIds.insert(it->first);
-			}
-			else
-			{
-				continue; // entity already displayed.
-			}
-			auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
-			auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
-			if (controlledEntity)
-			{
-				entityName = avdecc::helper::smartEntityName(*controlledEntity);
-			}
-			auto errorsForEntity = applyInfo.entityApplyErrors.equal_range(it->first);
-			QString errors;
-
-			for (auto i = errorsForEntity.first; i != errorsForEntity.second; ++i)
-			{
-				errors += "-";
-				if (i->second.commandTypeAcmp)
-				{
-					switch (*i->second.commandTypeAcmp)
-					{
-						case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
-							errors += "Connecting stream failed. ";
-							break;
-						case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
-							errors += "Disconnecting stream failed. ";
-							break;
-						case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
-							errors += "Disconnecting talker stream failed. ";
-							break;
-					}
-				}
-				else if (i->second.commandTypeAecp)
-				{
-					switch (*i->second.commandTypeAecp)
-					{
-						case avdecc::ControllerManager::AecpCommandType::SetClockSource:
-							errors += "Setting the clock source failed. ";
-							break;
-						case avdecc::ControllerManager::AecpCommandType::SetSamplingRate:
-							errors += "Setting the sampling rate failed. ";
-							break;
-					}
-				}
-				switch (i->second.errorType)
-				{
-					case avdecc::mediaClock::CommandExecutionError::LockedByOther:
-						errors += "Entity is locked.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::AcquiredByOther:
-						errors += "Entity is aquired by an other controller.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::Timeout:
-						errors += "Command timed out. Entity might be offline.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::EntityError:
-						errors += "Entity error. Operation might not be supported.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::NetworkIssue:
-						errors += "Network error.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::CommandFailure:
-						errors += "Command failure.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::NoMediaClockInputAvailable:
-						errors += "Device does not have any compatible media clock inputs.";
-						break;
-					case avdecc::mediaClock::CommandExecutionError::NoMediaClockOutputAvailable:
-						errors += "Device does not have any compatible media clock outputs.";
-						break;
-					default:
-						errors += "Unknwon error.";
-						break;
-				}
-				errors += "\n";
-			}
-			QMessageBox::information(qobject_cast<QWidget*>(this), "Error while applying", QString("Error(s) occured on %1 while applying the configuration:\n\n%2").arg(entityName).arg(errors));
-		}
-	}
-
 	void refreshModels()
 	{
 		// read out again:
@@ -511,10 +182,345 @@ public:
 		}
 	}
 
+	// Slots
+
+	/**
+	* Handles the click of the remove assignment button.
+	* Removes the selected entity in the domain tree and adds it to the unassigned list.
+	*/
+	void button_AssignToDomainClicked(bool /*checked*/)
+	{
+		auto const& entityIds = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
+		for (auto const& entityId : entityIds)
+		{
+			bool success = _domainTreeModel.addEntityToSelection(treeViewMediaClockDomains->currentIndex(), entityId);
+			if (success)
+			{
+				_unassignedListModel.removeEntity(entityId);
+			}
+		}
+
+		_hasChanges = true;
+		adjustButtonStates();
+	}
+
+	/**
+	* Handles the click of the remove assignment button.
+	* Removes the selected entity in the domain tree and adds it to the unassigned list.
+	*/
+	void button_RemoveAssignmentClicked()
+	{
+		auto selectedEntities = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
+		if (selectedEntities.empty())
+		{
+			return;
+		}
+
+		for (auto const& selectedEntity : selectedEntities)
+		{
+			auto const domainIndex = selectedEntity.first;
+			auto const entityId = selectedEntity.second;
+
+			// check if this entity occurs on other places in the tree.
+			if (!_domainTreeModel.isEntityDoubled(entityId) && avdecc::mediaClock::MCDomainManager::getInstance().isMediaClockDomainManageable(entityId))
+			{
+				// the entity is not added to the unassigned list if it is classified as not manageable by MCMD.
+				// If an entity cannot be added to a domain, the user should not be presented with it and then confused why he cannot use it.
+				_unassignedListModel.addEntity(entityId);
+			}
+			_domainTreeModel.removeEntity(domainIndex, entityId);
+		}
+
+		_hasChanges = true;
+		adjustButtonStates();
+	}
+
+	/**
+	* Handles the click of the add button.
+	* Removes the selected domain and moves the assinged entities to the unassigned list.
+	*/
+	void button_AddClicked()
+	{
+		auto domainIndex = _domainTreeModel.addNewDomain();
+		expandDomain(_domainTreeModel.getDomainModelIndex(domainIndex));
+
+		_hasChanges = true;
+		adjustButtonStates();
+	}
+
+	/**
+	* Handles the click of the remove button.
+	* Removes the selected domain and moves the assinged entities to the unassigned list.
+	*/
+	void button_RemoveClicked()
+	{
+		auto selectedDomains = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
+		if (selectedDomains.empty())
+		{
+			return;
+		}
+
+		for (auto const& domainIndex : selectedDomains)
+		{
+			// remove domain
+			auto entities = _domainTreeModel.removeDomain(domainIndex);
+
+			// add domain assigned entities back to the unassigned list.
+			for (const auto& entityId : entities)
+			{
+				_unassignedListModel.addEntity(entityId);
+			}
+		}
+
+		_hasChanges = true;
+		adjustButtonStates();
+	}
+
+	/**
+	* Handles the click of the clear button.
+	* Removes all domains and moves all entities to the unassigned list.
+	*/
+	void button_ClearClicked()
+	{
+		// remove domain
+		auto entities = _domainTreeModel.removeAllDomains();
+
+		// add domain assigned entities back to the unassigned list.
+		for (const auto& entityId : entities)
+		{
+			_unassignedListModel.addEntity(entityId);
+		}
+
+		_hasChanges = true;
+		adjustButtonStates();
+	}
+
+	/**
+	* Handles the click of the apply changes button.
+	* Gathers the data from the models and calls the applyMediaClockDomainModel in the MediaClockConnectionManager.
+	*/
+	void button_ApplyChangesClicked()
+	{
+		_hasChanges = false;
+		adjustButtonStates();
+
+		auto mediaClockMappings = _domainTreeModel.createMediaClockMappings();
+		auto unassignedEntities = _unassignedListModel.getAllItems();
+		for (const auto& unassignedEntity : unassignedEntities)
+		{
+			mediaClockMappings.getEntityMediaClockMasterMappings().emplace(unassignedEntity, std::vector<avdecc::mediaClock::DomainIndex>());
+		}
+
+		_progressDialog = new QProgressDialog("Executing commands...", "Abort apply", 0, 100, qobject_cast<QWidget*>(this));
+		_progressDialog->setMinimumWidth(350);
+		_progressDialog->setWindowModality(Qt::WindowModal);
+		_progressDialog->setMinimumDuration(500);
+		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
+		mediaClockManager.applyMediaClockDomainModel(mediaClockMappings);
+	}
+
+	/**
+	* Handles the click of the discard changes button.
+	* Loads the domain data again and assigns it to the models.
+	*/
+	void button_DiscardChangesClicked()
+	{
+		_hasChanges = false;
+		adjustButtonStates();
+
+		refreshModels();
+	}
+
+	/**
+	* Updates the assign button enabled state.
+	*/
+	void handleUnassignedListSelectionChanged()
+	{
+		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
+		//auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
+		auto const& unassignedEntitySelections = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
+
+		// update assign button
+		button_AssignToDomain->setEnabled(assignedDomainSelections.size() == 1 && !unassignedEntitySelections.empty());
+	}
+
+	/**
+	* Updates the unassign button enabled state.
+	*/
+	void handleDomainTreeSelectionChanged()
+	{
+		auto const& assignedDomainSelections = _domainTreeModel.getSelectedDomainItems(treeViewMediaClockDomains->selectionModel()->selection());
+		auto const& assignedEntitySelections = _domainTreeModel.getSelectedEntityItems(treeViewMediaClockDomains->selectionModel()->selection());
+		auto const& unassignedEntitySelections = _unassignedListModel.getSelectedItems(listView_UnassignedEntities->selectionModel()->selection());
+
+		// update unassign button
+		button_RemoveAssignment->setEnabled(!assignedEntitySelections.empty());
+
+		// update assign button
+		button_AssignToDomain->setEnabled(assignedDomainSelections.size() == 1 && !unassignedEntitySelections.empty());
+
+		// update remove button
+		button_Remove->setEnabled(!assignedDomainSelections.empty());
+	}
+
+	void removeMcDomainTreeViewSelections()
+	{
+		treeViewMediaClockDomains->clearSelection();
+		const QModelIndex index;
+		treeViewMediaClockDomains->selectionModel()->setCurrentIndex(index, QItemSelectionModel::Select);
+	}
+
+	/**
+	* Handles the change of any data inside the media clock domain tree model. Triggers state change of the buttons.
+	*/
+	void handleDomainTreeDataChanged()
+	{
+		_hasChanges = true;
+		adjustButtonStates();
+	}
+
+	/**
+	* Triggers a resize of the columns in the media clock domain tree view.
+	*/
+	void resizeMCTreeViewColumns()
+	{
+		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::Domain);
+		treeViewMediaClockDomains->resizeColumnToContents((int)DomainTreeModelColumn::MediaClockMaster);
+	}
+
+	/*
+	* When an entity goes offline while in the dialog it is removed from the models.
+	*/
+	void entityOffline(la::avdecc::UniqueIdentifier entityId)
+	{
+		_unassignedListModel.removeEntity(entityId);
+		_domainTreeModel.removeEntity(entityId);
+	}
+
+	/*
+	* Whenever the media clock mappings change while this dialog doesn't have unapplied user changes,
+	* the model is updated.
+	*/
+	void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& /*entityIds*/)
+	{
+		if (!_hasChanges)
+		{
+			refreshModels();
+			resizeMCTreeViewColumns();
+		}
+	}
+
+	/*
+	* Update the progress dialog.
+	*/
+	void applyMediaClockDomainModelProgressUpdate(float_t progress)
+	{
+		_progressDialog->setValue(static_cast<int>(progress));
+	}
+
+	/*
+	* Display any error that occurs
+	*/
+	void applyMediaClockDomainModelFinished(avdecc::mediaClock::ApplyInfo applyInfo)
+	{
+		_progressDialog->setValue(100);
+		_progressDialog->close();
+		refreshModels();
+
+		std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> iteratedEntityIds;
+		for (auto it = applyInfo.entityApplyErrors.begin(), end = applyInfo.entityApplyErrors.end(); it != end; it++) // upper_bound not supported on mac (to iterate over unique keys)
+		{
+			if (iteratedEntityIds.find(it->first) == iteratedEntityIds.end())
+			{
+				iteratedEntityIds.insert(it->first);
+			}
+			else
+			{
+				continue; // entity already displayed.
+			}
+			auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+			auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+			if (controlledEntity)
+			{
+				entityName = avdecc::helper::smartEntityName(*controlledEntity);
+			}
+			auto errorsForEntity = applyInfo.entityApplyErrors.equal_range(it->first);
+			QString errors;
+
+			for (auto i = errorsForEntity.first; i != errorsForEntity.second; ++i)
+			{
+				errors += "-";
+				if (i->second.commandTypeAcmp)
+				{
+					switch (*i->second.commandTypeAcmp)
+					{
+						case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+							errors += "Connecting stream failed. ";
+							break;
+						case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+							errors += "Disconnecting stream failed. ";
+							break;
+						case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+							errors += "Disconnecting talker stream failed. ";
+							break;
+						default:
+							break;
+					}
+				}
+				else if (i->second.commandTypeAecp)
+				{
+					switch (*i->second.commandTypeAecp)
+					{
+						case avdecc::ControllerManager::AecpCommandType::SetClockSource:
+							errors += "Setting the clock source failed. ";
+							break;
+						case avdecc::ControllerManager::AecpCommandType::SetSamplingRate:
+							errors += "Setting the sampling rate failed. ";
+							break;
+						default:
+							break;
+					}
+				}
+				switch (i->second.errorType)
+				{
+					case avdecc::commandChain::CommandExecutionError::LockedByOther:
+						errors += "Entity is locked.";
+						break;
+					case avdecc::commandChain::CommandExecutionError::AcquiredByOther:
+						errors += "Entity is aquired by an other controller.";
+						break;
+					case avdecc::commandChain::CommandExecutionError::Timeout:
+						errors += "Command timed out. Entity might be offline.";
+						break;
+					case avdecc::commandChain::CommandExecutionError::EntityError:
+						errors += "Entity error. Operation might not be supported.";
+						break;
+					case avdecc::commandChain::CommandExecutionError::NetworkIssue:
+						errors += "Network error.";
+						break;
+					case avdecc::commandChain::CommandExecutionError::CommandFailure:
+						errors += "Command failure.";
+						break;
+					case avdecc::commandChain::CommandExecutionError::NoMediaClockInputAvailable:
+						errors += "Device does not have any compatible media clock inputs.";
+						break;
+					case avdecc::commandChain::CommandExecutionError::NoMediaClockOutputAvailable:
+						errors += "Device does not have any compatible media clock outputs.";
+						break;
+					default:
+						errors += "Unknwon error.";
+						break;
+				}
+				errors += "\n";
+			}
+			QMessageBox::information(qobject_cast<QWidget*>(this), "Error while applying", QString("Error(s) occured on %1 while applying the configuration:\n\n%2").arg(entityName).arg(errors));
+		}
+	}
+
 	/**
 	* Expands every item in the domain tree view.
 	*/
-	Q_SLOT void expandDomain(QModelIndex index)
+	void expandDomain(QModelIndex index)
 	{
 		treeViewMediaClockDomains->expand(index);
 	}

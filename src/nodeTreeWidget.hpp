@@ -28,10 +28,16 @@ class NodeTreeWidget : public QTreeWidget
 {
 	Q_OBJECT
 public:
+	enum class TreeWidgetItemType : int
+	{
+		EntityStatistic = QTreeWidgetItem::UserType + 1,
+		StreamInputCounter,
+	};
+
 	NodeTreeWidget(QWidget* parent = nullptr);
 	~NodeTreeWidget();
 
-	void setNode(la::avdecc::UniqueIdentifier const entityID, AnyNode const& node);
+	void setNode(la::avdecc::UniqueIdentifier const entityID, bool const isActiveConfiguration, AnyNode const& node);
 
 private:
 	NodeTreeWidgetPrivate* d_ptr{ nullptr };

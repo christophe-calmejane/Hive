@@ -78,7 +78,7 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildStreamMappings(la::avdecc::co
 	for (auto const* streamNode : streamNodes)
 	{
 		auto streamName = avdecc::helper::objectName(controlledEntity, *streamNode).toStdString();
-		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamInfo.streamFormat);
+		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
 		NodeMapping nodeMapping{ streamNode->descriptorIndex };
 		mappingMatrix::Node node{ streamName };
 
@@ -339,7 +339,7 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 /* ************************************************************ */
 /* StreamPortDynamicTreeWidgetItem                              */
 /* ************************************************************ */
-StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::controller::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::controller::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
+StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const /*staticModel*/, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const /*dynamicModel*/, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 	, _streamPortType(streamPortType)
@@ -357,32 +357,11 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		auto* mappingsItem = new QTreeWidgetItem(this);
 		mappingsItem->setText(0, "Dynamic Mappings");
 		_mappingsList = new QListWidget;
+		_mappingsList->setSelectionMode(QAbstractItemView::NoSelection);
 		parent->setItemWidget(mappingsItem, 1, _mappingsList);
-		try
-		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto controlledEntity = manager.getControlledEntity(entityID);
-			if (controlledEntity)
-			{
-				auto& entity = *controlledEntity;
-				auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
 
-				auto const& entityNode = entity.getEntityNode();
-				if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
-				{
-					streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-				}
-				else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-				{
-					streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-				}
-				// Update info right now
-				updateMappings(streamPortNode->dynamicModel->dynamicAudioMap);
-			}
-		}
-		catch (...)
-		{
-		}
+		// Update info right now
+		updateMappings();
 
 		auto* clearMappings = new QTreeWidgetItem(this);
 		clearMappings->setText(0, "Clear All Dynamic Mappings");
@@ -396,25 +375,8 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 			{
 				if (entityID == _entityID && descriptorType == _streamPortType && streamPortIndex == _streamPortIndex)
 				{
-					auto& manager = avdecc::ControllerManager::getInstance();
-					auto controlledEntity = manager.getControlledEntity(entityID);
-					if (controlledEntity)
-					{
-						auto& entity = *controlledEntity;
-						auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
-
-						auto const& entityNode = entity.getEntityNode();
-						if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
-						{
-							streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-						}
-						else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-						{
-							streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
-						}
-						// Update mappings
-						updateMappings(streamPortNode->dynamicModel->dynamicAudioMap);
-					}
+					// Update mappings
+					updateMappings();
 				}
 			});
 
@@ -424,10 +386,6 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 
 void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 {
-	// TODO: Avoir access au controller pour faire un acquire de l'entite (sans utiliser les callbacks du ControllerManager, car sinon ca lance une popup globale si le acquire echoue)
-	// Si acquire echoue, alors on indique un message comme quoi il est necessaire de pouvoir acquire l'entite afin de changer le mapping sans etre derange
-	// Si acquire reussi, alors on peut ouvrir la fenetre et faire le mapping
-	// TODO: Plus tard, il faudra faire un Lock, au lieu de Acquire (ou mieux faire une fonction "GetExclusiveToken" qui acquire ou lock en fonction du type d'entite, une fois le token relache et si c'est le dernier, ca release l'entite). Peut etre le mettre dans la lib controller comme ca on gere directement le resend du lock !!
 	try
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -446,7 +404,7 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 			auto const isValidStream = [](auto const* const streamNode)
 			{
-				auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamInfo.streamFormat);
+				auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
 				auto const formatType = sfi->getType();
 
 				if (formatType == la::avdecc::entity::model::StreamFormatInfo::Type::None || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::Unsupported || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
@@ -540,22 +498,47 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 			if (!outputs.empty() && !inputs.empty())
 			{
-				mappingMatrix::MappingMatrixDialog dialog(outputs, inputs, connections);
+				auto smartName = avdecc::helper::smartEntityName(*entity);
 
 				// Release the controlled entity before starting a long operation (dialog.exec)
 				controlledEntity.reset();
 
-				if (dialog.exec() == QDialog::Accepted)
-				{
-					if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+				// Get exclusive access
+				manager.requestExclusiveAccess(_entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType::Lock,
+					[this, streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections)](auto const /*entityID*/, auto const status, auto&& token)
 					{
-						processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
-					}
-					else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-					{
-						processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
-					}
-				}
+						// Moving the token to the capture will effectively extend the lifetime of the token, keeping the entity locked until the lambda completes (meaning the dialog has been closed and mappings changed)
+						QMetaObject::invokeMethod(this,
+							[this, status, token = std::move(token), streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections)]()
+							{
+								// Failed to get the exclusive access
+								if (!status || !token)
+								{
+									// If the device does not support the exclusive access, still proceed
+									if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotImplemented && status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotSupported)
+									{
+										QMessageBox::warning(nullptr, QString(""), QString("Failed to get Exclusive Access on %1:<br>%2").arg(smartName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
+										return;
+									}
+								}
+
+								// Create the dialog
+								auto title = QString("%1 - %2.%3 Dynamic Mappings").arg(smartName).arg(avdecc::helper::descriptorTypeToString(_streamPortType)).arg(_streamPortIndex);
+								auto dialog = mappingMatrix::MappingMatrixDialog{ title, outputs, inputs, connections };
+
+								if (dialog.exec() == QDialog::Accepted)
+								{
+									if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+									{
+										processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+									}
+									else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+									{
+										processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(_entityID, _streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+									}
+								}
+							});
+					});
 			}
 		}
 	}
@@ -566,10 +549,6 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 {
-	// TODO: Avoir access au controller pour faire un acquire de l'entite (sans utiliser les callbacks du ControllerManager, car sinon ca lance une popup globale si le acquire echoue)
-	// Si acquire echoue, alors on indique un message comme quoi il est necessaire de pouvoir acquire l'entite afin de changer le mapping sans etre derange
-	// Si acquire reussi, alors on peut ouvrir la fenetre et faire le mapping
-	// TODO: Plus tard, il faudra faire un Lock, au lieu de Acquire (ou mieux faire une fonction "GetExclusiveToken" qui acquire ou lock en fonction du type d'entite, une fois le token relache et si c'est le dernier, ca release l'entite). Peut etre le mettre dans la lib controller comme ca on gere directement le resend du lock !!
 	try
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -597,13 +576,52 @@ void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 	}
 }
 
-void StreamPortDynamicTreeWidgetItem::updateMappings(la::avdecc::entity::model::AudioMappings const& mappings)
+void StreamPortDynamicTreeWidgetItem::updateMappings()
 {
+	constexpr auto showRedundantMappings = true;
+
 	_mappingsList->clear();
 
-	for (auto const& mapping : mappings)
+	try
 	{
-		_mappingsList->addItem(QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel));
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(_entityID);
+		if (controlledEntity)
+		{
+			auto& entity = *controlledEntity;
+			auto mappings = la::avdecc::entity::model::AudioMappings{};
+
+			if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+			{
+				if (showRedundantMappings)
+				{
+					mappings = entity.getStreamPortInputAudioMappings(_streamPortIndex);
+				}
+				else
+				{
+					mappings = entity.getStreamPortInputNonRedundantAudioMappings(_streamPortIndex);
+				}
+			}
+			else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+			{
+				if (showRedundantMappings)
+				{
+					mappings = entity.getStreamPortOutputAudioMappings(_streamPortIndex);
+				}
+				else
+				{
+					mappings = entity.getStreamPortOutputNonRedundantAudioMappings(_streamPortIndex);
+				}
+			}
+
+			for (auto const& mapping : mappings)
+			{
+				_mappingsList->addItem(QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel));
+			}
+		}
+	}
+	catch (...)
+	{
 	}
 
 	_mappingsList->sortItems();

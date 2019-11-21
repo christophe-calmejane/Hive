@@ -1,27 +1,31 @@
-qt--toolkit--MaterialButton {
+/*
+%1: base color backgound
+%2: base color foreground
+%3: connection matrix highlight color
+*/
+
+QWidget {
+	selection-background-color: %1;
+	selection-color: %2;
+}
+QAbstractItemView::item:selected {
+	background-color: %1;
+	color: %2;
+}
+qt--toolkit--FlatIconButton {
 	font-size: 24px;
 	border: none;
 	color: #3e3e3e;
 }
-qt--toolkit--MaterialButton:hover {
+qt--toolkit--FlatIconButton:hover {
 	color: #262626;
 }
-qt--toolkit--MaterialButton:pressed {
+qt--toolkit--FlatIconButton:pressed {
 	margin: 2 0 0 2;
-	color: #000000;
+	color: %1;
 }
-QTableView,
-QListView,
-QTreeView {
-	selection-background-color: #9575cd;
-}
-QTableView:!active,
-QListView:!active,
-QTreeView:!active {
-	selection-background-color: #dcdcdc;
-}
-connectionMatrix--View {
-	selection-background-color: #f3e5f5;
+qt--toolkit--material--Button:checked {
+	color: %1;
 }
 NodeTreeWidget .QListWidget {
 	margin-top: 4;
@@ -43,4 +47,7 @@ QLabel#EntityNameLabel {
 QLabel#EntityNameLabel[isOnline=true] {
 	color: #4caf50;
 	font-weight: bold;
+}
+connectionMatrix--View {
+	selection-background-color: %3;
 }

@@ -19,51 +19,32 @@
 
 #pragma once
 
-#include "ui_mainWindow.h"
-#include <QSettings>
-#include <QLabel>
-#include <memory>
-#include "avdecc/controllerModel.hpp"
-#include "toolkit/dynamicHeaderView.hpp"
-#include "toolkit/comboBox.hpp"
-#include "toolkit/materialButton.hpp"
+#include <QMainWindow>
 
 class DynamicHeaderView;
 
-class MainWindow : public QMainWindow, private Ui::MainWindow
+class MainWindowImpl;
+class MainWindow : public QMainWindow
 {
 	Q_OBJECT
 public:
+	// Constructor
 	MainWindow(QWidget* parent = nullptr);
+	virtual ~MainWindow() noexcept;
 
-	Q_SLOT void currentControllerChanged();
-	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
-
-private:
-	void registerMetaTypes();
-
-	void createViewMenu();
-	void createMainToolBar();
-
-	void createControllerView();
-
-	void populateProtocolComboBox();
-	void populateInterfaceComboBox();
-
-	void loadSettings();
-
-	void connectSignals();
+	// Deleted compiler auto-generated methods
+	MainWindow(MainWindow const&) = delete;
+	MainWindow(MainWindow&&) = delete;
+	MainWindow& operator=(MainWindow const&) = delete;
+	MainWindow& operator=(MainWindow&&) = delete;
 
 private:
-	void showChangeLog(QString const title, QString const versionString);
-	void showEvent(QShowEvent* event) override;
-	void closeEvent(QCloseEvent* event) override;
+	// QMainWindow overrides
+	virtual void showEvent(QShowEvent* event) override;
+	virtual void closeEvent(QCloseEvent* event) override;
+	virtual void dragEnterEvent(QDragEnterEvent* event) override;
+	virtual void dropEvent(QDropEvent* event) override;
 
-private:
-	qt::toolkit::ComboBox _protocolComboBox{ this };
-	qt::toolkit::ComboBox _interfaceComboBox{ this };
-	qt::toolkit::MaterialButton _refreshControllerButton{ "refresh", this };
-	QLabel _controllerEntityIDLabel{ this };
-	avdecc::ControllerModel* _controllerModel{ nullptr };
-	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, this };
+	// Private variables
+	MainWindowImpl* _pImpl{ nullptr };
 };

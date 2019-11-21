@@ -19,23 +19,17 @@
 
 #pragma once
 
-#include <QAbstractItemDelegate>
+#include <QStyledItemDelegate>
 
 namespace connectionMatrix
 {
-class ItemDelegate final : public QAbstractItemDelegate
+class ItemDelegate final : public QStyledItemDelegate
 {
 public:
-	void setTransposed(bool const isTransposed);
-	bool isTransposed() const;
+	using QStyledItemDelegate::QStyledItemDelegate;
 
 private:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
-	virtual QSize sizeHint(QStyleOptionViewItem const& option, QModelIndex const& index) const override;
-
-private:
-	bool _isTransposed{ false };
 };
-
 
 } // namespace connectionMatrix

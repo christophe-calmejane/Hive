@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>471</width>
-    <height>575</height>
+    <width>377</width>
+    <height>623</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -92,7 +92,7 @@
       <item row="3" column="0">
        <widget class="QLabel" name="automaticPNGDownloadLabel">
         <property name="text">
-         <string>Automatic PNG Download</string>
+         <string>Automatic Entity Logo Download</string>
         </property>
        </widget>
       </item>
@@ -116,16 +116,6 @@
         </item>
        </layout>
       </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="transposeConnectionMatrixLabel">
-        <property name="text">
-         <string>Show Talkers Vertically</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QCheckBox" name="transposeConnectionMatrixCheckBox"/>
-      </item>
       <item row="5" column="0">
        <widget class="QLabel" name="automaticCheckForUpdatesLabel">
         <property name="text">
@@ -145,6 +135,61 @@
       </item>
       <item row="6" column="1">
        <widget class="QCheckBox" name="checkForBetaVersionsCheckBox"/>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="themeColorLabel">
+        <property name="text">
+         <string>Theme Color</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QComboBox" name="themeColorComboBox"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_4">
+     <property name="title">
+      <string>Connection Matrix</string>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <layout class="QFormLayout" name="formLayout_4">
+      <item row="0" column="0">
+       <widget class="QLabel" name="transposeConnectionMatrixLabel">
+        <property name="text">
+         <string>Show Talkers On Top</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="transposeConnectionMatrixCheckBox"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="alwaysShowArrowTipConnectionMatrixLabel">
+        <property name="text">
+         <string>Always Show Arrow Tip</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="alwaysShowArrowTipConnectionMatrixCheckBox"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="alwaysShowArrowEndConnectionMatrixLabel">
+        <property name="text">
+         <string>Always Show Arrow End</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="alwaysShowArrowEndConnectionMatrixCheckBox"/>
       </item>
      </layout>
     </widget>
@@ -174,7 +219,7 @@
       <item row="0" column="1">
        <widget class="QCheckBox" name="enableAEMCacheCheckBox"/>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="enableAdvertisingLabel">
         <property name="enabled">
          <bool>false</bool>
@@ -184,21 +229,14 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="2" column="1">
        <widget class="QCheckBox" name="enableAdvertisingCheckBox">
         <property name="enabled">
          <bool>false</bool>
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="controllerIDLineEdit">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="controllerIDLabel">
         <property name="enabled">
          <bool>false</bool>
@@ -208,8 +246,83 @@
         </property>
        </widget>
       </item>
+      <item row="3" column="1">
+       <widget class="QLineEdit" name="controllerIDLineEdit">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="fullAEMEnumerationLabel">
+        <property name="text">
+         <string>Full AEM Enumeration</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="fullAEMEnumerationCheckBox"/>
+      </item>
      </layout>
     </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_3">
+     <property name="title">
+      <string>Network</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout_3">
+      <item row="0" column="0">
+       <widget class="QLabel" name="protocolLabel">
+        <property name="text">
+         <string>Protocol</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="protocolComboBox"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="interfaceTypesLabel">
+        <property name="text">
+         <string>Interface Types</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QListView" name="interfaceTypeList">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>80</height>
+         </size>
+        </property>
+        <property name="selectionMode">
+         <enum>QAbstractItemView::NoSelection</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
@@ -223,6 +336,20 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>descriptorIndexStartsAt0CheckBox</tabstop>
+  <tabstop>primarilyPreferredLocaleComboBox</tabstop>
+  <tabstop>secondarilyPreferredLocaleComboBox</tabstop>
+  <tabstop>automaticPNGDownloadCheckBox</tabstop>
+  <tabstop>clearLogoCacheButton</tabstop>
+  <tabstop>automaticCheckForUpdatesCheckBox</tabstop>
+  <tabstop>checkForBetaVersionsCheckBox</tabstop>
+  <tabstop>themeColorComboBox</tabstop>
+  <tabstop>enableAEMCacheCheckBox</tabstop>
+  <tabstop>enableAdvertisingCheckBox</tabstop>
+  <tabstop>controllerIDLineEdit</tabstop>
+  <tabstop>protocolComboBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

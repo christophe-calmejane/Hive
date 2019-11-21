@@ -96,7 +96,7 @@ bool SocketItem::isOver(QPointF const& pos) const
 	return pos.x() >= -CIRCLE_RADIUS && pos.x() <= CIRCLE_RADIUS && pos.y() >= -CIRCLE_RADIUS && pos.y() <= CIRCLE_RADIUS;
 }
 
-void SocketItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
+void SocketItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/)
 {
 	QPen pen;
 	pen.setWidth(2);

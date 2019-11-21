@@ -23,6 +23,7 @@
 
 #include "avdecc/helper.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "nodeTreeWidget.hpp"
 
 #include <map>
 
@@ -36,8 +37,8 @@
 class StreamInputCounterTreeWidgetItem : public QTreeWidgetItem
 {
 public:
-	StreamInputCounterTreeWidgetItem(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag flag, QTreeWidgetItem* parent)
-		: QTreeWidgetItem{ parent }
+	StreamInputCounterTreeWidgetItem(la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag, QTreeWidgetItem* parent)
+		: QTreeWidgetItem{ parent, la::avdecc::utils::to_integral(NodeTreeWidget::TreeWidgetItemType::StreamInputCounter) }
 		, _streamIndex{ streamIndex }
 		, _counterValidFlag{ flag }
 	{
@@ -61,16 +62,17 @@ private:
 class StreamInputCountersTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::controller::model::StreamInputCounters const& counters, QTreeWidget* parent = nullptr);
-
-	void setStreamInputErrorCounterFlags(la::avdecc::entity::StreamInputCounterValidFlags const& flags);
+	StreamInputCountersTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isConnected, la::avdecc::entity::model::StreamInputCounters const& counters, QTreeWidget* parent = nullptr);
 
 private:
-	void updateCounters(la::avdecc::controller::model::StreamInputCounters const& counters);
+	void updateCounters(la::avdecc::entity::model::StreamInputCounters const& counters);
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::StreamIndex const _streamIndex{ 0u };
+	bool _isConnected{ false };
 
 	// Counters
-	std::map<la::avdecc::entity::StreamInputCounterValidFlag, StreamInputCounterTreeWidgetItem*> _counters{};
+	std::map<la::avdecc::entity::StreamInputCounterValidFlag, StreamInputCounterTreeWidgetItem*> _counterWidgets{};
+	la::avdecc::entity::model::StreamInputCounters _counters{};
+	avdecc::ControllerManager::StreamInputErrorCounters _errorCounters{};
 };
