@@ -62,37 +62,19 @@ setupEnv()
 	getOS osName
 	if [[ $osName == "win" ]];
 	then
-		echo -n "Downloading WinPcap Developer's Pack... "
-		local result
-		result=$(which wget 2>&1)
-		if [ $? -ne 0 ];
+		local wpcapInstallFolder="3rdparty/avdecc/externals/3rdparty/winpcap"
+		if [[ ! -d "${wpcapInstallFolder}/Include" || ! -d "${wpcapInstallFolder}/Lib" ]];
 		then
-			echo "failed, wget not found (see 3rdparty/avdecc/externals/3rdparty/winpcap/README.me for manually installation instructions)"
-		else
-			local wpcapOutputFile="_WpdPack.zip"
-			rm -f "$wpcapOutputFile"
-			local log=$("$result" https://www.winpcap.org/install/bin/WpdPack_4_1_2.zip -O "$wpcapOutputFile" 2>&1)
+			echo -n "Downloading WinPcap Developer's Pack... "
+			local result
+			result=$(which wget 2>&1)
 			if [ $? -ne 0 ];
 			then
-				echo "failed!"
-				echo ""
-				echo "Error log:"
-				echo $log
-				rm -f "$wpcapOutputFile"
-				exit 1
-			fi
-			echo "done"
-			
-			echo -n "Installing WinPcap Developer's Pack... "
-			result=$(which unzip 2>&1)
-			if [ $? -ne 0 ];
-			then
-				echo "failed, unzip not found (see 3rdparty/avdecc/externals/3rdparty/winpcap/README.me for manually installation instructions)"
-				rm -f "$wpcapOutputFile"
+				echo "failed, wget not found (see ${wpcapInstallFolder}/README.me for manually installation instructions)"
 			else
-				local wpcapOutputFolder="_WpdPack"
-				rm -rf "$wpcapOutputFolder"
-				local log=$("$result" -d "$wpcapOutputFolder" "$wpcapOutputFile" 2>&1)
+				local wpcapOutputFile="_WpdPack.zip"
+				rm -f "$wpcapOutputFile"
+				local log=$("$result" https://www.winpcap.org/install/bin/WpdPack_4_1_2.zip -O "$wpcapOutputFile" 2>&1)
 				if [ $? -ne 0 ];
 				then
 					echo "failed!"
@@ -100,51 +82,54 @@ setupEnv()
 					echo "Error log:"
 					echo $log
 					rm -f "$wpcapOutputFile"
-					rm -rf "$wpcapOutputFolder"
 					exit 1
 				fi
-				mv "${wpcapOutputFolder}/WpdPack/Include" "3rdparty/avdecc/externals/3rdparty/winpcap/"
-				mv "${wpcapOutputFolder}/WpdPack/Lib" "3rdparty/avdecc/externals/3rdparty/winpcap/"
-				rm -f "$wpcapOutputFile"
-				rm -rf "$wpcapOutputFolder"
 				echo "done"
+				
+				echo -n "Installing WinPcap Developer's Pack... "
+				result=$(which unzip 2>&1)
+				if [ $? -ne 0 ];
+				then
+					echo "failed, unzip not found (see ${wpcapInstallFolder}/README.me for manually installation instructions)"
+					rm -f "$wpcapOutputFile"
+				else
+					local wpcapOutputFolder="_WpdPack"
+					rm -rf "$wpcapOutputFolder"
+					local log=$("$result" -d "$wpcapOutputFolder" "$wpcapOutputFile" 2>&1)
+					if [ $? -ne 0 ];
+					then
+						echo "failed!"
+						echo ""
+						echo "Error log:"
+						echo $log
+						rm -f "$wpcapOutputFile"
+						rm -rf "$wpcapOutputFolder"
+						exit 1
+					fi
+					mv "${wpcapOutputFolder}/WpdPack/Include" "${wpcapInstallFolder}/"
+					mv "${wpcapOutputFolder}/WpdPack/Lib" "${wpcapInstallFolder}/"
+					rm -f "$wpcapOutputFile"
+					rm -rf "$wpcapOutputFolder"
+					echo "done"
+				fi
 			fi
 		fi
 
-		echo -n "Downloading WinSparkle... "
 		local baseSparkleFolder="3rdparty/winsparkle"
-		local result
-		result=$(which wget 2>&1)
-		if [ $? -ne 0 ];
+		if [[ ! -d "${baseSparkleFolder}/bin" || ! -d "${baseSparkleFolder}/include" || ! -d "${baseSparkleFolder}/lib" ]];
 		then
-			echo "failed, wget not found (see ${baseSparkleFolder}/README.me for manually installation instructions)"
-		else
-			local wspkloutputFile="_WinSparkle.zip"
-			rm -f "$wspkloutputFile"
-			local spklVersion="0.6.0"
-			local spklZipName="WinSparkle-${spklVersion}"
-			local log=$("$result" https://github.com/vslavik/winsparkle/releases/download/v${spklVersion}/${spklZipName}.zip -O "$wspkloutputFile" 2>&1)
+			echo -n "Downloading WinSparkle... "
+			local result
+			result=$(which wget 2>&1)
 			if [ $? -ne 0 ];
 			then
-				echo "failed!"
-				echo ""
-				echo "Error log:"
-				echo $log
-				rm -f "$wspkloutputFile"
-				exit 1
-			fi
-			echo "done"
-
-			echo -n "Installing WinSparkle... "
-			result=$(which unzip 2>&1)
-			if [ $? -ne 0 ];
-			then
-				echo "failed, unzip not found (see ${baseSparkleFolder}/README.me for manually installation instructions)"
-				rm -f "$wspkloutputFile"
+				echo "failed, wget not found (see ${baseSparkleFolder}/README.me for manually installation instructions)"
 			else
-				local wspklOutputFolder="_WinSparkle"
-				rm -rf "$wspklOutputFolder"
-				local log=$("$result" -d "$wspklOutputFolder" "$wspkloutputFile" 2>&1)
+				local wspkloutputFile="_WinSparkle.zip"
+				rm -f "$wspkloutputFile"
+				local spklVersion="0.6.0"
+				local spklZipName="WinSparkle-${spklVersion}"
+				local log=$("$result" https://github.com/vslavik/winsparkle/releases/download/v${spklVersion}/${spklZipName}.zip -O "$wspkloutputFile" 2>&1)
 				if [ $? -ne 0 ];
 				then
 					echo "failed!"
@@ -152,21 +137,43 @@ setupEnv()
 					echo "Error log:"
 					echo $log
 					rm -f "$wspkloutputFile"
-					rm -rf "$wspklOutputFolder"
 					exit 1
 				fi
-				mkdir -p "${baseSparkleFolder}/bin/x86"
-				mkdir -p "${baseSparkleFolder}/bin/x64"
-				mkdir -p "${baseSparkleFolder}/lib/x86"
-				mkdir -p "${baseSparkleFolder}/lib/x64"
-				mv "${wspklOutputFolder}/${spklZipName}/include" "${baseSparkleFolder}/"
-				mv "${wspklOutputFolder}/${spklZipName}/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x86"
-				mv "${wspklOutputFolder}/${spklZipName}/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x86"
-				mv "${wspklOutputFolder}/${spklZipName}/x64/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x64"
-				mv "${wspklOutputFolder}/${spklZipName}/x64/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x64"
-				rm -f "$wspkloutputFile"
-				rm -rf "$wspklOutputFolder"
 				echo "done"
+
+				echo -n "Installing WinSparkle... "
+				result=$(which unzip 2>&1)
+				if [ $? -ne 0 ];
+				then
+					echo "failed, unzip not found (see ${baseSparkleFolder}/README.me for manually installation instructions)"
+					rm -f "$wspkloutputFile"
+				else
+					local wspklOutputFolder="_WinSparkle"
+					rm -rf "$wspklOutputFolder"
+					local log=$("$result" -d "$wspklOutputFolder" "$wspkloutputFile" 2>&1)
+					if [ $? -ne 0 ];
+					then
+						echo "failed!"
+						echo ""
+						echo "Error log:"
+						echo $log
+						rm -f "$wspkloutputFile"
+						rm -rf "$wspklOutputFolder"
+						exit 1
+					fi
+					mkdir -p "${baseSparkleFolder}/bin/x86"
+					mkdir -p "${baseSparkleFolder}/bin/x64"
+					mkdir -p "${baseSparkleFolder}/lib/x86"
+					mkdir -p "${baseSparkleFolder}/lib/x64"
+					mv "${wspklOutputFolder}/${spklZipName}/include" "${baseSparkleFolder}/"
+					mv "${wspklOutputFolder}/${spklZipName}/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x86"
+					mv "${wspklOutputFolder}/${spklZipName}/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x86"
+					mv "${wspklOutputFolder}/${spklZipName}/x64/Release/WinSparkle.dll" "${baseSparkleFolder}/bin/x64"
+					mv "${wspklOutputFolder}/${spklZipName}/x64/Release/WinSparkle.lib" "${baseSparkleFolder}/lib/x64"
+					rm -f "$wspkloutputFile"
+					rm -rf "$wspklOutputFolder"
+					echo "done"
+				fi
 			fi
 		fi
 
@@ -184,7 +191,7 @@ setupEnv()
 				echo "failed, openssl not found"
 			else
 				openssl dsaparam 1024 < /dev/random > "$dsa_params" 2>&1
-				openssl gendsa "$dsa_params" -out "$dsa_priv_key" 2>&1
+				openssl gendsa -out "$dsa_priv_key" "$dsa_params" 2>&1
 				openssl dsa -in "$dsa_priv_key" -pubout -out "$dsa_pub_key" 2>&1
 				chmod 600 "$dsa_priv_key" 2>&1
 				chmod 644 "$dsa_pub_key" 2>&1
