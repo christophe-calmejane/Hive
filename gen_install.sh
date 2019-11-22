@@ -42,6 +42,89 @@ then
 	fi
 fi
 
+# Deploy symbols found in current directory
+deploySymbols()
+{
+	local projectName="$1"
+	local version="$2"
+	local result=""
+
+	if isWindows;
+	then
+		echo -n "Deploying symbol files... "
+
+		local symbolsServerPath="${params["symbols_windows_pdb_server_path"]}"
+		if [ -z "${symbolsServerPath}" ];
+		then
+			echo "FAILED: 'symbols_windows_pdb_server_path' variable not set in .hive_config"
+			return
+		fi
+		if isCygwin; then
+			symbolsServerPath=$(cygpath -a -u "${symbolsServerPath}")
+		fi
+		if [ ! -d "${symbolsServerPath}" ];
+		then
+			echo "FAILED: Server path does not exist: '${symbolsServerPath}'"
+			return
+		fi
+		if isCygwin; then
+			symbolsServerPath=$(cygpath -a -w "${symbolsServerPath}")
+		fi
+
+		local symstorePath="${params["symbols_symstore_path"]}"
+		if [ -z "${symstorePath}" ];
+		then
+			echo "FAILED: 'symbols_symstore_path' variable not set in .hive_config"
+			return
+		fi
+		if isCygwin; then
+			symstorePath=$(cygpath -a -u "${symstorePath}")
+		fi
+		if [ ! -f "${symstorePath}" ];
+		then
+			echo "FAILED: symstore.exe path does not exist: '${symstorePath}'"
+			return
+		fi
+
+		result=$("${symstorePath}" add /r /l /f *.* /s "${symbolsServerPath}" /t "${projectName}" /v "${version}" /c "Adding ${projectName} ${version}" /compress)
+		if [ $? -ne 0 ]; then
+			echo "Failed to deploy symbols ;("
+			echo ""
+			echo $result
+			return
+		fi
+
+		echo "done"
+
+	elif isMac;
+	then
+		echo -n "Deploying symbol files... "
+
+		local symbolsServerPath="${params["symbols_macos_dsym_server_path"]}"
+		if [ -z "${symbolsServerPath}" ];
+		then
+			echo "FAILED: 'symbols_macos_dsym_server_path' variable not set in .hive_config"
+			return
+		fi
+		if [ ! -d "${symbolsServerPath}" ];
+		then
+			echo "FAILED: Server path does not exist: '${symbolsServerPath}'"
+			return
+		fi
+		symbolsServerPath="${symbolsServerPath}/${projectName}/${version}"
+		if [ ! -d "${symbolsServerPath}" ]; then
+			mkdir -p "${symbolsServerPath}"
+		fi
+		for sym in `ls`
+		do
+			#rm -rf "${symbolsServerPath}/${sym}"
+			cp -R "${sym}" "${symbolsServerPath}/"
+		done
+
+		echo "done"
+	fi
+}
+
 getSignatureHash()
 {
 	local filePath="$1"
@@ -162,6 +245,7 @@ parseFile()
 
 			# Switch on key
 			case "$key" in
+				# Signing
 				identity)
 					_params["$key"]="$value"
 					if [[ isMac && ! "$value" == "-" ]]; then
@@ -173,12 +257,26 @@ parseFile()
 						fi
 					fi
 					;;
+
+				# Automatic check for update
 				appcast_releases)
 					_params["$key"]="$value"
 					;;
 				appcast_betas)
 					_params["$key"]="$value"
 					;;
+
+				# Debug Symbols
+				symbols_symstore_path)
+					_params["$key"]="$value"
+					;;
+				symbols_windows_pdb_server_path)
+					_params["$key"]="$value"
+					;;
+				symbols_macos_dsym_server_path)
+					_params["$key"]="$value"
+					;;
+
 				*)
 					echo "Ignoring unknown key '$key' in '${configFile}' file"
 					;;
@@ -484,10 +582,12 @@ beta_tag=""
 build_tag=""
 is_release=1
 releaseVersion="${versionSplit[0]}.${versionSplit[1]}.${versionSplit[2]}"
+internalVersion="${releaseVersion}"
 if [ ${#versionSplit[*]} -eq 4 ]; then
 	beta_tag="-beta${versionSplit[3]}"
 	build_tag="+$(git rev-parse --short HEAD)"
 	is_release=0
+	internalVersion="${internalVersion}.${versionSplit[3]}"
 fi
 
 if isWindows; then
@@ -593,7 +693,12 @@ echo ""
 echo "Installer generated: ${fullInstallerName}"
 if [ ! -z "${symbolsFile}" ]; then
 	echo "Symbols generated: ${symbolsFile}"
+	pushd "${outputFolder}/Symbols" &> /dev/null
+	deploySymbols "Hive" "${internalVersion}"
+	popd &> /dev/null
 fi
+
+# TODO: Notarization+Staple (BEFORE appcast signature is generated)
 
 generateAppcast "${fullInstallerName}" "${releaseVersion}${beta_tag}" $is_release
 
@@ -601,6 +706,6 @@ echo ""
 echo "Do not forget to upload:"
 echo " - CHANGELOG.MD"
 echo " - Installer file"
-echo " - Updated appcast file"
+echo " - Updated appcast file(s)"
 
 exit 0
