@@ -21,6 +21,8 @@ default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
+default_sha1url="http://timestamp.digicert.com"
+default_sha256url="http://timestamp.digicert.com"
 
 # 
 cmake_generator=""
@@ -69,6 +71,8 @@ useVSclang=0
 useVS2017=0
 signingId="-"
 doSign=0
+sha1url="$default_sha1url"
+sha256url="$default_sha256url"
 useSources=0
 overrideQt5dir=0
 Qt5dir=""
@@ -90,6 +94,8 @@ do
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
 				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 				echo " -clang -> Compile using clang for VisualStudio"
+				echo " -sha1url <url> -> Code signing server for SHA1 signature (Default: $default_sha1url)"
+				echo " -sha256url <url> -> Code signing server for SHA256 signature (Default: $default_sha256url)"
 			fi
 			if isMac; then
 				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing."
@@ -205,6 +211,32 @@ do
 				exit 4
 			fi
 			;;
+		-sha1url)
+			if isWindows; then
+				shift
+				if [ $# -lt 1 ]; then
+					echo "ERROR: Missing parameter for -sha1url option, see help (-h)"
+					exit 4
+				fi
+				sha1url="$1"
+			else
+				echo "ERROR: -sha1url option is only supported on Windows platform"
+				exit 4
+			fi
+			;;
+		-sha256url)
+			if isWindows; then
+				shift
+				if [ $# -lt 1 ]; then
+					echo "ERROR: Missing parameter for -sha256url option, see help (-h)"
+					exit 4
+				fi
+				sha256url="$1"
+			else
+				echo "ERROR: -sha256url option is only supported on Windows platform"
+				exit 4
+			fi
+			;;
 		-id)
 			if isMac; then
 				shift
@@ -281,6 +313,14 @@ fi
 
 if [ $doSign -eq 1 ]; then
 	add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
+	if isWindows; then
+		if [ ! -z "$sha1url" ]; then
+			add_cmake_opt+=("-DLA_SIGNTOOL_SHA1_URL=$sha1url")
+		fi
+		if [ ! -z "$sha256url" ]; then
+			add_cmake_opt+=("-DLA_SIGNTOOL_SHA256_URL=$sha256url")
+		fi
+	fi
 fi
 
 # Get DSA public key (macOS needs it in the plist)

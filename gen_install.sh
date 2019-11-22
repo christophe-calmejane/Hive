@@ -257,6 +257,12 @@ parseFile()
 						fi
 					fi
 					;;
+				signtool_sha1_url)
+					_params["$key"]="$value"
+					;;
+				signtool_sha256_url)
+					_params["$key"]="$value"
+					;;
 
 				# Automatic check for update
 				appcast_releases)
@@ -499,6 +505,21 @@ parseFile ".hive_config" params
 # Check for signing
 if [ $doSign -eq 1 ]; then
 	gen_cmake_additional_options+=("-sign")
+
+	# Check if SHA1/SHA256 URLs are specified on windows
+	if isWindows; then
+		sha1url=${params["signtool_sha1_url"]}
+		if [ ! -z "$sha1url" ]; then
+			gen_cmake_additional_options+=("-sha1url")
+			gen_cmake_additional_options+=("$sha1url")
+		fi
+
+		sha256url=${params["signtool_sha256_url"]}
+		if [ ! -z "$sha256url" ]; then
+			gen_cmake_additional_options+=("-sha256url")
+			gen_cmake_additional_options+=("$sha256url")
+		fi
+	fi
 
 	# Check if TeamIdentifier is specified on macOS
 	if isMac; then
