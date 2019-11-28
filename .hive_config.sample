@@ -5,11 +5,8 @@
 # Signing identity to be used, defaults to "-" which let Xcode autodetect appropriate signing identity
 identity=-
 
-# Windows signtool SHA1 URL (defaults to http://timestamp.digicert.com)
-#signtool_sha1_url=http://timestamp.digicert.com
-
-# Windows signtool SHA256 URL (defaults to http://timestamp.digicert.com)
-#signtool_sha256_url=http://timestamp.digicert.com
+# Windows signtool options (defaults to '/a /sm /q /fd sha256 /tr http://timestamp.digicert.com')
+#signtool_options=/a /sm /q /fd sha256 /tr http://timestamp.digicert.com
 
 ################ Automatic check for update
 # Appcast URL for Hive Releases - Only use https URLs (except for debugging when using localhost)

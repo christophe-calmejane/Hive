@@ -49,6 +49,11 @@ deploySymbols()
 	local version="$2"
 	local result=""
 
+	if [ ${doDeploySym} -eq 0 ];
+	then
+		return
+	fi
+
 	if isWindows;
 	then
 		echo -n "Deploying symbol files... "
@@ -257,10 +262,7 @@ parseFile()
 						fi
 					fi
 					;;
-				signtool_sha1_url)
-					_params["$key"]="$value"
-					;;
-				signtool_sha256_url)
+				signtool_options)
 					_params["$key"]="$value"
 					;;
 
@@ -302,6 +304,7 @@ default_VisualSdk="8.1"
 params["identity"]="-"
 params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
 params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
+params["signtool_options"]="/a /sm /q /fd sha256 /tr http://timestamp.digicert.com"
 
 # 
 arch=""
@@ -344,6 +347,7 @@ buildConfig="Release"
 buildConfigOverride=0
 doCleanup=1
 doSign=1
+doDeploySym=1
 gen_cmake_additional_options=()
 if [ -z $default_keyDigits ]; then
 	default_keyDigits=2
@@ -366,6 +370,7 @@ do
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
 				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 			fi
+			echo " -no-sym -> Do not deploy debug symbols (Default: Do deploy)"
 			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
 			echo " -key-digits <Number of digits> -> The number of digits to be used as Key for installation, comprised between 0 and 4 (Default: $default_keyDigits)"
@@ -445,6 +450,9 @@ do
 			echo "ERROR: -id option is deprecated, please use the new .hive_config file (see .hive_config.sample for an example config file)"
 			exit 1
 			;;
+		-no-sym)
+			doDeploySym=0
+			;;
 		-no-signing)
 			doSign=0
 			;;
@@ -506,19 +514,14 @@ parseFile ".hive_config" params
 if [ $doSign -eq 1 ]; then
 	gen_cmake_additional_options+=("-sign")
 
-	# Check if SHA1/SHA256 URLs are specified on windows
+	# Check if signtool options are specified on windows
 	if isWindows; then
-		sha1url=${params["signtool_sha1_url"]}
-		if [ ! -z "$sha1url" ]; then
-			gen_cmake_additional_options+=("-sha1url")
-			gen_cmake_additional_options+=("$sha1url")
+		signtoolOptions=${params["signtool_options"]}
+		if [ -z "$signtoolOptions" ]; then
+			echo "ERROR: windows requires signtool options to be set. Specify it in the .hive_config file"
 		fi
-
-		sha256url=${params["signtool_sha256_url"]}
-		if [ ! -z "$sha256url" ]; then
-			gen_cmake_additional_options+=("-sha256url")
-			gen_cmake_additional_options+=("$sha256url")
-		fi
+		gen_cmake_additional_options+=("-signtool-opt")
+		gen_cmake_additional_options+=("$signtoolOptions")
 	fi
 
 	# Check if TeamIdentifier is specified on macOS
@@ -696,8 +699,7 @@ if [ $doSign -eq 1 ]; then
 	if isMac; then
 		log=$(codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}")
 	else
-		log=$(signtool sign /a /sm /q /fd sha1 /t http://timestamp.digicert.com "${installerFile}")
-		log=$(signtool sign /a /sm /as /q /fd sha256 /tr http://timestamp.digicert.com "${installerFile}")
+		log=$(signtool sign ${signtoolOptions} "${installerFile}")
 	fi
 	if [ $? -ne 0 ]; then
 		echo "Failed to sign package ;("
