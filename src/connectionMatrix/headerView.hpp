@@ -62,6 +62,7 @@ private:
 	void handleSectionInserted(QModelIndex const& parent, int first, int last);
 	void handleSectionRemoved(QModelIndex const& parent, int first, int last);
 	void handleModelReset();
+	void handleEditMappingsClicked(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex);
 	void updateSectionVisibility(int const logicalIndex);
 	void applyFilterPattern();
 

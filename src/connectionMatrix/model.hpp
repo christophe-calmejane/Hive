@@ -179,6 +179,10 @@ public:
 	using Visitor = std::function<void(Node*)>;
 	void accept(Node* node, Visitor const& visitor, bool const childrenOnly = false) const;
 
+	// helper methods to determine if given section is a talker or listener
+	bool isTalkerSection(int section, Qt::Orientation orientation) const;
+	bool isListenerSection(int section, Qt::Orientation orientation) const;
+
 private:
 	QScopedPointer<ModelPrivate> d_ptr;
 	Q_DECLARE_PRIVATE(Model);

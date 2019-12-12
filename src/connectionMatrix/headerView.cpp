@@ -22,6 +22,7 @@
 #include "connectionMatrix/node.hpp"
 #include "connectionMatrix/paintHelper.hpp"
 #include "avdecc/controllerManager.hpp"
+#include "avdecc/mappingsHelper.hpp"
 #include "toolkit/material/color.hpp"
 #include <QPainter>
 #include <QContextMenuEvent>
@@ -541,53 +542,166 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 		return;
 	}
 
-	if (node->isStreamNode())
+	auto addHeaderAction = [](QMenu& menu, QString const& text)
 	{
+		auto* action = menu.addAction(text);
+		auto font = action->font();
+		font.setBold(true);
+		action->setFont(font);
+		action->setEnabled(false);
+		return action;
+	};
+
+	auto addAction = [](QMenu& menu, QString const& text, bool enabled)
+	{
+		auto* action = menu.addAction(text);
+		action->setEnabled(enabled);
+		return action;
+	};
+
+	auto getStreamNodeFromNode = [](la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::controller::model::EntityNode const& entityNode, connectionMatrix::Node const* node, la::avdecc::entity::model::StreamIndex streamIndex)
+	{
+		auto const isOutputStream = node->type() == Node::Type::OutputStream || node->type() == Node::Type::RedundantOutputStream;
+		if (isOutputStream)
+		{
+			return static_cast<la::avdecc::controller::model::StreamNode const*>(&controlledEntity.getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex));
+		}
+		else if (node->type() == Node::Type::InputStream || node->type() == Node::Type::RedundantInputStream)
+		{
+			return static_cast<la::avdecc::controller::model::StreamNode const*>(&controlledEntity.getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex));
+		}
+		else
+		{
+			return static_cast<la::avdecc::controller::model::StreamNode const*>(nullptr);
+		}
+	};
+
+	struct MapsupTypeIndex
+	{
+		bool supportsDynamicMappings{ false };
+		la::avdecc::entity::model::DescriptorType streamPortType{ la::avdecc::entity::model::DescriptorType::Invalid };
+		la::avdecc::entity::model::StreamPortIndex streamPortIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
+	};
+	auto findMappingssupportTypeIndexForDescriptor = [](la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::DescriptorType const& descriptorType)
+	{
+		MapsupTypeIndex mti;
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
-			auto const entityID = node->entityID();
-			if (auto controlledEntity = manager.getControlledEntity(entityID))
+			if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
-				auto const& entityNode = controlledEntity->getEntityNode();
-				auto const streamIndex = static_cast<StreamNode*>(node)->streamIndex();
-
-				la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
-				auto const isOutputStream = node->type() == Node::Type::OutputStream || node->type() == Node::Type::RedundantOutputStream;
-
-				if (isOutputStream)
+				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
 				{
-					streamNode = &controlledEntity->getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortInputs)
+					{
+						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						{
+							mti.supportsDynamicMappings = true;
+							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
+							mti.streamPortIndex = spi;
+							break;
+						}
+					}
 				}
-				else if (node->type() == Node::Type::InputStream || node->type() == Node::Type::RedundantInputStream)
+			}
+			else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+			{
+				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
 				{
-					streamNode = &controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortOutputs)
+					{
+						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						{
+							mti.supportsDynamicMappings = true;
+							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
+							mti.streamPortIndex = spi;
+							break;
+						}
+					}
 				}
+			}
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
+		{
+			// one of the given parameters is invalid.
+		}
+
+		return mti;
+	};
+	auto findMappingssupportTypeIndexForStreamNode = [](la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::controller::model::StreamNode const& streamNode)
+	{
+		MapsupTypeIndex mti;
+		try
+		{
+			if (streamNode.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+			{
+				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
+				{
+					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortInputs)
+					{
+						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						{
+							auto const& streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const&>(streamNode);
+							auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamInputNode.dynamicModel->streamFormat);
+
+							mti.supportsDynamicMappings = (sfi->getChannelsCount() > 0);
+							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
+							mti.streamPortIndex = spi;
+							break;
+						}
+					}
+				}
+			}
+			else if (streamNode.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+			{
+				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
+				{
+					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortOutputs)
+					{
+						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						{
+							auto const& streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const&>(streamNode);
+							auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamOutputNode.dynamicModel->streamFormat);
+
+							mti.supportsDynamicMappings = (sfi->getChannelsCount() > 0);
+							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
+							mti.streamPortIndex = spi;
+							break;
+						}
+					}
+				}
+			}
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
+		{
+			// one of the given parameters is invalid.
+		}
+
+		return mti;
+	};
+
+	try
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto const entityID = node->entityID();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			auto const& entityNode = controlledEntity->getEntityNode();
+			la::avdecc::controller::model::StreamNode const* streamNode{ nullptr };
+			la::avdecc::entity::model::StreamIndex streamIndex = la::avdecc::entity::model::getInvalidDescriptorIndex();
+
+			QMenu menu;
+			addHeaderAction(menu, "Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
+
+			if (node->isStreamNode())
+			{
+				streamIndex = static_cast<StreamNode*>(node)->streamIndex();
+				streamNode = getStreamNodeFromNode(*controlledEntity, entityNode, node, streamIndex);
 
 				if (!AVDECC_ASSERT_WITH_RET(streamNode, "invalid node"))
 				{
 					return;
 				}
 
-				auto addHeaderAction = [](QMenu& menu, QString const& text)
-				{
-					auto* action = menu.addAction(text);
-					auto font = action->font();
-					font.setBold(true);
-					action->setFont(font);
-					action->setEnabled(false);
-					return action;
-				};
-
-				auto addAction = [](QMenu& menu, QString const& text, bool enabled)
-				{
-					auto* action = menu.addAction(text);
-					action->setEnabled(enabled);
-					return action;
-				};
-
-				QMenu menu;
-				addHeaderAction(menu, "Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
 				addHeaderAction(menu, "Stream: " + node->name());
 
 				menu.addSeparator();
@@ -598,6 +712,12 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 				menu.addSeparator();
 
+				auto mti = findMappingssupportTypeIndexForStreamNode(*controlledEntity, *streamNode);
+
+				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings", mti.supportsDynamicMappings);
+
+				menu.addSeparator();
+
 				// Release the controlled entity before starting a long operation (menu.exec()
 				controlledEntity.reset();
 
@@ -605,7 +725,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 				{
 					if (action == startStreamingAction)
 					{
-						if (isOutputStream)
+						if (node->type() == Node::Type::OutputStream || node->type() == Node::Type::RedundantOutputStream)
 						{
 							manager.startStreamOutput(entityID, streamIndex);
 						}
@@ -616,7 +736,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 					}
 					else if (action == stopStreamingAction)
 					{
-						if (isOutputStream)
+						if (node->type() == Node::Type::OutputStream || node->type() == Node::Type::RedundantOutputStream)
 						{
 							manager.stopStreamOutput(entityID, streamIndex);
 						}
@@ -625,12 +745,72 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 							manager.stopStreamInput(entityID, streamIndex);
 						}
 					}
+					else if (action == editMappingsAction)
+					{
+						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, streamIndex);
+					}
+				}
+			}
+			else if (node->isRedundantNode())
+			{
+				if (static_cast<RedundantNode*>(node)->childrenCount() > 0)
+				{
+					auto const* connectionMatrixNode = static_cast<StreamNode const*>(static_cast<RedundantNode*>(node)->childAt(0));
+					streamIndex = connectionMatrixNode->streamIndex();
+					streamNode = getStreamNodeFromNode(*controlledEntity, entityNode, connectionMatrixNode, streamIndex);
+				}
+
+				if (!AVDECC_ASSERT_WITH_RET(streamNode, "invalid node"))
+				{
+					return;
+				}
+
+				addHeaderAction(menu, "Stream: " + node->name());
+
+				menu.addSeparator();
+
+				auto mti = findMappingssupportTypeIndexForStreamNode(*controlledEntity, *streamNode);
+
+				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings", mti.supportsDynamicMappings);
+
+				menu.addSeparator();
+
+				// Release the controlled entity before starting a long operation (menu.exec()
+				controlledEntity.reset();
+
+				if (auto* action = menu.exec(event->globalPos()))
+				{
+					if (action == editMappingsAction)
+					{
+						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, streamIndex);
+					}
+				}
+			}
+			else if (node->isEntityNode())
+			{
+				menu.addSeparator();
+
+				auto mti = findMappingssupportTypeIndexForDescriptor(*controlledEntity, model->isListenerSection(logicalIndex, orientation()) ? la::avdecc::entity::model::DescriptorType::StreamInput : la::avdecc::entity::model::DescriptorType::StreamOutput);
+
+				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings", mti.supportsDynamicMappings);
+
+				menu.addSeparator();
+
+				// Release the controlled entity before starting a long operation (menu.exec()
+				controlledEntity.reset();
+
+				if (auto* action = menu.exec(event->globalPos()))
+				{
+					if (action == editMappingsAction)
+					{
+						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, la::avdecc::entity::model::getInvalidDescriptorIndex());
+					}
 				}
 			}
 		}
-		catch (...)
-		{
-		}
+	}
+	catch (...)
+	{
 	}
 }
 
@@ -661,6 +841,217 @@ void HeaderView::leaveEvent(QEvent* event)
 	selectionModel()->clearSelection();
 
 	QHeaderView::leaveEvent(event);
+}
+
+void HeaderView::handleEditMappingsClicked(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex)
+{
+	try
+	{
+		auto& manager = avdecc::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(entityID);
+
+		if (controlledEntity)
+		{
+			auto const* const entity = controlledEntity.get();
+			auto const& entityNode = entity->getEntityNode();
+			auto const& configurationNode = entity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+			mappingMatrix::Nodes outputs;
+			mappingMatrix::Nodes inputs;
+			mappingMatrix::Connections connections;
+			avdecc::mappingsHelper::NodeMappings streamMappings;
+			avdecc::mappingsHelper::NodeMappings clusterMappings;
+
+			auto const isValidStream = [](auto const* const streamNode)
+			{
+				auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
+				auto const formatType = sfi->getType();
+
+				if (formatType == la::avdecc::entity::model::StreamFormatInfo::Type::None || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::Unsupported || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+					return false;
+
+				return true;
+			};
+
+			if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+			{
+				auto const& streamPortNode = entity->getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+				std::vector<la::avdecc::controller::model::StreamInputNode const*> streamNodes;
+
+				if (streamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())
+				{
+					// Insert single StreamInput to list
+					auto const& streamNode = configurationNode.streamInputs.at(streamIndex);
+					if (!streamNode.isRedundant && isValidStream(&streamNode))
+						streamNodes.push_back(&streamNode);
+
+					// Insert single primary stream of a Redundant Set to list
+					for (auto const& redundantStreamKV : configurationNode.redundantStreamInputs)
+					{
+						auto const& redundantStreamNode = redundantStreamKV.second;
+						auto const* const primRedundantStreamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
+
+						// we use the redundantStreams to check if our current streamIndex is either prim or sec of it. For mappings edit, we only use prim though.
+						if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStream(primRedundantStreamNode))
+						{
+							streamNodes.push_back(primRedundantStreamNode);
+							break;
+						}
+					}
+				}
+				else
+				{
+					// Build list of StreamInput
+					for (auto const& streamKV : configurationNode.streamInputs)
+					{
+						auto const& streamNode = streamKV.second;
+						if (!streamNode.isRedundant && isValidStream(&streamNode))
+						{
+							streamNodes.push_back(&streamNode);
+						}
+					}
+
+					// Add primary stream of a Redundant Set
+					for (auto const& redundantStreamKV : configurationNode.redundantStreamInputs)
+					{
+						auto const& redundantStreamNode = redundantStreamKV.second;
+						auto const* const streamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
+						if (isValidStream(streamNode))
+						{
+							streamNodes.push_back(streamNode);
+						}
+					}
+				}
+
+				// Build mappingMatrix vectors
+				auto clusterResult = avdecc::mappingsHelper::buildClusterMappings(entity, streamPortNode);
+				clusterMappings = std::move(clusterResult.first);
+				inputs = std::move(clusterResult.second);
+				auto streamResult = avdecc::mappingsHelper::buildStreamMappings(entity, streamNodes);
+				streamMappings = std::move(streamResult.first);
+				outputs = std::move(streamResult.second);
+				connections = buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
+					[](mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)
+					{
+						return std::make_pair(streamSlotID, clusterSlotID);
+					});
+			}
+			else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+			{
+				auto const& streamPortNode = entity->getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+				std::vector<la::avdecc::controller::model::StreamOutputNode const*> streamNodes;
+
+				if (streamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())
+				{
+					// Insert single StreamOutput to list
+					auto const& streamNode = configurationNode.streamOutputs.at(streamIndex);
+					if (!streamNode.isRedundant && isValidStream(&streamNode))
+						streamNodes.push_back(&streamNode);
+
+					// Insert single primary stream of a Redundant Set to list
+					for (auto const& redundantStreamKV : configurationNode.redundantStreamOutputs)
+					{
+						auto const& redundantStreamNode = redundantStreamKV.second;
+						auto const* const primRedundantStreamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
+
+						// we use the redundantStreams to check if our current streamIndex is either prim or sec of it. For mappings edit, we only use prim though.
+						if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStream(primRedundantStreamNode))
+						{
+							streamNodes.push_back(primRedundantStreamNode);
+							break;
+						}
+					}
+				}
+				else
+				{
+					// Build list of StreamOutput
+					for (auto const& streamKV : configurationNode.streamOutputs)
+					{
+						auto const& streamNode = streamKV.second;
+						if (!streamNode.isRedundant && isValidStream(&streamNode))
+						{
+							streamNodes.push_back(&streamNode);
+						}
+					}
+
+					// Add primary stream of a Redundant Set
+					for (auto const& redundantStreamKV : configurationNode.redundantStreamOutputs)
+					{
+						auto const& redundantStreamNode = redundantStreamKV.second;
+						auto const* const streamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
+						if (isValidStream(streamNode))
+						{
+							streamNodes.push_back(streamNode);
+						}
+					}
+				}
+
+				// Build mappingMatrix vectors
+				auto clusterResult = avdecc::mappingsHelper::buildClusterMappings(entity, streamPortNode);
+				clusterMappings = std::move(clusterResult.first);
+				outputs = std::move(clusterResult.second);
+				auto streamResult = avdecc::mappingsHelper::buildStreamMappings(entity, streamNodes);
+				streamMappings = std::move(streamResult.first);
+				inputs = std::move(streamResult.second);
+				connections = buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
+					[](mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)
+					{
+						return std::make_pair(clusterSlotID, streamSlotID);
+					});
+			}
+			else
+			{
+				AVDECC_ASSERT(false, "Should not happen");
+			}
+
+			if (!outputs.empty() && !inputs.empty())
+			{
+				auto smartName = avdecc::helper::smartEntityName(*entity);
+
+				// Release the controlled entity before starting a long operation (dialog.exec)
+				controlledEntity.reset();
+
+				// Get exclusive access
+				manager.requestExclusiveAccess(entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType::Lock,
+					[this, streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections), entityID, streamPortType, streamPortIndex](auto const /*entityID*/, auto const status, auto&& token)
+					{
+						// Moving the token to the capture will effectively extend the lifetime of the token, keeping the entity locked until the lambda completes (meaning the dialog has been closed and mappings changed)
+						QMetaObject::invokeMethod(this,
+							[this, status, token = std::move(token), streamMappings = std::move(streamMappings), clusterMappings = std::move(clusterMappings), smartName = std::move(smartName), outputs = std::move(outputs), inputs = std::move(inputs), connections = std::move(connections), entityID, streamPortType, streamPortIndex]()
+							{
+								// Failed to get the exclusive access
+								if (!status || !token)
+								{
+									// If the device does not support the exclusive access, still proceed
+									if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotImplemented && status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotSupported)
+									{
+										QMessageBox::warning(nullptr, QString(""), QString("Failed to get Exclusive Access on %1:<br>%2").arg(smartName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
+										return;
+									}
+								}
+
+								// Create the dialog
+								auto title = QString("%1 - %2.%3 Dynamic Mappings").arg(smartName).arg(avdecc::helper::descriptorTypeToString(streamPortType)).arg(streamPortIndex);
+								auto dialog = mappingMatrix::MappingMatrixDialog{ title, outputs, inputs, connections };
+
+								if (dialog.exec() == QDialog::Accepted)
+								{
+									if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+									{
+										avdecc::mappingsHelper::processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+									}
+									else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+									{
+										avdecc::mappingsHelper::processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+									}
+								}
+							});
+					});
+			}
+		}
+	}
+	catch (...)
+	{
+	}
 }
 
 } // namespace connectionMatrix
