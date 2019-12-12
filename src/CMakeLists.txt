@@ -61,6 +61,7 @@ set(HEADER_FILES_COMMON
 	avdecc/controllerModel.hpp
 	avdecc/channelConnectionManager.hpp
 	avdecc/helper.hpp
+	avdecc/mappingsHelper.hpp
 	avdecc/hiveLogItems.hpp
 	avdecc/loggerModel.hpp
 	avdecc/commandChain.hpp
@@ -149,6 +150,7 @@ set(SOURCE_FILES_COMMON
 	avdecc/controllerModel.cpp
 	avdecc/channelConnectionManager.cpp
 	avdecc/helper.cpp
+	avdecc/mappingsHelper.cpp
 	avdecc/loggerModel.cpp
 	avdecc/commandChain.cpp
 	connectionMatrix/cornerWidget.cpp

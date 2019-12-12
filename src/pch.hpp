@@ -50,6 +50,7 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/loggerModel.hpp"
+#include "avdecc/mappingsHelper.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "avdecc/stringValidator.hpp"
 #include "connectionMatrix/cornerWidget.hpp"
