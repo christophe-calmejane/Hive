@@ -2987,7 +2987,7 @@ int Model::columnCount(QModelIndex const&) const
 	}
 }
 
-QVariant Model::data(QModelIndex const& index, int role) const
+QVariant Model::data([[maybe_unused]] QModelIndex const& index, [[maybe_unused]] int role) const
 {
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 	if (role == Qt::BackgroundRole)
