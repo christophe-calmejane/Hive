@@ -24,6 +24,7 @@
 #include "streamPortDynamicTreeWidgetItem.hpp"
 #include "mappingMatrix.hpp"
 #include <vector>
+#include <set>
 #include <utility>
 #include <cstdint>
 #include <QPushButton>
