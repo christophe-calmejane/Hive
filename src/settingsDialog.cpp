@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
