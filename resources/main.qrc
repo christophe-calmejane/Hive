@@ -15,5 +15,7 @@
         <file>misbehaving.png</file>
         <file>style.qss</file>
         <file>dsa_pub.pem</file>
+        <file>legal_notices.md</file>
+        <file>L-Acoustics.png</file>
     </qresource>
 </RCC>

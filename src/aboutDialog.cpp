@@ -23,10 +23,19 @@
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 
-class AboutDialogImpl final : private Ui::AboutDialog
+#include <QObject>
+#include <QPushButton>
+
+extern "C"
+{
+#include <mkdio.h>
+}
+
+class AboutDialogImpl final : public QWidget, private Ui::AboutDialog
 {
 public:
 	AboutDialogImpl(::AboutDialog* parent)
+		: _parent(parent)
 	{
 		// Link UI
 		setupUi(parent);
@@ -48,9 +57,61 @@ public:
 		}
 
 		// Configure text
-		auto const configuredText = aboutLabel->text().arg(hive::internals::applicationLongName).arg(hive::internals::versionString).arg(hive::internals::buildArchitecture).arg(hive::internals::buildConfiguration).arg(la::avdecc::getVersion().c_str()).arg(avdeccOptions.c_str()).arg(la::avdecc::controller::getVersion().c_str()).arg(avdeccControllerOptions.c_str()).arg(hive::internals::authors).arg(hive::internals::projectURL);
+		auto const configuredText = aboutLabel->text().arg(hive::internals::applicationLongName).arg(hive::internals::versionString).arg(hive::internals::buildArchitecture).arg(hive::internals::buildConfiguration).arg(la::avdecc::getVersion().c_str()).arg(avdeccOptions.c_str()).arg(la::avdecc::controller::getVersion().c_str()).arg(avdeccControllerOptions.c_str()).arg(hive::internals::originalAuthors).arg(hive::internals::projectURL);
 		aboutLabel->setText(configuredText);
+
+		connect(legalNotices, &QPushButton::clicked, this, &AboutDialogImpl::on_legalNotices_clicked);
 	}
+
+private:
+	Q_SLOT void on_legalNotices_clicked()
+	{
+		// Create dialog popup
+		auto dialog = QDialog{ _parent };
+		auto layout = QVBoxLayout{ &dialog };
+		auto view = QTextBrowser{};
+		layout.addWidget(&view);
+		dialog.setWindowTitle(hive::internals::applicationShortName + " - Legal Notices");
+		dialog.resize(800, 600);
+		auto closeButton = QPushButton{ "Close" };
+		connect(&closeButton, &QPushButton::clicked, &dialog,
+			[&dialog]()
+			{
+				dialog.accept();
+			});
+		layout.addWidget(&closeButton);
+
+		view.setContextMenuPolicy(Qt::NoContextMenu);
+		view.setOpenExternalLinks(true);
+		auto noticesFile = QFile(":/legal_notices.md");
+		if (noticesFile.open(QIODevice::ReadOnly))
+		{
+			auto content = QString(noticesFile.readAll()).toLocal8Bit();
+			auto* mmiot = mkd_string(content.data(), content.size(), 0);
+			if (mmiot == nullptr)
+				return;
+			std::unique_ptr<MMIOT, std::function<void(MMIOT*)>> scopedMmiot{ mmiot, [](MMIOT* ptr)
+				{
+					if (ptr != nullptr)
+						mkd_cleanup(ptr);
+				} };
+
+			if (mkd_compile(mmiot, 0) == 0)
+				return;
+
+			char* docPointer{ nullptr };
+			auto const docLength = mkd_document(mmiot, &docPointer);
+			if (docLength == 0)
+				return;
+
+			view.setHtml(QString::fromUtf8(docPointer, docLength));
+
+			// Run dialog
+			dialog.exec();
+		}
+	}
+
+	::AboutDialog* _parent{ nullptr };
 };
 
 AboutDialog::AboutDialog(QWidget* parent)
