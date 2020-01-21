@@ -66,7 +66,7 @@ private:
 	ActiveNetworkInterfaceModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ActiveNetworkInterfaceModel);
 
-	NetworkInterfaceModel _model{};
+	NetworkInterfaceListModel _model{};
 	std::unordered_set<la::avdecc::networkInterface::Interface::Type> _allowedInterfaceTypes{};
 };
 
@@ -102,6 +102,6 @@ bool ActiveNetworkInterfaceModel::filterAcceptsRow(int sourceRow, QModelIndex co
 {
 	Q_D(const ActiveNetworkInterfaceModel);
 	auto const index = d->_model.index(sourceRow);
-	auto const interfaceType = d->_model.interfaceType(index);
+	auto const interfaceType = d->_model.getInterfaceType(index);
 	return d->_allowedInterfaceTypes.count(interfaceType) == 1;
 }

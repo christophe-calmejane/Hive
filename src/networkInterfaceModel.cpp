@@ -22,192 +22,81 @@
 #include "avdecc/helper.hpp"
 #include "errorItemDelegate.hpp"
 
-#include <vector>
-
-class NetworkInterfaceModelPrivate : public QObject, private la::avdecc::networkInterface::NetworkInterfaceObserver
+bool NetworkInterfaceListModel::isEnabled(QString const& id) const noexcept
 {
-public:
-	NetworkInterfaceModelPrivate(NetworkInterfaceModel* q)
-		: q_ptr{ q }
+	auto const optInterface = _model.networkInterface(id.toStdString());
+
+	if (optInterface)
 	{
+		auto const& intfc = (*optInterface).get();
+		return intfc.isEnabled;
 	}
 
-private:
-	QModelIndex indexOf(std::string const& id) const noexcept
-	{
-		Q_Q(const NetworkInterfaceModel);
-
-		auto const it = std::find_if(_interfaces.begin(), _interfaces.end(),
-			[id](auto const& i)
-			{
-				return i.id == id;
-			});
-		if (it == _interfaces.end())
-		{
-			return {};
-		}
-		return q->createIndex(static_cast<int>(std::distance(_interfaces.begin(), it)), 0);
-	}
-
-	// la::avdecc::networkInterface::NetworkInterfaceObserver overrides
-	void onInterfaceAdded(la::avdecc::networkInterface::Interface const& intfc) noexcept
-	{
-		QMetaObject::invokeMethod(this,
-			[this, intfc = intfc]()
-			{
-				Q_Q(NetworkInterfaceModel);
-
-				// Only use non-virtual, enabled, Ethernet interfaces
-				if (!intfc.isVirtual)
-				{
-					auto const count = q->rowCount();
-					emit q->beginInsertRows({}, count, count);
-					_interfaces.push_back(Data{ intfc.id, intfc.alias, intfc.isEnabled, intfc.isConnected, intfc.type });
-					emit q->endInsertRows();
-				}
-			});
-	}
-	void onInterfaceRemoved(la::avdecc::networkInterface::Interface const& intfc) noexcept
-	{
-		QMetaObject::invokeMethod(this,
-			[this, id = intfc.id]()
-			{
-				Q_Q(NetworkInterfaceModel);
-
-				// Search the element
-				auto const index = indexOf(id);
-				if (index.isValid())
-				{
-					// Remove it
-					auto const idx = index.row();
-					emit q->beginRemoveRows({}, idx, idx);
-					_interfaces.erase(_interfaces.begin() + idx);
-					emit q->endRemoveRows();
-				}
-			});
-	}
-	void onInterfaceEnabledStateChanged(la::avdecc::networkInterface::Interface const& intfc, bool const isEnabled) noexcept
-	{
-		QMetaObject::invokeMethod(this,
-			[this, id = intfc.id, isEnabled]()
-			{
-				Q_Q(NetworkInterfaceModel);
-
-				// Search the element
-				auto const index = indexOf(id);
-				if (index.isValid())
-				{
-					// Change data and emit signal
-					auto const idx = index.row();
-					_interfaces[idx].isEnabled = isEnabled;
-					emit q->dataChanged(index, index);
-				}
-			},
-			Qt::QueuedConnection);
-	}
-	void onInterfaceConnectedStateChanged(la::avdecc::networkInterface::Interface const& intfc, bool const isConnected) noexcept
-	{
-		QMetaObject::invokeMethod(this,
-			[this, id = intfc.id, isConnected]()
-			{
-				Q_Q(NetworkInterfaceModel);
-
-				// Search the element
-				auto const index = indexOf(id);
-				if (index.isValid())
-				{
-					// Change data and emit signal
-					auto const idx = index.row();
-					_interfaces[idx].isConnected = isConnected;
-					emit q->dataChanged(index, index);
-				}
-			},
-			Qt::QueuedConnection);
-	}
-	void onInterfaceAliasChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, std::string const& /*alias*/) noexcept {}
-	void onInterfaceIPAddressInfosChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, la::avdecc::networkInterface::Interface::IPAddressInfos const& /*ipAddressInfos*/) noexcept {}
-	void onInterfaceGateWaysChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, la::avdecc::networkInterface::Interface::Gateways const& /*gateways*/) noexcept {}
-
-	NetworkInterfaceModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(NetworkInterfaceModel);
-
-	struct Data
-	{
-		std::string id{};
-		std::string name{};
-		bool isEnabled{ false };
-		bool isConnected{ false };
-		la::avdecc::networkInterface::Interface::Type interfaceType{ la::avdecc::networkInterface::Interface::Type::None };
-	};
-
-	// Private Members
-	std::vector<Data> _interfaces{};
-	DECLARE_AVDECC_OBSERVER_GUARD(NetworkInterfaceModelPrivate);
-};
-
-NetworkInterfaceModel::NetworkInterfaceModel(QObject* parent)
-	: QAbstractListModel{ parent }
-	, d_ptr{ new NetworkInterfaceModelPrivate{ this } }
-{
-	la::avdecc::networkInterface::registerObserver(d_ptr.get());
+	return false;
 }
 
-NetworkInterfaceModel::~NetworkInterfaceModel() = default;
-
-bool NetworkInterfaceModel::isEnabled(QString const& id) const noexcept
+la::avdecc::networkInterface::Interface::Type NetworkInterfaceListModel::getInterfaceType(QModelIndex const& index) const noexcept
 {
-	Q_D(const NetworkInterfaceModel);
+	auto const optInterface = _model.networkInterface(index);
 
-	auto const it = std::find_if(d->_interfaces.begin(), d->_interfaces.end(),
-		[id = id.toStdString()](auto const& i)
-		{
-			return i.id == id;
-		});
-	if (it == d->_interfaces.end())
+	if (optInterface)
 	{
-		return false;
-	}
-	return it->isEnabled;
-}
-
-la::avdecc::networkInterface::Interface::Type NetworkInterfaceModel::interfaceType(QModelIndex const& index) const noexcept
-{
-	Q_D(const NetworkInterfaceModel);
-
-	auto const idx = index.row();
-	if (idx >= 0 && idx < rowCount())
-	{
-		return d->_interfaces.at(idx).interfaceType;
+		auto const& intfc = (*optInterface).get();
+		return intfc.interfaceType;
 	}
 
 	return la::avdecc::networkInterface::Interface::Type::None;
 }
 
-int NetworkInterfaceModel::rowCount(QModelIndex const& /*parent*/) const
+// hive::modelsLibrary::NetworkInterfaceAbstractListModel overrides
+void NetworkInterfaceListModel::nameChanged(QModelIndex const& index, std::string const& name) noexcept
 {
-	Q_D(const NetworkInterfaceModel);
-	return d->_interfaces.size();
+	emit dataChanged(index, index, { Qt::DisplayRole });
+}
+void NetworkInterfaceListModel::enabledStateChanged(QModelIndex const& index, bool const isEnabled) noexcept
+{
+	emit dataChanged(index, index, { Qt::DisplayRole });
 }
 
-QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
+void NetworkInterfaceListModel::connectedStateChanged(QModelIndex const& index, bool const isConnected) noexcept
 {
-	Q_D(const NetworkInterfaceModel);
+	emit dataChanged(index, index, { Qt::DisplayRole });
+}
 
-	auto const idx = index.row();
-	if (idx >= 0 && idx < rowCount())
+// QAbstractListModel overrides
+int NetworkInterfaceListModel::rowCount(QModelIndex const& /*parent*/) const
+{
+	return _model.rowCount();
+}
+
+QVariant NetworkInterfaceListModel::data(QModelIndex const& index, int role) const
+{
+	switch (role)
 	{
-		switch (role)
+		case Qt::DisplayRole:
 		{
-			case Qt::DisplayRole:
-				return QString::fromStdString(d->_interfaces.at(idx).name);
-			case ErrorItemDelegate::ErrorRole:
+			auto const optInterface = _model.networkInterface(index);
+			if (optInterface)
 			{
-				auto const& intfc = d->_interfaces.at(idx);
+				auto const& intfc = (*optInterface).get();
+				return QString::fromStdString(intfc.name);
+			}
+		}
+		case ErrorItemDelegate::ErrorRole: // TODO -> Define this role in NetworkInterfaceModel directly (probably another name !)
+		{
+			auto const optInterface = _model.networkInterface(index);
+			if (optInterface)
+			{
+				auto const& intfc = (*optInterface).get();
 				return intfc.isEnabled && !intfc.isConnected;
 			}
-			case Qt::ForegroundRole:
+		}
+		case Qt::ForegroundRole:
+		{
+			auto const optInterface = _model.networkInterface(index);
+			if (optInterface)
 			{
-				auto const& intfc = d->_interfaces.at(idx);
+				auto const& intfc = (*optInterface).get();
 				if (!intfc.isEnabled)
 				{
 					return qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Gray);
@@ -222,31 +111,51 @@ QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const
 					return QColor{ Qt::black };
 				}
 			}
-			case Qt::UserRole:
-				return QString::fromStdString(d->_interfaces.at(idx).id);
-			case Qt::WhatsThisRole:
+		}
+		case Qt::UserRole:
+		{
+			auto const optInterface = _model.networkInterface(index);
+			if (optInterface)
 			{
-				auto const& intfc = d->_interfaces.at(idx);
+				auto const& intfc = (*optInterface).get();
+				return QString::fromStdString(intfc.id);
+			}
+		}
+		case Qt::WhatsThisRole:
+		{
+			auto const optInterface = _model.networkInterface(index);
+			if (optInterface)
+			{
+				auto const& intfc = (*optInterface).get();
 				return QString{ "%1#%2" }.arg(la::avdecc::utils::to_integral(intfc.interfaceType)).arg(intfc.id.c_str());
 			}
-			case Qt::DecorationRole:
-				return avdecc::helper::interfaceTypeIcon(d->_interfaces.at(idx).interfaceType);
+		}
+		case Qt::DecorationRole:
+		{
+			auto const optInterface = _model.networkInterface(index);
+			if (optInterface)
+			{
+				auto const& intfc = (*optInterface).get();
+				return avdecc::helper::interfaceTypeIcon(intfc.interfaceType);
+			}
 		}
 	}
+
 	return {};
 }
 
-Qt::ItemFlags NetworkInterfaceModel::flags(QModelIndex const& index) const
+Qt::ItemFlags NetworkInterfaceListModel::flags(QModelIndex const& index) const
 {
-	Q_D(const NetworkInterfaceModel);
+	auto const optInterface = _model.networkInterface(index);
 
-	auto const idx = index.row();
-	if (idx >= 0 && idx < rowCount())
+	if (optInterface)
 	{
-		if (d->_interfaces.at(idx).isEnabled)
+		auto const& intfc = (*optInterface).get();
+		if (intfc.isEnabled)
 		{
 			return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 		}
 	}
+
 	return {};
 }

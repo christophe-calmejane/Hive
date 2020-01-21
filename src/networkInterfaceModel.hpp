@@ -19,29 +19,25 @@
 
 #pragma once
 
-#include <QAbstractListModel>
-#include <QScopedPointer>
-#include <la/avdecc/networkInterfaceHelper.hpp>
+#include <hive/modelsLibrary/networkInterfaceModel.hpp>
 
-// Model for Network Interfaces
-class NetworkInterfaceModelPrivate;
-class NetworkInterfaceModel final : public QAbstractListModel
+class NetworkInterfaceListModel : public hive::modelsLibrary::NetworkInterfaceAbstractListModel
 {
 public:
-	NetworkInterfaceModel(QObject* parent = nullptr);
-	virtual ~NetworkInterfaceModel();
-
 	bool isEnabled(QString const& id) const noexcept;
-
-	la::avdecc::networkInterface::Interface::Type interfaceType(QModelIndex const& index) const noexcept;
+	la::avdecc::networkInterface::Interface::Type getInterfaceType(QModelIndex const& index) const noexcept;
 
 private:
+	// hive::modelsLibrary::NetworkInterfaceAbstractListModel overrides
+	virtual void nameChanged(QModelIndex const& index, std::string const& name) noexcept override;
+	virtual void enabledStateChanged(QModelIndex const& index, bool const isEnabled) noexcept override;
+	virtual void connectedStateChanged(QModelIndex const& index, bool const isConnected) noexcept override;
+
 	// QAbstractListModel overrides
 	virtual int rowCount(QModelIndex const& parent = {}) const override;
 	virtual QVariant data(QModelIndex const& index, int role) const override;
 	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
 
-private:
-	QScopedPointer<NetworkInterfaceModelPrivate> const d_ptr;
-	Q_DECLARE_PRIVATE(NetworkInterfaceModel);
+	// Private members
+	hive::modelsLibrary::NetworkInterfaceModel _model{ this };
 };

@@ -38,7 +38,8 @@ set(HEADER_FILES_GENERATED
 )
 
 set(HEADER_FILES_PUBLIC
-	${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
+${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
+${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/networkInterfaceModel.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -46,6 +47,7 @@ set(HEADER_FILES_COMMON
 
 set(SOURCE_FILES_COMMON
 	controllerManager.cpp
+	networkInterfaceModel.cpp
 )
 
 # Group source files
