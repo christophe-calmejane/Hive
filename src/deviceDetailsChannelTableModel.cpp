@@ -18,23 +18,20 @@
 */
 
 #include "deviceDetailsChannelTableModel.hpp"
-
-#include "avdecc/channelConnectionManager.hpp"
-
-#include <QCoreApplication>
-#include <QLayout>
-#include <QPainter>
-
-#include <la/avdecc/avdecc.hpp>
-#include <la/avdecc/controller/avdeccController.hpp>
-
 #include "ui_deviceDetailsDialog.h"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "connectionMatrix/paintHelper.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 
+#include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+
+#include <QCoreApplication>
+#include <QLayout>
+#include <QPainter>
 
 /**
 * Helper function for connectionStatus medthod. Checks if the stream is currently connected.
@@ -84,7 +81,7 @@ bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkS
 // Returns the connection status of the given talker-listener pair.
 DeviceDetailsChannelTableModel::ConnectionStatus calculateConnectionStatus(la::avdecc::UniqueIdentifier talkerEntityId, la::avdecc::entity::model::StreamIndex talkerStreamIndex, la::avdecc::UniqueIdentifier listenerEntityId, la::avdecc::entity::model::StreamIndex listenerStreamIndex)
 {
-	auto const& manager = avdecc::ControllerManager::getInstance();
+	auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto talkerEntity = manager.getControlledEntity(talkerEntityId);
 	auto listenerEntity = manager.getControlledEntity(listenerEntityId);
 	if (!talkerEntity || !listenerEntity)
@@ -394,7 +391,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				{
 					try
 					{
-						auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo->sourceEntityId);
+						auto const& controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(connectionInfo->sourceEntityId);
 						if (controlledEntity)
 						{
 							auto const configurationIndex = connectionInfo->sourceClusterChannelInfo->configurationIndex;
@@ -452,7 +449,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 						for (auto const& clusterKV : connection->targetClusterChannels)
 						{
 							auto const& targetEntityId = connection->targetEntityId;
-							auto const& manager = avdecc::ControllerManager::getInstance();
+							auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto controlledEntity = manager.getControlledEntity(targetEntityId);
 							if (!controlledEntity)
 							{
@@ -555,7 +552,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							listenerStreamIndex = connection->sourceStreamIndex;
 						}
 
-						auto const& manager = avdecc::ControllerManager::getInstance();
+						auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto talkerEntity = manager.getControlledEntity(talkerEntityId);
 						auto listenerEntity = manager.getControlledEntity(listenerEntityId);
 

@@ -24,9 +24,10 @@
 #include <QStyledItemDelegate>
 #include <QTableView>
 
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 #include "connectionMatrix/paintHelper.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 class DeviceDetailsChannelTableModelPrivate;
 

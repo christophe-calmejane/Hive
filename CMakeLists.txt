@@ -16,6 +16,7 @@ set(HIVE_VERSION 1.2.4.1)
 
 # Build options
 option(BUILD_HIVE_TESTS "Build Hive tests." TRUE)
+option(BUILD_HIVE_MODELS_SHARED_LIBRARY "Build Hive Models Shared Library (for external usage)." FALSE)
 option(BUILD_HIVE_APPLICATION "Build Hive main application." TRUE)
 # Install options
 option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." TRUE)

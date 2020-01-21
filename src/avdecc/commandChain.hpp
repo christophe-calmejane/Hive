@@ -25,7 +25,7 @@
 #include <QObject>
 #include <QMap>
 
-#include "avdecc/controllerManager.hpp"
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 namespace avdecc
 {
@@ -48,8 +48,8 @@ enum class CommandExecutionError
 struct CommandErrorInfo
 {
 	CommandExecutionError errorType{ CommandExecutionError::NoError };
-	std::optional<avdecc::ControllerManager::AcmpCommandType> commandTypeAcmp{ std::nullopt };
-	std::optional<avdecc::ControllerManager::AecpCommandType> commandTypeAecp{ std::nullopt };
+	std::optional<hive::modelsLibrary::ControllerManager::AcmpCommandType> commandTypeAcmp{ std::nullopt };
+	std::optional<hive::modelsLibrary::ControllerManager::AecpCommandType> commandTypeAecp{ std::nullopt };
 };
 
 using CommandExecutionErrors = std::unordered_multimap<la::avdecc::UniqueIdentifier, CommandErrorInfo, la::avdecc::UniqueIdentifier::hash>;
@@ -81,8 +81,8 @@ public:
 	void append(AsyncCommand const& command) noexcept;
 	void append(std::vector<AsyncCommand> const& commands) noexcept;
 
-	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AcmpCommandType const commandType) noexcept;
-	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AecpCommandType const commandType) noexcept;
+	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, hive::modelsLibrary::ControllerManager::AcmpCommandType const commandType) noexcept;
+	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType) noexcept;
 	void addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error) noexcept;
 
 	size_t parallelCommandCount() const noexcept;

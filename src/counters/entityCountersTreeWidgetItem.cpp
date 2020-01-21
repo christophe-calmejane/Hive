@@ -48,7 +48,7 @@ EntityCountersTreeWidgetItem::EntityCountersTreeWidgetItem(la::avdecc::UniqueIde
 	updateCounters(counters);
 
 	// Listen for EntityCountersChanged
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::entityCountersChanged, this,
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::entityCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::EntityCounters const& counters)
 		{
 			if (entityID == _entityID)

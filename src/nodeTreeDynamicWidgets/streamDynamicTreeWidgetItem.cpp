@@ -39,7 +39,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 {
 	setText(0, "Dynamic Info");
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto listenerEntity = manager.getControlledEntity(entityID);
 
 	auto* currentFormatItem = new QTreeWidgetItem(this);
@@ -59,16 +59,16 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		{
 			if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
-				avdecc::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
 			}
 			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{
-				avdecc::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
 			}
 		});
 
 	// Listen for changes
-	connect(&manager, &avdecc::ControllerManager::streamFormatChanged, formatComboBox,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::streamFormatChanged, formatComboBox,
 		[this, formatComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 		{
 			if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -119,7 +119,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		}
 
 		// Listen for events
-		connect(&manager, &avdecc::ControllerManager::streamFormatChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamFormatChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 			{
 				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -127,7 +127,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 					updateStreamFormat(streamFormat);
 				}
 			});
-		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamRunningChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
 			{
 				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -135,7 +135,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 					updateStreamIsRunning(isRunning);
 				}
 			});
-		connect(&manager, &avdecc::ControllerManager::streamDynamicInfoChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamDynamicInfoChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info)
 			{
 				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -176,7 +176,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		updateConnections(outputDynamicModel->connections);
 
 		// Listen for Connections changed signal
-		connect(&manager, &avdecc::ControllerManager::streamOutputConnectionsChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamOutputConnectionsChanged, this,
 			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections)
 			{
 				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)

@@ -60,8 +60,8 @@ public:
 		connect(&mediaClockManager, &avdecc::mediaClock::MCDomainManager::applyMediaClockDomainModelProgressUpdate, this, &MediaClockManagementDialogImpl::applyMediaClockDomainModelProgressUpdate);
 
 
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
-		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &MediaClockManagementDialogImpl::entityOffline);
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &MediaClockManagementDialogImpl::entityOffline);
 
 		treeViewMediaClockDomains->setModel(&_domainTreeModel);
 		auto* delegateDomainEntity = new SampleRateDomainDelegate(treeViewMediaClockDomains);
@@ -438,7 +438,7 @@ public:
 			{
 				continue; // entity already displayed.
 			}
-			auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+			auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(it->first);
 			auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
 			if (controlledEntity)
 			{
@@ -454,13 +454,13 @@ public:
 				{
 					switch (*i->second.commandTypeAcmp)
 					{
-						case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+						case hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream:
 							errors += "Connecting stream failed. ";
 							break;
-						case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+						case hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectStream:
 							errors += "Disconnecting stream failed. ";
 							break;
-						case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+						case hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
 							errors += "Disconnecting talker stream failed. ";
 							break;
 						default:
@@ -471,10 +471,10 @@ public:
 				{
 					switch (*i->second.commandTypeAecp)
 					{
-						case avdecc::ControllerManager::AecpCommandType::SetClockSource:
+						case hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource:
 							errors += "Setting the clock source failed. ";
 							break;
-						case avdecc::ControllerManager::AecpCommandType::SetSamplingRate:
+						case hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate:
 							errors += "Setting the sampling rate failed. ";
 							break;
 						default:

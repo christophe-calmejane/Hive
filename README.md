@@ -34,6 +34,10 @@ Before running Hive on a linux system, you must give the program access to RAW S
 sudo setcap cap_net_raw+ep /path/to/Hive
 ```
 
+### Troubleshooting
+
+- If you have the _cannot find winsock2.h_ compilation error, install or reinstall [Windows 8.1 SDK](https://developer.microsoft.com/en-US/windows/downloads/sdk-archive)
+
 ## Versioning
 
 We use [SemVer](http://semver.org/) for versioning.

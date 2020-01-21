@@ -18,8 +18,9 @@
 */
 
 #include "entityInspector.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QHeaderView>
 
@@ -55,12 +56,12 @@ EntityInspector::EntityInspector(QWidget* parent)
 	connect(&_splitter, &QSplitter::splitterMoved, this, &EntityInspector::stateChanged);
 	connect(_nodeTreeWiget.header(), &QHeaderView::sectionResized, this, &EntityInspector::stateChanged);
 
-	auto& controllerManager = avdecc::ControllerManager::getInstance();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 
-	connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &EntityInspector::controllerOffline);
-	connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &EntityInspector::entityOnline);
-	connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &EntityInspector::entityOffline);
-	connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &EntityInspector::entityNameChanged);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &EntityInspector::controllerOffline);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &EntityInspector::entityOnline);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &EntityInspector::entityOffline);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &EntityInspector::entityNameChanged);
 }
 
 void EntityInspector::setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
@@ -138,7 +139,7 @@ void EntityInspector::entityNameChanged(la::avdecc::UniqueIdentifier const entit
 
 void EntityInspector::configureWindowTitle()
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(_controlledEntityTreeWiget.controlledEntityID());
 	if (controlledEntity)
 	{

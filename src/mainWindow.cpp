@@ -38,7 +38,6 @@
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 #include "avdecc/controllerModel.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
 #include "internals/config.hpp"
@@ -62,6 +61,7 @@
 #include "defaults.hpp"
 #include "windowsNpfHelper.hpp"
 
+#include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/networkInterfaceHelper.hpp>
 
 #include <mutex>
@@ -267,7 +267,7 @@ void MainWindowImpl::currentControllerChanged()
 	}
 
 	// Clear the current controller
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	manager.destroyController();
 	_controllerEntityIDLabel.clear();
 
@@ -311,7 +311,7 @@ void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 		return;
 	}
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto const entityID = _controllerModel->controlledEntityID(index);
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
@@ -529,6 +529,7 @@ void MainWindowImpl::loadSettings()
 
 	// Configure settings observers
 	settings.registerSettingObserver(settings::Network_ProtocolType.name, this);
+	settings.registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 	settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
@@ -549,7 +550,7 @@ static inline bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entit
 
 static inline bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
 	if (controlledEntity)
@@ -567,7 +568,7 @@ void MainWindowImpl::connectSignals()
 	connect(&_discoverButton, &QPushButton::clicked, this,
 		[]()
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			manager.discoverRemoteEntities();
 		});
 
@@ -598,7 +599,7 @@ void MainWindowImpl::connectSignals()
 	connect(controllerTableView, &QTableView::doubleClicked, this,
 		[this](QModelIndex const& index)
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const entityID = _controllerModel->controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
@@ -616,7 +617,7 @@ void MainWindowImpl::connectSignals()
 		{
 			auto const index = controllerTableView->indexAt(pos);
 
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const entityID = _controllerModel->controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
@@ -872,26 +873,26 @@ void MainWindowImpl::connectSignals()
 		});
 
 	// Connect ControllerManager events
-	auto& manager = avdecc::ControllerManager::getInstance();
-	connect(&manager, &avdecc::ControllerManager::transportError, this,
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	connect(&manager, &hive::modelsLibrary::ControllerManager::transportError, this,
 		[this]()
 		{
 			LOG_HIVE_ERROR("Error reading from the active Network Interface");
 		});
-	connect(&manager, &avdecc::ControllerManager::endAecpCommand, this,
-		[this](la::avdecc::UniqueIdentifier const /*entityID*/, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+	connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this,
+		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
 			{
-				QMessageBox::warning(_parent, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+				QMessageBox::warning(_parent, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::endAcmpCommand, this,
-		[this](la::avdecc::UniqueIdentifier const /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+	connect(&manager, &hive::modelsLibrary::ControllerManager::endAcmpCommand, this,
+		[this](la::avdecc::UniqueIdentifier const /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, hive::modelsLibrary::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::ControlStatus::Success)
 			{
-				QMessageBox::warning(_parent, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+				QMessageBox::warning(_parent, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
 			}
 		});
 
@@ -914,7 +915,7 @@ void MainWindowImpl::connectSignals()
 			auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/FullDump_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), filterName);
 			if (!filename.isEmpty())
 			{
-				auto& manager = avdecc::ControllerManager::getInstance();
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				auto [error, message] = manager.serializeAllControlledEntitiesAsJson(filename, flags, generateDumpSourceString());
 				if (!error)
 				{
@@ -1169,6 +1170,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
 	// Remove settings observers
 	settings.unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
+	settings.unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
 	settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
 	settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
@@ -1197,7 +1199,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 
 void MainWindow::dropEvent(QDropEvent* event)
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	auto const loadEntity = [&manager](auto const& filePath, auto const flags)
 	{
@@ -1321,8 +1323,25 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	{
 		currentControllerChanged();
 	}
+	else if (name == settings::Controller_DiscoveryDelay.name)
+	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		auto const delay = std::chrono::seconds{ value.toInt() };
+		manager.setAutomaticDiscoveryDelay(delay);
+	}
 	else if (name == settings::Controller_AemCacheEnabled.name || name == settings::Controller_FullStaticModelEnabled.name)
 	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		if (name == settings::Controller_AemCacheEnabled.name)
+		{
+			auto const enabled = value.toBool();
+			manager.setEnableAemCache(enabled);
+		}
+		else if (name == settings::Controller_FullStaticModelEnabled.name)
+		{
+			auto const enabled = value.toBool();
+			manager.setEnableFullAemEnumeration(enabled);
+		}
 		if (_shown)
 		{
 			currentControllerChanged();

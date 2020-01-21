@@ -66,7 +66,7 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		parent->setItemWidget(clearMappings, 1, clearMappingsButton);
 
 		// Listen for streamPortAudioMappingsChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamPortAudioMappingsChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamPortAudioMappingsChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
 			{
 				if (entityID == _entityID && descriptorType == _streamPortType && streamPortIndex == _streamPortIndex)
@@ -89,7 +89,7 @@ void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 {
 	try
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(_entityID);
 		if (controlledEntity)
 		{
@@ -122,7 +122,7 @@ void StreamPortDynamicTreeWidgetItem::updateMappings()
 
 	try
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(_entityID);
 		if (controlledEntity)
 		{

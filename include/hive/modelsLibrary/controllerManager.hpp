@@ -27,12 +27,10 @@
 #include <cstdint>
 
 #include <QObject>
-#include <QApplication>
-#include <QThread>
 
-#define ASSERT_QT_MAIN_THREAD AVDECC_ASSERT(QApplication::instance()->thread() == QThread::currentThread(), "Should be in Qt Main Thread")
-
-namespace avdecc
+namespace hive
+{
+namespace modelsLibrary
 {
 class ControllerManager : public QObject
 {
@@ -131,12 +129,12 @@ public:
 	using RequestExclusiveAccessHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::controller::Controller::ExclusiveAccessToken::UniquePointer&& token)>;
 
 	/**
-	* @brief Creates a new controller, replacing previous one if any.
-	* @details Creates a new controller, first removing the previous one if any.
-	*          If an error occurs during the setup of the new controller, the previous one is NOT restored.
-	* @note Might throw la::avdecc::controller::Controller::Exception.
-	*       All observers should be removed from the previous controller before setting a new one.
-	*/
+			* @brief Creates a new controller, replacing previous one if any.
+			* @details Creates a new controller, first removing the previous one if any.
+			*          If an error occurs during the setup of the new controller, the previous one is NOT restored.
+			* @note Might throw la::avdecc::controller::Controller::Exception.
+			*       All observers should be removed from the previous controller before setting a new one.
+			*/
 	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) = 0;
 
 	/** Destroys the currently stored instance of the controller. */
@@ -156,6 +154,12 @@ public:
 
 	/** Deserializes a JSON file representing an entity, and loads it as a virtual ControlledEntity. */
 	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept = 0;
+
+	/** Enable/Disable AEM cache */
+	virtual void setEnableAemCache(bool const enable) noexcept = 0;
+
+	/** Enable/Disable full AEM enumeration */
+	virtual void setEnableFullAemEnumeration(bool const enable) noexcept = 0;
 
 	/** Counter error flags */
 	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
@@ -280,13 +284,13 @@ public:
 	Q_SIGNAL void streamOutputConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections);
 
 	/* Entity commands signals */
-	Q_SIGNAL void beginAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType);
-	Q_SIGNAL void endAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status);
-	Q_SIGNAL void beginAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType);
-	Q_SIGNAL void endAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status);
+	Q_SIGNAL void beginAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType);
+	Q_SIGNAL void endAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status);
+	Q_SIGNAL void beginAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, hive::modelsLibrary::ControllerManager::AcmpCommandType commandType);
+	Q_SIGNAL void endAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, hive::modelsLibrary::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status);
 
 	/* Counter errors signals */
-	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters);
+	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, hive::modelsLibrary::ControllerManager::StreamInputErrorCounters const& errorCounters);
 
 	/* Statistics signals */
 	Q_SIGNAL void aecpRetryCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
@@ -294,8 +298,8 @@ public:
 	Q_SIGNAL void aecpUnexpectedResponseCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
 	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
-	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::StatisticsErrorCounters const& errorCounters);
+	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters);
+};
 
-}; // namespace avdecc
-
-} // namespace avdecc
+} // namespace modelsLibrary
+} // namespace hive

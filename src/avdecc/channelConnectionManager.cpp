@@ -18,14 +18,14 @@
 */
 
 #include "channelConnectionManager.hpp"
+#include "helper.hpp"
+
+#include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <set>
 #include <algorithm>
-#include <la/avdecc/avdecc.hpp>
-#include <la/avdecc/controller/avdeccController.hpp>
-
-#include "helper.hpp"
-#include "controllerManager.hpp"
 
 namespace avdecc
 {
@@ -42,13 +42,13 @@ public:
 	*/
 	ChannelConnectionManagerImpl() noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		connect(&manager, &ControllerManager::controllerOffline, this, &ChannelConnectionManagerImpl::onControllerOffline);
-		connect(&manager, &ControllerManager::entityOnline, this, &ChannelConnectionManagerImpl::onEntityOnline);
-		connect(&manager, &ControllerManager::entityOffline, this, &ChannelConnectionManagerImpl::onEntityOffline);
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		connect(&manager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ChannelConnectionManagerImpl::onControllerOffline);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ChannelConnectionManagerImpl::onEntityOnline);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ChannelConnectionManagerImpl::onEntityOffline);
 
-		connect(&manager, &ControllerManager::streamInputConnectionChanged, this, &ChannelConnectionManagerImpl::onStreamInputConnectionChanged);
-		connect(&manager, &ControllerManager::streamPortAudioMappingsChanged, this, &ChannelConnectionManagerImpl::onStreamPortAudioMappingsChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamInputConnectionChanged, this, &ChannelConnectionManagerImpl::onStreamInputConnectionChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamPortAudioMappingsChanged, this, &ChannelConnectionManagerImpl::onStreamPortAudioMappingsChanged);
 	}
 
 	/**
@@ -183,7 +183,7 @@ private:
 	*/
 	virtual bool isOutputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification const& streamIdentification) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
 		if (controlledEntity)
 		{
@@ -213,7 +213,7 @@ private:
 	*/
 	virtual bool isInputStreamPrimaryOrNonRedundant(la::avdecc::entity::model::StreamIdentification const& streamIdentification) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
 		if (controlledEntity)
 		{
@@ -242,7 +242,7 @@ private:
 	*/
 	std::optional<la::avdecc::controller::model::VirtualIndex> getRedundantVirtualIndexFromInputStreamIndex(la::avdecc::entity::model::StreamIdentification const& streamIdentification) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
 		if (controlledEntity)
 		{
@@ -282,7 +282,7 @@ private:
 	*/
 	std::optional<la::avdecc::controller::model::VirtualIndex> getRedundantVirtualIndexFromOutputStreamIndex(la::avdecc::entity::model::StreamIdentification const& streamIdentification) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(streamIdentification.entityID);
 		if (controlledEntity)
 		{
@@ -319,7 +319,7 @@ private:
 
 	std::optional<la::avdecc::entity::model::StreamIndex> getPrimaryOutputStreamIndexFromVirtualIndex(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::VirtualIndex const virtualIndex) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
@@ -336,7 +336,7 @@ private:
 
 	std::optional<la::avdecc::entity::model::StreamIndex> getPrimaryInputStreamIndexFromVirtualIndex(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::VirtualIndex const virtualIndex) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
@@ -354,7 +354,7 @@ private:
 	std::vector<std::pair<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>> getRedundantStreamIndexPairs(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::controller::model::VirtualIndex const talkerStreamVirtualIndex, la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::controller::model::VirtualIndex const listenerStreamVirtualIndex) const noexcept
 	{
 		std::vector<std::pair<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>> result;
-		auto const& manager = avdecc::ControllerManager::getInstance();
+		auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 		auto const controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
 		auto const controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
@@ -392,7 +392,7 @@ private:
 	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const talkerEntityId)
 	{
 		auto disconnectedStreams = std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>>{};
-		auto const& manager = avdecc::ControllerManager::getInstance();
+		auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{
 			auto const controlledEntity = manager.getControlledEntity(potentialListenerEntityId);
@@ -449,7 +449,7 @@ private:
 
 		// find channel connections via connection matrix + stream connections.
 		// an output channel can be connected to one or multiple input channels on different devices or to none.
-		auto const& manager = avdecc::ControllerManager::getInstance();
+		auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 		if (!controlledEntity)
 		{
@@ -692,7 +692,7 @@ private:
 		// find channel connections via connection matrix + stream connections.
 		// an output channel can be connected to one or multiple input channels on different devices or to none.
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -898,7 +898,7 @@ private:
 	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const& talkerEntityId) const noexcept
 	{
 		auto disconnectedStreams = std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>>{};
-		auto const& manager = avdecc::ControllerManager::getInstance();
+		auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{
 			auto const controlledEntity = manager.getControlledEntity(potentialListenerEntityId);
@@ -931,7 +931,7 @@ private:
 	*/
 	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamOutputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const primaryStreamIndex) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -968,7 +968,7 @@ private:
 	*/
 	virtual std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> getRedundantStreamInputsForPrimary(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const primaryStreamIndex) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -1023,7 +1023,7 @@ private:
 		// find channel connections via connection matrix + stream connections.
 		// an output channel can be connected to one or multiple input channels on different devices or to none.
 
-		auto const& manager = avdecc::ControllerManager::getInstance();
+		auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(sourceEntityId);
 		if (!controlledEntity)
 		{
@@ -1171,7 +1171,7 @@ private:
 	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getStreamOutputConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex const outputStreamIndex) const noexcept
 	{
 		auto disconnectedStreams = std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>>{};
-		auto const& manager = avdecc::ControllerManager::getInstance();
+		auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{
 			auto const controlledEntity = manager.getControlledEntity(potentialListenerEntityId);
@@ -1252,7 +1252,7 @@ private:
 			}
 		};
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
 		auto controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
 
@@ -1506,7 +1506,7 @@ private:
 		// convenience function to create StreamChannelInfo
 		auto buildStreamChannelInfo = [talkerEntityId, listenerEntityId, streamConnection, isStreamAlreadyConnected, talkerClusterOffset, listenerClusterOffset](uint16_t streamChannel, bool reusesTalkerMapping, bool reusesListenerMapping) -> std::optional<StreamChannelInfo>
 		{
-			auto const& manager = avdecc::ControllerManager::getInstance();
+			auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const talkerEntity = manager.getControlledEntity(talkerEntityId);
 			auto const listenerEntity = manager.getControlledEntity(listenerEntityId);
 			if (!talkerEntity || !listenerEntity)
@@ -1637,7 +1637,7 @@ private:
 	la::avdecc::entity::model::AudioMappings getPossibleDefaultMappings(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, StreamChannelMappings const& newMappingsTalker, StreamChannelMappings const& overriddenMappingsListener) const
 	{
 		la::avdecc::entity::model::AudioMappings result;
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
 		if (!controlledTalkerEntity)
 		{
@@ -1796,14 +1796,14 @@ private:
 					commandsChangeStreamFormat.push_back(
 						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 						{
-							auto& manager = avdecc::ControllerManager::getInstance();
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
 								// notify SequentialAsyncCommandExecuter that the command completed.
 								auto error = commandChain::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
 								if (error != commandChain::CommandExecutionError::NoError)
 								{
-									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::SetStreamFormat);
+									parentCommandSet->addErrorInfo(entityID, error, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat);
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
@@ -1816,14 +1816,14 @@ private:
 					commandsChangeStreamFormat.push_back(
 						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 						{
-							auto& manager = avdecc::ControllerManager::getInstance();
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
 								// notify SequentialAsyncCommandExecuter that the command completed.
 								auto error = commandChain::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
 								if (error != commandChain::CommandExecutionError::NoError)
 								{
-									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::SetStreamFormat);
+									parentCommandSet->addErrorInfo(entityID, error, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat);
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
@@ -1853,7 +1853,7 @@ private:
 				commandsCreateStreamConnections.push_back(
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
-						auto& manager = avdecc::ControllerManager::getInstance();
+						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 						{
 							// notify SequentialAsyncCommandExecuter that the command completed.
@@ -1868,16 +1868,16 @@ private:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoBandwidth:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoStreamIndex:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerExclusive:
-										parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(talkerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 										break;
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerMisbehaving:
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerUnknownID:
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerExclusive:
-										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 										break;
 									default:
-										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
-										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 								}
 							}
 							parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
@@ -1896,7 +1896,7 @@ private:
 						commandsCreateStreamConnections.push_back(
 							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 							{
-								auto& manager = avdecc::ControllerManager::getInstance();
+								auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 								auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 								{
 									// notify SequentialAsyncCommandExecuter that the command completed.
@@ -1911,16 +1911,16 @@ private:
 											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoBandwidth:
 											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoStreamIndex:
 											case la::avdecc::entity::LocalEntity::ControlStatus::TalkerExclusive:
-												parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+												parentCommandSet->addErrorInfo(talkerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 												break;
 											case la::avdecc::entity::LocalEntity::ControlStatus::ListenerMisbehaving:
 											case la::avdecc::entity::LocalEntity::ControlStatus::ListenerUnknownID:
 											case la::avdecc::entity::LocalEntity::ControlStatus::ListenerExclusive:
-												parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+												parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 												break;
 											default:
-												parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
-												parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+												parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
+												parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 										}
 									}
 									parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
@@ -1973,7 +1973,7 @@ private:
 				commandsTempDisconnectStreams.push_back(
 					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
-						auto& manager = avdecc::ControllerManager::getInstance();
+						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 						{
 							// notify SequentialAsyncCommandExecuter that the command completed.
@@ -1988,16 +1988,16 @@ private:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoBandwidth:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoStreamIndex:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerExclusive:
-										parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::DisconnectStream);
+										parentCommandSet->addErrorInfo(talkerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectStream);
 										break;
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerMisbehaving:
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerUnknownID:
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerExclusive:
-										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::DisconnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectStream);
 										break;
 									default:
-										parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::DisconnectStream);
-										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::DisconnectStream);
+										parentCommandSet->addErrorInfo(talkerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectStream);
 										break;
 								}
 							}
@@ -2015,7 +2015,7 @@ private:
 				commandsReconnectStreams.push_back(
 					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
-						auto& manager = avdecc::ControllerManager::getInstance();
+						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 						{
 							// notify SequentialAsyncCommandExecuter that the command completed.
@@ -2030,16 +2030,16 @@ private:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoBandwidth:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerNoStreamIndex:
 									case la::avdecc::entity::LocalEntity::ControlStatus::TalkerExclusive:
-										parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(talkerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 										break;
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerMisbehaving:
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerUnknownID:
 									case la::avdecc::entity::LocalEntity::ControlStatus::ListenerExclusive:
-										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 										break;
 									default:
-										parentCommandSet->addErrorInfo(talkerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
-										parentCommandSet->addErrorInfo(listenerEntityID, error, avdecc::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(talkerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
+										parentCommandSet->addErrorInfo(listenerEntityID, error, hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream);
 										break;
 								}
 							}
@@ -2059,14 +2059,14 @@ private:
 					commandsRemoveMappings.push_back(
 						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 						{
-							auto& manager = avdecc::ControllerManager::getInstance();
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
 								// notify SequentialAsyncCommandExecuter that the command completed.
 								auto error = commandChain::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
 								if (error != commandChain::CommandExecutionError::NoError)
 								{
-									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
+									parentCommandSet->addErrorInfo(entityID, error, hive::modelsLibrary::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
@@ -2085,14 +2085,14 @@ private:
 					commandsCreateMappings.push_back(
 						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 						{
-							auto& manager = avdecc::ControllerManager::getInstance();
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
 								// notify SequentialAsyncCommandExecuter that the command completed.
 								auto error = commandChain::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
 								if (error != commandChain::CommandExecutionError::NoError)
 								{
-									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
+									parentCommandSet->addErrorInfo(entityID, error, hive::modelsLibrary::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
@@ -2109,14 +2109,14 @@ private:
 					commandsCreateMappings.push_back(
 						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 						{
-							auto& manager = avdecc::ControllerManager::getInstance();
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
 								// notify SequentialAsyncCommandExecuter that the command completed.
 								auto error = commandChain::AsyncParallelCommandSet::aemCommandStatusToCommandError(status);
 								if (error != commandChain::CommandExecutionError::NoError)
 								{
-									parentCommandSet->addErrorInfo(entityID, error, avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
+									parentCommandSet->addErrorInfo(entityID, error, hive::modelsLibrary::ControllerManager::AecpCommandType::AddStreamPortAudioMappings);
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
@@ -2177,7 +2177,7 @@ private:
 	{
 		// check if the connection exists
 		// and remove all parts of it
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
 		auto controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
 
@@ -2361,7 +2361,7 @@ private:
 	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::entity::model::StreamIndex const talkerStreamIndex)
 	{
 		auto disconnectedStreams = std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>>{};
-		auto const& manager = avdecc::ControllerManager::getInstance();
+		auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{
 			auto const controlledEntity = manager.getControlledEntity(potentialListenerEntityId);
@@ -2434,7 +2434,7 @@ private:
 	{
 		std::set<uint16_t> result;
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -2515,7 +2515,7 @@ private:
 	{
 		std::set<uint16_t> result;
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -2569,7 +2569,7 @@ private:
 	{
 		std::set<uint16_t> result;
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(listenerEntityId);
 
 		if (!controlledEntity)
@@ -2636,7 +2636,7 @@ private:
 	{
 		std::set<uint16_t> result;
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -2706,7 +2706,7 @@ private:
 	{
 		std::set<uint16_t> result;
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -2759,7 +2759,7 @@ private:
 	la::avdecc::entity::model::AudioMappings getMappingsFromStreamInputChannel(la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const inputStreamIndex, uint16_t const streamChannel) const noexcept
 	{
 		la::avdecc::entity::model::AudioMappings result;
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(listenerEntityId);
 
 		if (!controlledEntity)
@@ -2803,7 +2803,7 @@ private:
 	StreamConnections getStreamConnectionsBetweenDevices(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId) const noexcept
 	{
 		StreamConnections result;
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(talkerEntityId);
 
 		if (!controlledEntity)
@@ -2832,7 +2832,7 @@ private:
 	StreamConnections getPossibleAudioStreamConnectionsBetweenDevices(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId) const noexcept
 	{
 		StreamConnections result;
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
 		auto controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
 
@@ -3011,7 +3011,7 @@ private:
 	*/
 	std::pair<std::optional<la::avdecc::entity::model::StreamFormat>, std::optional<la::avdecc::entity::model::StreamFormat>> findCompatibleStreamPairFormat(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex const streamOutputIndex, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex const streamInputIndex, la::avdecc::entity::model::StreamFormatInfo::Type const expectedStreamFormatType, uint16_t const channelMinSizeHint = 0) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
 		auto controlledListenerEntity = manager.getControlledEntity(listenerEntityId);
 
@@ -3172,7 +3172,7 @@ private:
 	*/
 	void adjustStreamPairFormats(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex const streamOutputIndex, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex const streamInputIndex, std::pair<std::optional<la::avdecc::entity::model::StreamFormat>, std::optional<la::avdecc::entity::model::StreamFormat>> const streamFormats) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		if (streamFormats.first)
 		{
 			manager.setStreamOutputFormat(talkerEntityId, streamOutputIndex, *streamFormats.first);
@@ -3188,7 +3188,7 @@ private:
 	*/
 	uint16_t getStreamInputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -3221,7 +3221,7 @@ private:
 	*/
 	uint16_t getStreamOutputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
 
 		if (!controlledEntity)
@@ -3308,7 +3308,7 @@ private:
 						{
 							if (*virtualListenerIndex == *target->sourceVirtualIndex)
 							{
-								auto& manager = avdecc::ControllerManager::getInstance();
+								auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 								auto controlledEntity = manager.getControlledEntity(stream.entityID);
 								auto const configIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 								auto const& redundantListenerStreamNode = controlledEntity->getRedundantStreamInputNode(configIndex, *virtualListenerIndex);
@@ -3366,7 +3366,7 @@ private:
 						la::avdecc::entity::model::AudioMappings mappings;
 						try
 						{
-							auto& manager = avdecc::ControllerManager::getInstance();
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto controlledEntity = manager.getControlledEntity(stream.entityID);
 							if (controlledEntity)
 							{
@@ -3396,7 +3396,7 @@ private:
 							{
 								if (*virtualListenerIndex == *virtualStreamIndex)
 								{
-									auto& manager = avdecc::ControllerManager::getInstance();
+									auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 									auto controlledEntity = manager.getControlledEntity(stream.entityID);
 									auto const configIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 									auto const& redundantListenerStreamNode = controlledEntity->getRedundantStreamInputNode(configIndex, *virtualListenerIndex);
@@ -3478,7 +3478,7 @@ private:
 		{
 			try
 			{
-				auto& manager = avdecc::ControllerManager::getInstance();
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 				// search for talker changes that affect a listener in the cached map.
 				for (auto const& deviceMappingsKV : _listenerChannelMappings)

@@ -20,7 +20,8 @@
 #pragma once
 
 #include "toolkit/comboBox.hpp"
-#include "avdecc/controllerManager.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 // ComboBox that watches an Aecp command result, restoring the previous index if the command fails
 class AecpCommandComboBoxPrivate;
@@ -29,7 +30,7 @@ class AecpCommandComboBox : public qt::toolkit::ComboBox
 	Q_OBJECT
 
 public:
-	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, QWidget* parent = nullptr);
+	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, QWidget* parent = nullptr);
 	~AecpCommandComboBox();
 
 protected:

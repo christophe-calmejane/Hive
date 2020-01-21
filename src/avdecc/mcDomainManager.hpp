@@ -25,8 +25,9 @@
 #include <QObject>
 #include <QMap>
 
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/commandChain.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 namespace avdecc
 {

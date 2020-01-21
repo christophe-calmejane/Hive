@@ -130,7 +130,7 @@ private:
 
 	Key makeKey(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
@@ -158,7 +158,7 @@ private:
 
 	void downloadImage(la::avdecc::UniqueIdentifier const entityID, Type const type) noexcept
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 
 		if (!controlledEntity)

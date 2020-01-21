@@ -22,11 +22,11 @@
 #include "entityLogoCache.hpp"
 #include "imageItemDelegate.hpp"
 #include "errorItemDelegate.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "settingsManager/settings.hpp"
 #include "toolkit/material/color.hpp"
 
+#include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/logger.hpp>
 
@@ -180,7 +180,7 @@ MediaClockInfo computeMediaClockInfo(la::avdecc::UniqueIdentifier const& entityI
 			{
 				info.masterID = helper::uniqueIdentifierToString(mediaClockMasterID);
 
-				auto& manager = avdecc::ControllerManager::getInstance();
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				if (auto const clockMasterEntity = manager.getControlledEntity(mediaClockMasterID))
 				{
 					info.masterName = helper::entityName(*clockMasterEntity);
@@ -239,21 +239,21 @@ public:
 	ControllerModelPrivate(ControllerModel* model)
 		: q_ptr{ model }
 	{
-		// Connect avdecc::ControllerManager signals
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
-		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ControllerModelPrivate::handleControllerOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ControllerModelPrivate::handleEntityOnline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ControllerModelPrivate::handleEntityOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::identificationStarted, this, &ControllerModelPrivate::handleIdentificationStarted);
-		connect(&controllerManager, &avdecc::ControllerManager::identificationStopped, this, &ControllerModelPrivate::handleIdentificationStopped);
-		connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::handleEntityNameChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::entityGroupNameChanged, this, &ControllerModelPrivate::handleEntityGroupNameChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::handleAcquireStateChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, this, &ControllerModelPrivate::handleLockStateChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ControllerModelPrivate::handleCompatibilityFlagsChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
+		// Connect hive::modelsLibrary::ControllerManager signals
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ControllerModelPrivate::handleControllerOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ControllerModelPrivate::handleEntityOnline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControllerModelPrivate::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStarted, this, &ControllerModelPrivate::handleIdentificationStarted);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStopped, this, &ControllerModelPrivate::handleIdentificationStopped);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::handleEntityNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityGroupNameChanged, this, &ControllerModelPrivate::handleEntityGroupNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::handleAcquireStateChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::lockStateChanged, this, &ControllerModelPrivate::handleLockStateChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityFlagsChanged, this, &ControllerModelPrivate::handleCompatibilityFlagsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
 
 		// Connect avdecc::mediaClock::MCDomainManager signals
 		auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
@@ -621,7 +621,7 @@ private:
 		}
 	}
 
-	// avdecc::ControllerManager
+	// hive::modelsLibrary::ControllerManager
 
 	void handleControllerOffline()
 	{
@@ -639,7 +639,7 @@ private:
 	{
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			// Check if the entity is actually online (it might happen that the entity quickly switched from online to offline)
 			if (controlledEntity)
@@ -760,7 +760,7 @@ private:
 
 			try
 			{
-				auto& manager = avdecc::ControllerManager::getInstance();
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				if (auto controlledEntity = manager.getControlledEntity(entityID))
 				{
 					data.compatibility = computeCompatibility(controlledEntity->getMilanInfo(), compatibilityFlags);
@@ -792,7 +792,7 @@ private:
 		}
 	}
 
-	void handleStreamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, ControllerManager::StreamInputErrorCounters const& errorCounters)
+	void handleStreamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, hive::modelsLibrary::ControllerManager::StreamInputErrorCounters const& errorCounters)
 	{
 		if (auto const row = entityRow(entityID))
 		{
@@ -809,7 +809,7 @@ private:
 		}
 	}
 
-	void handleStatisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, ControllerManager::StatisticsErrorCounters const& errorCounters)
+	void handleStatisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters)
 	{
 		if (auto const row = entityRow(entityID))
 		{

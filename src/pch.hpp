@@ -45,7 +45,6 @@
 #include "windowsNpfHelper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 #include "avdecc/commandChain.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/controllerModel.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
@@ -71,6 +70,7 @@
 #include "mediaClock/domainTreeModel.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
 #include "mediaClock/unassignedListModel.hpp"
+#include "nodeTreeDynamicWidgets/asPathWidget.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
@@ -94,6 +94,9 @@
 #include "toolkit/material/color.hpp"
 #include "toolkit/material/colorPalette.hpp"
 #include "toolkit/material/helper.hpp"
+
+// Models Library
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 // Other Headers
 #include <la/avdecc/avdecc.hpp>

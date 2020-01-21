@@ -35,7 +35,7 @@ MemoryObjectDynamicTreeWidgetItem::MemoryObjectDynamicTreeWidgetItem(la::avdecc:
 		updateMemoryObjectLength(dynamicModel->length);
 
 		// Listen for MemoryObjectLengthChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectLengthChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::memoryObjectLengthChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, std::uint64_t const length)
 			{
 				if (entityID == _entityID && configurationIndex == _configurationIndex && memoryObjectIndex == _memoryObjectIndex)

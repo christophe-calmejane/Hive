@@ -21,9 +21,11 @@
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
 #include "connectionMatrix/paintHelper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mappingsHelper.hpp"
 #include "toolkit/material/color.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
+
 #include <QPainter>
 #include <QContextMenuEvent>
 #include <QMenu>
@@ -707,7 +709,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 	try
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto const entityID = node->entityID();
 		if (auto controlledEntity = manager.getControlledEntity(entityID))
 		{

@@ -22,9 +22,10 @@
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "toolkit/comboBox.hpp"
 #include "aecpCommandComboBox.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QObject>
 #include <QTreeWidgetItem>

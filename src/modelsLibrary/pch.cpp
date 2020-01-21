@@ -17,34 +17,4 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
-#include <QObject>
-#include <QImage>
-#include <QHash>
-
-#include <hive/modelsLibrary/controllerManager.hpp>
-
-class EntityLogoCache : public QObject
-{
-	Q_OBJECT
-public:
-	enum class Type
-	{
-		None,
-		Entity,
-		Manufacturer
-	};
-
-	static EntityLogoCache& getInstance() noexcept;
-
-	virtual QImage getImage(la::avdecc::UniqueIdentifier const entityID, Type const type, bool const downloadIfNotInCache = false) noexcept = 0;
-	virtual bool isImageInCache(la::avdecc::UniqueIdentifier const entityID, Type const type) const noexcept = 0;
-
-	virtual void clear() noexcept = 0;
-
-	Q_SIGNAL void imageChanged(la::avdecc::UniqueIdentifier const entityID, EntityLogoCache::Type const type);
-
-protected:
-	EntityLogoCache() = default;
-};
+#include "pch.hpp"

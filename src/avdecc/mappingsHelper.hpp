@@ -21,8 +21,8 @@
 
 #include "mappingMatrix.hpp"
 #include "helper.hpp"
-#include "controllerManager.hpp"
 
+#include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 
@@ -257,7 +257,7 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 	}
 
 	// Remove and Add the mappings
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	if (!toRemove.empty())
 	{
 		if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)

@@ -19,6 +19,12 @@
 
 #include "multiFirmwareUpdateDialog.hpp"
 #include "ui_multiFirmwareUpdateDialog.h"
+#include "avdecc/helper.hpp"
+#include "firmwareUploadDialog.hpp"
+#include "defaults.hpp"
+
+#include <la/avdecc/utils.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QLabel>
 #include <QProgressBar>
@@ -32,12 +38,6 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QFileDialog>
-
-#include <la/avdecc/utils.hpp>
-#include "avdecc/controllerManager.hpp"
-#include "avdecc/helper.hpp"
-#include "firmwareUploadDialog.hpp"
-#include "defaults.hpp"
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -79,12 +79,12 @@ public:
 	ModelPrivate(Model* model)
 		: q_ptr{ model }
 	{
-		// Connect avdecc::ControllerManager signals
-		auto& manager = avdecc::ControllerManager::getInstance();
-		connect(&manager, &avdecc::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
-		connect(&manager, &avdecc::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
-		connect(&manager, &avdecc::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
-		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
+		// Connect hive::modelsLibrary::ControllerManager signals
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		connect(&manager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
 	}
 
 	int rowCount() const
@@ -150,7 +150,7 @@ public:
 	}
 
 private:
-	// avdecc::ControllerManager
+	// hive::modelsLibrary::ControllerManager
 
 	void handleControllerOffline()
 	{
@@ -165,7 +165,7 @@ private:
 	{
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity && controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 			{
@@ -305,7 +305,7 @@ Model::Model(QObject* parent)
 	, d_ptr{ new ModelPrivate{ this } }
 {
 	// Initialize the model for each existing entity
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	manager.foreachEntity(
 		[this](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const&)
 		{
@@ -396,7 +396,7 @@ void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const&, QI
 		return;
 	}
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	// Check that all selected entities have the same model name
 	QString modelName;
@@ -443,7 +443,7 @@ void MultiFirmwareUpdateDialog::startFirmwareUpdate()
 	}
 
 	// Determine the maximum length (TODO, cache in the model?)
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto maximumLength = 0;
 
 	auto firmwareUpdateEntityInfos = std::vector<FirmwareUploadDialog::EntityInfo>{};

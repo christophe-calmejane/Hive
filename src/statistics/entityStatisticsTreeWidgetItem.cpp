@@ -34,7 +34,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 	_enumerationTimeItem.setText(0, "Enumeration Time");
 
 	// Update statistics right now
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	_errorCounters = manager.getStatisticsCounters(_entityID);
 	updateAecpRetryCounter(aecpRetryCounter);
 	updateAecpTimeoutCounter(aecpTimeoutCounter);
@@ -44,7 +44,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 	_enumerationTimeItem.setText(1, QString::number(enumerationTime.count()) + " msec");
 
 	// Listen for signals
-	connect(&manager, &avdecc::ControllerManager::aecpRetryCounterChanged, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::aecpRetryCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -52,7 +52,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpRetryCounter(value);
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::aecpTimeoutCounterChanged, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::aecpTimeoutCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -60,7 +60,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpTimeoutCounter(value);
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::aecpUnexpectedResponseCounterChanged, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::aecpUnexpectedResponseCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -68,7 +68,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpUnexpectedResponseCounter(value);
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::aecpResponseAverageTimeChanged, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::aecpResponseAverageTimeChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value)
 		{
 			if (entityID == _entityID)
@@ -76,7 +76,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpResponseAverageTime(value);
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::aemAecpUnsolicitedCounterChanged, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::aemAecpUnsolicitedCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
 		{
 			if (entityID == _entityID)
@@ -84,20 +84,20 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAemAecpUnsolicitedCounter(value);
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::statisticsErrorCounterChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::StatisticsErrorCounters const& errorCounters)
+	connect(&manager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters)
 		{
 			if (entityID == _entityID)
 			{
 				_errorCounters = errorCounters;
-				updateAecpRetryCounter(_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries]);
-				updateAecpTimeoutCounter(_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts]);
-				updateAecpUnexpectedResponseCounter(_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses]);
+				updateAecpRetryCounter(_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpRetries]);
+				updateAecpTimeoutCounter(_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts]);
+				updateAecpUnexpectedResponseCounter(_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses]);
 			}
 		});
 }
 
-void EntityStatisticsTreeWidgetItem::setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, avdecc::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept
+void EntityStatisticsTreeWidgetItem::setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept
 {
 	auto color = QColor{ Qt::black };
 	auto text = QString::number(value);
@@ -118,20 +118,20 @@ void EntityStatisticsTreeWidgetItem::setWidgetTextAndColor(EntityStatisticTreeWi
 
 void EntityStatisticsTreeWidgetItem::updateAecpRetryCounter(std::uint64_t const value) noexcept
 {
-	_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries] = value;
-	setWidgetTextAndColor(_aecpRetryCounterItem, value, avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries);
+	_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpRetries] = value;
+	setWidgetTextAndColor(_aecpRetryCounterItem, value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpRetries);
 }
 
 void EntityStatisticsTreeWidgetItem::updateAecpTimeoutCounter(std::uint64_t const value) noexcept
 {
-	_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts] = value;
-	setWidgetTextAndColor(_aecpTimeoutCounterItem, value, avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts);
+	_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts] = value;
+	setWidgetTextAndColor(_aecpTimeoutCounterItem, value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts);
 }
 
 void EntityStatisticsTreeWidgetItem::updateAecpUnexpectedResponseCounter(std::uint64_t const value) noexcept
 {
-	_counters[avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses] = value;
-	setWidgetTextAndColor(_aecpUnexpectedResponseCounterItem, value, avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses);
+	_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses] = value;
+	setWidgetTextAndColor(_aecpUnexpectedResponseCounterItem, value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses);
 }
 
 void EntityStatisticsTreeWidgetItem::updateAecpResponseAverageTime(std::chrono::milliseconds const& value) noexcept

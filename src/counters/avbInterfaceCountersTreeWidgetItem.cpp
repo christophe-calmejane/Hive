@@ -55,7 +55,7 @@ AvbInterfaceCountersTreeWidgetItem::AvbInterfaceCountersTreeWidgetItem(la::avdec
 	updateCounters(counters);
 
 	// Listen for AvbInterfaceCountersChanged
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceCountersChanged, this,
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::avbInterfaceCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters)
 		{
 			if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)

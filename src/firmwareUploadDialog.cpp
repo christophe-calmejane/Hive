@@ -19,8 +19,9 @@
 
 #include "firmwareUploadDialog.hpp"
 #include "ui_firmwareUploadDialog.h"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/utils.hpp>
 
 #include <QLabel>
@@ -104,8 +105,8 @@ FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::D
 	}
 
 	// Connect signals
-	auto& manager = avdecc::ControllerManager::getInstance();
-	connect(&manager, &avdecc::ControllerManager::operationProgress, this,
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	connect(&manager, &hive::modelsLibrary::ControllerManager::operationProgress, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, float const percentComplete)
 		{
 			for (auto row = 0; row < _ui->listWidget->count(); ++row)
@@ -123,7 +124,7 @@ FirmwareUploadDialog::FirmwareUploadDialog(la::avdecc::controller::Controller::D
 				}
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::operationCompleted, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::operationCompleted, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, bool const failed)
 		{
 			for (auto row = 0; row < _ui->listWidget->count(); ++row)
@@ -247,7 +248,7 @@ void FirmwareUploadDialog::scheduleUpload(EntityInfo const& entityInfo) noexcept
 	auto const [entityID, descriptorIndex, memoryObjectAddress] = entityInfo;
 	auto* item = new QListWidgetItem{ _ui->listWidget };
 	auto* widget = new UploadWidget{ this };
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
 	if (controlledEntity)
@@ -293,7 +294,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 	_ui->startPushButton->setEnabled(false);
 	_ui->abortPushButton->setEnabled(true);
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	for (auto row = 0; row < _ui->listWidget->count(); ++row)
 	{
@@ -331,7 +332,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 							item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Uploading));
 
 							// Write the firmware to the MemoryObject
-							auto& manager = avdecc::ControllerManager::getInstance();
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							manager.writeDeviceMemory(entityID, memoryObjectAddress, _firmwareData,
 								[widget, this, item](la::avdecc::controller::ControlledEntity const* const /*entity*/, float const percentComplete)
 								{
@@ -367,7 +368,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 												item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::StartStore));
 
 												// Query an OperationID to store the firmware and reboot
-												auto& manager = avdecc::ControllerManager::getInstance();
+												auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 												manager.startStoreAndRebootMemoryObjectOperation(entityID, descriptorIndex,
 													[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
 													{
@@ -405,7 +406,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 
 void FirmwareUploadDialog::on_abortPushButton_clicked()
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	for (auto row = 0; row < _ui->listWidget->count(); ++row)
 	{

@@ -23,8 +23,9 @@
 #include <QStyledItemDelegate>
 #include <QTreeView>
 #include <optional>
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 class DomainTreeModel;
 class DomainTreeModelPrivate;

@@ -18,9 +18,11 @@
 */
 
 #include "helper.hpp"
-#include "controllerManager.hpp"
 #include "toolkit/material/helper.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/utils.hpp>
+
 #include <cctype>
 
 namespace avdecc
@@ -185,7 +187,7 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 		case la::avdecc::controller::model::AcquireState::AcquiredByOther:
 		{
 			auto text = QString{ "Acquired by " };
-			auto& controllerManager = avdecc::ControllerManager::getInstance();
+			auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const& controllerEntity = controllerManager.getControlledEntity(owningController);
 			if (controllerEntity)
 			{
@@ -222,7 +224,7 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 		case la::avdecc::controller::model::LockState::LockedByOther:
 		{
 			auto text = QString{ "Locked by " };
-			auto& controllerManager = avdecc::ControllerManager::getInstance();
+			auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const& controllerEntity = controllerManager.getControlledEntity(lockingController);
 			if (controllerEntity)
 			{

@@ -51,7 +51,7 @@ ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc:
 	updateCounters(counters);
 
 	// Listen for ClockDomainCountersChanged
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainCountersChanged, this,
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockDomainCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters)
 		{
 			if (entityID == _entityID && clockDomainIndex == _clockDomainIndex)

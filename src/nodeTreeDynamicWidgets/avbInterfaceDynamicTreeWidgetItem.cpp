@@ -74,7 +74,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		}
 
 		// Listen for onGptpChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::gptpChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::gptpChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 			{
 				if (entityID == _entityID && (avbInterfaceIndex == _avbInterfaceIndex || avbInterfaceIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex))
@@ -83,7 +83,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 				}
 			});
 		// Listen for AvbInterfaceInfoChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceInfoChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::avbInterfaceInfoChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info)
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
@@ -96,7 +96,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 				}
 			});
 		// Listen for avbInterfaceLinkStatusChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::avbInterfaceLinkStatusChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
@@ -130,7 +130,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		}
 
 		// Listen for AsPathChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::asPathChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::asPathChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath)
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)

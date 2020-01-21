@@ -21,8 +21,9 @@
 
 #include <QAbstractListModel>
 #include <QListView>
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 class UnassignedListModelPrivate;
 

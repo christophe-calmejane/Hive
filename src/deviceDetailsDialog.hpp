@@ -21,7 +21,7 @@
 
 #include <QDialog>
 
-#include "avdecc/controllerManager.hpp"
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 class DeviceDetailsDialogImpl;
 

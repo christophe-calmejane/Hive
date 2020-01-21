@@ -19,8 +19,9 @@
 
 #include "entityTreeItem.hpp"
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
-#include "la/avdecc/utils.hpp"
+
+#include <la/avdecc/utils.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 /**
  * Constructor.
@@ -44,7 +45,7 @@ la::avdecc::UniqueIdentifier EntityTreeItem::entityId() const
  */
 QString EntityTreeItem::entityName() const
 {
-	auto const controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(m_entityID);
+	auto const controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(m_entityID);
 	if (controlledEntity)
 	{
 		return avdecc::helper::smartEntityName(*controlledEntity);
@@ -58,7 +59,7 @@ QString EntityTreeItem::entityName() const
  */
 std::optional<QPair<la::avdecc::entity::model::SamplingRate, QString>> EntityTreeItem::sampleRate() const
 {
-	auto const controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(m_entityID);
+	auto const controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(m_entityID);
 	if (controlledEntity)
 	{
 		try

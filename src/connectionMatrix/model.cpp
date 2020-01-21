@@ -19,11 +19,13 @@
 
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "toolkit/helper.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
+
 #include <deque>
 #include <vector>
 
@@ -430,28 +432,28 @@ public:
 	ModelPrivate(Model* q)
 		: q_ptr{ q }
 	{
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 		// Common signals
-		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ModelPrivate::handleGptpChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInputConnectionChanged, this, &ModelPrivate::handleStreamInputConnectionChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &ModelPrivate::handleStreamDynamicInfoChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamPortAudioMappingsChanged, this, &ModelPrivate::handleStreamPortAudioMappingsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ModelPrivate::handleGptpChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputConnectionChanged, this, &ModelPrivate::handleStreamInputConnectionChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamDynamicInfoChanged, this, &ModelPrivate::handleStreamDynamicInfoChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamPortAudioMappingsChanged, this, &ModelPrivate::handleStreamPortAudioMappingsChanged);
 
 		// Stream Mode specific signals
-		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
 
 		// Channel Mode specific signals
-		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
 
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &ModelPrivate::handleListenerChannelConnectionsUpdate);
@@ -1951,7 +1953,7 @@ public:
 		return _listenerNodes[section];
 	}
 
-	// avdecc::ControllerManager slots
+	// hive::modelsLibrary::ControllerManager slots
 
 	void handleControllerOffline()
 	{
@@ -1962,7 +1964,7 @@ public:
 	{
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
 			{
@@ -2101,7 +2103,7 @@ public:
 		// Event affecting the whole entity (but just the entity node as Talker and Listener)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2295,7 +2297,7 @@ public:
 		// Event affecting a single stream node (either Input or Output)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2344,7 +2346,7 @@ public:
 		// Event affecting a single stream node (Input)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2380,7 +2382,7 @@ public:
 		// Event affecting a single stream node (Input)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2429,7 +2431,7 @@ public:
 		// Event affecting a single stream node (Output)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2479,7 +2481,7 @@ public:
 		// Event affecting multiple channel nodes (either Input or Output)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2559,7 +2561,7 @@ public:
 		try
 		{
 #pragma message("TODO: cache the current configuration in the node to avoid locking the controller from the main thread")
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			auto const& entityNode = controlledEntity->getEntityNode();
 

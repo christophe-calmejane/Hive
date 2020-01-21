@@ -49,7 +49,7 @@ StreamOutputCountersTreeWidgetItem::StreamOutputCountersTreeWidgetItem(la::avdec
 	updateCounters(counters);
 
 	// Listen for StreamOutputCountersChanged
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamOutputCountersChanged, this,
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamOutputCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)

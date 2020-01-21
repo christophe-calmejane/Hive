@@ -41,10 +41,10 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	updateData();
 
 	// Connect ControllerManager signals
-	auto const& manager = avdecc::ControllerManager::getInstance();
+	auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	// Listen for Connection changed signals
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInputConnectionChanged, this,
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamInputConnectionChanged, this,
 		[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 		{
 			if (stream == _stream)
@@ -57,7 +57,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 		});
 
 	// EntityOnline
-	connect(&manager, &avdecc::ControllerManager::entityOnline, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			if (entityID == _info.talkerStream.entityID)
@@ -65,7 +65,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 		});
 
 	// EntityOffline
-	connect(&manager, &avdecc::ControllerManager::entityOffline, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			if (entityID == _info.talkerStream.entityID)
@@ -77,13 +77,13 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	connect(&_disconnectButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			avdecc::ControllerManager::getInstance().disconnectStream(_info.talkerStream.entityID, _info.talkerStream.streamIndex, _stream.entityID, _stream.streamIndex);
+			hive::modelsLibrary::ControllerManager::getInstance().disconnectStream(_info.talkerStream.entityID, _info.talkerStream.streamIndex, _stream.entityID, _stream.streamIndex);
 		});
 }
 
 void ListenerStreamConnectionWidget::updateData()
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	QString stateText{ "Unknown" };
 	auto haveTalker{ false };

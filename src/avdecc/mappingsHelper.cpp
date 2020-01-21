@@ -101,7 +101,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 	{
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity)

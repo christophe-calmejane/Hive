@@ -190,7 +190,7 @@ QVariant UnassignedListModelPrivate::data(QModelIndex const& index, int role) co
 	if (role != Qt::DisplayRole)
 		return QVariant();
 
-	auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(_entities.at(index.row()));
+	auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(_entities.at(index.row()));
 	if (!controlledEntity)
 		return QVariant();
 

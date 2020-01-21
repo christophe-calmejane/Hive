@@ -17,9 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "controllerManager.hpp"
-#include "avdecc/helper.hpp"
-#include "settingsManager/settings.hpp"
+#include "hive/modelsLibrary/controllerManager.hpp"
 
 #include <la/avdecc/logger.hpp>
 
@@ -30,9 +28,11 @@
 #	define HAVE_ATOMIC_SMART_POINTERS
 #endif // __cpp_lib_experimental_atomic_smart_pointers
 
-namespace avdecc
+namespace hive
 {
-class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer, public settings::SettingsManager::Observer
+namespace modelsLibrary
+{
+class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer
 {
 public:
 	using SharedController = std::shared_ptr<la::avdecc::controller::Controller>;
@@ -309,10 +309,10 @@ public:
 		qRegisterMetaType<std::uint16_t>("std::uint16_t");
 		qRegisterMetaType<std::uint64_t>("std::uint64_t");
 		qRegisterMetaType<std::chrono::milliseconds>("std::chrono::milliseconds");
-		qRegisterMetaType<AecpCommandType>("avdecc::ControllerManager::AecpCommandType");
-		qRegisterMetaType<AcmpCommandType>("avdecc::ControllerManager::AcmpCommandType");
-		qRegisterMetaType<StreamInputErrorCounters>("avdecc::ControllerManager::StreamInputErrorCounters");
-		qRegisterMetaType<StatisticsErrorCounters>("avdecc::ControllerManager::StatisticsErrorCounters");
+		qRegisterMetaType<AecpCommandType>("hive::modelsLibrary::ControllerManager::AecpCommandType");
+		qRegisterMetaType<AcmpCommandType>("hive::modelsLibrary::ControllerManager::AcmpCommandType");
+		qRegisterMetaType<StreamInputErrorCounters>("hive::modelsLibrary::ControllerManager::StreamInputErrorCounters");
+		qRegisterMetaType<StatisticsErrorCounters>("hive::modelsLibrary::ControllerManager::StatisticsErrorCounters");
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
@@ -364,12 +364,6 @@ public:
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::CompatibilityFlags>("la::avdecc::controller::ControlledEntity::CompatibilityFlags");
 		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
 		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
-
-		// Configure settings observers
-		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
-		settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
-		settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
 
 	~ControllerManagerImpl() noexcept
@@ -379,37 +373,9 @@ public:
 		{
 			destroyController();
 		}
-
-		// Remove settings observers
-		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, this);
-		settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, this);
-		settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
 
 private:
-	// settings::SettingsManager::Observer overrides
-	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
-	{
-		if (name == settings::Controller_DiscoveryDelay.name)
-		{
-			_discoveryDelay = std::chrono::seconds{ value.toInt() };
-			auto ctrl = getController();
-			if (ctrl)
-			{
-				ctrl->setAutomaticDiscoveryDelay(_discoveryDelay);
-			}
-		}
-		else if (name == settings::Controller_AemCacheEnabled.name)
-		{
-			_enableAemCache = value.toBool();
-		}
-		else if (name == settings::Controller_FullStaticModelEnabled.name)
-		{
-			_fullAemEnumeration = value.toBool();
-		}
-	}
-
 	// la::avdecc::controller::Controller::Observer overrides
 	// Global controller notifications
 	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/) noexcept override
@@ -439,7 +405,6 @@ private:
 		QMetaObject::invokeMethod(this,
 			[this, entityID = entity->getEntity().getEntityID()]()
 			{
-				ASSERT_QT_MAIN_THREAD;
 				{
 					auto const lg = std::lock_guard{ _lock };
 					_entities.erase(entityID);
@@ -860,6 +825,16 @@ private:
 			return controller->loadVirtualEntityFromJson(filePath.toStdString(), flags);
 		}
 		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
+	}
+
+	virtual void setEnableAemCache(bool const enable) noexcept override
+	{
+		_enableAemCache = enable;
+	}
+
+	virtual void setEnableFullAemEnumeration(bool const enable) noexcept override
+	{
+		_fullAemEnumeration = enable;
 	}
 
 	ErrorCounterTracker const* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) const noexcept
@@ -1912,4 +1887,5 @@ ControllerManager& ControllerManager::getInstance() noexcept
 	return s_manager;
 }
 
-} // namespace avdecc
+} // namespace modelsLibrary
+} // namespace hive
