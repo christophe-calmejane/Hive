@@ -270,7 +270,7 @@ public:
 	bool isRunning() const;
 	TriState lockedState() const; // StreamInput only
 	bool isStreaming() const; // StreamOutput only
-	la::avdecc::entity::model::StreamConnectionState const& streamConnectionState() const;
+	la::avdecc::entity::model::StreamInputConnectionInfo const& streamInputConnectionInformation() const;
 
 protected:
 	StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
@@ -285,7 +285,7 @@ protected:
 	void setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
 	void setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
 	void setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
-	void setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState);
+	void setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info);
 	void computeLockedState() noexcept;
 	void computeIsStreaming() noexcept;
 
@@ -302,7 +302,7 @@ protected:
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaUnlockedCounter{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStartCounter{ std::nullopt }; // StreamOutput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStopCounter{ std::nullopt }; // StreamOutput only
-	la::avdecc::entity::model::StreamConnectionState _streamConnectionState{};
+	la::avdecc::entity::model::StreamInputConnectionInfo _streamInputConnectionInfo{};
 	Node::TriState _lockedState{ Node::TriState::Unknown }; // StreamInput only
 	bool _isStreaming{ false }; // StreamOutput only
 };

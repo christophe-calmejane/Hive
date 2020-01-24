@@ -391,9 +391,9 @@ bool StreamNode::isStreaming() const
 	return _isStreaming;
 }
 
-la::avdecc::entity::model::StreamConnectionState const& StreamNode::streamConnectionState() const
+la::avdecc::entity::model::StreamInputConnectionInfo const& StreamNode::streamInputConnectionInformation() const
 {
-	return _streamConnectionState;
+	return _streamInputConnectionInfo;
 }
 
 StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
@@ -459,15 +459,15 @@ void StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCount
 	_streamStopCounter = value;
 }
 
-void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
+void StreamNode::setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 {
-	_streamConnectionState = streamConnectionState;
+	_streamInputConnectionInfo = info;
 }
 
 void StreamNode::computeLockedState() noexcept
 {
 	// Only if connected
-	if (_streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
+	if (_streamInputConnectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 	{
 		// If we have ProbingStatus it must be Completed
 		if (!_probingStatus || (*_probingStatus == la::avdecc::entity::model::ProbingStatus::Completed))

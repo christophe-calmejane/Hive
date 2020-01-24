@@ -22,9 +22,10 @@
 #include <QMenu>
 #include <QStyle>
 
-ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamConnectionState const& state, QWidget* parent)
+ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info, QWidget* parent)
 	: QWidget(parent)
-	, _state(state)
+	, _stream(stream)
+	, _info(info)
 {
 	auto const margin = style()->pixelMetric(QStyle::PM_FocusFrameHMargin, 0, this) + 1;
 	_layout.setContentsMargins(margin, 0, margin, 0);
@@ -43,13 +44,13 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	auto const& manager = avdecc::ControllerManager::getInstance();
 
 	// Listen for Connection changed signals
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamConnectionChanged, this,
-		[this](la::avdecc::entity::model::StreamConnectionState const& state)
+	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInputConnectionChanged, this,
+		[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 		{
-			if (state.listenerStream == _state.listenerStream)
+			if (stream == _stream)
 			{
 				// Update state
-				_state = state;
+				_info = info;
 				// Update data based on the new state
 				updateData();
 			}
@@ -59,7 +60,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	connect(&manager, &avdecc::ControllerManager::entityOnline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
-			if (entityID == _state.talkerStream.entityID)
+			if (entityID == _info.talkerStream.entityID)
 				updateData();
 		});
 
@@ -67,7 +68,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	connect(&manager, &avdecc::ControllerManager::entityOffline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
-			if (entityID == _state.talkerStream.entityID)
+			if (entityID == _info.talkerStream.entityID)
 				updateData();
 		});
 
@@ -76,7 +77,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	connect(&_disconnectButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			avdecc::ControllerManager::getInstance().disconnectStream(_state.talkerStream.entityID, _state.talkerStream.streamIndex, _state.listenerStream.entityID, _state.listenerStream.streamIndex);
+			avdecc::ControllerManager::getInstance().disconnectStream(_info.talkerStream.entityID, _info.talkerStream.streamIndex, _stream.entityID, _stream.streamIndex);
 		});
 }
 
@@ -86,11 +87,11 @@ void ListenerStreamConnectionWidget::updateData()
 
 	QString stateText{ "Unknown" };
 	auto haveTalker{ false };
-	auto listenerEntity = manager.getControlledEntity(_state.listenerStream.entityID);
+	auto listenerEntity = manager.getControlledEntity(_stream.entityID);
 
-	switch (_state.state)
+	switch (_info.state)
 	{
-		case la::avdecc::entity::model::StreamConnectionState::State::NotConnected:
+		case la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected:
 			if (listenerEntity && listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 			{
 				stateText = "Unbound";
@@ -101,11 +102,11 @@ void ListenerStreamConnectionWidget::updateData()
 			}
 			haveTalker = false;
 			break;
-		case la::avdecc::entity::model::StreamConnectionState::State::FastConnecting:
+		case la::avdecc::entity::model::StreamInputConnectionInfo::State::FastConnecting:
 			stateText = "Fast Connecting to ";
 			haveTalker = true;
 			break;
-		case la::avdecc::entity::model::StreamConnectionState::State::Connected:
+		case la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected:
 			if (listenerEntity && listenerEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 			{
 				stateText = "Bound to ";
@@ -129,12 +130,12 @@ void ListenerStreamConnectionWidget::updateData()
 	}
 	else
 	{
-		_streamConnectionLabel.setText(stateText + avdecc::helper::uniqueIdentifierToString(_state.talkerStream.entityID) + ":" + QString::number(_state.talkerStream.streamIndex));
+		_streamConnectionLabel.setText(stateText + avdecc::helper::uniqueIdentifierToString(_info.talkerStream.entityID) + ":" + QString::number(_info.talkerStream.streamIndex));
 
 		QString onlineStatus{ "Offline" };
 		bool isGhost{ true };
 
-		auto controlledEntity = manager.getControlledEntity(_state.talkerStream.entityID);
+		auto controlledEntity = manager.getControlledEntity(_info.talkerStream.entityID);
 		// If talker is online, get it's name
 		if (controlledEntity)
 		{

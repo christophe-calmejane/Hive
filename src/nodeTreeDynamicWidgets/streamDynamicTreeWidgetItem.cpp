@@ -158,7 +158,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		{
 			_connectionState->setText(0, "Connection State");
 		}
-		_connectionStateWidget = new ListenerStreamConnectionWidget(inputDynamicModel->connectionState, parent);
+		_connectionStateWidget = new ListenerStreamConnectionWidget({ _entityID, _streamIndex }, inputDynamicModel->connectionInfo, parent);
 		parent->setItemWidget(_connectionState, 1, _connectionStateWidget);
 	}
 
@@ -176,7 +176,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		updateConnections(outputDynamicModel->connections);
 
 		// Listen for Connections changed signal
-		connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this,
+		connect(&manager, &avdecc::ControllerManager::streamOutputConnectionsChanged, this,
 			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections)
 			{
 				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)

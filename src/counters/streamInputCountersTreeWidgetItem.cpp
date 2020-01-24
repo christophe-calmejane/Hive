@@ -86,12 +86,12 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 			}
 		});
 
-	connect(&manager, &avdecc::ControllerManager::streamConnectionChanged, this,
-		[this](la::avdecc::entity::model::StreamConnectionState const& state)
+	connect(&manager, &avdecc::ControllerManager::streamInputConnectionChanged, this,
+		[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 		{
-			if (state.listenerStream.entityID == _entityID && state.listenerStream.streamIndex == _streamIndex)
+			if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
 			{
-				_isConnected = state.state == la::avdecc::entity::model::StreamConnectionState::State::Connected;
+				_isConnected = info.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected;
 				updateCounters(_counters);
 			}
 		});
