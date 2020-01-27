@@ -1061,4 +1061,5 @@ L-Acoustics grants the users (the "Users") who are interested in accessing the d
 
 ### d&b audiotechnik Content License
 
-TBD
+The d&b logo/trademark is used with permission of d&b audiotechnik GmbH & Co. KG.
+Further use of the logo/trademark is prohibited without written consent of d&b audiotechnik GmbH & Co. KG.
