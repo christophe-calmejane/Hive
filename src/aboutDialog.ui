@@ -135,10 +135,10 @@
 				&lt;p&gt;Supported by:&lt;/p&gt;
 			&lt;/td&gt;
 			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
-				&lt;p&gt;&lt;img src=&quot;:/L-Acoustics.png&quot; width=&quot;64&quot; height=&quot;64&quot; /&gt;&lt;/p&gt;
-			&lt;/td&gt;
-			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
-				&lt;p&gt;&lt;img src=&quot;:/dbaudiotechnik.png&quot; width=&quot;64&quot; height=&quot;64&quot; /&gt;&lt;/p&gt;
+				&lt;p&gt;
+					&lt;img src=&quot;:/L-Acoustics.png&quot; width=&quot;64&quot; height=&quot;64&quot; /&gt;
+					&lt;img src=&quot;:/dbaudiotechnik.png&quot; width=&quot;64&quot; height=&quot;64&quot; /&gt;
+				&lt;/p&gt;
 			&lt;/td&gt;
 		&lt;/tr&gt;
 		&lt;tr&gt;
