@@ -17,5 +17,6 @@
         <file>dsa_pub.pem</file>
         <file>legal_notices.md</file>
         <file>L-Acoustics.png</file>
+        <file>dbaudiotechnik.png</file>
     </qresource>
 </RCC>
