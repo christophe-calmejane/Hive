@@ -61,7 +61,7 @@ public:
 		connect(&manager, &ControllerManager::controllerOffline, this, &MCDomainManagerImpl::onControllerOffline);
 		connect(&manager, &ControllerManager::entityOnline, this, &MCDomainManagerImpl::onEntityOnline);
 		connect(&manager, &ControllerManager::entityOffline, this, &MCDomainManagerImpl::onEntityOffline);
-		connect(&manager, &ControllerManager::streamConnectionChanged, this, &MCDomainManagerImpl::onStreamConnectionChanged);
+		connect(&manager, &ControllerManager::streamInputConnectionChanged, this, &MCDomainManagerImpl::onStreamInputConnectionChanged);
 		connect(&manager, &ControllerManager::clockSourceChanged, this, &MCDomainManagerImpl::onClockSourceChanged);
 		connect(&manager, &ControllerManager::entityNameChanged, this, &MCDomainManagerImpl::onEntityNameChanged);
 
@@ -270,7 +270,7 @@ private:
 							auto* clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, *clockStreamIndex).dynamicModel;
 							if (clockStreamDynModel)
 							{
-								auto connectedTalker = clockStreamDynModel->connectionState.talkerStream.entityID;
+								auto connectedTalker = clockStreamDynModel->connectionInfo.talkerStream.entityID;
 								if (!connectedTalker)
 								{
 									error = searchedEntityIds.size() == 1 ? McDeterminationError::StreamNotConnected : McDeterminationError::ParentStreamNotConnected;
@@ -1066,7 +1066,7 @@ private:
 		if (controlledListenerEntity)
 		{
 			auto const& inputNode = controlledListenerEntity->getStreamInputNode(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamIndex); // this doesn't work for redundant streams.
-			auto const& connectionState = inputNode.dynamicModel->connectionState;
+			auto const& connectionState = inputNode.dynamicModel->connectionInfo;
 			if (connectionState.talkerStream.entityID == talkerEntityId && connectionState.talkerStream.streamIndex == talkerStreamIndex)
 			{
 				return true;
@@ -1255,9 +1255,9 @@ private:
 	/**
 	* Iterates over the list of known entities and returns all connections that originate from the given talker.
 	*/
-	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const talkerEntityId)
+	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const talkerEntityId)
 	{
-		std::vector<la::avdecc::entity::model::StreamConnectionState> disconnectedStreams;
+		auto disconnectedStreams = std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>>{};
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		for (auto const& potentialListenerEntityId : _entities)
 		{
@@ -1271,14 +1271,14 @@ private:
 				try
 				{
 					auto const& configNode = controlledEntity->getCurrentConfigurationNode();
-					for (auto const& streamInput : configNode.streamInputs)
+					for (auto const& [streamIndex, streamInputNode] : configNode.streamInputs)
 					{
-						auto* streamInputDynamicModel = streamInput.second.dynamicModel;
+						auto* streamInputDynamicModel = streamInputNode.dynamicModel;
 						if (streamInputDynamicModel)
 						{
-							if (streamInputDynamicModel->connectionState.talkerStream.entityID == talkerEntityId)
+							if (streamInputDynamicModel->connectionInfo.talkerStream.entityID == talkerEntityId)
 							{
-								disconnectedStreams.push_back(streamInputDynamicModel->connectionState);
+								disconnectedStreams.push_back({ { potentialListenerEntityId, streamIndex }, streamInputDynamicModel->connectionInfo });
 							}
 						}
 					}
@@ -1294,9 +1294,9 @@ private:
 	/**
 	* Gets all entities that have stream connection to the given listener entity.
 	*/
-	std::vector<la::avdecc::entity::model::StreamConnectionState> getAllStreamInputConnections(la::avdecc::UniqueIdentifier const targetEntityId)
+	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getAllStreamInputConnections(la::avdecc::UniqueIdentifier const targetEntityId)
 	{
-		std::vector<la::avdecc::entity::model::StreamConnectionState> streamsToDisconnect;
+		auto streamsToDisconnect = std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>>{};
 		auto const& manager = avdecc::ControllerManager::getInstance();
 
 		auto const controlledEntity = manager.getControlledEntity(targetEntityId);
@@ -1310,15 +1310,15 @@ private:
 			{
 				auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 
-				for (auto const& streamInput : configNode.streamInputs)
+				for (auto const& [streamIndex, streamInputNode] : configNode.streamInputs)
 				{
-					auto* streamInputDynModel = streamInput.second.dynamicModel;
+					auto* streamInputDynModel = streamInputNode.dynamicModel;
 					if (streamInputDynModel)
 					{
-						auto connectionState = streamInputDynModel->connectionState;
-						if (connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
+						auto connectionState = streamInputDynModel->connectionInfo;
+						if (connectionState.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 						{
-							streamsToDisconnect.push_back(connectionState);
+							streamsToDisconnect.push_back({ { targetEntityId, streamIndex }, connectionState });
 						}
 					}
 				}
@@ -1335,19 +1335,19 @@ private:
 	* @param entityId The id of the entity to disconnect the streams from.
 	* @return A list of all streams that were disconnected.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamOutputConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamOutputConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> const& connections)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		auto const controlledEntity = manager.getControlledEntity(entityId);
 		if (controlledEntity)
 		{
-			for (auto const& connection : connections)
+			for (auto const& [listenerStream, connectionInfo] : connections)
 			{
 				auto const& sourceEntityId = entityId;
-				auto const& sourceStreamIndex = connection.talkerStream.streamIndex;
-				auto const& targetEntityId = connection.listenerStream.entityID;
-				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
+				auto const& sourceStreamIndex = connectionInfo.talkerStream.streamIndex;
+				auto const& targetEntityId = listenerStream.entityID;
+				auto const& targetStreamIndex = listenerStream.streamIndex;
 				commands.push_back(
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
@@ -1397,19 +1397,19 @@ private:
 	* @param entityId The id of the entity to disconnect the streams from.
 	* @return A list of all streams that were disconnected.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamInputConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> removeAllStreamInputConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> const& connections)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		auto const controlledEntity = manager.getControlledEntity(entityId);
 		if (controlledEntity)
 		{
-			for (auto const& connection : connections)
+			for (auto const& [listenerStream, connectionInfo] : connections)
 			{
-				auto const& sourceEntityId = connection.talkerStream.entityID;
-				auto const& sourceStreamIndex = connection.talkerStream.streamIndex;
-				auto const& targetEntityId = connection.listenerStream.entityID;
-				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
+				auto const& sourceEntityId = connectionInfo.talkerStream.entityID;
+				auto const& sourceStreamIndex = connectionInfo.talkerStream.streamIndex;
+				auto const& targetEntityId = listenerStream.entityID;
+				auto const& targetStreamIndex = listenerStream.streamIndex;
 				commands.push_back(
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
@@ -1508,19 +1508,19 @@ private:
 	* @param entityId The id of the entity to connect the streams from.
 	* @param A list of all streams that shall be connected.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> restoreOutputStreamConnections(la::avdecc::UniqueIdentifier entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> restoreOutputStreamConnections(la::avdecc::UniqueIdentifier entityId, std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> const& connections)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		auto const controlledEntity = manager.getControlledEntity(entityId);
 		if (controlledEntity)
 		{
-			for (auto const& connection : connections)
+			for (auto const& [listenerStream, connectionInfo] : connections)
 			{
 				auto const& sourceEntityId = entityId;
-				auto const& sourceStreamIndex = connection.talkerStream.streamIndex;
-				auto const& targetEntityId = connection.listenerStream.entityID;
-				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
+				auto const& sourceStreamIndex = connectionInfo.talkerStream.streamIndex;
+				auto const& targetEntityId = listenerStream.entityID;
+				auto const& targetStreamIndex = listenerStream.streamIndex;
 				commands.push_back(
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
@@ -1570,19 +1570,19 @@ private:
 	* @param entityId The id of the entity to connect the streams from.
 	* @param A list of all streams that shall be connected.
 	*/
-	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> restoreInputStreamConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<la::avdecc::entity::model::StreamConnectionState> const& connections)
+	std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> restoreInputStreamConnections(la::avdecc::UniqueIdentifier const entityId, std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> const& connections)
 	{
 		std::vector<commandChain::AsyncParallelCommandSet::AsyncCommand> commands;
 		auto const& manager = avdecc::ControllerManager::getInstance();
 		auto const controlledEntity = manager.getControlledEntity(entityId);
 		if (controlledEntity)
 		{
-			for (auto const& connection : connections)
+			for (auto const& [listenerStream, connectionInfo] : connections)
 			{
-				auto const& sourceEntityId = connection.talkerStream.entityID;
-				auto const& sourceStreamIndex = connection.talkerStream.streamIndex;
-				auto const& targetEntityId = connection.listenerStream.entityID;
-				auto const& targetStreamIndex = connection.listenerStream.streamIndex;
+				auto const& sourceEntityId = connectionInfo.talkerStream.entityID;
+				auto const& sourceStreamIndex = connectionInfo.talkerStream.streamIndex;
+				auto const& targetEntityId = listenerStream.entityID;
+				auto const& targetStreamIndex = listenerStream.streamIndex;
 				commands.push_back(
 					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
@@ -1714,11 +1714,11 @@ private:
 	/**
 	* Handles the change of a clock source on a stream connection. Checks if the stream is a clock stream and if so emits the mediaClockConnectionsUpdate signal.
 	*/
-	void onStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
+	void onStreamInputConnectionChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 	{
 		auto affectsMcMaster = false;
 		auto& manager = avdecc::ControllerManager::getInstance();
-		auto const& controlledEntity = manager.getControlledEntity(streamConnectionState.listenerStream.entityID);
+		auto const& controlledEntity = manager.getControlledEntity(stream.entityID);
 		if (controlledEntity)
 		{
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
@@ -1748,7 +1748,7 @@ private:
 								case la::avdecc::entity::model::ClockSourceType::External:
 								case la::avdecc::entity::model::ClockSourceType::InputStream:
 								{
-									if (streamConnectionState.listenerStream.streamIndex == activeClockSourceNode.staticModel->clockSourceLocationIndex)
+									if (stream.streamIndex == activeClockSourceNode.staticModel->clockSourceLocationIndex)
 									{
 										affectsMcMaster = true;
 									}

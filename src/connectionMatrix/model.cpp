@@ -428,7 +428,7 @@ public:
 		connect(&controllerManager, &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamConnectionChanged, this, &ModelPrivate::handleStreamConnectionChanged);
+		connect(&controllerManager, &avdecc::ControllerManager::streamInputConnectionChanged, this, &ModelPrivate::handleStreamInputConnectionChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &ModelPrivate::handleStreamDynamicInfoChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
 		connect(&controllerManager, &avdecc::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
@@ -916,8 +916,8 @@ public:
 						atLeastOneInterfaceDown |= talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
 						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
-						auto const isConnectedToTalker = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
-						auto const isFastConnectingToTalker = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamConnectionState());
+						auto const isConnectedToTalker = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
+						auto const isFastConnectingToTalker = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
 
 						auto const connected = isConnectedToTalker || isFastConnectingToTalker;
 						atLeastOneConnected |= connected;
@@ -1017,7 +1017,7 @@ public:
 						{
 							AVDECC_ASSERT(redundantStreamNode->isRedundantStreamNode(), "Should be a redundant node");
 							auto connectableStream = Model::IntersectionData::SmartConnectableStream{};
-							auto const* listenerStreamConnectionState = static_cast<la::avdecc::entity::model::StreamConnectionState const*>(nullptr);
+							auto const* listenerStreamInputConnectionInfo = static_cast<la::avdecc::entity::model::StreamInputConnectionInfo const*>(nullptr);
 							auto talkerStreamFormat = la::avdecc::entity::model::StreamFormat{};
 							auto listenerStreamFormat = la::avdecc::entity::model::StreamFormat{};
 
@@ -1026,7 +1026,7 @@ public:
 							{
 								connectableStream.talkerStreamIndex = redundantStreamNode->streamIndex();
 								connectableStream.listenerStreamIndex = nonRedundantStreamNode->streamIndex();
-								listenerStreamConnectionState = &nonRedundantStreamNode->streamConnectionState();
+								listenerStreamInputConnectionInfo = &nonRedundantStreamNode->streamInputConnectionInformation();
 								talkerStreamFormat = redundantStreamNode->streamFormat();
 								listenerStreamFormat = nonRedundantStreamNode->streamFormat();
 							}
@@ -1034,15 +1034,15 @@ public:
 							{
 								connectableStream.talkerStreamIndex = nonRedundantStreamNode->streamIndex();
 								connectableStream.listenerStreamIndex = redundantStreamNode->streamIndex();
-								listenerStreamConnectionState = &redundantStreamNode->streamConnectionState();
+								listenerStreamInputConnectionInfo = &redundantStreamNode->streamInputConnectionInformation();
 								talkerStreamFormat = nonRedundantStreamNode->streamFormat();
 								listenerStreamFormat = redundantStreamNode->streamFormat();
 							}
 
 							// Get Connection State
 							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, connectableStream.talkerStreamIndex };
-							connectableStream.isConnected = avdecc::helper::isConnectedToTalker(talkerStream, *listenerStreamConnectionState);
-							connectableStream.isFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, *listenerStreamConnectionState);
+							connectableStream.isConnected = avdecc::helper::isConnectedToTalker(talkerStream, *listenerStreamInputConnectionInfo);
+							connectableStream.isFastConnecting = avdecc::helper::isFastConnectingToTalker(talkerStream, *listenerStreamInputConnectionInfo);
 							areConnected |= connectableStream.isConnected;
 							fastConnecting |= connectableStream.isFastConnecting;
 
@@ -1219,11 +1219,11 @@ public:
 							return;
 						}
 
-						auto const& streamConnectionState = listenerStreamNode->streamConnectionState();
+						auto const& streamInputConnectionInfo = listenerStreamNode->streamInputConnectionInformation();
 						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
 
-						auto const isConnectedToTalker = avdecc::helper::isConnectedToTalker(talkerStream, streamConnectionState);
-						auto const isFastConnectingToTalker = avdecc::helper::isFastConnectingToTalker(talkerStream, streamConnectionState);
+						auto const isConnectedToTalker = avdecc::helper::isConnectedToTalker(talkerStream, streamInputConnectionInfo);
+						auto const isFastConnectingToTalker = avdecc::helper::isFastConnectingToTalker(talkerStream, streamInputConnectionInfo);
 
 						if (isConnectedToTalker || isFastConnectingToTalker)
 						{
@@ -1267,7 +1267,7 @@ public:
 							combinedFlags |= computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
 
 							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamIndex };
-							auto const connected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamConnectionState());
+							auto const connected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
 							allConnected &= connected;
 						}
 
@@ -1509,7 +1509,7 @@ public:
 				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
 				node.setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 				node.setRunning(controlledEntity.isStreamInputRunning(configurationIndex, streamIndex));
-				node.setStreamConnectionState(streamInputNode.dynamicModel->connectionState);
+				node.setStreamInputConnectionInformation(streamInputNode.dynamicModel->connectionInfo);
 				if (streamInputNode.dynamicModel->counters)
 				{
 					auto const& counters = *streamInputNode.dynamicModel->counters;
@@ -2115,17 +2115,17 @@ public:
 		}
 	}
 
-	void handleStreamConnectionChanged(la::avdecc::entity::model::StreamConnectionState const& state)
+	void handleStreamInputConnectionChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 	{
 		// Event affecting a single stream intersection, but having repercussion on parent intersection "summary" nodes
-		auto const entityID = state.listenerStream.entityID;
+		auto const entityID = stream.entityID;
 		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected };
 
 		if (auto* listener = listenerNodeFromEntityID(entityID))
 		{
-			if (auto* node = listenerStreamNode(entityID, state.listenerStream.streamIndex))
+			if (auto* node = listenerStreamNode(entityID, stream.streamIndex))
 			{
-				node->setStreamConnectionState(state);
+				node->setStreamInputConnectionInformation(info);
 
 				if (_mode == Model::Mode::Stream)
 				{
@@ -2141,7 +2141,7 @@ public:
 			}
 			else
 			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(state.listenerStream.streamIndex));
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInputConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(stream.streamIndex));
 			}
 		}
 	}
