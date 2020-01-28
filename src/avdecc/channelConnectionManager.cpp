@@ -2378,7 +2378,7 @@ private:
 		return ChannelDisconnectResult::NoError;
 	}
 
-	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::entity::model::StreamIndex const streamIndex)
+	std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>> getAllStreamOutputConnections(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::entity::model::StreamIndex const talkerStreamIndex)
 	{
 		auto disconnectedStreams = std::vector<std::pair<la::avdecc::entity::model::StreamIdentification, la::avdecc::entity::model::StreamInputConnectionInfo>>{};
 		auto const& manager = avdecc::ControllerManager::getInstance();
@@ -2400,7 +2400,7 @@ private:
 						if (streamInputDynamicModel)
 						{
 							auto const& talkerStream = streamInputDynamicModel->connectionInfo.talkerStream;
-							if (talkerStream.entityID == talkerEntityId && talkerStream.streamIndex == streamIndex)
+							if (talkerStream.entityID == talkerEntityId && talkerStream.streamIndex == talkerStreamIndex)
 							{
 								disconnectedStreams.push_back({ { potentialListenerEntityId, streamIndex }, streamInputDynamicModel->connectionInfo });
 							}

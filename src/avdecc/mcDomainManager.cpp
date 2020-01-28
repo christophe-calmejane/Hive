@@ -1714,7 +1714,7 @@ private:
 	/**
 	* Handles the change of a clock source on a stream connection. Checks if the stream is a clock stream and if so emits the mediaClockConnectionsUpdate signal.
 	*/
-	void onStreamInputConnectionChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
+	void onStreamInputConnectionChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& /*info*/)
 	{
 		auto affectsMcMaster = false;
 		auto& manager = avdecc::ControllerManager::getInstance();

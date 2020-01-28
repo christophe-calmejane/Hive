@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Legal notices for each third party resource
 
 ### Changed
-- Reworked About Dialog a bit
+- Small rework of About Dialog
+- Using AVDECC Library v3.0.0
+
+### Fixed
+- Full Entity State loading issue (connection state was not properly loaded)
 
 ## [1.2.1] - 2019-11-21
 ### Fixed

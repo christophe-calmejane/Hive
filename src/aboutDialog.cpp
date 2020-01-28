@@ -25,6 +25,8 @@
 
 #include <QObject>
 #include <QPushButton>
+#include <QTextBrowser>
+#include <QFile>
 
 extern "C"
 {
