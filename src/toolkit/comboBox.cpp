@@ -48,10 +48,35 @@ protected:
 	Q_DECLARE_PUBLIC(ComboBox);
 };
 
+class BoldCurrentIndexSelectionDelegate : public QStyledItemDelegate
+{
+	using QStyledItemDelegate::QStyledItemDelegate;
+
+protected:
+	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override
+	{
+		auto opt = option;
+
+		if (auto* view = dynamic_cast<QAbstractItemView const*>(option.widget))
+		{
+			if (auto* parent = view->parent(); !qstrcmp("QComboBoxPrivateContainer", parent->metaObject()->className()))
+			{
+				if (auto* widget = dynamic_cast<QComboBox const*>(parent->parent()))
+				{
+					opt.font.setBold(index.row() == widget->currentIndex());
+				}
+			}
+		}
+
+		QStyledItemDelegate::paint(painter, opt, index);
+	}
+};
+
 ComboBox::ComboBox(QWidget* parent)
 	: QComboBox(parent)
 	, d_ptr(new ComboBoxPrivate(this))
 {
+	setItemDelegate(new BoldCurrentIndexSelectionDelegate{ this });
 }
 
 ComboBox::~ComboBox()

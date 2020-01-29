@@ -94,7 +94,6 @@ void StreamFormatComboBox::setCurrentStreamFormat(StreamFormat const& streamForm
 		auto const index = findData(QVariant::fromValue(streamFormat));
 
 		QFont font;
-		font.setBold(true);
 		font.setItalic(true);
 
 		setItemData(index, font, Qt::FontRole);
