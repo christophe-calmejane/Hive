@@ -37,6 +37,8 @@ public:
 	{
 		None,
 
+		OfflineOutputStream,
+
 		Entity,
 
 		RedundantOutput,
@@ -62,6 +64,9 @@ public:
 
 	// Returns node type
 	Type type() const;
+
+	// Returns true if node type is OfflineOutputStream
+	bool isOfflineOutputStreamNode() const;
 
 	// Returns true if node type is Entity
 	bool isEntityNode() const;
@@ -184,6 +189,17 @@ protected:
 
 	// Holds the children
 	std::vector<std::unique_ptr<Node>> _children;
+};
+
+class OfflineOutputStreamNode : public Node
+{
+	friend class ModelPrivate;
+
+public:
+	static OfflineOutputStreamNode* create();
+
+protected:
+	OfflineOutputStreamNode();
 };
 
 class EntityNode : public Node

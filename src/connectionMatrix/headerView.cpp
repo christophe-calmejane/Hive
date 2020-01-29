@@ -356,6 +356,11 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	// First pass for Bar Color
 	switch (nodeType)
 	{
+		case Node::Type::OfflineOutputStream:
+			backgroundColor = Qt::black;
+			foregroundColor = Qt::white;
+			foregroundErrorColor = Qt::red;
+			break;
 		case Node::Type::Entity:
 			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
 			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade900);

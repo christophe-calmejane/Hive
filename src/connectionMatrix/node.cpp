@@ -27,6 +27,11 @@ Node::Type Node::type() const
 	return _type;
 }
 
+bool Node::isOfflineOutputStreamNode() const
+{
+	return _type == Type::OfflineOutputStream;
+}
+
 bool Node::isEntityNode() const
 {
 	return _type == Type::Entity;
@@ -185,6 +190,17 @@ Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* 
 void Node::setName(QString const& name)
 {
 	_name = name;
+}
+
+OfflineOutputStreamNode* OfflineOutputStreamNode::create()
+{
+	return new OfflineOutputStreamNode{};
+}
+
+OfflineOutputStreamNode::OfflineOutputStreamNode()
+	: Node{ Type::OfflineOutputStream, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), nullptr }
+{
+	setName("Offline Streams");
 }
 
 EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan)
@@ -547,7 +563,7 @@ bool Node::CompleteHierarchyPolicy::shouldVisit(Node const* const) noexcept
 
 bool Node::StreamHierarchyPolicy::shouldVisit(Node const* const node) noexcept
 {
-	return node->isEntityNode() || node->isRedundantNode() || node->isStreamNode();
+	return node->isOfflineOutputStreamNode() || node->isEntityNode() || node->isRedundantNode() || node->isStreamNode();
 }
 
 bool Node::StreamPolicy::shouldVisit(Node const* const node) noexcept

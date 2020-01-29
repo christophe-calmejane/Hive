@@ -200,58 +200,120 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 
 	auto const connected = state != Model::IntersectionData::State::NotConnected;
 
-	auto const penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);
+	auto penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade500);
 	auto penWidth = qreal{ 1.5 };
 	auto wrongFormatHasPriorityOverInterfaceDown = false;
 
+	auto const drawInvalidIntersection = [painter, &rect]()
+	{
+		painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+	};
+	auto const drawSingleStreamIntersection = [painter, &rect, state, flags](auto const brush, auto const penColor, auto const penWidth)
+	{
+		painter->setBrush(brush);
+		painter->setPen(QPen{ penColor, penWidth });
+		drawCircle(painter, rect);
+	};
+	auto const drawRedundantStreamIntersection = [painter, &rect, state, flags](auto const brush, auto const penColor, auto const penWidth)
+	{
+		painter->setBrush(brush);
+		painter->setPen(QPen{ penColor, penWidth });
+		drawDiamond(painter, rect);
+	};
+
 	switch (type)
 	{
+		// Offline Streams
+		case Model::IntersectionData::Type::OfflineOutputStream_RedundantStream:
+		{
+			// Only draw something if it's connected
+			if (state == Model::IntersectionData::State::Connected)
+			{
+				auto const brush = QBrush{ color::value(color::Name::Orange, color::Shade::Shade600), Qt::SolidPattern };
+				penColor = color::value(color::Name::Gray, color::Shade::Shade900);
+				penWidth = qreal{ 1.0 };
+				drawRedundantStreamIntersection(brush, penColor, penWidth);
+			}
+			else
+			{
+				drawInvalidIntersection();
+			}
+			break;
+		}
+		case Model::IntersectionData::Type::OfflineOutputStream_Redundant:
+		{
+			penWidth = qreal{ 2.0 };
+			wrongFormatHasPriorityOverInterfaceDown = true; // For summary, we want the WrongFormat error flag to have priority over InterfaceDown (more meaningful information)
+			[[fallthrough]];
+		}
+		case Model::IntersectionData::Type::OfflineOutputStream_SingleStream:
+		{
+			// Only draw something if it's connected
+			if (state == Model::IntersectionData::State::Connected)
+			{
+				auto const brush = QBrush{ color::value(color::Name::Orange, color::Shade::Shade600), Qt::SolidPattern };
+				penColor = color::value(color::Name::Gray, color::Shade::Shade900);
+				drawSingleStreamIntersection(brush, penColor, penWidth);
+			}
+			else
+			{
+				drawInvalidIntersection();
+			}
+			break;
+		}
 		case Model::IntersectionData::Type::Entity_Entity:
 		case Model::IntersectionData::Type::Entity_Redundant:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
 		case Model::IntersectionData::Type::Entity_SingleStream:
 		case Model::IntersectionData::Type::Entity_SingleChannel:
+		{
 			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
 			painter->setPen(QPen{ penColor, penWidth });
 			drawSquare(painter, rect);
 			break;
+		}
 		case Model::IntersectionData::Type::Redundant_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
-			painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
+		{
+			auto const brush = QBrush{ getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown) };
 			penWidth = qreal{ 1.0 };
-			painter->setPen(QPen{ penColor, penWidth });
-			drawDiamond(painter, rect);
+			drawRedundantStreamIntersection(brush, penColor, penWidth);
 			break;
+		}
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden:
+		{
 			// Nominal case, not connected (since it's forbidden by Milan)
 			if (state == Model::IntersectionData::State::NotConnected)
 			{
-				painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+				drawInvalidIntersection();
 			}
 			else
 			{
 				// But if the connection is made using another controller, we might have a connection we want to kill
-				painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
+				auto const brush = QBrush{ getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown) };
 				penWidth = qreal{ 1.0 };
-				painter->setPen(QPen{ penColor, penWidth });
-				drawDiamond(painter, rect);
+				drawRedundantStreamIntersection(brush, penColor, penWidth);
 			}
 			break;
+		}
 		case Model::IntersectionData::Type::Redundant_Redundant:
+		{
 			penWidth = qreal{ 2.0 };
 			wrongFormatHasPriorityOverInterfaceDown = true; // For summary, we want the WrongFormat error flag to have priority over InterfaceDown (more meaningful information)
 			[[fallthrough]];
+		}
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::Redundant_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
 		case Model::IntersectionData::Type::SingleChannel_SingleChannel:
-			painter->setBrush(getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown));
-			painter->setPen(QPen{ penColor, penWidth });
-			drawCircle(painter, rect);
+		{
+			auto const brush = QBrush{ getConnectionBrushColor(state, flags, wrongFormatHasPriorityOverInterfaceDown) };
+			drawSingleStreamIntersection(brush, penColor, penWidth);
 			break;
+		}
 		case Model::IntersectionData::Type::None:
 		default:
-			painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+			drawInvalidIntersection();
 			break;
 	}
 }

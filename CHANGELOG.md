@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Legal notices for each third party resource
+- [Possibility to disconnect an Input Stream connected to an offline talker](https://github.com/christophe-calmejane/Hive/issues/6)
 
 ### Changed
 - Small rework of About Dialog
