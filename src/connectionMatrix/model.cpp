@@ -2007,7 +2007,10 @@ public:
 			}
 
 			// Trigger "special offline streams" intersection update
-			talkerIntersectionDataChanged(_offlineOutputStreamNode.get(), false, true, IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected });
+			if (_mode == Model::Mode::Stream)
+			{
+				talkerIntersectionDataChanged(_offlineOutputStreamNode.get(), false, true, IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected });
+			}
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{
@@ -2043,7 +2046,10 @@ public:
 		}
 
 		// Trigger "special offline streams" intersection update
-		talkerIntersectionDataChanged(_offlineOutputStreamNode.get(), false, true, IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected });
+		if (_mode == Model::Mode::Stream)
+		{
+			talkerIntersectionDataChanged(_offlineOutputStreamNode.get(), false, true, IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected });
+		}
 	}
 
 	void handleGptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
@@ -2804,6 +2810,12 @@ private:
 			return;
 		}
 
+		auto const talkerSection = talkerNodeSection(talker);
+		if (!AVDECC_ASSERT_WITH_RET(talkerSection != -1, "Called with a Node that doesn't exist for current Matrix Mode, a check like 'if (_mode == Model::Mode::Stream)' is probably missing"))
+		{
+			return;
+		}
+
 		// Update the children
 		if (andChildren)
 		{
@@ -2816,7 +2828,6 @@ private:
 		}
 
 		// Then, update the node intersection
-		auto const talkerSection = talkerNodeSection(talker);
 		for (auto listenerSection = static_cast<int>(_listenerNodes.size()); listenerSection > 0; --listenerSection)
 		{
 			intersectionDataChanged(talkerSection, listenerSection - 1, dirtyFlags);
