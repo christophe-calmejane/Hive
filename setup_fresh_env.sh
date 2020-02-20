@@ -282,8 +282,7 @@ setupEnv()
 			fi
 		fi
 
-	elif [[ $osName == "mac" ]];
-	then
+	else
 		local dsa_pub_key="resources/dsa_pub.pem"
 		touch "$dsa_pub_key"
 
