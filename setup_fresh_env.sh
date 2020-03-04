@@ -1,22 +1,4 @@
-#!/bin/bash
-
-getFolderAbsoluteOSDependantPath()
-{
-  local _retval="$1"
-  local result="$2"
-
-  if [[ $OSTYPE = cygwin ]];
-	then
-    result="$(cygpath -a -w "$2")\\"
-  elif [[ $OSTYPE = msys ]];
-	then
-    result="$({ cd "$2" && pwd -W; } | sed 's|/|\\|g')\\"
-  else
-    result="$(cd "$2"; pwd -P)/"
-  fi
-
-  eval $_retval="'${result}'"
-}
+#!/usr/bin/env bash
 
 getOS()
 {
