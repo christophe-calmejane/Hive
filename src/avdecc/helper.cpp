@@ -711,6 +711,8 @@ QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept
 			return "Protocol Interface";
 		case la::avdecc::logger::Layer::AemPayload:
 			return "AemPayload";
+		case la::avdecc::logger::Layer::Entity:
+			return "Entity";
 		case la::avdecc::logger::Layer::ControllerEntity:
 			return "Controller Entity";
 		case la::avdecc::logger::Layer::ControllerStateMachine:

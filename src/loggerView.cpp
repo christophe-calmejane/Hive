@@ -60,6 +60,7 @@ const std::vector<la::avdecc::logger::Layer> loggerLayers{
 	la::avdecc::logger::Layer::Serialization,
 	la::avdecc::logger::Layer::ProtocolInterface,
 	la::avdecc::logger::Layer::AemPayload,
+	la::avdecc::logger::Layer::Entity,
 	la::avdecc::logger::Layer::ControllerEntity,
 	la::avdecc::logger::Layer::ControllerStateMachine,
 	la::avdecc::logger::Layer::Controller,
