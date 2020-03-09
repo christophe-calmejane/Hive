@@ -19,6 +19,8 @@
 
 #include "comboBox.hpp"
 #include <QEvent>
+#include <QStyledItemDelegate>
+#include <QAbstractItemView>
 
 namespace qt
 {

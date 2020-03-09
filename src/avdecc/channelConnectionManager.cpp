@@ -1971,7 +1971,7 @@ private:
 			for (auto const& [listenerStream, streamConnectionInfo] : streamsToDisconnect)
 			{
 				commandsTempDisconnectStreams.push_back(
-					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
@@ -2013,7 +2013,7 @@ private:
 			for (auto const& [listenerStream, streamConnectionInfo] : streamsToDisconnect)
 			{
 				commandsReconnectStreams.push_back(
-					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
 					{
 						auto& manager = avdecc::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
