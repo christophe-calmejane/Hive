@@ -34,7 +34,9 @@ public:
 		bool visible{ true };
 	};
 
-	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
+	HeaderView(bool const isListenersHeader, Qt::Orientation const orientation, QWidget* parent = nullptr);
+
+	bool isListenersHeader() const noexcept;
 
 	void setAlwaysShowArrowTip(bool const show);
 	void setAlwaysShowArrowEnd(bool const show);
@@ -76,6 +78,7 @@ private:
 	virtual void leaveEvent(QEvent* event) override;
 
 private:
+	bool const _isListenersHeader{ false };
 	QVector<SectionState> _sectionState;
 	QRegExp _pattern;
 

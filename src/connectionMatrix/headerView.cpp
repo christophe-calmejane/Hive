@@ -40,8 +40,9 @@
 
 namespace connectionMatrix
 {
-HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
+HeaderView::HeaderView(bool const isListenersHeader, Qt::Orientation const orientation, QWidget* parent)
 	: QHeaderView{ orientation, parent }
+	, _isListenersHeader(isListenersHeader)
 {
 	setSectionResizeMode(QHeaderView::Fixed);
 	setSectionsClickable(true);
@@ -54,6 +55,11 @@ HeaderView::HeaderView(Qt::Orientation orientation, QWidget* parent)
 	setAttribute(Qt::WA_Hover);
 
 	connect(this, &QHeaderView::sectionClicked, this, &HeaderView::handleSectionClicked);
+}
+
+bool HeaderView::isListenersHeader() const noexcept
+{
+	return _isTransposed ? !_isListenersHeader : _isListenersHeader;
 }
 
 void HeaderView::setAlwaysShowArrowTip(bool const show)
@@ -790,7 +796,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 			{
 				menu.addSeparator();
 
-				auto mti = findMappingssupportTypeIndexForDescriptor(*controlledEntity, model->isListenerSection(logicalIndex, orientation()) ? la::avdecc::entity::model::DescriptorType::StreamInput : la::avdecc::entity::model::DescriptorType::StreamOutput);
+				auto mti = findMappingssupportTypeIndexForDescriptor(*controlledEntity, isListenersHeader() ? la::avdecc::entity::model::DescriptorType::StreamInput : la::avdecc::entity::model::DescriptorType::StreamOutput);
 
 				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings", mti.supportsDynamicMappings);
 

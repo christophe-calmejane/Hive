@@ -3354,39 +3354,6 @@ void Model::accept(Node* node, Visitor const& visitor, bool const childrenOnly) 
 	priv::accept(node, d->_mode, visitor, childrenOnly);
 }
 
-bool Model::isTalkerSection(int section, Qt::Orientation orientation) const
-{
-	Q_D(const Model);
-
-	if (!d->_transposed)
-	{
-		if (orientation == Qt::Vertical)
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
-	}
-	else
-	{
-		if (orientation == Qt::Vertical)
-		{
-			return false;
-		}
-		else
-		{
-			return true;
-		}
-	}
-}
-
-bool Model::isListenerSection(int section, Qt::Orientation orientation) const
-{
-	return !isTalkerSection(section, orientation);
-}
-
 } // namespace connectionMatrix
 
 #include "model.moc"
