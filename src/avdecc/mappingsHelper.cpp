@@ -21,6 +21,8 @@
 
 #include <la/avdecc/utils.hpp>
 
+#include <QMessageBox>
+
 namespace avdecc
 {
 namespace mappingsHelper

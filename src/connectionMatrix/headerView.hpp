@@ -19,9 +19,12 @@
 
 #pragma once
 
+#include "toolkit/material/color.hpp"
+
+#include <la/avdecc/avdecc.hpp>
+
 #include <QHeaderView>
 #include <QVector>
-#include "toolkit/material/color.hpp"
 
 namespace connectionMatrix
 {

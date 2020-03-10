@@ -20,8 +20,11 @@
 #pragma once
 
 #include "mappingMatrix.hpp"
+#include "helper.hpp"
+#include "controllerManager.hpp"
 
 #include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/controller/avdeccController.hpp>
 
 #include <cstdint>
 #include <vector>
