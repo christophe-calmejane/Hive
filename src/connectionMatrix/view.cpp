@@ -37,8 +37,8 @@ namespace connectionMatrix
 View::View(QWidget* parent)
 	: QTableView{ parent }
 	, _model{ std::make_unique<Model>() }
-	, _horizontalHeaderView{ std::make_unique<HeaderView>(Qt::Horizontal, this) }
-	, _verticalHeaderView{ std::make_unique<HeaderView>(Qt::Vertical, this) }
+	, _horizontalHeaderView{ std::make_unique<HeaderView>(true, Qt::Horizontal, this) }
+	, _verticalHeaderView{ std::make_unique<HeaderView>(false, Qt::Vertical, this) }
 	, _itemDelegate{ std::make_unique<ItemDelegate>(this) }
 	, _cornerWidget{ std::make_unique<CornerWidget>(this) }
 {

@@ -19,9 +19,12 @@
 
 #pragma once
 
+#include "toolkit/material/color.hpp"
+
+#include <la/avdecc/avdecc.hpp>
+
 #include <QHeaderView>
 #include <QVector>
-#include "toolkit/material/color.hpp"
 
 namespace connectionMatrix
 {
@@ -34,7 +37,9 @@ public:
 		bool visible{ true };
 	};
 
-	HeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
+	HeaderView(bool const isListenersHeader, Qt::Orientation const orientation, QWidget* parent = nullptr);
+
+	bool isListenersHeader() const noexcept;
 
 	void setAlwaysShowArrowTip(bool const show);
 	void setAlwaysShowArrowEnd(bool const show);
@@ -62,6 +67,7 @@ private:
 	void handleSectionInserted(QModelIndex const& parent, int first, int last);
 	void handleSectionRemoved(QModelIndex const& parent, int first, int last);
 	void handleModelReset();
+	void handleEditMappingsClicked(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex);
 	void updateSectionVisibility(int const logicalIndex);
 	void applyFilterPattern();
 
@@ -75,6 +81,7 @@ private:
 	virtual void leaveEvent(QEvent* event) override;
 
 private:
+	bool const _isListenersHeader{ false };
 	QVector<SectionState> _sectionState;
 	QRegExp _pattern;
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Legal notices for each third party resource
 - [Possibility to disconnect an Input Stream connected to an offline talker](https://github.com/christophe-calmejane/Hive/issues/6)
 - [Highlighted currently selected item in comboBox](https://github.com/christophe-calmejane/Hive/issues/82)
+- [Possibility to edit dynamic mappings from the connection matrix headers context menu](https://github.com/christophe-calmejane/Hive/issues/85)
 
 ### Changed
 - Small rework of About Dialog
