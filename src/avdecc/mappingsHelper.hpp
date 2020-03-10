@@ -21,6 +21,14 @@
 
 #include "mappingMatrix.hpp"
 
+#include <la/avdecc/avdecc.hpp>
+
+#include <cstdint>
+#include <vector>
+#include <set>
+#include <utility>
+#include <QObject>
+
 namespace avdecc
 {
 namespace mappingsHelper
@@ -270,6 +278,8 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 		}
 	}
 }
+
+void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 
 } // namespace mappingsHelper
 } // namespace avdecc
