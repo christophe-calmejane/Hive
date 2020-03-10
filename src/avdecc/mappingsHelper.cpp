@@ -113,15 +113,16 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 				avdecc::mappingsHelper::NodeMappings streamMappings;
 				avdecc::mappingsHelper::NodeMappings clusterMappings;
 
-				auto const isValidStream = [](auto const* const streamNode)
+				auto const isValidClockDomain = [](auto const& streamPortNode, auto const& streamNode)
 				{
-					auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
-					auto const formatType = sfi->getType();
+					return streamPortNode.staticModel->clockDomainIndex == streamNode.staticModel->clockDomainIndex;
+				};
 
-					if (formatType == la::avdecc::entity::model::StreamFormatInfo::Type::None || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::Unsupported || formatType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
-						return false;
+				auto const isValidStreamFormat = [](auto const& streamNode)
+				{
+					auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamFormat);
 
-					return true;
+					return sfi->getChannelsCount() > 0;
 				};
 
 				if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
@@ -133,8 +134,10 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 					{
 						// Insert single StreamInput to list
 						auto const& streamNode = configurationNode.streamInputs.at(streamIndex);
-						if (!streamNode.isRedundant && isValidStream(&streamNode))
+						if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
+						{
 							streamNodes.push_back(&streamNode);
+						}
 
 						// Insert single primary stream of a Redundant Set to list
 						for (auto const& redundantStreamKV : configurationNode.redundantStreamInputs)
@@ -143,7 +146,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 							auto const* const primRedundantStreamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
 
 							// we use the redundantStreams to check if our current streamIndex is either prim or sec of it. For mappings edit, we only use prim though.
-							if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStream(primRedundantStreamNode))
+							if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStreamFormat(*primRedundantStreamNode) && isValidClockDomain(streamPortNode, *primRedundantStreamNode))
 							{
 								streamNodes.push_back(primRedundantStreamNode);
 								break;
@@ -156,7 +159,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 						for (auto const& streamKV : configurationNode.streamInputs)
 						{
 							auto const& streamNode = streamKV.second;
-							if (!streamNode.isRedundant && isValidStream(&streamNode))
+							if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
 							{
 								streamNodes.push_back(&streamNode);
 							}
@@ -167,7 +170,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 						{
 							auto const& redundantStreamNode = redundantStreamKV.second;
 							auto const* const streamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
-							if (isValidStream(streamNode))
+							if (isValidStreamFormat(*streamNode) && isValidClockDomain(streamPortNode, *streamNode))
 							{
 								streamNodes.push_back(streamNode);
 							}
@@ -196,7 +199,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 					{
 						// Insert single StreamOutput to list
 						auto const& streamNode = configurationNode.streamOutputs.at(streamIndex);
-						if (!streamNode.isRedundant && isValidStream(&streamNode))
+						if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
 							streamNodes.push_back(&streamNode);
 
 						// Insert single primary stream of a Redundant Set to list
@@ -206,7 +209,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 							auto const* const primRedundantStreamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
 
 							// we use the redundantStreams to check if our current streamIndex is either prim or sec of it. For mappings edit, we only use prim though.
-							if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStream(primRedundantStreamNode))
+							if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStreamFormat(*primRedundantStreamNode) && isValidClockDomain(streamPortNode, *primRedundantStreamNode))
 							{
 								streamNodes.push_back(primRedundantStreamNode);
 								break;
@@ -219,7 +222,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 						for (auto const& streamKV : configurationNode.streamOutputs)
 						{
 							auto const& streamNode = streamKV.second;
-							if (!streamNode.isRedundant && isValidStream(&streamNode))
+							if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
 							{
 								streamNodes.push_back(&streamNode);
 							}
@@ -230,7 +233,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 						{
 							auto const& redundantStreamNode = redundantStreamKV.second;
 							auto const* const streamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
-							if (isValidStream(streamNode))
+							if (isValidStreamFormat(*streamNode) && isValidClockDomain(streamPortNode, *streamNode))
 							{
 								streamNodes.push_back(streamNode);
 							}

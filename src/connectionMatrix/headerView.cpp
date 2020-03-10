@@ -587,6 +587,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 		bool supportsDynamicMappings{ false };
 		la::avdecc::entity::model::DescriptorType streamPortType{ la::avdecc::entity::model::DescriptorType::Invalid };
 		la::avdecc::entity::model::StreamPortIndex streamPortIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
+		la::avdecc::entity::model::StreamIndex streamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
 	};
 	auto findMappingsSupportTypeIndexForDescriptor = [](la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::DescriptorType const& descriptorType)
 	{
@@ -637,22 +638,35 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 	auto findMappingsSupportTypeIndexForStreamNode = [](la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::controller::model::StreamNode const& streamNode)
 	{
 		auto mti = MapSupTypeIndex{};
+
+		auto const isValidStreamFormat = [](auto const& streamNode)
+		{
+			auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamFormat);
+
+			return sfi->getChannelsCount() > 0;
+		};
+
 		try
 		{
 			if (streamNode.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
 				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
 				{
+					// Search which StreamPort has the same ClockDomain than passed StreamNode
 					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortInputs)
 					{
-						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						if (streamPortNode.staticModel->clockDomainIndex == streamNode.staticModel->clockDomainIndex)
 						{
-							auto const& streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const&>(streamNode);
-							auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamInputNode.dynamicModel->streamFormat);
+							if (streamPortNode.staticModel->hasDynamicAudioMap)
+							{
+								auto const& streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const&>(streamNode);
+								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamInputNode.dynamicModel->streamFormat);
 
-							mti.supportsDynamicMappings = (sfi->getChannelsCount() > 0);
-							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
-							mti.streamPortIndex = spi;
+								mti.supportsDynamicMappings = isValidStreamFormat(streamInputNode);
+								mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
+								mti.streamPortIndex = spi;
+								// Don't allow StreamInput to be configured individually to prevent user errors
+							}
 							break;
 						}
 					}
@@ -662,16 +676,21 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 			{
 				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
 				{
+					// Search which StreamPort has the same ClockDomain than passed StreamNode
 					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortOutputs)
 					{
-						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						if (streamPortNode.staticModel->clockDomainIndex == streamNode.staticModel->clockDomainIndex)
 						{
-							auto const& streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const&>(streamNode);
-							auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamOutputNode.dynamicModel->streamFormat);
+							if (streamPortNode.staticModel->hasDynamicAudioMap)
+							{
+								auto const& streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const&>(streamNode);
+								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamOutputNode.dynamicModel->streamFormat);
 
-							mti.supportsDynamicMappings = (sfi->getChannelsCount() > 0);
-							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
-							mti.streamPortIndex = spi;
+								mti.supportsDynamicMappings = isValidStreamFormat(streamOutputNode);
+								mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
+								mti.streamPortIndex = spi;
+								mti.streamIndex = streamOutputNode.descriptorIndex;
+							}
 							break;
 						}
 					}
@@ -721,11 +740,11 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 				auto mti = findMappingsSupportTypeIndexForStreamNode(*controlledEntity, *streamNode);
 
-				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings", mti.supportsDynamicMappings);
+				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings...", mti.supportsDynamicMappings);
 
 				menu.addSeparator();
 
-				// Release the controlled entity before starting a long operation (menu.exec()
+				// Release the controlled entity before starting a long operation (menu.exec)
 				controlledEntity.reset();
 
 				if (auto* action = menu.exec(event->globalPos()))
@@ -754,7 +773,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 					}
 					else if (action == editMappingsAction)
 					{
-						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, streamIndex);
+						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, mti.streamIndex);
 					}
 				}
 			}
@@ -778,18 +797,18 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 				auto mti = findMappingsSupportTypeIndexForStreamNode(*controlledEntity, *streamNode);
 
-				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings", mti.supportsDynamicMappings);
+				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings...", mti.supportsDynamicMappings);
 
 				menu.addSeparator();
 
-				// Release the controlled entity before starting a long operation (menu.exec()
+				// Release the controlled entity before starting a long operation (menu.exec)
 				controlledEntity.reset();
 
 				if (auto* action = menu.exec(event->globalPos()))
 				{
 					if (action == editMappingsAction)
 					{
-						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, streamIndex);
+						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, mti.streamIndex);
 					}
 				}
 			}
@@ -799,18 +818,18 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 				auto mti = findMappingsSupportTypeIndexForDescriptor(*controlledEntity, isListenersHeader() ? la::avdecc::entity::model::DescriptorType::StreamInput : la::avdecc::entity::model::DescriptorType::StreamOutput);
 
-				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings", mti.supportsDynamicMappings);
+				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings...", mti.supportsDynamicMappings);
 
 				menu.addSeparator();
 
-				// Release the controlled entity before starting a long operation (menu.exec()
+				// Release the controlled entity before starting a long operation (menu.exec)
 				controlledEntity.reset();
 
 				if (auto* action = menu.exec(event->globalPos()))
 				{
 					if (action == editMappingsAction)
 					{
-						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, la::avdecc::entity::model::getInvalidDescriptorIndex());
+						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, mti.streamIndex);
 					}
 				}
 			}
