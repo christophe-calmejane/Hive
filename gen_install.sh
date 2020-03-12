@@ -4,8 +4,11 @@
 # Get absolute folder for this script
 callerFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
-# Include util functions
+# Include utils functions
 . "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
+
+# Include config file functions
+. "${callerFolderPath}scripts/loadConfigFile.sh"
 
 # Override default cmake options
 cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_HIVE_SIGNING=FALSE"
@@ -61,7 +64,7 @@ deploySymbols()
 		local symbolsServerPath="${params["symbols_windows_pdb_server_path"]}"
 		if [ -z "${symbolsServerPath}" ];
 		then
-			echo "FAILED: 'symbols_windows_pdb_server_path' variable not set in .hive_config"
+			echo "FAILED: 'symbols_windows_pdb_server_path' variable not set in ${configFile}"
 			return
 		fi
 		if isCygwin; then
@@ -79,7 +82,7 @@ deploySymbols()
 		local symstorePath="${params["symbols_symstore_path"]}"
 		if [ -z "${symstorePath}" ];
 		then
-			echo "FAILED: 'symbols_symstore_path' variable not set in .hive_config"
+			echo "FAILED: 'symbols_symstore_path' variable not set in ${configFile}"
 			return
 		fi
 		if isCygwin; then
@@ -108,7 +111,7 @@ deploySymbols()
 		local symbolsServerPath="${params["symbols_macos_dsym_server_path"]}"
 		if [ -z "${symbolsServerPath}" ];
 		then
-			echo "FAILED: 'symbols_macos_dsym_server_path' variable not set in .hive_config"
+			echo "FAILED: 'symbols_macos_dsym_server_path' variable not set in ${configFile}"
 			return
 		fi
 		if [ ! -d "${symbolsServerPath}" ];
@@ -226,95 +229,12 @@ generateAppcast()
 	echo "Appcast item generated to file: $appcastFile (add it to tools/webserver/appcast-${subPath}.xml)"
 }
 
-parseFile()
-{
-	local configFile="$1"
-	declare -n _params="$2"
-
-	if [ ! -f "$configFile" ]; then
-		return
-	fi
-
-	while IFS=$'\r\n' read -r -a line || [ -n "$line" ]; do
-		# Only process lines with something
-		if [ "${line}" != "" ]; then
-			IFS='=' read -a lineSplit <<< "${line}"
-
-			local key="${lineSplit[0]}"
-			local value="${lineSplit[1]}"
-
-			# Don't parse commented lines
-			if [ "${key:0:1}" = "#" ]; then
-				continue
-			fi
-
-			# Switch on key
-			case "$key" in
-				# Signing
-				identity)
-					_params["$key"]="$value"
-					if [[ isMac && ! "$value" == "-" ]]; then
-						# Quick check for identity in keychain
-						security find-identity -v -p codesigning | grep "$value" &> /dev/null
-						if [ $? -ne 0 ]; then
-							echo "Invalid identity value '${configFile}' file (not found in keychain, or not valid for codesigning): $value"
-							exit 1
-						fi
-					fi
-					;;
-				signtool_options)
-					_params["$key"]="$value"
-					;;
-
-				# macOS Notarization
-				notarization_username)
-					_params["$key"]="$value"
-					;;
-				notarization_password)
-					_params["$key"]="$value"
-					;;
-
-				# Automatic check for update
-				appcast_releases)
-					_params["$key"]="$value"
-					;;
-				appcast_betas)
-					_params["$key"]="$value"
-					;;
-
-				# Debug Symbols
-				symbols_symstore_path)
-					_params["$key"]="$value"
-					;;
-				symbols_windows_pdb_server_path)
-					_params["$key"]="$value"
-					;;
-				symbols_macos_dsym_server_path)
-					_params["$key"]="$value"
-					;;
-
-				*)
-					echo "Ignoring unknown key '$key' in '${configFile}' file"
-					;;
-			esac
-		fi
-	done < "${configFile}"
-}
-
-declare -A params=()
-
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
 default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
-params["identity"]="-"
-params["notarization_username"]=""
-params["notarization_password"]="@keychain:AC_PASSWORD"
-params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
-params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
-params["signtool_options"]="/a /sm /q /fd sha256 /tr http://timestamp.digicert.com"
 
 # 
 arch=""
@@ -457,7 +377,7 @@ do
 			fi
 			;;
 		-id)
-			echo "ERROR: -id option is deprecated, please use the new .hive_config file (see .hive_config.sample for an example config file)"
+			echo "ERROR: -id option is deprecated, please use the new ${configFile} file (see ${configFile}.sample for an example config file)"
 			exit 1
 			;;
 		-no-sym)
@@ -517,8 +437,8 @@ do
 	shift
 done
 
-# Parse config file
-parseFile ".hive_config" params
+# Load config file
+loadConfigFile
 
 # Check for signing
 if [ $doSign -eq 1 ]; then
@@ -528,7 +448,7 @@ if [ $doSign -eq 1 ]; then
 	if isWindows; then
 		signtoolOptions=${params["signtool_options"]}
 		if [ -z "$signtoolOptions" ]; then
-			echo "ERROR: windows requires signtool options to be set. Specify it in the .hive_config file"
+			echo "ERROR: windows requires signtool options to be set. Specify it in the ${configFile} file"
 		fi
 		gen_cmake_additional_options+=("-signtool-opt")
 		gen_cmake_additional_options+=("$signtoolOptions")
@@ -539,10 +459,9 @@ if [ $doSign -eq 1 ]; then
 		identityString=${params["identity"]}
 
 		if [ "x$identityString" == "x" ]; then
-			echo "ERROR: macOS requires either iTunes TeamIdentifier. Specify it in the .hive_config file"
+			echo "ERROR: macOS requires either iTunes TeamIdentifier. Specify it in the ${configFile} file"
 			exit 4
 		fi
-
 		gen_cmake_additional_options+=("-id")
 		gen_cmake_additional_options+=("$identityString")
 	fi
@@ -550,14 +469,14 @@ fi
 
 # Additional options from .hive_config file
 if [ "x${params["appcast_releases"]}" == "x" ]; then
-	echo "ERROR: appcast_releases must not be empty in .hive_config file"
+	echo "ERROR: appcast_releases must not be empty in ${configFile} file"
 	exit 4
 fi
 gen_cmake_additional_options+=("-a")
 gen_cmake_additional_options+=("-DHIVE_APPCAST_RELEASES_URL=${params["appcast_releases"]}")
 
 if [ "x${params["appcast_betas"]}" == "x" ]; then
-	echo "ERROR: appcast_betas must not be empty in .hive_config file"
+	echo "ERROR: appcast_betas must not be empty in ${configFile} file"
 	exit 4
 fi
 gen_cmake_additional_options+=("-a")
