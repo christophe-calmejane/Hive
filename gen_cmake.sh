@@ -5,7 +5,7 @@
 selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
 # Include util functions
-. "${selfFolderPath}3rdparty/avdecc/scripts/utils.sh"
+. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
 # Override default cmake options
 cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"

@@ -5,7 +5,7 @@
 callerFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
 # Include util functions
-. "${callerFolderPath}3rdparty/avdecc/scripts/utils.sh"
+. "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
 # Override default cmake options
 cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_HIVE_SIGNING=FALSE"
@@ -266,6 +266,14 @@ parseFile()
 					_params["$key"]="$value"
 					;;
 
+				# macOS Notarization
+				notarization_username)
+					_params["$key"]="$value"
+					;;
+				notarization_password)
+					_params["$key"]="$value"
+					;;
+
 				# Automatic check for update
 				appcast_releases)
 					_params["$key"]="$value"
@@ -302,6 +310,8 @@ default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
 params["identity"]="-"
+params["notarization_username"]=""
+params["notarization_password"]="@keychain:AC_PASSWORD"
 params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
 params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
 params["signtool_options"]="/a /sm /q /fd sha256 /tr http://timestamp.digicert.com"
@@ -721,7 +731,17 @@ if [ ! -z "${symbolsFile}" ]; then
 	popd &> /dev/null
 fi
 
-# TODO: Notarization+Staple (BEFORE appcast signature is generated)
+
+# Call notarization
+if isMac; then
+	if [ ! "x${params["notarization_username"]}" == "x" ]; then
+		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "fr.KikiSoft.Hive.dmg"
+		if [ $? -ne 0 ]; then
+			echo "Failed to notarize installer"
+			exit 1
+		fi
+	fi
+fi
 
 generateAppcast "${fullInstallerName}" "${releaseVersion}${beta_tag}" $is_release
 
