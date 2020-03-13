@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.13)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.2.3)
+set(HIVE_VERSION 1.2.2.4)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
