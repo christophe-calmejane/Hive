@@ -19,6 +19,7 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 ## Compilation
 
 - Clone this repository
+- Copy .hive.config.sample to .hive.config, then edit it for installer customization
 - Run the setup_fresh_env.sh script that should properly setup your working copy
 - Run the gen_cmake.sh script with whatever optional parameters required (run *gen_cmake.sh -h* to display the help)
 - Go into the generated output folder
@@ -41,7 +42,7 @@ See the [COPYING](COPYING) and [COPYING.LESSER](COPYING.LESSER) files for detail
 ## Third party
 
 Hive uses the following 3rd party resources:
-- [L-Acoustics (open source) Avdecc libraries](https://github.com/L-Acoustics/avdecc).
+- [L-Acoustics (open source) Avdecc libraries](https://github.com/L-Acoustics/avdecc)
 - [Qt](https://www.qt.io)
 - [Material Icons](https://material.io/icons/)
 - [Discount Markdown](http://www.pell.portland.or.us/~orc/Code/markdown/)
