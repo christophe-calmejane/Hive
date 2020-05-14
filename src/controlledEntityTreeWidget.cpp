@@ -20,11 +20,11 @@
 #include "controlledEntityTreeWidget.hpp"
 #include "avdecc/helper.hpp"
 #include "settingsManager/settings.hpp"
-#include "errorItemDelegate.hpp"
 #include "nodeVisitor.hpp"
 #include "entityInspector.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QHeaderView>
@@ -598,7 +598,7 @@ private:
 		{
 			return QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(type), QString::number(index), name);
 		};
-		auto* item = addItem(node.descriptorIndex, parent, &node, genName(avdecc::helper::configurationName(controlledEntity, node)));
+		auto* item = addItem(node.descriptorIndex, parent, &node, genName(hive::modelsLibrary::helper::configurationName(controlledEntity, node)));
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::configurationNameChanged, item,
 			[this, genName, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& /*configurationName*/)
@@ -610,7 +610,7 @@ private:
 
 					if (controlledEntity)
 					{
-						auto name = genName(avdecc::helper::configurationName(controlledEntity.get(), node));
+						auto name = genName(hive::modelsLibrary::helper::configurationName(controlledEntity.get(), node));
 						item->setData(0, Qt::DisplayRole, name);
 					}
 				}

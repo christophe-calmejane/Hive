@@ -20,6 +20,7 @@
 #include "mcDomainManager.hpp"
 #include "helper.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/internals/streamFormatInfo.hpp>
 
@@ -1855,7 +1856,7 @@ DomainIndex MCDomain::getDomainIndex() const noexcept
 */
 QString MCDomain::getDisplayName() const noexcept
 {
-	return QString("Domain ").append(_mediaClockMasterId ? helper::uniqueIdentifierToString(_mediaClockMasterId) : "-");
+	return QString("Domain ").append(_mediaClockMasterId ? hive::modelsLibrary::helper::uniqueIdentifierToString(_mediaClockMasterId) : "-");
 }
 
 /**

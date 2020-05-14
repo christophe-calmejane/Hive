@@ -70,7 +70,6 @@ endif()
 
 # Include our internal macros
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required to find_package 3rd party modules that don't provide their CMake Config files
-include(cmake/TargetSetupDeploy.cmake)
 
 # Avdecc project location
 if(NOT AVDECC_BASE_FOLDER)
@@ -152,9 +151,13 @@ set(PROJECT_URL "https://github.com/christophe-calmejane/Hive")
 set(PROJECT_LEGALCOPYRIGHT "(c) ${PROJECT_AUTHORS}")
 set(PROJECT_READABLE_COPYRIGHT "Copyright ${PROJECT_COPYRIGHT_YEAR}, ${PROJECT_AUTHORS}")
 set(PROJECT_ROOT_DIR "${PROJECT_SOURCE_DIR}")
+set(HIVE_RESOURCES_FOLDER "${PROJECT_ROOT_DIR}/resources")
 set(PROJECT_ARCH "32-bit")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(PROJECT_ARCH "64-bit")
+endif()
+if(${ENABLE_HIVE_SIGNING})
+	set(SIGN_FLAG "SIGN")
 endif()
 
 # Split HIVE_VERSION string
@@ -199,6 +202,9 @@ else()
 endif()
 
 ############ Add projects
+
+# Add Libraries
+add_subdirectory(libs)
 
 # Add main project
 add_subdirectory(src)

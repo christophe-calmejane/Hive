@@ -19,6 +19,8 @@
 
 #include "talkerStreamConnectionWidget.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <QMenu>
 #include <QStyle>
 
@@ -33,7 +35,7 @@ TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::m
 	_layout.addWidget(&_entityNameLabel, 2);
 	_layout.addWidget(&_disconnectButton);
 
-	_streamConnectionLabel.setText(avdecc::helper::uniqueIdentifierToString(_listenerConnection.entityID) + ":" + QString::number(_listenerConnection.streamIndex));
+	_streamConnectionLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(_listenerConnection.entityID) + ":" + QString::number(_listenerConnection.streamIndex));
 
 	_entityNameLabel.setObjectName("EntityNameLabel");
 	_disconnectButton.setObjectName("DisconnectButton");
@@ -97,7 +99,7 @@ void TalkerStreamConnectionWidget::updateData()
 	auto controlledEntity = manager.getControlledEntity(_listenerConnection.entityID);
 	if (controlledEntity)
 	{
-		onlineStatus = avdecc::helper::smartEntityName(*controlledEntity);
+		onlineStatus = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 
 		try
 		{

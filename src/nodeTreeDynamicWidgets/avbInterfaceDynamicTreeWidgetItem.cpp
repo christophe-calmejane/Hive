@@ -22,6 +22,8 @@
 #include "nodeTreeWidget.hpp"
 #include "avdecc/helper.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <unordered_map>
 #include <string>
 
@@ -187,7 +189,7 @@ void AvbInterfaceDynamicTreeWidgetItem::restoreAsPathVisibility()
 
 void AvbInterfaceDynamicTreeWidgetItem::updateGptpInfo(la::avdecc::UniqueIdentifier const& gptpGrandmasterID, std::uint8_t const gptpDomainNumber)
 {
-	_gptpGrandmasterID->setText(1, avdecc::helper::uniqueIdentifierToString(gptpGrandmasterID));
+	_gptpGrandmasterID->setText(1, hive::modelsLibrary::helper::uniqueIdentifierToString(gptpGrandmasterID));
 	_gptpDomainNumber->setText(1, QString::number(gptpDomainNumber));
 }
 
@@ -223,7 +225,7 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAsPath(la::avdecc::entity::model::
 
 	for (auto const& clockID : asPath.sequence)
 	{
-		auto* widget = new AsPathWidget{ clockID, avdecc::helper::getVendorName(clockID) };
+		auto* widget = new AsPathWidget{ clockID, hive::modelsLibrary::helper::getVendorName(clockID) };
 		auto* item = new QListWidgetItem(_asPath);
 		item->setSizeHint(widget->sizeHint());
 

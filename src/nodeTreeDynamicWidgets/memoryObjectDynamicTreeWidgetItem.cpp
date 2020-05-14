@@ -19,6 +19,8 @@
 
 #include "memoryObjectDynamicTreeWidgetItem.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 MemoryObjectDynamicTreeWidgetItem::MemoryObjectDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::entity::model::MemoryObjectNodeDynamicModel const* const dynamicModel, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
@@ -48,5 +50,5 @@ MemoryObjectDynamicTreeWidgetItem::MemoryObjectDynamicTreeWidgetItem(la::avdecc:
 
 void MemoryObjectDynamicTreeWidgetItem::updateMemoryObjectLength(std::uint64_t const length)
 {
-	_length->setText(1, avdecc::helper::toHexQString(length, false, true));
+	_length->setText(1, hive::modelsLibrary::helper::toHexQString(length, false, true));
 }

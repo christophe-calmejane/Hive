@@ -19,6 +19,8 @@
 
 #include "listenerStreamConnectionWidget.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <QMenu>
 #include <QStyle>
 
@@ -130,7 +132,7 @@ void ListenerStreamConnectionWidget::updateData()
 	}
 	else
 	{
-		_streamConnectionLabel.setText(stateText + avdecc::helper::uniqueIdentifierToString(_info.talkerStream.entityID) + ":" + QString::number(_info.talkerStream.streamIndex));
+		_streamConnectionLabel.setText(stateText + hive::modelsLibrary::helper::uniqueIdentifierToString(_info.talkerStream.entityID) + ":" + QString::number(_info.talkerStream.streamIndex));
 
 		QString onlineStatus{ "Offline" };
 		bool isGhost{ true };
@@ -140,7 +142,7 @@ void ListenerStreamConnectionWidget::updateData()
 		if (controlledEntity)
 		{
 			isGhost = false;
-			onlineStatus = avdecc::helper::smartEntityName(*controlledEntity);
+			onlineStatus = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 		}
 
 		_entityNameLabel.setText(onlineStatus);

@@ -18,7 +18,8 @@
 */
 
 #include "node.hpp"
-#include "toolkit/helper.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
 
 namespace connectionMatrix
 {
@@ -179,7 +180,7 @@ Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* 
 	: _type{ type }
 	, _entityID{ entityID }
 	, _parent{ parent }
-	, _name{ avdecc::helper::uniqueIdentifierToString(entityID) }
+	, _name{ hive::modelsLibrary::helper::uniqueIdentifierToString(entityID) }
 {
 	if (_parent)
 	{

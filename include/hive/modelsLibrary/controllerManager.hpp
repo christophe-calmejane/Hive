@@ -25,6 +25,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <cstdint>
+#include <optional>
 
 #include <QObject>
 
@@ -244,8 +245,10 @@ public:
 	Q_SIGNAL void entityQueryError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::QueryCommandError const error);
 	Q_SIGNAL void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const enumerationTime);
 	Q_SIGNAL void entityOffline(la::avdecc::UniqueIdentifier const entityID);
-	Q_SIGNAL void unsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID);
+	Q_SIGNAL void unsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed);
 	Q_SIGNAL void compatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags);
+	Q_SIGNAL void entityCapabilitiesChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::EntityCapabilities const entityCapabilities);
+	Q_SIGNAL void associationIDChanged(la::avdecc::UniqueIdentifier const entityID, std::optional<la::avdecc::UniqueIdentifier> const associationID);
 	Q_SIGNAL void identificationStarted(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void identificationStopped(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void gptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain);

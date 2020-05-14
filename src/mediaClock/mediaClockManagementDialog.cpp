@@ -18,24 +18,25 @@
 */
 
 #include "mediaClockManagementDialog.hpp"
-
-#include <QPushButton>
-#include <QMenu>
-#include <QMessageBox>
-#include <QProgressDialog>
-#include <unordered_set>
-
 #include "ui_mediaClockManagementDialog.h"
 #include "internals/config.hpp"
-#include <la/avdecc/avdecc.hpp>
-#include <la/avdecc/controller/avdeccController.hpp>
 #include "settingsManager/settings.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "avdecc/helper.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
 #include "mediaClock/domainTreeModel.hpp"
 #include "mediaClock/unassignedListModel.hpp"
-#include "entityLogoCache.hpp"
+
+#include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+
+#include <QPushButton>
+#include <QMenu>
+#include <QMessageBox>
+#include <QProgressDialog>
+
+#include <unordered_set>
 
 class MediaClockManagementDialogImpl final : private Ui::MediaClockManagementDialog, public QObject
 {
@@ -439,10 +440,10 @@ public:
 				continue; // entity already displayed.
 			}
 			auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(it->first);
-			auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+			auto entityName = hive::modelsLibrary::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
 			if (controlledEntity)
 			{
-				entityName = avdecc::helper::smartEntityName(*controlledEntity);
+				entityName = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 			}
 			auto errorsForEntity = applyInfo.entityApplyErrors.equal_range(it->first);
 			QString errors;

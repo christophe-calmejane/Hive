@@ -22,6 +22,7 @@
 #include "avdecc/helper.hpp"
 
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 #include <la/avdecc/utils.hpp>
 
 #include <QLabel>
@@ -253,7 +254,7 @@ void FirmwareUploadDialog::scheduleUpload(EntityInfo const& entityInfo) noexcept
 
 	if (controlledEntity)
 	{
-		auto const name = avdecc::helper::smartEntityName(*controlledEntity);
+		auto const name = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 		item->setData(la::avdecc::utils::to_integral(ItemRole::EntityID), QVariant::fromValue(entityID));
 		item->setData(la::avdecc::utils::to_integral(ItemRole::DescriptorIndex), QVariant::fromValue(descriptorIndex));
 		item->setData(la::avdecc::utils::to_integral(ItemRole::MemoryObjectAddress), QVariant::fromValue(memoryObjectAddress));

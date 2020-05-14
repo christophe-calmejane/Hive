@@ -20,8 +20,7 @@
 #include "nodeTreeWidget.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/helper.hpp"
-#include "toolkit/textEntry.hpp"
-#include "toolkit/comboBox.hpp"
+#include "avdecc/stringValidator.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
@@ -33,17 +32,17 @@
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "counters/streamOutputCountersTreeWidgetItem.hpp"
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
-#include "entityLogoCache.hpp"
 #include "firmwareUploadDialog.hpp"
 #include "aecpCommandComboBox.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/logger.hpp>
+#include <QtMate/widgets/textEntry.hpp>
+#include <QtMate/widgets/comboBox.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
-
-#include <vector>
-#include <utility>
-#include <algorithm>
+#include <hive/widgetModelsLibrary/entityLogoCache.hpp>
+#include <hive/widgetModelsLibrary/painterHelper.hpp>
 
 #include <QListWidget>
 #include <QHeaderView>
@@ -51,7 +50,9 @@
 #include <QPushButton>
 #include <QMessageBox>
 
-#include "painterHelper.hpp"
+#include <vector>
+#include <utility>
+#include <algorithm>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -104,7 +105,7 @@ protected:
 		{
 			QPainter painter{ this };
 			painter.fillRect(rect(), QBrush{ _backgroundPixmap });
-			painterHelper::drawCentered(&painter, rect(), _image);
+			hive::widgetModelsLibrary::painterHelper::drawCentered(&painter, rect(), _image);
 		}
 	}
 
@@ -205,8 +206,8 @@ private:
 			auto* nameItem = new QTreeWidgetItem(q);
 			nameItem->setText(0, "Names");
 
-			addEditableTextItem(nameItem, "Entity Name", avdecc::helper::entityName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, {});
-			addEditableTextItem(nameItem, "Group Name", avdecc::helper::groupName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName, {});
+			addEditableTextItem(nameItem, "Entity Name", hive::modelsLibrary::helper::entityName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, {});
+			addEditableTextItem(nameItem, "Group Name", hive::modelsLibrary::helper::groupName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName, {});
 		}
 
 		// Static model
@@ -224,7 +225,7 @@ private:
 				auto const listenerCaps = e.getListenerCapabilities();
 				auto const ctrlCaps = e.getControllerCapabilities();
 
-				addTextItem(descriptorItem, "Entity Model ID", avdecc::helper::uniqueIdentifierToString(e.getEntityModelID()));
+				addTextItem(descriptorItem, "Entity Model ID", hive::modelsLibrary::helper::uniqueIdentifierToString(e.getEntityModelID()));
 				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::forceNumeric(talkerCaps.value()), avdecc::helper::capabilitiesToString(talkerCaps));
 				addTextItem(descriptorItem, "Talker Max Sources", QString::number(e.getTalkerStreamSources()));
 				addFlagsItem(descriptorItem, "Listener Capabilities", la::avdecc::utils::forceNumeric(listenerCaps.value()), avdecc::helper::capabilitiesToString(listenerCaps));
@@ -267,7 +268,7 @@ private:
 			auto const& e = entity.getEntity();
 			auto const entityCaps = e.getEntityCapabilities();
 			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::forceNumeric(entityCaps.value()), avdecc::helper::capabilitiesToString(entityCaps));
-			addTextItem(dynamicItem, "Association ID", e.getAssociationID() ? avdecc::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString("Not Set"));
+			addTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString("Not Set"));
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
@@ -276,7 +277,7 @@ private:
 
 			for (auto const& it : node.configurations)
 			{
-				configurationComboBox->addItem(QString::number(it.first) + ": " + avdecc::helper::configurationName(&entity, it.second), it.first);
+				configurationComboBox->addItem(QString::number(it.first) + ": " + hive::modelsLibrary::helper::configurationName(&entity, it.second), it.first);
 			}
 
 			auto currentConfigurationComboBoxIndex = configurationComboBox->findData(node.dynamicModel->currentConfiguration);
@@ -425,17 +426,17 @@ private:
 
 			addTextItem(descriptorItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(model->macAddress, true));
 			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->interfaceFlags.value()), avdecc::helper::flagsToString(model->interfaceFlags));
-			addTextItem(descriptorItem, "Clock Identity", avdecc::helper::uniqueIdentifierToString(model->clockIdentity));
-			addTextItem(descriptorItem, "Priority 1", avdecc::helper::toHexQString(model->priority1, true, true));
-			addTextItem(descriptorItem, "Clock Class", avdecc::helper::toHexQString(model->clockClass, true, true));
-			addTextItem(descriptorItem, "Offset Scaled Log Variance", avdecc::helper::toHexQString(model->offsetScaledLogVariance, true, true));
-			addTextItem(descriptorItem, "Clock Accuracy", avdecc::helper::toHexQString(model->clockAccuracy, true, true));
-			addTextItem(descriptorItem, "Priority 2", avdecc::helper::toHexQString(model->priority2, true, true));
-			addTextItem(descriptorItem, "Domain Number", avdecc::helper::toHexQString(model->domainNumber, true, true));
-			addTextItem(descriptorItem, "Log Sync Interval", avdecc::helper::toHexQString(model->logSyncInterval, true, true));
-			addTextItem(descriptorItem, "Log Announce Interval", avdecc::helper::toHexQString(model->logAnnounceInterval, true, true));
-			addTextItem(descriptorItem, "Log Delay Interval", avdecc::helper::toHexQString(model->logPDelayInterval, true, true));
-			addTextItem(descriptorItem, "Port Number", avdecc::helper::toHexQString(model->portNumber, true, true));
+			addTextItem(descriptorItem, "Clock Identity", hive::modelsLibrary::helper::uniqueIdentifierToString(model->clockIdentity));
+			addTextItem(descriptorItem, "Priority 1", hive::modelsLibrary::helper::toHexQString(model->priority1, true, true));
+			addTextItem(descriptorItem, "Clock Class", hive::modelsLibrary::helper::toHexQString(model->clockClass, true, true));
+			addTextItem(descriptorItem, "Offset Scaled Log Variance", hive::modelsLibrary::helper::toHexQString(model->offsetScaledLogVariance, true, true));
+			addTextItem(descriptorItem, "Clock Accuracy", hive::modelsLibrary::helper::toHexQString(model->clockAccuracy, true, true));
+			addTextItem(descriptorItem, "Priority 2", hive::modelsLibrary::helper::toHexQString(model->priority2, true, true));
+			addTextItem(descriptorItem, "Domain Number", hive::modelsLibrary::helper::toHexQString(model->domainNumber, true, true));
+			addTextItem(descriptorItem, "Log Sync Interval", hive::modelsLibrary::helper::toHexQString(model->logSyncInterval, true, true));
+			addTextItem(descriptorItem, "Log Announce Interval", hive::modelsLibrary::helper::toHexQString(model->logAnnounceInterval, true, true));
+			addTextItem(descriptorItem, "Log Delay Interval", hive::modelsLibrary::helper::toHexQString(model->logPDelayInterval, true, true));
+			addTextItem(descriptorItem, "Port Number", hive::modelsLibrary::helper::toHexQString(model->portNumber, true, true));
 		}
 
 		// Dynamic model
@@ -472,7 +473,7 @@ private:
 			addTextItem(descriptorItem, "Clock Source Type", avdecc::helper::clockSourceTypeToString(model->clockSourceType));
 			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(dynamicModel->clockSourceFlags.value()), avdecc::helper::flagsToString(dynamicModel->clockSourceFlags));
 
-			addTextItem(descriptorItem, "Clock Source Identifier", avdecc::helper::uniqueIdentifierToString(dynamicModel->clockSourceIdentifier));
+			addTextItem(descriptorItem, "Clock Source Identifier", hive::modelsLibrary::helper::uniqueIdentifierToString(dynamicModel->clockSourceIdentifier));
 			addTextItem(descriptorItem, "Clock Source Location Type", avdecc::helper::descriptorTypeToString(model->clockSourceLocationType));
 			addTextItem(descriptorItem, "Clock Source Location Index", model->clockSourceLocationIndex);
 		}
@@ -636,7 +637,7 @@ private:
 				try
 				{
 					auto const& clockSourceNode = controlledEntity->getClockSourceNode(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, sourceIndex);
-					auto const name = QString::number(sourceIndex) + ": '" + avdecc::helper::objectName(controlledEntity, clockSourceNode) + "' (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
+					auto const name = QString::number(sourceIndex) + ": '" + hive::modelsLibrary::helper::objectName(controlledEntity, clockSourceNode) + "' (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
 					sourceComboBox->addItem(name, QVariant::fromValue(sourceIndex));
 				}
 				catch (...)
@@ -709,8 +710,8 @@ private:
 			addTextItem(descriptorItem, "Memory object type", avdecc::helper::memoryObjectTypeToString(model->memoryObjectType));
 			addTextItem(descriptorItem, "Target descriptor type", avdecc::helper::descriptorTypeToString(model->targetDescriptorType));
 			addTextItem(descriptorItem, "Target descriptor index", model->targetDescriptorIndex);
-			addTextItem(descriptorItem, "Start address", avdecc::helper::toHexQString(model->startAddress, false, true));
-			addTextItem(descriptorItem, "Maximum length", avdecc::helper::toHexQString(model->maximumLength, false, true));
+			addTextItem(descriptorItem, "Start address", hive::modelsLibrary::helper::toHexQString(model->startAddress, false, true));
+			addTextItem(descriptorItem, "Maximum length", hive::modelsLibrary::helper::toHexQString(model->maximumLength, false, true));
 
 			// Check and add ImageItem, if this MemoryObject is a supported image type
 			checkAddImageItem(descriptorItem, "Preview", model->memoryObjectType);
@@ -815,7 +816,7 @@ private:
 			addTextItem(discoveryItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(interfaceInfo.macAddress, true));
 			if (interfaceInfo.gptpGrandmasterID)
 			{
-				addTextItem(discoveryItem, "Grandmaster ID", avdecc::helper::uniqueIdentifierToString(*interfaceInfo.gptpGrandmasterID));
+				addTextItem(discoveryItem, "Grandmaster ID", hive::modelsLibrary::helper::uniqueIdentifierToString(*interfaceInfo.gptpGrandmasterID));
 				addTextItem(discoveryItem, "Grandmaster Domain Number", QString::number(*interfaceInfo.gptpDomainNumber));
 			}
 			addTextItem(discoveryItem, "Valid Time (2sec periods)", QString::number(interfaceInfo.validTime));
@@ -907,7 +908,7 @@ private:
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, itemName);
 
-		auto* textEntry = new qt::toolkit::TextEntry(itemValue);
+		auto* textEntry = new qtMate::widgets::TextEntry(itemValue, avdecc::StringValidator::getSharedInstance());
 
 		q->setItemWidget(item, 1, textEntry);
 
@@ -918,7 +919,7 @@ private:
 					textEntry->setEnabled(false);
 			});
 
-		connect(textEntry, &qt::toolkit::TextEntry::returnPressed, textEntry,
+		connect(textEntry, &qtMate::widgets::TextEntry::returnPressed, textEntry,
 			[this, textEntry, commandType, customData]()
 			{
 				// Send changes
@@ -1175,20 +1176,20 @@ private:
 
 	void checkAddImageItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, la::avdecc::entity::model::MemoryObjectType const memoryObjectType)
 	{
-		auto type = EntityLogoCache::Type::None;
+		auto type = hive::widgetModelsLibrary::EntityLogoCache::Type::None;
 		switch (memoryObjectType)
 		{
 			case la::avdecc::entity::model::MemoryObjectType::PngEntity:
-				type = EntityLogoCache::Type::Entity;
+				type = hive::widgetModelsLibrary::EntityLogoCache::Type::Entity;
 				break;
 			case la::avdecc::entity::model::MemoryObjectType::PngManufacturer:
-				type = EntityLogoCache::Type::Manufacturer;
+				type = hive::widgetModelsLibrary::EntityLogoCache::Type::Manufacturer;
 				break;
 			default:
 				return;
 		}
 
-		auto const image = EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
+		auto const image = hive::widgetModelsLibrary::EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
 
 		Q_Q(NodeTreeWidget);
 
@@ -1203,15 +1204,15 @@ private:
 		connect(label, &Label::clicked, label,
 			[this, requestedType = type]()
 			{
-				EntityLogoCache::getInstance().getImage(_controlledEntityID, requestedType, true);
+				hive::widgetModelsLibrary::EntityLogoCache::getInstance().getImage(_controlledEntityID, requestedType, true);
 			});
 
-		connect(&EntityLogoCache::getInstance(), &EntityLogoCache::imageChanged, label,
-			[this, label, requestedType = type](const la::avdecc::UniqueIdentifier entityID, const EntityLogoCache::Type type)
+		connect(&hive::widgetModelsLibrary::EntityLogoCache::getInstance(), &hive::widgetModelsLibrary::EntityLogoCache::imageChanged, label,
+			[this, label, requestedType = type](const la::avdecc::UniqueIdentifier entityID, const hive::widgetModelsLibrary::EntityLogoCache::Type type)
 			{
 				if (entityID == _controlledEntityID && type == requestedType)
 				{
-					auto const image = EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
+					auto const image = hive::widgetModelsLibrary::EntityLogoCache::getInstance().getImage(_controlledEntityID, type);
 					label->setImage(image);
 				}
 			});

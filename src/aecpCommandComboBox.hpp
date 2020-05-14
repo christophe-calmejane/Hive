@@ -19,13 +19,12 @@
 
 #pragma once
 
-#include "toolkit/comboBox.hpp"
-
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <QtMate/widgets/comboBox.hpp>
 
 // ComboBox that watches an Aecp command result, restoring the previous index if the command fails
 class AecpCommandComboBoxPrivate;
-class AecpCommandComboBox : public qt::toolkit::ComboBox
+class AecpCommandComboBox : public qtMate::widgets::ComboBox
 {
 	Q_OBJECT
 

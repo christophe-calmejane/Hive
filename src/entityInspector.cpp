@@ -20,6 +20,7 @@
 #include "entityInspector.hpp"
 #include "avdecc/helper.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QHeaderView>
@@ -62,6 +63,9 @@ EntityInspector::EntityInspector(QWidget* parent)
 	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &EntityInspector::entityOnline);
 	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &EntityInspector::entityOffline);
 	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &EntityInspector::entityNameChanged);
+	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_itemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
+
+	_settingsSignaler.start();
 }
 
 void EntityInspector::setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
@@ -143,6 +147,6 @@ void EntityInspector::configureWindowTitle()
 	auto controlledEntity = manager.getControlledEntity(_controlledEntityTreeWiget.controlledEntityID());
 	if (controlledEntity)
 	{
-		setWindowTitle(avdecc::helper::smartEntityName(*controlledEntity));
+		setWindowTitle(hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
 	}
 }

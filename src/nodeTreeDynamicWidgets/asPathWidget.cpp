@@ -19,6 +19,8 @@
 
 #include "asPathWidget.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 AsPathWidget::AsPathWidget(la::avdecc::UniqueIdentifier const clockID, QString const& vendorName, QWidget* parent)
 	: QWidget(parent)
 {
@@ -27,6 +29,6 @@ AsPathWidget::AsPathWidget(la::avdecc::UniqueIdentifier const clockID, QString c
 	_layout.addWidget(&_clockIDLabel, 1);
 	_layout.addWidget(&_vendorNameLabel, 2);
 
-	_clockIDLabel.setText(avdecc::helper::uniqueIdentifierToString(clockID));
+	_clockIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(clockID));
 	_vendorNameLabel.setText(vendorName);
 }

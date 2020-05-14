@@ -83,7 +83,7 @@ private:
 	Model::IntersectionData::Flags const _flags;
 };
 
-LegendDialog::LegendDialog(qt::toolkit::material::color::Name const& colorName, bool const isTransposed, QWidget* parent)
+LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool const isTransposed, QWidget* parent)
 	: QDialog{ parent }
 {
 	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection Matrix Legend");
@@ -146,8 +146,8 @@ LegendDialog::LegendDialog(qt::toolkit::material::color::Name const& colorName, 
 
 		auto* sectionLayout = new QGridLayout{ sectionGroupBox };
 
-		auto const arrowColor = qt::toolkit::material::color::value(colorName, qt::toolkit::material::color::Shade::Shade600);
-		auto const errorArrowColor = qt::toolkit::material::color::foregroundErrorColorValue(colorName, qt::toolkit::material::color::Shade::Shade600);
+		auto const arrowColor = qtMate::material::color::value(colorName, qtMate::material::color::Shade::Shade600);
+		auto const errorArrowColor = qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::Shade::Shade600);
 		auto const talkerOrientation = isTransposed ? Qt::Orientation::Horizontal : Qt::Orientation::Vertical;
 		auto const listenerOrientation = isTransposed ? Qt::Orientation::Vertical : Qt::Orientation::Horizontal;
 

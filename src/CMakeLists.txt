@@ -1,10 +1,6 @@
 # Hive Sources CMake File
 
-set(HIVE_RESOURCES_FOLDER "${PROJECT_ROOT_DIR}/resources")
 set(HIVE_SOURCES_FOLDER ${CMAKE_CURRENT_SOURCE_DIR})
-
-# Add Models Library
-add_subdirectory(modelsLibrary)
 
 # Declare project
 setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
@@ -104,25 +100,10 @@ set(HEADER_FILES_COMMON
 	profiles/profileSelectionDialog.hpp
 	profiles/profileWidget.hpp
 	settingsManager/settingsManager.hpp
-	settingsManager/settingsManager.hpp
+	settingsManager/settingsSignaler.hpp
 	settingsManager/settings.hpp
 	sparkleHelper/sparkleHelper.hpp
 	statistics/entityStatisticsTreeWidgetItem.hpp
-	toolkit/comboBox.hpp
-	toolkit/dynamicHeaderView.hpp
-	toolkit/flatIconButton.hpp
-	toolkit/material/color.hpp
-	toolkit/material/colorPalette.hpp
-	toolkit/material/helper.hpp
-	toolkit/tableView.hpp
-	toolkit/textEntry.hpp
-	toolkit/tickableMenu.hpp
-	toolkit/graph/connection.hpp
-	toolkit/graph/inputSocket.hpp
-	toolkit/graph/node.hpp
-	toolkit/graph/outputSocket.hpp
-	toolkit/graph/socket.hpp
-	toolkit/graph/view.hpp
 	settingsDialog.hpp
 	defaults.hpp
 	deviceDetailsDialog.hpp
@@ -135,16 +116,11 @@ set(HEADER_FILES_COMMON
 	aecpCommandComboBox.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
-	entityLogoCache.hpp
-	errorItemDelegate.hpp
-	imageItemDelegate.hpp
 	mappingMatrix.hpp
-	activeNetworkInterfaceModel.hpp
-	networkInterfaceModel.hpp
+	activeNetworkInterfacesModel.hpp
 	networkInterfaceTypeModel.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
-	painterHelper.hpp
 	windowsNpfHelper.hpp
 )
 
@@ -190,21 +166,6 @@ set(SOURCE_FILES_COMMON
 	profiles/profileWidget.cpp
 	settingsManager/settingsManager.cpp
 	statistics/entityStatisticsTreeWidgetItem.cpp
-	toolkit/comboBox.cpp
-	toolkit/dynamicHeaderView.cpp
-	toolkit/flatIconButton.cpp
-	toolkit/material/color.cpp
-	toolkit/material/colorPalette.cpp
-	toolkit/material/helper.cpp
-	toolkit/tableView.cpp
-	toolkit/textEntry.cpp
-	toolkit/tickableMenu.cpp
-	toolkit/graph/connection.cpp
-	toolkit/graph/inputSocket.cpp
-	toolkit/graph/node.cpp
-	toolkit/graph/outputSocket.cpp
-	toolkit/graph/socket.cpp
-	toolkit/graph/view.cpp
 	aboutDialog.cpp
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
@@ -214,17 +175,12 @@ set(SOURCE_FILES_COMMON
 	mainWindow.cpp
 	settingsDialog.cpp
 	aecpCommandComboBox.cpp
-	entityLogoCache.cpp
-	errorItemDelegate.cpp
-	imageItemDelegate.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
-	activeNetworkInterfaceModel.cpp
-	networkInterfaceModel.cpp
+	activeNetworkInterfacesModel.cpp
 	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
-	painterHelper.cpp
 	windowsNpfHelper.cpp
 )
 
@@ -290,7 +246,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network Hive_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()
@@ -328,16 +284,8 @@ if(BUILD_HIVE_APPLICATION)
 		)
 	endif()
 
-	# Deploy required shared libraries and resources to the output folder and setup installation rules (must be done BEFORE sign_target or qtDeploy will strip the signature from the binary)
-	target_setup_deploy(${PROJECT_NAME} INSTALL)
-
-	# Sign binary (this is done during installation phase)
-	if(ENABLE_HIVE_SIGNING)
-		sign_target(${PROJECT_NAME})
-	endif()
-
-	# Set installation rule (always installing application)
-	install(TARGETS ${PROJECT_NAME} BUNDLE DESTINATION . RUNTIME DESTINATION bin)
+	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
+	setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG})
 endif()
 
 ################

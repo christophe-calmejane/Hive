@@ -90,7 +90,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="qt::toolkit::FlatIconButton" name="clearButton">
+      <widget class="qtMate::widgets::FlatIconButton" name="clearButton">
        <property name="font">
         <font>
          <family>Material Icons</family>
@@ -106,7 +106,7 @@
       </widget>
      </item>
      <item>
-      <widget class="qt::toolkit::FlatIconButton" name="saveButton">
+      <widget class="qtMate::widgets::FlatIconButton" name="saveButton">
        <property name="font">
         <font>
          <family>Material Icons</family>
@@ -149,9 +149,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>qt::toolkit::FlatIconButton</class>
+   <class>qtMate::widgets::FlatIconButton</class>
    <extends>QPushButton</extends>
-   <header location="global">toolkit/flatIconButton.hpp</header>
+   <header location="global">QtMate/widgets/flatIconButton.hpp</header>
   </customwidget>
  </customwidgets>
  <resources>

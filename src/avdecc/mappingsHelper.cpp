@@ -38,7 +38,7 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildClusterMappings(la::avdecc::c
 		auto const clusterIndex = static_cast<la::avdecc::entity::model::ClusterIndex>(clusterKV.first - streamPortNode.staticModel->baseCluster); // Mappings use relative index (see IEEE1722.1 Table 7.33)
 		AVDECC_ASSERT(clusterIndex < streamPortNode.staticModel->numberOfClusters, "ClusterIndex invalid");
 		auto const& clusterNode = clusterKV.second;
-		auto clusterName = avdecc::helper::objectName(controlledEntity, clusterNode).toStdString();
+		auto clusterName = hive::modelsLibrary::helper::objectName(controlledEntity, clusterNode).toStdString();
 		NodeMapping nodeMapping{ clusterIndex };
 		mappingMatrix::Node node{ clusterName };
 
@@ -262,7 +262,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 
 				if (!outputs.empty() && !inputs.empty())
 				{
-					auto smartName = avdecc::helper::smartEntityName(*entity);
+					auto smartName = hive::modelsLibrary::helper::smartEntityName(*entity);
 
 					// Release the controlled entity before starting a long operation (dialog.exec)
 					controlledEntity.reset();

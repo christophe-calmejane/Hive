@@ -26,6 +26,7 @@
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 
 #include "ui_deviceDetailsDialog.h"
 #include "deviceDetailsChannelTableModel.hpp"
@@ -153,18 +154,18 @@ public:
 			{
 				return;
 			}
-			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::smartEntityName(*controlledEntity));
+			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
 
 			if (!leaveOutGeneralData)
 			{
 				// get the device name into the line edit
 				const QSignalBlocker blockerLineEditDeviceName(lineEditDeviceName);
-				lineEditDeviceName->setText(avdecc::helper::entityName(*controlledEntity));
+				lineEditDeviceName->setText(hive::modelsLibrary::helper::entityName(*controlledEntity));
 				setModifiedStyleOnWidget(lineEditDeviceName, false);
 
 				// get the group name into the line edit
 				const QSignalBlocker blockerLineEditGroupName(lineEditGroupName);
-				lineEditGroupName->setText(avdecc::helper::groupName(*controlledEntity));
+				lineEditGroupName->setText(hive::modelsLibrary::helper::groupName(*controlledEntity));
 				setModifiedStyleOnWidget(lineEditGroupName, false);
 
 				auto const& entityNode = controlledEntity->getEntityNode();
@@ -172,7 +173,7 @@ public:
 				auto const* const staticModel = entityNode.staticModel;
 				auto const* const dynamicModel = entityNode.dynamicModel;
 
-				labelEntityIdValue->setText(avdecc::helper::toHexQString(entityID.getValue(), true, true));
+				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(entityID.getValue(), true, true));
 				if (staticModel)
 				{
 					labelVendorNameValue->setText(controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
@@ -363,7 +364,7 @@ public:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const /*parent*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		QSignalBlocker const blocker(comboBoxConfiguration);
-		comboBoxConfiguration->addItem(avdecc::helper::configurationName(controlledEntity, node), node.descriptorIndex);
+		comboBoxConfiguration->addItem(hive::modelsLibrary::helper::configurationName(controlledEntity, node), node.descriptorIndex);
 
 		// relevant Node:
 		if (node.dynamicModel->isActiveConfiguration && !_activeConfigurationIndex)

@@ -24,6 +24,7 @@
 #include "defaults.hpp"
 
 #include <la/avdecc/utils.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QLabel>
@@ -113,7 +114,7 @@ public:
 			switch (column)
 			{
 				case Model::Column::EntityID:
-					return avdecc::helper::uniqueIdentifierToString(data.entityID);
+					return hive::modelsLibrary::helper::uniqueIdentifierToString(data.entityID);
 				case Model::Column::Name:
 					return data.name;
 				case Model::Column::FirmwareVersion:
@@ -184,7 +185,7 @@ private:
 							auto const row = rowCount();
 							emit q->beginInsertRows({}, row, row);
 
-							_entities.push_back(EntityData{ entityID, avdecc::helper::smartEntityName(*controlledEntity), entityNode.dynamicModel->firmwareVersion.data() });
+							_entities.push_back(EntityData{ entityID, hive::modelsLibrary::helper::smartEntityName(*controlledEntity), entityNode.dynamicModel->firmwareVersion.data() });
 
 							// Update the cache
 							rebuildEntityRowMap();

@@ -21,6 +21,7 @@
 #include "avdecc/helper.hpp"
 
 #include <la/avdecc/utils.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 /**
@@ -48,7 +49,7 @@ QString EntityTreeItem::entityName() const
 	auto const controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(m_entityID);
 	if (controlledEntity)
 	{
-		return avdecc::helper::smartEntityName(*controlledEntity);
+		return hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 	}
 	return "";
 }

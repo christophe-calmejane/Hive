@@ -21,9 +21,10 @@
 
 #include "settingsManager.hpp"
 #include "profiles/profiles.hpp"
-#include "toolkit/material/colorPalette.hpp"
+
 #include <la/avdecc/internals/protocolInterface.hpp>
 #include <la/avdecc/utils.hpp>
+#include <QtMate/material/colorPalette.hpp>
 
 namespace settings
 {
@@ -35,7 +36,7 @@ static SettingsManager::SettingDefault UserProfile = { "userProfile", la::avdecc
 static SettingsManager::SettingDefault General_AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };
 static SettingsManager::SettingDefault General_AutomaticCheckForUpdates = { "avdecc/general/enableAutomaticCheckForUpdates", true };
 static SettingsManager::SettingDefault General_CheckForBetaVersions = { "avdecc/general/enableCheckForBetaVersions", false };
-static SettingsManager::SettingDefault General_ThemeColorIndex = { "avdecc/general/themeColorIndex", qt::toolkit::material::color::Palette::index(qt::toolkit::material::color::DefaultColor) };
+static SettingsManager::SettingDefault General_ThemeColorIndex = { "avdecc/general/themeColorIndex", qtMate::material::color::Palette::index(qtMate::material::color::DefaultColor) };
 
 // Connection matrix settings
 static SettingsManager::SettingDefault ConnectionMatrix_Transpose = { "avdecc/connectionMatrix/transpose", false };

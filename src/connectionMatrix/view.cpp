@@ -26,6 +26,7 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QMouseEvent>
@@ -538,7 +539,7 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 	}
 	else if (name == settings::General_ThemeColorIndex.name)
 	{
-		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+		auto const colorName = qtMate::material::color::Palette::name(value.toInt());
 
 		_cornerWidget->setColor(colorName);
 		_verticalHeaderView->setColor(colorName);
@@ -562,12 +563,12 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 		{
 			continue; // entity already displayed.
 		}
-		auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+		auto entityName = hive::modelsLibrary::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
 		{
 			auto const controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(it->first);
 			if (controlledEntity)
 			{
-				entityName = avdecc::helper::smartEntityName(*controlledEntity);
+				entityName = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 			}
 		}
 		auto errorsForEntity = info.connectionCreationErrors.equal_range(it->first);

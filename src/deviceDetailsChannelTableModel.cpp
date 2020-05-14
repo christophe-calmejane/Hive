@@ -27,6 +27,7 @@
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QCoreApplication>
@@ -407,7 +408,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										return avdecc::helper::objectName(controlledEntity.get(), audioClusterIt->second);
+										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), audioClusterIt->second);
 									}
 								}
 							}
@@ -420,7 +421,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										return avdecc::helper::objectName(controlledEntity.get(), audioClusterIt->second);
+										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), audioClusterIt->second);
 									}
 								}
 							}
@@ -462,16 +463,16 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								QString clusterName;
 								if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 								{
-									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+									clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 								}
 								else
 								{
-									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+									clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 								}
 
 								if (connection->isSourceRedundant && connection->isTargetRedundant)
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())).append(" (Prim)"));
+									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Prim)"));
 
 									auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
@@ -498,7 +499,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 
 									while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 									{
-										connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())).append(" (Sec)"));
+										connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Sec)"));
 
 										itOutputs++;
 										itInputs++;
@@ -506,7 +507,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								}
 								else
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())));
+									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())));
 								}
 							}
 							innerRow++;

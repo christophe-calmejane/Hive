@@ -22,6 +22,8 @@
 #include "talkerStreamConnectionWidget.hpp"
 #include "nodeTreeWidget.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <QMenu>
 
 static inline void setNoValue(QTreeWidgetItem* const widget)
@@ -191,7 +193,7 @@ void StreamDynamicTreeWidgetItem::updateStreamFormat(la::avdecc::entity::model::
 {
 	_streamFormat->setForeground(0, QColor{ Qt::black });
 	_streamFormat->setForeground(1, QColor{ Qt::black });
-	_streamFormat->setText(1, avdecc::helper::toHexQString(streamFormat.getValue(), true, true));
+	_streamFormat->setText(1, hive::modelsLibrary::helper::toHexQString(streamFormat.getValue(), true, true));
 }
 
 void StreamDynamicTreeWidgetItem::updateStreamIsRunning(bool const isRunning)
@@ -228,7 +230,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 
 	if (streamDynamicInfo.streamID)
 	{
-		setStringValue(_streamID, avdecc::helper::uniqueIdentifierToString(*streamDynamicInfo.streamID));
+		setStringValue(_streamID, hive::modelsLibrary::helper::uniqueIdentifierToString(*streamDynamicInfo.streamID));
 	}
 	else
 	{
@@ -261,7 +263,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	if (streamDynamicInfo.msrpFailureCode && streamDynamicInfo.msrpFailureBridgeID)
 	{
 		setStringValue(_msrpFailureCode, QString::number(*streamDynamicInfo.msrpFailureCode));
-		setStringValue(_msrpFailureBridgeID, avdecc::helper::toHexQString(*streamDynamicInfo.msrpFailureBridgeID, true, true));
+		setStringValue(_msrpFailureBridgeID, hive::modelsLibrary::helper::toHexQString(*streamDynamicInfo.msrpFailureBridgeID, true, true));
 	}
 	else
 	{
@@ -283,7 +285,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	if (streamDynamicInfo.probingStatus)
 	{
 		auto const probingStatus = *streamDynamicInfo.probingStatus;
-		setStringValue(_probingStatus, QString("%1 (%2)").arg(avdecc::helper::toHexQString(la::avdecc::utils::to_integral(probingStatus), true, true)).arg(avdecc::helper::probingStatusToString(probingStatus)));
+		setStringValue(_probingStatus, QString("%1 (%2)").arg(hive::modelsLibrary::helper::toHexQString(la::avdecc::utils::to_integral(probingStatus), true, true)).arg(avdecc::helper::probingStatusToString(probingStatus)));
 	}
 	else
 	{
@@ -292,7 +294,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	if (streamDynamicInfo.acmpStatus)
 	{
 		auto const acmpStatus = *streamDynamicInfo.acmpStatus;
-		setStringValue(_acmpStatus, QString("%1 (%2)").arg(avdecc::helper::toHexQString(acmpStatus.getValue(), true, true)).arg(avdecc::helper::toUpperCamelCase(static_cast<std::string>(acmpStatus))));
+		setStringValue(_acmpStatus, QString("%1 (%2)").arg(hive::modelsLibrary::helper::toHexQString(acmpStatus.getValue(), true, true)).arg(hive::modelsLibrary::helper::toUpperCamelCase(static_cast<std::string>(acmpStatus))));
 	}
 	else
 	{

@@ -20,13 +20,12 @@
 #include "domainTreeEntityNameDelegate.hpp"
 #include "ui_domainTreeEntityNameDelegate.h"
 #include "internals/config.hpp"
-#include <la/avdecc/avdecc.hpp>
-#include <la/avdecc/controller/avdeccController.hpp>
 #include "settingsManager/settings.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "mediaClock/domainTreeModel.hpp"
-#include "entityLogoCache.hpp"
 
+#include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/controller/avdeccController.hpp>
 
 // **************************************************************
 // class MediaClockTableEntityNameDelegateImpl

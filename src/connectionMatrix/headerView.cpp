@@ -22,8 +22,9 @@
 #include "connectionMatrix/node.hpp"
 #include "connectionMatrix/paintHelper.hpp"
 #include "avdecc/mappingsHelper.hpp"
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QPainter>
@@ -81,7 +82,7 @@ void HeaderView::setTransposed(bool const isTransposed)
 	update();
 }
 
-void HeaderView::setColor(qt::toolkit::material::color::Name const name)
+void HeaderView::setColor(qtMate::material::color::Name const name)
 {
 	_colorName = name;
 	update();
@@ -371,9 +372,9 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			foregroundErrorColor = Qt::red;
 			break;
 		case Node::Type::Entity:
-			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade900);
-			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade900);
-			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade900);
+			backgroundColor = qtMate::material::color::value(_colorName, qtMate::material::color::Shade::Shade900);
+			foregroundColor = qtMate::material::color::foregroundValue(_colorName, qtMate::material::color::Shade::Shade900);
+			foregroundErrorColor = qtMate::material::color::foregroundErrorColorValue(_colorName, qtMate::material::color::Shade::Shade900);
 			break;
 		case Node::Type::RedundantInput:
 		case Node::Type::RedundantOutput:
@@ -381,16 +382,16 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 		case Node::Type::OutputStream:
 		case Node::Type::InputChannel:
 		case Node::Type::OutputChannel:
-			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade600);
-			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
-			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
+			backgroundColor = qtMate::material::color::value(_colorName, qtMate::material::color::Shade::Shade600);
+			foregroundColor = qtMate::material::color::foregroundValue(_colorName, qtMate::material::color::Shade::Shade600);
+			foregroundErrorColor = qtMate::material::color::foregroundErrorColorValue(_colorName, qtMate::material::color::Shade::Shade600);
 			nodeLevel = 1;
 			break;
 		case Node::Type::RedundantInputStream:
 		case Node::Type::RedundantOutputStream:
-			backgroundColor = qt::toolkit::material::color::value(_colorName, qt::toolkit::material::color::Shade::Shade300);
-			foregroundColor = qt::toolkit::material::color::foregroundValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
-			foregroundErrorColor = qt::toolkit::material::color::foregroundErrorColorValue(_colorName, qt::toolkit::material::color::Shade::Shade300);
+			backgroundColor = qtMate::material::color::value(_colorName, qtMate::material::color::Shade::Shade300);
+			foregroundColor = qtMate::material::color::foregroundValue(_colorName, qtMate::material::color::Shade::Shade300);
+			foregroundErrorColor = qtMate::material::color::foregroundErrorColorValue(_colorName, qtMate::material::color::Shade::Shade300);
 			nodeLevel = 2;
 			break;
 		default:
@@ -463,8 +464,8 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	if (isSelected)
 	{
-		backgroundColor = qt::toolkit::material::color::complementaryValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
-		foregroundColor = qt::toolkit::material::color::foregroundComplementaryValue(_colorName, qt::toolkit::material::color::Shade::Shade600);
+		backgroundColor = qtMate::material::color::complementaryValue(_colorName, qtMate::material::color::Shade::Shade600);
+		foregroundColor = qtMate::material::color::foregroundComplementaryValue(_colorName, qtMate::material::color::Shade::Shade600);
 	}
 
 	painter->save();
@@ -718,7 +719,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 			la::avdecc::entity::model::StreamIndex streamIndex = la::avdecc::entity::model::getInvalidDescriptorIndex();
 
 			QMenu menu;
-			addHeaderAction(menu, "Entity: " + avdecc::helper::smartEntityName(*controlledEntity));
+			addHeaderAction(menu, "Entity: " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
 
 			if (node->isStreamNode())
 			{

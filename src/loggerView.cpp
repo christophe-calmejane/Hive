@@ -183,9 +183,9 @@ LoggerView::LoggerView(QWidget* parent)
 	createLevelFilterButton();
 }
 
-qt::toolkit::DynamicHeaderView* LoggerView::header() const
+qtMate::widgets::DynamicHeaderView* LoggerView::header() const
 {
-	return const_cast<qt::toolkit::DynamicHeaderView*>(&_dynamicHeaderView);
+	return const_cast<qtMate::widgets::DynamicHeaderView*>(&_dynamicHeaderView);
 }
 
 void LoggerView::createLayerFilterButton()

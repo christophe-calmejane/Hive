@@ -22,7 +22,6 @@
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 
 #include "avdecc/helper.hpp"
-#include "toolkit/comboBox.hpp"
 #include "aecpCommandComboBox.hpp"
 
 #include <hive/modelsLibrary/controllerManager.hpp>
