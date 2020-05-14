@@ -36,6 +36,7 @@ namespace modelsLibrary
 class NetworkInterfaceAbstractListModel : public QAbstractListModel
 {
 public:
+	// Notifications for NetworkInterfaceModel changes
 	virtual void nameChanged(QModelIndex const& index, std::string const& name) noexcept = 0;
 	virtual void enabledStateChanged(QModelIndex const& index, bool const isEnabled) noexcept = 0;
 	virtual void connectedStateChanged(QModelIndex const& index, bool const isConnected) noexcept = 0;
@@ -44,6 +45,7 @@ private:
 	friend class NetworkInterfaceModel;
 };
 
+/** NetworkInterface model itself (core engine) */
 class NetworkInterfaceModel
 {
 public:

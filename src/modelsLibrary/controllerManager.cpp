@@ -389,19 +389,24 @@ private:
 	// Discovery notifications (ADP)
 	virtual void onEntityOnline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
-		auto const entityID{ entity->getEntity().getEntityID() };
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), enumerationTime = entity->getEnumerationTime()]()
+			{
+				{
+					auto const lg = std::lock_guard{ _lock };
+					_entities.insert(entityID);
+					_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
+				}
 
-		{
-			auto const lg = std::lock_guard{ _lock };
-			_entities.insert(entityID);
-			_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
-		}
-
-		emit entityOnline(entityID, entity->getEnumerationTime());
+				emit entityOnline(entityID, enumerationTime);
+			});
 	}
 	virtual void onEntityOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
-		// We absolutely want Entity Removal to be processed in the main thread, so that _entities and _entityErrorCounterTrackers still contain this entity
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
 			[this, entityID = entity->getEntity().getEntityID()]()
 			{
