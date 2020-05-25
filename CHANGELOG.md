@@ -13,12 +13,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Small rework of About Dialog
-- Using AVDECC Library v3.0.0
+- Using AVDECC Library v3.0.1
 - macOS Native is now restricted to macOS Catalina and later
 
 ### Fixed
 - Full Entity State loading issue (connection state was not properly loaded)
 - [Crashed when using macOS Native ProtocolInterface](https://github.com/christophe-calmejane/Hive/issues/76)
+- USB-C and Thunderbolt Network interfaces enumeration issues on macOS Catalina
 
 ## [1.2.1] - 2019-11-21
 ### Fixed
