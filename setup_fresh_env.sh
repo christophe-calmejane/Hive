@@ -1,51 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-getFolderAbsoluteOSDependantPath()
-{
-  local _retval="$1"
-  local result="$2"
+# Get absolute folder for this script
+callerFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
-  if [[ $OSTYPE = cygwin ]];
-	then
-    result="$(cygpath -a -w "$2")\\"
-  elif [[ $OSTYPE = msys ]];
-	then
-    result="$({ cd "$2" && pwd -W; } | sed 's|/|\\|g')\\"
-  else
-    result="$(cd "$2"; pwd -P)/"
-  fi
-
-  eval $_retval="'${result}'"
-}
-
-getOS()
-{
-  local _retval="$1"
-  local result=""
-
-  case "$OSTYPE" in
-    msys)
-      result="win"
-      ;;
-    cygwin)
-      result="win"
-      ;;
-    darwin*)
-      result="mac"
-      ;;
-    linux*)
-      result="linux"
-      ;;
-    *)
-      echo "ERROR: Unknown OSTYPE: $OSTYPE"
-      exit 127
-      ;;
-  esac
-
-  eval $_retval="'${result}'"
-}
-
-setupEnv()
+setupSubmodules()
 {
 	echo -n "Fetching submodules... "
 	local log=$(git submodule update --init --recursive 2>&1)
@@ -58,7 +16,10 @@ setupEnv()
 		exit 1
 	fi
 	echo "done"
-  
+}
+
+setupEnv()
+{
 	getOS osName
 	if [[ $osName == "win" ]];
 	then
@@ -252,6 +213,9 @@ setupEnv()
 				mv -f "${spklOutputFolder}/bin/sign_update" "${baseSparkleFolder}/"
 				rm -f "$spkloutputFile"
 				rm -rf "$spklOutputFolder"
+
+				codesign -s "${params["identity"]}" --timestamp --deep --strict --force --options=runtime ${baseSparkleFolder}/Sparkle.framework/Resources/Autoupdate.app
+
 				echo "done"
 			fi
 		fi
@@ -282,24 +246,34 @@ setupEnv()
 			fi
 		fi
 
-	elif [[ $osName == "mac" ]];
+	elif [[ $osName == "linux" ]];
 	then
 		local dsa_pub_key="resources/dsa_pub.pem"
 		touch "$dsa_pub_key"
 
 	fi
 
-	echo -n "Copying .hive_config file... "
-	if [ -f ".hive_config" ];
-	then
-		echo "already found, not overriding"
-	else
-		cp -f ".hive_config.sample" ".hive_config"
-	fi
 	echo "done"
 }
 
+if [ ! -f ".hive_config" ]; then
+	echo "ERROR: You must create and configure a .hive_config file before running this script:"
+	echo "Copy .hive_config.sample file to .hive_config then edit it to your needs."
+	exit 1
+fi
+
+setupSubmodules
+
+# Include utils functions
+. "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
+
+# Include config file functions
+. "${callerFolderPath}scripts/loadConfigFile.sh"
+
+# Load config file
+loadConfigFile
+
 setupEnv
-echo "All done! Feel free to edit the .hive_config file to customize your installer."
+echo "All done!"
 
 exit 0

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -65,14 +65,14 @@ QString objectName(la::avdecc::controller::ControlledEntity const* const control
 	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
 }
 
-bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamConnectionState const& streamConnectionState) noexcept
+bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
 {
-	return streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected && streamConnectionState.talkerStream == talkerStream;
+	return info.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected && info.talkerStream == talkerStream;
 }
 
-bool constexpr isFastConnectingToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamConnectionState const& streamConnectionState) noexcept
+bool constexpr isFastConnectingToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
 {
-	return streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting && streamConnectionState.talkerStream == talkerStream;
+	return info.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::FastConnecting && info.talkerStream == talkerStream;
 }
 
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;

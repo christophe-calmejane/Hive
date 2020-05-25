@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -54,6 +54,7 @@ class Model : public QAbstractTableModel
 public:
 	enum class Mode
 	{
+		None,
 		Stream,
 		Channel,
 	};
@@ -64,6 +65,14 @@ public:
 		{
 			// None
 			None,
+
+			// OfflineOutputStream
+			OfflineOutputStream_Entity, // Summary kind
+			OfflineOutputStream_Redundant, // Summary kind
+			OfflineOutputStream_RedundantStream,
+			OfflineOutputStream_RedundantChannel,
+			OfflineOutputStream_SingleStream,
+			OfflineOutputStream_SingleChannel,
 
 			// Entity
 			Entity_Entity, // Summary kind
@@ -115,8 +124,8 @@ public:
 
 		struct SmartConnectableStream
 		{
-			la::avdecc::entity::model::StreamIndex talkerStreamIndex{ 0u };
-			la::avdecc::entity::model::StreamIndex listenerStreamIndex{ 0u };
+			la::avdecc::entity::model::StreamIdentification talkerStream{};
+			la::avdecc::entity::model::StreamIdentification listenerStream{};
 			bool isConnected{ false };
 			bool isFastConnecting{ false };
 		};
@@ -152,7 +161,7 @@ public:
 	IntersectionData const& intersectionData(QModelIndex const& index) const;
 
 	// Set the model mode
-	void setMode(Mode const mode);
+	void setMode(Mode const mode, bool const force = false);
 
 	// Returns the mode of the model
 	Mode mode() const;

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -37,8 +37,8 @@ namespace connectionMatrix
 View::View(QWidget* parent)
 	: QTableView{ parent }
 	, _model{ std::make_unique<Model>() }
-	, _horizontalHeaderView{ std::make_unique<HeaderView>(Qt::Horizontal, this) }
-	, _verticalHeaderView{ std::make_unique<HeaderView>(Qt::Vertical, this) }
+	, _horizontalHeaderView{ std::make_unique<HeaderView>(true, Qt::Horizontal, this) }
+	, _verticalHeaderView{ std::make_unique<HeaderView>(false, Qt::Vertical, this) }
 	, _itemDelegate{ std::make_unique<ItemDelegate>(this) }
 	, _cornerWidget{ std::make_unique<CornerWidget>(this) }
 {
@@ -108,9 +108,6 @@ void View::onIntersectionClicked(QModelIndex const& index)
 {
 	auto const& intersectionData = _model->intersectionData(index);
 
-	auto const talkerID = intersectionData.talker->entityID();
-	auto const listenerID = intersectionData.listener->entityID();
-
 	auto& manager = avdecc::ControllerManager::getInstance();
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
@@ -156,7 +153,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 	switch (intersectionData.type)
 	{
-			// Use SmartConnection algorithm
+		// Use SmartConnection algorithm
 		case Model::IntersectionData::Type::RedundantStream_RedundantStream:
 		case Model::IntersectionData::Type::RedundantStream_SingleStream:
 		case Model::IntersectionData::Type::SingleStream_SingleStream:
@@ -187,16 +184,15 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 				for (auto const& connectableStream : intersectionData.smartConnectableStreams)
 				{
-					auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, connectableStream.talkerStreamIndex };
 					auto const areConnected = connectableStream.isConnected || connectableStream.isFastConnecting;
 
 					if (doConnect && !areConnected)
 					{
-						manager.connectStream(talkerID, connectableStream.talkerStreamIndex, listenerID, connectableStream.listenerStreamIndex);
+						manager.connectStream(connectableStream.talkerStream.entityID, connectableStream.talkerStream.streamIndex, connectableStream.listenerStream.entityID, connectableStream.listenerStream.streamIndex);
 					}
 					else if (doDisconnect && areConnected)
 					{
-						manager.disconnectStream(talkerID, connectableStream.talkerStreamIndex, listenerID, connectableStream.listenerStreamIndex);
+						manager.disconnectStream(connectableStream.talkerStream.entityID, connectableStream.talkerStream.streamIndex, connectableStream.listenerStream.entityID, connectableStream.listenerStream.streamIndex);
 					}
 					else
 					{
@@ -217,12 +213,11 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 				for (auto const& connectableStream : intersectionData.smartConnectableStreams)
 				{
-					auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerID, connectableStream.talkerStreamIndex };
 					auto const areConnected = connectableStream.isConnected || connectableStream.isFastConnecting;
 
 					if (areConnected)
 					{
-						manager.disconnectStream(talkerID, connectableStream.talkerStreamIndex, listenerID, connectableStream.listenerStreamIndex);
+						manager.disconnectStream(connectableStream.talkerStream.entityID, connectableStream.talkerStream.streamIndex, connectableStream.listenerStream.entityID, connectableStream.listenerStream.streamIndex);
 					}
 				}
 			}
@@ -235,7 +230,9 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			{
 				// establish diagonal connections
 				// gather all connections to be made:
-				auto talkerControlledEntity = manager.getControlledEntity(talkerID);
+				auto const talkerID = intersectionData.talker->entityID();
+				auto const listenerID = intersectionData.listener->entityID();
+				auto talkerControlledEntity = manager.getControlledEntity(talkerID); // TODO: all getControlledEntity calls should be removed the this method. Any model related information should be gathered and cached from notification thread
 				auto listenerControlledEntity = manager.getControlledEntity(listenerID);
 
 				auto const& talkerConfiguration = talkerControlledEntity->getCurrentConfigurationNode();
@@ -311,6 +308,8 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				// gather all connections to be made:
 				auto const& talkerChannelIdentification = talkerChannelNode->channelIdentification();
 
+				auto const talkerID = intersectionData.talker->entityID();
+				auto const listenerID = intersectionData.listener->entityID();
 				auto talkerControlledEntity = manager.getControlledEntity(talkerID);
 				auto listenerControlledEntity = manager.getControlledEntity(listenerID);
 
@@ -355,6 +354,8 @@ void View::onIntersectionClicked(QModelIndex const& index)
 
 		case Model::IntersectionData::Type::SingleChannel_SingleChannel:
 		{
+			auto const talkerID = intersectionData.talker->entityID();
+			auto const listenerID = intersectionData.listener->entityID();
 			auto const talkerChannelIdentification = static_cast<ChannelNode*>(intersectionData.talker)->channelIdentification();
 			auto const listenerChannelIdentification = static_cast<ChannelNode*>(intersectionData.listener)->channelIdentification();
 
@@ -373,6 +374,25 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					handleChannelCreationResult(errorSecondTry, allowTalkerMappingChanges, allowListenerMappingRemoval, elevatedRightsCallback);
 				};
 				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
+			}
+			break;
+		}
+
+		// Offline Streams
+		case Model::IntersectionData::Type::OfflineOutputStream_Redundant:
+		case Model::IntersectionData::Type::OfflineOutputStream_RedundantStream:
+		case Model::IntersectionData::Type::OfflineOutputStream_SingleStream:
+		{
+			auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
+			auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
+
+			for (auto const& connectableStream : intersectionData.smartConnectableStreams)
+			{
+				auto const areConnected = connectableStream.isConnected || connectableStream.isFastConnecting;
+				if (areConnected)
+				{
+					manager.disconnectStream(connectableStream.talkerStream.entityID, connectableStream.talkerStream.streamIndex, connectableStream.listenerStream.entityID, connectableStream.listenerStream.streamIndex);
+				}
 			}
 			break;
 		}

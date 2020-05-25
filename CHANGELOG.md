@@ -4,6 +4,23 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2020-05-25
+### Added
+- Legal notices for each third party resource
+- [Possibility to disconnect an Input Stream connected to an offline talker](https://github.com/christophe-calmejane/Hive/issues/6)
+- [Highlighted currently selected item in comboBox](https://github.com/christophe-calmejane/Hive/issues/82)
+- [Possibility to edit dynamic mappings from the connection matrix headers context menu](https://github.com/christophe-calmejane/Hive/issues/85)
+
+### Changed
+- Small rework of About Dialog
+- Using AVDECC Library v3.0.1
+- macOS Native is now restricted to macOS Catalina and later
+
+### Fixed
+- Full Entity State loading issue (connection state was not properly loaded)
+- [Crashed when using macOS Native ProtocolInterface](https://github.com/christophe-calmejane/Hive/issues/76)
+- USB-C and Thunderbolt Network interfaces enumeration issues on macOS Catalina
+
 ## [1.2.1] - 2019-11-21
 ### Fixed
 - Windows updater not ignoring winPcap reinstallation
@@ -192,7 +209,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [1.0.3] - 2018-07-17
 ### Added
-- Support for Memory Object descriptors (Contributed by Florian Harmuth)
+- Support for Memory Object descriptors
 - Settings menu
 
 ### Fixed

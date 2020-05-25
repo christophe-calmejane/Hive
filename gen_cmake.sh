@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Useful script to generate project files using cmake
 
 # Get absolute folder for this script
 selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
 # Include util functions
-. "${selfFolderPath}3rdparty/avdecc/scripts/utils.sh"
+. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
 # Override default cmake options
 cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
@@ -21,6 +21,7 @@ default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
+default_signtoolOptions="/a /sm /q /fd sha256 /tr http://timestamp.digicert.com"
 
 # 
 cmake_generator=""
@@ -69,6 +70,7 @@ useVSclang=0
 useVS2017=0
 signingId="-"
 doSign=0
+signtoolOptions="$default_signtoolOptions"
 useSources=0
 overrideQt5dir=0
 Qt5dir=""
@@ -90,6 +92,7 @@ do
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
 				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 				echo " -clang -> Compile using clang for VisualStudio"
+				echo " -signtool-opt <options> -> Windows code signing options (Default: $default_signtoolOptions)"
 			fi
 			if isMac; then
 				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing."
@@ -205,6 +208,19 @@ do
 				exit 4
 			fi
 			;;
+		-signtool-opt)
+			if isWindows; then
+				shift
+				if [ $# -lt 1 ]; then
+					echo "ERROR: Missing parameter for -signtool-opt option, see help (-h)"
+					exit 4
+				fi
+				signtoolOptions="$1"
+			else
+				echo "ERROR: -signtool-opt option is only supported on Windows platform"
+				exit 4
+			fi
+			;;
 		-id)
 			if isMac; then
 				shift
@@ -281,6 +297,11 @@ fi
 
 if [ $doSign -eq 1 ]; then
 	add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
+	if isWindows; then
+		if [ ! -z "$signtoolOptions" ]; then
+			add_cmake_opt+=("-DLA_SIGNTOOL_OPTIONS=$signtoolOptions")
+		fi
+	fi
 fi
 
 # Get DSA public key (macOS needs it in the plist)

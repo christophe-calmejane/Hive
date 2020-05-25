@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -33,6 +33,7 @@ namespace internals
 	QString const cmakeVersionString{ "@HIVE_VERSION@" };
 	QString const projectURL{ "@PROJECT_URL@" };
 	QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
+	QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
 	QString const authors{ "@PROJECT_AUTHORS@" };
 	QString const contact{ "@PROJECT_CONTACT@" };
 	QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };

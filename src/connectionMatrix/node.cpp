@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -25,6 +25,11 @@ namespace connectionMatrix
 Node::Type Node::type() const
 {
 	return _type;
+}
+
+bool Node::isOfflineOutputStreamNode() const
+{
+	return _type == Type::OfflineOutputStream;
 }
 
 bool Node::isEntityNode() const
@@ -185,6 +190,17 @@ Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* 
 void Node::setName(QString const& name)
 {
 	_name = name;
+}
+
+OfflineOutputStreamNode* OfflineOutputStreamNode::create()
+{
+	return new OfflineOutputStreamNode{};
+}
+
+OfflineOutputStreamNode::OfflineOutputStreamNode()
+	: Node{ Type::OfflineOutputStream, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), nullptr }
+{
+	setName("Offline Streams");
 }
 
 EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan)
@@ -391,9 +407,9 @@ bool StreamNode::isStreaming() const
 	return _isStreaming;
 }
 
-la::avdecc::entity::model::StreamConnectionState const& StreamNode::streamConnectionState() const
+la::avdecc::entity::model::StreamInputConnectionInfo const& StreamNode::streamInputConnectionInformation() const
 {
-	return _streamConnectionState;
+	return _streamInputConnectionInfo;
 }
 
 StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
@@ -459,15 +475,15 @@ void StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCount
 	_streamStopCounter = value;
 }
 
-void StreamNode::setStreamConnectionState(la::avdecc::entity::model::StreamConnectionState const& streamConnectionState)
+void StreamNode::setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 {
-	_streamConnectionState = streamConnectionState;
+	_streamInputConnectionInfo = info;
 }
 
 void StreamNode::computeLockedState() noexcept
 {
 	// Only if connected
-	if (_streamConnectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected)
+	if (_streamInputConnectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 	{
 		// If we have ProbingStatus it must be Completed
 		if (!_probingStatus || (*_probingStatus == la::avdecc::entity::model::ProbingStatus::Completed))
@@ -547,7 +563,7 @@ bool Node::CompleteHierarchyPolicy::shouldVisit(Node const* const) noexcept
 
 bool Node::StreamHierarchyPolicy::shouldVisit(Node const* const node) noexcept
 {
-	return node->isEntityNode() || node->isRedundantNode() || node->isStreamNode();
+	return node->isOfflineOutputStreamNode() || node->isEntityNode() || node->isRedundantNode() || node->isStreamNode();
 }
 
 bool Node::StreamPolicy::shouldVisit(Node const* const node) noexcept

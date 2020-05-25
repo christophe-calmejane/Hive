@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>350</height>
+    <width>730</width>
+    <height>468</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -21,7 +21,7 @@
   </property>
   <property name="maximumSize">
    <size>
-    <width>600</width>
+    <width>800</width>
     <height>16777215</height>
    </size>
   </property>
@@ -51,7 +51,7 @@
        <property name="maximumSize">
         <size>
          <width>256</width>
-         <height>256</height>
+         <height>230</height>
         </size>
        </property>
        <property name="text">
@@ -76,31 +76,199 @@
        <item>
         <widget class="QLabel" name="aboutLabel">
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;%1&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;Version %2 (%3 %4 build)&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;&lt;br/&gt;&lt;/span&gt;AVDECC Library Version %5 (with options: %6)&lt;br/&gt;AVDECC Controller Library Version %7 (with options: %8)&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;About this software:&lt;/span&gt;&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;0&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Authors:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;%9&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Project URL:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;%10&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;%10&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Third party resources&lt;/span&gt;:&lt;/p&gt;&lt;table border=&quot;0&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;&quot; cellspacing=&quot;2&quot; cellpadding=&quot;0&quot;&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;L-Acoustics Avdecc libraries:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/L-Acoustics/avdecc&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/L-Acoustics/avdecc&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Qt:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://www.qt.io&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://www.qt.io&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Material Icons:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://material.io/icons/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://material.io/icons/&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Discount Markdown:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;http://www.pell.portland.or.us/~orc/Code/markdown/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;http://www.pell.portland.or.us/~orc/Code/markdown/&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;BugTrap:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/bchavez/BugTrap&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/bchavez/BugTrap&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;Sparkle:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://sparkle-project.org&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://sparkle-project.org&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;p&gt;WinSparkle:&lt;/p&gt;&lt;/td&gt;&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/vslavik/winsparkle&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/vslavik/winsparkle&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;
+
+&lt;head /&gt;
+
+&lt;body&gt;
+	&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;%1&lt;/span&gt;&lt;/p&gt;
+	&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;Version %2 (%3 %4 build)&lt;/span&gt;&lt;/p&gt;
+	&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;&lt;br /&gt;&lt;/span&gt;AVDECC Library Version %5 (with options: %6)&lt;br /&gt;AVDECC
+		Controller Library Version %7 (with options: %8)&lt;/p&gt;
+	&lt;p&gt;&lt;br /&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;About this software:&lt;/span&gt;&lt;/p&gt;
+	&lt;table border=&quot;0&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;&quot; cellspacing=&quot;2&quot;
+		cellpadding=&quot;0&quot;&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;Authors:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;%9&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr valign=&quot;middle&quot;&gt;
+			&lt;td&gt;
+				&lt;p&gt;Contributors:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+
+				&lt;div style=&quot;overflow-y: auto; height:100px;&quot;&gt;
+					&lt;table border=&quot;0&quot;
+						style=&quot;margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;&quot;
+						cellspacing=&quot;2&quot; cellpadding=&quot;0&quot;&gt;
+						&lt;tr&gt;
+							&lt;td&gt;
+								Florian Harmuth
+							&lt;/td&gt;
+						&lt;/tr&gt;
+						&lt;tr&gt;
+							&lt;td&gt;
+								Marius Erlen
+							&lt;/td&gt;
+						&lt;/tr&gt;
+						&lt;tr&gt;
+							&lt;td&gt;
+								Daniel Mack
+							&lt;/td&gt;
+						&lt;/tr&gt;
+						&lt;tr&gt;
+							&lt;td&gt;
+								Christian Ahrens
+							&lt;/td&gt;
+						&lt;/tr&gt;
+					&lt;/table&gt;
+				&lt;/div&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr valign=&quot;middle&quot;&gt;
+			&lt;td&gt;
+				&lt;p&gt;Supported by:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;
+					&lt;img src=&quot;:/L-Acoustics.png&quot; width=&quot;64&quot; height=&quot;64&quot; /&gt;
+					&lt;img src=&quot;:/dbaudiotechnik.png&quot; width=&quot;64&quot; height=&quot;64&quot; /&gt;
+				&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;Project URL:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;%10&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;%10&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+	&lt;/table&gt;
+	&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Third party resources&lt;/span&gt;:&lt;/p&gt;
+	&lt;table border=&quot;0&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;&quot; cellspacing=&quot;2&quot;
+		cellpadding=&quot;0&quot;&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;L-Acoustics Avdecc libraries:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;https://github.com/L-Acoustics/avdecc&quot;&gt;&lt;span
+							style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/L-Acoustics/avdecc&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;Qt:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;https://www.qt.io&quot;&gt;&lt;span
+							style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://www.qt.io&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;Material Icons:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;https://material.io/icons/&quot;&gt;&lt;span
+							style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://material.io/icons/&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;Discount Markdown:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;http://www.pell.portland.or.us/~orc/Code/markdown/&quot;&gt;&lt;span
+							style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;http://www.pell.portland.or.us/~orc/Code/markdown/&lt;/span&gt;&lt;/a&gt;
+				&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;BugTrap:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;https://github.com/bchavez/BugTrap&quot;&gt;&lt;span
+							style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/bchavez/BugTrap&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;Sparkle:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;https://sparkle-project.org&quot;&gt;&lt;span
+							style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://sparkle-project.org&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+		&lt;tr&gt;
+			&lt;td&gt;
+				&lt;p&gt;WinSparkle:&lt;/p&gt;
+			&lt;/td&gt;
+			&lt;td style=&quot; padding-left:15; padding-right:15; padding-top:0; padding-bottom:0;&quot;&gt;
+				&lt;p&gt;&lt;a href=&quot;https://github.com/vslavik/winsparkle&quot;&gt;&lt;span
+							style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/vslavik/winsparkle&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;
+			&lt;/td&gt;
+		&lt;/tr&gt;
+	&lt;/table&gt;
+&lt;/body&gt;
+
+&lt;/html&gt;</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
-       <item alignment="Qt::AlignRight">
-        <widget class="QPushButton" name="closeButton">
-         <property name="maximumSize">
-          <size>
-           <width>100</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
-         </property>
-         <property name="text">
-          <string>Close</string>
-         </property>
-         <property name="default">
-          <bool>true</bool>
-         </property>
-        </widget>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QPushButton" name="legalNotices">
+           <property name="text">
+            <string>Legal Notices</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="closeButton">
+           <property name="maximumSize">
+            <size>
+             <width>100</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="layoutDirection">
+            <enum>Qt::LeftToRight</enum>
+           </property>
+           <property name="text">
+            <string>Close</string>
+           </property>
+           <property name="default">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>

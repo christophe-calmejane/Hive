@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.13)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.1)
+set(HIVE_VERSION 1.2.2)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -140,10 +140,12 @@ string(TIMESTAMP CURRENT_YEAR "%Y")
 set(PROJECT_COPYRIGHT_YEAR "2017-${CURRENT_YEAR}")
 set(PROJECT_FULL_NAME "${PROJECT_NAME} - Pro Audio Avdecc Controller")
 set(PROJECT_COMPANYNAME "KikiSoft")
+set(PROJECT_DOMAIN_COUNTRY "fr")
+set(PROJECT_ORIGINAL_AUTHORS "Emilien Vallot and Christophe Calmejane")
 set(PROJECT_AUTHORS "Emilien Vallot, Christophe Calmejane and other contributors")
 set(PROJECT_CONTACT "christophe.calmejane@l-acoustics.com")
-set(PROJECT_REVERSE_DOMAINNAME "fr.${PROJECT_COMPANYNAME}")
-set(PROJECT_DOMAINNAME "${PROJECT_COMPANYNAME}.fr")
+set(PROJECT_REVERSE_DOMAINNAME "${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}")
+set(PROJECT_DOMAINNAME "${PROJECT_COMPANYNAME}.${PROJECT_DOMAIN_COUNTRY}")
 set(PROJECT_URL "https://github.com/christophe-calmejane/Hive")
 set(PROJECT_LEGALCOPYRIGHT "(c) ${PROJECT_AUTHORS}")
 set(PROJECT_READABLE_COPYRIGHT "Copyright ${PROJECT_COPYRIGHT_YEAR}, ${PROJECT_AUTHORS}")

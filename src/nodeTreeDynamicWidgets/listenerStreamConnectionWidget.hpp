@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -34,12 +34,13 @@ class ListenerStreamConnectionWidget : public QWidget
 {
 	Q_OBJECT
 public:
-	ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamConnectionState const& state, QWidget* parent = nullptr);
+	ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info, QWidget* parent = nullptr);
 
 private:
 	void updateData();
 
-	la::avdecc::entity::model::StreamConnectionState _state{};
+	la::avdecc::entity::model::StreamIdentification _stream{};
+	la::avdecc::entity::model::StreamInputConnectionInfo _info{};
 
 	QHBoxLayout _layout{ this };
 	QLabel _streamConnectionLabel{ this };

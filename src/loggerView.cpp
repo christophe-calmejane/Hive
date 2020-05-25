@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -60,6 +60,7 @@ const std::vector<la::avdecc::logger::Layer> loggerLayers{
 	la::avdecc::logger::Layer::Serialization,
 	la::avdecc::logger::Layer::ProtocolInterface,
 	la::avdecc::logger::Layer::AemPayload,
+	la::avdecc::logger::Layer::Entity,
 	la::avdecc::logger::Layer::ControllerEntity,
 	la::avdecc::logger::Layer::ControllerStateMachine,
 	la::avdecc::logger::Layer::Controller,

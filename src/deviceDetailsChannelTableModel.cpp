@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -46,7 +46,7 @@ bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::
 {
 	if (listenerNode && listenerNode->dynamicModel && talkerNode)
 	{
-		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::Connected) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+		return (listenerNode->dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected) && (listenerNode->dynamicModel->connectionInfo.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionInfo.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
 
 	return false;
@@ -62,7 +62,7 @@ bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avd
 {
 	if (listenerNode && listenerNode->dynamicModel && talkerNode)
 	{
-		return (listenerNode->dynamicModel->connectionState.state == la::avdecc::entity::model::StreamConnectionState::State::FastConnecting) && (listenerNode->dynamicModel->connectionState.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionState.talkerStream.streamIndex == talkerNode->descriptorIndex);
+		return (listenerNode->dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::FastConnecting) && (listenerNode->dynamicModel->connectionInfo.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionInfo.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
 
 	return false;

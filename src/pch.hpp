@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -50,6 +50,7 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/loggerModel.hpp"
+#include "avdecc/mappingsHelper.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "avdecc/stringValidator.hpp"
 #include "connectionMatrix/cornerWidget.hpp"

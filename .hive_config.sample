@@ -1,11 +1,33 @@
 # This is a sample configuration file for Hive Installer build
 # Rename this file to .hive_config
 
+################ Signing
 # Signing identity to be used, defaults to "-" which let Xcode autodetect appropriate signing identity
 identity=-
 
+# Windows signtool options (defaults to '/a /sm /q /fd sha256 /tr http://timestamp.digicert.com')
+#signtool_options=/a /sm /q /fd sha256 /tr http://timestamp.digicert.com
+
+################ macOS Notarization
+# Notarization username, defaults to "" which will not notarize
+#notarization_username=
+
+# Notarization password, defaults to "@keychain:AC_PASSWORD" which will use the password stored in the keychain
+#notarization_password=@keychain:AC_PASSWORD
+
+################ Automatic check for update
 # Appcast URL for Hive Releases - Only use https URLs (except for debugging when using localhost)
 appcast_releases=https://www.kikisoft.com/Hive/appcast-release.xml
 
 # Appcast URL for Hive Betas - Only use https URLs (except for debugging when using localhost)
 appcast_betas=https://www.kikisoft.com/Hive/appcast-beta.xml
+
+################ Debug Symbols
+# Windows symstore.exe location (cygwin, mixed or windows path style ; Don't use quotes) - Can be a network path
+#symbols_symstore_path=c:/Program Files (x86)/Windows Kits/10/Debuggers/x86/symstore.exe
+
+# Windows Symbols Server location (cygwin, mixed or windows path style ; Don't use quotes) - Can be a network path
+#symbols_windows_pdb_server_path=\\\\sambaServer\\sambaShare\\full\\path
+
+# MacOS Symbols Server location (unix path style ; Don't use quotes)
+#symbols_macos_dsym_server_path=/full/path

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -124,6 +124,9 @@ private:
 			},
 			Qt::QueuedConnection);
 	}
+	void onInterfaceAliasChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, std::string const& /*alias*/) noexcept {}
+	void onInterfaceIPAddressInfosChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, la::avdecc::networkInterface::Interface::IPAddressInfos const& /*ipAddressInfos*/) noexcept {}
+	void onInterfaceGateWaysChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, la::avdecc::networkInterface::Interface::Gateways const& /*gateways*/) noexcept {}
 
 	NetworkInterfaceModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(NetworkInterfaceModel);

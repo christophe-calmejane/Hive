@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -94,7 +94,6 @@ void StreamFormatComboBox::setCurrentStreamFormat(StreamFormat const& streamForm
 		auto const index = findData(QVariant::fromValue(streamFormat));
 
 		QFont font;
-		font.setBold(true);
 		font.setItalic(true);
 
 		setItemData(index, font, Qt::FontRole);

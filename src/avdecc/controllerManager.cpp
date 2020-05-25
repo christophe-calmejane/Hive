@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -352,7 +352,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::AvbInterfaceInfo>("la::avdecc::entity::model::AvbInterfaceInfo");
 		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
-		qRegisterMetaType<la::avdecc::entity::model::StreamConnectionState>("la::avdecc::entity::model::StreamConnectionState");
+		qRegisterMetaType<la::avdecc::entity::model::StreamInputConnectionInfo>("la::avdecc::entity::model::StreamInputConnectionInfo");
 		qRegisterMetaType<la::avdecc::entity::model::StreamConnections>("la::avdecc::entity::model::StreamConnections");
 		qRegisterMetaType<la::avdecc::entity::model::EntityCounters>("la::avdecc::entity::model::EntityCounters");
 		qRegisterMetaType<la::avdecc::entity::model::AvbInterfaceCounters>("la::avdecc::entity::model::AvbInterfaceCounters");
@@ -470,13 +470,13 @@ private:
 		emit identificationStopped(entity->getEntity().getEntityID());
 	}
 	// Connection notifications (sniffed ACMP)
-	virtual void onStreamConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::entity::model::StreamConnectionState const& state, bool const /*changedByOther*/) noexcept override
+	virtual void onStreamInputConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputConnectionInfo const& info, bool const /*changedByOther*/) noexcept override
 	{
-		emit streamConnectionChanged(state);
+		emit streamInputConnectionChanged({ entity->getEntity().getEntityID(), streamIndex }, info);
 	}
-	virtual void onStreamConnectionsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamConnections const& connections) noexcept override
+	virtual void onStreamOutputConnectionsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamConnections const& connections) noexcept override
 	{
-		emit streamConnectionsChanged({ entity->getEntity().getEntityID(), streamIndex }, connections);
+		emit streamOutputConnectionsChanged({ entity->getEntity().getEntityID(), streamIndex }, connections);
 	}
 	// Entity model notifications (unsolicited AECP or changes this controller sent)
 	virtual void onAcquireStateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity) noexcept override
@@ -613,7 +613,7 @@ private:
 						{
 							auto const& entityNode = entity->getEntityNode();
 							auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
-							if (streamNode.dynamicModel->connectionState.state != la::avdecc::entity::model::StreamConnectionState::State::Connected)
+							if (streamNode.dynamicModel->connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 							{
 								// Only consider MediaUnlocked as an error if the stream is connected, otherwise juste ignore this
 								break;

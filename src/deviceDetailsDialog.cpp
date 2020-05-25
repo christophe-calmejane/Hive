@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -115,7 +115,7 @@ public:
 		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
 		connect(&manager, &avdecc::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
 		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
-		connect(&manager, &avdecc::ControllerManager::streamConnectionsChanged, this, &DeviceDetailsDialogImpl::streamConnectionsChanged);
+		connect(&manager, &avdecc::ControllerManager::streamOutputConnectionsChanged, this, &DeviceDetailsDialogImpl::streamOutputConnectionsChanged);
 		connect(&manager, &avdecc::ControllerManager::streamPortAudioMappingsChanged, this, &DeviceDetailsDialogImpl::streamPortAudioMappingsChanged);
 		connect(&manager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &DeviceDetailsDialogImpl::streamDynamicInfoChanged);
 		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &DeviceDetailsDialogImpl::listenerChannelConnectionsUpdate);
@@ -660,7 +660,7 @@ public:
 	/**
 	* Updates the transmit table models on stream connection changes.
 	*/
-	void streamConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& streamIdentification, la::avdecc::entity::model::StreamConnections const&)
+	void streamOutputConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& streamIdentification, la::avdecc::entity::model::StreamConnections const&)
 	{
 		_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(streamIdentification.entityID);
 

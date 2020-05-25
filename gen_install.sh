@@ -1,11 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Useful script to generate installer
 
 # Get absolute folder for this script
 callerFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
-# Include util functions
-. "${callerFolderPath}3rdparty/avdecc/scripts/utils.sh"
+# Include utils functions
+. "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
+
+# Include config file functions
+. "${callerFolderPath}scripts/loadConfigFile.sh"
 
 # Override default cmake options
 cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_HIVE_SIGNING=FALSE"
@@ -41,6 +44,94 @@ then
 		exit 127
 	fi
 fi
+
+# Deploy symbols found in current directory
+deploySymbols()
+{
+	local projectName="$1"
+	local version="$2"
+	local result=""
+
+	if [ ${doDeploySym} -eq 0 ];
+	then
+		return
+	fi
+
+	if isWindows;
+	then
+		echo -n "Deploying symbol files... "
+
+		local symbolsServerPath="${params["symbols_windows_pdb_server_path"]}"
+		if [ -z "${symbolsServerPath}" ];
+		then
+			echo "FAILED: 'symbols_windows_pdb_server_path' variable not set in ${configFile}"
+			return
+		fi
+		if isCygwin; then
+			symbolsServerPath=$(cygpath -a -u "${symbolsServerPath}")
+		fi
+		if [ ! -d "${symbolsServerPath}" ];
+		then
+			echo "FAILED: Server path does not exist: '${symbolsServerPath}'"
+			return
+		fi
+		if isCygwin; then
+			symbolsServerPath=$(cygpath -a -w "${symbolsServerPath}")
+		fi
+
+		local symstorePath="${params["symbols_symstore_path"]}"
+		if [ -z "${symstorePath}" ];
+		then
+			echo "FAILED: 'symbols_symstore_path' variable not set in ${configFile}"
+			return
+		fi
+		if isCygwin; then
+			symstorePath=$(cygpath -a -u "${symstorePath}")
+		fi
+		if [ ! -f "${symstorePath}" ];
+		then
+			echo "FAILED: symstore.exe path does not exist: '${symstorePath}'"
+			return
+		fi
+
+		result=$("${symstorePath}" add /r /l /f *.* /s "${symbolsServerPath}" /t "${projectName}" /v "${version}" /c "Adding ${projectName} ${version}" /compress)
+		if [ $? -ne 0 ]; then
+			echo "Failed to deploy symbols ;("
+			echo ""
+			echo $result
+			return
+		fi
+
+		echo "done"
+
+	elif isMac;
+	then
+		echo -n "Deploying symbol files... "
+
+		local symbolsServerPath="${params["symbols_macos_dsym_server_path"]}"
+		if [ -z "${symbolsServerPath}" ];
+		then
+			echo "FAILED: 'symbols_macos_dsym_server_path' variable not set in ${configFile}"
+			return
+		fi
+		if [ ! -d "${symbolsServerPath}" ];
+		then
+			echo "FAILED: Server path does not exist: '${symbolsServerPath}'"
+			return
+		fi
+		symbolsServerPath="${symbolsServerPath}/${projectName}/${version}"
+		if [ ! -d "${symbolsServerPath}" ]; then
+			mkdir -p "${symbolsServerPath}"
+		fi
+		for sym in `ls`
+		do
+			#rm -rf "${symbolsServerPath}/${sym}"
+			cp -R "${sym}" "${symbolsServerPath}/"
+		done
+
+		echo "done"
+	fi
+}
 
 getSignatureHash()
 {
@@ -138,66 +229,12 @@ generateAppcast()
 	echo "Appcast item generated to file: $appcastFile (add it to tools/webserver/appcast-${subPath}.xml)"
 }
 
-parseFile()
-{
-	local configFile="$1"
-	declare -n _params="$2"
-
-	if [ ! -f "$configFile" ]; then
-		return
-	fi
-
-	while IFS=$'\r\n' read -r -a line || [ -n "$line" ]; do
-		# Only process lines with something
-		if [ "${line}" != "" ]; then
-			IFS='=' read -a lineSplit <<< "${line}"
-
-			local key="${lineSplit[0]}"
-			local value="${lineSplit[1]}"
-
-			# Don't parse commented lines
-			if [ "${key:0:1}" = "#" ]; then
-				continue
-			fi
-
-			# Switch on key
-			case "$key" in
-				identity)
-					_params["$key"]="$value"
-					if [[ isMac && ! "$value" == "-" ]]; then
-						# Quick check for identity in keychain
-						security find-identity -v -p codesigning | grep "$value" &> /dev/null
-						if [ $? -ne 0 ]; then
-							echo "Invalid identity value '${configFile}' file (not found in keychain, or not valid for codesigning): $value"
-							exit 1
-						fi
-					fi
-					;;
-				appcast_releases)
-					_params["$key"]="$value"
-					;;
-				appcast_betas)
-					_params["$key"]="$value"
-					;;
-				*)
-					echo "Ignoring unknown key '$key' in '${configFile}' file"
-					;;
-			esac
-		fi
-	done < "${configFile}"
-}
-
-declare -A params=()
-
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
 default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 default_VisualSdk="8.1"
-params["identity"]="-"
-params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
-params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
 
 # 
 arch=""
@@ -240,6 +277,7 @@ buildConfig="Release"
 buildConfigOverride=0
 doCleanup=1
 doSign=1
+doDeploySym=1
 gen_cmake_additional_options=()
 if [ -z $default_keyDigits ]; then
 	default_keyDigits=2
@@ -262,6 +300,7 @@ do
 				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
 				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 			fi
+			echo " -no-sym -> Do not deploy debug symbols (Default: Do deploy)"
 			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
 			echo " -debug -> Compile using Debug configuration (Default: Release)"
 			echo " -key-digits <Number of digits> -> The number of digits to be used as Key for installation, comprised between 0 and 4 (Default: $default_keyDigits)"
@@ -338,8 +377,11 @@ do
 			fi
 			;;
 		-id)
-			echo "ERROR: -id option is deprecated, please use the new .hive_config file (see .hive_config.sample for an example config file)"
+			echo "ERROR: -id option is deprecated, please use the new ${configFile} file (see ${configFile}.sample for an example config file)"
 			exit 1
+			;;
+		-no-sym)
+			doDeploySym=0
 			;;
 		-no-signing)
 			doSign=0
@@ -395,22 +437,31 @@ do
 	shift
 done
 
-# Parse config file
-parseFile ".hive_config" params
+# Load config file
+loadConfigFile
 
 # Check for signing
 if [ $doSign -eq 1 ]; then
 	gen_cmake_additional_options+=("-sign")
+
+	# Check if signtool options are specified on windows
+	if isWindows; then
+		signtoolOptions=${params["signtool_options"]}
+		if [ -z "$signtoolOptions" ]; then
+			echo "ERROR: windows requires signtool options to be set. Specify it in the ${configFile} file"
+		fi
+		gen_cmake_additional_options+=("-signtool-opt")
+		gen_cmake_additional_options+=("$signtoolOptions")
+	fi
 
 	# Check if TeamIdentifier is specified on macOS
 	if isMac; then
 		identityString=${params["identity"]}
 
 		if [ "x$identityString" == "x" ]; then
-			echo "ERROR: macOS requires either iTunes TeamIdentifier. Specify it in the .hive_config file"
+			echo "ERROR: macOS requires either iTunes TeamIdentifier. Specify it in the ${configFile} file"
 			exit 4
 		fi
-
 		gen_cmake_additional_options+=("-id")
 		gen_cmake_additional_options+=("$identityString")
 	fi
@@ -418,14 +469,14 @@ fi
 
 # Additional options from .hive_config file
 if [ "x${params["appcast_releases"]}" == "x" ]; then
-	echo "ERROR: appcast_releases must not be empty in .hive_config file"
+	echo "ERROR: appcast_releases must not be empty in ${configFile} file"
 	exit 4
 fi
 gen_cmake_additional_options+=("-a")
 gen_cmake_additional_options+=("-DHIVE_APPCAST_RELEASES_URL=${params["appcast_releases"]}")
 
 if [ "x${params["appcast_betas"]}" == "x" ]; then
-	echo "ERROR: appcast_betas must not be empty in .hive_config file"
+	echo "ERROR: appcast_betas must not be empty in ${configFile} file"
 	exit 4
 fi
 gen_cmake_additional_options+=("-a")
@@ -484,10 +535,12 @@ beta_tag=""
 build_tag=""
 is_release=1
 releaseVersion="${versionSplit[0]}.${versionSplit[1]}.${versionSplit[2]}"
+internalVersion="${releaseVersion}"
 if [ ${#versionSplit[*]} -eq 4 ]; then
 	beta_tag="-beta${versionSplit[3]}"
 	build_tag="+$(git rev-parse --short HEAD)"
 	is_release=0
+	internalVersion="${internalVersion}.${versionSplit[3]}"
 fi
 
 if isWindows; then
@@ -575,8 +628,7 @@ if [ $doSign -eq 1 ]; then
 	if isMac; then
 		log=$(codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}")
 	else
-		log=$(signtool sign /a /sm /q /fd sha1 /t http://timestamp.digicert.com "${installerFile}")
-		log=$(signtool sign /a /sm /as /q /fd sha256 /tr http://timestamp.digicert.com "${installerFile}")
+		log=$(signtool sign ${signtoolOptions} "${installerFile}")
 	fi
 	if [ $? -ne 0 ]; then
 		echo "Failed to sign package ;("
@@ -593,6 +645,21 @@ echo ""
 echo "Installer generated: ${fullInstallerName}"
 if [ ! -z "${symbolsFile}" ]; then
 	echo "Symbols generated: ${symbolsFile}"
+	pushd "${outputFolder}/Symbols" &> /dev/null
+	deploySymbols "Hive" "${internalVersion}"
+	popd &> /dev/null
+fi
+
+
+# Call notarization
+if isMac; then
+	if [ ! "x${params["notarization_username"]}" == "x" ]; then
+		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "fr.KikiSoft.Hive.dmg"
+		if [ $? -ne 0 ]; then
+			echo "Failed to notarize installer"
+			exit 1
+		fi
+	fi
 fi
 
 generateAppcast "${fullInstallerName}" "${releaseVersion}${beta_tag}" $is_release
@@ -601,6 +668,6 @@ echo ""
 echo "Do not forget to upload:"
 echo " - CHANGELOG.MD"
 echo " - Installer file"
-echo " - Updated appcast file"
+echo " - Updated appcast file(s)"
 
 exit 0
