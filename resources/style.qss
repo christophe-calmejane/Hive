@@ -12,19 +12,16 @@ QAbstractItemView::item:selected {
 	background-color: %1;
 	color: %2;
 }
-qt--toolkit--FlatIconButton {
+qtMate--widgets--FlatIconButton {
 	font-size: 24px;
 	border: none;
 	color: #3e3e3e;
 }
-qt--toolkit--FlatIconButton:hover {
+qtMate--widgets--FlatIconButton:hover {
 	color: #262626;
 }
-qt--toolkit--FlatIconButton:pressed {
+qtMate--widgets--FlatIconButton:pressed {
 	margin: 2 0 0 2;
-	color: %1;
-}
-qt--toolkit--material--Button:checked {
 	color: %1;
 }
 NodeTreeWidget .QListWidget {
