@@ -3438,7 +3438,7 @@ private:
 									}
 								}
 							}
-							else if (clusterIndex + baseCluster == mapping.clusterOffset && clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamIndex)
+							else if (clusterIndex - baseCluster == mapping.clusterOffset && clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamIndex)
 							{
 								// this propably needs a refresh
 								auto const& channelIdentification = mappingKV.first;

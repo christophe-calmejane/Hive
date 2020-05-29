@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- [CBR matrix not refreshing](https://github.com/christophe-calmejane/Hive/issues/89)
 
 ## [1.2.2] - 2020-05-25
 ### Added
