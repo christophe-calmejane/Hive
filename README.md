@@ -12,9 +12,9 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 
 ## Minimum requirements for compilation
 
-- CMake 3.13
+- CMake 3.15
 - Qt 5.12.4
-- Visual Studio 2019 16.3 (using platform toolset v142), Xcode 10, gcc 8.2.1
+- Visual Studio 2019 16.3 (using platform toolset v142), Xcode 10, g++ 8.2.1
 
 ## Compilation
 
@@ -25,7 +25,14 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 - Go into the generated output folder
 - Open the generated solution
 - Compile everything
-- Compile the *INSTALL* target
+- Compile the *install* target
+
+## Linux specificities
+
+Before running Hive on a linux system, you must give the program access to RAW SOCKETS creation. The easiest way to do it is to run the following command (replace `/path/to/Hive` with the actual path to the binary):
+```bash
+sudo setcap cap_net_raw+ep /path/to/Hive
+```
 
 ## Versioning
 

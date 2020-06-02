@@ -292,6 +292,13 @@ void MainWindowImpl::currentControllerChanged()
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
 		LOG_HIVE_WARN(e.what());
+#ifdef __linux__
+		if (e.getError() == la::avdecc::controller::Controller::Error::InterfaceOpenError)
+		{
+			LOG_HIVE_INFO("Make sure Hive is allowed to use RAW SOCKETS. Close Hive and run the following command to give it access (you can select the log line and use CTRL+C to copy the command)");
+			LOG_HIVE_INFO("sudo setcap cap_net_raw+ep Hive");
+		}
+#endif // __linux__
 	}
 }
 
