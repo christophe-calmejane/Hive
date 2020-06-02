@@ -79,7 +79,7 @@ public:
 
 private:
 	class pImpl;
-	std::unique_ptr<pImpl> _pImpl{ nullptr };
+	std::unique_ptr<pImpl> _pImpl; //{ nullptr }; NSDMI for unique_ptr not supported by gcc (for incomplete type)
 };
 
 /** Qt Abstract TableModel Proxy for DiscoveredEntities */
@@ -112,10 +112,10 @@ public:
 	using ChangedErrorCounterFlags = la::avdecc::utils::EnumBitfield<ChangedErrorCounterFlag>;
 
 	// Notifications for DiscoveredEntitiesModel changes
-	virtual void entityInfoChanged(std::size_t const index, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity, ChangedInfoFlags const changedInfoFlags) noexcept {}
-	virtual void identificationStarted(std::size_t const index) noexcept {}
-	virtual void identificationStopped(std::size_t const index) noexcept {}
-	virtual void entityErrorCountersChanged(std::size_t const index, ChangedErrorCounterFlags const changedErrorCounterFlags) noexcept {}
+	virtual void entityInfoChanged(std::size_t const /*index*/, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& /*entity*/, ChangedInfoFlags const /*changedInfoFlags*/) noexcept {}
+	virtual void identificationStarted(std::size_t const /*index*/) noexcept {}
+	virtual void identificationStopped(std::size_t const /*index*/) noexcept {}
+	virtual void entityErrorCountersChanged(std::size_t const /*index*/, ChangedErrorCounterFlags const /*changedErrorCounterFlags*/) noexcept {}
 
 private:
 	friend class DiscoveredEntitiesModel;

@@ -83,18 +83,18 @@ QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::avdecc::networkInterface
 }
 
 // hive::modelsLibrary::NetworkInterfacesAbstractListModel overrides
-void NetworkInterfacesListModel::nameChanged(std::size_t const index, std::string const& name) noexcept
+void NetworkInterfacesListModel::nameChanged(std::size_t const index, std::string const& /*name*/) noexcept
 {
 	auto const modelIndex = createIndex(index, 0);
 	emit dataChanged(modelIndex, modelIndex, { Qt::DisplayRole });
 }
-void NetworkInterfacesListModel::enabledStateChanged(std::size_t const index, bool const isEnabled) noexcept
+void NetworkInterfacesListModel::enabledStateChanged(std::size_t const index, bool const /*isEnabled*/) noexcept
 {
 	auto const modelIndex = createIndex(index, 0);
 	emit dataChanged(modelIndex, modelIndex, { Qt::DisplayRole });
 }
 
-void NetworkInterfacesListModel::connectedStateChanged(std::size_t const index, bool const isConnected) noexcept
+void NetworkInterfacesListModel::connectedStateChanged(std::size_t const index, bool const /*isConnected*/) noexcept
 {
 	auto const modelIndex = createIndex(index, 0);
 	emit dataChanged(modelIndex, modelIndex, { Qt::DisplayRole });
@@ -117,6 +117,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 				auto const& intfc = (*optInterface).get();
 				return QString::fromStdString(intfc.name);
 			}
+			break;
 		}
 		case ErrorItemDelegate::ErrorRole: // Make use of this role if ErrorItemDelegate is defined as ItemDelegate
 		{
@@ -125,6 +126,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 				auto const& intfc = (*optInterface).get();
 				return intfc.isEnabled && !intfc.isConnected;
 			}
+			break;
 		}
 		case Qt::ForegroundRole:
 		{
@@ -145,6 +147,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 					return QColor{ Qt::black };
 				}
 			}
+			break;
 		}
 		case Qt::UserRole:
 		{
@@ -153,6 +156,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 				auto const& intfc = (*optInterface).get();
 				return QString::fromStdString(intfc.id);
 			}
+			break;
 		}
 		case Qt::WhatsThisRole:
 		{
@@ -161,6 +165,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 				auto const& intfc = (*optInterface).get();
 				return QString{ "%1#%2" }.arg(la::avdecc::utils::to_integral(intfc.interfaceType)).arg(intfc.id.c_str());
 			}
+			break;
 		}
 		case Qt::DecorationRole:
 		{
@@ -169,7 +174,10 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 				auto const& intfc = (*optInterface).get();
 				return interfaceTypeIcon(intfc.interfaceType);
 			}
+			break;
 		}
+		default:
+			break;
 	}
 
 	return {};

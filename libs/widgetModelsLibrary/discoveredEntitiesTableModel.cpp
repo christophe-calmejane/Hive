@@ -17,8 +17,6 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
 #include "hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp"
 #include "hive/widgetModelsLibrary/entityLogoCache.hpp"
 #include "hive/widgetModelsLibrary/imageItemDelegate.hpp"
@@ -37,7 +35,7 @@ DiscoveredEntitiesTableModel::DiscoveredEntitiesTableModel(EntityDataFlags const
 }
 
 // hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel overrides
-void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity, ChangedInfoFlags const changedInfoFlags) noexcept
+void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& /*entity*/, ChangedInfoFlags const changedInfoFlags) noexcept
 {
 	for (auto const flag : changedInfoFlags)
 	{
@@ -62,12 +60,12 @@ void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hi
 }
 
 // QAbstractTableModel overrides
-int DiscoveredEntitiesTableModel::rowCount(QModelIndex const& parent) const
+int DiscoveredEntitiesTableModel::rowCount(QModelIndex const& /*parent*/) const
 {
 	return static_cast<int>(_model.entitiesCount());
 }
 
-int DiscoveredEntitiesTableModel::columnCount(QModelIndex const& parent) const
+int DiscoveredEntitiesTableModel::columnCount(QModelIndex const& /*parent*/) const
 {
 	return static_cast<int>(_count);
 }

@@ -57,7 +57,7 @@ public:
 
 private:
 	class pImpl;
-	std::unique_ptr<pImpl> _pImpl{ nullptr };
+	std::unique_ptr<pImpl> _pImpl; //{ nullptr }; NSDMI for unique_ptr not supported by gcc (for incomplete type)
 };
 
 /** Qt Abstract ListModel Proxy for NetworkInterfaces */
@@ -65,9 +65,9 @@ class NetworkInterfacesAbstractListModel : public QAbstractListModel
 {
 public:
 	// Notifications for NetworkInterfacesModel changes, guaranteed to be called from Qt Main Thread
-	virtual void nameChanged(std::size_t const index, std::string const& name) noexcept {}
-	virtual void enabledStateChanged(std::size_t const index, bool const isEnabled) noexcept {}
-	virtual void connectedStateChanged(std::size_t const index, bool const isConnected) noexcept {}
+	virtual void nameChanged(std::size_t const /*index*/, std::string const& /*name*/) noexcept {}
+	virtual void enabledStateChanged(std::size_t const /*index*/, bool const /*isEnabled*/) noexcept {}
+	virtual void connectedStateChanged(std::size_t const /*index*/, bool const /*isConnected*/) noexcept {}
 
 private:
 	friend class NetworkInterfacesModel;

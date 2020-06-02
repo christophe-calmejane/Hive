@@ -26,7 +26,7 @@
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
-#	include <QDebug>
+#include <QDebug>
 
 #include <deque>
 #include <vector>

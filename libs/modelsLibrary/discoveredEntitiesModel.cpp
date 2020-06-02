@@ -35,8 +35,8 @@ class DiscoveredEntitiesModel::pImpl : public QObject
 {
 public:
 	pImpl(Model* const model, QObject* parent = nullptr)
-		: _model(model)
-		, QObject(parent)
+		: QObject(parent)
+		, _model(model)
 	{
 		// Connect hive::modelsLibrary::ControllerManager signals
 		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();

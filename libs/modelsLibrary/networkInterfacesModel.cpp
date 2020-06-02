@@ -29,8 +29,8 @@ class NetworkInterfacesModel::pImpl : public QObject, public la::avdecc::network
 {
 public:
 	pImpl(Model* const model, QObject* parent = nullptr)
-		: _model(model)
-		, QObject(parent)
+		: QObject(parent)
+		, _model(model)
 	{
 	}
 
