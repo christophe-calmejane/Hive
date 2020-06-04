@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - [Displaying a message with shell command to run, if network interface cannot be opened](https://github.com/christophe-calmejane/Hive/issues/88)
+- Error message when a critical error occurs on the active network interface
 
 ### Fixed
 - [CBR matrix not refreshing](https://github.com/christophe-calmejane/Hive/issues/89)
+- [Deadlock on linux when shutting down pcap interface](https://github.com/christophe-calmejane/Hive/issues/90)
 
 ## [1.2.2] - 2020-05-25
 ### Added

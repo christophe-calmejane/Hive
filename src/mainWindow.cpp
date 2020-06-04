@@ -864,6 +864,11 @@ void MainWindowImpl::connectSignals()
 
 	// Connect ControllerManager events
 	auto& manager = avdecc::ControllerManager::getInstance();
+	connect(&manager, &avdecc::ControllerManager::transportError, this,
+		[this]()
+		{
+			LOG_HIVE_ERROR("Error reading from the active Network Interface");
+		});
 	connect(&manager, &avdecc::ControllerManager::endAecpCommand, this,
 		[this](la::avdecc::UniqueIdentifier const /*entityID*/, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 		{
