@@ -154,6 +154,18 @@ LoggerView::LoggerView(QWidget* parent)
 			_searchFilterProxyModel.setFilterKeyColumn(3);
 			_searchFilterProxyModel.setFilterRegExp(pattern);
 			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
+
+			// Invoke view scroll in main thread (Queued, to be sure the view has been updated before calling scrollTo)
+			QMetaObject::invokeMethod(this,
+				[this]()
+				{
+					auto const selectedRows = tableView->selectionModel()->selectedRows();
+					if (selectedRows.count() > 0)
+					{
+						tableView->scrollTo(selectedRows.at(0));
+					}
+				},
+				Qt::QueuedConnection);
 		});
 
 	auto* searchShortcut = new QShortcut{ QKeySequence::Replace, this };
