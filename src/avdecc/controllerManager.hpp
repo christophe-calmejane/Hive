@@ -165,6 +165,18 @@ public:
 	virtual void clearStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, StatisticsErrorCounterFlag const flag) noexcept = 0;
 	virtual void clearAllStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
 
+	/* Discovery Protocol (ADP) */
+	/** Enables entity advertising with available duration included between 2-62 seconds on the specified interfaceIndex if set, otherwise on all interfaces. */
+	virtual bool enableEntityAdvertising(std::uint32_t const availableDuration, std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex = std::nullopt) noexcept = 0;
+	/** Disables entity advertising on the specified interfaceIndex if set, otherwise on all interfaces. */
+	virtual void disableEntityAdvertising(std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex = std::nullopt) noexcept = 0;
+	/** Requests a remote entities discovery. */
+	virtual bool discoverRemoteEntities() const noexcept = 0;
+	/** Requests a targetted remote entity discovery. */
+	virtual bool discoverRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	/** Sets automatic discovery delay. 0 (default) for no automatic discovery. */
+	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept = 0;
+
 	/* Enumeration and Control Protocol (AECP) */
 	virtual void acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent, AcquireEntityHandler const& handler = {}) noexcept = 0;
 	virtual void releaseEntity(la::avdecc::UniqueIdentifier const targetEntityID, ReleaseEntityHandler const& handler = {}) noexcept = 0;

@@ -35,14 +35,14 @@ public:
 
 	void setText(QString const& text);
 
+	using QLineEdit::setValidator;
+
 protected:
 	using QLineEdit::setFocusPolicy;
 
 private:
 	TextEntryPrivate* const d_ptr{ nullptr };
 	Q_DECLARE_PRIVATE(TextEntry);
-
-	using QLineEdit::setValidator;
 };
 
 } // namespace toolkit

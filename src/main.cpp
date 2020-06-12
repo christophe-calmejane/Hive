@@ -145,6 +145,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::Network_InterfaceTypeWiFi);
 
 	// Controller
+	settings.registerSetting(settings::Controller_DiscoveryDelay);
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
 	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
 

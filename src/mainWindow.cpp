@@ -154,6 +154,7 @@ public:
 	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ _parent };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
 	qt::toolkit::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
+	qt::toolkit::FlatIconButton _discoverButton{ "Material Icons", "cast", _parent };
 	qt::toolkit::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
 	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qt::toolkit::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
@@ -380,6 +381,7 @@ void MainWindowImpl::createToolbars()
 	// Utilities Toolbar
 	{
 		_refreshControllerButton.setToolTip("Reload Controller");
+		_discoverButton.setToolTip("Force Entities Discovery");
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
@@ -387,6 +389,7 @@ void MainWindowImpl::createToolbars()
 		// Controller
 		utilitiesToolBar->setMinimumHeight(30);
 		utilitiesToolBar->addWidget(&_refreshControllerButton);
+		utilitiesToolBar->addWidget(&_discoverButton);
 
 		// Tools
 		utilitiesToolBar->addSeparator();
@@ -561,6 +564,12 @@ void MainWindowImpl::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindowImpl::currentControllerChanged);
+	connect(&_discoverButton, &QPushButton::clicked, this,
+		[]()
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			manager.discoverRemoteEntities();
+		});
 
 	connect(&_openMcmdDialogButton, &QPushButton::clicked, actionMediaClockManagement, &QAction::trigger);
 	connect(&_openMultiFirmwareUpdateDialogButton, &QPushButton::clicked, actionDeviceFirmwareUpdate, &QAction::trigger);

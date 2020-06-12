@@ -49,6 +49,7 @@ static SettingsManager::SettingDefault Network_InterfaceTypeEthernet = { "avdecc
 static SettingsManager::SettingDefault Network_InterfaceTypeWiFi = { "avdecc/network/interfaceType/wifi", false };
 
 // Controller settings
+static SettingsManager::SettingDefault Controller_DiscoveryDelay = { "avdecc/controller/discoveryDelay", 0 };
 static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "avdecc/controller/fullStaticModel", false };
 
