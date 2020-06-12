@@ -968,6 +968,12 @@ private:
 	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept
 	{
 		_discoveryDelay = delay;
+		// No need to re-create the controller, simply update this live parameter if the controller has been created
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->setAutomaticDiscoveryDelay(delay);
+		}
 	}
 
 	/* Enumeration and Control Protocol (AECP) */

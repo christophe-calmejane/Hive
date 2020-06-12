@@ -1118,7 +1118,7 @@ void MainWindow::showEvent(QShowEvent* event)
 			{
 				Sparkle::getInstance().start();
 			}
-			// Check if we have a network interface selected
+			// Check if we have a network interface selected and start controller
 			{
 				auto const interfaceID = _pImpl->_interfaceComboBox.currentData().toString();
 				if (interfaceID.isEmpty())
@@ -1128,6 +1128,15 @@ void MainWindow::showEvent(QShowEvent* event)
 						[this]()
 						{
 							QMessageBox::warning(this, "", "No Network Interface selected.\nPlease choose one in the Toolbar.");
+						});
+				}
+				else
+				{
+					// Postpone Controller start
+					QTimer::singleShot(0,
+						[this]()
+						{
+							_pImpl->currentControllerChanged();
 						});
 				}
 			}
@@ -1326,7 +1335,10 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 {
 	if (name == settings::Network_ProtocolType.name)
 	{
-		currentControllerChanged();
+		if (_shown)
+		{
+			currentControllerChanged();
+		}
 	}
 	else if (name == settings::Controller_DiscoveryDelay.name)
 	{
