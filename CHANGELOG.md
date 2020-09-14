@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Configurable automatic entities discovery delay](https://github.com/christophe-calmejane/Hive/issues/87)
 - [Scroll logger view to selected item whenever the filter changes](https://github.com/christophe-calmejane/Hive/issues/92)
 
+### Changed
+- No longer clearing talker mapping upon disconnection
+
 ### Fixed
 - [CBR matrix not refreshing](https://github.com/christophe-calmejane/Hive/issues/89)
 - [Deadlock on linux when shutting down pcap interface](https://github.com/christophe-calmejane/Hive/issues/90)
