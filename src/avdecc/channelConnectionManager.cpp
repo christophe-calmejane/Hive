@@ -2338,26 +2338,6 @@ private:
 				}
 			}
 
-			// only remove the talker channel mapping if it isn't in use by any other channel on any target anymore.
-			// also static mappings can't be removed
-			auto const& streamPortOutput = controlledTalkerEntity->getStreamPortOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamPortIndex);
-			if (talkerChannelReceivers <= 1 && streamPortOutput.staticModel->hasDynamicAudioMap)
-			{
-				// never remove talker mappings, that are default mappings:
-				if (talkerClusterIndex - talkerBaseCluster != *connectionStreamChannel)
-				{
-					la::avdecc::entity::model::AudioMapping mapping;
-					mapping.clusterChannel = talkerClusterChannel;
-					mapping.clusterOffset = talkerClusterIndex - talkerBaseCluster;
-					mapping.streamChannel = *connectionStreamChannel;
-					mapping.streamIndex = *connectionStreamSourceIndex;
-					la::avdecc::entity::model::AudioMappings mappings;
-					mappings.push_back(mapping);
-
-					manager.removeStreamPortOutputAudioMappings(talkerEntityId, talkerStreamPortIndex, mappings);
-				}
-			}
-
 			// the listener channel has to be unmapped in any case.
 			{
 				la::avdecc::entity::model::AudioMapping mapping;
@@ -3438,7 +3418,7 @@ private:
 									}
 								}
 							}
-							else if (clusterIndex + baseCluster == mapping.clusterOffset && clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamIndex)
+							else if (clusterIndex - baseCluster == mapping.clusterOffset && clusterChannel == mapping.clusterChannel && mapping.streamIndex == streamIndex)
 							{
 								// this propably needs a refresh
 								auto const& channelIdentification = mappingKV.first;

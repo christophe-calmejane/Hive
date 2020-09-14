@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>730</width>
-    <height>468</height>
+    <height>482</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -96,7 +96,7 @@
 				&lt;p&gt;%9&lt;/p&gt;
 			&lt;/td&gt;
 		&lt;/tr&gt;
-		&lt;tr valign=&quot;middle&quot;&gt;
+		&lt;tr valign=&quot;top&quot;&gt;
 			&lt;td&gt;
 				&lt;p&gt;Contributors:&lt;/p&gt;
 			&lt;/td&gt;
@@ -130,7 +130,7 @@
 				&lt;/div&gt;
 			&lt;/td&gt;
 		&lt;/tr&gt;
-		&lt;tr valign=&quot;middle&quot;&gt;
+		&lt;tr valign=&quot;top&quot;&gt;
 			&lt;td&gt;
 				&lt;p&gt;Supported by:&lt;/p&gt;
 			&lt;/td&gt;

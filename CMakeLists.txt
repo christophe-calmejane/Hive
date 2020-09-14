@@ -1,7 +1,7 @@
 # Root CMake File for Hive
 
 # Minimum CMake version
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.15)
 
 ############ Versioning
 
@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.13)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.2)
+set(HIVE_VERSION 1.2.3)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -82,7 +82,7 @@ set(BUILD_AVDECC_TESTS OFF CACHE BOOL "Build unit tests." FORCE)
 set(BUILD_AVDECC_LIB_SHARED_CXX ON CACHE BOOL "Build C++ shared library." FORCE)
 set(BUILD_AVDECC_LIB_STATIC_RT_SHARED OFF CACHE BOOL "Build static library (runtime shared)." FORCE)
 set(BUILD_AVDECC_DOC OFF CACHE BOOL "Build documentation." FORCE)
-set(BUILD_AVDECC_WRAPPER_LUA OFF CACHE BOOL "Build avdecc lua wrapper library." FORCE)
+set(BUILD_AVDECC_BINDINGS_C OFF CACHE BOOL "Build avdecc C bindings library." FORCE)
 set(BUILD_AVDECC_CONTROLLER ON CACHE BOOL "Build avdecc controller library." FORCE)
 set(BUILD_AVDECC_INTERFACE_PCAP ON CACHE BOOL "Build the pcap protocol interface." FORCE)
 set(BUILD_AVDECC_INTERFACE_PCAP_DYNAMIC_LINKING ON CACHE BOOL "Pcap protocol interface uses dynamic shared library linking (instead of static linking)." FORCE)
@@ -107,6 +107,7 @@ set(ENABLE_AVDECC_STRICT_2018_REDUNDANCY ON CACHE BOOL "Be strict about 'Network
 set(IGNORE_INVALID_CONTROL_DATA_LENGTH ON CACHE BOOL "Allow messages with an invalid advertised 'Control Data Length' field." FORCE)
 set(IGNORE_INVALID_NON_SUCCESS_AEM_RESPONSES ON CACHE BOOL "Allow invalid AEM non-success responses messages." FORCE)
 set(IGNORE_NEITHER_STATIC_NOR_DYNAMIC_MAPPINGS ON CACHE BOOL "Allow Entities not supporting Dynamic Mapping and not adversiting AUDIO_MAP." FORCE)
+set(ALLOW_GET_AUDIO_MAP_UNSOL ON CACHE BOOL "Allow receiving GetAudioMap unsolicited notifications." FORCE)
 set(ALLOW_RECV_BIG_AECP_PAYLOADS ON CACHE BOOL "Allow receiving AECP payloads bigger than the allowed 524 bytes." FORCE)
 set(ALLOW_SEND_BIG_AECP_PAYLOADS OFF CACHE BOOL "Allow sending AECP payloads bigger than the allowed 524 bytes." FORCE)
 

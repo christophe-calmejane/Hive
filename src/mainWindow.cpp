@@ -154,6 +154,7 @@ public:
 	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ _parent };
 	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
 	qt::toolkit::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
+	qt::toolkit::FlatIconButton _discoverButton{ "Material Icons", "cast", _parent };
 	qt::toolkit::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
 	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qt::toolkit::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
@@ -292,6 +293,13 @@ void MainWindowImpl::currentControllerChanged()
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
 		LOG_HIVE_WARN(e.what());
+#ifdef __linux__
+		if (e.getError() == la::avdecc::controller::Controller::Error::InterfaceOpenError)
+		{
+			LOG_HIVE_INFO("Make sure Hive is allowed to use RAW SOCKETS. Close Hive and run the following command to give it access (you can select the log line and use CTRL+C to copy the command)");
+			LOG_HIVE_INFO("sudo setcap cap_net_raw+ep Hive");
+		}
+#endif // __linux__
 	}
 }
 
@@ -373,6 +381,7 @@ void MainWindowImpl::createToolbars()
 	// Utilities Toolbar
 	{
 		_refreshControllerButton.setToolTip("Reload Controller");
+		_discoverButton.setToolTip("Force Entities Discovery");
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
@@ -380,6 +389,7 @@ void MainWindowImpl::createToolbars()
 		// Controller
 		utilitiesToolBar->setMinimumHeight(30);
 		utilitiesToolBar->addWidget(&_refreshControllerButton);
+		utilitiesToolBar->addWidget(&_discoverButton);
 
 		// Tools
 		utilitiesToolBar->addSeparator();
@@ -554,6 +564,12 @@ void MainWindowImpl::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindowImpl::currentControllerChanged);
+	connect(&_discoverButton, &QPushButton::clicked, this,
+		[]()
+		{
+			auto& manager = avdecc::ControllerManager::getInstance();
+			manager.discoverRemoteEntities();
+		});
 
 	connect(&_openMcmdDialogButton, &QPushButton::clicked, actionMediaClockManagement, &QAction::trigger);
 	connect(&_openMultiFirmwareUpdateDialogButton, &QPushButton::clicked, actionDeviceFirmwareUpdate, &QAction::trigger);
@@ -857,6 +873,11 @@ void MainWindowImpl::connectSignals()
 
 	// Connect ControllerManager events
 	auto& manager = avdecc::ControllerManager::getInstance();
+	connect(&manager, &avdecc::ControllerManager::transportError, this,
+		[this]()
+		{
+			LOG_HIVE_ERROR("Error reading from the active Network Interface");
+		});
 	connect(&manager, &avdecc::ControllerManager::endAecpCommand, this,
 		[this](la::avdecc::UniqueIdentifier const /*entityID*/, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 		{

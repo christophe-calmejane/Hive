@@ -367,6 +367,7 @@ public:
 
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
+		settings.registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 		settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 		settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
@@ -381,6 +382,7 @@ public:
 
 		// Remove settings observers
 		auto& settings = settings::SettingsManager::getInstance();
+		settings.unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 		settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 		settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
@@ -389,7 +391,16 @@ private:
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
-		if (name == settings::Controller_AemCacheEnabled.name)
+		if (name == settings::Controller_DiscoveryDelay.name)
+		{
+			_discoveryDelay = std::chrono::seconds{ value.toInt() };
+			auto ctrl = getController();
+			if (ctrl)
+			{
+				ctrl->setAutomaticDiscoveryDelay(_discoveryDelay);
+			}
+		}
+		else if (name == settings::Controller_AemCacheEnabled.name)
 		{
 			_enableAemCache = value.toBool();
 		}
@@ -753,6 +764,8 @@ private:
 			ctrl->registerObserver(this);
 			//ctrl->enableEntityAdvertising(10);
 
+			ctrl->setAutomaticDiscoveryDelay(_discoveryDelay);
+
 			if (_enableAemCache)
 			{
 				ctrl->enableEntityModelCache();
@@ -921,6 +934,58 @@ private:
 		{
 			errorCounterTracker->clearAllStatisticsCounters();
 		}
+	}
+
+	/* Discovery Protocol (ADP) */
+	virtual bool enableEntityAdvertising(std::uint32_t const availableDuration, std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex) noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			try
+			{
+				controller->enableEntityAdvertising(availableDuration, interfaceIndex);
+				return true;
+			}
+			catch (...)
+			{
+			}
+		}
+		return false;
+	}
+
+	virtual void disableEntityAdvertising(std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex) noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			controller->disableEntityAdvertising(interfaceIndex);
+		}
+	}
+
+	virtual bool discoverRemoteEntities() const noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->discoverRemoteEntities();
+		}
+		return false;
+	}
+
+	virtual bool discoverRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->discoverRemoteEntity(entityID);
+		}
+		return false;
+	}
+
+	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept
+	{
+		_discoveryDelay = delay;
 	}
 
 	/* Enumeration and Control Protocol (AECP) */
@@ -1751,6 +1816,7 @@ private:
 	mutable std::mutex _lock{}; // Data members exclusive access
 	std::set<la::avdecc::UniqueIdentifier> _entities; // Online entities
 	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterTracker, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterTrackers; // Entities error counter flags
+	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };
 	bool _fullAemEnumeration{ false };
 };

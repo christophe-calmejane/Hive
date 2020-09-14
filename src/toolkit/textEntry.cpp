@@ -33,14 +33,15 @@ public:
 	{
 		q->installEventFilter(this);
 		q->setValidator(&_validator);
-		connect(q, &QLineEdit::returnPressed, q, &QLineEdit::clearFocus);
 	}
 
 	virtual bool eventFilter(QObject* /*object*/, QEvent* event) override
 	{
 		Q_Q(TextEntry);
 
-		auto abort{ false };
+		auto abort = false;
+		auto swallow = false;
+		auto clearFocus = false;
 
 		switch (event->type())
 		{
@@ -56,14 +57,18 @@ public:
 				{
 					case Qt::Key_Escape:
 						abort = true;
+						// Swallow escape
+						swallow = true;
 						break;
 					case Qt::Key_Return:
 					case Qt::Key_Enter:
 						_validated = true;
+						clearFocus = true;
 						break;
 					case Qt::Key_Tab:
 						// Swallow tab
-						return true;
+						swallow = true;
+						break;
 					default:
 						break;
 				}
@@ -76,10 +81,16 @@ public:
 		{
 			QSignalBlocker lock(q);
 			q->setText(_focusInText);
+			clearFocus = true;
+		}
+
+		if (clearFocus)
+		{
+			QSignalBlocker lock(q);
 			q->clearFocus();
 		}
 
-		return false;
+		return swallow;
 	}
 
 protected:

@@ -4,6 +4,21 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2020-09-14
+### Added
+- [Displaying a message with shell command to run, if network interface cannot be opened](https://github.com/christophe-calmejane/Hive/issues/88)
+- Error message when a critical error occurs on the active network interface
+- [Configurable automatic entities discovery delay](https://github.com/christophe-calmejane/Hive/issues/87)
+- [Scroll logger view to selected item whenever the filter changes](https://github.com/christophe-calmejane/Hive/issues/92)
+
+### Changed
+- No longer clearing talker mapping upon disconnection
+- Using AVDECC Library v3.0.2
+
+### Fixed
+- [CBR matrix not refreshing](https://github.com/christophe-calmejane/Hive/issues/89)
+- [Deadlock on linux when shutting down pcap interface](https://github.com/christophe-calmejane/Hive/issues/90)
+
 ## [1.2.2] - 2020-05-25
 ### Added
 - Legal notices for each third party resource

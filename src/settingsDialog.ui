@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>377</width>
-    <height>623</height>
+    <height>649</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -209,17 +209,17 @@
       <property name="verticalSpacing">
        <number>6</number>
       </property>
-      <item row="0" column="0">
+      <item row="1" column="0">
        <widget class="QLabel" name="enableAEMCacheLabel">
         <property name="text">
          <string>Enable AEM Cache</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item row="1" column="1">
        <widget class="QCheckBox" name="enableAEMCacheCheckBox"/>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="enableAdvertisingLabel">
         <property name="enabled">
          <bool>false</bool>
@@ -229,14 +229,14 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="QCheckBox" name="enableAdvertisingCheckBox">
         <property name="enabled">
          <bool>false</bool>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="controllerIDLabel">
         <property name="enabled">
          <bool>false</bool>
@@ -246,22 +246,36 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="4" column="1">
        <widget class="QLineEdit" name="controllerIDLineEdit">
         <property name="enabled">
          <bool>false</bool>
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="fullAEMEnumerationLabel">
         <property name="text">
          <string>Full AEM Enumeration</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="2" column="1">
        <widget class="QCheckBox" name="fullAEMEnumerationCheckBox"/>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="discoveryDelayLabel">
+        <property name="text">
+         <string>Discovery Delay (in sec, 0=manual)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="qt::toolkit::TextEntry" name="discoveryDelayLineEdit">
+        <property name="maxLength">
+         <number>3</number>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
@@ -336,6 +350,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>qt::toolkit::TextEntry</class>
+   <extends>QLineEdit</extends>
+   <header>toolkit/textEntry.hpp</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>descriptorIndexStartsAt0CheckBox</tabstop>
   <tabstop>primarilyPreferredLocaleComboBox</tabstop>
@@ -356,15 +377,15 @@
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
    <receiver>SettingsDialog</receiver>
-   <slot>accept()</slot>
+   <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>313</x>
-     <y>226</y>
+     <x>188</x>
+     <y>628</y>
     </hint>
     <hint type="destinationlabel">
-     <x>322</x>
-     <y>241</y>
+     <x>188</x>
+     <y>324</y>
     </hint>
    </hints>
   </connection>

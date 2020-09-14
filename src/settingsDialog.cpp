@@ -38,6 +38,14 @@ public:
 		// Link UI
 		setupUi(parent);
 
+		// Additional UI initialization
+		if (auto* closeButton = buttonBox->button(QDialogButtonBox::Close))
+		{
+			closeButton->setDefault(false);
+			closeButton->setAutoDefault(false);
+		}
+		discoveryDelayLineEdit->setValidator(new QIntValidator{ 0, 999, discoveryDelayLineEdit });
+
 		// Initialize settings (blocking signals)
 		loadGeneralSettings();
 		loadConnectionMatrixSettings();
@@ -105,6 +113,12 @@ private:
 			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
 			checkForBetaVersionsLabel->setEnabled(enabled);
 			checkForBetaVersionsCheckBox->setEnabled(enabled);
+		}
+
+		// Discovery Delay
+		{
+			auto const lock = QSignalBlocker{ discoveryDelayLineEdit };
+			discoveryDelayLineEdit->setText(settings.getValue(settings::Controller_DiscoveryDelay.name).toString());
 		}
 
 		// AEM Cache
@@ -228,6 +242,12 @@ void SettingsDialog::on_alwaysShowArrowEndConnectionMatrixCheckBox_toggled(bool 
 {
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.setValue(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, checked);
+}
+
+void SettingsDialog::on_discoveryDelayLineEdit_returnPressed()
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::Controller_DiscoveryDelay.name, _pImpl->discoveryDelayLineEdit->text());
 }
 
 void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
