@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - No longer clearing talker mapping upon disconnection
+- Using AVDECC Library v3.0.2
 
 ### Fixed
 - [CBR matrix not refreshing](https://github.com/christophe-calmejane/Hive/issues/89)
