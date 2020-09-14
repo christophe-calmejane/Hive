@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.2.3] - 2020-09-14
 ### Added
 - [Displaying a message with shell command to run, if network interface cannot be opened](https://github.com/christophe-calmejane/Hive/issues/88)
 - Error message when a critical error occurs on the active network interface
