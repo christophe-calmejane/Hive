@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Scroll logger view to selected item whenever the filter changes](https://github.com/christophe-calmejane/Hive/issues/92)
 
 ### Changed
-- No longer clearing talker mapping upon disconnection
+- No longer clearing talker mapping when the removing the last (CBR matrix) channel connection
 - Using AVDECC Library v3.0.2
 
 ### Fixed
