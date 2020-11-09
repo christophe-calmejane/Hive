@@ -79,7 +79,7 @@ public:
 			});
 
 		connect(&_sequentialAcmpCommandExecuter, &commandChain::SequentialAsyncCommandExecuter::progressUpdate, this,
-			[this](uint32_t const completedCommands, uint32_t const totalCommands)
+			[this](size_t const completedCommands, size_t const totalCommands)
 			{
 				emit applyMediaClockDomainModelProgressUpdate(roundf(((float)completedCommands) / totalCommands * 100));
 			});
