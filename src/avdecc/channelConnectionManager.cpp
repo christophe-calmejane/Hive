@@ -1653,7 +1653,7 @@ private:
 		{
 			for (auto const& streamPortOutputKV : audioUnitKV.second.streamPortOutputs)
 			{
-				talkerClusterCount += streamPortOutputKV.second.audioClusters.size(); // mapping cluster channels > 0 unsupported
+				talkerClusterCount += static_cast<unsigned int>(streamPortOutputKV.second.audioClusters.size()); // mapping cluster channels > 0 unsupported
 
 				for (auto const& audioMapKV : streamPortOutputKV.second.audioMaps)
 				{
@@ -2239,7 +2239,7 @@ private:
 			bool streamConnectionStillNeeded = false;
 			std::set<std::tuple<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::ClusterIndex, uint16_t>> listenerClusterChannels;
 
-			auto streamConnectionUsages = uint32_t{ 0 };
+			auto streamConnectionUsages = size_t{ 0 };
 			for (auto const& deviceConnection : channelConnectionsOfTalker->targets)
 			{
 				// if this is a redundant connection, we convert the index to the primary:
@@ -2292,7 +2292,7 @@ private:
 				{
 					if (!deviceConnection->targetClusterChannels.empty())
 					{
-						streamConnectionUsages += static_cast<int>(deviceConnection->targetClusterChannels.size());
+						streamConnectionUsages += deviceConnection->targetClusterChannels.size();
 						if (streamConnectionUsages > 1)
 						{
 							streamConnectionStillNeeded = true;
@@ -2305,7 +2305,7 @@ private:
 			// determine the amount of channel receivers:
 			ChannelIdentification talkerChannelIdentification(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerClusterIndex, talkerClusterChannel, ChannelConnectionDirection::OutputToInput, talkerAudioUnitIndex, talkerStreamPortIndex, talkerBaseCluster);
 
-			auto talkerChannelReceivers = uint32_t{ 0 };
+			auto talkerChannelReceivers = size_t{ 0 };
 			auto const channelConnectionsOfTalkerChannel = getChannelConnections(talkerEntityId, talkerChannelIdentification);
 
 			for (auto deviceConnection : channelConnectionsOfTalkerChannel->targets)

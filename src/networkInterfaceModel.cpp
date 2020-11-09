@@ -186,7 +186,7 @@ la::avdecc::networkInterface::Interface::Type NetworkInterfaceModel::interfaceTy
 int NetworkInterfaceModel::rowCount(QModelIndex const& /*parent*/) const
 {
 	Q_D(const NetworkInterfaceModel);
-	return d->_interfaces.size();
+	return static_cast<int>(d->_interfaces.size());
 }
 
 QVariant NetworkInterfaceModel::data(QModelIndex const& index, int role) const

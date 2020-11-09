@@ -127,15 +127,15 @@ public:
 	void start() noexcept;
 
 	// Signals
-	Q_SIGNAL void progressUpdate(uint32_t const completedCommands, uint32_t const totalCommands);
+	Q_SIGNAL void progressUpdate(size_t const completedCommands, size_t const totalCommands);
 	Q_SIGNAL void completed(CommandExecutionErrors const errors);
 
 private:
 	CommandExecutionErrors _errors;
 	std::vector<AsyncParallelCommandSet*> _commands;
-	uint32_t _currentCommandSet{ 0 };
-	uint32_t _totalCommandCount{ 0 }; // includes parallel sub commands
-	uint32_t _completedCommandCount{ 0 }; // includes parallel sub commands
+	size_t _currentCommandSet{ 0 };
+	size_t _totalCommandCount{ 0 }; // includes parallel sub commands
+	size_t _completedCommandCount{ 0 }; // includes parallel sub commands
 };
 
 } // namespace commandChain
