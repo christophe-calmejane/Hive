@@ -20,6 +20,7 @@
 #include "QtMate/material/color.hpp"
 
 #include <unordered_map>
+#include <stdexcept>
 
 namespace qtMate
 {
