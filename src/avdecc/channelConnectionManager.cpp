@@ -1653,7 +1653,7 @@ private:
 		{
 			for (auto const& streamPortOutputKV : audioUnitKV.second.streamPortOutputs)
 			{
-				talkerClusterCount += static_cast<unsigned int>(streamPortOutputKV.second.audioClusters.size()); // mapping cluster channels > 0 unsupported
+				talkerClusterCount += static_cast<std::uint32_t>(streamPortOutputKV.second.audioClusters.size()); // mapping cluster channels > 0 unsupported
 
 				for (auto const& audioMapKV : streamPortOutputKV.second.audioMaps)
 				{
