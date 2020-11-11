@@ -1717,10 +1717,10 @@ private:
 
 
 		// get the stream channel count and the talker cluster count and use the lower value as maximum
-		auto assignableChannels = qMin(talkerClusterCount, static_cast<uint32_t>(talkerStreamChannelCount));
+		auto assignableChannels = qMin(talkerClusterCount, static_cast<std::uint32_t>(talkerStreamChannelCount));
 
 		// create the i:i mappings where possible
-		for (uint32_t i = 0; i < assignableChannels; i++)
+		for (std::uint32_t i = 0; i < assignableChannels; i++)
 		{
 			if (unmappableStreamChannels.find(i) != unmappableStreamChannels.end())
 			{
@@ -1794,7 +1794,7 @@ private:
 				if (compatibleStreamFormats.first)
 				{
 					commandsChangeStreamFormat.push_back(
-						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 						{
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
@@ -1814,7 +1814,7 @@ private:
 				if (compatibleStreamFormats.second)
 				{
 					commandsChangeStreamFormat.push_back(
-						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 						{
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
@@ -1851,7 +1851,7 @@ private:
 
 				// connect primary
 				commandsCreateStreamConnections.push_back(
-					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+					[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 					{
 						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
@@ -1894,7 +1894,7 @@ private:
 						auto const talkerSecStreamIndex = redundantOutputStreamsIterator->first;
 						auto const listenerSecStreamIndex = redundantInputStreamsIterator->first;
 						commandsCreateStreamConnections.push_back(
-							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+							[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 							{
 								auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 								auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
@@ -1971,7 +1971,7 @@ private:
 			for (auto const& [listenerStream, streamConnectionInfo] : streamsToDisconnect)
 			{
 				commandsTempDisconnectStreams.push_back(
-					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 					{
 						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
@@ -2013,7 +2013,7 @@ private:
 			for (auto const& [listenerStream, streamConnectionInfo] : streamsToDisconnect)
 			{
 				commandsReconnectStreams.push_back(
-					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+					[listenerStream = listenerStream, streamConnectionInfo = streamConnectionInfo](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 					{
 						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, la::avdecc::entity::ControllerEntity::ControlStatus const status)
@@ -2057,7 +2057,7 @@ private:
 				for (auto const& mapping : mappingsListener.second)
 				{
 					commandsRemoveMappings.push_back(
-						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 						{
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
@@ -2083,7 +2083,7 @@ private:
 				for (auto const& mapping : mappingsTalker.second)
 				{
 					commandsCreateMappings.push_back(
-						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 						{
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
@@ -2107,7 +2107,7 @@ private:
 				for (auto const& mapping : mappingsListener.second)
 				{
 					commandsCreateMappings.push_back(
-						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, uint32_t const commandIndex) -> bool
+						[=](commandChain::AsyncParallelCommandSet* const parentCommandSet, std::uint32_t const commandIndex) -> bool
 						{
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
