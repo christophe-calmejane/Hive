@@ -57,7 +57,7 @@ public:
 	~ChannelConnectionManagerImpl() noexcept {}
 
 private:
-	using StreamChannelConnection = std::tuple<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex, uint16_t>;
+	using StreamChannelConnection = std::tuple<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex, std::uint16_t>;
 	using StreamChannelConnections = std::vector<StreamChannelConnection>;
 
 	struct FindStreamConnectionResult
@@ -83,7 +83,7 @@ private:
 
 	struct StreamChannelInfo
 	{
-		StreamChannelInfo(la::avdecc::entity::model::StreamIndex const talkerPrimaryStreamIndex, la::avdecc::entity::model::StreamIndex const listenerPrimaryStreamIndex, uint16_t const streamChannel, bool const streamAlreadyConnected, bool const reusesTalkerMapping, bool const reusesListenerMapping, bool const isTalkerDefaultMapped, la::avdecc::entity::model::StreamFormat const talkerStreamFormat, la::avdecc::entity::model::StreamFormat const listenerStreamFormat)
+		StreamChannelInfo(la::avdecc::entity::model::StreamIndex const talkerPrimaryStreamIndex, la::avdecc::entity::model::StreamIndex const listenerPrimaryStreamIndex, std::uint16_t const streamChannel, bool const streamAlreadyConnected, bool const reusesTalkerMapping, bool const reusesListenerMapping, bool const isTalkerDefaultMapped, la::avdecc::entity::model::StreamFormat const talkerStreamFormat, la::avdecc::entity::model::StreamFormat const listenerStreamFormat)
 			: talkerPrimaryStreamIndex(talkerPrimaryStreamIndex)
 			, listenerPrimaryStreamIndex(listenerPrimaryStreamIndex)
 			, streamChannel(streamChannel)
@@ -100,7 +100,7 @@ private:
 
 		la::avdecc::entity::model::StreamIndex talkerPrimaryStreamIndex{ 0 };
 		la::avdecc::entity::model::StreamIndex listenerPrimaryStreamIndex{ 0 };
-		uint16_t streamChannel{ 0 };
+		std::uint16_t streamChannel{ 0 };
 		bool streamAlreadyConnected{ false };
 		bool reusesTalkerMapping{ false };
 		bool reusesListenerMapping{ false };
@@ -502,7 +502,7 @@ private:
 		}
 
 
-		std::set<std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex, uint16_t>> processedListenerChannels;
+		std::set<std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ClusterIndex, std::uint16_t>> processedListenerChannels;
 
 		auto const& streamConnections = getAllStreamOutputConnections(entityId);
 
@@ -1221,7 +1221,7 @@ private:
 	* @param allowRemovalOfUnusedAudioMappings Flag parameter to indicate if existing mappings can be overridden
 	* @param channelUsageHint
 	*/
-	CheckChannelCreationsPossibleResult checkChannelCreationsPossible(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool const allowTalkerMappingChanges, bool const allowRemovalOfUnusedAudioMappings, uint16_t const channelUsageHint) const noexcept
+	CheckChannelCreationsPossibleResult checkChannelCreationsPossible(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool const allowTalkerMappingChanges, bool const allowRemovalOfUnusedAudioMappings, std::uint16_t const channelUsageHint) const noexcept
 	{
 		auto insertAudioMapping = [](StreamChannelMappings& streamChannelMappings, la::avdecc::entity::model::AudioMapping const& audioMapping, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
 		{
@@ -1308,7 +1308,7 @@ private:
 					auto assignedChannelsTalker = getAssignedChannelsOnTalkerStream(talkerEntityId, streamChannelInfoToUse->talkerPrimaryStreamIndex);
 					auto assignedChannelsListener = getAssignedChannelsOnListenerStream(listenerEntityId, streamChannelInfoToUse->listenerPrimaryStreamIndex);
 
-					std::vector<uint16_t> unwantedConnectionsAfterStreamConnect;
+					std::vector<std::uint16_t> unwantedConnectionsAfterStreamConnect;
 					set_intersection(assignedChannelsTalker.begin(), assignedChannelsTalker.end(), assignedChannelsListener.begin(), assignedChannelsListener.end(), back_inserter(unwantedConnectionsAfterStreamConnect));
 
 					if (!unwantedConnectionsAfterStreamConnect.empty() && !allowRemovalOfUnusedAudioMappings)
@@ -1501,10 +1501,10 @@ private:
 	* @param newMappingsListener Contains mappings that will be created with createChannelConnections method, but are not created yet.
 	* @return Gets all connection
 	*/
-	std::vector<StreamChannelInfo> findAllUsableStreamChannelsOnStreamConnection(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::UniqueIdentifier const listenerEntityId, StreamConnection const streamConnection, bool const isStreamAlreadyConnected, la::avdecc::entity::model::ClusterIndex const talkerClusterOffset, uint16_t const talkerClusterChannel, la::avdecc::entity::model::ClusterIndex const listenerClusterOffset, uint16_t const listenerClusterChannel, StreamChannelMappings const& newMappingsTalker, StreamChannelMappings const& newMappingsListener) const noexcept
+	std::vector<StreamChannelInfo> findAllUsableStreamChannelsOnStreamConnection(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::UniqueIdentifier const listenerEntityId, StreamConnection const streamConnection, bool const isStreamAlreadyConnected, la::avdecc::entity::model::ClusterIndex const talkerClusterOffset, std::uint16_t const talkerClusterChannel, la::avdecc::entity::model::ClusterIndex const listenerClusterOffset, uint16_t const listenerClusterChannel, StreamChannelMappings const& newMappingsTalker, StreamChannelMappings const& newMappingsListener) const noexcept
 	{
 		// convenience function to create StreamChannelInfo
-		auto buildStreamChannelInfo = [talkerEntityId, listenerEntityId, streamConnection, isStreamAlreadyConnected, talkerClusterOffset, listenerClusterOffset](uint16_t streamChannel, bool reusesTalkerMapping, bool reusesListenerMapping) -> std::optional<StreamChannelInfo>
+		auto buildStreamChannelInfo = [talkerEntityId, listenerEntityId, streamConnection, isStreamAlreadyConnected, talkerClusterOffset, listenerClusterOffset](std::uint16_t streamChannel, bool reusesTalkerMapping, bool reusesListenerMapping) -> std::optional<StreamChannelInfo>
 		{
 			auto const& manager = avdecc::ControllerManager::getInstance();
 			auto const talkerEntity = manager.getControlledEntity(talkerEntityId);
@@ -1645,7 +1645,7 @@ private:
 		}
 
 		// find all unmappable streeam channels (occupied) and count the talker clusters
-		std::set<uint16_t> unmappableStreamChannels;
+		std::set<std::uint16_t> unmappableStreamChannels;
 		auto talkerStreamChannelCount = getStreamOutputChannelCount(talkerEntityId, talkerStreamIndex);
 		auto talkerClusterCount = 0u;
 		auto const& talkerAudioUnits = controlledTalkerEntity->getCurrentConfigurationNode().audioUnits;
@@ -1766,7 +1766,7 @@ private:
 	virtual ChannelConnectResult createChannelConnections(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::UniqueIdentifier const& listenerEntityId, std::vector<std::pair<avdecc::ChannelIdentification, avdecc::ChannelIdentification>> const& talkerToListenerChannelConnections, bool const allowTalkerMappingChanges, bool const allowRemovalOfUnusedAudioMappings) noexcept
 	{
 		// count the number of channel connections needed (filter doubled talker connections)
-		uint16_t channelUsage = 0;
+		std::uint16_t channelUsage = 0;
 		std::set<avdecc::ChannelIdentification> uniqueTalkers;
 		for (auto const& connection : talkerToListenerChannelConnections)
 		{
@@ -2206,7 +2206,7 @@ private:
 
 		auto connectionStreamSourceIndex = std::optional<la::avdecc::entity::model::StreamIndex>{ std::nullopt };
 		auto connectionStreamTargetIndex = std::optional<la::avdecc::entity::model::StreamIndex>{ std::nullopt };
-		auto connectionStreamChannel = std::optional<uint16_t>{ std::nullopt };
+		auto connectionStreamChannel = std::optional<std::uint16_t>{ std::nullopt };
 
 		for (auto deviceConnection : channelConnectionOfListenerChannel->targets)
 		{
@@ -2237,7 +2237,7 @@ private:
 			auto unassignedChannels = getUnassignedChannelsOnTalkerStream(talkerEntityId, *connectionStreamSourceIndex);
 			auto const channelConnectionsOfTalker = getAllChannelConnectionsBetweenDevices(talkerEntityId, talkerStreamPortIndex, listenerEntityId);
 			bool streamConnectionStillNeeded = false;
-			std::set<std::tuple<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::ClusterIndex, uint16_t>> listenerClusterChannels;
+			std::set<std::tuple<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::ClusterIndex, std::uint16_t>> listenerClusterChannels;
 
 			auto streamConnectionUsages = size_t{ 0 };
 			for (auto const& deviceConnection : channelConnectionsOfTalker->targets)
@@ -2430,9 +2430,9 @@ private:
 	/**
 	* Find all outgoing stream channels that are assigned to the given cluster channel.
 	*/
-	std::set<uint16_t> getAssignedChannelsOnTalkerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const outputStreamIndex, std::optional<la::avdecc::entity::model::ClusterIndex> const clusterOffset = std::nullopt, std::optional<uint16_t> const clusterChannel = std::nullopt) const noexcept
+	std::set<std::uint16_t> getAssignedChannelsOnTalkerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const outputStreamIndex, std::optional<la::avdecc::entity::model::ClusterIndex> const clusterOffset = std::nullopt, std::optional<std::uint16_t> const clusterChannel = std::nullopt) const noexcept
 	{
-		std::set<uint16_t> result;
+		std::set<std::uint16_t> result;
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
@@ -2511,9 +2511,9 @@ private:
 	/**
 	* Find all outgoing stream channels that are assigned to the given cluster channel.
 	*/
-	std::set<uint16_t> getAssignedChannelsOnListenerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const inputStreamIndex, std::optional<la::avdecc::entity::model::ClusterIndex> const clusterOffset = std::nullopt, std::optional<uint16_t> const clusterChannel = std::nullopt) const noexcept
+	std::set<std::uint16_t> getAssignedChannelsOnListenerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const inputStreamIndex, std::optional<la::avdecc::entity::model::ClusterIndex> const clusterOffset = std::nullopt, std::optional<std::uint16_t> const clusterChannel = std::nullopt) const noexcept
 	{
-		std::set<uint16_t> result;
+		std::set<std::uint16_t> result;
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
@@ -2565,9 +2565,9 @@ private:
 		return result;
 	}
 
-	std::set<uint16_t> getAssignedChannelsOnConnectedListenerStreams(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const outputStreamIndex, std::optional<la::avdecc::entity::model::ClusterIndex> const clusterOffset = std::nullopt, std::optional<uint16_t> const clusterChannel = std::nullopt) const noexcept
+	std::set<std::uint16_t> getAssignedChannelsOnConnectedListenerStreams(la::avdecc::UniqueIdentifier const talkerEntityId, la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const outputStreamIndex, std::optional<la::avdecc::entity::model::ClusterIndex> const clusterOffset = std::nullopt, std::optional<std::uint16_t> const clusterChannel = std::nullopt) const noexcept
 	{
-		std::set<uint16_t> result;
+		std::set<std::uint16_t> result;
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(listenerEntityId);
@@ -2632,9 +2632,9 @@ private:
 	/**
 	* Find all outgoing stream channels that are unassigned.
 	*/
-	std::set<uint16_t> getUnassignedChannelsOnTalkerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const outputStreamIndex) const noexcept
+	std::set<std::uint16_t> getUnassignedChannelsOnTalkerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const outputStreamIndex) const noexcept
 	{
-		std::set<uint16_t> result;
+		std::set<std::uint16_t> result;
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
@@ -2658,7 +2658,7 @@ private:
 			return result;
 		}
 
-		auto occupiedStreamChannels = std::set<uint16_t>{};
+		auto occupiedStreamChannels = std::set<std::uint16_t>{};
 		for (auto const& audioUnit : configurationNode.audioUnits)
 		{
 			for (auto const& streamPortOutput : audioUnit.second.streamPortOutputs)
@@ -2688,7 +2688,7 @@ private:
 
 		// get the stream channel count:
 		auto channelCount = getStreamOutputChannelCount(entityId, outputStreamIndex);
-		for (auto i = uint16_t{ 0 }; i < channelCount; i++)
+		for (auto i = std::uint16_t{ 0 }; i < channelCount; i++)
 		{
 			if (occupiedStreamChannels.find(i) == occupiedStreamChannels.end())
 			{
@@ -2702,9 +2702,9 @@ private:
 	/**
 	* Find all incoming stream channels that are unassigned.
 	*/
-	std::set<uint16_t> getUnassignedChannelsOnListenerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const inputStreamIndex) const noexcept
+	std::set<std::uint16_t> getUnassignedChannelsOnListenerStream(la::avdecc::UniqueIdentifier const entityId, la::avdecc::entity::model::StreamIndex const inputStreamIndex) const noexcept
 	{
-		std::set<uint16_t> result;
+		std::set<std::uint16_t> result;
 
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
@@ -2728,7 +2728,7 @@ private:
 			return result;
 		}
 
-		auto occupiedStreamChannels = std::set<uint16_t>{};
+		auto occupiedStreamChannels = std::set<std::uint16_t>{};
 		for (auto const& audioUnit : configurationNode.audioUnits)
 		{
 			for (auto const& streamPortInput : audioUnit.second.streamPortInputs)
@@ -2745,7 +2745,7 @@ private:
 
 		// get the stream channel count:
 		auto channelCount = getStreamInputChannelCount(entityId, inputStreamIndex);
-		for (auto i = uint16_t{ 0 }; i < channelCount; i++)
+		for (auto i = std::uint16_t{ 0 }; i < channelCount; i++)
 		{
 			if (occupiedStreamChannels.find(i) == occupiedStreamChannels.end())
 			{
@@ -2756,7 +2756,7 @@ private:
 		return result;
 	}
 
-	la::avdecc::entity::model::AudioMappings getMappingsFromStreamInputChannel(la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const inputStreamIndex, uint16_t const streamChannel) const noexcept
+	la::avdecc::entity::model::AudioMappings getMappingsFromStreamInputChannel(la::avdecc::UniqueIdentifier const listenerEntityId, la::avdecc::entity::model::StreamIndex const inputStreamIndex, std::uint16_t const streamChannel) const noexcept
 	{
 		la::avdecc::entity::model::AudioMappings result;
 		auto& manager = avdecc::ControllerManager::getInstance();
@@ -2963,7 +2963,7 @@ private:
 		return std::nullopt;
 	}
 
-	std::pair<std::optional<la::avdecc::entity::model::StreamFormat>, std::optional<la::avdecc::entity::model::StreamFormat>> getCompatibleStreamFormatChannelCount(la::avdecc::entity::model::StreamFormat const talkerStreamFormat, la::avdecc::entity::model::StreamFormat const listenerStreamFormat, uint16_t channelMinSizeHint) const noexcept
+	std::pair<std::optional<la::avdecc::entity::model::StreamFormat>, std::optional<la::avdecc::entity::model::StreamFormat>> getCompatibleStreamFormatChannelCount(la::avdecc::entity::model::StreamFormat const talkerStreamFormat, la::avdecc::entity::model::StreamFormat const listenerStreamFormat, std::uint16_t channelMinSizeHint) const noexcept
 	{
 		auto resultingTalkerStreamFormat = std::optional<la::avdecc::entity::model::StreamFormat>{ std::nullopt };
 		auto resultingListenerStreamFormat = std::optional<la::avdecc::entity::model::StreamFormat>{ std::nullopt };
@@ -3009,7 +3009,7 @@ private:
 	/**
 	* Changes the stream format if it is not already the given type and adjusts the number of channels if necessary.
 	*/
-	std::pair<std::optional<la::avdecc::entity::model::StreamFormat>, std::optional<la::avdecc::entity::model::StreamFormat>> findCompatibleStreamPairFormat(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex const streamOutputIndex, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex const streamInputIndex, la::avdecc::entity::model::StreamFormatInfo::Type const expectedStreamFormatType, uint16_t const channelMinSizeHint = 0) const noexcept
+	std::pair<std::optional<la::avdecc::entity::model::StreamFormat>, std::optional<la::avdecc::entity::model::StreamFormat>> findCompatibleStreamPairFormat(la::avdecc::UniqueIdentifier const& talkerEntityId, la::avdecc::entity::model::StreamIndex const streamOutputIndex, la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex const streamInputIndex, la::avdecc::entity::model::StreamFormatInfo::Type const expectedStreamFormatType, std::uint16_t const channelMinSizeHint = 0) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledTalkerEntity = manager.getControlledEntity(talkerEntityId);
@@ -3186,7 +3186,7 @@ private:
 	/**
 	* Returns the count of channels a stream supports.
 	*/
-	uint16_t getStreamInputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+	std::uint16_t getStreamInputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
@@ -3219,7 +3219,7 @@ private:
 	/**
 	* Returns the count of channels a stream supports.
 	*/
-	uint16_t getStreamOutputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+	std::uint16_t getStreamOutputChannelCount(la::avdecc::UniqueIdentifier const& entityId, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 	{
 		auto& manager = avdecc::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
