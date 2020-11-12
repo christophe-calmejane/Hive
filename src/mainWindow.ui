@@ -38,7 +38,7 @@
       <property name="orientation">
        <enum>Qt::Vertical</enum>
       </property>
-      <widget class="qt::toolkit::TableView" name="controllerTableView"/>
+      <widget class="qtMate::widgets::TableView" name="controllerTableView"/>
       <widget class="connectionMatrix::View" name="routingTableView"/>
      </widget>
     </item>
@@ -220,9 +220,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>qt::toolkit::TableView</class>
+   <class>qtMate::widgets::TableView</class>
    <extends>QTableView</extends>
-   <header>toolkit/tableView.hpp</header>
+   <header>QtMate/widgets/tableView.hpp</header>
   </customwidget>
   <customwidget>
    <class>EntityInspector</class>

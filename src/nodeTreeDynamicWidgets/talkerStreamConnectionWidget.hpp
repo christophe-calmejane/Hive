@@ -19,16 +19,16 @@
 
 #pragma once
 
-#include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
-
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
+
+#include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+#include <QtMate/widgets/flatIconButton.hpp>
 
 #include <QPushButton>
 #include <QLabel>
 #include <QHBoxLayout>
 
-#include "toolkit/flatIconButton.hpp"
 
 class TalkerStreamConnectionWidget : public QWidget
 {
@@ -46,5 +46,5 @@ private:
 	QLabel _streamConnectionLabel{ this };
 	QLabel _entityNameLabel{ this };
 
-	qt::toolkit::FlatIconButton _disconnectButton{ "Material Icons", "block", this };
+	qtMate::widgets::FlatIconButton _disconnectButton{ "Material Icons", "block", this };
 };

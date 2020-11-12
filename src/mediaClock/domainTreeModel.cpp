@@ -114,7 +114,7 @@ DomainTreeModelPrivate::DomainTreeModelPrivate(DomainTreeModel* model)
 {
 	_rootItem = new RootTreeItem();
 
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::gptpChanged, this, &DomainTreeModelPrivate::onGptpChanged);
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::gptpChanged, this, &DomainTreeModelPrivate::onGptpChanged);
 }
 
 /**

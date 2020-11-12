@@ -19,6 +19,8 @@
 
 #include "talkerStreamConnectionWidget.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <QMenu>
 #include <QStyle>
 
@@ -33,7 +35,7 @@ TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::m
 	_layout.addWidget(&_entityNameLabel, 2);
 	_layout.addWidget(&_disconnectButton);
 
-	_streamConnectionLabel.setText(avdecc::helper::uniqueIdentifierToString(_listenerConnection.entityID) + ":" + QString::number(_listenerConnection.streamIndex));
+	_streamConnectionLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(_listenerConnection.entityID) + ":" + QString::number(_listenerConnection.streamIndex));
 
 	_entityNameLabel.setObjectName("EntityNameLabel");
 	_disconnectButton.setObjectName("DisconnectButton");
@@ -41,10 +43,10 @@ TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::m
 	updateData();
 
 	// Connect ControllerManager signals
-	auto const& manager = avdecc::ControllerManager::getInstance();
+	auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	// EntityOnline
-	connect(&manager, &avdecc::ControllerManager::entityOnline, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			if (entityID == _listenerConnection.entityID)
@@ -52,7 +54,7 @@ TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::m
 		});
 
 	// EntityOffline
-	connect(&manager, &avdecc::ControllerManager::entityOffline, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			if (entityID == _listenerConnection.entityID)
@@ -64,7 +66,7 @@ TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::m
 	connect(&_disconnectButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			avdecc::ControllerManager::getInstance().disconnectTalkerStream(_talkerConnection.entityID, _talkerConnection.streamIndex, _listenerConnection.entityID, _listenerConnection.streamIndex);
+			hive::modelsLibrary::ControllerManager::getInstance().disconnectTalkerStream(_talkerConnection.entityID, _talkerConnection.streamIndex, _listenerConnection.entityID, _listenerConnection.streamIndex);
 		});
 	// Row context menu
 #pragma message("TODO: Pas a faire ici mais dans la table complete!!")
@@ -89,7 +91,7 @@ TalkerStreamConnectionWidget::TalkerStreamConnectionWidget(la::avdecc::entity::m
 
 void TalkerStreamConnectionWidget::updateData()
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	QString onlineStatus{ "Offline" };
 	bool isGhost{ true };
@@ -97,7 +99,7 @@ void TalkerStreamConnectionWidget::updateData()
 	auto controlledEntity = manager.getControlledEntity(_listenerConnection.entityID);
 	if (controlledEntity)
 	{
-		onlineStatus = avdecc::helper::smartEntityName(*controlledEntity);
+		onlineStatus = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 
 		try
 		{

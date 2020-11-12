@@ -27,8 +27,7 @@
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
-
-#include "toolkit/dynamicHeaderView.hpp"
+#include <QtMate/widgets/dynamicHeaderView.hpp>
 
 namespace Ui
 {

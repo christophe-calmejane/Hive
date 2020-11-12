@@ -21,8 +21,9 @@
 
 #include "mappingMatrix.hpp"
 #include "helper.hpp"
-#include "controllerManager.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 
@@ -56,7 +57,7 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildStreamMappings(la::avdecc::co
 	// Build list of stream mappings
 	for (auto const* streamNode : streamNodes)
 	{
-		auto streamName = avdecc::helper::objectName(controlledEntity, *streamNode).toStdString();
+		auto streamName = hive::modelsLibrary::helper::objectName(controlledEntity, *streamNode).toStdString();
 		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
 		NodeMapping nodeMapping{ streamNode->descriptorIndex };
 		mappingMatrix::Node node{ streamName };
@@ -257,7 +258,7 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 	}
 
 	// Remove and Add the mappings
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	if (!toRemove.empty())
 	{
 		if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)

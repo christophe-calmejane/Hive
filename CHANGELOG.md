@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- New CLI tool to dump AEM from entities: AEMDumper
+
+### Changed
+- macOS minimum version is now 10.12 (due to Qt update)
 
 ## [1.2.3] - 2020-09-14
 ### Added

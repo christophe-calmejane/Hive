@@ -19,8 +19,9 @@
 
 #pragma once
 
-#include "toolkit/flatIconButton.hpp"
 #include "settingsManager/settings.hpp"
+
+#include <QtMate/widgets/flatIconButton.hpp>
 
 #include <QWidget>
 #include <QLayout>
@@ -37,7 +38,7 @@ public:
 	CornerWidget(QWidget* parent = nullptr);
 	~CornerWidget();
 
-	void setColor(qt::toolkit::material::color::Name const name);
+	void setColor(qtMate::material::color::Name const name);
 	void setTransposed(bool const isTransposed);
 	bool isTransposed() const;
 
@@ -67,16 +68,16 @@ private:
 	QLineEdit _searchLineEdit{ &_buttonContainer };
 
 	QHBoxLayout _horizontalLayout;
-	qt::toolkit::FlatIconButton _horizontalExpandButton{ "Material Icons", "expand_more" };
+	qtMate::widgets::FlatIconButton _horizontalExpandButton{ "Material Icons", "expand_more" };
 	QWidget _horizontalPlaceholder{ this };
-	qt::toolkit::FlatIconButton _horizontalCollapseButton{ "Material Icons", "expand_less" };
+	qtMate::widgets::FlatIconButton _horizontalCollapseButton{ "Material Icons", "expand_less" };
 
 	QVBoxLayout _verticalLayout;
-	qt::toolkit::FlatIconButton _verticalCollapseButton{ "Material Icons", "chevron_left" };
+	qtMate::widgets::FlatIconButton _verticalCollapseButton{ "Material Icons", "chevron_left" };
 	QWidget _verticalPlaceholder{ this };
-	qt::toolkit::FlatIconButton _verticalExpandButton{ "Material Icons", "chevron_right" };
+	qtMate::widgets::FlatIconButton _verticalExpandButton{ "Material Icons", "chevron_right" };
 
-	qt::toolkit::material::color::Name _colorName{ qt::toolkit::material::color::DefaultColor };
+	qtMate::material::color::Name _colorName{ qtMate::material::color::DefaultColor };
 	bool _isTransposed{ false };
 };
 

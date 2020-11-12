@@ -108,7 +108,7 @@ CornerWidget::~CornerWidget()
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 }
 
-void CornerWidget::setColor(qt::toolkit::material::color::Name const name)
+void CornerWidget::setColor(qtMate::material::color::Name const name)
 {
 	_colorName = name;
 	update();

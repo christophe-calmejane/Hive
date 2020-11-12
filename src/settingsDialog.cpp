@@ -20,13 +20,14 @@
 #include "settingsDialog.hpp"
 #include "ui_settingsDialog.h"
 #include "internals/config.hpp"
+#include "settingsManager/settings.hpp"
+#include "networkInterfaceTypeModel.hpp"
+
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
-#include "settingsManager/settings.hpp"
-#include "entityLogoCache.hpp"
-#include "toolkit/material/colorPalette.hpp"
-#include "toolkit/tickableMenu.hpp"
-#include "networkInterfaceTypeModel.hpp"
+#include <QtMate/material/colorPalette.hpp>
+#include <QtMate/widgets/tickableMenu.hpp>
+#include <hive/widgetModelsLibrary/entityLogoCache.hpp>
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
@@ -74,7 +75,7 @@ private:
 		{
 			auto const lock = QSignalBlocker{ themeColorComboBox };
 			themeColorComboBox->setModel(&_themeColorModel);
-			themeColorComboBox->setModelColumn(_themeColorModel.index(qt::toolkit::material::color::DefaultShade));
+			themeColorComboBox->setModelColumn(_themeColorModel.index(qtMate::material::color::DefaultShade));
 			themeColorComboBox->setCurrentIndex(settings.getValue(settings::General_ThemeColorIndex.name).toInt());
 		}
 	}
@@ -175,7 +176,7 @@ private:
 	}
 
 private:
-	qt::toolkit::material::color::Palette _themeColorModel;
+	qtMate::material::color::Palette _themeColorModel;
 	NetworkInterfaceTypeModel _networkInterfaceTypeModel;
 };
 
@@ -201,7 +202,7 @@ void SettingsDialog::on_automaticPNGDownloadCheckBox_toggled(bool checked)
 
 void SettingsDialog::on_clearLogoCacheButton_clicked()
 {
-	auto& logoCache{ EntityLogoCache::getInstance() };
+	auto& logoCache{ hive::widgetModelsLibrary::EntityLogoCache::getInstance() };
 	logoCache.clear();
 }
 

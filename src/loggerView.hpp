@@ -21,8 +21,9 @@
 
 #include "ui_loggerView.h"
 #include "avdecc/loggerModel.hpp"
-#include "toolkit/dynamicHeaderView.hpp"
-#include "toolkit/tickableMenu.hpp"
+
+#include <QtMate/widgets/dynamicHeaderView.hpp>
+#include <QtMate/widgets/tickableMenu.hpp>
 
 #include <QSortFilterProxyModel>
 
@@ -31,7 +32,7 @@ class LoggerView : public QWidget, private Ui::LoggerView
 	Q_OBJECT
 public:
 	LoggerView(QWidget* parent = nullptr);
-	qt::toolkit::DynamicHeaderView* header() const;
+	qtMate::widgets::DynamicHeaderView* header() const;
 
 private:
 	void createLayerFilterButton();
@@ -42,7 +43,7 @@ private:
 	QSortFilterProxyModel _layerFilterProxyModel{ this };
 	QSortFilterProxyModel _levelFilterProxyModel{ this };
 	QSortFilterProxyModel _searchFilterProxyModel{ this };
-	qt::toolkit::DynamicHeaderView _dynamicHeaderView{ Qt::Horizontal, this };
-	qt::toolkit::TickableMenu _layerFilterMenu{ this };
-	qt::toolkit::TickableMenu _levelFilterMenu{ this };
+	qtMate::widgets::DynamicHeaderView _dynamicHeaderView{ Qt::Horizontal, this };
+	qtMate::widgets::TickableMenu _layerFilterMenu{ this };
+	qtMate::widgets::TickableMenu _levelFilterMenu{ this };
 };

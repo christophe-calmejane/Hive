@@ -33,10 +33,11 @@
 
 #include "mainWindow.hpp"
 #include "sparkleHelper/sparkleHelper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 #include "profiles/profileSelectionDialog.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #ifdef DEBUG
 #	define SPLASH_DELAY 0
@@ -237,7 +238,7 @@ int main(int argc, char* argv[])
 #endif // !BUGREPORTER_CATCH_EXCEPTIONS
 
 	// Destroy the controller before leaving main (so it's properly cleaned before all static variables are destroyed in a random order)
-	avdecc::ControllerManager::getInstance().destroyController();
+	hive::modelsLibrary::ControllerManager::getInstance().destroyController();
 
 	// Return from main
 	return retValue;

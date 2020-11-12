@@ -2,8 +2,8 @@
 # Rename this file to .hive_config
 
 ################ Signing
-# Signing identity to be used, defaults to "-" which let Xcode autodetect appropriate signing identity
-identity=-
+# Signing identity to be used, run './gen_cmake.sh -ids' to get the list of valid identities on this computer (copy the printed identity without adding quotes)
+#identity=
 
 # Windows signtool options (defaults to '/a /sm /q /fd sha256 /tr http://timestamp.digicert.com')
 #signtool_options=/a /sm /q /fd sha256 /tr http://timestamp.digicert.com

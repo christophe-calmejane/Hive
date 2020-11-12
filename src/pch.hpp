@@ -21,31 +21,25 @@
 
 // Private Headers
 #include "aboutDialog.hpp"
-#include "activeNetworkInterfaceModel.hpp"
+#include "activeNetworkInterfacesModel.hpp"
 #include "aecpCommandComboBox.hpp"
 #include "controlledEntityTreeWidget.hpp"
 #include "defaults.hpp"
 #include "deviceDetailsChannelTableModel.hpp"
 #include "deviceDetailsDialog.hpp"
 #include "entityInspector.hpp"
-#include "entityLogoCache.hpp"
-#include "errorItemDelegate.hpp"
 #include "firmwareUploadDialog.hpp"
-#include "imageItemDelegate.hpp"
 #include "loggerView.hpp"
 #include "mainWindow.hpp"
 #include "mappingMatrix.hpp"
 #include "multiFirmwareUpdateDialog.hpp"
-#include "networkInterfaceModel.hpp"
 #include "networkInterfaceTypeModel.hpp"
 #include "nodeTreeWidget.hpp"
 #include "nodeVisitor.hpp"
-#include "painterHelper.hpp"
 #include "settingsDialog.hpp"
 #include "windowsNpfHelper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 #include "avdecc/commandChain.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/controllerModel.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
@@ -71,6 +65,7 @@
 #include "mediaClock/domainTreeModel.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
 #include "mediaClock/unassignedListModel.hpp"
+#include "nodeTreeDynamicWidgets/asPathWidget.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
@@ -81,19 +76,34 @@
 #include "settingsManager/settings.hpp"
 #include "sparkleHelper/sparkleHelper.hpp"
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
-#include "toolkit/comboBox.hpp"
-#include "toolkit/dynamicHeaderView.hpp"
-#include "toolkit/flatIconButton.hpp"
-#include "toolkit/helper.hpp"
-#include "toolkit/textEntry.hpp"
-#include "toolkit/tickableMenu.hpp"
-#include "toolkit/graph/inputSocket.hpp"
-#include "toolkit/graph/node.hpp"
-#include "toolkit/graph/outputSocket.hpp"
-#include "toolkit/graph/view.hpp"
-#include "toolkit/material/color.hpp"
-#include "toolkit/material/colorPalette.hpp"
-#include "toolkit/material/helper.hpp"
+
+// QtMate Library
+#include <QtMate/graph/inputSocket.hpp>
+#include <QtMate/graph/node.hpp>
+#include <QtMate/graph/outputSocket.hpp>
+#include <QtMate/graph/view.hpp>
+#include <QtMate/material/color.hpp>
+#include <QtMate/material/colorPalette.hpp>
+#include <QtMate/material/helper.hpp>
+#include <QtMate/widgets/comboBox.hpp>
+#include <QtMate/widgets/dynamicHeaderView.hpp>
+#include <QtMate/widgets/flatIconButton.hpp>
+#include <QtMate/widgets/textEntry.hpp>
+#include <QtMate/widgets/tickableMenu.hpp>
+
+// Models Library
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/modelsLibrary/networkInterfacesModel.hpp>
+#include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
+
+// Widget Models Library
+#include <hive/widgetModelsLibrary/entityLogoCache.hpp>
+#include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
+#include <hive/widgetModelsLibrary/painterHelper.hpp>
+
 
 // Other Headers
 #include <la/avdecc/avdecc.hpp>

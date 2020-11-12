@@ -18,14 +18,14 @@
 */
 
 #include "controlledEntityTreeWidget.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
 #include "settingsManager/settings.hpp"
-#include "errorItemDelegate.hpp"
 #include "nodeVisitor.hpp"
 #include "entityInspector.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QHeaderView>
 #include <QMenu>
@@ -214,13 +214,13 @@ public:
 	ControlledEntityTreeWidgetPrivate(ControlledEntityTreeWidget* q)
 		: q_ptr(q)
 	{
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 
-		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ControlledEntityTreeWidgetPrivate::controllerOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ControlledEntityTreeWidgetPrivate::entityOnline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ControlledEntityTreeWidgetPrivate::entityOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::streamInputErrorCounterChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::statisticsErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::statisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ControlledEntityTreeWidgetPrivate::controllerOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ControlledEntityTreeWidgetPrivate::entityOnline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControlledEntityTreeWidgetPrivate::entityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::streamInputErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::statisticsErrorCounterChanged);
 
 		// Configure settings observers
 		auto& settings = settings::SettingsManager::getInstance();
@@ -262,7 +262,7 @@ public:
 		}
 	}
 
-	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters)
+	Q_SLOT void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, hive::modelsLibrary::ControllerManager::StreamInputErrorCounters const& errorCounters)
 	{
 		if (entityID != _controlledEntityID)
 		{
@@ -275,7 +275,7 @@ public:
 		}
 	}
 
-	Q_SLOT void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::StatisticsErrorCounters const& errorCounters)
+	Q_SLOT void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters)
 	{
 		if (entityID != _controlledEntityID)
 		{
@@ -358,7 +358,7 @@ public:
 			return;
 		}
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(_controlledEntityID);
 
 		if (controlledEntity)
@@ -452,7 +452,7 @@ public:
 				showSetDescriptorAsCurrentMenu(pos, item, "Set As Current Configuration", isEnabled,
 					[this, configurationIndex = nodeIdentifier.index]()
 					{
-						avdecc::ControllerManager::getInstance().setConfiguration(_controlledEntityID, configurationIndex);
+						hive::modelsLibrary::ControllerManager::getInstance().setConfiguration(_controlledEntityID, configurationIndex);
 					});
 				break;
 			}
@@ -473,7 +473,7 @@ public:
 						showSetDescriptorAsCurrentMenu(pos, item, "Set As Current Clock Source", isEnabled,
 							[this, clockDomainIndex, clockSourceIndex]()
 							{
-								avdecc::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, clockSourceIndex);
+								hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, clockSourceIndex);
 							});
 					}
 				}
@@ -577,11 +577,11 @@ private:
 		// Use Index 0 as ConfigurationIndex for the Entity Descriptor
 		auto* item = addItem<la::avdecc::controller::model::Node const*>(la::avdecc::entity::model::ConfigurationIndex{ 0u }, nullptr, &node, genName(node.dynamicModel->entityName.data()));
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto const errorCounters = manager.getStatisticsCounters(_controlledEntityID);
 		item->setHasError(!errorCounters.empty());
 
-		connect(&manager, &avdecc::ControllerManager::entityNameChanged, item,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityNameChanged, item,
 			[genName, item](la::avdecc::UniqueIdentifier const /*entityID*/, QString const& entityName)
 			{
 				auto name = genName(entityName);
@@ -598,19 +598,19 @@ private:
 		{
 			return QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(type), QString::number(index), name);
 		};
-		auto* item = addItem(node.descriptorIndex, parent, &node, genName(avdecc::helper::configurationName(controlledEntity, node)));
+		auto* item = addItem(node.descriptorIndex, parent, &node, genName(hive::modelsLibrary::helper::configurationName(controlledEntity, node)));
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::configurationNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::configurationNameChanged, item,
 			[this, genName, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& /*configurationName*/)
 			{
 				if (entityID == _controlledEntityID && configurationIndex == node.descriptorIndex)
 				{
-					auto& manager = avdecc::ControllerManager::getInstance();
+					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 					auto controlledEntity = manager.getControlledEntity(entityID);
 
 					if (controlledEntity)
 					{
-						auto name = genName(avdecc::helper::configurationName(controlledEntity.get(), node));
+						auto name = genName(hive::modelsLibrary::helper::configurationName(controlledEntity.get(), node));
 						item->setData(0, Qt::DisplayRole, name);
 					}
 				}
@@ -642,7 +642,7 @@ private:
 	{
 		if (entityID == _controlledEntityID && descriptorType == node.descriptorType && descriptorIndex == node.descriptorIndex)
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			// Filter configuration, we currently expand nodes only for current configuration
@@ -659,7 +659,7 @@ private:
 		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioUnitNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::audioUnitNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& /*audioUnitName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex);
@@ -672,11 +672,11 @@ private:
 		auto const name = genName(controlledEntity, configurationIndex, node);
 		auto* item = addItem(configurationIndex, parent, &node, name);
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex);
 		item->setHasError(!errorCounters.empty());
 
-		connect(&manager, &avdecc::ControllerManager::streamNameChanged, item,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
@@ -698,7 +698,7 @@ private:
 		auto const name = genName(controlledEntity, configurationIndex, node);
 		auto* item = addItem(configurationIndex, parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
@@ -719,7 +719,7 @@ private:
 		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::avbInterfaceNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& /*avbInterfaceName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex);
@@ -749,7 +749,7 @@ private:
 		auto const name = genName(controlledEntity, grandGrandParent->descriptorIndex, node);
 		auto* item = addItem(grandGrandParent->descriptorIndex, parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioClusterNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::audioClusterNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& /*audioClusterName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioCluster, audioClusterIndex);
@@ -767,7 +767,7 @@ private:
 		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockDomainNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockDomainNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& /*clockDomainName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex);
@@ -780,13 +780,13 @@ private:
 		auto* item = addItem(grandParent->descriptorIndex, parent, &node, name);
 		auto const isCurrentConfiguration = grandParent->descriptorIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& /*clockSourceName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex);
 			});
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::clockSourceChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceChanged, item,
 			[this, item, node, parentIndex = parent->descriptorIndex, isCurrentConfiguration](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex)
 			{
 				if (isCurrentConfiguration && entityID == _controlledEntityID && clockDomainIndex == parentIndex)
@@ -807,7 +807,7 @@ private:
 		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::memoryObjectNameChanged, item,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::memoryObjectNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& /*memoryObjectName*/)
 			{
 				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::MemoryObject, memoryObjectIndex);

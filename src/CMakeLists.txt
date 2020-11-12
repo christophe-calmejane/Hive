@@ -1,4 +1,6 @@
-# Hive Application CMake File
+# Hive Sources CMake File
+
+set(HIVE_SOURCES_FOLDER ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Declare project
 setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
@@ -25,15 +27,14 @@ if(WIN32)
 endif()
 
 # Resource files
-set(RESOURCES_FOLDER "${PROJECT_ROOT_DIR}/resources")
 set(RESOURCE_FILES
-	${RESOURCES_FOLDER}/main.qrc
+	${HIVE_RESOURCES_FOLDER}/main.qrc
 )
 set(RESOURCE_FILES_GENERATED)
 
 if(WIN32)
 	configure_file(
-		${RESOURCES_FOLDER}/win32/Info.rc.in
+		${HIVE_RESOURCES_FOLDER}/win32/Info.rc.in
 		${CMAKE_CURRENT_BINARY_DIR}/Info.rc
 	)
 	list(APPEND RESOURCE_FILES_GENERATED
@@ -44,7 +45,7 @@ if(WIN32)
 	set(BUGREPORTER_LINK_LIBRARIES "BugTrap")
 elseif(APPLE)
 	set(ICON_FILE Icon.icns)
-	set(ICON_PATH ${RESOURCES_FOLDER}/macOS/${ICON_FILE})
+	set(ICON_PATH ${HIVE_RESOURCES_FOLDER}/macOS/${ICON_FILE})
 	set_source_files_properties(${ICON_PATH} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	list(APPEND RESOURCE_FILES
 		${ICON_PATH}
@@ -56,7 +57,6 @@ set(HEADER_FILES_GENERATED
 )
 
 set(HEADER_FILES_COMMON
-	avdecc/controllerManager.hpp
 	avdecc/mcDomainManager.hpp
 	avdecc/controllerModel.hpp
 	avdecc/channelConnectionManager.hpp
@@ -100,25 +100,10 @@ set(HEADER_FILES_COMMON
 	profiles/profileSelectionDialog.hpp
 	profiles/profileWidget.hpp
 	settingsManager/settingsManager.hpp
-	settingsManager/settingsManager.hpp
+	settingsManager/settingsSignaler.hpp
 	settingsManager/settings.hpp
 	sparkleHelper/sparkleHelper.hpp
 	statistics/entityStatisticsTreeWidgetItem.hpp
-	toolkit/comboBox.hpp
-	toolkit/dynamicHeaderView.hpp
-	toolkit/flatIconButton.hpp
-	toolkit/material/color.hpp
-	toolkit/material/colorPalette.hpp
-	toolkit/material/helper.hpp
-	toolkit/tableView.hpp
-	toolkit/textEntry.hpp
-	toolkit/tickableMenu.hpp
-	toolkit/graph/connection.hpp
-	toolkit/graph/inputSocket.hpp
-	toolkit/graph/node.hpp
-	toolkit/graph/outputSocket.hpp
-	toolkit/graph/socket.hpp
-	toolkit/graph/view.hpp
 	settingsDialog.hpp
 	defaults.hpp
 	deviceDetailsDialog.hpp
@@ -131,21 +116,15 @@ set(HEADER_FILES_COMMON
 	aecpCommandComboBox.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
-	entityLogoCache.hpp
-	errorItemDelegate.hpp
-	imageItemDelegate.hpp
 	mappingMatrix.hpp
-	activeNetworkInterfaceModel.hpp
-	networkInterfaceModel.hpp
+	activeNetworkInterfacesModel.hpp
 	networkInterfaceTypeModel.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
-	painterHelper.hpp
 	windowsNpfHelper.hpp
 )
 
 set(SOURCE_FILES_COMMON
-	avdecc/controllerManager.cpp
 	avdecc/mcDomainManager.cpp
 	avdecc/controllerModel.cpp
 	avdecc/channelConnectionManager.cpp
@@ -187,21 +166,6 @@ set(SOURCE_FILES_COMMON
 	profiles/profileWidget.cpp
 	settingsManager/settingsManager.cpp
 	statistics/entityStatisticsTreeWidgetItem.cpp
-	toolkit/comboBox.cpp
-	toolkit/dynamicHeaderView.cpp
-	toolkit/flatIconButton.cpp
-	toolkit/material/color.cpp
-	toolkit/material/colorPalette.cpp
-	toolkit/material/helper.cpp
-	toolkit/tableView.cpp
-	toolkit/textEntry.cpp
-	toolkit/tickableMenu.cpp
-	toolkit/graph/connection.cpp
-	toolkit/graph/inputSocket.cpp
-	toolkit/graph/node.cpp
-	toolkit/graph/outputSocket.cpp
-	toolkit/graph/socket.cpp
-	toolkit/graph/view.cpp
 	aboutDialog.cpp
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
@@ -211,17 +175,12 @@ set(SOURCE_FILES_COMMON
 	mainWindow.cpp
 	settingsDialog.cpp
 	aecpCommandComboBox.cpp
-	entityLogoCache.cpp
-	errorItemDelegate.cpp
-	imageItemDelegate.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
-	activeNetworkInterfaceModel.cpp
-	networkInterfaceModel.cpp
+	activeNetworkInterfacesModel.cpp
 	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
-	painterHelper.cpp
 	windowsNpfHelper.cpp
 )
 
@@ -266,7 +225,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEAD
 source_group("Header Files" FILES ${HEADER_FILES_GENERATED})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON})
-source_group(TREE ${RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
+source_group(TREE ${HIVE_RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
 source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
 
 # Define static library to be used by main application and unit tests
@@ -284,10 +243,10 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 )
 
 # Additional compile definitions
-target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${RESOURCES_FOLDER}")
+target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()
@@ -321,20 +280,12 @@ if(BUILD_HIVE_APPLICATION)
 	if(APPLE)
 		set_target_properties(${PROJECT_NAME} PROPERTIES
 			MACOSX_BUNDLE_ICON_FILE ${ICON_FILE}
-			MACOSX_BUNDLE_INFO_PLIST ${RESOURCES_FOLDER}/macOS/Info.plist.in
+			MACOSX_BUNDLE_INFO_PLIST ${HIVE_RESOURCES_FOLDER}/macOS/Info.plist.in
 		)
 	endif()
 
-	# Deploy required shared libraries and resources to the output folder and setup installation rules (must be done BEFORE sign_target or qtDeploy will strip the signature from the binary)
-	target_setup_deploy(${PROJECT_NAME} INSTALL)
-
-	# Sign binary (this is done during installation phase)
-	if(ENABLE_HIVE_SIGNING)
-		sign_target(${PROJECT_NAME})
-	endif()
-
-	# Set installation rule (always installing application)
-	install(TARGETS ${PROJECT_NAME} BUNDLE DESTINATION . RUNTIME DESTINATION bin)
+	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
+	setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG})
 endif()
 
 ################

@@ -19,12 +19,13 @@
 
 #include "mediaClock/unassignedListModel.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <QMenu>
 #include <QMimeData>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-
 
 #include "avdecc/mcDomainManager.hpp"
 #include "avdecc/helper.hpp"
@@ -190,11 +191,11 @@ QVariant UnassignedListModelPrivate::data(QModelIndex const& index, int role) co
 	if (role != Qt::DisplayRole)
 		return QVariant();
 
-	auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(_entities.at(index.row()));
+	auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(_entities.at(index.row()));
 	if (!controlledEntity)
 		return QVariant();
 
-	return avdecc::helper::smartEntityName(*controlledEntity);
+	return hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 }
 
 /**

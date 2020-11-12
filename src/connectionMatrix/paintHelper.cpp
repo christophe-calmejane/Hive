@@ -18,9 +18,9 @@
 */
 
 #include "connectionMatrix/paintHelper.hpp"
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 
-namespace color = qt::toolkit::material::color;
+namespace color = qtMate::material::color;
 
 namespace connectionMatrix
 {

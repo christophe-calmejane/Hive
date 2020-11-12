@@ -19,14 +19,15 @@
 
 #include "controllerModel.hpp"
 #include "helper.hpp"
-#include "entityLogoCache.hpp"
-#include "imageItemDelegate.hpp"
-#include "errorItemDelegate.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "settingsManager/settings.hpp"
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/widgetModelsLibrary/entityLogoCache.hpp>
+#include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/logger.hpp>
 
@@ -160,7 +161,7 @@ MediaClockInfo computeMediaClockInfo(la::avdecc::UniqueIdentifier const& entityI
 					}
 					else
 					{
-						info.masterID = "External on " + helper::uniqueIdentifierToString(mediaClockMasterID);
+						info.masterID = "External on " + hive::modelsLibrary::helper::uniqueIdentifierToString(mediaClockMasterID);
 					}
 					break;
 				case mediaClock::McDeterminationError::AnyEntityInChainOffline:
@@ -178,12 +179,12 @@ MediaClockInfo computeMediaClockInfo(la::avdecc::UniqueIdentifier const& entityI
 		{
 			if (mediaClockMasterID != entityID)
 			{
-				info.masterID = helper::uniqueIdentifierToString(mediaClockMasterID);
+				info.masterID = hive::modelsLibrary::helper::uniqueIdentifierToString(mediaClockMasterID);
 
-				auto& manager = avdecc::ControllerManager::getInstance();
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				if (auto const clockMasterEntity = manager.getControlledEntity(mediaClockMasterID))
 				{
-					info.masterName = helper::entityName(*clockMasterEntity);
+					info.masterName = hive::modelsLibrary::helper::entityName(*clockMasterEntity);
 				}
 			}
 			else
@@ -220,11 +221,11 @@ QString computeGptpTooltip(GptpInfoPerAvbInterfaceIndex const& gptp)
 		{
 			if (avbInterfaceIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex)
 			{
-				list << QString{ "Global gPTP: %1 / %2" }.arg(helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
+				list << QString{ "Global gPTP: %1 / %2" }.arg(hive::modelsLibrary::helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
 			}
 			else
 			{
-				list << QString{ "gPTP for index %1: %2 / %3" }.arg(avbInterfaceIndex).arg(helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
+				list << QString{ "gPTP for index %1: %2 / %3" }.arg(avbInterfaceIndex).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
 			}
 		}
 	}
@@ -239,21 +240,21 @@ public:
 	ControllerModelPrivate(ControllerModel* model)
 		: q_ptr{ model }
 	{
-		// Connect avdecc::ControllerManager signals
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
-		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ControllerModelPrivate::handleControllerOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ControllerModelPrivate::handleEntityOnline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ControllerModelPrivate::handleEntityOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::identificationStarted, this, &ControllerModelPrivate::handleIdentificationStarted);
-		connect(&controllerManager, &avdecc::ControllerManager::identificationStopped, this, &ControllerModelPrivate::handleIdentificationStopped);
-		connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::handleEntityNameChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::entityGroupNameChanged, this, &ControllerModelPrivate::handleEntityGroupNameChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::handleAcquireStateChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::lockStateChanged, this, &ControllerModelPrivate::handleLockStateChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ControllerModelPrivate::handleCompatibilityFlagsChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
+		// Connect hive::modelsLibrary::ControllerManager signals
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ControllerModelPrivate::handleControllerOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ControllerModelPrivate::handleEntityOnline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControllerModelPrivate::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStarted, this, &ControllerModelPrivate::handleIdentificationStarted);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStopped, this, &ControllerModelPrivate::handleIdentificationStopped);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::handleEntityNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityGroupNameChanged, this, &ControllerModelPrivate::handleEntityGroupNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::acquireStateChanged, this, &ControllerModelPrivate::handleAcquireStateChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::lockStateChanged, this, &ControllerModelPrivate::handleLockStateChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityFlagsChanged, this, &ControllerModelPrivate::handleCompatibilityFlagsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
 
 		// Connect avdecc::mediaClock::MCDomainManager signals
 		auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
@@ -261,8 +262,8 @@ public:
 		connect(&mediaClockConnectionManager, &avdecc::mediaClock::MCDomainManager::mcMasterNameChanged, this, &ControllerModelPrivate::handleMcMasterNameChanged);
 
 		// Connect EntityLogoCache signals
-		auto& logoCache = EntityLogoCache::getInstance();
-		connect(&logoCache, &EntityLogoCache::imageChanged, this, &ControllerModelPrivate::handleImageChanged);
+		auto& logoCache = hive::widgetModelsLibrary::EntityLogoCache::getInstance();
+		connect(&logoCache, &hive::widgetModelsLibrary::EntityLogoCache::imageChanged, this, &ControllerModelPrivate::handleImageChanged);
 
 		// Register to settings::SettingsManager
 		auto& settings = settings::SettingsManager::getInstance();
@@ -305,7 +306,7 @@ public:
 			switch (column)
 			{
 				case ControllerModel::Column::EntityID:
-					return helper::uniqueIdentifierToString(entityID);
+					return hive::modelsLibrary::helper::uniqueIdentifierToString(entityID);
 				case ControllerModel::Column::Name:
 					return data.name;
 				case ControllerModel::Column::Group:
@@ -328,7 +329,7 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityID)
 		{
-			if (role == ErrorItemDelegate::ErrorRole || role == Qt::ForegroundRole)
+			if (role == hive::widgetModelsLibrary::ErrorItemDelegate::ErrorRole || role == Qt::ForegroundRole)
 			{
 				auto const it = _entitiesWithErrorCounter.find(entityID);
 				if (it != std::end(_entitiesWithErrorCounter))
@@ -336,7 +337,7 @@ public:
 					auto const& entityWithErrorCounter{ it->second };
 					if (entityWithErrorCounter.hasError())
 					{
-						if (role == ErrorItemDelegate::ErrorRole)
+						if (role == hive::widgetModelsLibrary::ErrorItemDelegate::ErrorRole)
 						{
 							return true;
 						}
@@ -356,12 +357,12 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityLogo)
 		{
-			if (role == ImageItemDelegate::ImageRole)
+			if (role == hive::widgetModelsLibrary::ImageItemDelegate::ImageRole)
 			{
 				if (data.aemSupported)
 				{
-					auto& logoCache = EntityLogoCache::getInstance();
-					return logoCache.getImage(entityID, EntityLogoCache::Type::Entity, _automaticEntityLogoDownload);
+					auto& logoCache = hive::widgetModelsLibrary::EntityLogoCache::getInstance();
+					return logoCache.getImage(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity, _automaticEntityLogoDownload);
 				}
 			}
 		}
@@ -369,7 +370,7 @@ public:
 		{
 			switch (role)
 			{
-				case ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
 				{
 					try
 					{
@@ -402,7 +403,7 @@ public:
 		{
 			switch (role)
 			{
-				case ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
 				{
 					try
 					{
@@ -424,7 +425,7 @@ public:
 		{
 			switch (role)
 			{
-				case ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
 				{
 					try
 					{
@@ -517,8 +518,8 @@ private:
 	public:
 		EntityData(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::Entity const& entity)
 			: entityID{ entityID }
-			, name{ helper::entityName(controlledEntity) }
-			, groupName{ helper::groupName(controlledEntity) }
+			, name{ hive::modelsLibrary::helper::entityName(controlledEntity) }
+			, groupName{ hive::modelsLibrary::helper::groupName(controlledEntity) }
 			, acquireState{ computeAcquireState(controlledEntity.getAcquireState()) }
 			, acquireStateTooltip{ helper::acquireStateToString(controlledEntity.getAcquireState(), controlledEntity.getOwningControllerID()) }
 			, lockState{ computeLockState(controlledEntity.getLockState()) }
@@ -562,7 +563,7 @@ private:
 			try
 			{
 				auto const& [avbInterfaceIndex, info] = *gptpInfoMap.begin();
-				return info.grandmasterID ? helper::uniqueIdentifierToString(*info.grandmasterID) : "Not Set";
+				return info.grandmasterID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*info.grandmasterID) : "Not Set";
 			}
 			catch (...)
 			{
@@ -598,7 +599,7 @@ private:
 
 		QString associationIDToString() const
 		{
-			return associationID ? helper::uniqueIdentifierToString(*associationID) : "Not Set";
+			return associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "Not Set";
 		}
 	};
 
@@ -621,7 +622,7 @@ private:
 		}
 	}
 
-	// avdecc::ControllerManager
+	// hive::modelsLibrary::ControllerManager
 
 	void handleControllerOffline()
 	{
@@ -639,7 +640,7 @@ private:
 	{
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			// Check if the entity is actually online (it might happen that the entity quickly switched from online to offline)
 			if (controlledEntity)
@@ -735,7 +736,7 @@ private:
 			data.acquireState = computeAcquireState(acquireState);
 			data.acquireStateTooltip = helper::acquireStateToString(acquireState, owningEntity);
 
-			dataChanged(*row, ControllerModel::Column::AcquireState, { ImageItemDelegate::ImageRole });
+			dataChanged(*row, ControllerModel::Column::AcquireState, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
 		}
 	}
 
@@ -748,7 +749,7 @@ private:
 			data.lockState = computeLockState(lockState);
 			data.lockStateTooltip = helper::lockStateToString(lockState, lockingEntity);
 
-			dataChanged(*row, ControllerModel::Column::LockState, { ImageItemDelegate::ImageRole });
+			dataChanged(*row, ControllerModel::Column::LockState, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
 		}
 	}
 
@@ -760,7 +761,7 @@ private:
 
 			try
 			{
-				auto& manager = avdecc::ControllerManager::getInstance();
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				if (auto controlledEntity = manager.getControlledEntity(entityID))
 				{
 					data.compatibility = computeCompatibility(controlledEntity->getMilanInfo(), compatibilityFlags);
@@ -792,7 +793,7 @@ private:
 		}
 	}
 
-	void handleStreamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, ControllerManager::StreamInputErrorCounters const& errorCounters)
+	void handleStreamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, hive::modelsLibrary::ControllerManager::StreamInputErrorCounters const& errorCounters)
 	{
 		if (auto const row = entityRow(entityID))
 		{
@@ -809,7 +810,7 @@ private:
 		}
 	}
 
-	void handleStatisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, ControllerManager::StatisticsErrorCounters const& errorCounters)
+	void handleStatisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters)
 	{
 		if (auto const row = entityRow(entityID))
 		{
@@ -854,13 +855,13 @@ private:
 
 	// EntityLogoCache
 
-	void handleImageChanged(la::avdecc::UniqueIdentifier const& entityID, EntityLogoCache::Type const type)
+	void handleImageChanged(la::avdecc::UniqueIdentifier const& entityID, hive::widgetModelsLibrary::EntityLogoCache::Type const type)
 	{
-		if (type == EntityLogoCache::Type::Entity)
+		if (type == hive::widgetModelsLibrary::EntityLogoCache::Type::Entity)
 		{
 			if (auto const row = entityRow(entityID))
 			{
-				dataChanged(*row, ControllerModel::Column::EntityLogo, { ImageItemDelegate::ImageRole });
+				dataChanged(*row, ControllerModel::Column::EntityLogo, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
 			}
 		}
 	}
@@ -880,14 +881,14 @@ private:
 				auto const topLeft = q->createIndex(0, column, nullptr);
 				auto const bottomRight = q->createIndex(rowCount(), column, nullptr);
 
-				emit q->dataChanged(topLeft, bottomRight, { ImageItemDelegate::ImageRole });
+				emit q->dataChanged(topLeft, bottomRight, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
 			}
 		}
 		else if (name == settings::General_ThemeColorIndex.name)
 		{
-			//auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
-			//_errorColorValue = qt::toolkit::material::color::foregroundErrorColorValue(colorName, qt::toolkit::material::color::Shade::ShadeA700);
-			_errorColorValue = qt::toolkit::material::color::foregroundErrorColorValue(qt::toolkit::material::color::DefaultColor, qt::toolkit::material::color::DefaultShade); // Right now, always use default value, as we draw on white background
+			//auto const colorName = qtMate::material::color::Palette::name(value.toInt());
+			//_errorColorValue = qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::Shade::ShadeA700);
+			_errorColorValue = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::DefaultShade); // Right now, always use default value, as we draw on white background
 
 			Q_Q(ControllerModel);
 

@@ -22,8 +22,9 @@
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "nodeTreeWidget.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <chrono>
 
@@ -36,19 +37,19 @@
 class EntityStatisticTreeWidgetItem : public QTreeWidgetItem
 {
 public:
-	EntityStatisticTreeWidgetItem(avdecc::ControllerManager::StatisticsErrorCounterFlag const flag, QTreeWidgetItem* parent)
+	EntityStatisticTreeWidgetItem(hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag const flag, QTreeWidgetItem* parent)
 		: QTreeWidgetItem{ parent, la::avdecc::utils::to_integral(NodeTreeWidget::TreeWidgetItemType::EntityStatistic) }
 		, _counterFlag{ flag }
 	{
 	}
 
-	avdecc::ControllerManager::StatisticsErrorCounterFlag counterFlag() const
+	hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag counterFlag() const
 	{
 		return _counterFlag;
 	}
 
 private:
-	avdecc::ControllerManager::StatisticsErrorCounterFlag const _counterFlag;
+	hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag const _counterFlag;
 };
 
 class EntityStatisticsTreeWidgetItem : public QObject, public QTreeWidgetItem
@@ -61,7 +62,7 @@ public:
 	}
 
 private:
-	void setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, avdecc::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept;
+	void setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept;
 	void updateAecpRetryCounter(std::uint64_t const value) noexcept;
 	void updateAecpTimeoutCounter(std::uint64_t const value) noexcept;
 	void updateAecpUnexpectedResponseCounter(std::uint64_t const value) noexcept;
@@ -71,12 +72,12 @@ private:
 	la::avdecc::UniqueIdentifier const _entityID{};
 
 	// Statistics
-	EntityStatisticTreeWidgetItem _aecpRetryCounterItem{ avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpRetries, this };
-	EntityStatisticTreeWidgetItem _aecpTimeoutCounterItem{ avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts, this };
-	EntityStatisticTreeWidgetItem _aecpUnexpectedResponseCounterItem{ avdecc::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses, this };
+	EntityStatisticTreeWidgetItem _aecpRetryCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpRetries, this };
+	EntityStatisticTreeWidgetItem _aecpTimeoutCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts, this };
+	EntityStatisticTreeWidgetItem _aecpUnexpectedResponseCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses, this };
 	QTreeWidgetItem _aecpResponseAverageTimeItem{ this };
 	QTreeWidgetItem _aemAecpUnsolicitedCounterItem{ this };
 	QTreeWidgetItem _enumerationTimeItem{ this };
-	avdecc::ControllerManager::StatisticsErrorCounters _counters{};
-	avdecc::ControllerManager::StatisticsErrorCounters _errorCounters{};
+	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _counters{};
+	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _errorCounters{};
 };

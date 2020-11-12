@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 
 #include <QDialog>
 #include <QLayout>
@@ -32,7 +32,7 @@ class LegendDialog : public QDialog
 {
 	Q_OBJECT
 public:
-	LegendDialog(qt::toolkit::material::color::Name const& colorName, bool const isTransposed, QWidget* parent = nullptr);
+	LegendDialog(qtMate::material::color::Name const& colorName, bool const isTransposed, QWidget* parent = nullptr);
 
 private:
 	QVBoxLayout _layout{ this };
