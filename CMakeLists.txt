@@ -52,7 +52,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "Hive")
 
 # Set minimum OSX version
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9 CACHE INTERNAL "Force the target to be at least a Mac OS X 10.9" FORCE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE INTERNAL "Force the target to be at least a Mac OS X 10.12" FORCE)
 
 # Enable cmake folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
