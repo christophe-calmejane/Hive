@@ -68,7 +68,7 @@ outputFolderForced=0
 add_cmake_opt=()
 useVSclang=0
 useVS2017=0
-signingId="-"
+signingId=""
 doSign=0
 signtoolOptions="$default_signtoolOptions"
 useSources=0
@@ -95,7 +95,8 @@ do
 				echo " -signtool-opt <options> -> Windows code signing options (Default: $default_signtoolOptions)"
 			fi
 			if isMac; then
-				echo " -id <TeamIdentifier> -> iTunes team identifier for binary signing."
+				echo " -id <Signing Identity> -> Signing identity for binary signing (full identity name inbetween the quotes, see -ids to get the list)"
+				echo " -ids -> List signing identities"
 			fi
 			if isLinux; then
 				echo " -debug -> Force debug configuration (Linux only)"
@@ -234,6 +235,19 @@ do
 				exit 4
 			fi
 			;;
+		-ids)
+			if isMac; then
+				security find-identity -v -p codesigning | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"\KDeveloper ID Application: [^(]+\([^)]+\)(?=\")"
+				if [ $? -ne 0 ]; then
+					echo "ERROR: No valid signing identity found. You must install a 'Developer ID Application' certificate"
+					exit 4
+				fi
+				exit 0
+			else
+				echo "ERROR: -ids option is only supported on macOS platform"
+				exit 4
+			fi
+			;;
 		-debug)
 			if isLinux; then
 				cmake_config="Debug"
@@ -288,15 +302,42 @@ fi
 
 # Signing is now mandatory for macOS
 if isMac; then
+	# No signing identity provided, try to autodetect
+	if [ "$signingId" == "" ]; then
+		echo -n "No signing identity provided, autodetecting... "
+		signingId="$(security find-identity -v -p codesigning | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"\KDeveloper ID Application: [^(]+\([^)]+\)(?=\")" -m1)"
+		if [ "$signingId" == "" ]; then
+			echo "ERROR: Cannot autodetect a valid signing identity, please use -id option"
+			exit 4
+		fi
+		echo "using identity: '$signingId'"
+	fi
+	# Validate signing identity exists
+	subSign="${signingId//(/\\(}" # Need to escape ( and )
+	subSign="${subSign//)/\\)}"
+	security find-identity -v -p codesigning | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"${subSign}" &> /dev/null
+	if [ $? -ne 0 ]; then
+		echo "ERROR: Signing identity '${signingId}' not found, use the full identity name inbetween the quotes (see -ids to get a list of valid identities)"
+		exit 4
+	fi
+	# Get Team Identifier from signing identity (for xcode)
+	teamRegEx="[^(]+\(([^)]+)"
+	if ! [[ $signingId =~ $teamRegEx ]]; then
+		echo "ERROR: Failed to find Team Identifier in signing identity: $signingId"
+		exit 4
+	fi
+	teamId="${BASH_REMATCH[1]}"
 	if [ $doSign -eq 0 ]; then
-		echo "Binary signing is mandatory starting with macOS Catalina, forcing it using ID '$signingId'"
+		echo "Binary signing is mandatory since macOS Catalina, forcing it using ID '$signingId' (TeamID '$teamId')"
 		doSign=1
 	fi
-	add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$signingId")
+	add_cmake_opt+=("-DLA_BINARY_SIGNING_IDENTITY=$signingId")
+	add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$teamId")
 fi
 
 if [ $doSign -eq 1 ]; then
 	add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
+	# Set signtool options if signing enabled on windows
 	if isWindows; then
 		if [ ! -z "$signtoolOptions" ]; then
 			add_cmake_opt+=("-DLA_SIGNTOOL_OPTIONS=$signtoolOptions")

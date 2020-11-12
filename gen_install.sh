@@ -454,12 +454,12 @@ if [ $doSign -eq 1 ]; then
 		gen_cmake_additional_options+=("$signtoolOptions")
 	fi
 
-	# Check if TeamIdentifier is specified on macOS
+	# Check if Identity is specified on macOS
 	if isMac; then
-		identityString=${params["identity"]}
+		identityString="${params["identity"]}"
 
 		if [ "x$identityString" == "x" ]; then
-			echo "ERROR: macOS requires either iTunes TeamIdentifier. Specify it in the ${configFile} file"
+			echo "ERROR: macOS requires valid signing identity. Specify it in the ${configFile} file"
 			exit 4
 		fi
 		gen_cmake_additional_options+=("-id")
