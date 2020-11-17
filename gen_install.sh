@@ -234,7 +234,6 @@ default_VisualGenerator="Visual Studio 16 2019"
 default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
-default_VisualSdk="8.1"
 
 # 
 arch=""
@@ -256,7 +255,6 @@ else
 		generator="$default_VisualGenerator"
 		toolset="$default_VisualToolset"
 		toolchain="$default_VisualToolchain"
-		platformSdk="$default_VisualSdk"
 		arch="$default_VisualArch"
 		defaultOutputFolder="${outputFolderBasePath}_<arch>_<toolset>"
 	else
