@@ -245,7 +245,7 @@ SequentialAsyncCommandExecuter::~SequentialAsyncCommandExecuter()
 		*/
 void SequentialAsyncCommandExecuter::setCommandChain(std::vector<AsyncParallelCommandSet*> const& commands) noexcept
 {
-	auto totalCommandCount = std::uint32_t{ 0 };
+	auto totalCommandCount = size_t{ 0 };
 	_commands = commands;
 	for (auto* command : _commands)
 	{
