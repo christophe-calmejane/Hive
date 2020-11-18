@@ -85,18 +85,18 @@ QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::avdecc::networkInterface
 // hive::modelsLibrary::NetworkInterfacesAbstractListModel overrides
 void NetworkInterfacesListModel::nameChanged(std::size_t const index, std::string const& /*name*/) noexcept
 {
-	auto const modelIndex = createIndex(index, 0);
+	auto const modelIndex = createIndex(static_cast<int>(index), 0);
 	emit dataChanged(modelIndex, modelIndex, { Qt::DisplayRole });
 }
 void NetworkInterfacesListModel::enabledStateChanged(std::size_t const index, bool const /*isEnabled*/) noexcept
 {
-	auto const modelIndex = createIndex(index, 0);
+	auto const modelIndex = createIndex(static_cast<int>(index), 0);
 	emit dataChanged(modelIndex, modelIndex, { Qt::DisplayRole });
 }
 
 void NetworkInterfacesListModel::connectedStateChanged(std::size_t const index, bool const /*isConnected*/) noexcept
 {
-	auto const modelIndex = createIndex(index, 0);
+	auto const modelIndex = createIndex(static_cast<int>(index), 0);
 	emit dataChanged(modelIndex, modelIndex, { Qt::DisplayRole });
 }
 

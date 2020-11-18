@@ -48,7 +48,7 @@ void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hi
 			{
 				try
 				{
-					auto const modelIndex = createIndex(index, static_cast<int>(_entityDataFlags.getPosition(entityDataFlag)));
+					auto const modelIndex = createIndex(static_cast<int>(index), static_cast<int>(_entityDataFlags.getPosition(entityDataFlag)));
 					emit dataChanged(modelIndex, modelIndex, roles);
 				}
 				catch (...)
