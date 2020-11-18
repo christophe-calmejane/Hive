@@ -17,8 +17,6 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
-
 #include "hive/widgetModelsLibrary/widgetModelsLibrary.hpp"
 #include "config.hpp"
 
