@@ -187,7 +187,7 @@ private:
 				}
 
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), entity.getCompatibilityFlags(), e.getEntityCapabilities(), entity.getAcquireState(), entity.getOwningControllerID(), entity.getLockState(), entity.getLockingControllerID(), gptpInfo, e.getAssociationID() };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), entity.getCompatibilityFlags(), e.getEntityCapabilities(), entity.getAcquireState(), entity.getOwningControllerID(), entity.getLockState(), entity.getLockingControllerID(), gptpInfo, e.getAssociationID() };
 
 				// Insert at the end
 				auto const row = _model->rowCount();

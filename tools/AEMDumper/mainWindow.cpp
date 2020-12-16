@@ -41,9 +41,8 @@
 
 #include <QtMate/widgets/dynamicHeaderView.hpp>
 #include <QtMate/widgets/comboBox.hpp>
-//#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
-//#include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 #include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
 #include <hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp>
 #include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
@@ -58,186 +57,6 @@
 #define VENDOR_ID 0x001B92
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
-
-//Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
-#if 0
-class DiscoveredEntitiesTableModel : public hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel
-{
-public:
-	enum class EntityDataFlag : std::uint32_t
-	{
-		EntityLogo = 1u << 0,
-		Compatibility = 1u << 1,
-		EntityID = 1u << 2,
-		Name = 1u << 3,
-		Group = 1u << 4,
-		FirmwareVersion = 1u << 5,
-	};
-	using EntityDataFlags = la::avdecc::utils::EnumBitfield<EntityDataFlag>;
-
-	DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags)
-		: _entityDataFlags{ entityDataFlags }
-		, _count{ static_cast<decltype(_count)>(_entityDataFlags.count()) }
-	{
-	}
-
-private:
-	std::optional<std::pair<EntityDataFlag, QVector<int>>> dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept
-	{
-		switch (flag)
-		{
-			case ChangedInfoFlag::Name:
-				return std::make_pair(EntityDataFlag::Name, QVector<int>{ Qt::DisplayRole });
-			case ChangedInfoFlag::GroupName:
-				return std::make_pair(EntityDataFlag::Group, QVector<int>{ Qt::DisplayRole });
-			case ChangedInfoFlag::Compatibility:
-				return std::make_pair(EntityDataFlag::Compatibility, QVector<int>{ Qt::DisplayRole });
-			default:
-				break;
-		}
-		return {};
-	}
-
-	// hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel overrides
-	virtual void entityInfoChanged(std::size_t const index, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity, ChangedInfoFlags const changedInfoFlags) noexcept override
-	{
-		for (auto const flag : changedInfoFlags)
-		{
-			if (auto const dataInfoOpt = dataChangedInfoForFlag(flag))
-			{
-				auto const& [entityDataFlag, roles] = *dataInfoOpt;
-
-				// Is this EntityData active for this model
-				if (_entityDataFlags.test(entityDataFlag))
-				{
-					try
-					{
-						auto const modelIndex = createIndex(index, static_cast<int>(_entityDataFlags.getPosition(entityDataFlag)));
-						emit dataChanged(modelIndex, modelIndex, roles);
-					}
-					catch (...)
-					{
-					}
-				}
-			}
-		}
-	}
-
-	// QAbstractTableModel overrides
-	virtual int rowCount(QModelIndex const& parent = {}) const override
-	{
-		return static_cast<int>(_model.entitiesCount());
-	}
-
-	virtual int columnCount(QModelIndex const& parent = {}) const override
-	{
-		return static_cast<int>(_count);
-	}
-
-	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override
-	{
-		if (orientation == Qt::Horizontal)
-		{
-			try
-			{
-				auto const entityDataFlag = _entityDataFlags.at(section);
-
-				if (role == Qt::DisplayRole)
-				{
-					switch (entityDataFlag)
-					{
-						case EntityDataFlag::EntityLogo:
-							return "Logo";
-						case EntityDataFlag::Compatibility:
-							return "Compat";
-						case EntityDataFlag::EntityID:
-							return "Entity ID";
-						case EntityDataFlag::Name:
-							return "Name";
-						case EntityDataFlag::Group:
-							return "Group";
-						case EntityDataFlag::FirmwareVersion:
-							return "Firmware Version";
-						default:
-							break;
-					}
-				}
-			}
-			catch (...)
-			{
-			}
-		}
-
-		return {};
-	}
-	virtual QVariant data(QModelIndex const& index, int role) const override
-	{
-		auto const row = static_cast<std::size_t>(index.row());
-		auto const section = static_cast<decltype(_count)>(index.column());
-		if (row < static_cast<std::size_t>(rowCount()) && section < _count)
-		{
-			if (auto const entityOpt = _model.entity(row))
-			{
-				auto const& entity = (*entityOpt).get();
-
-				try
-				{
-					auto const entityDataFlag = _entityDataFlags.at(section);
-
-					switch (role)
-					{
-						case Qt::DisplayRole:
-						{
-							switch (entityDataFlag)
-							{
-								case EntityDataFlag::EntityID:
-									return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityID);
-								case EntityDataFlag::Name:
-									return entity.name;
-								case EntityDataFlag::Group:
-									return entity.groupName;
-								case EntityDataFlag::FirmwareVersion:
-									return entity.firmwareVersion ? *entity.firmwareVersion : "N/A";
-								default:
-									break;
-							}
-							break;
-						}
-						case ImageItemDelegate::ImageRole:
-						{
-							switch (entityDataFlag)
-							{
-								case EntityDataFlag::EntityLogo:
-									if (entity.aemSupported)
-									{
-										auto& logoCache = EntityLogoCache::getInstance();
-										return logoCache.getImage(entity.entityID, EntityLogoCache::Type::Entity, true);
-									}
-									break;
-								default:
-									break;
-							}
-							break;
-						}
-						default:
-							break;
-					}
-				}
-				catch (...)
-				{
-				}
-			}
-		}
-
-		return {};
-	}
-
-	// Private members
-	hive::modelsLibrary::DiscoveredEntitiesModel _model{ this };
-	EntityDataFlags _entityDataFlags{};
-	std::underlying_type_t<EntityDataFlag> _count{ 0u };
-};
-#endif
 
 class MainWindowImpl final : public QObject, public Ui::MainWindow
 {
@@ -373,6 +192,7 @@ void MainWindowImpl::createControllerView()
 	// The table view does not take ownership on the item delegate
 	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ _parent } };
 	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_EntityLogo, imageItemDelegate);
+	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_Compatibility, imageItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityID);
@@ -405,6 +225,118 @@ static inline bool isEntityModelComplete(la::avdecc::UniqueIdentifier const enti
 void MainWindowImpl::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
+	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
+		[this](QPoint const& pos)
+		{
+			auto const index = controllerTableView->indexAt(pos);
+
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+			auto const entityOpt = _controllerModel.entity(index.row());
+
+			if (entityOpt)
+			{
+				QMenu menu;
+				auto const& entity = (*entityOpt).get();
+				auto const entityID = entity.entityID;
+				auto const entityModelID = entity.entityModelID;
+
+				// Dump Entity
+				auto* const dumpFullEntity = menu.addAction("Export Full Entity...");
+				auto* const dumpEntityModel = menu.addAction("Export Entity Model...");
+				dumpEntityModel->setEnabled(entity.isAemSupported && entityModelID);
+
+				menu.addSeparator();
+
+				// Cancel
+				menu.addAction("Cancel");
+
+				if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
+				{
+					if (action == dumpFullEntity || action == dumpEntityModel)
+					{
+						auto baseFileName = QString{};
+						auto binaryFilterName = QString{};
+						if (action == dumpFullEntity)
+						{
+							binaryFilterName = "AVDECC Virtual Entity Files (*.ave)";
+							baseFileName = QString("%1/Entity_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID));
+						}
+						else
+						{
+							// Do some validation
+							if (!isValidEntityModelID(entityModelID))
+							{
+								QMessageBox::warning(_parent, "", "EntityModelID is not valid (invalid Vendor OUI-24), cannot same the Model of this Entity.");
+								return;
+							}
+							if (!isEntityModelComplete(entityID))
+							{
+								QMessageBox::warning(_parent, "", "'Full AEM Enumeration' option must be Enabled in order to export Model of a multi-configuration Entity.");
+								return;
+							}
+							binaryFilterName = "AVDECC Entity Model Files (*.aem)";
+							baseFileName = QString("%1/EntityModel_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityModelID));
+						}
+						auto const dumpFile = [this, &entityID, &manager, isFullEntity = (action == dumpFullEntity)](auto const& baseFileName, auto const& binaryFilterName, auto const isBinary)
+						{
+							auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", baseFileName, binaryFilterName);
+							if (!filename.isEmpty())
+							{
+								auto flags = la::avdecc::entity::model::jsonSerializer::Flags{};
+								if (isFullEntity)
+								{
+									flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+								}
+								else
+								{
+									flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel };
+								}
+								if (isBinary)
+								{
+									flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+								}
+								auto [error, message] = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
+								if (!error)
+								{
+									QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
+								}
+								else
+								{
+									if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex && isFullEntity)
+									{
+										auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+										if (choice == QMessageBox::StandardButton::Yes)
+										{
+											flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
+											error = std::get<0>(result);
+											message = std::get<1>(result);
+											if (!error)
+											{
+												QMessageBox::information(_parent, "", "Export completed but with warnings:\n" + filename);
+											}
+											// Fallthrough to warning message
+										}
+									}
+									if (!!error)
+									{
+										QMessageBox::warning(_parent, "", QString("Export of EntityID %1 failed:\n%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
+									}
+								}
+							}
+						};
+						if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier))
+						{
+							dumpFile(baseFileName, "JSON Files (*.json)", false);
+						}
+						else
+						{
+							dumpFile(baseFileName, binaryFilterName, true);
+						}
+					}
+				}
+			}
+		});
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -427,6 +359,15 @@ void MainWindow::showEvent(QShowEvent* event)
 						[this]()
 						{
 							QMessageBox::warning(this, "", "No Network Interface selected.\nPlease choose one in the Toolbar.");
+						});
+				}
+				else
+				{
+					// Postpone Controller start
+					QTimer::singleShot(0,
+						[this]()
+						{
+							_pImpl->currentControllerChanged();
 						});
 				}
 			}

@@ -34,6 +34,12 @@ DiscoveredEntitiesTableModel::DiscoveredEntitiesTableModel(EntityDataFlags const
 {
 }
 
+// Data getter
+std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesModel::Entity const>> DiscoveredEntitiesTableModel::entity(int const row) const noexcept
+{
+	return _model.entity(static_cast<std::size_t>(row));
+}
+
 // hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel overrides
 void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& /*entity*/, ChangedInfoFlags const changedInfoFlags) noexcept
 {
@@ -94,6 +100,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "Group";
 					case EntityDataFlag::FirmwareVersion:
 						return "Firmware Version";
+					case EntityDataFlag::EntityModelID:
+						return "Entity Model ID";
 					default:
 						break;
 				}
@@ -135,6 +143,8 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								return entity.groupName;
 							case EntityDataFlag::FirmwareVersion:
 								return entity.firmwareVersion ? *entity.firmwareVersion : "N/A";
+							case EntityDataFlag::EntityModelID:
+								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityModelID);
 							default:
 								break;
 						}
@@ -145,12 +155,70 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						switch (entityDataFlag)
 						{
 							case EntityDataFlag::EntityLogo:
-								if (entity.aemSupported)
+							{
+								if (entity.isAemSupported)
 								{
 									auto& logoCache = EntityLogoCache::getInstance();
 									return logoCache.getImage(entity.entityID, EntityLogoCache::Type::Entity, true);
 								}
 								break;
+							}
+							case EntityDataFlag::Compatibility:
+							{
+								if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
+								{
+									return QImage{ ":/misbehaving.png" };
+								}
+								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+								{
+									if (entity.milanInfo)
+									{
+										if ((*entity.milanInfo).featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
+										{
+											return QImage{ ":/milan_redundant.png" };
+										}
+										return QImage{ ":/milan.png" };
+									}
+								}
+								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
+								{
+									return QImage{ ":/ieee.png" };
+								}
+								else
+								{
+									return QImage{ ":/not_compliant.png" };
+								}
+								break;
+							}
+							default:
+								break;
+						}
+						break;
+					}
+					case Qt::ToolTipRole:
+					{
+						switch (entityDataFlag)
+						{
+							case EntityDataFlag::Compatibility:
+							{
+								if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
+								{
+									return "Entity is sending incoherent values that can cause undefined behavior";
+								}
+								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+								{
+									return "MILAN compatible";
+								}
+								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
+								{
+									return "IEEE 1722.1 compatible";
+								}
+								else
+								{
+									return "Not fully IEEE 1722.1 compliant";
+								}
+								break;
+							}
 							default:
 								break;
 						}

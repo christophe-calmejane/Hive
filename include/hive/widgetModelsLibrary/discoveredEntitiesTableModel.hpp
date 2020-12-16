@@ -21,6 +21,9 @@
 
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 
+#include <optional>
+#include <type_traits>
+
 namespace hive
 {
 namespace widgetModelsLibrary
@@ -36,10 +39,14 @@ public:
 		Name = 1u << 3,
 		Group = 1u << 4,
 		FirmwareVersion = 1u << 5,
+		EntityModelID = 1u << 6,
 	};
 	using EntityDataFlags = la::avdecc::utils::EnumBitfield<EntityDataFlag>;
 
 	DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags);
+
+	// Data getter
+	std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesModel::Entity const>> entity(int const row) const noexcept;
 
 private:
 	// hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel overrides

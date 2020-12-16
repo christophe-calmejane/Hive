@@ -314,6 +314,7 @@ public:
 		qRegisterMetaType<StreamInputErrorCounters>("hive::modelsLibrary::ControllerManager::StreamInputErrorCounters");
 		qRegisterMetaType<StatisticsErrorCounters>("hive::modelsLibrary::ControllerManager::StatisticsErrorCounters");
 		qRegisterMetaType<la::avdecc::UniqueIdentifier>("la::avdecc::UniqueIdentifier");
+		qRegisterMetaType<std::optional<la::avdecc::UniqueIdentifier>>("std::optional<la::avdecc::UniqueIdentifier>");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
 		qRegisterMetaType<la::avdecc::entity::StreamInputCounterValidFlags>("la::avdecc::entity::StreamInputCounterValidFlags");

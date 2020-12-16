@@ -17,6 +17,8 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma message("WARNING: ControllerModel is to be replaced by the new discoveredEntitiesModel (see AEMDumper example)")
+
 #include "controllerModel.hpp"
 #include "helper.hpp"
 #include "avdecc/mcDomainManager.hpp"

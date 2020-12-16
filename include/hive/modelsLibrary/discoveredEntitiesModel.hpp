@@ -26,6 +26,7 @@
 #include <QString>
 
 #include <optional>
+#include <type_traits>
 #include <string>
 #include <memory>
 #include <map>
@@ -49,7 +50,8 @@ public:
 	{
 		// Static information
 		la::avdecc::UniqueIdentifier entityID{};
-		bool aemSupported{ false };
+		bool isAemSupported{ false };
+		la::avdecc::UniqueIdentifier entityModelID{};
 		std::optional<QString> firmwareVersion{};
 		std::optional<la::avdecc::entity::model::MemoryObjectIndex> firmwareUploadMemoryIndex{ std::nullopt };
 		std::optional<la::avdecc::entity::model::MilanInfo> milanInfo{};
