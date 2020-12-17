@@ -24,7 +24,7 @@ namespace qtMate
 namespace widgets
 {
 FlatIconButton::FlatIconButton(QWidget* parent)
-	: FlatIconButton{ QString::null, QString::null, parent }
+	: FlatIconButton{ QString{}, QString{}, parent }
 {
 	//auto font = QFont{ "Material Icons" };
 	//font.setStyleStrategy(QFont::PreferQuality);

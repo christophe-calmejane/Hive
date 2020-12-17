@@ -102,6 +102,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "Firmware Version";
 					case EntityDataFlag::EntityModelID:
 						return "Entity Model ID";
+					case EntityDataFlag::GrandmasterID:
+						return "Grandmaster ID";
 					default:
 						break;
 				}
@@ -145,6 +147,23 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								return entity.firmwareVersion ? *entity.firmwareVersion : "N/A";
 							case EntityDataFlag::EntityModelID:
 								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityModelID);
+							case EntityDataFlag::GrandmasterID:
+							{
+								auto const& gptpInfo = entity.gptpInfo;
+
+								if (!gptpInfo.empty())
+								{
+									// Search the first valid gPTP info
+									for (auto const& [avbIndex, info] : gptpInfo)
+									{
+										if (info.grandmasterID)
+										{
+											return hive::modelsLibrary::helper::uniqueIdentifierToString(*info.grandmasterID);
+										}
+									}
+								}
+								return "N/A";
+							}
 							default:
 								break;
 						}
@@ -218,6 +237,36 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 									return "Not fully IEEE 1722.1 compliant";
 								}
 								break;
+							}
+							case EntityDataFlag::GrandmasterID:
+							{
+								auto const& gptpInfo = entity.gptpInfo;
+
+								if (!gptpInfo.empty())
+								{
+									auto list = QStringList{};
+
+									for (auto const& [avbIndex, info] : gptpInfo)
+									{
+										if (info.grandmasterID && info.domainNumber)
+										{
+											if (avbIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex)
+											{
+												list << QString{ "Global gPTP: %1 / %2" }.arg(hive::modelsLibrary::helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
+											}
+											else
+											{
+												list << QString{ "gPTP for index %1: %2 / %3" }.arg(avbIndex).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(*info.grandmasterID)).arg(*info.domainNumber);
+											}
+										}
+									}
+
+									if (!list.isEmpty())
+									{
+										return list.join('\n');
+									}
+								}
+								return "Not set by the entity";
 							}
 							default:
 								break;

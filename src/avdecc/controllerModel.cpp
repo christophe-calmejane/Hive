@@ -247,6 +247,8 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ControllerModelPrivate::handleControllerOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ControllerModelPrivate::handleEntityOnline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControllerModelPrivate::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOnline, this, &ControllerModelPrivate::handleEntityRedundantInterfaceOnline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOffline, this, &ControllerModelPrivate::handleEntityRedundantInterfaceOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStarted, this, &ControllerModelPrivate::handleIdentificationStarted);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStopped, this, &ControllerModelPrivate::handleIdentificationStopped);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::handleEntityNameChanged);
@@ -686,6 +688,40 @@ private:
 			rebuildEntityRowMap();
 
 			emit q->endRemoveRows();
+		}
+	}
+
+	void handleEntityRedundantInterfaceOnline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::Entity::InterfaceInformation const& interfaceInfo)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			auto& data = _entities[*row];
+
+			auto& info = data.gptpInfoMap[avbInterfaceIndex];
+
+			info.grandmasterID = interfaceInfo.gptpGrandmasterID;
+			info.domainNumber = interfaceInfo.gptpDomainNumber;
+
+			data.gptpTooltip = computeGptpTooltip(data.gptpInfoMap);
+
+			dataChanged(*row, ControllerModel::Column::GrandmasterID);
+			dataChanged(*row, ControllerModel::Column::GptpDomain);
+		}
+	}
+
+	void handleEntityRedundantInterfaceOffline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			auto& data = _entities[*row];
+
+			if (data.gptpInfoMap.erase(avbInterfaceIndex) == 1)
+			{
+				data.gptpTooltip = computeGptpTooltip(data.gptpInfoMap);
+
+				dataChanged(*row, ControllerModel::Column::GrandmasterID);
+				dataChanged(*row, ControllerModel::Column::GptpDomain);
+			}
 		}
 	}
 

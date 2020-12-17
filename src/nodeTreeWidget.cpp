@@ -23,6 +23,7 @@
 #include "avdecc/stringValidator.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
+#include "nodeTreeDynamicWidgets/discoveredInterfacesTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
@@ -257,7 +258,8 @@ private:
 
 		// Discovery information
 		{
-			createDiscoveryInfo(entity.getEntity());
+			auto* discoveredInterfacesItem = new DiscoveredInterfacesTreeWidgetItem(_controlledEntityID, entity.getEntity().getInterfacesInformation(), q);
+			discoveredInterfacesItem->setText(0, "Discovered Interfaces");
 		}
 
 		// Dynamic model
@@ -789,38 +791,6 @@ private:
 		}
 
 		return accessItem;
-	}
-
-	void createDiscoveryInfo(la::avdecc::entity::Entity const& entity)
-	{
-#pragma message("TODO: And listen for changes to dynamically update the info")
-
-		Q_Q(NodeTreeWidget);
-		auto const entityCaps = entity.getEntityCapabilities();
-
-		for (auto const& interfaceInfoKV : entity.getInterfacesInformation())
-		{
-			auto const avbInterfaceIndex = interfaceInfoKV.first;
-			auto const& interfaceInfo = interfaceInfoKV.second;
-
-			auto* discoveryItem = new QTreeWidgetItem(q);
-			if (avbInterfaceIndex != la::avdecc::entity::Entity::GlobalAvbInterfaceIndex)
-			{
-				discoveryItem->setText(0, QString("Interface Index %1").arg(avbInterfaceIndex));
-			}
-			else
-			{
-				discoveryItem->setText(0, QString("Global Interface (Index Not Set)"));
-			}
-
-			addTextItem(discoveryItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(interfaceInfo.macAddress, true));
-			if (interfaceInfo.gptpGrandmasterID)
-			{
-				addTextItem(discoveryItem, "Grandmaster ID", hive::modelsLibrary::helper::uniqueIdentifierToString(*interfaceInfo.gptpGrandmasterID));
-				addTextItem(discoveryItem, "Grandmaster Domain Number", QString::number(*interfaceInfo.gptpDomainNumber));
-			}
-			addTextItem(discoveryItem, "Valid Time (2sec periods)", QString::number(interfaceInfo.validTime));
-		}
 	}
 
 	template<class NodeType>

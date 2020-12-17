@@ -196,7 +196,7 @@ QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orien
 void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
 {
 	painter->setRenderHint(QPainter::Antialiasing);
-	painter->setRenderHint(QPainter::HighQualityAntialiasing);
+	painter->setRenderHint(QPainter::Antialiasing);
 
 	auto const connected = state != Model::IntersectionData::State::NotConnected;
 

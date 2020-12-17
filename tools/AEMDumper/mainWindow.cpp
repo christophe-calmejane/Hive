@@ -60,12 +60,13 @@
 
 class MainWindowImpl final : public QObject, public Ui::MainWindow
 {
-	static constexpr auto ControllerModelEntityDataFlags = hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlags{ hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Name, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Group, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion };
+	static constexpr auto ControllerModelEntityDataFlags = hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlags{ hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Name, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Group, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityModelID };
 	static constexpr auto ControllerModelEntityColumn_EntityLogo = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo);
 	static constexpr auto ControllerModelEntityColumn_Compatibility = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility);
 	static constexpr auto ControllerModelEntityColumn_EntityID = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityID);
 	static constexpr auto ControllerModelEntityColumn_Name = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Name);
 	static constexpr auto ControllerModelEntityColumn_Group = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Group);
+	static constexpr auto ControllerModelEntityColumn_EntityModelID = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityModelID);
 	static constexpr auto ControllerModelEntityColumn_FirmwareVersion = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion);
 
 public:
@@ -123,6 +124,7 @@ void MainWindowImpl::setupView()
 	controllerTableView->setColumnWidth(ControllerModelEntityColumn_EntityID, 160);
 	controllerTableView->setColumnWidth(ControllerModelEntityColumn_Name, 180);
 	controllerTableView->setColumnWidth(ControllerModelEntityColumn_Group, 180);
+	controllerTableView->setColumnWidth(ControllerModelEntityColumn_EntityModelID, 160);
 	controllerTableView->setColumnWidth(ControllerModelEntityColumn_FirmwareVersion, 120);
 
 	// Connect all signals

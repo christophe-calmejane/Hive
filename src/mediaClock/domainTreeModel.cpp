@@ -398,7 +398,8 @@ void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const 
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainItem->child(0));
 			domainItem->domain().setMediaClockDomainMaster(entityTreeItem->entityId());
-			q->dataChanged(domainModelIndex.child(0, 1), domainModelIndex.child(0, 1));
+			auto const changedIndex = q->index(0, 1, domainModelIndex);
+			q->dataChanged(changedIndex, changedIndex);
 			mcMasterEnabledEntitiesFound = true;
 			break;
 		}
@@ -1610,7 +1611,7 @@ void MCMasterSelectionDelegate::paint(QPainter* painter, QStyleOptionViewItem co
 		editor.setChecked(entityIsMCMaster);
 		editor.setEnabled(isMediaClockDomainManageableEntity);
 		QPalette pal;
-		pal.setColor(QPalette::Background, Qt::transparent);
+		pal.setColor(QPalette::Window, Qt::transparent);
 		editor.setPalette(pal);
 
 		painter->save();

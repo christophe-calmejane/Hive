@@ -113,7 +113,7 @@ TextEntry::TextEntry(QString const& text, std::optional<QValidator*> validator, 
 }
 
 TextEntry::TextEntry(QWidget* parent)
-	: TextEntry(QString::null, std::nullopt, parent)
+	: TextEntry(QString{}, std::nullopt, parent)
 {
 }
 

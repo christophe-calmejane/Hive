@@ -245,6 +245,8 @@ public:
 	Q_SIGNAL void entityQueryError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::QueryCommandError const error);
 	Q_SIGNAL void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const enumerationTime);
 	Q_SIGNAL void entityOffline(la::avdecc::UniqueIdentifier const entityID);
+	Q_SIGNAL void entityRedundantInterfaceOnline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::Entity::InterfaceInformation const& interfaceInfo);
+	Q_SIGNAL void entityRedundantInterfaceOffline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
 	Q_SIGNAL void unsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed);
 	Q_SIGNAL void compatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags);
 	Q_SIGNAL void entityCapabilitiesChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::EntityCapabilities const entityCapabilities);

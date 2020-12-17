@@ -37,7 +37,7 @@ GraphicsView::GraphicsView(QWidget* parent)
 	setResizeAnchor(NoAnchor);
 	setTransformationAnchor(AnchorUnderMouse);
 	setDragMode(QGraphicsView::ScrollHandDrag);
-	setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::HighQualityAntialiasing | QPainter::SmoothPixmapTransform);
+	setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
 }
 
 void GraphicsView::mousePressEvent(QMouseEvent* event)

@@ -52,7 +52,7 @@ public:
 		setupUi(parent);
 
 		QPalette pal;
-		pal.setColor(QPalette::Background, Qt::transparent);
+		pal.setColor(QPalette::Window, Qt::transparent);
 		m_parent->setPalette(pal);
 	}
 
