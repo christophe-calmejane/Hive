@@ -16,3 +16,5 @@
 
 Doxyfile		text_lf
 *.eap			binary
+.gitattributes	text_lf
+
