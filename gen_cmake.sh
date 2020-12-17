@@ -12,7 +12,7 @@ cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
-qtVersion="5.12.4"
+qtVersion="5.15.2"
 
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
@@ -404,7 +404,7 @@ if [ $overrideQt5dir -eq 0 ]; then
 		if [ "$arch" == "x64" ]; then
 			qtArch="msvc2017_64"
 		else
-			qtArch="msvc2017"
+			qtArch="msvc2019"
 		fi
 	elif isMac; then
 		qtBasePath="/Applications/Qt/${qtVersion}"
