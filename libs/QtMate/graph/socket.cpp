@@ -42,7 +42,7 @@ SocketItem::SocketItem(int nodeId, int index, QString const& text, QGraphicsItem
 {
 	QFont font;
 	QFontMetrics fm(font);
-	auto const textWidth = fm.width(_text);
+	auto const textWidth = fm.horizontalAdvance(_text);
 	auto const textHeight = fm.height();
 	auto const width = std::max(MIN_WIDTH, CIRCLE_RADIUS * 2 + TEXT_OFFSET + textWidth + PEN_WIDTH);
 	auto const height = std::max(MIN_HEIGHT, textHeight + PEN_WIDTH);

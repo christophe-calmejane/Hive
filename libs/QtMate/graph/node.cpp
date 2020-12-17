@@ -139,7 +139,7 @@ void NodeItem::updateGeometry()
 	_height = step * max;
 	_height += TITLE_HEIGHT;
 
-	_width = std::max(maxInputWidth + PADDING + maxOutputWidth, fm.width(_text) + PADDING * 2);
+	_width = std::max(maxInputWidth + PADDING + maxOutputWidth, fm.horizontalAdvance(_text) + PADDING * 2);
 
 	// Input & Outputs
 

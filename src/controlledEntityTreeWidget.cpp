@@ -303,7 +303,7 @@ public:
 			}
 
 			// Put only the expanded nodes in the set
-			if (q->isItemExpanded(item))
+			if (item->isExpanded())
 			{
 				expandedNodes.insert(id);
 			}
@@ -589,7 +589,7 @@ private:
 			});
 
 		Q_Q(ControlledEntityTreeWidget);
-		q->setItemExpanded(item, true);
+		item->setExpanded(true);
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const parent, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
@@ -621,7 +621,7 @@ private:
 			priv::useBoldFont(item, true);
 
 			Q_Q(ControlledEntityTreeWidget);
-			q->setItemExpanded(item, true);
+			item->setExpanded(true);
 		}
 	}
 

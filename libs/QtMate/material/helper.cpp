@@ -36,7 +36,7 @@ QIcon generateIcon(QString const& what, QColor const& color)
 		pixmap.fill(Qt::transparent);
 
 		QPainter painter{ &pixmap };
-		painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::HighQualityAntialiasing);
+		painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::Antialiasing);
 
 		QFont font{ "Material Icons" };
 		font.setStyleStrategy(QFont::PreferQuality);
