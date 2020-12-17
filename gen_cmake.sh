@@ -25,10 +25,14 @@ default_signtoolOptions="/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com"
 # 
 cmake_generator=""
 generator_arch=""
+platform=""
+default_arch=""
 arch=""
 toolset=""
 cmake_config=""
 outputFolderBasePath="_build"
+defaultOutputFolder="${outputFolderBasePath}_<platform>_<arch>_<toolset>_<config>"
+declare -a supportedArchs=()
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
 	# CMake.app not found, use cmake from the path
@@ -36,8 +40,8 @@ if isMac; then
 		cmake_path="cmake"
 	fi
 	generator="Xcode"
-	getCcArch arch
-	defaultOutputFolder="${outputFolderBasePath}_<arch>"
+	getMachineArch default_arch
+	supportedArchs+=("${default_arch}")
 else
 	# Use cmake from the path
 	cmake_path="cmake"
@@ -46,14 +50,16 @@ else
 		generator_arch="$default_VisualGeneratorArch"
 		toolset="$default_VisualToolset"
 		toolchain="$default_VisualToolchain"
-		arch="$default_VisualArch"
-		defaultOutputFolder="${outputFolderBasePath}_<arch>_<toolset>"
+		default_arch="$default_VisualArch"
+		supportedArchs+=("x86")
+		supportedArchs+=("x64")
 	else
 		generator="Unix Makefiles"
-		getCcArch arch
-		defaultOutputFolder="${outputFolderBasePath}_<arch>_<config>"
+		getMachineArch default_arch
+		supportedArchs+=("${default_arch}")
 	fi
 fi
+getOS platform
 
 which "${cmake_path}" &> /dev/null
 if [ $? -ne 0 ]; then
@@ -84,6 +90,7 @@ do
 			echo " -a <flags> -> Add cmake flags to default ones (or to forced ones with -f option)"
 			echo " -b <cmake path> -> Force cmake binary path (Default: $cmake_path)"
 			echo " -c <cmake generator> -> Force cmake generator (Default: $generator)"
+			echo " -arch <arch> -> Set target architecture (Default: $default_arch). Supported archs depends on target platform"
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
@@ -95,14 +102,13 @@ do
 			if isMac; then
 				echo " -id <Signing Identity> -> Signing identity for binary signing (full identity name inbetween the quotes, see -ids to get the list)"
 				echo " -ids -> List signing identities"
+				echo " -t <xcode toolset> -> Force xcode toolset (Default: autodetect)"
+				echo " -ios -> Cross-compiling for iOS"
 			fi
-			if isLinux; then
-				echo " -debug -> Force debug configuration (Linux only)"
-				echo " -release -> Force release configuration (Linux only)"
-			fi
-			if [[ isMac -eq 1 ]]; then
-				echo " -sign -> Sign binaries (Default: No signing)"
-			fi
+			echo " -android -> Cross-compiling for Android"
+			echo " -debug -> Force debug configuration (Single-Configuration generators only)"
+			echo " -release -> Force release configuration (Single-Configuration generators only)"
+			echo " -sign -> Sign binaries (Default: No signing)"
 			echo " -source -> Use Qt source instead of precompiled binarie (Default: Not using sources). Do not use with -qt5dir option."
 			echo " -qt5dir <Qt5 CMake Folder> -> Override automatic Qt5_DIR detection with the full path to the folder containing Qt5Config.cmake file (either binary or source)"
 			exit 3
@@ -157,7 +163,7 @@ do
 			cmake_generator="$1"
 			;;
 		-t)
-			if isWindows; then
+			if [[ $(isWindows; echo $?) -eq 0 || $(isMac; echo $?) -eq 0 ]]; then
 				shift
 				if [ $# -lt 1 ]; then
 					echo "ERROR: Missing parameter for -t option, see help (-h)"
@@ -165,7 +171,7 @@ do
 				fi
 				toolset="$1"
 			else
-				echo "ERROR: -t option is only supported on Windows platform"
+				echo "ERROR: -t option is only supported on Windows/macOS platforms"
 				exit 4
 			fi
 			;;
@@ -184,10 +190,10 @@ do
 			;;
 		-64)
 			if isWindows; then
-				generator_arch="x64"
-				arch="x64"
+				generator="Visual Studio 15 2017 Win64"
+				arch="x64" # Changing arch not default_arch, as this is not a cross-compilation option
 			else
-				echo "ERROR: -64 option is only supported on Windows platform (linux and macOS are already defaulting to 64 bits)"
+				echo "ERROR: -64 option is only supported on Windows platform"
 				exit 4
 			fi
 			;;
@@ -246,23 +252,58 @@ do
 				exit 4
 			fi
 			;;
-		-debug)
-			if isLinux; then
-				cmake_config="Debug"
-				add_cmake_opt+=("-DCMAKE_BUILD_TYPE=${cmake_config}")
+		-ios)
+			if isMac; then
+				platform="ios"
+				default_arch="arm64" # Setting default arch for cross-compilation
+				supportedArchs+=("arm")
+				supportedArchs+=("arm64")
+				add_cmake_opt+=("-DCMAKE_SYSTEM_NAME=iOS")
 			else
-				echo "ERROR: -debug option is only supported on Linux platform"
+				echo "ERROR: -ios option is only supported on MacOS platform"
 				exit 4
 			fi
 			;;
-		-release)
-			if isLinux; then
-				cmake_config="Release"
-				add_cmake_opt+=("-DCMAKE_BUILD_TYPE=${cmake_config}")
-			else
-				echo "ERROR: -release option is only supported on Linux platform"
+		-android)
+			if [ "x${ANDROID_NDK_HOME}" == "x" ]; then
+				echo "ERROR: ANDROID_NDK_HOME env var required for Android cross-compilation"
 				exit 4
 			fi
+			if [ ! -d "${ANDROID_NDK_HOME}" ]; then
+				echo "ERROR: ANDROID_NDK_HOME env var does not point to a valid folder: ${ANDROID_NDK_HOME}"
+				exit 4
+			fi
+			if [ ! -f "${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake" ]; then
+				echo "ERROR: ANDROID_NDK_HOME env var does not point to a valid NDK folder (build/cmake/android.toolchain.cmake not found): ${ANDROID_NDK_HOME}"
+				exit 4
+			fi
+			generator="Ninja"
+			toolset=""
+			toolchain="clang"
+			platform="android"
+			default_arch="arm64" # Setting default arch for cross-compilation
+			supportedArchs+=("arm")
+			supportedArchs+=("arm64")
+			add_cmake_opt+=("-DCMAKE_SYSTEM_NAME=Android")
+			add_cmake_opt+=("-DANDROID_TOOLCHAIN=${toolchain}")
+			add_cmake_opt+=("-DCMAKE_ANDROID_NDK=$ANDROID_NDK_HOME")
+			add_cmake_opt+=("-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake")
+			add_cmake_opt+=("-DCMAKE_ANDROID_STL_TYPE=gnustl_static")
+			add_cmake_opt+=("-DANDROID_NATIVE_API_LEVEL=24")
+			;;
+		-arch)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -arch option, see help (-h)"
+				exit 4
+			fi
+			arch="$1"
+			;;
+		-debug)
+			cmake_config="Debug"
+			;;
+		-release)
+			cmake_config="Release"
 			;;
 		-sign)
 			doSign=1
@@ -296,6 +337,37 @@ fi
 if [ ! -z "$cmake_generator" ]; then
 	echo "Overriding default cmake generator ($generator) with: $cmake_generator"
 	generator="$cmake_generator"
+fi
+
+# Default arch has not been overridden, use default arch
+if [ "x${arch}" == "x" ]; then
+	arch="${default_arch}"
+fi
+
+# Check arch is valid for target platform
+if [[ ! " ${supportedArchs[@]} " =~ " ${arch} " ]]; then
+	echo "ERROR: Unsupported arch for target platform: ${arch} (Supported archs: ${supportedArchs[@]})"
+	exit 4
+fi
+
+# Special case for Android cross-compilation, we must set the correct ABI
+if [ "${platform}" == "android" ];
+then
+	case "${arch}" in
+		x86)
+			add_cmake_opt+=("-DANDROID_ABI=x86")
+			;;
+		x64)
+			add_cmake_opt+=("-DANDROID_ABI=x86_64")
+			;;
+		arm64)
+			add_cmake_opt+=("-DANDROID_ABI=arm64-v8a")
+			;;
+		*)
+			echo "ERROR: Unknown android arch: ${arch} (add support for it)"
+			exit 4
+			;;
+	esac
 fi
 
 # Signing is now mandatory for macOS
@@ -353,14 +425,6 @@ if isMac; then
 	add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
 fi
 
-# Check if at least a -debug or -release option has been passed on linux
-if isLinux; then
-	if [ -z $cmake_config ]; then
-		echo "ERROR: Linux requires either -debug or -release option to be specified"
-		exit 4
-	fi
-fi
-
 # Using -vs2017 option
 if [ $useVS2017 -eq 1 ]; then
 	generator="Visual Studio 15 2017"
@@ -372,21 +436,40 @@ if [ $useVSclang -eq 1 ]; then
 	toolset="ClangCL"
 fi
 
+# Check if at least a -debug or -release option has been passed for Single-Configuration generators
+if isSingleConfigurationGenerator "$generator"; then
+	if [ -z $cmake_config ]; then
+		echo "ERROR: Single-Configuration generator '$generator' requires either -debug or -release option to be specified"
+		exit 4
+	fi
+	add_cmake_opt+=("-DCMAKE_BUILD_TYPE=${cmake_config}")
+else
+	# Clear any -debug or -release passed to a Multi-Configurations generator
+	cmake_config=""
+fi
+
 if [ $outputFolderForced -eq 0 ]; then
-	getOutputFolder outputFolder "${outputFolderBasePath}" "${arch}" "${toolset}" "${cmake_config}"
+	getOutputFolder outputFolder "${outputFolderBasePath}" "${platform}" "${arch}" "${toolset}" "${cmake_config}" "${generator}"
 fi
 
-generator_arch_option=""
-if [ ! -z "${generator_arch}" ]; then
-	generator_arch_option="-A${generator_arch} "
-fi
+if ! isSingleConfigurationGenerator "$generator"; then
+	generator_arch_option=""
+	if [ ! -z "${generator_arch}" ]; then
+		generator_arch_option="-A${generator_arch} "
+	fi
 
-toolset_option=""
-if [ ! -z "${toolset}" ]; then
-	if [ ! -z "${toolchain}" ]; then
-		toolset_option="-T${toolset},host=${toolchain} "
-	else
-		toolset_option="-T${toolset} "
+	toolset_option=""
+	if [ ! -z "${toolset}" ]; then
+		# On macOS, only valid for Xcode generator
+		if [[ $(isMac; echo $?) -eq 0 && "${generator}" != "Xcode" ]]; then
+			echo "The toolset option (-t) is only valid for Xcode generator on macOS"
+			exit 4
+		fi
+		if [ ! -z "${toolchain}" ]; then
+			toolset_option="-T${toolset},host=${toolchain} "
+		else
+			toolset_option="-T${toolset} "
+		fi
 	fi
 fi
 
@@ -457,7 +540,23 @@ fi
 
 add_cmake_opt+=("-DQt5_DIR=${Qt5dir}")
 
-echo "Generating cmake project..."
+echo "/--------------------------\\"
+echo "| Generating cmake project"
+echo "| - GENERATOR: ${generator}"
+echo "| - PLATFORM: ${platform}"
+echo "| - ARCH: ${arch}"
+if [ ! -z "${toolset}" ]; then
+	echo "| - TOOLSET: ${toolset}"
+fi
+if [ ! -z "${toolchain}" ]; then
+	echo "| - TOOLCHAIN: ${toolchain}"
+fi
+if [ ! -z "${cmake_config}" ]; then
+	echo "| - BUILD TYPE: ${cmake_config}"
+fi
+echo "\\--------------------------/"
+echo ""
+
 "$cmake_path" -H. -B"${outputFolder}" "-G${generator}" $generator_arch_option $toolset_option $cmake_opt "${add_cmake_opt[@]}"
 
 echo ""
