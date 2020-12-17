@@ -43,6 +43,8 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &pImpl::handleControllerOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &pImpl::handleEntityOnline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &pImpl::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOnline, this, &pImpl::handleEntityRedundantInterfaceOnline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOffline, this, &pImpl::handleEntityRedundantInterfaceOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, this, &pImpl::handleUnsolicitedRegistrationChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityFlagsChanged, this, &pImpl::handleCompatibilityFlagsChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityCapabilitiesChanged, this, &pImpl::handleEntityCapabilitiesChanged);
@@ -229,6 +231,36 @@ private:
 		}
 	}
 
+	void handleEntityRedundantInterfaceOnline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::Entity::InterfaceInformation const& interfaceInfo)
+	{
+		if (auto const index = indexOf(entityID))
+		{
+			auto const idx = *index;
+			auto& data = _entities[idx];
+
+			auto& info = data.gptpInfo[avbInterfaceIndex];
+
+			info.grandmasterID = interfaceInfo.gptpGrandmasterID;
+			info.domainNumber = interfaceInfo.gptpDomainNumber;
+
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::GptpInfo });
+		}
+	}
+
+	void handleEntityRedundantInterfaceOffline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+	{
+		if (auto const index = indexOf(entityID))
+		{
+			auto const idx = *index;
+			auto& data = _entities[idx];
+
+			if (data.gptpInfo.erase(avbInterfaceIndex) == 1)
+			{
+				la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::GptpInfo });
+			}
+		}
+	}
+
 	void handleUnsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const& entityID, bool const isSubscribed)
 	{
 		if (auto const index = indexOf(entityID))
@@ -248,7 +280,7 @@ private:
 			}
 			catch (...)
 			{
-				//
+				// Ignore
 			}
 		}
 	}
@@ -273,7 +305,7 @@ private:
 			}
 			catch (...)
 			{
-				//
+				// Ignore
 			}
 		}
 	}
@@ -297,7 +329,7 @@ private:
 			}
 			catch (...)
 			{
-				//
+				// Ignore
 			}
 		}
 	}
@@ -321,7 +353,7 @@ private:
 			}
 			catch (...)
 			{
-				//
+				// Ignore
 			}
 		}
 	}

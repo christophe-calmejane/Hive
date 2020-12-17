@@ -38,8 +38,16 @@ public:
 		EntityID = 1u << 2,
 		Name = 1u << 3,
 		Group = 1u << 4,
-		FirmwareVersion = 1u << 5,
-		EntityModelID = 1u << 6,
+		// AcquireState = 1u << 5,
+		// LockState = 1u << 6,
+		GrandmasterID = 1u << 7,
+		// gPTP Domain = 1u << 8,
+		// InterfaceIndex = 1u << 9,
+		// AssociationID = 1u << 10,
+		EntityModelID = 1u << 11,
+		FirmwareVersion = 1u << 12,
+		// MediaClockMasterID = 1u << 13,
+		// MediaClockMasterName = 1u << 14,
 	};
 	using EntityDataFlags = la::avdecc::utils::EnumBitfield<EntityDataFlag>;
 

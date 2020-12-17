@@ -318,6 +318,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::AemCommandStatus>("la::avdecc::entity::ControllerEntity::AemCommandStatus");
 		qRegisterMetaType<la::avdecc::entity::ControllerEntity::ControlStatus>("la::avdecc::entity::ControllerEntity::ControlStatus");
 		qRegisterMetaType<la::avdecc::entity::StreamInputCounterValidFlags>("la::avdecc::entity::StreamInputCounterValidFlags");
+		qRegisterMetaType<la::avdecc::entity::Entity::InterfaceInformation>("la::avdecc::entity::Entity::InterfaceInformation");
 		qRegisterMetaType<la::avdecc::entity::model::AvdeccFixedString>("la::avdecc::entity::model::AvdeccFixedString");
 		qRegisterMetaType<la::avdecc::entity::model::ConfigurationIndex>("la::avdecc::entity::model::ConfigurationIndex");
 		qRegisterMetaType<la::avdecc::entity::model::DescriptorType>("la::avdecc::entity::model::DescriptorType");
@@ -419,6 +420,16 @@ private:
 
 				emit entityOffline(entityID);
 			});
+	}
+	virtual void onEntityRedundantInterfaceOnline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::Entity::InterfaceInformation const& interfaceInfo) noexcept override
+	{
+		auto const& e = entity->getEntity();
+		emit entityRedundantInterfaceOnline(e.getEntityID(), avbInterfaceIndex, interfaceInfo);
+	}
+	virtual void onEntityRedundantInterfaceOffline(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept override
+	{
+		auto const& e = entity->getEntity();
+		emit entityRedundantInterfaceOffline(e.getEntityID(), avbInterfaceIndex);
 	}
 	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
