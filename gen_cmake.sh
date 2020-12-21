@@ -31,7 +31,7 @@ arch=""
 toolset=""
 cmake_config=""
 outputFolderBasePath="_build"
-defaultOutputFolder="${outputFolderBasePath}_<platform>_<arch>_<toolset>_<config>"
+defaultOutputFolder="${outputFolderBasePath}_<platform>_<arch>_<generator>_<toolset>_<config>"
 declare -a supportedArchs=()
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
