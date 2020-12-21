@@ -29,6 +29,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QToolTip>
+#include <QEvent>
+#include <QHelpEvent>
 
 #include "mediaClock/domainTreeModel.hpp"
 #include "avdecc/mcDomainManager.hpp"

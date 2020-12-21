@@ -25,6 +25,8 @@
 
 #include <hive/modelsLibrary/controllerManager.hpp>
 
+#include <QSet>
+
 /**
 * Constructor.
 */

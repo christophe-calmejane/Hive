@@ -19,12 +19,16 @@
 
 #pragma once
 
-#include <QList>
-#include <QVariant>
-#include <QStringList>
+#include <la/avdecc/internals/entityModelTypes.hpp>
 
 #include "abstractTreeItem.hpp"
 #include "avdecc/mcDomainManager.hpp"
+
+#include <QPair>
+#include <QList>
+#include <QString>
+
+#include <optional>
 
 class EntityTreeItem;
 
