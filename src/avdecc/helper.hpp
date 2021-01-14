@@ -59,6 +59,9 @@ QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const ca
 
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type) noexcept;
 QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format) noexcept;
+QString controlTypeToString(la::avdecc::entity::model::ControlType const controlType) noexcept;
+QString controlValueTypeToString(la::avdecc::entity::model::ControlValueType::Type const controlValueType) noexcept;
+QString controlValueUnitToString(la::avdecc::entity::model::ControlValueUnit::Unit const controlValueUnit) noexcept;
 
 QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept;
 

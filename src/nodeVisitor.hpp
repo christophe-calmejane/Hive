@@ -74,6 +74,7 @@ public:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamPortNode const& node) noexcept = 0;
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioClusterNode const& node) noexcept = 0;
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioMapNode const& node) noexcept = 0;
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept = 0;
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept = 0;
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept = 0;
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept = 0;

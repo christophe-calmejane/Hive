@@ -76,6 +76,8 @@ void NodeVisitor::accept(NodeVisitor* const visitor, la::avdecc::controller::Con
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::AudioClusterNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::AudioClusterNode const*>();
 		// AudioMapNode
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::AudioMapNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::AudioMapNode const*>();
+		// ControlNode
+		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::ControlNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::ControlNode const*>();
 		// ClockDomainNode
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::ClockDomainNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::ClockDomainNode const*>();
 		// RedundantStreamNodes

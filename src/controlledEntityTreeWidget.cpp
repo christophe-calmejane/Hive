@@ -763,6 +763,18 @@ private:
 		addItem(grandGrandParent->descriptorIndex, parent, &node, name);
 	}
 
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::ControlNode const& node) noexcept override
+	{
+		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
+
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& /*controlName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Control, controlIndex);
+			});
+	}
+
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		auto const name = genName(controlledEntity, parent->descriptorIndex, node);

@@ -353,6 +353,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::StreamDynamicInfo>("la::avdecc::entity::model::StreamDynamicInfo");
 		qRegisterMetaType<la::avdecc::entity::model::AvbInterfaceInfo>("la::avdecc::entity::model::AvbInterfaceInfo");
 		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
+		qRegisterMetaType<la::avdecc::entity::model::ControlValues>("la::avdecc::entity::model::ControlValues");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
 		qRegisterMetaType<la::avdecc::entity::model::StreamInputConnectionInfo>("la::avdecc::entity::model::StreamInputConnectionInfo");
 		qRegisterMetaType<la::avdecc::entity::model::StreamConnections>("la::avdecc::entity::model::StreamConnections");
@@ -538,6 +539,10 @@ private:
 	{
 		emit audioClusterNameChanged(entity->getEntity().getEntityID(), configurationIndex, audioClusterIndex, QString::fromStdString(audioClusterName));
 	}
+	virtual void onControlNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::AvdeccFixedString const& controlName) noexcept override
+	{
+		emit controlNameChanged(entity->getEntity().getEntityID(), configurationIndex, controlIndex, QString::fromStdString(controlName));
+	}
 	virtual void onClockDomainNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::AvdeccFixedString const& clockDomainName) noexcept override
 	{
 		emit clockDomainNameChanged(entity->getEntity().getEntityID(), configurationIndex, clockDomainIndex, QString::fromStdString(clockDomainName));
@@ -549,6 +554,10 @@ private:
 	virtual void onClockSourceChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex) noexcept override
 	{
 		emit clockSourceChanged(entity->getEntity().getEntityID(), clockDomainIndex, clockSourceIndex);
+	}
+	virtual void onControlValuesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues) noexcept override
+	{
+		emit controlValuesChanged(entity->getEntity().getEntityID(), controlIndex, controlValues);
 	}
 	virtual void onStreamInputStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
 	{
@@ -1360,6 +1369,27 @@ private:
 		}
 	}
 
+	virtual void setControlName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& name, SetControlNameHandler const& handler = {}) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetControlName);
+			controller->setControlName(targetEntityID, configurationIndex, controlIndex, name.toStdString(),
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetControlName, status);
+					}
+				});
+		}
+	}
+
 	virtual void setClockDomainName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& name, SetClockDomainNameHandler const& handler) noexcept override
 	{
 		auto controller = getController();
@@ -1418,6 +1448,27 @@ private:
 					else
 					{
 						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSource, status);
+					}
+				});
+		}
+	}
+
+	virtual void setControlValues(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues, SetControlValuesHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetControl);
+			controller->setControlValues(targetEntityID, controlIndex, controlValues,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetControl, status);
 					}
 				});
 		}
@@ -1860,12 +1911,16 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Memory Object Name";
 		case AecpCommandType::SetAudioClusterName:
 			return "Set Audio Cluster Name";
+		case AecpCommandType::SetControlName:
+			return "Set Control Name";
 		case AecpCommandType::SetClockDomainName:
 			return "Set Clock Domain Name";
 		case AecpCommandType::SetSamplingRate:
 			return "Set Sampling Rate";
 		case AecpCommandType::SetClockSource:
 			return "Set Clock Source";
+		case AecpCommandType::SetControl:
+			return "Set Control Values";
 		case AecpCommandType::StartStream:
 			return "Start Streaming";
 		case AecpCommandType::StopStream:

@@ -89,6 +89,7 @@ set(HEADER_FILES_COMMON
 	mediaClock/entityTreeItem.hpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
+	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/discoveredInterfacesTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.hpp
@@ -156,6 +157,7 @@ set(SOURCE_FILES_COMMON
 	mediaClock/entityTreeItem.cpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
+	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/discoveredInterfacesTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/listenerStreamConnectionWidget.cpp

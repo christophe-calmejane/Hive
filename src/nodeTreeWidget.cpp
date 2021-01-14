@@ -23,6 +23,7 @@
 #include "avdecc/stringValidator.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
+#include "nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/discoveredInterfacesTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
@@ -37,6 +38,7 @@
 #include "aecpCommandComboBox.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
+#include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
 #include <la/avdecc/logger.hpp>
 #include <QtMate/widgets/textEntry.hpp>
 #include <QtMate/widgets/comboBox.hpp>
@@ -606,6 +608,139 @@ private:
 		}
 	}
 
+	template<la::avdecc::entity::model::ControlValueType::Type Type>
+	struct VisitStaticValuesTraits
+	{
+		static void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlValues const& /*values*/) noexcept
+		{
+			AVDECC_ASSERT(false, "Should not be there. Missing specialized trait?");
+			self->addTextItem(item, "Values", "Not supported (but should be), please report this bug");
+		}
+		static void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
+		{
+			AVDECC_ASSERT(false, "Should not be there. Missing specialized trait?");
+			self->addTextItem(tree, "Dynamic Info", "Not supported (but should be), please report this bug");
+		}
+		static constexpr la::avdecc::entity::model::ControlValueType::Type control_value_type = Type;
+	};
+
+	template<class StaticValueType, class DynamicValueType>
+	struct StaticLinearValuesTraits
+	{
+		static void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlValues const& values) noexcept
+		{
+			auto valNumber = decltype(std::declval<decltype(values)>().size()){ 0u };
+			auto const linearValues = values.getValues<StaticValueType>(); // We have to store the copie or it will go out of scope if using it directly in the range-based loop
+			for (auto const& val : linearValues.getValues())
+			{
+				auto* valueItem = new QTreeWidgetItem(item);
+				valueItem->setText(0, QString("Value %1").arg(valNumber));
+
+				self->addTextItem(valueItem, "Minimum", val.minimum);
+				self->addTextItem(valueItem, "Maximum", val.maximum);
+				self->addTextItem(valueItem, "Step", val.step);
+				self->addTextItem(valueItem, "Default Value", val.defaultValue);
+				self->addTextItem(valueItem, "Unit Type", avdecc::helper::controlValueUnitToString(val.unit.getUnit()));
+				self->addTextItem(valueItem, "Unit Multiplier", val.unit.getMultiplier());
+				auto* localizedNameItem = new QTreeWidgetItem(valueItem);
+				localizedNameItem->setText(0, "Localized Name");
+				localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, val.localizedName));
+
+				++valNumber;
+			}
+		}
+		static void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept
+		{
+			auto* dynamicItem = new LinearControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
+			dynamicItem->setText(0, "Dynamic Info");
+		}
+	};
+
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>>>
+	{
+	};
+
+	using VisitStaticControlValuesFunctor = std::function<void(NodeTreeWidgetPrivate*, la::avdecc::controller::ControlledEntity const*, QTreeWidgetItem*, la::avdecc::entity::model::ControlValues const&)>;
+	using VisitDynamicControlValuesFunctor = std::function<void(QTreeWidget*, la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ControlIndex, la::avdecc::entity::model::ControlNodeStaticModel const&, la::avdecc::entity::model::ControlNodeDynamicModel const&)>;
+	using VisitControlValuesDispatchTable = std::unordered_map<la::avdecc::entity::model::ControlValueType::Type, std::pair<VisitStaticControlValuesFunctor, VisitDynamicControlValuesFunctor>>;
+	static inline void createControlValuesDispatchTable(VisitControlValuesDispatchTable& dispatchTable)
+	{
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8>::visitStaticControlValues;
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8>::visitDynamicControlValues);
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16>::visitStaticControlValues;
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16>::visitStaticControlValues;
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32>::visitStaticControlValues;
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32>::visitStaticControlValues;
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64>::visitStaticControlValues;
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64>::visitStaticControlValues;
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat>::visitStaticControlValues;
+		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble>::visitStaticControlValues;
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept override
+	{
+		static auto s_Dispatch = VisitControlValuesDispatchTable{};
+		if (s_Dispatch.empty())
+		{
+			// Create the dispatch table
+			createControlValuesDispatchTable(s_Dispatch);
+		}
+
+		createIdItem(&node);
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+
+		Q_Q(NodeTreeWidget);
+		auto const* const staticModel = node.staticModel;
+		auto const valueType = staticModel->controlValueType.getType();
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			addTextItem(descriptorItem, "Signal Type", avdecc::helper::descriptorTypeToString(staticModel->signalType));
+			addTextItem(descriptorItem, "Signal Index", staticModel->signalIndex);
+			addTextItem(descriptorItem, "Signal Output", staticModel->signalOutput);
+
+			addTextItem(descriptorItem, "Block Latency", staticModel->blockLatency);
+			addTextItem(descriptorItem, "Control Latency", staticModel->controlLatency);
+			addTextItem(descriptorItem, "Control Domain", staticModel->controlDomain);
+			addTextItem(descriptorItem, "Auto Reset Time (usec)", staticModel->resetTime);
+
+			addTextItem(descriptorItem, "Control Type", avdecc::helper::controlTypeToString(staticModel->controlType));
+			addTextItem(descriptorItem, "Values Type", avdecc::helper::controlValueTypeToString(valueType));
+			addTextItem(descriptorItem, "Values Writable", staticModel->controlValueType.isReadOnly() ? "False" : "True");
+			addTextItem(descriptorItem, "Values Valid", staticModel->controlValueType.isUnknown() ? "False" : "True");
+			addTextItem(descriptorItem, "Values Count", staticModel->values.size());
+
+			// Display static values
+			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
+			{
+				it->second.first(this, controlledEntity, descriptorItem, staticModel->values);
+			}
+			else
+			{
+				addTextItem(descriptorItem, "Values", "Value Type Not Supported");
+			}
+		}
+
+		// Dynamic model
+		{
+			// Display static values
+			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
+			{
+				it->second.second(q, _controlledEntityID, node.descriptorIndex, *staticModel, *node.dynamicModel);
+			}
+			else
+			{
+				auto* descriptorItem = new QTreeWidgetItem(q);
+				descriptorItem->setText(0, "Dynamic Info");
+				descriptorItem->setText(0, "Value Type Not Supported");
+			}
+		}
+	}
+
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		createIdItem(&node);
@@ -987,6 +1122,18 @@ private:
 						{
 						}
 						break;
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName:
+						try
+						{
+							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ControlIndex>>(customData);
+							auto const configIndex = std::get<0>(customTuple);
+							auto const controlIndex = std::get<1>(customTuple);
+							hive::modelsLibrary::ControllerManager::getInstance().setControlName(_controlledEntityID, configIndex, controlIndex, textEntry->text());
+						}
+						catch (...)
+						{
+						}
+						break;
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName:
 						try
 						{
@@ -1119,6 +1266,19 @@ private:
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && audioClusterIndex == acIndex)
 								textEntry->setText(audioClusterName);
+						});
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ControlIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const controlIndex = std::get<1>(customTuple);
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, textEntry,
+						[this, textEntry, configIndex, cdIndex = controlIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
+						{
+							if (entityID == _controlledEntityID && configurationIndex == configIndex && controlIndex == cdIndex)
+								textEntry->setText(controlName);
 						});
 					break;
 				}
