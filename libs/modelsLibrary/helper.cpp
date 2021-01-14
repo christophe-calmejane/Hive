@@ -37,7 +37,18 @@ QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
 {
-	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.descriptorIndex, node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
+	return objectName(controlledEntity, node);
+}
+
+QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept
+{
+	auto const& localizedName = controlledEntity.getLocalizedString(stringReference);
+
+	if (localizedName.empty())
+	{
+		return "(No Localization)";
+	}
+	return localizedName.data();
 }
 
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept

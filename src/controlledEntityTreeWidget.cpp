@@ -628,9 +628,10 @@ private:
 	template<class Node>
 	QString genName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, Node const& node)
 	{
+		auto objName = hive::modelsLibrary::helper::localizedString(*controlledEntity, node.staticModel->localizedDescription);
+
 		// Only use name for current configuration
-		auto objName = QString{ controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() };
-		if (controlledEntity && configurationIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration && !node.dynamicModel->objectName.empty())
+		if (configurationIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration && !node.dynamicModel->objectName.empty())
 		{
 			objName = node.dynamicModel->objectName.data();
 		}

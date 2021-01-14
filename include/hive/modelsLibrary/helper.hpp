@@ -64,8 +64,14 @@ QString configurationName(la::avdecc::controller::ControlledEntity const* const 
 template<class NodeType>
 QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, NodeType const& node) noexcept
 {
-	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
+	if (node.dynamicModel->objectName.empty())
+	{
+		return localizedString(*controlledEntity, node.staticModel->localizedDescription);
+	}
+
+	return node.dynamicModel->objectName.data();
 }
+QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 
 bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
 {

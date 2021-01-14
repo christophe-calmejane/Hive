@@ -409,7 +409,7 @@ void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const&, QI
 
 		if (entityNode.staticModel)
 		{
-			auto const rowModelName = controlledEntity->getLocalizedString(entityNode.staticModel->modelNameString).data();
+			auto const rowModelName = hive::modelsLibrary::helper::localizedString(*controlledEntity, entityNode.staticModel->modelNameString);
 
 			if (modelName.isEmpty())
 			{

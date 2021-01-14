@@ -235,8 +235,8 @@ private:
 				addTextItem(descriptorItem, "Identify Control Index", e.getIdentifyControlIndex() ? QString::number(*e.getIdentifyControlIndex()) : QString("Not Set"));
 			}
 
-			addTextItem(descriptorItem, "Vendor Name", entity.getLocalizedString(staticModel->vendorNameString).data());
-			addTextItem(descriptorItem, "Model Name", entity.getLocalizedString(staticModel->modelNameString).data());
+			addTextItem(descriptorItem, "Vendor Name", hive::modelsLibrary::helper::localizedString(entity, staticModel->vendorNameString));
+			addTextItem(descriptorItem, "Model Name", hive::modelsLibrary::helper::localizedString(entity, staticModel->modelNameString));
 			addTextItem(descriptorItem, "Firmware Version", dynamicModel->firmwareVersion.data());
 			addTextItem(descriptorItem, "Serial Number", dynamicModel->serialNumber.data());
 
@@ -819,7 +819,7 @@ private:
 
 		auto* localizedNameItem = new QTreeWidgetItem(nameItem);
 		localizedNameItem->setText(0, "Localized Name");
-		localizedNameItem->setText(1, controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data());
+		localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, node.staticModel->localizedDescription));
 
 		return nameItem;
 	}

@@ -176,8 +176,8 @@ public:
 				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(entityID.getValue(), true, true));
 				if (staticModel)
 				{
-					labelVendorNameValue->setText(controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
-					labelModelNameValue->setText(controlledEntity->getLocalizedString(staticModel->modelNameString).data());
+					labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel->vendorNameString));
+					labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel->modelNameString));
 				}
 				if (dynamicModel)
 				{
