@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - macOS minimum version is now 10.12 (due to Qt update)
 
+### Fixed
+- Slightly improved Firmware Update Dialog
+
 ## [1.2.3] - 2020-09-14
 ### Added
 - [Displaying a message with shell command to run, if network interface cannot be opened](https://github.com/christophe-calmejane/Hive/issues/88)

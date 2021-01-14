@@ -140,7 +140,7 @@ public:
 					case Model::Column::Name:
 						return "Name";
 					case Model::Column::FirmwareVersion:
-						return "Firmware Version";
+						return "Current Firmware Version";
 					default:
 						break;
 				}
@@ -358,7 +358,7 @@ MultiFirmwareUpdateDialog::MultiFirmwareUpdateDialog(QWidget* parent)
 
 	// Initial configuration
 	_ui->buttonContinue->setEnabled(false);
-	setWindowTitle("Firmware Update Selection");
+	setWindowTitle("Firmware Update - Select device(s) to update");
 
 	_ui->controllerTableView->setModel(_model);
 
