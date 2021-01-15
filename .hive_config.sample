@@ -5,8 +5,8 @@
 # Signing identity to be used, run './gen_cmake.sh -ids' to get the list of valid identities on this computer (copy the printed identity without adding quotes)
 #identity=
 
-# Windows signtool options (defaults to '/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com')
-#signtool_options=/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com
+# Windows signtool options (defaults to '/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com /td sha256')
+#signtool_options=/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com /td sha256
 
 ################ macOS Notarization
 # Notarization username, defaults to "" which will not notarize

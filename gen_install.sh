@@ -231,14 +231,21 @@ generateAppcast()
 
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
+default_VisualGeneratorArch="Win32"
 default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
 
 # 
+cmake_generator=""
+generator_arch=""
+platform=""
+default_arch=""
 arch=""
 toolset=""
 outputFolderBasePath="_install"
+defaultOutputFolder="${outputFolderBasePath}_<platform>_<arch>_<toolset>_<config>"
+declare -a supportedArchs=()
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
 	# CMake.app not found, use cmake from the path
@@ -246,23 +253,26 @@ if isMac; then
 		cmake_path="cmake"
 	fi
 	generator="Xcode"
-	getCcArch arch
-	defaultOutputFolder="${outputFolderBasePath}_<arch>"
+	getMachineArch default_arch
+	supportedArchs+=("${default_arch}")
 else
 	# Use cmake from the path
 	cmake_path="cmake"
 	if isWindows; then
 		generator="$default_VisualGenerator"
+		generator_arch="$default_VisualGeneratorArch"
 		toolset="$default_VisualToolset"
 		toolchain="$default_VisualToolchain"
-		arch="$default_VisualArch"
-		defaultOutputFolder="${outputFolderBasePath}_<arch>_<toolset>"
+		default_arch="$default_VisualArch"
+		supportedArchs+=("x86")
+		supportedArchs+=("x64")
 	else
 		generator="Unix Makefiles"
-		getCcArch arch
-		defaultOutputFolder="${outputFolderBasePath}_<arch>_<config>"
+		getMachineArch default_arch
+		supportedArchs+=("${default_arch}")
 	fi
 fi
+getOS platform
 
 which "${cmake_path}" &> /dev/null
 if [ $? -ne 0 ]; then
@@ -291,6 +301,7 @@ do
 			echo " -h -> Display this help"
 			echo " -b <cmake path> -> Force cmake binary path (Default: $cmake_path)"
 			echo " -c <cmake generator> -> Force cmake generator (Default: $generator)"
+			echo " -arch <arch> -> Set target architecture (Default: $default_arch). Supported archs depends on target platform"
 			echo " -noclean -> Don't remove temp build folder [Default=clean on successful build]"
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
@@ -329,6 +340,7 @@ do
 			fi
 			gen_cmake_additional_options+=("-c")
 			gen_cmake_additional_options+=("$1")
+			cmake_generator="$1"
 			;;
 		-t)
 			if isWindows; then
@@ -435,6 +447,22 @@ do
 	shift
 done
 
+if [ ! -z "$cmake_generator" ]; then
+	echo "Overriding default cmake generator ($generator) with: $cmake_generator"
+	generator="$cmake_generator"
+fi
+
+# Default arch has not been overridden, use default arch
+if [ "x${arch}" == "x" ]; then
+	arch="${default_arch}"
+fi
+
+# Check arch is valid for target platform
+if [[ ! " ${supportedArchs[@]} " =~ " ${arch} " ]]; then
+	echo "ERROR: Unsupported arch for target platform: ${arch} (Supported archs: ${supportedArchs[@]})"
+	exit 4
+fi
+
 # Load config file
 loadConfigFile
 
@@ -483,7 +511,7 @@ gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas
 # Build marketing options
 marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
 
-getOutputFolder outputFolder "${outputFolderBasePath}" "${arch}" "${toolset}" ""
+getOutputFolder outputFolder "${outputFolderBasePath}" "${platform}" "${arch}" "${toolset}" "" "${generator}"
 
 toolset_option=""
 if [ ! -z "${toolset}" ]; then

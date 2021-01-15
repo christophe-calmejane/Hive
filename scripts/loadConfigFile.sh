@@ -11,7 +11,7 @@ params["notarization_username"]=""
 params["notarization_password"]="@keychain:AC_PASSWORD"
 params["appcast_releases"]="https://localhost/hive/appcast-release.xml"
 params["appcast_betas"]="https://localhost/hive/appcast-beta.xml"
-params["signtool_options"]="/a /sm /q /fd sha256 /tr http://timestamp.digicert.com"
+params["signtool_options"]="/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com /td sha256"
 
 loadConfigFile()
 {
