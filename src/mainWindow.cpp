@@ -631,6 +631,8 @@ void MainWindowImpl::connectSignals()
 				QMenu menu;
 				auto const& entity = controlledEntity->getEntity();
 				auto const entityModelID = entity.getEntityModelID();
+				auto const isAemSupported = entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported);
+				auto const isIdentifyControlValid = !!controlledEntity->getIdentifyControlIndex();
 
 				auto* acquireAction{ static_cast<QAction*>(nullptr) };
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
@@ -640,10 +642,11 @@ void MainWindowImpl::connectSignals()
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
+				auto* identify{ static_cast<QAction*>(nullptr) };
 				auto* dumpFullEntity{ static_cast<QAction*>(nullptr) };
 				auto* dumpEntityModel{ static_cast<QAction*>(nullptr) };
 
-				if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+				if (isAemSupported)
 				{
 					// Do not propose Acquire if the device is Milan (not supported)
 					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
@@ -709,6 +712,10 @@ void MainWindowImpl::connectSignals()
 					{
 						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
 					}
+					{
+						identify = menu.addAction("Identify Device");
+						identify->setEnabled(isIdentifyControlValid);
+					}
 				}
 
 				menu.addSeparator();
@@ -717,7 +724,7 @@ void MainWindowImpl::connectSignals()
 				{
 					dumpFullEntity = menu.addAction("Export Full Entity...");
 					dumpEntityModel = menu.addAction("Export Entity Model...");
-					dumpEntityModel->setEnabled(entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && entityModelID);
+					dumpEntityModel->setEnabled(isAemSupported && entityModelID);
 				}
 
 				menu.addSeparator();
@@ -769,6 +776,10 @@ void MainWindowImpl::connectSignals()
 					{
 						manager.clearAllStreamInputCounterValidFlags(entityID);
 						manager.clearAllStatisticsCounterValidFlags(entityID);
+					}
+					else if (action == identify)
+					{
+						manager.identifyEntity(entityID);
 					}
 					else if (action == dumpFullEntity || action == dumpEntityModel)
 					{

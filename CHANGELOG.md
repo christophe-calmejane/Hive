@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - New CLI tool to dump AEM from entities: AEMDumper
 - Support for Control Descriptors (only Linear Values for now)
+- Support for Controller to Entity Identification (right-click an entity in the list)
 
 ### Changed
 - macOS minimum version is now 10.12 (due to Qt update)

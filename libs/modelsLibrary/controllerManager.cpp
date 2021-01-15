@@ -865,6 +865,26 @@ private:
 		_fullAemEnumeration = enable;
 	}
 
+	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, IdentifyEntityHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			controller->identifyEntity(targetEntityID, std::chrono::milliseconds{ 5000 },
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::IdentifyEntity, status);
+					}
+				});
+		}
+	}
+
 	ErrorCounterTracker const* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{
 		auto const lg = std::lock_guard{ _lock };
@@ -1935,6 +1955,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Upload Operation";
 		case AecpCommandType::AbortOperation:
 			return "Abort Operation";
+		case AecpCommandType::IdentifyEntity:
+			return "Identify Entity";
 		default:
 			AVDECC_ASSERT(false, "Unhandled type");
 			return "Unknown";

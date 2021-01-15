@@ -82,6 +82,7 @@ public:
 		StartStoreAndRebootMemoryObjectOperation,
 		StartUploadMemoryObjectOperation,
 		AbortOperation,
+		IdentifyEntity,
 	};
 
 	enum class AcmpCommandType
@@ -127,6 +128,7 @@ public:
 	using StartStoreAndRebootMemoryObjectOperationHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)>;
 	using StartUploadMemoryObjectOperationHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)>;
 	using AbortOperationHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
+	using IdentifyEntityHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	/* ACMP handlers to override the global ACMP result process */
 	using ConnectStreamHandler = std::function<void(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)>;
 	using DisconnectStreamHandler = std::function<void(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)>;
@@ -165,6 +167,9 @@ public:
 
 	/** Enable/Disable full AEM enumeration */
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept = 0;
+
+	/** Identify entity */
+	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, IdentifyEntityHandler const& handler = {}) noexcept = 0;
 
 	/** Counter error flags */
 	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
