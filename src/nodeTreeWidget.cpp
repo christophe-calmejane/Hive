@@ -619,7 +619,9 @@ private:
 		static void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
 		{
 			AVDECC_ASSERT(false, "Should not be there. Missing specialized trait?");
-			self->addTextItem(tree, "Dynamic Info", "Not supported (but should be), please report this bug");
+			auto* dynamicItem = new QTreeWidgetItem(tree);
+			dynamicItem->setText(0, "Dynamic Info");
+			dynamicItem->setText(1, "Not supported (but should be), please report this bug");
 		}
 		static constexpr la::avdecc::entity::model::ControlValueType::Type control_value_type = Type;
 	};

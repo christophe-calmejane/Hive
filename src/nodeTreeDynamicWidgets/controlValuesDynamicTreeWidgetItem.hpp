@@ -140,7 +140,7 @@ private:
 			for (auto const* item : _widgets)
 			{
 				auto const* comboBox = static_cast<AecpCommandComboBox const*>(item);
-				auto value = DynamicValueType::value_type{};
+				auto value = typename DynamicValueType::value_type{};
 				value.currentValue = comboBox->currentData().value<value_size>();
 
 				values.addValue(std::move(value));
