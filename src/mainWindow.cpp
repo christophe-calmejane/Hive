@@ -713,7 +713,7 @@ void MainWindowImpl::connectSignals()
 						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
 					}
 					{
-						identify = menu.addAction("Identify Device");
+						identify = menu.addAction("Identify Device (10 sec)");
 						identify->setEnabled(isIdentifyControlValid);
 					}
 				}
@@ -779,7 +779,7 @@ void MainWindowImpl::connectSignals()
 					}
 					else if (action == identify)
 					{
-						manager.identifyEntity(entityID);
+						manager.identifyEntity(entityID, std::chrono::seconds{ 10 });
 					}
 					else if (action == dumpFullEntity || action == dumpEntityModel)
 					{

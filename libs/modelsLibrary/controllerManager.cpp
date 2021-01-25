@@ -865,12 +865,12 @@ private:
 		_fullAemEnumeration = enable;
 	}
 
-	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, IdentifyEntityHandler const& handler) noexcept override
+	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, std::chrono::milliseconds const duration, IdentifyEntityHandler const& handler) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
-			controller->identifyEntity(targetEntityID, std::chrono::milliseconds{ 5000 },
+			controller->identifyEntity(targetEntityID, duration,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)

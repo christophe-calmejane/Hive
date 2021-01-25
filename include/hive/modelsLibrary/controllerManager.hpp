@@ -169,7 +169,7 @@ public:
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept = 0;
 
 	/** Identify entity */
-	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, IdentifyEntityHandler const& handler = {}) noexcept = 0;
+	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, std::chrono::milliseconds const duration, IdentifyEntityHandler const& handler = {}) noexcept = 0;
 
 	/** Counter error flags */
 	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
