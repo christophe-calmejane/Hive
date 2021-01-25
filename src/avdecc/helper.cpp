@@ -538,131 +538,139 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 	}
 }
 
-QString controlTypeToString(la::avdecc::entity::model::ControlType const controlType) noexcept
+QString controlTypeToString(la::avdecc::entity::model::ControlType const& controlType) noexcept
 {
-	switch (controlType)
+	auto const vendorID = controlType.getVendorID();
+	if (vendorID == la::avdecc::entity::model::StandardControlTypeVendorID)
 	{
-		case la::avdecc::entity::model::ControlType::Enable:
-			return "Enable";
-		case la::avdecc::entity::model::ControlType::Identify:
-			return "Identify";
-		case la::avdecc::entity::model::ControlType::Mute:
-			return "Mute";
-		case la::avdecc::entity::model::ControlType::Invert:
-			return "Invert";
-		case la::avdecc::entity::model::ControlType::Gain:
-			return "Gain";
-		case la::avdecc::entity::model::ControlType::Attenuate:
-			return "Attenuate";
-		case la::avdecc::entity::model::ControlType::Delay:
-			return "Delay";
-		case la::avdecc::entity::model::ControlType::SrcMode:
-			return "Sample Rate Converter Mode";
-		case la::avdecc::entity::model::ControlType::Snapshot:
-			return "Snapshot";
-		case la::avdecc::entity::model::ControlType::PowLineFreq:
-			return "Power Line Frequency";
-		case la::avdecc::entity::model::ControlType::PowerStatus:
-			return "Power Status";
-		case la::avdecc::entity::model::ControlType::FanStatus:
-			return "Fan Status";
-		case la::avdecc::entity::model::ControlType::Temperature:
-			return "Temperature";
-		case la::avdecc::entity::model::ControlType::Altitude:
-			return "Altitude";
-		case la::avdecc::entity::model::ControlType::AbsoluteHumidity:
-			return "Absolute Humidity";
-		case la::avdecc::entity::model::ControlType::RelativeHumidity:
-			return "Relative Humidity";
-		case la::avdecc::entity::model::ControlType::Orientation:
-			return "Orientation";
-		case la::avdecc::entity::model::ControlType::Velocity:
-			return "Velocity";
-		case la::avdecc::entity::model::ControlType::Acceleration:
-			return "Acceleration";
-		case la::avdecc::entity::model::ControlType::FilterResponse:
-			return "Filter Response";
-		case la::avdecc::entity::model::ControlType::Panpot:
-			return "Stereo Pan Position";
-		case la::avdecc::entity::model::ControlType::Phantom:
-			return "Phantom Power";
-		case la::avdecc::entity::model::ControlType::AudioScale:
-			return "Audio Scale";
-		case la::avdecc::entity::model::ControlType::AudioMeters:
-			return "Audio Meters";
-		case la::avdecc::entity::model::ControlType::AudioSpectrum:
-			return "Audio Spectrum";
-		case la::avdecc::entity::model::ControlType::ScanningMode:
-			return "Video Scanning Mode";
-		case la::avdecc::entity::model::ControlType::AutoExpMode:
-			return "Auto Exposure Mode";
-		case la::avdecc::entity::model::ControlType::AutoExpPrio:
-			return "Auto Exposure Priority";
-		case la::avdecc::entity::model::ControlType::ExpTime:
-			return "Exposure Time";
-		case la::avdecc::entity::model::ControlType::Focus:
-			return "Focus";
-		case la::avdecc::entity::model::ControlType::FocusAuto:
-			return "Focus Automatic";
-		case la::avdecc::entity::model::ControlType::Iris:
-			return "Iris";
-		case la::avdecc::entity::model::ControlType::Zoom:
-			return "Zoom";
-		case la::avdecc::entity::model::ControlType::Privacy:
-			return "Privacy";
-		case la::avdecc::entity::model::ControlType::Backlight:
-			return "Backlight Compensation";
-		case la::avdecc::entity::model::ControlType::Brightness:
-			return "Brightness";
-		case la::avdecc::entity::model::ControlType::Contrast:
-			return "Contrast";
-		case la::avdecc::entity::model::ControlType::Hue:
-			return "Hue";
-		case la::avdecc::entity::model::ControlType::Saturation:
-			return "Saturation";
-		case la::avdecc::entity::model::ControlType::Sharpness:
-			return "Sharpness";
-		case la::avdecc::entity::model::ControlType::Gamma:
-			return "Gamma";
-		case la::avdecc::entity::model::ControlType::WhiteBalTemp:
-			return "White Balance Temperature";
-		case la::avdecc::entity::model::ControlType::WhiteBalTempAuto:
-			return "White Balance Temperature Auto";
-		case la::avdecc::entity::model::ControlType::WhiteBalComp:
-			return "White Balance Components";
-		case la::avdecc::entity::model::ControlType::WhiteBalCompAuto:
-			return "White Balance Components Auto";
-		case la::avdecc::entity::model::ControlType::DigitalZoom:
-			return "Digital Zoom";
-		case la::avdecc::entity::model::ControlType::MediaPlaylist:
-			return "Media Playlist";
-		case la::avdecc::entity::model::ControlType::MediaPlaylistName:
-			return "Media Playlist Name";
-		case la::avdecc::entity::model::ControlType::MediaDisk:
-			return "Media Disk";
-		case la::avdecc::entity::model::ControlType::MediaDiskName:
-			return "Media Disk Name";
-		case la::avdecc::entity::model::ControlType::MediaTrack:
-			return "Media Track";
-		case la::avdecc::entity::model::ControlType::MediaTrackName:
-			return "Media Track Name";
-		case la::avdecc::entity::model::ControlType::MediaSpeed:
-			return "Media Speed";
-		case la::avdecc::entity::model::ControlType::MediaSamplePosition:
-			return "Media Sample Position";
-		case la::avdecc::entity::model::ControlType::MediaPlaybackTransport:
-			return "Media Playback Transport";
-		case la::avdecc::entity::model::ControlType::MediaRecordTransport:
-			return "Media Record Transport";
-		case la::avdecc::entity::model::ControlType::Frequency:
-			return "Frequency";
-		case la::avdecc::entity::model::ControlType::Modulation:
-			return "Modulation";
-		case la::avdecc::entity::model::ControlType::Polarization:
-			return "Polarization";
-		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+		switch (static_cast<la::avdecc::entity::model::StandardControlType>(controlType.getValue()))
+		{
+			case la::avdecc::entity::model::StandardControlType::Enable:
+				return "Enable";
+			case la::avdecc::entity::model::StandardControlType::Identify:
+				return "Identify";
+			case la::avdecc::entity::model::StandardControlType::Mute:
+				return "Mute";
+			case la::avdecc::entity::model::StandardControlType::Invert:
+				return "Invert";
+			case la::avdecc::entity::model::StandardControlType::Gain:
+				return "Gain";
+			case la::avdecc::entity::model::StandardControlType::Attenuate:
+				return "Attenuate";
+			case la::avdecc::entity::model::StandardControlType::Delay:
+				return "Delay";
+			case la::avdecc::entity::model::StandardControlType::SrcMode:
+				return "Sample Rate Converter Mode";
+			case la::avdecc::entity::model::StandardControlType::Snapshot:
+				return "Snapshot";
+			case la::avdecc::entity::model::StandardControlType::PowLineFreq:
+				return "Power Line Frequency";
+			case la::avdecc::entity::model::StandardControlType::PowerStatus:
+				return "Power Status";
+			case la::avdecc::entity::model::StandardControlType::FanStatus:
+				return "Fan Status";
+			case la::avdecc::entity::model::StandardControlType::Temperature:
+				return "Temperature";
+			case la::avdecc::entity::model::StandardControlType::Altitude:
+				return "Altitude";
+			case la::avdecc::entity::model::StandardControlType::AbsoluteHumidity:
+				return "Absolute Humidity";
+			case la::avdecc::entity::model::StandardControlType::RelativeHumidity:
+				return "Relative Humidity";
+			case la::avdecc::entity::model::StandardControlType::Orientation:
+				return "Orientation";
+			case la::avdecc::entity::model::StandardControlType::Velocity:
+				return "Velocity";
+			case la::avdecc::entity::model::StandardControlType::Acceleration:
+				return "Acceleration";
+			case la::avdecc::entity::model::StandardControlType::FilterResponse:
+				return "Filter Response";
+			case la::avdecc::entity::model::StandardControlType::Panpot:
+				return "Stereo Pan Position";
+			case la::avdecc::entity::model::StandardControlType::Phantom:
+				return "Phantom Power";
+			case la::avdecc::entity::model::StandardControlType::AudioScale:
+				return "Audio Scale";
+			case la::avdecc::entity::model::StandardControlType::AudioMeters:
+				return "Audio Meters";
+			case la::avdecc::entity::model::StandardControlType::AudioSpectrum:
+				return "Audio Spectrum";
+			case la::avdecc::entity::model::StandardControlType::ScanningMode:
+				return "Video Scanning Mode";
+			case la::avdecc::entity::model::StandardControlType::AutoExpMode:
+				return "Auto Exposure Mode";
+			case la::avdecc::entity::model::StandardControlType::AutoExpPrio:
+				return "Auto Exposure Priority";
+			case la::avdecc::entity::model::StandardControlType::ExpTime:
+				return "Exposure Time";
+			case la::avdecc::entity::model::StandardControlType::Focus:
+				return "Focus";
+			case la::avdecc::entity::model::StandardControlType::FocusAuto:
+				return "Focus Automatic";
+			case la::avdecc::entity::model::StandardControlType::Iris:
+				return "Iris";
+			case la::avdecc::entity::model::StandardControlType::Zoom:
+				return "Zoom";
+			case la::avdecc::entity::model::StandardControlType::Privacy:
+				return "Privacy";
+			case la::avdecc::entity::model::StandardControlType::Backlight:
+				return "Backlight Compensation";
+			case la::avdecc::entity::model::StandardControlType::Brightness:
+				return "Brightness";
+			case la::avdecc::entity::model::StandardControlType::Contrast:
+				return "Contrast";
+			case la::avdecc::entity::model::StandardControlType::Hue:
+				return "Hue";
+			case la::avdecc::entity::model::StandardControlType::Saturation:
+				return "Saturation";
+			case la::avdecc::entity::model::StandardControlType::Sharpness:
+				return "Sharpness";
+			case la::avdecc::entity::model::StandardControlType::Gamma:
+				return "Gamma";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalTemp:
+				return "White Balance Temperature";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalTempAuto:
+				return "White Balance Temperature Auto";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalComp:
+				return "White Balance Components";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalCompAuto:
+				return "White Balance Components Auto";
+			case la::avdecc::entity::model::StandardControlType::DigitalZoom:
+				return "Digital Zoom";
+			case la::avdecc::entity::model::StandardControlType::MediaPlaylist:
+				return "Media Playlist";
+			case la::avdecc::entity::model::StandardControlType::MediaPlaylistName:
+				return "Media Playlist Name";
+			case la::avdecc::entity::model::StandardControlType::MediaDisk:
+				return "Media Disk";
+			case la::avdecc::entity::model::StandardControlType::MediaDiskName:
+				return "Media Disk Name";
+			case la::avdecc::entity::model::StandardControlType::MediaTrack:
+				return "Media Track";
+			case la::avdecc::entity::model::StandardControlType::MediaTrackName:
+				return "Media Track Name";
+			case la::avdecc::entity::model::StandardControlType::MediaSpeed:
+				return "Media Speed";
+			case la::avdecc::entity::model::StandardControlType::MediaSamplePosition:
+				return "Media Sample Position";
+			case la::avdecc::entity::model::StandardControlType::MediaPlaybackTransport:
+				return "Media Playback Transport";
+			case la::avdecc::entity::model::StandardControlType::MediaRecordTransport:
+				return "Media Record Transport";
+			case la::avdecc::entity::model::StandardControlType::Frequency:
+				return "Frequency";
+			case la::avdecc::entity::model::StandardControlType::Modulation:
+				return "Modulation";
+			case la::avdecc::entity::model::StandardControlType::Polarization:
+				return "Polarization";
+			default:
+				AVDECC_ASSERT(false, "Not handled!");
+				return "Unknown Standard Control Type";
+		}
+	}
+	else
+	{
+		return "Vendor: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint32_t, 6>(vendorID, true, true)) + " Value: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint64_t, 10>(controlType.getVendorValue(), true, true));
 	}
 }
 

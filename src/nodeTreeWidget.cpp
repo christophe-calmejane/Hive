@@ -668,16 +668,16 @@ private:
 	using VisitControlValuesDispatchTable = std::unordered_map<la::avdecc::entity::model::ControlValueType::Type, std::pair<VisitStaticControlValuesFunctor, VisitDynamicControlValuesFunctor>>;
 	static inline void createControlValuesDispatchTable(VisitControlValuesDispatchTable& dispatchTable)
 	{
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8>::visitStaticControlValues;
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8>::visitDynamicControlValues);
 		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8>::visitDynamicControlValues);
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16>::visitStaticControlValues;
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16>::visitStaticControlValues;
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32>::visitStaticControlValues;
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32>::visitStaticControlValues;
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64>::visitStaticControlValues;
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64>::visitStaticControlValues;
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat>::visitStaticControlValues;
-		//dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble] = VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble>::visitStaticControlValues;
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16>::visitDynamicControlValues);
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16>::visitDynamicControlValues);
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32>::visitDynamicControlValues);
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32>::visitDynamicControlValues);
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64>::visitDynamicControlValues);
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64>::visitDynamicControlValues);
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat>::visitDynamicControlValues);
+		dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble] = std::make_pair(VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble>::visitStaticControlValues, VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble>::visitDynamicControlValues);
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept override
@@ -695,6 +695,14 @@ private:
 		Q_Q(NodeTreeWidget);
 		auto const* const staticModel = node.staticModel;
 		auto const valueType = staticModel->controlValueType.getType();
+
+		if (!staticModel->values)
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Error");
+			descriptorItem->setText(1, "Invalid Descriptor");
+			return;
+		}
 
 		// Static model
 		{

@@ -95,13 +95,17 @@ public:
 					parent->setItemWidget(item, 1, comboBox);
 
 					auto const range = static_cast<value_size>(staticVal.maximum - staticVal.minimum);
-					auto const stepsCount = static_cast<value_size>((range / staticVal.step) + 1u);
-					if ((range % staticVal.step) != 0)
+					auto stepsCount = size_t{ 1 };
+					if (staticVal.step != value_size{ 0 })
 					{
-						// This should probably be detected by the AVDECC library
-						LOG_HIVE_WARN("ControlValues not valid: Range not evenly divisible by Step");
+						stepsCount += static_cast<size_t>(range / staticVal.step);
+						if ((range % staticVal.step) != 0)
+						{
+							// This should probably be detected by the AVDECC library
+							LOG_HIVE_WARN("ControlValues not valid: Range not evenly divisible by Step");
+						}
 					}
-					for (auto i = value_size{ 0u }; i < stepsCount; ++i)
+					for (auto i = size_t{ 0u }; i < stepsCount; ++i)
 					{
 						auto const possibleValue = static_cast<value_size>(staticVal.minimum + i * staticVal.step);
 						comboBox->addItem(QString::number(possibleValue), QVariant::fromValue(possibleValue));
