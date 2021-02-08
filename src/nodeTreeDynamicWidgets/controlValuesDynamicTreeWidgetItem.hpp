@@ -65,8 +65,8 @@ public:
 		{
 			auto const staticValues = staticModel.values.getValues<StaticValueType>();
 			auto const dynamicValues = dynamicModel.values.getValues<DynamicValueType>();
-			auto const staticCount = staticValues.size();
-			auto const dynamicCount = dynamicValues.size();
+			auto const staticCount = staticValues.countValues();
+			auto const dynamicCount = dynamicValues.countValues();
 			if (staticCount != dynamicCount)
 			{
 				LOG_HIVE_WARN("ControlValues not valid: Static/Dynamic count mismatch");
@@ -99,10 +99,13 @@ public:
 					if (staticVal.step != value_size{ 0 })
 					{
 						stepsCount += static_cast<size_t>(range / staticVal.step);
-						if ((range % staticVal.step) != 0)
+						if constexpr (std::is_integral_v<value_size>)
 						{
-							// This should probably be detected by the AVDECC library
-							LOG_HIVE_WARN("ControlValues not valid: Range not evenly divisible by Step");
+							if ((range % staticVal.step) != 0)
+							{
+								// This should probably be detected by the AVDECC library
+								LOG_HIVE_WARN("ControlValues not valid: Range not evenly divisible by Step");
+							}
 						}
 					}
 					for (auto i = size_t{ 0u }; i < stepsCount; ++i)
@@ -165,7 +168,7 @@ private:
 				return;
 			}
 
-			auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copie or it will go out of scope if using it directly in the range-based loop
+			auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
 			auto valNumber = size_t{ 0u };
 			for (auto const& val : dynamicValues.getValues())
 			{

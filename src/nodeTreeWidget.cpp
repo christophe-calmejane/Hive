@@ -632,7 +632,7 @@ private:
 		static void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlValues const& values) noexcept
 		{
 			auto valNumber = decltype(std::declval<decltype(values)>().size()){ 0u };
-			auto const linearValues = values.getValues<StaticValueType>(); // We have to store the copie or it will go out of scope if using it directly in the range-based loop
+			auto const linearValues = values.getValues<StaticValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
 			for (auto const& val : linearValues.getValues())
 			{
 				auto* valueItem = new QTreeWidgetItem(item);
@@ -658,8 +658,45 @@ private:
 		}
 	};
 
+	// Declare Traits for Linear Values
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int8_t>>>
+	{
+	};
 	template<>
 	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int16_t>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint16_t>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int32_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int32_t>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint32_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint32_t>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int64_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int64_t>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint64_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint64_t>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<float>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<float>>>
+	{
+	};
+	template<>
+	struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<double>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<double>>>
 	{
 	};
 
