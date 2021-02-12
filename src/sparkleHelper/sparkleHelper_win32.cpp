@@ -45,7 +45,11 @@ void Sparkle::init(std::string const& signature) noexcept
 		win_sparkle_set_shutdown_request_callback(
 			[]()
 			{
-				QCoreApplication::postEvent(qApp, new QEvent{ QEvent::Type::Close });
+				auto const& sparkle = getInstance();
+				if (sparkle._shutdownRequestHandler)
+				{
+					sparkle._shutdownRequestHandler();
+				}
 			});
 		win_sparkle_set_did_find_update_callback(
 			[]()

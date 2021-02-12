@@ -1037,6 +1037,11 @@ void MainWindowImpl::connectSignals()
 		{
 			return true;
 		});
+	sparkle.setShutdownRequestHandler(
+		[]()
+		{
+			QCoreApplication::postEvent(qApp, new QEvent{ QEvent::Type::Quit });
+		});
 	sparkle.setLogHandler(
 		[this](auto const& message, auto const level)
 		{
