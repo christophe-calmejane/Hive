@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 - Slightly improved Firmware Update Dialog
 - Application not properly closing during self-update on windows
+- Application not properly restarting after self-update on windows
 
 ## [1.2.3] - 2020-09-14
 ### Added

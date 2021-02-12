@@ -205,7 +205,7 @@ generateAppcast()
 	if isWindows;
 	then
 		echo "				sparkle:dsaSignature=\"${fileSignature}\"" >> "$appcastFile"
-		echo "				sparkle:installerArguments=\"/S /NOPCAP\"" >> "$appcastFile"
+		echo "				sparkle:installerArguments=\"/S /NOPCAP /LAUNCH\"" >> "$appcastFile"
 		echo "				sparkle:os=\"windows\"" >> "$appcastFile"
 
 	elif isMac;

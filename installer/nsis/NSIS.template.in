@@ -22,7 +22,8 @@
   Var ADD_TO_PATH_CURRENT_USER
   Var INSTALL_DESKTOP
   Var IS_DEFAULT_INSTALLDIR
-	Var PrevInstVers
+  Var PrevInstVers
+  Var ShouldLaunch
 ;--------------------------------
 ;Include Modern UI
 
@@ -546,6 +547,9 @@ FunctionEnd
 @CPACK_NSIS_INSTALLER_MUI_UNWELCOMEFINISH_CODE@
 @CPACK_NSIS_INSTALLER_MUI_COMPONENTS_DESC@
 @CPACK_NSIS_INSTALLER_MUI_FINISHPAGE_RUN_CODE@
+!ifdef MUI_FINISHPAGE_RUN
+  !define BINARY_TO_RUN "${MUI_FINISHPAGE_RUN}"
+!endif
 
 ;--------------------------------
 ;Pages
@@ -750,11 +754,18 @@ Function ReadCustomOptionalParameters
 	${GetParameters} $R0
 	ClearErrors
 
-  ; Read /NOPCAP option
+	; Read /NOPCAP option
 	${GetOptions} $R0 /NOPCAP $0
 	IfErrors defaultPcap
-	  !insertmacro UnselectSection ${WinPcap}
+		!insertmacro UnselectSection ${WinPcap}
 	defaultPcap:
+
+	; Read /LAUNCH option
+	StrCpy $ShouldLaunch 0
+	${GetOptions} $R0 /LAUNCH $0
+	IfErrors defaultNoLaunch
+		StrCpy $ShouldLaunch 1
+	defaultNoLaunch:
 
 FunctionEnd
 
@@ -764,6 +775,18 @@ Function InstallOptionsPage
   !insertmacro MUI_HEADER_TEXT "Install Options" "Choose options for installing @CPACK_NSIS_PACKAGE_NAME@"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "NSIS.InstallOptions.ini"
 
+FunctionEnd
+
+
+;--------------------------------
+; run application if installation was silent
+Function .onInstSuccess
+!ifdef BINARY_TO_RUN
+	StrCmp $ShouldLaunch "0" dont_run_binary
+	IfSilent 0 dont_run_binary
+		Exec "${BINARY_TO_RUN}"
+dont_run_binary:
+!endif
 FunctionEnd
 
 ;--------------------------------
