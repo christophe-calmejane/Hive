@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Slightly improved Firmware Update Dialog
 - Application not properly closing during self-update on windows
 - Application not properly restarting after self-update on windows
+- [AVB domain incompatibility checks for gPTP domain number](https://github.com/christophe-calmejane/Hive/issues/98)
 
 ## [1.2.3] - 2020-09-14
 ### Added

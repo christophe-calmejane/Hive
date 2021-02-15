@@ -1051,9 +1051,7 @@ public:
 						atLeastOneConnected |= connected;
 						allConnected &= connected;
 
-						auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
-						auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-						allCompatibleDomain &= talkerGrandMasterID == listenerGrandMasterID;
+						allCompatibleDomain &= isSameDomain(*talkerStreamNode, *listenerStreamNode);
 
 						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
@@ -1177,7 +1175,7 @@ public:
 							isCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 
 							// Get Domain Compatibility
-							auto const sameDomain = redundantStreamNode->grandMasterID() == nonRedundantStreamNode->grandMasterID();
+							auto const sameDomain = isSameDomain(*redundantStreamNode, *nonRedundantStreamNode);
 							atLeastOneMatchingDomain |= sameDomain;
 							if (sameDomain || connectableStream.isConnected || connectableStream.isFastConnecting)
 							{
@@ -1308,9 +1306,6 @@ public:
 					auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
 					auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
 
-					auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
-					auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-
 					auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
 					intersectionData.flags = computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
@@ -1429,6 +1424,11 @@ public:
 		}
 	}
 
+	bool isSameDomain(StreamNode const& lhs, StreamNode const& rhs) const noexcept
+	{
+		return lhs.grandMasterID() == rhs.grandMasterID() && lhs.grandMasterDomain() == rhs.grandMasterDomain();
+	}
+
 	Model::IntersectionData::Flags computeStreamIntersectionFlags(StreamNode const* const talkerStreamNode, StreamNode const* const listenerStreamNode) const
 	{
 		auto flags = Model::IntersectionData::Flags{};
@@ -1436,12 +1436,9 @@ public:
 		auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
 		auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
 
-		auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
-		auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-
 		auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
-		// InterfaceDown
+		// InterfaceDown flag
 		if (interfaceDown)
 		{
 			flags.set(Model::IntersectionData::Flag::InterfaceDown);
@@ -1451,8 +1448,8 @@ public:
 			flags.reset(Model::IntersectionData::Flag::InterfaceDown);
 		}
 
-		// WrongDomain
-		if (talkerGrandMasterID == listenerGrandMasterID)
+		// WrongDomain flag
+		if (isSameDomain(*talkerStreamNode, *listenerStreamNode))
 		{
 			flags.reset(Model::IntersectionData::Flag::WrongDomain);
 		}
@@ -1461,7 +1458,7 @@ public:
 			flags.set(Model::IntersectionData::Flag::WrongDomain);
 		}
 
-		// WrongFormat
+		// WrongFormat flag
 		auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 		auto const listenerStreamFormat = listenerStreamNode->streamFormat();
 
