@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 # Useful script to generate project files using cmake
 
-# Get absolute folder for this script
-selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
-
-# Include util functions
-. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
+# Qt Version to use
+qtVersion="5.15.2"
 
 # Override default cmake options
 cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
-qtVersion="5.15.2"
+# Get absolute folder for this script
+selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
+
+# Include util functions
+. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
+
+# Check if setup_fresh_env has been called
+if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
+	echo "ERROR: Please run setup_fresh_env.sh (just once) after having cloned this repository."
+	exit 4
+fi
 
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
