@@ -24,11 +24,30 @@
 #include "QtMate/graph/type.hpp"
 
 #include <QMouseEvent>
+#include <QScrollBar>
 
 namespace qtMate
 {
 namespace graph
 {
+
+Qt::Edges computeCloseEdges(QPoint const& p, QRect const& r, int const margin = 20)
+{
+	auto edges = Qt::Edges{};
+
+	auto const left = r.left() + margin;
+	auto const top = r.top() + margin;
+	auto const right = r.right() - margin;
+	auto const bottom = r.bottom() - margin;
+
+	if (p.x() <= left) edges.setFlag(Qt::Edge::LeftEdge);
+	if (p.y() <= top) edges.setFlag(Qt::Edge::TopEdge);
+	if (p.x() >= right) edges.setFlag(Qt::Edge::RightEdge);
+	if (p.y() >= bottom) edges.setFlag(Qt::Edge::BottomEdge);
+
+	return edges;
+}
+
 GraphicsView::GraphicsView(QWidget* parent)
 	: QGraphicsView(parent)
 {
@@ -61,6 +80,7 @@ void GraphicsView::mousePressEvent(QMouseEvent* event)
 					if (socket->isOver(itemPos))
 					{
 						_connectionDragEvent = std::make_unique<ConnectionDragEvent>();
+						startAutoScroll();
 
 						if (socket->isConnected())
 						{
@@ -91,6 +111,7 @@ void GraphicsView::mousePressEvent(QMouseEvent* event)
 					if (socket->isOver(itemPos))
 					{
 						_connectionDragEvent = std::make_unique<ConnectionDragEvent>();
+						startAutoScroll();
 
 						if (socket->isConnected() && event->modifiers().testFlag(Qt::ControlModifier))
 						{
@@ -234,6 +255,7 @@ void GraphicsView::mouseReleaseEvent(QMouseEvent* event)
 				}
 			}
 
+			stopAutoScroll();
 			_connectionDragEvent.reset();
 			event->ignore();
 			return;
@@ -242,6 +264,53 @@ void GraphicsView::mouseReleaseEvent(QMouseEvent* event)
 
 	QGraphicsView::mouseReleaseEvent(event);
 }
+
+void GraphicsView::timerEvent(QTimerEvent* event) {
+
+	auto const pos = mapFromGlobal(QCursor::pos());
+	auto const viewportGeometry = viewport()->geometry();
+
+	// Check if the mouse is close to an edge of the viewport
+	auto const edges = computeCloseEdges(pos, viewportGeometry, 20);
+
+	if (edges != 0)
+	{
+		// If so, scroll the contant by the distance in pixels between the mouse and the matching edge
+		auto dx = 0;
+		auto dy = 0;
+
+		if (edges.testFlag(Qt::LeftEdge))
+		{
+			dx -= std::abs(pos.x() - viewportGeometry.left());
+		}
+
+		if (edges.testFlag(Qt::RightEdge))
+		{
+			dx += pos.x() - viewportGeometry.right();
+		}
+
+		if (edges.testFlag(Qt::TopEdge))
+		{
+			dy -= std::abs(pos.y() - viewportGeometry.top());
+		}
+
+		if (edges.testFlag(Qt::BottomEdge))
+		{
+			dy += std::abs(pos.y() - viewportGeometry.bottom());
+		}
+
+		if (dx)
+		{
+			horizontalScrollBar()->setValue(horizontalScrollBar()->value() + dx);
+		}
+
+		if (dy)
+		{
+			verticalScrollBar()->setValue(verticalScrollBar()->value() + dy);
+		}
+	}
+}
+
 
 bool GraphicsView::acceptableConnection(SocketItem* item) const
 {
@@ -278,6 +347,16 @@ SocketItem* GraphicsView::socketAt(QPoint const& pos) const
 	}
 
 	return nullptr;
+}
+
+void GraphicsView::startAutoScroll()
+{
+	_autoScrollTimer = startTimer(std::chrono::milliseconds{ 100 });
+}
+
+void GraphicsView::stopAutoScroll()
+{
+	killTimer(_autoScrollTimer);
 }
 
 } // namespace graph

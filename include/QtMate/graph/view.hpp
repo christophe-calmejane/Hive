@@ -60,13 +60,18 @@ private:
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mouseReleaseEvent(QMouseEvent* event) override;
+	virtual void timerEvent(QTimerEvent* event) override;
 
 private:
 	bool acceptableConnection(SocketItem* item) const;
 	SocketItem* socketAt(QPoint const& pos) const;
 
+	void startAutoScroll();
+	void stopAutoScroll();
+
 private:
 	std::unique_ptr<ConnectionDragEvent> _connectionDragEvent{};
+	int _autoScrollTimer{};
 };
 
 } // namespace graph
