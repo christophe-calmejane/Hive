@@ -238,13 +238,12 @@ default_VisualArch="x86"
 
 # 
 cmake_generator=""
-generator_arch=""
 platform=""
 default_arch=""
 arch=""
 toolset=""
 outputFolderBasePath="_install"
-defaultOutputFolder="${outputFolderBasePath}_<platform>_<arch>_<toolset>_<config>"
+defaultOutputFolder="${outputFolderBasePath}_<platform>_<arch>_<generator>_<toolset>_<config>"
 declare -a supportedArchs=()
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
@@ -260,7 +259,6 @@ else
 	cmake_path="cmake"
 	if isWindows; then
 		generator="$default_VisualGenerator"
-		generator_arch="$default_VisualGeneratorArch"
 		toolset="$default_VisualToolset"
 		toolchain="$default_VisualToolchain"
 		default_arch="$default_VisualArch"
@@ -511,7 +509,7 @@ gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas
 # Build marketing options
 marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
 
-getOutputFolder outputFolder "${outputFolderBasePath}" "${platform}" "${arch}" "${toolset}" "" "${generator}"
+getOutputFolder outputFolder "${outputFolderBasePath}" "${platform}" "${arch}" "${toolset}" "${buildConfig}" "${generator}"
 
 toolset_option=""
 if [ ! -z "${toolset}" ]; then
@@ -571,11 +569,9 @@ fi
 
 if isWindows; then
 	installerOSName="win32"
-	latestVersionOSName="windows"
 	installerExtension="exe"
 elif isMac; then
 	installerOSName="Darwin"
-	latestVersionOSName="macOS"
 	installerExtension="dmg"
 else
 	getOS osName
