@@ -289,7 +289,7 @@ if(BUILD_HIVE_APPLICATION)
 	endif()
 
 	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
-	setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG})
+	setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
 endif()
 
 ################
