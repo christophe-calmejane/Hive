@@ -381,20 +381,29 @@ fi
 if isMac; then
 	# No signing identity provided, try to autodetect
 	if [ "$signingId" == "" ]; then
-		echo -n "No signing identity provided, autodetecting... "
+		echo -n "No code signing identity provided, autodetecting... "
 		signingId="$(security find-identity -v -p codesigning | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"\KDeveloper ID Application: [^(]+\([^)]+\)(?=\")" -m1)"
 		if [ "$signingId" == "" ]; then
-			echo "ERROR: Cannot autodetect a valid signing identity, please use -id option"
+			echo "ERROR: Cannot autodetect a valid code signing identity, please use -id option"
 			exit 4
 		fi
 		echo "using identity: '$signingId'"
 	fi
-	# Validate signing identity exists
+	# Validate code signing identity exists and is of 'Developer ID Application' type
 	subSign="${signingId//(/\\(}" # Need to escape ( and )
 	subSign="${subSign//)/\\)}"
-	security find-identity -v -p codesigning | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"${subSign}" &> /dev/null
+	security find-identity -v -p codesigning | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"${subSign}" | grep "Developer ID Application" &> /dev/null
 	if [ $? -ne 0 ]; then
-		echo "ERROR: Signing identity '${signingId}' not found, use the full identity name inbetween the quotes (see -ids to get a list of valid identities)"
+		echo "ERROR: Code signing identity '${signingId}' not found, use the full identity name inbetween the quotes (see -ids to get a list of valid identities)"
+		exit 4
+	fi
+	# Validate installer signing identity exists and is of 'Developer ID Installer' type
+	signingInstallerId="${signingId/Developer ID Application/Developer ID Installer}"
+	subSign="${signingInstallerId//(/\\(}" # Need to escape ( and )
+	subSign="${subSign//)/\\)}"
+	security find-identity -v | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"${subSign}" | grep "Developer ID Installer" &> /dev/null
+	if [ $? -ne 0 ]; then
+		echo "ERROR: Installer signing identity '${signingInstallerId}' not found. Download or create it from your Apple Developer account (should be of type 'Developer ID Installer')"
 		exit 4
 	fi
 	# Get Team Identifier from signing identity (for xcode)
@@ -409,6 +418,7 @@ if isMac; then
 		doSign=1
 	fi
 	add_cmake_opt+=("-DLA_BINARY_SIGNING_IDENTITY=$signingId")
+	add_cmake_opt+=("-DLA_INSTALLER_SIGNING_IDENTITY=$signingInstallerId")
 	add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$teamId")
 fi
 
