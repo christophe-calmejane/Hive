@@ -121,7 +121,8 @@ else()
 
 		# Extra install commands
 		install(FILES ${PROJECT_ROOT_DIR}/resources/win32/vc_redist.x86.exe DESTINATION . CONFIGURATIONS Release)
-		install(FILES ${PROJECT_ROOT_DIR}/resources/win32/WinPcap_4_1_3.exe DESTINATION . CONFIGURATIONS Release COMPONENT WinPcap)
+		set(COMPONENT_NAME_WINPCAP WinPcap)
+		install(FILES ${PROJECT_ROOT_DIR}/resources/win32/WinPcap_4_1_3.exe DESTINATION . CONFIGURATIONS Release COMPONENT ${COMPONENT_NAME_WINPCAP})
 		set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}\n\
 			; Install the VS2017 redistributables\n\
 			ExecWait '\\\"$INSTDIR\\\\vc_redist.x86.exe\\\" /repair /quiet /norestart'\n\
@@ -155,11 +156,12 @@ else()
 		# Add a finish page to run the program
 		set(CPACK_NSIS_MUI_FINISHPAGE_RUN "${PROJECT_NAME}.exe")
 
+		# Include CPack so we can call cpack_add_component
 		include(CPack REQUIRED)
 
 		# Setup components
-		cpack_add_component(Hive DISPLAY_NAME "${PROJECT_NAME}" DESCRIPTION "Installs ${PROJECT_NAME} Application." REQUIRED)
-		cpack_add_component(WinPcap DISPLAY_NAME "WinPCap" DESCRIPTION "Installs WinPcap, necessary if not already installed on the system.")
+		cpack_add_component(${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME} DISPLAY_NAME "${PROJECT_NAME}" DESCRIPTION "Installs ${PROJECT_NAME} Application." REQUIRED)
+		cpack_add_component(${COMPONENT_NAME_WINPCAP} DISPLAY_NAME "WinPCap" DESCRIPTION "Installs WinPcap, necessary if not already installed on the system.")
 
 	elseif(APPLE)
 
