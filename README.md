@@ -44,7 +44,7 @@ We use [SemVer](http://semver.org/) for versioning.
 
 ## License
 
-See the [COPYING](COPYING) and [COPYING.LESSER](COPYING.LESSER) files for details.
+See the [COPYING](COPYING.txt) and [COPYING.LESSER](COPYING.LESSER.txt) files for details.
 
 ## Contributing code
 
