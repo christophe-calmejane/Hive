@@ -165,13 +165,63 @@ else()
 
 	elseif(APPLE)
 
-		set(CPACK_GENERATOR DragNDrop)
+		set(CPACK_GENERATOR productbuild)
 
-		set(CPACK_DMG_FORMAT UDBZ)
-		# set(CPACK_DMG_DS_STORE "${PROJECT_ROOT_DIR}/resources/macOS/DS_Store")
+		# Set CMake module path to our own nsis template is used during nsis generation
+		set(CMAKE_MODULE_PATH ${PROJECT_ROOT_DIR}/installer/productbuild ${CMAKE_MODULE_PATH})
 
+		set(CPACK_PRODUCTBUILD_RESOURCES_DIR ${PROJECT_ROOT_DIR}/installer/productbuild/resources)
+		set(CPACK_PRODUCTBUILD_BACKGROUND "background.png")
+		set(CPACK_PRODUCTBUILD_BACKGROUND_ALIGNMENT "bottomleft")
+		set(CPACK_PRODUCTBUILD_BACKGROUND_SCALING "proportional")
+		set(CPACK_PRODUCTBUILD_BACKGROUND_MIME_TYPE "image/png")
+		set(CPACK_PRODUCTBUILD_BACKGROUND_DARKAQUA "background.png")
+		set(CPACK_PRODUCTBUILD_BACKGROUND_DARKAQUA_ALIGNMENT "bottomleft")
+		set(CPACK_PRODUCTBUILD_BACKGROUND_DARKAQUA_SCALING "proportional")
+		set(CPACK_PRODUCTBUILD_BACKGROUND_DARKAQUA_MIME_TYPE "image/png")
+		set(CPACK_PRODUCTBUILD_IDENTITY_NAME "${LA_INSTALLER_SIGNING_IDENTITY}")
+		set(CPACK_PKGBUILD_IDENTITY_NAME "${LA_INSTALLER_SIGNING_IDENTITY}")
+
+		# Include CPack so we can call cpack_add_component
 		include(CPack REQUIRED)
 
+		# Create uninstall package
+		string(REGEX REPLACE "([][+.*()^])" "\\\\\\1" ESCAPED_IDENTITY "${LA_INSTALLER_SIGNING_IDENTITY}")
+		configure_file(
+			"${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/postinstall.in"
+			"${CMAKE_BINARY_DIR}/uninstaller/install-scripts/postinstall"
+		)
+		set(UNINSTALL_HIVE_GENERATED_PKG "${CMAKE_BINARY_DIR}/uninstaller.pkg")
+		add_custom_command(OUTPUT "${UNINSTALL_HIVE_GENERATED_PKG}"
+			COMMAND pkgbuild
+				--identifier fr.KikiSoft.Hive.uninstaller.pkg
+				--version 1.0
+				--nopayload
+				--sign ${ESCAPED_IDENTITY}
+				--scripts "${CMAKE_BINARY_DIR}/uninstaller/install-scripts/"
+				"${UNINSTALL_HIVE_GENERATED_PKG}"
+			DEPENDS
+				"${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/postinstall.in"
+				"${CMAKE_BINARY_DIR}/uninstaller/install-scripts/postinstall"
+		)
+		set(UNINSTALL_HIVE_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Uninstall ${CPACK_PACKAGE_NAME}.pkg")
+		add_custom_command(OUTPUT "${UNINSTALL_HIVE_GENERATED_PRODUCT}"
+			COMMAND productbuild
+				--identifier fr.KikiSoft.Hive.uninstaller.product
+				--version 1.0
+				--sign ${ESCAPED_IDENTITY}
+				--distribution "${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/install-distribution.xml"
+				--package-path "${CMAKE_BINARY_DIR}"
+				${UNINSTALL_HIVE_GENERATED_PRODUCT}
+			DEPENDS
+				"${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/install-distribution.xml"
+				${UNINSTALL_HIVE_GENERATED_PKG}
+		)
+		add_custom_target(uninstall_pkg ALL DEPENDS "${UNINSTALL_HIVE_GENERATED_PRODUCT}")
+		install(FILES "${UNINSTALL_HIVE_GENERATED_PRODUCT}" DESTINATION "${MACOS_INSTALL_FOLDER}")
+
+		# Setup components
+		cpack_add_component(${CMAKE_INSTALL_DEFAULT_COMPONENT_NAME} DISPLAY_NAME "${PROJECT_NAME}" DESCRIPTION "Installs ${PROJECT_NAME} Application." REQUIRED)
 	endif()
 
 endif()
