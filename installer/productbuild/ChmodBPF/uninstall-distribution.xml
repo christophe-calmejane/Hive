@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Uninstall ChmodBPF</title>
+    <welcome language="en" mime-type="text/html"><![CDATA[<html><body><br />
+<p style="margin: 0px; font: 13px 'Lucida Grande'">This package will uninstall the ChmodBPF launch daemon and remove the access_bpf group.</p></body></html>]]></welcome>
+    <pkg-ref id="com.KikiSoft.Hive.ChmodBPF.pkg"/>
+    <options customize="never" require-scripts="false"/>
+    <domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.KikiSoft.Hive.ChmodBPF.pkg"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.KikiSoft.Hive.ChmodBPF.pkg" visible="false">
+        <pkg-ref id="com.KikiSoft.Hive.ChmodBPF.pkg"/>
+    </choice>
+    <pkg-ref id="com.KikiSoft.Hive.ChmodBPF.pkg" version="1.1" onConclusion="none">uninstall.ChmodBPF.pkg</pkg-ref>
+</installer-gui-script>
