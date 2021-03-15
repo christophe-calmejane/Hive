@@ -675,7 +675,7 @@ fi
 # Call notarization
 if isMac; then
 	if [ ! "x${params["notarization_username"]}" == "x" ]; then
-		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "fr.KikiSoft.Hive.${installerExtension}"
+		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
 		if [ $? -ne 0 ]; then
 			echo "Failed to notarize installer"
 			exit 1
