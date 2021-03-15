@@ -26,28 +26,28 @@ namespace hive
 {
 namespace internals
 {
-	QString const applicationShortName{ "@PROJECT_NAME@" };
-	QString const applicationLongName{ "@PROJECT_FULL_NAME@" };
-	QString const versionString{ "@HIVE_FRIENDLY_VERSION@" };
-	QString const marketingVersion{ "@HIVE_MARKETING_VERSION@" };
-	QString const cmakeVersionString{ "@HIVE_VERSION@" };
-	QString const projectURL{ "@PROJECT_URL@" };
-	QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
-	QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
-	QString const authors{ "@PROJECT_AUTHORS@" };
-	QString const contact{ "@PROJECT_CONTACT@" };
-	QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };
-	QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
-	QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
-	QString const organizationName{ "@PROJECT_COMPANYNAME@" };
-	QString const buildArchitecture{ "@PROJECT_ARCH@" };
+QString const applicationShortName{ "@PROJECT_NAME@" };
+QString const applicationLongName{ "@PROJECT_FULL_NAME@" };
+QString const versionString{ "@HIVE_FRIENDLY_VERSION@" };
+QString const marketingVersion{ "@HIVE_MARKETING_VERSION@" };
+QString const cmakeVersionString{ "@HIVE_VERSION@" };
+QString const projectURL{ "@PROJECT_URL@" };
+QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
+QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
+QString const authors{ "@PROJECT_AUTHORS@" };
+QString const contact{ "@PROJECT_CONTACT@" };
+QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };
+QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
+QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
+QString const organizationName{ "@PROJECT_COMPANYNAME@" };
+QString const buildArchitecture{ "@PROJECT_ARCH@" };
 #ifdef DEBUG
-	QString const buildConfiguration{ "Debug" };
+QString const buildConfiguration{ "Debug" };
 #else // !DEBUG
-	QString const buildConfiguration{ "Release" };
+QString const buildConfiguration{ "Release" };
 #endif // DEBUG
-	std::string const appcastReleasesUrl{ "@HIVE_APPCAST_RELEASES_URL@" };
-	std::string const appcastBetasUrl{ "@HIVE_APPCAST_BETAS_URL@" };
+std::string const appcastReleasesUrl{ "@HIVE_APPCAST_RELEASES_URL@" };
+std::string const appcastBetasUrl{ "@HIVE_APPCAST_BETAS_URL@" };
 
 } // namespace internals
 } // namespace hive

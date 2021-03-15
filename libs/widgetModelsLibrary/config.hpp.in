@@ -27,24 +27,24 @@ namespace widgetModelsLibrary
 {
 namespace internals
 {
-	QString const libraryShortName{ "@PROJECT_NAME@" };
-	QString const libraryDescription{ "@LA_PROJECT_PRODUCTDESCRIPTION@" };
-	QString const versionString{ "@HIVE_FRIENDLY_VERSION@" };
-	QString const marketingVersion{ "@HIVE_MARKETING_VERSION@" };
-	QString const cmakeVersionString{ "@HIVE_VERSION@" };
-	QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
-	QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
-	QString const authors{ "@PROJECT_AUTHORS@" };
-	QString const contact{ "@PROJECT_CONTACT@" };
-	QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };
-	QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
-	QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
-	QString const organizationName{ "@PROJECT_COMPANYNAME@" };
-	QString const buildArchitecture{ "@PROJECT_ARCH@" };
+QString const libraryShortName{ "@PROJECT_NAME@" };
+QString const libraryDescription{ "@LA_PROJECT_PRODUCTDESCRIPTION@" };
+QString const versionString{ "@HIVE_FRIENDLY_VERSION@" };
+QString const marketingVersion{ "@HIVE_MARKETING_VERSION@" };
+QString const cmakeVersionString{ "@HIVE_VERSION@" };
+QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
+QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
+QString const authors{ "@PROJECT_AUTHORS@" };
+QString const contact{ "@PROJECT_CONTACT@" };
+QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };
+QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
+QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
+QString const organizationName{ "@PROJECT_COMPANYNAME@" };
+QString const buildArchitecture{ "@PROJECT_ARCH@" };
 #ifdef DEBUG
-	QString const buildConfiguration{ "Debug" };
+QString const buildConfiguration{ "Debug" };
 #else // !DEBUG
-	QString const buildConfiguration{ "Release" };
+QString const buildConfiguration{ "Release" };
 #endif // DEBUG
 
 } // namespace internals
