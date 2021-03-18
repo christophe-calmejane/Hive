@@ -19,24 +19,41 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 ## Compilation
 
 - Clone this repository
-- Copy .hive.config.sample to .hive.config, then edit it for installer customization
-- Run the setup_fresh_env.sh script that should properly setup your working copy
-- Run the gen_cmake.sh script with whatever optional parameters required (run *gen_cmake.sh -h* to display the help)
+- Copy `.hive_config.sample` to `.hive_config`, then edit it for installer customization
+- Run the `setup_fresh_env.sh` script that should properly setup your working copy
+- Run the `gen_cmake.sh` script with whatever optional parameters required (run *gen_cmake.sh -h* to display the help)
 - Go into the generated output folder
 - Open the generated solution
 - Compile everything
 - Compile the *install* target
 
-## Linux specificities
+## Installer generation
+
+- Run the `gen_install.sh` script on either Windows or macOS (not supported on Linux yet)
+
+### MacOS notarization
+
+If you want to generate a proper installer that can be distributed (outside the AppStore), you need to notarize the installer. The `gen_install.sh` script can do this for you if you define `notarization_username` and `notarization_password`.
+Note that `notarization_password` can be omitted if you save the password in your keychain.
+
+You can only use an application-password, **not your Apple ID account password**. To generate an application-password, do the following:
+- Sign in to your [Apple ID account page](https://appleid.apple.com/account/home) (https://appleid.apple.com/account/home)
+- In the Security section, click Generate Password below App-Specific Passwords
+- Follow the steps on your screen
+
+To save the password in your keychain, do the following:
+- `xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u AccountEmailAdrs -p AppSpecificPwd`
+
+## MacOS runtime specificities
+
+Before running Hive on a macOS system, you must install `Install ChmodBPF.pkg` which can be found in `/Applications/Hive <Version>/`. If you have previously installed [Wireshark](https://www.wireshark.org) or [LANetworkManager](https://www.l-acoustics.com), then you don't need this step.
+
+## Linux runtime specificities
 
 Before running Hive on a linux system, you must give the program access to RAW SOCKETS creation. The easiest way to do it is to run the following command (replace `/path/to/Hive` with the actual path to the binary):
 ```bash
 sudo setcap cap_net_raw+ep /path/to/Hive
 ```
-
-### Troubleshooting
-
-- If you have the _cannot find winsock2.h_ compilation error, install or reinstall [Windows 8.1 SDK](https://developer.microsoft.com/en-US/windows/downloads/sdk-archive)
 
 ## Versioning
 
@@ -59,3 +76,4 @@ Hive uses the following 3rd party resources:
 - [Discount Markdown](http://www.pell.portland.or.us/~orc/Code/markdown/)
 - [BugTrap](https://github.com/bchavez/BugTrap)
 - [Sparkle](https://sparkle-project.org) and [WinSparkle](https://github.com/vslavik/winsparkle)
+- ChmodBPF macOS script from [Wireshark](https://www.wireshark.org)
