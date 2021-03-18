@@ -35,6 +35,7 @@ class SettingsDialogImpl final : public Ui::SettingsDialog
 {
 public:
 	SettingsDialogImpl(::SettingsDialog* parent)
+		: _parent(parent)
 	{
 		// Link UI
 		setupUi(parent);
@@ -169,13 +170,20 @@ private:
 		{
 #ifndef DEBUG
 			if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
+			{
 				continue;
+			}
 #endif // !DEBUG
 			protocolComboBox->addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
+		}
+		if (protocolComboBox->count() == 0)
+		{
+			QMessageBox::warning(_parent, "", "No Network Protocol available.\nPlease reinstall pcap driver.");
 		}
 	}
 
 private:
+	::SettingsDialog* _parent{ nullptr };
 	qtMate::material::color::Palette _themeColorModel;
 	NetworkInterfaceTypeModel _networkInterfaceTypeModel;
 };

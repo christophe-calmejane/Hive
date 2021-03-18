@@ -263,6 +263,13 @@ void MainWindowImpl::currentControllerChanged()
 	auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
+	// Check for No ProtocolInterface
+	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::None)
+	{
+		QMessageBox::warning(_parent, "", "No Network Protocol selected.\nPlease choose one from the Settings.");
+		return;
+	}
+
 	// Check for WinPcap driver
 	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::PCap && _shown)
 	{
@@ -507,16 +514,26 @@ void MainWindowImpl::loadSettings()
 		{
 			LOG_HIVE_WARN(QString("Previously configured Network Protocol is no longer supported: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
 		}
+		// Remove Virtual Protocol Interface in Release
+#ifndef DEBUG
+		supportedTypes.reset(la::avdecc::protocol::ProtocolInterface::Type::Virtual);
+#endif
+		// If at least one type remains, use it
 		if (!supportedTypes.empty())
 		{
-			// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
+			// Force the first supported ProtocolInterface
 			protocolType = *supportedTypes.begin();
 			if (wasConfigured)
 			{
 				LOG_HIVE_WARN(QString("Forcing new Network Protocol: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
 			}
-			settings.setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
 		}
+		else
+		{
+			protocolType = la::avdecc::protocol::ProtocolInterface::Type::None;
+		}
+		// Save the new ProtocolInterface to the settings, before we call registerSettingObserver
+		settings.setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
 	}
 
 	// Configure connectionMatrix mode
@@ -1156,21 +1173,6 @@ void MainWindow::showEvent(QShowEvent* event)
 						});
 				}
 			}
-#ifdef _WIN32
-			// Check for WinPcap
-			{
-				auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
-				if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::PCap)
-				{
-					// Postpone check (because of possible dialog creation)
-					QTimer::singleShot(0,
-						[this]()
-						{
-							_pImpl->checkNpfStatus();
-						});
-				}
-			}
-#endif // _WIN32
 			// Check if this is the first time we launch a new Hive version
 			{
 				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
