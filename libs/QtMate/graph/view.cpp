@@ -30,7 +30,6 @@ namespace qtMate
 {
 namespace graph
 {
-
 Qt::Edges computeCloseEdges(QPoint const& p, QRect const& r, int const margin = 20)
 {
 	auto edges = Qt::Edges{};
@@ -40,10 +39,22 @@ Qt::Edges computeCloseEdges(QPoint const& p, QRect const& r, int const margin = 
 	auto const right = r.right() - margin;
 	auto const bottom = r.bottom() - margin;
 
-	if (p.x() <= left) edges.setFlag(Qt::Edge::LeftEdge);
-	if (p.y() <= top) edges.setFlag(Qt::Edge::TopEdge);
-	if (p.x() >= right) edges.setFlag(Qt::Edge::RightEdge);
-	if (p.y() >= bottom) edges.setFlag(Qt::Edge::BottomEdge);
+	if (p.x() <= left)
+	{
+		edges.setFlag(Qt::Edge::LeftEdge);
+	}
+	if (p.y() <= top)
+	{
+		edges.setFlag(Qt::Edge::TopEdge);
+	}
+	if (p.x() >= right)
+	{
+		edges.setFlag(Qt::Edge::RightEdge);
+	}
+	if (p.y() >= bottom)
+	{
+		edges.setFlag(Qt::Edge::BottomEdge);
+	}
 
 	return edges;
 }
@@ -265,8 +276,8 @@ void GraphicsView::mouseReleaseEvent(QMouseEvent* event)
 	QGraphicsView::mouseReleaseEvent(event);
 }
 
-void GraphicsView::timerEvent(QTimerEvent* event) {
-
+void GraphicsView::timerEvent(QTimerEvent* event)
+{
 	auto const pos = mapFromGlobal(QCursor::pos());
 	auto const viewportGeometry = viewport()->geometry();
 
@@ -351,7 +362,7 @@ SocketItem* GraphicsView::socketAt(QPoint const& pos) const
 
 void GraphicsView::startAutoScroll()
 {
-	_autoScrollTimer = startTimer(std::chrono::milliseconds{ 100 });
+	_autoScrollTimer = startTimer(std::chrono::milliseconds{ 50 });
 }
 
 void GraphicsView::stopAutoScroll()
