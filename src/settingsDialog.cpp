@@ -29,6 +29,8 @@
 #include <QtMate/widgets/tickableMenu.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
 
+#include <QMessageBox>
+
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
 class SettingsDialogImpl final : public Ui::SettingsDialog
