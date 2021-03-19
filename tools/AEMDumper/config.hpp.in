@@ -26,24 +26,24 @@ namespace aemDumper
 {
 namespace internals
 {
-	QString const applicationShortName{ "@PROJECT_NAME@" };
-	QString const applicationLongName{ "@LA_PROJECT_PRODUCTDESCRIPTION@" };
-	QString const versionString{ "@LA_PROJECT_VERSION_STRING@" };
-	QString const cmakeVersionString{ "@LA_PROJECT_CMAKEVERSION_STRING@" };
-	QString const projectURL{ "@PROJECT_URL@" };
-	QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
-	QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
-	QString const authors{ "@PROJECT_AUTHORS@" };
-	QString const contact{ "@PROJECT_CONTACT@" };
-	QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };
-	QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
-	QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
-	QString const organizationName{ "@PROJECT_COMPANYNAME@" };
-	QString const buildArchitecture{ "@PROJECT_ARCH@" };
+QString const applicationShortName{ "@PROJECT_NAME@" };
+QString const applicationLongName{ "@LA_PROJECT_PRODUCTDESCRIPTION@" };
+QString const versionString{ "@LA_PROJECT_VERSION_STRING@" };
+QString const cmakeVersionString{ "@LA_PROJECT_CMAKEVERSION_STRING@" };
+QString const projectURL{ "@PROJECT_URL@" };
+QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
+QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
+QString const authors{ "@PROJECT_AUTHORS@" };
+QString const contact{ "@PROJECT_CONTACT@" };
+QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };
+QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
+QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
+QString const organizationName{ "@PROJECT_COMPANYNAME@" };
+QString const buildArchitecture{ "@PROJECT_ARCH@" };
 #ifdef DEBUG
-	QString const buildConfiguration{ "Debug" };
+QString const buildConfiguration{ "Debug" };
 #else // !DEBUG
-	QString const buildConfiguration{ "Release" };
+QString const buildConfiguration{ "Release" };
 #endif // DEBUG
 
 } // namespace internals

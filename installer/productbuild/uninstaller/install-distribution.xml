@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Remove Hive from the system</title>
+    <welcome language="en" mime-type="text/html"><![CDATA[<html><body><br />
+<p style="margin: 0px; font: 13px 'Lucida Grande'">This package will remove Hive and its associated utilities from the system.</p></body></html>]]></welcome>
+    <pkg-ref id="com.KikiSoft.Hive.uninstaller.pkg"/>
+    <options customize="never" require-scripts="false"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.KikiSoft.Hive.uninstaller.pkg"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.KikiSoft.Hive.uninstaller.pkg" visible="false">
+        <pkg-ref id="com.KikiSoft.Hive.uninstaller.pkg"/>
+    </choice>
+    <pkg-ref id="com.KikiSoft.Hive.uninstaller.pkg" version="1.0" onConclusion="none">uninstaller.pkg</pkg-ref>
+</installer-gui-script>

@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New CLI tool to dump AEM from entities: AEMDumper
 - Support for Control Descriptors (only Linear Values for now)
 - Support for Controller to Entity Identification (right-click an entity in the list)
+- [Added a daemon on macOS to setup pcap access rights for non-root execution](https://github.com/christophe-calmejane/Hive/issues/50)
 
 ### Changed
 - macOS minimum version is now 10.12 (due to Qt update)
+- Using macOS PKG installer instead of simple DMG
 
 ### Fixed
 - Slightly improved Firmware Update Dialog

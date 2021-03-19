@@ -1,0 +1,8 @@
+#!/bin/sh
+
+#
+# Remove Hive and associated files.
+#
+
+rm -rf "/Applications/@MACOS_INSTALL_FOLDER@"
+pkgutil --forget "com.KikiSoft.@CPACK_PACKAGE_NAME@.Hive"

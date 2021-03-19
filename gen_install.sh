@@ -572,7 +572,7 @@ if isWindows; then
 	installerExtension="exe"
 elif isMac; then
 	installerOSName="Darwin"
-	installerExtension="dmg"
+	installerExtension="pkg"
 else
 	getOS osName
 	echo "ERROR: Installer for $osName not supported yet"
@@ -646,19 +646,18 @@ if [ ! -f "$installerFile" ]; then
 fi
 
 if [ $doSign -eq 1 ]; then
-	echo -n "Signing Package..."
-	if isMac; then
-		log=$(codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}")
-	else
+	# MacOS already signed by CPack
+	if isWindows; then
+		echo -n "Signing Package..."
 		log=$(signtool sign ${signtoolOptions} "${installerFile}")
+		if [ $? -ne 0 ]; then
+			echo "Failed to sign package ;("
+			echo ""
+			echo $log
+			exit 1
+		fi
+		echo "done"
 	fi
-	if [ $? -ne 0 ]; then
-		echo "Failed to sign package ;("
-		echo ""
-		echo $log
-		exit 1
-	fi
-	echo "done"
 fi
 
 mv "${installerFile}" .
@@ -676,7 +675,7 @@ fi
 # Call notarization
 if isMac; then
 	if [ ! "x${params["notarization_username"]}" == "x" ]; then
-		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "fr.KikiSoft.Hive.dmg"
+		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
 		if [ $? -ne 0 ]; then
 			echo "Failed to notarize installer"
 			exit 1
