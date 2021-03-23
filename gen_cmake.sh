@@ -51,8 +51,8 @@ if isMac; then
 	supportedArchs+=("${default_arch}")
 else
 	# Use cmake from the path
-	cmake_path="cmake"
 	if isWindows; then
+		cmake_path="cmake.exe"
 		generator="$default_VisualGenerator"
 		generator_arch="$default_VisualGeneratorArch"
 		toolset="$default_VisualToolset"
@@ -61,6 +61,7 @@ else
 		supportedArchs+=("x86")
 		supportedArchs+=("x64")
 	else
+		cmake_path="cmake"
 		generator="Unix Makefiles"
 		getMachineArch default_arch
 		supportedArchs+=("${default_arch}")
