@@ -19,12 +19,6 @@ configure_file(
 
 set(ADD_LINK_LIBS "")
 set(PCH_HEADER_NAME "pch.hpp")
-set(PCH_SOURCE_NAME "pch.cpp")
-
-# Define PCH files for windows
-if(WIN32)
-	set(PCH_FILES ${PCH_HEADER_NAME} ${PCH_SOURCE_NAME})
-endif()
 
 # Resource files
 set(RESOURCE_FILES
@@ -233,10 +227,10 @@ source_group(TREE ${HIVE_RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOU
 source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
 
 # Define static library to be used by main application and unit tests
-add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON} ${PCH_FILES})
+add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON})
 
 # Enable precompiled headers
-set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME} ${PCH_SOURCE_NAME})
+set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
 
 # Setup common options
 setup_library_options(${PROJECT_NAME}_static "${PROJECT_NAME}_static")
