@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - macOS minimum version is now 10.12 (due to Qt update)
 - Using macOS PKG installer instead of simple DMG
+  - **WARNING**: When upgrading from a DMG version of Hive, you will have to manually close and erase the previous version
 
 ### Fixed
 - Slightly improved Firmware Update Dialog

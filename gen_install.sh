@@ -27,6 +27,12 @@ then
 fi
 if isMac;
 then
+	which tar &> /dev/null
+	if [ $? -ne 0 ];
+	then
+		echo "tar required. Install it via HomeBrew"
+		exit 127
+	fi
 	which grep &> /dev/null
 	if [ $? -ne 0 ];
 	then
@@ -671,9 +677,11 @@ if [ ! -z "${symbolsFile}" ]; then
 	popd &> /dev/null
 fi
 
+appcastInstallerName="${fullInstallerName}"
 
-# Call notarization
+# macOS specific code
 if isMac; then
+	# Call notarization
 	if [ ! "x${params["notarization_username"]}" == "x" ]; then
 		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
 		if [ $? -ne 0 ]; then
@@ -681,14 +689,18 @@ if isMac; then
 			exit 1
 		fi
 	fi
+	# Tar the installer as Sparkle do not support PKG
+	appcastInstallerName="${fullInstallerName}.tar"
+	tar cvf "${appcastInstallerName}" "${fullInstallerName}" &> /dev/null
+	rm -f "${fullInstallerName}" &> /dev/null
 fi
 
-generateAppcast "${fullInstallerName}" "${releaseVersion}${beta_tag}" $is_release
+generateAppcast "${appcastInstallerName}" "${releaseVersion}${beta_tag}" $is_release
 
 echo ""
 echo "Do not forget to upload:"
 echo " - CHANGELOG.MD"
-echo " - Installer file"
+echo " - Installer file: ${appcastInstallerName}"
 echo " - Updated appcast file(s)"
 
 exit 0
