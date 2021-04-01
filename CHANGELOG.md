@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [AVB domain incompatibility checks for gPTP domain number](https://github.com/christophe-calmejane/Hive/issues/98)
 - [Using a timestamped filename when saving the log file](https://github.com/christophe-calmejane/Hive/issues/99)
 - Added a popup error message if the pcap driver is not properly installed
+- [Changing more than 63 mappings at the same time doesn't cause an error](https://github.com/christophe-calmejane/Hive/issues/95)
 
 ## [1.2.3] - 2020-09-14
 ### Added
