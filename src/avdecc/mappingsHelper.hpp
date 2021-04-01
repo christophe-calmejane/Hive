@@ -39,6 +39,14 @@ namespace mappingsHelper
 {
 void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 la::avdecc::entity::model::AudioMappings getMaximumAudioMappings(la::avdecc::entity::model::AudioMappings const& mappings, size_t const offset) noexcept;
+/** Adds new input audio mappings. Entity is expected to be under ExclusiveAccess. */
+void batchAddInputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::AddStreamPortInputAudioMappingsHandler const& handler = {}) noexcept;
+/** Adds new output audio mappings. Entity is expected to be under ExclusiveAccess. */
+void batchAddOutputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::AddStreamPortInputAudioMappingsHandler const& handler = {}) noexcept;
+/** Removes new input audio mappings. Entity is expected to be under ExclusiveAccess. */
+void batchRemoveInputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::RemoveStreamPortInputAudioMappingsHandler const& handler = {}) noexcept;
+/** Removes new output audio mappings. Entity is expected to be under ExclusiveAccess. */
+void batchRemoveOutputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::RemoveStreamPortInputAudioMappingsHandler const& handler = {}) noexcept;
 
 } // namespace mappingsHelper
 } // namespace avdecc

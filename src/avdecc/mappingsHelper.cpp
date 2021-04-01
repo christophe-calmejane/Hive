@@ -331,7 +331,6 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 	}
 }
 
-
 std::pair<NodeMappings, mappingMatrix::Nodes> buildClusterMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamPortNode const& streamPortNode)
 {
 	NodeMappings clusterMappings;
@@ -376,8 +375,8 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 				mappingMatrix::Nodes outputs;
 				mappingMatrix::Nodes inputs;
 				mappingMatrix::Connections connections;
-				avdecc::mappingsHelper::NodeMappings streamMappings;
-				avdecc::mappingsHelper::NodeMappings clusterMappings;
+				NodeMappings streamMappings;
+				NodeMappings clusterMappings;
 
 				auto const isValidClockDomain = [](auto const& streamPortNode, auto const& streamNode)
 				{
@@ -444,10 +443,10 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 					}
 
 					// Build mappingMatrix vectors
-					auto clusterResult = avdecc::mappingsHelper::buildClusterMappings(entity, streamPortNode);
+					auto clusterResult = buildClusterMappings(entity, streamPortNode);
 					clusterMappings = std::move(clusterResult.first);
 					inputs = std::move(clusterResult.second);
-					auto streamResult = avdecc::mappingsHelper::buildStreamMappings(entity, streamNodes);
+					auto streamResult = buildStreamMappings(entity, streamNodes);
 					streamMappings = std::move(streamResult.first);
 					outputs = std::move(streamResult.second);
 					connections = buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
@@ -507,10 +506,10 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 					}
 
 					// Build mappingMatrix vectors
-					auto clusterResult = avdecc::mappingsHelper::buildClusterMappings(entity, streamPortNode);
+					auto clusterResult = buildClusterMappings(entity, streamPortNode);
 					clusterMappings = std::move(clusterResult.first);
 					outputs = std::move(clusterResult.second);
-					auto streamResult = avdecc::mappingsHelper::buildStreamMappings(entity, streamNodes);
+					auto streamResult = buildStreamMappings(entity, streamNodes);
 					streamMappings = std::move(streamResult.first);
 					inputs = std::move(streamResult.second);
 					connections = buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
@@ -528,7 +527,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 				{
 					auto smartName = hive::modelsLibrary::helper::smartEntityName(*entity);
 
-					// Release the controlled entity before starting a long operation (dialog.exec)
+					// Release the controlled entity before starting a long operation
 					controlledEntity.reset();
 
 					// Get exclusive access
@@ -558,11 +557,11 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 									{
 										if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 										{
-											avdecc::mappingsHelper::processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+											processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
 										}
 										else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 										{
-											avdecc::mappingsHelper::processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+											processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
 										}
 									}
 								});
@@ -590,6 +589,72 @@ la::avdecc::entity::model::AudioMappings getMaximumAudioMappings(la::avdecc::ent
 
 	auto const& begin = mappings.begin() + offset;
 	return la::avdecc::entity::model::AudioMappings{ begin, begin + nbCopy };
+}
+
+template<la::avdecc::entity::model::DescriptorType StreamPortType, bool Remove, typename HandlerType>
+void processMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, HandlerType const& handler)
+{
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	auto const countMappings = mappings.size();
+	auto offset = decltype(countMappings){ 0u };
+	while (offset < countMappings)
+	{
+		auto const m = getMaximumAudioMappings(mappings, offset);
+		auto const count = m.size();
+		if (!AVDECC_ASSERT_WITH_RET(count != 0, "Should have at least one mapping to change"))
+		{
+			break;
+		}
+		offset += count;
+
+		if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+		{
+			if constexpr (Remove)
+			{
+				manager.removeStreamPortInputAudioMappings(entityID, streamPortIndex, m, handler);
+			}
+			else
+			{
+				manager.addStreamPortInputAudioMappings(entityID, streamPortIndex, m, handler);
+			}
+		}
+		else if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+		{
+			if constexpr (Remove)
+			{
+				manager.removeStreamPortOutputAudioMappings(entityID, streamPortIndex, m, handler);
+			}
+			else
+			{
+				manager.addStreamPortOutputAudioMappings(entityID, streamPortIndex, m, handler);
+			}
+		}
+		else
+		{
+			AVDECC_ASSERT(false, "Unsupported StreamPort type");
+		}
+	}
+}
+
+void batchAddInputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::AddStreamPortInputAudioMappingsHandler const& handler) noexcept
+{
+	processMappings<la::avdecc::entity::model::DescriptorType::StreamPortInput, false>(entityID, streamPortIndex, mappings, handler);
+}
+
+void batchAddOutputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::AddStreamPortInputAudioMappingsHandler const& handler) noexcept
+{
+	processMappings<la::avdecc::entity::model::DescriptorType::StreamPortOutput, false>(entityID, streamPortIndex, mappings, handler);
+}
+
+void batchRemoveInputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::RemoveStreamPortInputAudioMappingsHandler const& handler) noexcept
+{
+	processMappings<la::avdecc::entity::model::DescriptorType::StreamPortInput, true>(entityID, streamPortIndex, mappings, handler);
+}
+
+void batchRemoveOutputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::RemoveStreamPortInputAudioMappingsHandler const& handler) noexcept
+{
+	processMappings<la::avdecc::entity::model::DescriptorType::StreamPortOutput, true>(entityID, streamPortIndex, mappings, handler);
 }
 
 } // namespace mappingsHelper
