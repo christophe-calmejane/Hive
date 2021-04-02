@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -25,6 +25,7 @@
 #include <QStandardPaths>
 #include <QShortcut>
 #include <QMessageBox>
+#include <QDateTime>
 
 class AutoScrollBar : public QScrollBar
 {
@@ -140,7 +141,7 @@ LoggerView::LoggerView(QWidget* parent)
 			level.setCaseSensitivity(Qt::CaseInsensitive);
 			layer.setCaseSensitivity(Qt::CaseInsensitive);
 
-			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/%2.txt").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()), "*.txt");
+			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/%2_%3.log").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()).arg(QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss")), "*.log");
 			if (!filename.isEmpty())
 			{
 				_loggerModel.save(filename, { search, level, layer });
@@ -183,9 +184,9 @@ LoggerView::LoggerView(QWidget* parent)
 	createLevelFilterButton();
 }
 
-qt::toolkit::DynamicHeaderView* LoggerView::header() const
+qtMate::widgets::DynamicHeaderView* LoggerView::header() const
 {
-	return const_cast<qt::toolkit::DynamicHeaderView*>(&_dynamicHeaderView);
+	return const_cast<qtMate::widgets::DynamicHeaderView*>(&_dynamicHeaderView);
 }
 
 void LoggerView::createLayerFilterButton()

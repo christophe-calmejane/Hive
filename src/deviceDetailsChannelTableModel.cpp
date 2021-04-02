@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,23 +18,21 @@
 */
 
 #include "deviceDetailsChannelTableModel.hpp"
-
-#include "avdecc/channelConnectionManager.hpp"
-
-#include <QCoreApplication>
-#include <QLayout>
-#include <QPainter>
-
-#include <la/avdecc/avdecc.hpp>
-#include <la/avdecc/controller/avdeccController.hpp>
-
 #include "ui_deviceDetailsDialog.h"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "connectionMatrix/paintHelper.hpp"
+#include "avdecc/channelConnectionManager.hpp"
 
+#include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+
+#include <QCoreApplication>
+#include <QLayout>
+#include <QPainter>
 
 /**
 * Helper function for connectionStatus medthod. Checks if the stream is currently connected.
@@ -84,7 +82,7 @@ bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkS
 // Returns the connection status of the given talker-listener pair.
 DeviceDetailsChannelTableModel::ConnectionStatus calculateConnectionStatus(la::avdecc::UniqueIdentifier talkerEntityId, la::avdecc::entity::model::StreamIndex talkerStreamIndex, la::avdecc::UniqueIdentifier listenerEntityId, la::avdecc::entity::model::StreamIndex listenerStreamIndex)
 {
-	auto const& manager = avdecc::ControllerManager::getInstance();
+	auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto talkerEntity = manager.getControlledEntity(talkerEntityId);
 	auto listenerEntity = manager.getControlledEntity(listenerEntityId);
 	if (!talkerEntity || !listenerEntity)
@@ -394,7 +392,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				{
 					try
 					{
-						auto const& controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(connectionInfo->sourceEntityId);
+						auto const& controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(connectionInfo->sourceEntityId);
 						if (controlledEntity)
 						{
 							auto const configurationIndex = connectionInfo->sourceClusterChannelInfo->configurationIndex;
@@ -410,7 +408,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										return avdecc::helper::objectName(controlledEntity.get(), audioClusterIt->second);
+										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), audioClusterIt->second);
 									}
 								}
 							}
@@ -423,7 +421,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										return avdecc::helper::objectName(controlledEntity.get(), audioClusterIt->second);
+										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), audioClusterIt->second);
 									}
 								}
 							}
@@ -452,7 +450,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 						for (auto const& clusterKV : connection->targetClusterChannels)
 						{
 							auto const& targetEntityId = connection->targetEntityId;
-							auto const& manager = avdecc::ControllerManager::getInstance();
+							auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 							auto controlledEntity = manager.getControlledEntity(targetEntityId);
 							if (!controlledEntity)
 							{
@@ -465,16 +463,16 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								QString clusterName;
 								if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 								{
-									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+									clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 								}
 								else
 								{
-									clusterName = avdecc::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+									clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 								}
 
 								if (connection->isSourceRedundant && connection->isTargetRedundant)
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())).append(" (Prim)"));
+									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Prim)"));
 
 									auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
@@ -501,7 +499,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 
 									while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 									{
-										connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())).append(" (Sec)"));
+										connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Sec)"));
 
 										itOutputs++;
 										itInputs++;
@@ -509,7 +507,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								}
 								else
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(avdecc::helper::smartEntityName(*controlledEntity.get())));
+									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())));
 								}
 							}
 							innerRow++;
@@ -555,7 +553,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							listenerStreamIndex = connection->sourceStreamIndex;
 						}
 
-						auto const& manager = avdecc::ControllerManager::getInstance();
+						auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						auto talkerEntity = manager.getControlledEntity(talkerEntityId);
 						auto listenerEntity = manager.getControlledEntity(listenerEntityId);
 

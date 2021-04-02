@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,9 +18,11 @@
 */
 
 #include "commandChain.hpp"
-#include "controllerManager.hpp"
 #include "helper.hpp"
+
 #include <la/avdecc/internals/streamFormatInfo.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+
 #include <atomic>
 #include <optional>
 #include <unordered_set>
@@ -143,7 +145,7 @@ void AsyncParallelCommandSet::append(std::vector<AsyncCommand> const& commands) 
 /**
 		* Adds error info for acmp commands.
 		*/
-void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AcmpCommandType const commandType) noexcept
+void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, hive::modelsLibrary::ControllerManager::AcmpCommandType const commandType) noexcept
 {
 	CommandErrorInfo info{ error };
 	info.commandTypeAcmp = commandType;
@@ -153,7 +155,7 @@ void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const en
 /**
 		* Adds error info for aecp commands.
 		*/
-void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, avdecc::ControllerManager::AecpCommandType const commandType) noexcept
+void AsyncParallelCommandSet::addErrorInfo(la::avdecc::UniqueIdentifier const entityId, CommandExecutionError const error, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType) noexcept
 {
 	CommandErrorInfo info{ error };
 	info.commandTypeAecp = commandType;
@@ -243,7 +245,7 @@ SequentialAsyncCommandExecuter::~SequentialAsyncCommandExecuter()
 		*/
 void SequentialAsyncCommandExecuter::setCommandChain(std::vector<AsyncParallelCommandSet*> const& commands) noexcept
 {
-	auto totalCommandCount = std::uint32_t{ 0 };
+	auto totalCommandCount = size_t{ 0 };
 	_commands = commands;
 	for (auto* command : _commands)
 	{

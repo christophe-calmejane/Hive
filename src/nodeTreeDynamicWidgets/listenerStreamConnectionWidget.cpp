@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,6 +18,8 @@
 */
 
 #include "listenerStreamConnectionWidget.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
 
 #include <QMenu>
 #include <QStyle>
@@ -41,10 +43,10 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	updateData();
 
 	// Connect ControllerManager signals
-	auto const& manager = avdecc::ControllerManager::getInstance();
+	auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	// Listen for Connection changed signals
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamInputConnectionChanged, this,
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamInputConnectionChanged, this,
 		[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 		{
 			if (stream == _stream)
@@ -57,7 +59,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 		});
 
 	// EntityOnline
-	connect(&manager, &avdecc::ControllerManager::entityOnline, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			if (entityID == _info.talkerStream.entityID)
@@ -65,7 +67,7 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 		});
 
 	// EntityOffline
-	connect(&manager, &avdecc::ControllerManager::entityOffline, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			if (entityID == _info.talkerStream.entityID)
@@ -77,13 +79,13 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	connect(&_disconnectButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			avdecc::ControllerManager::getInstance().disconnectStream(_info.talkerStream.entityID, _info.talkerStream.streamIndex, _stream.entityID, _stream.streamIndex);
+			hive::modelsLibrary::ControllerManager::getInstance().disconnectStream(_info.talkerStream.entityID, _info.talkerStream.streamIndex, _stream.entityID, _stream.streamIndex);
 		});
 }
 
 void ListenerStreamConnectionWidget::updateData()
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	QString stateText{ "Unknown" };
 	auto haveTalker{ false };
@@ -130,7 +132,7 @@ void ListenerStreamConnectionWidget::updateData()
 	}
 	else
 	{
-		_streamConnectionLabel.setText(stateText + avdecc::helper::uniqueIdentifierToString(_info.talkerStream.entityID) + ":" + QString::number(_info.talkerStream.streamIndex));
+		_streamConnectionLabel.setText(stateText + hive::modelsLibrary::helper::uniqueIdentifierToString(_info.talkerStream.entityID) + ":" + QString::number(_info.talkerStream.streamIndex));
 
 		QString onlineStatus{ "Offline" };
 		bool isGhost{ true };
@@ -140,7 +142,7 @@ void ListenerStreamConnectionWidget::updateData()
 		if (controlledEntity)
 		{
 			isGhost = false;
-			onlineStatus = avdecc::helper::smartEntityName(*controlledEntity);
+			onlineStatus = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 		}
 
 		_entityNameLabel.setText(onlineStatus);

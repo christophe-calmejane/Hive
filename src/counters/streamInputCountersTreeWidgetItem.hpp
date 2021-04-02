@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -22,8 +22,9 @@
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "nodeTreeWidget.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <map>
 
@@ -74,5 +75,5 @@ private:
 	// Counters
 	std::map<la::avdecc::entity::StreamInputCounterValidFlag, StreamInputCounterTreeWidgetItem*> _counterWidgets{};
 	la::avdecc::entity::model::StreamInputCounters _counters{};
-	avdecc::ControllerManager::StreamInputErrorCounters _errorCounters{};
+	hive::modelsLibrary::ControllerManager::StreamInputErrorCounters _errorCounters{};
 };

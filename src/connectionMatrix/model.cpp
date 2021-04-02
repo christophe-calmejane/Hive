@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,20 +19,20 @@
 
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
-#include "toolkit/helper.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+
+#include <QDebug>
+
 #include <deque>
 #include <vector>
 
-#if ENABLE_CONNECTION_MATRIX_DEBUG
-#	include <QDebug>
-#endif
-
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
-#	include "toolkit/material/color.hpp"
+#	include <QtMate/material/color.hpp>
 #endif
 
 #ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
@@ -430,28 +430,28 @@ public:
 	ModelPrivate(Model* q)
 		: q_ptr{ q }
 	{
-		auto& controllerManager = avdecc::ControllerManager::getInstance();
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 		// Common signals
-		connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
-		connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
-		connect(&controllerManager, &avdecc::ControllerManager::gptpChanged, this, &ModelPrivate::handleGptpChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInputConnectionChanged, this, &ModelPrivate::handleStreamInputConnectionChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &ModelPrivate::handleStreamDynamicInfoChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::streamPortAudioMappingsChanged, this, &ModelPrivate::handleStreamPortAudioMappingsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ModelPrivate::handleGptpChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamFormatChanged, this, &ModelPrivate::handleStreamFormatChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamRunningChanged, this, &ModelPrivate::handleStreamRunningChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputConnectionChanged, this, &ModelPrivate::handleStreamInputConnectionChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamDynamicInfoChanged, this, &ModelPrivate::handleStreamDynamicInfoChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputCountersChanged, this, &ModelPrivate::handleStreamInputCountersChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamOutputCountersChanged, this, &ModelPrivate::handleStreamOutputCountersChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamPortAudioMappingsChanged, this, &ModelPrivate::handleStreamPortAudioMappingsChanged);
 
 		// Stream Mode specific signals
-		connect(&controllerManager, &avdecc::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
 
 		// Channel Mode specific signals
-		connect(&controllerManager, &avdecc::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
-		connect(&controllerManager, &avdecc::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
 
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &ModelPrivate::handleListenerChannelConnectionsUpdate);
@@ -484,7 +484,7 @@ public:
 			intersectionData.animation = new QVariantAnimation{ this };
 		}
 
-		intersectionData.animation->setStartValue(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Red));
+		intersectionData.animation->setStartValue(qtMate::material::color::value(qtMate::material::color::Name::Red));
 		intersectionData.animation->setEndValue(QColor{ Qt::transparent });
 		intersectionData.animation->setDuration(1000);
 		intersectionData.animation->start();
@@ -1044,16 +1044,14 @@ public:
 						atLeastOneInterfaceDown |= talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
 						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
-						auto const isConnectedToTalker = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
-						auto const isFastConnectingToTalker = avdecc::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
+						auto const isConnectedToTalker = hive::modelsLibrary::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
+						auto const isFastConnectingToTalker = hive::modelsLibrary::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
 
 						auto const connected = isConnectedToTalker || isFastConnectingToTalker;
 						atLeastOneConnected |= connected;
 						allConnected &= connected;
 
-						auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
-						auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-						allCompatibleDomain &= talkerGrandMasterID == listenerGrandMasterID;
+						allCompatibleDomain &= isSameDomain(*talkerStreamNode, *listenerStreamNode);
 
 						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
@@ -1168,8 +1166,8 @@ public:
 							}
 
 							// Get Connection State
-							connectableStream.isConnected = avdecc::helper::isConnectedToTalker(connectableStream.talkerStream, *listenerStreamInputConnectionInfo);
-							connectableStream.isFastConnecting = avdecc::helper::isFastConnectingToTalker(connectableStream.talkerStream, *listenerStreamInputConnectionInfo);
+							connectableStream.isConnected = hive::modelsLibrary::helper::isConnectedToTalker(connectableStream.talkerStream, *listenerStreamInputConnectionInfo);
+							connectableStream.isFastConnecting = hive::modelsLibrary::helper::isFastConnectingToTalker(connectableStream.talkerStream, *listenerStreamInputConnectionInfo);
 							areConnected |= connectableStream.isConnected;
 							fastConnecting |= connectableStream.isFastConnecting;
 
@@ -1177,7 +1175,7 @@ public:
 							isCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 
 							// Get Domain Compatibility
-							auto const sameDomain = redundantStreamNode->grandMasterID() == nonRedundantStreamNode->grandMasterID();
+							auto const sameDomain = isSameDomain(*redundantStreamNode, *nonRedundantStreamNode);
 							atLeastOneMatchingDomain |= sameDomain;
 							if (sameDomain || connectableStream.isConnected || connectableStream.isFastConnecting)
 							{
@@ -1308,9 +1306,6 @@ public:
 					auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
 					auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
 
-					auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
-					auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-
 					auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
 					intersectionData.flags = computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
@@ -1349,8 +1344,8 @@ public:
 						auto const& streamInputConnectionInfo = listenerStreamNode->streamInputConnectionInformation();
 						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
 
-						auto const isConnectedToTalker = avdecc::helper::isConnectedToTalker(talkerStream, streamInputConnectionInfo);
-						auto const isFastConnectingToTalker = avdecc::helper::isFastConnectingToTalker(talkerStream, streamInputConnectionInfo);
+						auto const isConnectedToTalker = hive::modelsLibrary::helper::isConnectedToTalker(talkerStream, streamInputConnectionInfo);
+						auto const isFastConnectingToTalker = hive::modelsLibrary::helper::isFastConnectingToTalker(talkerStream, streamInputConnectionInfo);
 
 						if (isConnectedToTalker || isFastConnectingToTalker)
 						{
@@ -1394,7 +1389,7 @@ public:
 							combinedFlags |= computeStreamIntersectionFlags(talkerStreamNode, listenerStreamNode);
 
 							auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamIndex };
-							auto const connected = avdecc::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
+							auto const connected = hive::modelsLibrary::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
 							allConnected &= connected;
 						}
 
@@ -1429,6 +1424,11 @@ public:
 		}
 	}
 
+	bool isSameDomain(StreamNode const& lhs, StreamNode const& rhs) const noexcept
+	{
+		return lhs.grandMasterID() == rhs.grandMasterID() && lhs.grandMasterDomain() == rhs.grandMasterDomain();
+	}
+
 	Model::IntersectionData::Flags computeStreamIntersectionFlags(StreamNode const* const talkerStreamNode, StreamNode const* const listenerStreamNode) const
 	{
 		auto flags = Model::IntersectionData::Flags{};
@@ -1436,12 +1436,9 @@ public:
 		auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
 		auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
 
-		auto const talkerGrandMasterID = talkerStreamNode->grandMasterID();
-		auto const listenerGrandMasterID = listenerStreamNode->grandMasterID();
-
 		auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 
-		// InterfaceDown
+		// InterfaceDown flag
 		if (interfaceDown)
 		{
 			flags.set(Model::IntersectionData::Flag::InterfaceDown);
@@ -1451,8 +1448,8 @@ public:
 			flags.reset(Model::IntersectionData::Flag::InterfaceDown);
 		}
 
-		// WrongDomain
-		if (talkerGrandMasterID == listenerGrandMasterID)
+		// WrongDomain flag
+		if (isSameDomain(*talkerStreamNode, *listenerStreamNode))
 		{
 			flags.reset(Model::IntersectionData::Flag::WrongDomain);
 		}
@@ -1461,7 +1458,7 @@ public:
 			flags.set(Model::IntersectionData::Flag::WrongDomain);
 		}
 
-		// WrongFormat
+		// WrongFormat flag
 		auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 		auto const listenerStreamFormat = listenerStreamNode->streamFormat();
 
@@ -1498,11 +1495,11 @@ public:
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
 			auto* entity = EntityNode::create(entityID, isMilan);
-			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
+			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamOutputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamOutputNode, auto const& avbInterfaceNode)
 			{
-				node.setName(avdecc::helper::outputStreamName(controlledEntity, streamIndex));
+				node.setName(hive::modelsLibrary::helper::outputStreamName(controlledEntity, streamIndex));
 				node.setStreamFormat(streamOutputNode.dynamicModel->streamFormat);
 				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
 				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
@@ -1532,7 +1529,7 @@ public:
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamOutputs)
 			{
 				auto* redundantOutput = RedundantNode::createOutputNode(*entity, redundantIndex);
-				redundantOutput->setName(avdecc::helper::redundantOutputName(redundantIndex));
+				redundantOutput->setName(hive::modelsLibrary::helper::redundantOutputName(redundantIndex));
 
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
@@ -1592,7 +1589,7 @@ public:
 								auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
 
 								auto* outputChannel = ChannelNode::createOutputNode(*entity, channelIdentification);
-								auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
+								auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
 								auto const channelName = priv::clusterChannelName(clusterName, channel);
 								outputChannel->setName(channelName);
 							}
@@ -1605,14 +1602,14 @@ public:
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const& e)
 		{
-			LOG_HIVE_ERROR(QString("Cannot build TalkerNode for EntityID=%1: %2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(e.what()));
+			LOG_HIVE_ERROR(QString("Cannot build TalkerNode for EntityID=%1: %2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(e.what()));
 			return nullptr;
 		}
 		catch (...)
 		{
 			// Uncaught exception
 			AVDECC_ASSERT(false, "Uncaught exception");
-			LOG_HIVE_ERROR(QString("Cannot build TalkerNode for EntityID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+			LOG_HIVE_ERROR(QString("Cannot build TalkerNode for EntityID=%1").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)));
 			return nullptr;
 		}
 	}
@@ -1626,11 +1623,11 @@ public:
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
 			auto* entity = EntityNode::create(entityID, isMilan);
-			entity->setName(avdecc::helper::smartEntityName(controlledEntity));
+			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamInputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamInputNode, auto const& avbInterfaceNode)
 			{
-				node.setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
+				node.setName(hive::modelsLibrary::helper::inputStreamName(controlledEntity, streamIndex));
 				node.setStreamFormat(streamInputNode.dynamicModel->streamFormat);
 				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
 				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
@@ -1665,7 +1662,7 @@ public:
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamInputs)
 			{
 				auto* redundantInput = RedundantNode::createInputNode(*entity, redundantIndex);
-				redundantInput->setName(avdecc::helper::redundantInputName(redundantIndex));
+				redundantInput->setName(hive::modelsLibrary::helper::redundantInputName(redundantIndex));
 
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
@@ -1673,7 +1670,7 @@ public:
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* redundantInputStream = StreamNode::createRedundantInputNode(*redundantInput, streamIndex, avbInterfaceIndex);
-					redundantInputStream->setName(avdecc::helper::inputStreamName(controlledEntity, streamIndex));
+					redundantInputStream->setName(hive::modelsLibrary::helper::inputStreamName(controlledEntity, streamIndex));
 
 					auto const* const streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(streamNode);
 					fillStreamInputNode(*redundantInputStream, configurationIndex, streamIndex, avbInterfaceIndex, *streamInputNode, avbInterfaceNode);
@@ -1717,7 +1714,7 @@ public:
 									auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
 
 									auto* inputChannel = ChannelNode::createInputNode(*entity, channelIdentification);
-									auto const clusterName = avdecc::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
+									auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
 									auto const channelName = priv::clusterChannelName(clusterName, channel);
 									inputChannel->setName(channelName);
 								}
@@ -1731,14 +1728,14 @@ public:
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const& e)
 		{
-			LOG_HIVE_ERROR(QString("Cannot build ListenerNode for EntityID=%1: %2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(e.what()));
+			LOG_HIVE_ERROR(QString("Cannot build ListenerNode for EntityID=%1: %2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(e.what()));
 			return nullptr;
 		}
 		catch (...)
 		{
 			// Uncaught exception
 			AVDECC_ASSERT(false, "Uncaught exception");
-			LOG_HIVE_ERROR(QString("Cannot build ListenerNode for EntityID=%1").arg(avdecc::helper::uniqueIdentifierToString(entityID)));
+			LOG_HIVE_ERROR(QString("Cannot build ListenerNode for EntityID=%1").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)));
 			return nullptr;
 		}
 	}
@@ -1951,7 +1948,7 @@ public:
 		return _listenerNodes[section];
 	}
 
-	// avdecc::ControllerManager slots
+	// hive::modelsLibrary::ControllerManager slots
 
 	void handleControllerOffline()
 	{
@@ -1962,7 +1959,7 @@ public:
 	{
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
 			{
@@ -2101,11 +2098,11 @@ public:
 		// Event affecting the whole entity (but just the entity node as Talker and Listener)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
-				auto const name = avdecc::helper::smartEntityName(*controlledEntity);
+				auto const name = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 
 				if (auto* node = talkerNodeFromEntityID(entityID))
 				{
@@ -2196,7 +2193,7 @@ public:
 				}
 				else
 				{
-					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 				}
 			}
 		}
@@ -2219,7 +2216,7 @@ public:
 				}
 				else
 				{
-					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamFormatChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 				}
 			}
 		}
@@ -2240,7 +2237,7 @@ public:
 			}
 			else
 			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 			}
 		}
 		else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
@@ -2254,7 +2251,7 @@ public:
 			}
 			else
 			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamRunningChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 			}
 		}
 	}
@@ -2285,7 +2282,7 @@ public:
 			}
 			else
 			{
-				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInputConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(stream.streamIndex));
+				LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInputConnectionChanged: Invalid StreamIndex: ListenerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(stream.streamIndex));
 			}
 		}
 	}
@@ -2295,13 +2292,13 @@ public:
 		// Event affecting a single stream node (either Input or Output)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
 				if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 				{
-					auto const name = avdecc::helper::outputStreamName(*controlledEntity, streamIndex);
+					auto const name = hive::modelsLibrary::helper::outputStreamName(*controlledEntity, streamIndex);
 
 					if (auto* node = talkerStreamNode(entityID, streamIndex))
 					{
@@ -2312,12 +2309,12 @@ public:
 					}
 					else
 					{
-						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 					}
 				}
 				else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 				{
-					auto const name = avdecc::helper::inputStreamName(*controlledEntity, streamIndex);
+					auto const name = hive::modelsLibrary::helper::inputStreamName(*controlledEntity, streamIndex);
 
 					if (auto* node = listenerStreamNode(entityID, streamIndex))
 					{
@@ -2327,7 +2324,7 @@ public:
 					}
 					else
 					{
-						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamNameChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 					}
 				}
 			}
@@ -2344,7 +2341,7 @@ public:
 		// Event affecting a single stream node (Input)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2363,7 +2360,7 @@ public:
 					}
 					else
 					{
-						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInfoChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+						LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInfoChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 					}
 				}
 			}
@@ -2380,7 +2377,7 @@ public:
 		// Event affecting a single stream node (Input)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2413,7 +2410,7 @@ public:
 				}
 				else
 				{
-					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInputCountersChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamInputCountersChanged: Invalid StreamInputIndex: ListenerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 				}
 			}
 		}
@@ -2429,7 +2426,7 @@ public:
 		// Event affecting a single stream node (Output)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2463,7 +2460,7 @@ public:
 				}
 				else
 				{
-					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamOutputCountersChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
+					LOG_HIVE_ERROR(QString("connectionMatrix::Model::StreamOutputCountersChanged: Invalid StreamOutputIndex: TalkerID=%1 StreamIndex=%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(streamIndex));
 				}
 			}
 		}
@@ -2479,7 +2476,7 @@ public:
 		// Event affecting multiple channel nodes (either Input or Output)
 		try
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			if (controlledEntity)
 			{
@@ -2559,7 +2556,7 @@ public:
 		try
 		{
 #pragma message("TODO: cache the current configuration in the node to avoid locking the controller from the main thread")
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 			auto const& entityNode = controlledEntity->getEntityNode();
 

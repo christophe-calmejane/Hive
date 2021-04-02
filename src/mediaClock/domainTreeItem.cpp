@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,8 +21,11 @@
 #include "entityTreeItem.hpp"
 
 #include "avdecc/helper.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "la/avdecc/utils.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
+
+#include <QSet>
 
 /**
 * Constructor.
@@ -67,7 +70,7 @@ QList<QPair<std::optional<la::avdecc::entity::model::SamplingRate>, QString>> Do
 
 	if (m_itemData.getMediaClockDomainMaster())
 	{
-		auto controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(m_itemData.getMediaClockDomainMaster());
+		auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(m_itemData.getMediaClockDomainMaster());
 		if (controlledEntity)
 		{
 			auto configurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -62,12 +62,12 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	}
 
 	// Update counters right now
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	_errorCounters = manager.getStreamInputErrorCounters(_entityID, _streamIndex);
 	updateCounters(counters);
 
 	// Listen for StreamInputCountersChanged
-	connect(&manager, &avdecc::ControllerManager::streamInputCountersChanged, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::streamInputCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)
@@ -76,8 +76,8 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 			}
 		});
 
-	connect(&manager, &avdecc::ControllerManager::streamInputErrorCounterChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, avdecc::ControllerManager::StreamInputErrorCounters const& errorCounters)
+	connect(&manager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, hive::modelsLibrary::ControllerManager::StreamInputErrorCounters const& errorCounters)
 		{
 			if (entityID == _entityID && streamIndex == _streamIndex)
 			{
@@ -86,7 +86,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 			}
 		});
 
-	connect(&manager, &avdecc::ControllerManager::streamInputConnectionChanged, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::streamInputConnectionChanged, this,
 		[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info)
 		{
 			if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,7 +21,11 @@
 
 #include "controlledEntityTreeWidget.hpp"
 #include "nodeTreeWidget.hpp"
-#include "errorItemDelegate.hpp"
+#include "settingsManager/settings.hpp"
+#include "settingsManager/settingsSignaler.hpp"
+
+#include <QtMate/material/colorPalette.hpp>
+#include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 
 #include <QSplitter>
 #include <QLayout>
@@ -33,7 +37,7 @@ public:
 	enum class RoleInfo
 	{
 		NodeType = Qt::UserRole,
-		ErrorRole = ErrorItemDelegate::ErrorRole,
+		ErrorRole = hive::widgetModelsLibrary::ErrorItemDelegate::ErrorRole,
 		IsActiveConfiguration,
 	};
 
@@ -60,5 +64,6 @@ private:
 	QSplitter _splitter{ Qt::Vertical, this };
 	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
 	NodeTreeWidget _nodeTreeWiget{ this };
-	ErrorItemDelegate _itemDelegate{ this };
+	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ qtMate::material::color::Palette::name(settings::SettingsManager::getInstance().getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	SettingsSignaler _settingsSignaler{};
 };

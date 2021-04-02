@@ -27,6 +27,12 @@ then
 fi
 if isMac;
 then
+	which tar &> /dev/null
+	if [ $? -ne 0 ];
+	then
+		echo "tar required. Install it via HomeBrew"
+		exit 127
+	fi
 	which grep &> /dev/null
 	if [ $? -ne 0 ];
 	then
@@ -205,7 +211,7 @@ generateAppcast()
 	if isWindows;
 	then
 		echo "				sparkle:dsaSignature=\"${fileSignature}\"" >> "$appcastFile"
-		echo "				sparkle:installerArguments=\"/S /NOPCAP\"" >> "$appcastFile"
+		echo "				sparkle:installerArguments=\"/S /NOPCAP /LAUNCH\"" >> "$appcastFile"
 		echo "				sparkle:os=\"windows\"" >> "$appcastFile"
 
 	elif isMac;
@@ -231,15 +237,20 @@ generateAppcast()
 
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
+default_VisualGeneratorArch="Win32"
 default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
-default_VisualSdk="8.1"
 
 # 
+cmake_generator=""
+platform=""
+default_arch=""
 arch=""
 toolset=""
 outputFolderBasePath="_install"
+defaultOutputFolder="${outputFolderBasePath}_<platform>_<arch>_<generator>_<toolset>_<config>"
+declare -a supportedArchs=()
 if isMac; then
 	cmake_path="/Applications/CMake.app/Contents/bin/cmake"
 	# CMake.app not found, use cmake from the path
@@ -247,8 +258,8 @@ if isMac; then
 		cmake_path="cmake"
 	fi
 	generator="Xcode"
-	getCcArch arch
-	defaultOutputFolder="${outputFolderBasePath}_<arch>"
+	getMachineArch default_arch
+	supportedArchs+=("${default_arch}")
 else
 	# Use cmake from the path
 	cmake_path="cmake"
@@ -256,15 +267,16 @@ else
 		generator="$default_VisualGenerator"
 		toolset="$default_VisualToolset"
 		toolchain="$default_VisualToolchain"
-		platformSdk="$default_VisualSdk"
-		arch="$default_VisualArch"
-		defaultOutputFolder="${outputFolderBasePath}_<arch>_<toolset>"
+		default_arch="$default_VisualArch"
+		supportedArchs+=("x86")
+		supportedArchs+=("x64")
 	else
 		generator="Unix Makefiles"
-		getCcArch arch
-		defaultOutputFolder="${outputFolderBasePath}_<arch>_<config>"
+		getMachineArch default_arch
+		supportedArchs+=("${default_arch}")
 	fi
 fi
+getOS platform
 
 which "${cmake_path}" &> /dev/null
 if [ $? -ne 0 ]; then
@@ -293,6 +305,7 @@ do
 			echo " -h -> Display this help"
 			echo " -b <cmake path> -> Force cmake binary path (Default: $cmake_path)"
 			echo " -c <cmake generator> -> Force cmake generator (Default: $generator)"
+			echo " -arch <arch> -> Set target architecture (Default: $default_arch). Supported archs depends on target platform"
 			echo " -noclean -> Don't remove temp build folder [Default=clean on successful build]"
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
@@ -331,6 +344,7 @@ do
 			fi
 			gen_cmake_additional_options+=("-c")
 			gen_cmake_additional_options+=("$1")
+			cmake_generator="$1"
 			;;
 		-t)
 			if isWindows; then
@@ -437,6 +451,22 @@ do
 	shift
 done
 
+if [ ! -z "$cmake_generator" ]; then
+	echo "Overriding default cmake generator ($generator) with: $cmake_generator"
+	generator="$cmake_generator"
+fi
+
+# Default arch has not been overridden, use default arch
+if [ "x${arch}" == "x" ]; then
+	arch="${default_arch}"
+fi
+
+# Check arch is valid for target platform
+if [[ ! " ${supportedArchs[@]} " =~ " ${arch} " ]]; then
+	echo "ERROR: Unsupported arch for target platform: ${arch} (Supported archs: ${supportedArchs[@]})"
+	exit 4
+fi
+
 # Load config file
 loadConfigFile
 
@@ -454,12 +484,12 @@ if [ $doSign -eq 1 ]; then
 		gen_cmake_additional_options+=("$signtoolOptions")
 	fi
 
-	# Check if TeamIdentifier is specified on macOS
+	# Check if Identity is specified on macOS
 	if isMac; then
-		identityString=${params["identity"]}
+		identityString="${params["identity"]}"
 
 		if [ "x$identityString" == "x" ]; then
-			echo "ERROR: macOS requires either iTunes TeamIdentifier. Specify it in the ${configFile} file"
+			echo "ERROR: macOS requires valid signing identity. Specify it in the ${configFile} file"
 			exit 4
 		fi
 		gen_cmake_additional_options+=("-id")
@@ -485,7 +515,7 @@ gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas
 # Build marketing options
 marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
 
-getOutputFolder outputFolder "${outputFolderBasePath}" "${arch}" "${toolset}" ""
+getOutputFolder outputFolder "${outputFolderBasePath}" "${platform}" "${arch}" "${toolset}" "${buildConfig}" "${generator}"
 
 toolset_option=""
 if [ ! -z "${toolset}" ]; then
@@ -545,12 +575,10 @@ fi
 
 if isWindows; then
 	installerOSName="win32"
-	latestVersionOSName="windows"
 	installerExtension="exe"
 elif isMac; then
 	installerOSName="Darwin"
-	latestVersionOSName="macOS"
-	installerExtension="dmg"
+	installerExtension="pkg"
 else
 	getOS osName
 	echo "ERROR: Installer for $osName not supported yet"
@@ -624,19 +652,18 @@ if [ ! -f "$installerFile" ]; then
 fi
 
 if [ $doSign -eq 1 ]; then
-	echo -n "Signing Package..."
-	if isMac; then
-		log=$(codesign -s "${identityString}" --timestamp --verbose=4 --strict --force "${installerFile}")
-	else
+	# MacOS already signed by CPack
+	if isWindows; then
+		echo -n "Signing Package..."
 		log=$(signtool sign ${signtoolOptions} "${installerFile}")
+		if [ $? -ne 0 ]; then
+			echo "Failed to sign package ;("
+			echo ""
+			echo $log
+			exit 1
+		fi
+		echo "done"
 	fi
-	if [ $? -ne 0 ]; then
-		echo "Failed to sign package ;("
-		echo ""
-		echo $log
-		exit 1
-	fi
-	echo "done"
 fi
 
 mv "${installerFile}" .
@@ -650,24 +677,30 @@ if [ ! -z "${symbolsFile}" ]; then
 	popd &> /dev/null
 fi
 
+appcastInstallerName="${fullInstallerName}"
 
-# Call notarization
+# macOS specific code
 if isMac; then
+	# Call notarization
 	if [ ! "x${params["notarization_username"]}" == "x" ]; then
-		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "fr.KikiSoft.Hive.dmg"
+		3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
 		if [ $? -ne 0 ]; then
 			echo "Failed to notarize installer"
 			exit 1
 		fi
 	fi
+	# Tar the installer as Sparkle do not support PKG
+	appcastInstallerName="${fullInstallerName}.tar"
+	tar cvf "${appcastInstallerName}" "${fullInstallerName}" &> /dev/null
+	rm -f "${fullInstallerName}" &> /dev/null
 fi
 
-generateAppcast "${fullInstallerName}" "${releaseVersion}${beta_tag}" $is_release
+generateAppcast "${appcastInstallerName}" "${releaseVersion}${beta_tag}" $is_release
 
 echo ""
 echo "Do not forget to upload:"
 echo " - CHANGELOG.MD"
-echo " - Installer file"
+echo " - Installer file: ${appcastInstallerName}"
 echo " - Updated appcast file(s)"
 
 exit 0

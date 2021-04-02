@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,12 +19,16 @@
 
 #pragma once
 
-#include <QList>
-#include <QVariant>
-#include <QStringList>
+#include <la/avdecc/internals/entityModelTypes.hpp>
 
 #include "abstractTreeItem.hpp"
 #include "avdecc/mcDomainManager.hpp"
+
+#include <QPair>
+#include <QList>
+#include <QString>
+
+#include <optional>
 
 class EntityTreeItem;
 

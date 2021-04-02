@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 
 #include <la/avdecc/avdecc.hpp>
 
@@ -44,7 +44,7 @@ public:
 	void setAlwaysShowArrowTip(bool const show);
 	void setAlwaysShowArrowEnd(bool const show);
 	void setTransposed(bool const isTransposed);
-	void setColor(qt::toolkit::material::color::Name const name);
+	void setColor(qtMate::material::color::Name const name);
 
 	// Retrieves the current sectionState for each section
 	QVector<SectionState> saveSectionState() const;
@@ -88,7 +88,7 @@ private:
 	bool _alwaysShowArrowTip{ false };
 	bool _alwaysShowArrowEnd{ false };
 	bool _isTransposed{ false };
-	qt::toolkit::material::color::Name _colorName{ qt::toolkit::material::color::DefaultColor };
+	qtMate::material::color::Name _colorName{ qtMate::material::color::DefaultColor };
 };
 
 } // namespace connectionMatrix

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -108,7 +108,7 @@ CornerWidget::~CornerWidget()
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 }
 
-void CornerWidget::setColor(qt::toolkit::material::color::Name const name)
+void CornerWidget::setColor(qtMate::material::color::Name const name)
 {
 	_colorName = name;
 	update();

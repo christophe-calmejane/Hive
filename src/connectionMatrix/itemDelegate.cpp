@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,7 +21,7 @@
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
 #include "connectionMatrix/paintHelper.hpp"
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 #include <QPainter>
 
 #if ENABLE_CONNECTION_MATRIX_DEBUG
@@ -39,7 +39,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 		return;
 	}
 
-	painter->setPen(qt::toolkit::material::color::value(qt::toolkit::material::color::Name::Gray));
+	painter->setPen(qtMate::material::color::value(qtMate::material::color::Name::Gray));
 
 	// Background highlithing if selected
 	if (option.state & QStyle::State_Selected)

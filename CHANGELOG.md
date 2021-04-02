@@ -4,6 +4,28 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2021-04-02
+### Added
+- New CLI tool to dump AEM from entities: AEMDumper
+- Support for Control Descriptors (only Linear Values for now)
+- Support for Controller to Entity Identification (right-click an entity in the list)
+- [Added a daemon on macOS to setup pcap access rights for non-root execution](https://github.com/christophe-calmejane/Hive/issues/50)
+- Automatic view scrolling when dragging a channel mapping near the edges of the window (Dynamic Mappings Editor View)
+
+### Changed
+- macOS minimum version is now 10.12 (due to Qt update)
+- Using macOS PKG installer instead of simple DMG
+  - **WARNING**: When upgrading from a DMG version of Hive, you will have to manually close and erase the previous version
+
+### Fixed
+- Slightly improved Firmware Update Dialog
+- Application not properly closing during self-update on windows
+- Application not properly restarting after self-update on windows
+- [AVB domain incompatibility checks for gPTP domain number](https://github.com/christophe-calmejane/Hive/issues/98)
+- [Using a timestamped filename when saving the log file](https://github.com/christophe-calmejane/Hive/issues/99)
+- Added a popup error message if the pcap driver is not properly installed
+- [Changing more than 63 mappings at the same time doesn't cause an error](https://github.com/christophe-calmejane/Hive/issues/95)
+
 ## [1.2.3] - 2020-09-14
 ### Added
 - [Displaying a message with shell command to run, if network interface cannot be opened](https://github.com/christophe-calmejane/Hive/issues/88)
@@ -12,7 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Scroll logger view to selected item whenever the filter changes](https://github.com/christophe-calmejane/Hive/issues/92)
 
 ### Changed
-- No longer clearing talker mapping upon disconnection
+- No longer clearing talker mapping when the removing the last (CBR matrix) channel connection
 - Using AVDECC Library v3.0.2
 
 ### Fixed

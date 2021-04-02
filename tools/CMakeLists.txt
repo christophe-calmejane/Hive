@@ -1,5 +1,8 @@
 # Hive Tools CMake File
 
+######## AEM Dumper
+add_subdirectory(AEMDumper)
+
 ######## MsgPack2Json
 # Declare project
 setup_project(msgPack2json "1.0" "Message Pack To JSON Converter")
@@ -12,14 +15,8 @@ setup_executable_options(${PROJECT_NAME})
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json)
 
-# Sign binary (this is done during installation phase)
-if(ENABLE_HIVE_SIGNING)
-	sign_target(${PROJECT_NAME})
-endif()
-
-# Set installation rule (always installing application)
-install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
-
+# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
+setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
 
 ######## Json2MsgPack
 # Declare project
@@ -33,10 +30,5 @@ setup_executable_options(${PROJECT_NAME})
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json)
 
-# Sign binary (this is done during installation phase)
-if(ENABLE_HIVE_SIGNING)
-	sign_target(${PROJECT_NAME})
-endif()
-
-# Set installation rule (always installing application)
-install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
+# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
+setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -22,6 +22,8 @@
 #include <QTreeWidget>
 #include "nodeVisitor.hpp"
 #include "avdecc/helper.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
 
 class NodeTreeWidgetPrivate;
 class NodeTreeWidget : public QTreeWidget
@@ -47,6 +49,6 @@ private:
 template<typename IntegralValueType, typename = std::enable_if_t<std::is_arithmetic<IntegralValueType>::value>>
 void setFlagsItemText(QTreeWidgetItem* const item, IntegralValueType flagsValue, QString flagsString)
 {
-	item->setText(1, QString("%1 (%2)").arg(avdecc::helper::toHexQString(flagsValue, true, true)).arg(flagsString));
+	item->setText(1, QString("%1 (%2)").arg(hive::modelsLibrary::helper::toHexQString(flagsValue, true, true)).arg(flagsString));
 	item->setData(1, Qt::ToolTipRole, flagsString);
 }

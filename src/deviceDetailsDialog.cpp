@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -26,6 +26,7 @@
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 
 #include "ui_deviceDetailsDialog.h"
 #include "deviceDetailsChannelTableModel.hpp"
@@ -42,7 +43,7 @@
 * [@date    2018-09-21]
 *
 * Implements the EntityModelVisitor to get informed about every node in the given entity.
-* Holds the state of the changes until the apply button is pressed, then uses the avdecc::ControllerManager class to
+* Holds the state of the changes until the apply button is pressed, then uses the hive::modelsLibrary::ControllerManager class to
 * write the changes to the device.
 */
 class DeviceDetailsDialogImpl final : private Ui::DeviceDetailsDialog, public QObject, public la::avdecc::controller::model::EntityModelVisitor
@@ -108,22 +109,22 @@ public:
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
-		connect(&manager, &avdecc::ControllerManager::entityOffline, this, &DeviceDetailsDialogImpl::entityOffline);
-		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
-		connect(&manager, &avdecc::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
-		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
-		connect(&manager, &avdecc::ControllerManager::streamOutputConnectionsChanged, this, &DeviceDetailsDialogImpl::streamOutputConnectionsChanged);
-		connect(&manager, &avdecc::ControllerManager::streamPortAudioMappingsChanged, this, &DeviceDetailsDialogImpl::streamPortAudioMappingsChanged);
-		connect(&manager, &avdecc::ControllerManager::streamDynamicInfoChanged, this, &DeviceDetailsDialogImpl::streamDynamicInfoChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &DeviceDetailsDialogImpl::entityOffline);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamRunningChanged, this, &DeviceDetailsDialogImpl::streamRunningChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamOutputConnectionsChanged, this, &DeviceDetailsDialogImpl::streamOutputConnectionsChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamPortAudioMappingsChanged, this, &DeviceDetailsDialogImpl::streamPortAudioMappingsChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamDynamicInfoChanged, this, &DeviceDetailsDialogImpl::streamDynamicInfoChanged);
 		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &DeviceDetailsDialogImpl::listenerChannelConnectionsUpdate);
 
 		// register for changes, to update the data live in the dialog, except the user edited it already:
-		connect(&manager, &avdecc::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
-		connect(&manager, &avdecc::ControllerManager::entityGroupNameChanged, this, &DeviceDetailsDialogImpl::entityGroupNameChanged);
-		connect(&manager, &avdecc::ControllerManager::audioClusterNameChanged, this, &DeviceDetailsDialogImpl::audioClusterNameChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &DeviceDetailsDialogImpl::entityNameChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityGroupNameChanged, this, &DeviceDetailsDialogImpl::entityGroupNameChanged);
+		connect(&manager, &hive::modelsLibrary::ControllerManager::audioClusterNameChanged, this, &DeviceDetailsDialogImpl::audioClusterNameChanged);
 	}
 
 	/**
@@ -140,7 +141,7 @@ public:
 		_activeConfigurationIndex = std::nullopt;
 		updateButtonStates();
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
@@ -153,18 +154,18 @@ public:
 			{
 				return;
 			}
-			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + avdecc::helper::smartEntityName(*controlledEntity));
+			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
 
 			if (!leaveOutGeneralData)
 			{
 				// get the device name into the line edit
 				const QSignalBlocker blockerLineEditDeviceName(lineEditDeviceName);
-				lineEditDeviceName->setText(avdecc::helper::entityName(*controlledEntity));
+				lineEditDeviceName->setText(hive::modelsLibrary::helper::entityName(*controlledEntity));
 				setModifiedStyleOnWidget(lineEditDeviceName, false);
 
 				// get the group name into the line edit
 				const QSignalBlocker blockerLineEditGroupName(lineEditGroupName);
-				lineEditGroupName->setText(avdecc::helper::groupName(*controlledEntity));
+				lineEditGroupName->setText(hive::modelsLibrary::helper::groupName(*controlledEntity));
 				setModifiedStyleOnWidget(lineEditGroupName, false);
 
 				auto const& entityNode = controlledEntity->getEntityNode();
@@ -172,11 +173,11 @@ public:
 				auto const* const staticModel = entityNode.staticModel;
 				auto const* const dynamicModel = entityNode.dynamicModel;
 
-				labelEntityIdValue->setText(avdecc::helper::toHexQString(entityID.getValue(), true, true));
+				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(entityID.getValue(), true, true));
 				if (staticModel)
 				{
-					labelVendorNameValue->setText(controlledEntity->getLocalizedString(staticModel->vendorNameString).data());
-					labelModelNameValue->setText(controlledEntity->getLocalizedString(staticModel->modelNameString).data());
+					labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel->vendorNameString));
+					labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel->modelNameString));
 				}
 				if (dynamicModel)
 				{
@@ -238,7 +239,7 @@ public:
 
 	/**
 	* Invoked when the apply button is clicked.
-	* Writes all data via the avdecc::ControllerManager. The avdecc::ControllerManager::endAecpCommand signal is used
+	* Writes all data via the hive::modelsLibrary::ControllerManager. The hive::modelsLibrary::ControllerManager::endAecpCommand signal is used
 	* to determine the state of the requested commands.
 	*/
 	void applyChanges()
@@ -249,7 +250,7 @@ public:
 		_expectedChanges = 0;
 		_gottenChanges = 0;
 
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 		// set all data
 		if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
@@ -363,7 +364,7 @@ public:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const /*parent*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		QSignalBlocker const blocker(comboBoxConfiguration);
-		comboBoxConfiguration->addItem(avdecc::helper::configurationName(controlledEntity, node), node.descriptorIndex);
+		comboBoxConfiguration->addItem(hive::modelsLibrary::helper::configurationName(controlledEntity, node), node.descriptorIndex);
 
 		// relevant Node:
 		if (node.dynamicModel->isActiveConfiguration && !_activeConfigurationIndex)
@@ -461,6 +462,11 @@ public:
 	/**
 	* Ignored.
 	*/
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::ControlNode const& /*node*/) noexcept override {}
+
+	/**
+	* Ignored.
+	*/
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::ClockDomainNode const& /*node*/) noexcept override {}
 
 	/**
@@ -551,19 +557,19 @@ public:
 	* @param cmdType		The executed command type.
 	* @param commandStatus  The status of the command.
 	*/
-	void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
+	void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
 	{
 		// TODO propably show message when a command failed.
 		if (entityID == _entityID)
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			switch (cmdType)
 			{
-				case avdecc::ControllerManager::AecpCommandType::SetEntityName:
-				case avdecc::ControllerManager::AecpCommandType::SetEntityGroupName:
-				case avdecc::ControllerManager::AecpCommandType::SetAudioClusterName:
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName:
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName:
 					_gottenChanges++;
 					break;
 				default:
@@ -755,7 +761,7 @@ private:
 
 	void loadLatencyData()
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(_entityID);
 		if (controlledEntity)
 		{
@@ -849,7 +855,7 @@ void DeviceDetailsDialog::setControlledEntityID(la::avdecc::UniqueIdentifier con
 	}
 	_controlledEntityID = entityID;
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(_controlledEntityID);
 
 	_pImpl->loadCurrentControlledEntity(_controlledEntityID, false);

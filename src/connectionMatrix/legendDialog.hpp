@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 
 #include <QDialog>
 #include <QLayout>
@@ -32,7 +32,7 @@ class LegendDialog : public QDialog
 {
 	Q_OBJECT
 public:
-	LegendDialog(qt::toolkit::material::color::Name const& colorName, bool const isTransposed, QWidget* parent = nullptr);
+	LegendDialog(qtMate::material::color::Name const& colorName, bool const isTransposed, QWidget* parent = nullptr);
 
 private:
 	QVBoxLayout _layout{ this };

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -66,7 +66,7 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		parent->setItemWidget(clearMappings, 1, clearMappingsButton);
 
 		// Listen for streamPortAudioMappingsChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::streamPortAudioMappingsChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamPortAudioMappingsChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
 			{
 				if (entityID == _entityID && descriptorType == _streamPortType && streamPortIndex == _streamPortIndex)
@@ -87,30 +87,54 @@ void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 
 void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 {
-	try
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto controlledEntity = manager.getControlledEntity(_entityID);
+	if (controlledEntity)
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		auto controlledEntity = manager.getControlledEntity(_entityID);
-		if (controlledEntity)
-		{
-			auto& entity = *controlledEntity;
-			auto const* streamPortNode = static_cast<la::avdecc::controller::model::StreamPortNode const*>(nullptr);
+		auto& entity = *controlledEntity;
+		auto smartName = hive::modelsLibrary::helper::smartEntityName(entity);
 
-			auto const& entityNode = entity.getEntityNode();
-			if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+		// Release the controlled entity before starting a long operation
+		controlledEntity.reset();
+
+		// Get exclusive access
+		manager.requestExclusiveAccess(_entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType::Lock,
+			[smartName, streamPortType = _streamPortType, streamPortIndex = _streamPortIndex](auto const entityID, auto const status, auto&& token)
 			{
-				streamPortNode = &entity.getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, _streamPortIndex);
-				manager.removeStreamPortInputAudioMappings(_entityID, _streamPortIndex, streamPortNode->dynamicModel->dynamicAudioMap);
-			}
-			else if (_streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-			{
-				streamPortNode = &entity.getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, _streamPortIndex);
-				manager.removeStreamPortOutputAudioMappings(_entityID, _streamPortIndex, streamPortNode->dynamicModel->dynamicAudioMap);
-			}
-		}
-	}
-	catch (...)
-	{
+				// Failed to get the exclusive access
+				if (!status || !token)
+				{
+					// If the device does not support the exclusive access, still proceed
+					if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotImplemented && status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotSupported)
+					{
+						QMessageBox::warning(nullptr, QString(""), QString("Failed to get Exclusive Access on %1:<br>%2").arg(smartName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
+						return;
+					}
+				}
+
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				auto controlledEntity = manager.getControlledEntity(entityID);
+				if (controlledEntity)
+				{
+					// Batch send the remove commands, and let the Exclusive Access Token go out of scope so the entity is unlocked right after (commands are sequentially sent)
+					try
+					{
+						auto& entity = *controlledEntity;
+
+						if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+						{
+							avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, entity.getStreamPortInputNonRedundantAudioMappings(streamPortIndex));
+						}
+						else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+						{
+							avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, entity.getStreamPortOutputNonRedundantAudioMappings(streamPortIndex));
+						}
+					}
+					catch (...)
+					{
+					}
+				}
+			});
 	}
 }
 
@@ -122,7 +146,7 @@ void StreamPortDynamicTreeWidgetItem::updateMappings()
 
 	try
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(_entityID);
 		if (controlledEntity)
 		{

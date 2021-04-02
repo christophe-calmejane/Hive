@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -22,6 +22,8 @@
 #include "talkerStreamConnectionWidget.hpp"
 #include "nodeTreeWidget.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <QMenu>
 
 static inline void setNoValue(QTreeWidgetItem* const widget)
@@ -39,7 +41,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 {
 	setText(0, "Dynamic Info");
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto listenerEntity = manager.getControlledEntity(entityID);
 
 	auto* currentFormatItem = new QTreeWidgetItem(this);
@@ -59,16 +61,16 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		{
 			if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
-				avdecc::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
 			}
 			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{
-				avdecc::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
 			}
 		});
 
 	// Listen for changes
-	connect(&manager, &avdecc::ControllerManager::streamFormatChanged, formatComboBox,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::streamFormatChanged, formatComboBox,
 		[this, formatComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 		{
 			if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -119,7 +121,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		}
 
 		// Listen for events
-		connect(&manager, &avdecc::ControllerManager::streamFormatChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamFormatChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 			{
 				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -127,7 +129,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 					updateStreamFormat(streamFormat);
 				}
 			});
-		connect(&manager, &avdecc::ControllerManager::streamRunningChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamRunningChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
 			{
 				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -135,7 +137,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 					updateStreamIsRunning(isRunning);
 				}
 			});
-		connect(&manager, &avdecc::ControllerManager::streamDynamicInfoChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamDynamicInfoChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info)
 			{
 				if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
@@ -176,7 +178,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		updateConnections(outputDynamicModel->connections);
 
 		// Listen for Connections changed signal
-		connect(&manager, &avdecc::ControllerManager::streamOutputConnectionsChanged, this,
+		connect(&manager, &hive::modelsLibrary::ControllerManager::streamOutputConnectionsChanged, this,
 			[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections)
 			{
 				if (stream.entityID == _entityID && stream.streamIndex == _streamIndex)
@@ -191,7 +193,7 @@ void StreamDynamicTreeWidgetItem::updateStreamFormat(la::avdecc::entity::model::
 {
 	_streamFormat->setForeground(0, QColor{ Qt::black });
 	_streamFormat->setForeground(1, QColor{ Qt::black });
-	_streamFormat->setText(1, avdecc::helper::toHexQString(streamFormat.getValue(), true, true));
+	_streamFormat->setText(1, hive::modelsLibrary::helper::toHexQString(streamFormat.getValue(), true, true));
 }
 
 void StreamDynamicTreeWidgetItem::updateStreamIsRunning(bool const isRunning)
@@ -228,7 +230,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 
 	if (streamDynamicInfo.streamID)
 	{
-		setStringValue(_streamID, avdecc::helper::uniqueIdentifierToString(*streamDynamicInfo.streamID));
+		setStringValue(_streamID, hive::modelsLibrary::helper::uniqueIdentifierToString(*streamDynamicInfo.streamID));
 	}
 	else
 	{
@@ -261,7 +263,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	if (streamDynamicInfo.msrpFailureCode && streamDynamicInfo.msrpFailureBridgeID)
 	{
 		setStringValue(_msrpFailureCode, QString::number(*streamDynamicInfo.msrpFailureCode));
-		setStringValue(_msrpFailureBridgeID, avdecc::helper::toHexQString(*streamDynamicInfo.msrpFailureBridgeID, true, true));
+		setStringValue(_msrpFailureBridgeID, hive::modelsLibrary::helper::toHexQString(*streamDynamicInfo.msrpFailureBridgeID, true, true));
 	}
 	else
 	{
@@ -283,7 +285,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	if (streamDynamicInfo.probingStatus)
 	{
 		auto const probingStatus = *streamDynamicInfo.probingStatus;
-		setStringValue(_probingStatus, QString("%1 (%2)").arg(avdecc::helper::toHexQString(la::avdecc::utils::to_integral(probingStatus), true, true)).arg(avdecc::helper::probingStatusToString(probingStatus)));
+		setStringValue(_probingStatus, QString("%1 (%2)").arg(hive::modelsLibrary::helper::toHexQString(la::avdecc::utils::to_integral(probingStatus), true, true)).arg(avdecc::helper::probingStatusToString(probingStatus)));
 	}
 	else
 	{
@@ -292,7 +294,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	if (streamDynamicInfo.acmpStatus)
 	{
 		auto const acmpStatus = *streamDynamicInfo.acmpStatus;
-		setStringValue(_acmpStatus, QString("%1 (%2)").arg(avdecc::helper::toHexQString(acmpStatus.getValue(), true, true)).arg(avdecc::helper::toUpperCamelCase(static_cast<std::string>(acmpStatus))));
+		setStringValue(_acmpStatus, QString("%1 (%2)").arg(hive::modelsLibrary::helper::toHexQString(acmpStatus.getValue(), true, true)).arg(hive::modelsLibrary::helper::toUpperCamelCase(static_cast<std::string>(acmpStatus))));
 	}
 	else
 	{

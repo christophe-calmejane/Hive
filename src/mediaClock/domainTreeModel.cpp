@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -29,6 +29,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QToolTip>
+#include <QEvent>
+#include <QHelpEvent>
 
 #include "mediaClock/domainTreeModel.hpp"
 #include "avdecc/mcDomainManager.hpp"
@@ -114,7 +116,7 @@ DomainTreeModelPrivate::DomainTreeModelPrivate(DomainTreeModel* model)
 {
 	_rootItem = new RootTreeItem();
 
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::gptpChanged, this, &DomainTreeModelPrivate::onGptpChanged);
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::gptpChanged, this, &DomainTreeModelPrivate::onGptpChanged);
 }
 
 /**
@@ -398,7 +400,8 @@ void DomainTreeModelPrivate::removeEntity(avdecc::mediaClock::DomainIndex const 
 		{
 			auto* entityTreeItem = static_cast<EntityTreeItem*>(domainItem->child(0));
 			domainItem->domain().setMediaClockDomainMaster(entityTreeItem->entityId());
-			q->dataChanged(domainModelIndex.child(0, 1), domainModelIndex.child(0, 1));
+			auto const changedIndex = q->index(0, 1, domainModelIndex);
+			q->dataChanged(changedIndex, changedIndex);
 			mcMasterEnabledEntitiesFound = true;
 			break;
 		}
@@ -1610,7 +1613,7 @@ void MCMasterSelectionDelegate::paint(QPainter* painter, QStyleOptionViewItem co
 		editor.setChecked(entityIsMCMaster);
 		editor.setEnabled(isMediaClockDomainManageableEntity);
 		QPalette pal;
-		pal.setColor(QPalette::Background, Qt::transparent);
+		pal.setColor(QPalette::Window, Qt::transparent);
 		editor.setPalette(pal);
 
 		painter->save();

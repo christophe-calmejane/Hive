@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,6 +21,8 @@
 #include "asPathWidget.hpp"
 #include "nodeTreeWidget.hpp"
 #include "avdecc/helper.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
 
 #include <unordered_map>
 #include <string>
@@ -74,7 +76,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		}
 
 		// Listen for onGptpChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::gptpChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::gptpChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 			{
 				if (entityID == _entityID && (avbInterfaceIndex == _avbInterfaceIndex || avbInterfaceIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex))
@@ -83,7 +85,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 				}
 			});
 		// Listen for AvbInterfaceInfoChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceInfoChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::avbInterfaceInfoChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info)
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
@@ -96,7 +98,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 				}
 			});
 		// Listen for avbInterfaceLinkStatusChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::avbInterfaceLinkStatusChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::avbInterfaceLinkStatusChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
@@ -130,7 +132,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		}
 
 		// Listen for AsPathChanged
-		connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::asPathChanged, this,
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::asPathChanged, this,
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath)
 			{
 				if (entityID == _entityID && avbInterfaceIndex == _avbInterfaceIndex)
@@ -187,7 +189,7 @@ void AvbInterfaceDynamicTreeWidgetItem::restoreAsPathVisibility()
 
 void AvbInterfaceDynamicTreeWidgetItem::updateGptpInfo(la::avdecc::UniqueIdentifier const& gptpGrandmasterID, std::uint8_t const gptpDomainNumber)
 {
-	_gptpGrandmasterID->setText(1, avdecc::helper::uniqueIdentifierToString(gptpGrandmasterID));
+	_gptpGrandmasterID->setText(1, hive::modelsLibrary::helper::uniqueIdentifierToString(gptpGrandmasterID));
 	_gptpDomainNumber->setText(1, QString::number(gptpDomainNumber));
 }
 
@@ -223,7 +225,7 @@ void AvbInterfaceDynamicTreeWidgetItem::updateAsPath(la::avdecc::entity::model::
 
 	for (auto const& clockID : asPath.sequence)
 	{
-		auto* widget = new AsPathWidget{ clockID, avdecc::helper::getVendorName(clockID) };
+		auto* widget = new AsPathWidget{ clockID, hive::modelsLibrary::helper::getVendorName(clockID) };
 		auto* item = new QListWidgetItem(_asPath);
 		item->setSizeHint(widget->sizeHint());
 

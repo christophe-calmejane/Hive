@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,7 +21,7 @@
 
 #include <QDialog>
 
-#include "avdecc/controllerManager.hpp"
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 class DeviceDetailsDialogImpl;
 

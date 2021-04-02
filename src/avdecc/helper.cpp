@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,9 +18,11 @@
 */
 
 #include "helper.hpp"
-#include "controllerManager.hpp"
-#include "toolkit/material/helper.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/utils.hpp>
+
 #include <cctype>
 
 namespace avdecc
@@ -45,124 +47,6 @@ QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type 
 	}
 }
 
-QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
-{
-	return toHexQString(identifier.getValue(), true, true);
-}
-
-QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
-{
-	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.descriptorIndex, node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
-}
-
-QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
-{
-	try
-	{
-		auto const& entity = controlledEntity.getEntity();
-
-		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
-		{
-			return controlledEntity.getEntityNode().dynamicModel->entityName.data();
-		}
-	}
-	catch (la::avdecc::controller::ControlledEntity::Exception const&)
-	{
-		// Ignore exception
-	}
-	catch (...)
-	{
-		// Uncaught exception
-		AVDECC_ASSERT(false, "Uncaught exception");
-	}
-	return {};
-}
-
-QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
-{
-	QString name;
-
-	name = entityName(controlledEntity);
-
-	if (name.isEmpty())
-		name = uniqueIdentifierToString(controlledEntity.getEntity().getEntityID());
-
-	return name;
-}
-
-QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
-{
-	try
-	{
-		auto const& entity = controlledEntity.getEntity();
-
-		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
-		{
-			return controlledEntity.getEntityNode().dynamicModel->groupName.data();
-		}
-	}
-	catch (la::avdecc::controller::ControlledEntity::Exception const&)
-	{
-		// Ignore exception
-	}
-	catch (...)
-	{
-		// Uncaught exception
-		AVDECC_ASSERT(false, "Uncaught exception");
-	}
-	return {};
-}
-
-QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
-{
-	try
-	{
-		auto const& entityNode = controlledEntity.getEntityNode();
-		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
-		return objectName(&controlledEntity, streamNode);
-	}
-	catch (la::avdecc::controller::ControlledEntity::Exception const&)
-	{
-		// Ignore exception
-	}
-	catch (...)
-	{
-		// Uncaught exception
-		AVDECC_ASSERT(false, "Uncaught exception");
-	}
-	return {};
-}
-
-QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
-{
-	try
-	{
-		auto const& entityNode = controlledEntity.getEntityNode();
-		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
-		return objectName(&controlledEntity, streamNode);
-	}
-	catch (la::avdecc::controller::ControlledEntity::Exception const&)
-	{
-		// Ignore exception
-	}
-	catch (...)
-	{
-		// Uncaught exception
-		AVDECC_ASSERT(false, "Uncaught exception");
-	}
-	return {};
-}
-
-QString redundantOutputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept
-{
-	return QString{ "Redundant Stream Output %1" }.arg(QString::number(redundantIndex));
-}
-
-QString redundantInputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept
-{
-	return QString{ "Redundant Stream Input %1" }.arg(QString::number(redundantIndex));
-}
-
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept
 {
 	return QString::fromStdString(la::avdecc::entity::model::descriptorTypeToString(descriptorType));
@@ -185,15 +69,15 @@ QString acquireStateToString(la::avdecc::controller::model::AcquireState const& 
 		case la::avdecc::controller::model::AcquireState::AcquiredByOther:
 		{
 			auto text = QString{ "Acquired by " };
-			auto& controllerManager = avdecc::ControllerManager::getInstance();
+			auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const& controllerEntity = controllerManager.getControlledEntity(owningController);
 			if (controllerEntity)
 			{
-				text += smartEntityName(*controllerEntity);
+				text += hive::modelsLibrary::helper::smartEntityName(*controllerEntity);
 			}
 			else
 			{
-				text += uniqueIdentifierToString(owningController);
+				text += hive::modelsLibrary::helper::uniqueIdentifierToString(owningController);
 			}
 			return text;
 		}
@@ -222,15 +106,15 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 		case la::avdecc::controller::model::LockState::LockedByOther:
 		{
 			auto text = QString{ "Locked by " };
-			auto& controllerManager = avdecc::ControllerManager::getInstance();
+			auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const& controllerEntity = controllerManager.getControlledEntity(lockingController);
 			if (controllerEntity)
 			{
-				text += smartEntityName(*controllerEntity);
+				text += hive::modelsLibrary::helper::smartEntityName(*controllerEntity);
 			}
 			else
 			{
-				text += uniqueIdentifierToString(lockingController);
+				text += hive::modelsLibrary::helper::uniqueIdentifierToString(lockingController);
 			}
 			return text;
 		}
@@ -654,6 +538,376 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 	}
 }
 
+QString controlTypeToString(la::avdecc::entity::model::ControlType const& controlType) noexcept
+{
+	auto const vendorID = controlType.getVendorID();
+	if (vendorID == la::avdecc::entity::model::StandardControlTypeVendorID)
+	{
+		switch (static_cast<la::avdecc::entity::model::StandardControlType>(controlType.getValue()))
+		{
+			case la::avdecc::entity::model::StandardControlType::Enable:
+				return "Enable";
+			case la::avdecc::entity::model::StandardControlType::Identify:
+				return "Identify";
+			case la::avdecc::entity::model::StandardControlType::Mute:
+				return "Mute";
+			case la::avdecc::entity::model::StandardControlType::Invert:
+				return "Invert";
+			case la::avdecc::entity::model::StandardControlType::Gain:
+				return "Gain";
+			case la::avdecc::entity::model::StandardControlType::Attenuate:
+				return "Attenuate";
+			case la::avdecc::entity::model::StandardControlType::Delay:
+				return "Delay";
+			case la::avdecc::entity::model::StandardControlType::SrcMode:
+				return "Sample Rate Converter Mode";
+			case la::avdecc::entity::model::StandardControlType::Snapshot:
+				return "Snapshot";
+			case la::avdecc::entity::model::StandardControlType::PowLineFreq:
+				return "Power Line Frequency";
+			case la::avdecc::entity::model::StandardControlType::PowerStatus:
+				return "Power Status";
+			case la::avdecc::entity::model::StandardControlType::FanStatus:
+				return "Fan Status";
+			case la::avdecc::entity::model::StandardControlType::Temperature:
+				return "Temperature";
+			case la::avdecc::entity::model::StandardControlType::Altitude:
+				return "Altitude";
+			case la::avdecc::entity::model::StandardControlType::AbsoluteHumidity:
+				return "Absolute Humidity";
+			case la::avdecc::entity::model::StandardControlType::RelativeHumidity:
+				return "Relative Humidity";
+			case la::avdecc::entity::model::StandardControlType::Orientation:
+				return "Orientation";
+			case la::avdecc::entity::model::StandardControlType::Velocity:
+				return "Velocity";
+			case la::avdecc::entity::model::StandardControlType::Acceleration:
+				return "Acceleration";
+			case la::avdecc::entity::model::StandardControlType::FilterResponse:
+				return "Filter Response";
+			case la::avdecc::entity::model::StandardControlType::Panpot:
+				return "Stereo Pan Position";
+			case la::avdecc::entity::model::StandardControlType::Phantom:
+				return "Phantom Power";
+			case la::avdecc::entity::model::StandardControlType::AudioScale:
+				return "Audio Scale";
+			case la::avdecc::entity::model::StandardControlType::AudioMeters:
+				return "Audio Meters";
+			case la::avdecc::entity::model::StandardControlType::AudioSpectrum:
+				return "Audio Spectrum";
+			case la::avdecc::entity::model::StandardControlType::ScanningMode:
+				return "Video Scanning Mode";
+			case la::avdecc::entity::model::StandardControlType::AutoExpMode:
+				return "Auto Exposure Mode";
+			case la::avdecc::entity::model::StandardControlType::AutoExpPrio:
+				return "Auto Exposure Priority";
+			case la::avdecc::entity::model::StandardControlType::ExpTime:
+				return "Exposure Time";
+			case la::avdecc::entity::model::StandardControlType::Focus:
+				return "Focus";
+			case la::avdecc::entity::model::StandardControlType::FocusAuto:
+				return "Focus Automatic";
+			case la::avdecc::entity::model::StandardControlType::Iris:
+				return "Iris";
+			case la::avdecc::entity::model::StandardControlType::Zoom:
+				return "Zoom";
+			case la::avdecc::entity::model::StandardControlType::Privacy:
+				return "Privacy";
+			case la::avdecc::entity::model::StandardControlType::Backlight:
+				return "Backlight Compensation";
+			case la::avdecc::entity::model::StandardControlType::Brightness:
+				return "Brightness";
+			case la::avdecc::entity::model::StandardControlType::Contrast:
+				return "Contrast";
+			case la::avdecc::entity::model::StandardControlType::Hue:
+				return "Hue";
+			case la::avdecc::entity::model::StandardControlType::Saturation:
+				return "Saturation";
+			case la::avdecc::entity::model::StandardControlType::Sharpness:
+				return "Sharpness";
+			case la::avdecc::entity::model::StandardControlType::Gamma:
+				return "Gamma";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalTemp:
+				return "White Balance Temperature";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalTempAuto:
+				return "White Balance Temperature Auto";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalComp:
+				return "White Balance Components";
+			case la::avdecc::entity::model::StandardControlType::WhiteBalCompAuto:
+				return "White Balance Components Auto";
+			case la::avdecc::entity::model::StandardControlType::DigitalZoom:
+				return "Digital Zoom";
+			case la::avdecc::entity::model::StandardControlType::MediaPlaylist:
+				return "Media Playlist";
+			case la::avdecc::entity::model::StandardControlType::MediaPlaylistName:
+				return "Media Playlist Name";
+			case la::avdecc::entity::model::StandardControlType::MediaDisk:
+				return "Media Disk";
+			case la::avdecc::entity::model::StandardControlType::MediaDiskName:
+				return "Media Disk Name";
+			case la::avdecc::entity::model::StandardControlType::MediaTrack:
+				return "Media Track";
+			case la::avdecc::entity::model::StandardControlType::MediaTrackName:
+				return "Media Track Name";
+			case la::avdecc::entity::model::StandardControlType::MediaSpeed:
+				return "Media Speed";
+			case la::avdecc::entity::model::StandardControlType::MediaSamplePosition:
+				return "Media Sample Position";
+			case la::avdecc::entity::model::StandardControlType::MediaPlaybackTransport:
+				return "Media Playback Transport";
+			case la::avdecc::entity::model::StandardControlType::MediaRecordTransport:
+				return "Media Record Transport";
+			case la::avdecc::entity::model::StandardControlType::Frequency:
+				return "Frequency";
+			case la::avdecc::entity::model::StandardControlType::Modulation:
+				return "Modulation";
+			case la::avdecc::entity::model::StandardControlType::Polarization:
+				return "Polarization";
+			default:
+				AVDECC_ASSERT(false, "Not handled!");
+				return "Unknown Standard Control Type";
+		}
+	}
+	else
+	{
+		return "Vendor: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint32_t, 6>(vendorID, true, true)) + " Value: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint64_t, 10>(controlType.getVendorValue(), true, true));
+	}
+}
+
+QString controlValueTypeToString(la::avdecc::entity::model::ControlValueType::Type const controlValueType) noexcept
+{
+	switch (controlValueType)
+	{
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8:
+			return "Linear Int 8";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8:
+			return "Linear UInt 8";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16:
+			return "Linear Int 16";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16:
+			return "Linear UInt 16";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32:
+			return "Linear Int 32";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32:
+			return "Linear UTnt 32";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64:
+			return "Linear Int 64";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64:
+			return "Linear UInt 64";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat:
+			return "Linear Float";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble:
+			return "Linear Double";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt8:
+			return "Selector Int 8";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt8:
+			return "Selector UInt 8";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt16:
+			return "Selector Int 16";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt16:
+			return "Selector UInt 16";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt32:
+			return "Selector Int 32";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt32:
+			return "Selector UInt 32";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt64:
+			return "Selector Int 64";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt64:
+			return "Selector UInt 64";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorFloat:
+			return "Selector Float";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorDouble:
+			return "Selector Double";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSelectorString:
+			return "Selector String";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt8:
+			return "Array Int 8";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt8:
+			return "Array UInt 8";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt16:
+			return "Array Int 16";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt16:
+			return "Array UInt 16";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt32:
+			return "Array Int 32";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt32:
+			return "Array UInt 32";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt64:
+			return "Array Int 64";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt64:
+			return "Array UInt 64";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayFloat:
+			return "Array Float";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlArrayDouble:
+			return "Array Double";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlUtf8:
+			return "UTF8";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlBodePlot:
+			return "Bode Plot";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSmpteTime:
+			return "SMPTE Time";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlSampleRate:
+			return "Sample Rate";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlGptpTime:
+			return "gPTP Time";
+		case la::avdecc::entity::model::ControlValueType::Type::ControlVendor:
+			return "Vendor";
+		case la::avdecc::entity::model::ControlValueType::Type::Expansion:
+			return "Expansion";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
+
+QString controlValueUnitToString(la::avdecc::entity::model::ControlValueUnit::Unit const controlValueUnit) noexcept
+{
+	switch (controlValueUnit)
+	{
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Unitless:
+			return "Unitless";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Count:
+			return "Count";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Percent:
+			return "Percent";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::FStop:
+			return "fstop";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Seconds:
+			return "Seconds";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Minutes:
+			return "Minutes";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Hours:
+			return "Hours";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Days:
+			return "Days";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Months:
+			return "Months";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Years:
+			return "Years";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Samples:
+			return "Samples";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Frames:
+			return "Frames";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Hertz:
+			return "Hertz";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Semitones:
+			return "Semitones";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Cents:
+			return "Cents";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Octaves:
+			return "Octaves";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Fps:
+			return "FPS";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Metres:
+			return "Metres";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Kelvin:
+			return "Kelvin";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Grams:
+			return "Grams";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Volts:
+			return "Volts";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Dbv:
+			return "dBV";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Dbu:
+			return "dBu";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Amps:
+			return "Amps";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Watts:
+			return "Watts";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Dbm:
+			return "dBm";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Dbw:
+			return "dBW";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Pascals:
+			return "Pascals";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Bits:
+			return "Bits";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Bytes:
+			return "Bytes";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::KibiBytes:
+			return "KibiBytes";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::MebiBytes:
+			return "MebiBytes";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::GibiBytes:
+			return "GibiBytes";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::TebiBytes:
+			return "TebiBytes";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::BitsPerSec:
+			return "Bits Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::BytesPerSec:
+			return "Bytes Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::KibiBytesPerSec:
+			return "KibiBytes Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::MebiBytesPerSec:
+			return "MebiBytes Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::GibiBytesPerSec:
+			return "GibiBytes Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::TebiBytesPerSec:
+			return "TebiBytes Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Candelas:
+			return "Candelas";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Joules:
+			return "Joules";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Radians:
+			return "Radians";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Newtons:
+			return "Newtons";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Ohms:
+			return "Ohms";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::MetresPerSec:
+			return "Metres Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::RadiansPerSec:
+			return "Radians Per Sec";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::MetresPerSecSquared:
+			return "Metres Per Sec Squared";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::RadiansPerSecSquared:
+			return "Radians Per Sec Squared";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Teslas:
+			return "Teslas";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Webers:
+			return "Webers";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::AmpsPerMetre:
+			return "Amps Per Metre";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::MetresSquared:
+			return "Metres Squared";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::MetresCubed:
+			return "Metres Cubed";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Litres:
+			return "Litres";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Db:
+			return "dB";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbPeak:
+			return "dB Peak";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbRms:
+			return "dB RMS";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Dbfs:
+			return "dBFS";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbfsPeak:
+			return "dBFS Peak";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbfsRms:
+			return "dBFS RMS";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Dbtp:
+			return "dBTP";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbSplA:
+			return "dB(A) SPL";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbZ:
+			return "dB(Z)";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbSplC:
+			return "dB(C) SPL";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbSpl:
+			return "dB SPL";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Lu:
+			return "LU";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::Lufs:
+			return "LUFS";
+		case la::avdecc::entity::model::ControlValueUnit::Unit::DbA:
+			return "dB(A)";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
+
 QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept
 {
 	switch (type)
@@ -749,129 +1003,6 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";
 	}
-}
-
-QString toUpperCamelCase(std::string const& text) noexcept
-{
-#pragma message("TODO: Use a regex, if possible")
-	auto output = std::string{};
-
-	auto shouldUpperCase = true;
-	for (auto const c : text)
-	{
-		if (c == '_')
-		{
-			output.push_back(' ');
-			shouldUpperCase = true;
-		}
-		else if (shouldUpperCase)
-		{
-			output.push_back(std::toupper(c));
-			shouldUpperCase = false;
-		}
-		else
-		{
-			output.push_back(std::tolower(c));
-		}
-	}
-
-	return QString::fromStdString(output);
-}
-
-QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
-{
-	static auto s_oui24ToName = std::unordered_map<std::uint32_t, QString>{};
-	static auto s_oui36ToName = std::unordered_map<std::uint64_t, QString>{};
-
-	// Map is empty, load it
-	if (s_oui24ToName.empty())
-	{
-		// Right now statically build the map, later use a resource file generated from https://standards.ieee.org/develop/regauth/oui/oui.csv
-		s_oui24ToName.emplace(std::make_pair(0x001B92, "l-acoustics"));
-		s_oui24ToName.emplace(std::make_pair(0x001CF7, "AudioScience"));
-		s_oui24ToName.emplace(std::make_pair(0xB4994C, "Texas Instruments"));
-		s_oui24ToName.emplace(std::make_pair(0x3CC0C6, "d&b audiotechnik GmbH"));
-		s_oui24ToName.emplace(std::make_pair(0x001CAB, "Meyer Sound Laboratories, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x0C4DE9, "Apple"));
-		s_oui24ToName.emplace(std::make_pair(0x0090E5, "TEKNEMA, INC."));
-		s_oui24ToName.emplace(std::make_pair(0x0001F2, "Mark of the Unicorn, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xD0699E, "LUMINEX Lighting Control Equipment"));
-		s_oui24ToName.emplace(std::make_pair(0xCC46D6, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x58AC78, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x00107B, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x00906D, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x0090BF, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x005080, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0xF4CFE2, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x501CBF, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x88F031, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x508789, "Cisco Systems, Inc")); // Too many cisco OUI-24 to manually add them
-		s_oui24ToName.emplace(std::make_pair(0x00A07E, "AVID TECHNOLOGY, INC."));
-		s_oui24ToName.emplace(std::make_pair(0xD88466, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x000496, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xB85001, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x5C0E8B, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xB4C799, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x7467F7, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x00E02B, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x949B2C, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xA4EA8E, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xFC0A81, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xB42D56, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x000130, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xF46E95, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x784501, "Biamp Systems"));
-	}
-
-	// First search in OUI-24
-	{
-		auto const nameIt = s_oui24ToName.find(entityID.getVendorID<std::uint32_t>());
-		if (nameIt != s_oui24ToName.end())
-		{
-			return nameIt->second;
-		}
-	}
-
-	// Then search in OUI-36
-	{
-		auto const nameIt = s_oui36ToName.find(entityID.getVendorID<std::uint64_t>());
-		if (nameIt != s_oui36ToName.end())
-		{
-			return nameIt->second;
-		}
-	}
-
-	// If not found, convert to hex string
-	return toHexQString(entityID.getVendorID<std::uint32_t>(), true, true);
-}
-
-QIcon interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept
-{
-	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QIcon> s_icon;
-
-	auto const it = s_icon.find(type);
-	if (it == std::end(s_icon))
-	{
-		auto what = QString{};
-
-		switch (type)
-		{
-			case la::avdecc::networkInterface::Interface::Type::Ethernet:
-				what = "settings_ethernet";
-				break;
-			case la::avdecc::networkInterface::Interface::Type::WiFi:
-				what = "wifi";
-				break;
-			default:
-				AVDECC_ASSERT(false, "Unhandled type");
-				what = "error_outline";
-				break;
-		}
-
-		s_icon[type] = qt::toolkit::material::helper::generateIcon(what);
-	}
-
-	return s_icon[type];
 }
 
 } // namespace helper

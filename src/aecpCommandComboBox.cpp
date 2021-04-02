@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -22,14 +22,14 @@
 class AecpCommandComboBoxPrivate : public QObject
 {
 public:
-	AecpCommandComboBoxPrivate(AecpCommandComboBox* q, la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType)
+	AecpCommandComboBoxPrivate(AecpCommandComboBox* q, la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType)
 		: q_ptr(q)
 		, _entityID(entityID)
 		, _commandType(commandType)
 	{
-		auto& manager = avdecc::ControllerManager::getInstance();
-		connect(&manager, &avdecc::ControllerManager::endAecpCommand, this,
-			[this](la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 			{
 				if (entityID != _entityID)
 				{
@@ -60,12 +60,12 @@ protected:
 	Q_DECLARE_PUBLIC(AecpCommandComboBox);
 
 	la::avdecc::UniqueIdentifier const _entityID;
-	avdecc::ControllerManager::AecpCommandType const _commandType;
+	hive::modelsLibrary::ControllerManager::AecpCommandType const _commandType;
 
 	int _previousIndex{ -1 };
 };
 
-AecpCommandComboBox::AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, QWidget* parent)
+AecpCommandComboBox::AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, QWidget* parent)
 	: ComboBox(parent)
 	, d_ptr(new AecpCommandComboBoxPrivate(this, entityID, commandType))
 {

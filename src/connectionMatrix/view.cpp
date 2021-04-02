@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -23,9 +23,11 @@
 #include "connectionMatrix/headerView.hpp"
 #include "connectionMatrix/itemDelegate.hpp"
 #include "connectionMatrix/cornerWidget.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QMouseEvent>
 #include <QMessageBox>
@@ -108,7 +110,7 @@ void View::onIntersectionClicked(QModelIndex const& index)
 {
 	auto const& intersectionData = _model->intersectionData(index);
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
 	auto const handleChannelCreationResult = [this](avdecc::ChannelConnectionManager::ChannelConnectResult channelConnectResult, bool allowTalkerMappingChanges, bool allowListenerMappingRemoval, std::function<void(bool, bool)> callbackTryAgainElevatedRights)
@@ -445,12 +447,12 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 
 					if (action == matchTalkerAction)
 					{
-						auto& manager = avdecc::ControllerManager::getInstance();
+						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode->streamFormat());
 					}
 					else if (action == matchListenerAction)
 					{
-						auto& manager = avdecc::ControllerManager::getInstance();
+						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 						manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode->streamFormat());
 					}
 				}
@@ -537,7 +539,7 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 	}
 	else if (name == settings::General_ThemeColorIndex.name)
 	{
-		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+		auto const colorName = qtMate::material::color::Palette::name(value.toInt());
 
 		_cornerWidget->setColor(colorName);
 		_verticalHeaderView->setColor(colorName);
@@ -561,12 +563,12 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 		{
 			continue; // entity already displayed.
 		}
-		auto entityName = avdecc::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
+		auto entityName = hive::modelsLibrary::helper::toHexQString(it->first.getValue()); // by default show the id if the entity is offline
 		{
-			auto const controlledEntity = avdecc::ControllerManager::getInstance().getControlledEntity(it->first);
+			auto const controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(it->first);
 			if (controlledEntity)
 			{
-				entityName = avdecc::helper::smartEntityName(*controlledEntity);
+				entityName = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
 			}
 		}
 		auto errorsForEntity = info.connectionCreationErrors.equal_range(it->first);
@@ -580,13 +582,13 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 			{
 				switch (*i->second.commandTypeAcmp)
 				{
-					case avdecc::ControllerManager::AcmpCommandType::ConnectStream:
+					case hive::modelsLibrary::ControllerManager::AcmpCommandType::ConnectStream:
 						errors += "Connecting stream failed. ";
 						break;
-					case avdecc::ControllerManager::AcmpCommandType::DisconnectStream:
+					case hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectStream:
 						errors += "Disconnecting stream failed. ";
 						break;
-					case avdecc::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
+					case hive::modelsLibrary::ControllerManager::AcmpCommandType::DisconnectTalkerStream:
 						errors += "Disconnecting talker stream failed. ";
 						break;
 					default:
@@ -597,16 +599,16 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 			{
 				switch (*i->second.commandTypeAecp)
 				{
-					case avdecc::ControllerManager::AecpCommandType::SetStreamFormat:
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat:
 						errors += "Setting the stream format failed. ";
 						break;
-					case avdecc::ControllerManager::AecpCommandType::AddStreamPortAudioMappings:
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::AddStreamPortAudioMappings:
 						errors += "Adding of dynamic mappings failed. ";
 						break;
-					case avdecc::ControllerManager::AecpCommandType::RemoveStreamPortAudioMappings:
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::RemoveStreamPortAudioMappings:
 						errors += "Removal of dynamic mappings failed. ";
 						break;
-					case avdecc::ControllerManager::AecpCommandType::StartStream:
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::StartStream:
 						// only show the error if the stop didn't fail
 						if (!stopStreamFailed)
 						{
@@ -617,7 +619,7 @@ void View::handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo 
 							continue; // continue the loop
 						}
 						break;
-					case avdecc::ControllerManager::AecpCommandType::StopStream:
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::StopStream:
 						stopStreamFailed = true;
 						continue; // never show stop stream failures -> continue the loop
 					default:

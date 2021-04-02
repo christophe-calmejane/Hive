@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -45,7 +45,11 @@ void Sparkle::init(std::string const& signature) noexcept
 		win_sparkle_set_shutdown_request_callback(
 			[]()
 			{
-				QCoreApplication::postEvent(qApp, new QEvent{ QEvent::Type::Close });
+				auto const& sparkle = getInstance();
+				if (sparkle._shutdownRequestHandler)
+				{
+					sparkle._shutdownRequestHandler();
+				}
 			});
 		win_sparkle_set_did_find_update_callback(
 			[]()

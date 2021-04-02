@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -20,13 +20,16 @@
 #include "settingsDialog.hpp"
 #include "ui_settingsDialog.h"
 #include "internals/config.hpp"
+#include "settingsManager/settings.hpp"
+#include "networkInterfaceTypeModel.hpp"
+
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
-#include "settingsManager/settings.hpp"
-#include "entityLogoCache.hpp"
-#include "toolkit/material/colorPalette.hpp"
-#include "toolkit/tickableMenu.hpp"
-#include "networkInterfaceTypeModel.hpp"
+#include <QtMate/material/colorPalette.hpp>
+#include <QtMate/widgets/tickableMenu.hpp>
+#include <hive/widgetModelsLibrary/entityLogoCache.hpp>
+
+#include <QMessageBox>
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
@@ -34,6 +37,7 @@ class SettingsDialogImpl final : public Ui::SettingsDialog
 {
 public:
 	SettingsDialogImpl(::SettingsDialog* parent)
+		: _parent(parent)
 	{
 		// Link UI
 		setupUi(parent);
@@ -74,7 +78,7 @@ private:
 		{
 			auto const lock = QSignalBlocker{ themeColorComboBox };
 			themeColorComboBox->setModel(&_themeColorModel);
-			themeColorComboBox->setModelColumn(_themeColorModel.index(qt::toolkit::material::color::DefaultShade));
+			themeColorComboBox->setModelColumn(_themeColorModel.index(qtMate::material::color::DefaultShade));
 			themeColorComboBox->setCurrentIndex(settings.getValue(settings::General_ThemeColorIndex.name).toInt());
 		}
 	}
@@ -168,14 +172,21 @@ private:
 		{
 #ifndef DEBUG
 			if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
+			{
 				continue;
+			}
 #endif // !DEBUG
 			protocolComboBox->addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
+		}
+		if (protocolComboBox->count() == 0)
+		{
+			QMessageBox::warning(_parent, "", "No Network Protocol available.\nPlease reinstall pcap driver.");
 		}
 	}
 
 private:
-	qt::toolkit::material::color::Palette _themeColorModel;
+	::SettingsDialog* _parent{ nullptr };
+	qtMate::material::color::Palette _themeColorModel;
 	NetworkInterfaceTypeModel _networkInterfaceTypeModel;
 };
 
@@ -201,7 +212,7 @@ void SettingsDialog::on_automaticPNGDownloadCheckBox_toggled(bool checked)
 
 void SettingsDialog::on_clearLogoCacheButton_clicked()
 {
-	auto& logoCache{ EntityLogoCache::getInstance() };
+	auto& logoCache{ hive::widgetModelsLibrary::EntityLogoCache::getInstance() };
 	logoCache.clear();
 }
 

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -38,31 +38,33 @@
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 #include "avdecc/controllerModel.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
 #include "internals/config.hpp"
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
+#include "settingsManager/settingsSignaler.hpp"
 #include "sparkleHelper/sparkleHelper.hpp"
-#include "toolkit/comboBox.hpp"
-#include "toolkit/flatIconButton.hpp"
-#include "toolkit/dynamicHeaderView.hpp"
-#include "toolkit/material/color.hpp"
-#include "toolkit/material/colorPalette.hpp"
-#include "activeNetworkInterfaceModel.hpp"
+#include "activeNetworkInterfacesModel.hpp"
 #include "aboutDialog.hpp"
 #include "deviceDetailsDialog.hpp"
-#include "entityLogoCache.hpp"
-#include "errorItemDelegate.hpp"
-#include "imageItemDelegate.hpp"
 #include "nodeVisitor.hpp"
 #include "settingsDialog.hpp"
 #include "multiFirmwareUpdateDialog.hpp"
 #include "defaults.hpp"
 #include "windowsNpfHelper.hpp"
 
+#include <QtMate/widgets/comboBox.hpp>
+#include <QtMate/widgets/flatIconButton.hpp>
+#include <QtMate/widgets/dynamicHeaderView.hpp>
+#include <QtMate/material/color.hpp>
+#include <QtMate/material/colorPalette.hpp>
 #include <la/avdecc/networkInterfaceHelper.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/widgetModelsLibrary/entityLogoCache.hpp>
+#include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
 
 #include <mutex>
 #include <memory>
@@ -84,7 +86,7 @@ class MainWindowImpl final : public QObject, public Ui::MainWindow, public setti
 public:
 	MainWindowImpl(::MainWindow* parent)
 		: _parent(parent)
-		, _controllerModel(new avdecc::ControllerModel(parent))
+		, _controllerModel(new avdecc::ControllerModel(parent)) // parent takes ownership of the object -> 'new' required
 	{
 		// Setup common UI
 		setupUi(parent);
@@ -142,7 +144,7 @@ public:
 	void loadSettings();
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
-	void updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename);
+	void updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename);
 	static QString generateDumpSourceString() noexcept;
 
 	// settings::SettingsManager::Observer overrides
@@ -150,18 +152,19 @@ public:
 
 	// Private members
 	::MainWindow* _parent{ nullptr };
-	qt::toolkit::ComboBox _interfaceComboBox{ _parent };
-	ActiveNetworkInterfaceModel _activeNetworkInterfaceModel{ _parent };
-	QSortFilterProxyModel _networkInterfaceModelProxy{ _parent };
-	qt::toolkit::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
-	qt::toolkit::FlatIconButton _discoverButton{ "Material Icons", "cast", _parent };
-	qt::toolkit::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
-	qt::toolkit::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
-	qt::toolkit::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
+	qtMate::widgets::ComboBox _interfaceComboBox{ _parent };
+	ActiveNetworkInterfacesModel _activeNetworkInterfacesModel{ _parent };
+	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
+	qtMate::widgets::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
+	qtMate::widgets::FlatIconButton _discoverButton{ "Material Icons", "cast", _parent };
+	qtMate::widgets::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
+	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
+	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
-	qt::toolkit::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
+	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	bool _shown{ false };
+	SettingsSignaler _settingsSignaler{};
 };
 
 void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
@@ -260,6 +263,13 @@ void MainWindowImpl::currentControllerChanged()
 	auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
+	// Check for No ProtocolInterface
+	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::None)
+	{
+		QMessageBox::warning(_parent, "", "No Network Protocol selected.\nPlease choose one from the Settings.");
+		return;
+	}
+
 	// Check for WinPcap driver
 	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::PCap && _shown)
 	{
@@ -267,7 +277,7 @@ void MainWindowImpl::currentControllerChanged()
 	}
 
 	// Clear the current controller
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	manager.destroyController();
 	_controllerEntityIDLabel.clear();
 
@@ -288,7 +298,7 @@ void MainWindowImpl::currentControllerChanged()
 		auto const progID = std::uint16_t{ PROG_ID };
 #endif // DEBUG
 		manager.createController(protocolType, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
-		_controllerEntityIDLabel.setText(avdecc::helper::uniqueIdentifierToString(manager.getControllerEID()));
+		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
@@ -311,7 +321,7 @@ void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 		return;
 	}
 
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto const entityID = _controllerModel->controlledEntityID(index);
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
@@ -327,9 +337,6 @@ void MainWindowImpl::registerMetaTypes()
 	//
 	qRegisterMetaType<la::avdecc::logger::Layer>("la::avdecc::logger::Layer");
 	qRegisterMetaType<la::avdecc::logger::Level>("la::avdecc::logger::Level");
-	qRegisterMetaType<std::string>("std::string");
-
-	qRegisterMetaType<EntityLogoCache::Type>("EntityLogoCache::Type");
 }
 
 void MainWindowImpl::createViewMenu()
@@ -360,11 +367,12 @@ void MainWindowImpl::createToolbars()
 		auto* interfaceLabel = new QLabel("Interface");
 		interfaceLabel->setMinimumWidth(50);
 		_interfaceComboBox.setMinimumWidth(100);
-		_interfaceComboBox.setModel(&_activeNetworkInterfaceModel);
+		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
 
 		// The combobox takes ownership of the item delegate
-		auto* interfaceComboBoxItemDelegate = new ErrorItemDelegate{};
+		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings::SettingsManager::getInstance().getValue(settings::General_ThemeColorIndex.name).toInt()) };
 		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
+		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, interfaceComboBoxItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
 		auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
 		controllerEntityIDLabel->setMinimumWidth(50);
@@ -420,15 +428,16 @@ void MainWindowImpl::createControllerView()
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
 	// The table view does not take ownership on the item delegate
-	auto* imageItemDelegate{ new ImageItemDelegate{ _parent } };
+	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ _parent } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
 	// The table view does not take ownership on the item delegate
-	auto* errorItemDelegate{ new ErrorItemDelegate{ _parent } };
+	auto* errorItemDelegate{ new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings::SettingsManager::getInstance().getValue(settings::General_ThemeColorIndex.name).toInt()), _parent } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), errorItemDelegate);
+	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
@@ -485,7 +494,7 @@ void MainWindowImpl::loadSettings()
 	auto const networkInterfaceIndex = _interfaceComboBox.findData(networkInterfaceId);
 
 	// Select the interface from the settings, if present and active
-	if (networkInterfaceIndex >= 0 && _activeNetworkInterfaceModel.isEnabled(networkInterfaceId))
+	if (networkInterfaceIndex >= 0 && _activeNetworkInterfacesModel.isEnabled(networkInterfaceId))
 	{
 		_interfaceComboBox.setCurrentIndex(networkInterfaceIndex);
 	}
@@ -505,16 +514,26 @@ void MainWindowImpl::loadSettings()
 		{
 			LOG_HIVE_WARN(QString("Previously configured Network Protocol is no longer supported: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
 		}
+		// Remove Virtual Protocol Interface in Release
+#ifndef DEBUG
+		supportedTypes.reset(la::avdecc::protocol::ProtocolInterface::Type::Virtual);
+#endif
+		// If at least one type remains, use it
 		if (!supportedTypes.empty())
 		{
-			// Force the first supported ProtocolInterface, and save it to the settings, before we call registerSettingObserver
+			// Force the first supported ProtocolInterface
 			protocolType = *supportedTypes.begin();
 			if (wasConfigured)
 			{
 				LOG_HIVE_WARN(QString("Forcing new Network Protocol: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
 			}
-			settings.setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
 		}
+		else
+		{
+			protocolType = la::avdecc::protocol::ProtocolInterface::Type::None;
+		}
+		// Save the new ProtocolInterface to the settings, before we call registerSettingObserver
+		settings.setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
 	}
 
 	// Configure connectionMatrix mode
@@ -529,12 +548,16 @@ void MainWindowImpl::loadSettings()
 
 	// Configure settings observers
 	settings.registerSettingObserver(settings::Network_ProtocolType.name, this);
+	settings.registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 	settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 	settings.registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
 	settings.registerSettingObserver(settings::General_CheckForBetaVersions.name, this);
+
+	// Start the SettingsSignaler
+	_settingsSignaler.start();
 }
 
 static inline bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept
@@ -549,7 +572,7 @@ static inline bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entit
 
 static inline bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
 	if (controlledEntity)
@@ -567,7 +590,7 @@ void MainWindowImpl::connectSignals()
 	connect(&_discoverButton, &QPushButton::clicked, this,
 		[]()
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			manager.discoverRemoteEntities();
 		});
 
@@ -588,7 +611,7 @@ void MainWindowImpl::connectSignals()
 		});
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
-	connect(&_controllerDynamicHeaderView, &qt::toolkit::DynamicHeaderView::sectionChanged, this,
+	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionChanged, this,
 		[this]()
 		{
 			auto& settings = settings::SettingsManager::getInstance();
@@ -598,7 +621,7 @@ void MainWindowImpl::connectSignals()
 	connect(controllerTableView, &QTableView::doubleClicked, this,
 		[this](QModelIndex const& index)
 		{
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const entityID = _controllerModel->controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
@@ -616,7 +639,7 @@ void MainWindowImpl::connectSignals()
 		{
 			auto const index = controllerTableView->indexAt(pos);
 
-			auto& manager = avdecc::ControllerManager::getInstance();
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto const entityID = _controllerModel->controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
@@ -625,6 +648,8 @@ void MainWindowImpl::connectSignals()
 				QMenu menu;
 				auto const& entity = controlledEntity->getEntity();
 				auto const entityModelID = entity.getEntityModelID();
+				auto const isAemSupported = entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported);
+				auto const isIdentifyControlValid = !!controlledEntity->getIdentifyControlIndex();
 
 				auto* acquireAction{ static_cast<QAction*>(nullptr) };
 				auto* releaseAction{ static_cast<QAction*>(nullptr) };
@@ -634,10 +659,11 @@ void MainWindowImpl::connectSignals()
 				auto* inspect{ static_cast<QAction*>(nullptr) };
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
+				auto* identify{ static_cast<QAction*>(nullptr) };
 				auto* dumpFullEntity{ static_cast<QAction*>(nullptr) };
 				auto* dumpEntityModel{ static_cast<QAction*>(nullptr) };
 
-				if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+				if (isAemSupported)
 				{
 					// Do not propose Acquire if the device is Milan (not supported)
 					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
@@ -698,10 +724,14 @@ void MainWindowImpl::connectSignals()
 					}
 					{
 						getLogo = menu.addAction("Retrieve Entity Logo");
-						getLogo->setEnabled(!EntityLogoCache::getInstance().isImageInCache(entityID, EntityLogoCache::Type::Entity));
+						getLogo->setEnabled(!hive::widgetModelsLibrary::EntityLogoCache::getInstance().isImageInCache(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity));
 					}
 					{
 						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
+					}
+					{
+						identify = menu.addAction("Identify Device (10 sec)");
+						identify->setEnabled(isIdentifyControlValid);
 					}
 				}
 
@@ -711,7 +741,7 @@ void MainWindowImpl::connectSignals()
 				{
 					dumpFullEntity = menu.addAction("Export Full Entity...");
 					dumpEntityModel = menu.addAction("Export Entity Model...");
-					dumpEntityModel->setEnabled(entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && entityModelID);
+					dumpEntityModel->setEnabled(isAemSupported && entityModelID);
 				}
 
 				menu.addSeparator();
@@ -757,12 +787,16 @@ void MainWindowImpl::connectSignals()
 					}
 					else if (action == getLogo)
 					{
-						EntityLogoCache::getInstance().getImage(entityID, EntityLogoCache::Type::Entity, true);
+						hive::widgetModelsLibrary::EntityLogoCache::getInstance().getImage(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity, true);
 					}
 					else if (action == clearErrorFlags)
 					{
 						manager.clearAllStreamInputCounterValidFlags(entityID);
 						manager.clearAllStatisticsCounterValidFlags(entityID);
+					}
+					else if (action == identify)
+					{
+						manager.identifyEntity(entityID, std::chrono::seconds{ 10 });
 					}
 					else if (action == dumpFullEntity || action == dumpEntityModel)
 					{
@@ -771,7 +805,7 @@ void MainWindowImpl::connectSignals()
 						if (action == dumpFullEntity)
 						{
 							binaryFilterName = "AVDECC Virtual Entity Files (*.ave)";
-							baseFileName = QString("%1/Entity_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityID));
+							baseFileName = QString("%1/Entity_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID));
 						}
 						else
 						{
@@ -787,7 +821,7 @@ void MainWindowImpl::connectSignals()
 								return;
 							}
 							binaryFilterName = "AVDECC Entity Model Files (*.aem)";
-							baseFileName = QString("%1/EntityModel_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(avdecc::helper::uniqueIdentifierToString(entityModelID));
+							baseFileName = QString("%1/EntityModel_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityModelID));
 						}
 						auto const dumpFile = [this, &entityID, &manager, isFullEntity = (action == dumpFullEntity)](auto const& baseFileName, auto const& binaryFilterName, auto const isBinary)
 						{
@@ -816,7 +850,7 @@ void MainWindowImpl::connectSignals()
 								{
 									if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex && isFullEntity)
 									{
-										auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+										auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
 										if (choice == QMessageBox::StandardButton::Yes)
 										{
 											flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
@@ -832,7 +866,7 @@ void MainWindowImpl::connectSignals()
 									}
 									if (!!error)
 									{
-										QMessageBox::warning(_parent, "", QString("Export of EntityID %1 failed:\n%2").arg(avdecc::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
+										QMessageBox::warning(_parent, "", QString("Export of EntityID %1 failed:\n%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
 									}
 								}
 							}
@@ -857,7 +891,7 @@ void MainWindowImpl::connectSignals()
 			settings.setValue(settings::EntityInspectorState, entityInspector->saveState());
 		});
 
-	connect(loggerView->header(), &qt::toolkit::DynamicHeaderView::sectionChanged, this,
+	connect(loggerView->header(), &qtMate::widgets::DynamicHeaderView::sectionChanged, this,
 		[this]()
 		{
 			auto& settings = settings::SettingsManager::getInstance();
@@ -872,26 +906,26 @@ void MainWindowImpl::connectSignals()
 		});
 
 	// Connect ControllerManager events
-	auto& manager = avdecc::ControllerManager::getInstance();
-	connect(&manager, &avdecc::ControllerManager::transportError, this,
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	connect(&manager, &hive::modelsLibrary::ControllerManager::transportError, this,
 		[this]()
 		{
 			LOG_HIVE_ERROR("Error reading from the active Network Interface");
 		});
-	connect(&manager, &avdecc::ControllerManager::endAecpCommand, this,
-		[this](la::avdecc::UniqueIdentifier const /*entityID*/, avdecc::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+	connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this,
+		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
 			{
-				QMessageBox::warning(_parent, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+				QMessageBox::warning(_parent, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
 			}
 		});
-	connect(&manager, &avdecc::ControllerManager::endAcmpCommand, this,
-		[this](la::avdecc::UniqueIdentifier const /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, avdecc::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+	connect(&manager, &hive::modelsLibrary::ControllerManager::endAcmpCommand, this,
+		[this](la::avdecc::UniqueIdentifier const /*talkerEntityID*/, la::avdecc::entity::model::StreamIndex const /*talkerStreamIndex*/, la::avdecc::UniqueIdentifier const /*listenerEntityID*/, la::avdecc::entity::model::StreamIndex const /*listenerStreamIndex*/, hive::modelsLibrary::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::ControlStatus::Success)
 			{
-				QMessageBox::warning(_parent, "", "<i>" + avdecc::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+				QMessageBox::warning(_parent, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
 			}
 		});
 
@@ -914,7 +948,7 @@ void MainWindowImpl::connectSignals()
 			auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", QString("%1/FullDump_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), filterName);
 			if (!filename.isEmpty())
 			{
-				auto& manager = avdecc::ControllerManager::getInstance();
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				auto [error, message] = manager.serializeAllControlledEntitiesAsJson(filename, flags, generateDumpSourceString());
 				if (!error)
 				{
@@ -1007,7 +1041,7 @@ void MainWindowImpl::connectSignals()
 		{
 			auto& settings = settings::SettingsManager::getInstance();
 			auto const themeColorIndex = settings.getValue(settings::General_ThemeColorIndex.name).toInt();
-			auto const colorName = qt::toolkit::material::color::Palette::name(themeColorIndex);
+			auto const colorName = qtMate::material::color::Palette::name(themeColorIndex);
 			updateStyleSheet(colorName, QString{ RESOURCES_ROOT_DIR } + "/style.qss");
 			LOG_HIVE_DEBUG("StyleSheet reloaded");
 		});
@@ -1019,6 +1053,11 @@ void MainWindowImpl::connectSignals()
 		[]()
 		{
 			return true;
+		});
+	sparkle.setShutdownRequestHandler(
+		[]()
+		{
+			QCoreApplication::postEvent(qApp, new QEvent{ QEvent::Type::Quit });
 		});
 	sparkle.setLogHandler(
 		[this](auto const& message, auto const level)
@@ -1112,7 +1151,7 @@ void MainWindow::showEvent(QShowEvent* event)
 			{
 				Sparkle::getInstance().start();
 			}
-			// Check if we have a network interface selected
+			// Check if we have a network interface selected and start controller
 			{
 				auto const interfaceID = _pImpl->_interfaceComboBox.currentData().toString();
 				if (interfaceID.isEmpty())
@@ -1124,22 +1163,16 @@ void MainWindow::showEvent(QShowEvent* event)
 							QMessageBox::warning(this, "", "No Network Interface selected.\nPlease choose one in the Toolbar.");
 						});
 				}
-			}
-#ifdef _WIN32
-			// Check for WinPcap
-			{
-				auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
-				if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::PCap)
+				else
 				{
-					// Postpone check (because of possible dialog creation)
+					// Postpone Controller start
 					QTimer::singleShot(0,
 						[this]()
 						{
-							_pImpl->checkNpfStatus();
+							_pImpl->currentControllerChanged();
 						});
 				}
 			}
-#endif // _WIN32
 			// Check if this is the first time we launch a new Hive version
 			{
 				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
@@ -1169,6 +1202,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 
 	// Remove settings observers
 	settings.unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
+	settings.unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
 	settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
 	settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
@@ -1197,7 +1231,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 
 void MainWindow::dropEvent(QDropEvent* event)
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	auto const loadEntity = [&manager](auto const& filePath, auto const flags)
 	{
@@ -1292,11 +1326,11 @@ void MainWindow::dropEvent(QDropEvent* event)
 	}
 }
 
-void MainWindowImpl::updateStyleSheet(qt::toolkit::material::color::Name const colorName, QString const& filename)
+void MainWindowImpl::updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename)
 {
-	auto const baseBackgroundColor = qt::toolkit::material::color::value(colorName);
-	auto const baseForegroundColor = QColor{ qt::toolkit::material::color::luminance(colorName) == qt::toolkit::material::color::Luminance::Dark ? Qt::white : Qt::black };
-	auto const connectionMatrixBackgroundColor = qt::toolkit::material::color::value(colorName, qt::toolkit::material::color::Shade::Shade100);
+	auto const baseBackgroundColor = qtMate::material::color::value(colorName);
+	auto const baseForegroundColor = QColor{ qtMate::material::color::luminance(colorName) == qtMate::material::color::Luminance::Dark ? Qt::white : Qt::black };
+	auto const connectionMatrixBackgroundColor = qtMate::material::color::value(colorName, qtMate::material::color::Shade::Shade100);
 
 	// Load and apply the stylesheet
 	auto styleFile = QFile{ filename };
@@ -1319,10 +1353,30 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 {
 	if (name == settings::Network_ProtocolType.name)
 	{
-		currentControllerChanged();
+		if (_shown)
+		{
+			currentControllerChanged();
+		}
+	}
+	else if (name == settings::Controller_DiscoveryDelay.name)
+	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		auto const delay = std::chrono::seconds{ value.toInt() };
+		manager.setAutomaticDiscoveryDelay(delay);
 	}
 	else if (name == settings::Controller_AemCacheEnabled.name || name == settings::Controller_FullStaticModelEnabled.name)
 	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		if (name == settings::Controller_AemCacheEnabled.name)
+		{
+			auto const enabled = value.toBool();
+			manager.setEnableAemCache(enabled);
+		}
+		else if (name == settings::Controller_FullStaticModelEnabled.name)
+		{
+			auto const enabled = value.toBool();
+			manager.setEnableFullAemEnumeration(enabled);
+		}
 		if (_shown)
 		{
 			currentControllerChanged();
@@ -1330,7 +1384,7 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	}
 	else if (name == settings::General_ThemeColorIndex.name)
 	{
-		auto const colorName = qt::toolkit::material::color::Palette::name(value.toInt());
+		auto const colorName = qtMate::material::color::Palette::name(value.toInt());
 		updateStyleSheet(colorName, ":/style.qss");
 	}
 	else if (name == settings::General_AutomaticCheckForUpdates.name)

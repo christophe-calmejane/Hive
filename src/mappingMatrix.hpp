@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,6 +19,11 @@
 
 #pragma once
 
+#include <QtMate/graph/view.hpp>
+#include <QtMate/graph/node.hpp>
+#include <QtMate/graph/inputSocket.hpp>
+#include <QtMate/graph/outputSocket.hpp>
+
 #include <QPushButton>
 #include <QDialog>
 #include <QGridLayout>
@@ -26,10 +31,6 @@
 #include <utility>
 #include <vector>
 #include <string>
-#include "toolkit/graph/view.hpp"
-#include "toolkit/graph/node.hpp"
-#include "toolkit/graph/inputSocket.hpp"
-#include "toolkit/graph/outputSocket.hpp"
 
 namespace mappingMatrix
 {
@@ -71,11 +72,11 @@ using Connections = std::vector<Connection>;
 
 */
 
-class MappingMatrix : public graph::GraphicsView
+class MappingMatrix : public qtMate::graph::GraphicsView
 {
 public:
 	MappingMatrix(Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
-		: graph::GraphicsView(parent)
+		: qtMate::graph::GraphicsView(parent)
 		, _connections{ connections }
 	{
 		setScene(&_scene);
@@ -91,7 +92,7 @@ public:
 
 		for (auto const& item : outputs)
 		{
-			auto* node = new graph::NodeItem{ static_cast<int>(_outputs.size()), QString::fromStdString(item.name) };
+			auto* node = new qtMate::graph::NodeItem{ static_cast<int>(_outputs.size()), QString::fromStdString(item.name) };
 			for (auto const& socket : item.sockets)
 			{
 				node->addOutput(QString::fromStdString(socket));
@@ -108,7 +109,7 @@ public:
 
 		for (auto const& item : inputs)
 		{
-			auto* node = new graph::NodeItem{ static_cast<int>(_inputs.size()), QString::fromStdString(item.name) };
+			auto* node = new qtMate::graph::NodeItem{ static_cast<int>(_inputs.size()), QString::fromStdString(item.name) };
 			for (auto const& socket : item.sockets)
 			{
 				node->addInput(QString::fromStdString(socket));
@@ -123,7 +124,7 @@ public:
 
 		for (auto const& connection : _connections)
 		{
-			auto* item = new graph::ConnectionItem;
+			auto* item = new qtMate::graph::ConnectionItem;
 
 			auto const& outputSlot{ connection.first };
 			auto const& inputSlot{ connection.second };
@@ -142,14 +143,14 @@ public:
 			}
 		}
 
-		connect(this, &graph::GraphicsView::connectionCreated, this,
-			[this](graph::ConnectionItem* connection)
+		connect(this, &qtMate::graph::GraphicsView::connectionCreated, this,
+			[this](qtMate::graph::ConnectionItem* connection)
 			{
 				_connections.emplace_back(std::make_pair(connection->output()->nodeId(), connection->output()->index()), std::make_pair(connection->input()->nodeId(), connection->input()->index()));
 			});
 
-		connect(this, &graph::GraphicsView::connectionDeleted, this,
-			[this](graph::ConnectionItem* connection)
+		connect(this, &qtMate::graph::GraphicsView::connectionDeleted, this,
+			[this](qtMate::graph::ConnectionItem* connection)
 			{
 				_connections.erase(std::remove_if(_connections.begin(), _connections.end(),
 														 [connection](Connection const& item)
@@ -170,8 +171,8 @@ public:
 
 private:
 	QGraphicsScene _scene{ this };
-	std::vector<graph::NodeItem*> _outputs;
-	std::vector<graph::NodeItem*> _inputs;
+	std::vector<qtMate::graph::NodeItem*> _outputs;
+	std::vector<qtMate::graph::NodeItem*> _inputs;
 	Connections _connections;
 };
 

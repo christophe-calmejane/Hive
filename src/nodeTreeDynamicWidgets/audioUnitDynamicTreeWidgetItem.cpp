@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -31,7 +31,7 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 	auto* currentSamplingRateItem = new QTreeWidgetItem(this);
 	currentSamplingRateItem->setText(0, "Sampling Rate");
 
-	_samplingRate = new AecpCommandComboBox(entityID, avdecc::ControllerManager::AecpCommandType::SetSamplingRate);
+	_samplingRate = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate);
 	parent->setItemWidget(currentSamplingRateItem, 1, _samplingRate);
 
 	for (auto const samplingRate : staticModel->samplingRates)
@@ -46,11 +46,11 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 		[this]()
 		{
 			auto const samplingRate = _samplingRate->currentData().value<la::avdecc::entity::model::SamplingRate>();
-			avdecc::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate);
+			hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate);
 		});
 
 	// Listen for changes
-	connect(&avdecc::ControllerManager::getInstance(), &avdecc::ControllerManager::audioUnitSamplingRateChanged, _samplingRate,
+	connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::audioUnitSamplingRateChanged, _samplingRate,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate)
 		{
 			if (entityID == _entityID && audioUnitIndex == _audioUnitIndex)

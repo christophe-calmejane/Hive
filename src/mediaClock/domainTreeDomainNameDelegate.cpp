@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -20,12 +20,12 @@
 #include "domainTreeDomainNameDelegate.hpp"
 #include "ui_domainTreeDomainNameDelegate.h"
 #include "internals/config.hpp"
-#include <la/avdecc/avdecc.hpp>
-#include <la/avdecc/controller/avdeccController.hpp>
 #include "settingsManager/settings.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "mediaClock/domainTreeModel.hpp"
-#include "entityLogoCache.hpp"
+
+#include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/controller/avdeccController.hpp>
 
 // **************************************************************
 // class MediaClockTableDomainEditDelegateImpl
@@ -51,7 +51,7 @@ public:
 		m_widget = parent;
 		setupUi(parent);
 		QPalette pal;
-		pal.setColor(QPalette::Background, Qt::transparent);
+		pal.setColor(QPalette::Window, Qt::transparent);
 		m_widget->setPalette(pal);
 	}
 

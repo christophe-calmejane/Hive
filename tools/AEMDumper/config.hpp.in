@@ -1,0 +1,50 @@
+/*
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#pragma once
+
+#include <QString>
+#include <string>
+
+namespace aemDumper
+{
+namespace internals
+{
+QString const applicationShortName{ "@PROJECT_NAME@" };
+QString const applicationLongName{ "@LA_PROJECT_PRODUCTDESCRIPTION@" };
+QString const versionString{ "@LA_PROJECT_VERSION_STRING@" };
+QString const cmakeVersionString{ "@LA_PROJECT_CMAKEVERSION_STRING@" };
+QString const projectURL{ "@PROJECT_URL@" };
+QString const copyrightYear{ "@PROJECT_COPYRIGHT_YEAR@" };
+QString const originalAuthors{ "@PROJECT_ORIGINAL_AUTHORS@" };
+QString const authors{ "@PROJECT_AUTHORS@" };
+QString const contact{ "@PROJECT_CONTACT@" };
+QString const legalCopyright{ "@PROJECT_LEGALCOPYRIGHT@" };
+QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
+QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
+QString const organizationName{ "@PROJECT_COMPANYNAME@" };
+QString const buildArchitecture{ "@PROJECT_ARCH@" };
+#ifdef DEBUG
+QString const buildConfiguration{ "Debug" };
+#else // !DEBUG
+QString const buildConfiguration{ "Release" };
+#endif // DEBUG
+
+} // namespace internals
+} // namespace aemDumper

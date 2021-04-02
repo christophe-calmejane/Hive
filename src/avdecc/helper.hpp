@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -32,56 +32,7 @@ namespace avdecc
 {
 namespace helper
 {
-template<typename T>
-inline QString toHexQString(T const v, bool const zeroFilled = false, bool const upper = false) noexcept
-{
-	static_assert(std::numeric_limits<T>::is_integer, "toHexQString requires an integer value");
-
-	try
-	{
-		std::stringstream stream;
-		stream << "0x";
-		if (zeroFilled)
-			stream << std::setfill('0') << std::setw(sizeof(T) * 2);
-		if (upper)
-			stream << std::uppercase;
-		stream << std::hex << la::avdecc::utils::forceNumeric(v);
-		return QString::fromStdString(stream.str());
-	}
-	catch (...)
-	{
-		return "[Invalid Conversion]";
-	}
-}
-
 QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type const& protocolInterfaceType);
-
-QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
-
-QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept;
-template<class NodeType>
-QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, NodeType const& node) noexcept
-{
-	return node.dynamicModel->objectName.empty() ? controlledEntity->getLocalizedString(node.staticModel->localizedDescription).data() : node.dynamicModel->objectName.data();
-}
-
-bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
-{
-	return info.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected && info.talkerStream == talkerStream;
-}
-
-bool constexpr isFastConnectingToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
-{
-	return info.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::FastConnecting && info.talkerStream == talkerStream;
-}
-
-QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
-QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
-QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
-QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
-QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
-QString redundantOutputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
-QString redundantInputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 
 QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& descriptorType) noexcept;
 QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState, la::avdecc::UniqueIdentifier const& owningController) noexcept;
@@ -108,6 +59,9 @@ QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const ca
 
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type) noexcept;
 QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format) noexcept;
+QString controlTypeToString(la::avdecc::entity::model::ControlType const& controlType) noexcept;
+QString controlValueTypeToString(la::avdecc::entity::model::ControlValueType::Type const controlValueType) noexcept;
+QString controlValueUnitToString(la::avdecc::entity::model::ControlValueUnit::Unit const controlValueUnit) noexcept;
 
 QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept;
 
@@ -115,12 +69,6 @@ QString certificationVersionToString(std::uint32_t const certificationVersion) n
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
 QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
-
-QString toUpperCamelCase(std::string const& text) noexcept;
-
-QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
-
-QIcon interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept;
 
 } // namespace helper
 } // namespace avdecc

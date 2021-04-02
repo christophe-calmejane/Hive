@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,8 +18,10 @@
 */
 
 #include "entityInspector.hpp"
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/helper.hpp"
+
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QHeaderView>
 
@@ -55,12 +57,15 @@ EntityInspector::EntityInspector(QWidget* parent)
 	connect(&_splitter, &QSplitter::splitterMoved, this, &EntityInspector::stateChanged);
 	connect(_nodeTreeWiget.header(), &QHeaderView::sectionResized, this, &EntityInspector::stateChanged);
 
-	auto& controllerManager = avdecc::ControllerManager::getInstance();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 
-	connect(&controllerManager, &avdecc::ControllerManager::controllerOffline, this, &EntityInspector::controllerOffline);
-	connect(&controllerManager, &avdecc::ControllerManager::entityOnline, this, &EntityInspector::entityOnline);
-	connect(&controllerManager, &avdecc::ControllerManager::entityOffline, this, &EntityInspector::entityOffline);
-	connect(&controllerManager, &avdecc::ControllerManager::entityNameChanged, this, &EntityInspector::entityNameChanged);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &EntityInspector::controllerOffline);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &EntityInspector::entityOnline);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &EntityInspector::entityOffline);
+	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &EntityInspector::entityNameChanged);
+	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_itemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
+
+	_settingsSignaler.start();
 }
 
 void EntityInspector::setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
@@ -138,10 +143,10 @@ void EntityInspector::entityNameChanged(la::avdecc::UniqueIdentifier const entit
 
 void EntityInspector::configureWindowTitle()
 {
-	auto& manager = avdecc::ControllerManager::getInstance();
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto controlledEntity = manager.getControlledEntity(_controlledEntityTreeWiget.controlledEntityID());
 	if (controlledEntity)
 	{
-		setWindowTitle(avdecc::helper::smartEntityName(*controlledEntity));
+		setWindowTitle(hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
 	}
 }

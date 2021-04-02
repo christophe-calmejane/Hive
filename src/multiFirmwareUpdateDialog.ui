@@ -7,13 +7,50 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>486</height>
+    <height>521</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="descriptionLabel">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="locale">
+      <locale language="English" country="UnitedStates"/>
+     </property>
+     <property name="text">
+      <string>Select the device(s) you want to update.
+You can only choose identical devices (same Model) for parallel update.
+
+Then click the 'Choose Firmware File' button to proceed.</string>
+     </property>
+     <property name="scaledContents">
+      <bool>false</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="margin">
+      <number>0</number>
+     </property>
+     <property name="indent">
+      <number>-1</number>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
+     </property>
+    </widget>
+   </item>
    <item>
     <widget class="QTableView" name="controllerTableView"/>
    </item>
@@ -22,7 +59,7 @@
      <item>
       <widget class="QPushButton" name="buttonContinue">
        <property name="text">
-        <string>Continue</string>
+        <string>Choose Firmware File...</string>
        </property>
       </widget>
      </item>

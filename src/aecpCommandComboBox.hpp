@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,17 +19,17 @@
 
 #pragma once
 
-#include "toolkit/comboBox.hpp"
-#include "avdecc/controllerManager.hpp"
+#include <hive/modelsLibrary/controllerManager.hpp>
+#include <QtMate/widgets/comboBox.hpp>
 
 // ComboBox that watches an Aecp command result, restoring the previous index if the command fails
 class AecpCommandComboBoxPrivate;
-class AecpCommandComboBox : public qt::toolkit::ComboBox
+class AecpCommandComboBox : public qtMate::widgets::ComboBox
 {
 	Q_OBJECT
 
 public:
-	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, avdecc::ControllerManager::AecpCommandType commandType, QWidget* parent = nullptr);
+	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, QWidget* parent = nullptr);
 	~AecpCommandComboBox();
 
 protected:

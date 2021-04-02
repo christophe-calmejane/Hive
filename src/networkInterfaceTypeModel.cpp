@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,7 +19,8 @@
 
 #include "networkInterfaceTypeModel.hpp"
 #include "settingsManager/settings.hpp"
-#include "avdecc/helper.hpp"
+
+#include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
 
 class NetworkInterfaceTypeModelPrivate : private settings::SettingsManager::Observer
 {
@@ -156,7 +157,7 @@ QVariant NetworkInterfaceTypeModel::data(QModelIndex const& index, int role) con
 			case Qt::CheckStateRole:
 				return info.active ? Qt::Checked : Qt::Unchecked;
 			case Qt::DecorationRole:
-				return avdecc::helper::interfaceTypeIcon(type);
+				return hive::widgetModelsLibrary::NetworkInterfacesListModel::interfaceTypeIcon(type);
 			default:
 				break;
 		}

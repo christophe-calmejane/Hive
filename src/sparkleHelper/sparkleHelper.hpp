@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -33,6 +33,7 @@ public:
 	};
 
 	using IsShutdownAllowedHandler = std::function<bool()>;
+	using ShutdownRequestHandler = std::function<void()>;
 	using LogHandler = std::function<void(std::string const& message, LogLevel const level)>;
 
 	static Sparkle& getInstance() noexcept
@@ -53,6 +54,10 @@ public:
 	void setIsShutdownAllowedHandler(IsShutdownAllowedHandler const& isShutdownAllowedHandler) noexcept
 	{
 		_isShutdownAllowedHandler = isShutdownAllowedHandler;
+	}
+	void setShutdownRequestHandler(ShutdownRequestHandler const& shutdownRequestHandler) noexcept
+	{
+		_shutdownRequestHandler = shutdownRequestHandler;
 	}
 	void setLogHandler(LogHandler const& logHandler) noexcept
 	{
@@ -85,5 +90,6 @@ private:
 	bool _checkForUpdates{ false };
 	std::string _appcastUrl{};
 	IsShutdownAllowedHandler _isShutdownAllowedHandler{ nullptr };
+	ShutdownRequestHandler _shutdownRequestHandler{ nullptr };
 	LogHandler _logHandler{ nullptr };
 };

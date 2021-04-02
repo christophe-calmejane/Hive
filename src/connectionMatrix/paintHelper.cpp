@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,9 +18,9 @@
 */
 
 #include "connectionMatrix/paintHelper.hpp"
-#include "toolkit/material/color.hpp"
+#include <QtMate/material/color.hpp>
 
-namespace color = qt::toolkit::material::color;
+namespace color = qtMate::material::color;
 
 namespace connectionMatrix
 {
@@ -196,7 +196,6 @@ QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orien
 void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
 {
 	painter->setRenderHint(QPainter::Antialiasing);
-	painter->setRenderHint(QPainter::HighQualityAntialiasing);
 
 	auto const connected = state != Model::IntersectionData::State::NotConnected;
 

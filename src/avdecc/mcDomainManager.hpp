@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -25,8 +25,9 @@
 #include <QObject>
 #include <QMap>
 
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/commandChain.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 namespace avdecc
 {

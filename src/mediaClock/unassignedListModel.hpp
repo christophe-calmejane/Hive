@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2020, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,8 +21,9 @@
 
 #include <QAbstractListModel>
 #include <QListView>
-#include "avdecc/controllerManager.hpp"
 #include "avdecc/mcDomainManager.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 class UnassignedListModelPrivate;
 
