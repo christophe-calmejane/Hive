@@ -845,6 +845,16 @@ private:
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
 	}
 
+	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntitiesFromJsonNetworkState(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->loadVirtualEntitiesFromJsonNetworkState(filePath.toStdString(), flags, true);
+		}
+		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
+	}
+
 	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept override
 	{
 		auto controller = getController();

@@ -1221,7 +1221,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "ave" /* || ext == "ans"*/)
+		if (ext == "ave" || ext == "ans")
 		{
 			event->acceptProposedAction();
 			return;
@@ -1233,9 +1233,8 @@ void MainWindow::dropEvent(QDropEvent* event)
 {
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
-	auto const loadEntity = [&manager](auto const& filePath, auto const flags)
+	auto const getErrorString = [](auto const error, auto const& message)
 	{
-		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
 		auto msg = QString{};
 		if (!!error)
 		{
@@ -1271,6 +1270,9 @@ void MainWindow::dropEvent(QDropEvent* event)
 				case la::avdecc::jsonSerializer::DeserializationError::NotCompliant:
 					msg = message.c_str();
 					break;
+				case la::avdecc::jsonSerializer::DeserializationError::Incomplete:
+					msg = message.c_str();
+					break;
 				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
 					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
 					break;
@@ -1283,7 +1285,19 @@ void MainWindow::dropEvent(QDropEvent* event)
 					break;
 			}
 		}
-		return std::make_tuple(error, msg);
+		return msg;
+	};
+
+	auto const loadEntity = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
+	};
+
+	auto const loadNetworkState = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
 	};
 
 	for (auto const& u : event->mimeData()->urls())
@@ -1314,15 +1328,22 @@ void MainWindow::dropEvent(QDropEvent* event)
 				}
 				if (!!error)
 				{
-					QMessageBox::warning(this, "Failed to load JSON entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+					QMessageBox::warning(this, "Failed to load Entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
 				}
 			}
 		}
 
 		// AVDECC Network State
-		//else if (ext == "ans")
-		//{
-		//}
+		else if (ext == "ans")
+		{
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+			auto [error, message] = loadNetworkState(u.toLocalFile(), flags);
+			if (!!error)
+			{
+				QMessageBox::warning(this, "Failed to load Network State", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+			}
+		}
 	}
 }
 

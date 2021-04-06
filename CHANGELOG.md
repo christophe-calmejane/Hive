@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for Controller to Entity Identification (right-click an entity in the list)
 - [Added a daemon on macOS to setup pcap access rights for non-root execution](https://github.com/christophe-calmejane/Hive/issues/50)
 - Automatic view scrolling when dragging a channel mapping near the edges of the window (Dynamic Mappings Editor View)
+- Support for ANS files loading (only to create virtual entities)
 
 ### Changed
 - macOS minimum version is now 10.12 (due to Qt update)
