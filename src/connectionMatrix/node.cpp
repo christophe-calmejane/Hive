@@ -447,33 +447,37 @@ void StreamNode::setRunning(bool isRunning)
 
 bool StreamNode::setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus)
 {
-	if (_probingStatus != probingStatus)
-	{
-		_probingStatus = probingStatus;
-		return true;
-	}
-
-	return false;
+	auto const changed = _probingStatus != probingStatus;
+	_probingStatus = probingStatus;
+	return changed;
 }
 
-void StreamNode::setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
 {
+	auto const changed = _mediaLockedCounter != value;
 	_mediaLockedCounter = value;
+	return changed;
 }
 
-void StreamNode::setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
 {
+	auto const changed = _mediaUnlockedCounter != value;
 	_mediaUnlockedCounter = value;
+	return changed;
 }
 
-void StreamNode::setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value)
 {
+	auto const changed = _streamStartCounter != value;
 	_streamStartCounter = value;
+	return changed;
 }
 
-void StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value)
 {
+	auto const changed = _streamStopCounter != value;
 	_streamStopCounter = value;
+	return changed;
 }
 
 void StreamNode::setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info)

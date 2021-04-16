@@ -297,10 +297,10 @@ protected:
 	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus);
 	void setRunning(bool isRunning);
 	bool setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus); // StreamInput only
-	void setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
-	void setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
-	void setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
-	void setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
+	bool setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
+	bool setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
+	bool setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
+	bool setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
 	void setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info);
 	void computeLockedState() noexcept;
 	void computeIsStreaming() noexcept;

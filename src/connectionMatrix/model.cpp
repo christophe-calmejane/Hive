@@ -636,6 +636,22 @@ public:
 	};
 	using HeaderDirtyFlags = la::avdecc::utils::EnumBitfield<HeaderDirtyFlag>;
 
+	// Returns HeaderDirtyFlags with all available flags set for a Talker
+	static HeaderDirtyFlags allHeaderDirtyFlagsTalker()
+	{
+		auto flags = HeaderDirtyFlags{};
+		flags.set(HeaderDirtyFlag::UpdateIsStreaming);
+		return flags;
+	}
+
+	// Returns HeaderDirtyFlags with all available flags set for a Listener
+	static HeaderDirtyFlags allHeaderDirtyFlagsListener()
+	{
+		auto flags = HeaderDirtyFlags{};
+		flags.set(HeaderDirtyFlag::UpdateLockedState);
+		return flags;
+	}
+
 	enum class IntersectionDirtyFlag
 	{
 		UpdateConnected = 1u << 0, /**< Update the connected status, or the summary if this is a parent node */
@@ -1790,6 +1806,16 @@ public:
 		auto const it = std::next(std::begin(_intersectionData), first);
 		_intersectionData.insert(it, childrenCount + 1, {});
 
+		if constexpr (std::is_same_v<NodeType, EntityNode>)
+		{
+			// Compute everything for initial state (Start from the end so that children are initialized before parents)
+			for (auto talkerSection = last; talkerSection >= first; --talkerSection)
+			{
+				auto* talker = _talkerNodes[talkerSection];
+				computeHeaderData(talker, allHeaderDirtyFlagsTalker());
+			}
+		}
+
 		// Update intersection matrix (Start from the end so that children are initialized before parents)
 		for (auto talkerSection = last; talkerSection >= first; --talkerSection)
 		{
@@ -1838,6 +1864,13 @@ public:
 		priv::insertNodes(_listenerNodes, flattendedNodes, first);
 
 		rebuildListenerSectionCache();
+
+		// Compute everything for initial state (Start from the end so that children are initialized before parents)
+		for (auto listenerSection = last; listenerSection >= first; --listenerSection)
+		{
+			auto* listener = _listenerNodes[listenerSection];
+			computeHeaderData(listener, allHeaderDirtyFlagsListener());
+		}
 
 		// Update intersection matrix (Start from the end so that children are initialized before parents)
 		for (auto talkerSection = _talkerNodes.size(); talkerSection > 0u; --talkerSection)
@@ -2390,12 +2423,16 @@ public:
 						switch (flag)
 						{
 							case la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked:
-								node->setMediaLockedCounter(counter);
-								changed = true;
+								if (node->setMediaLockedCounter(counter))
+								{
+									changed = true;
+								}
 								break;
 							case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
-								node->setMediaUnlockedCounter(counter);
-								changed = true;
+								if (node->setMediaUnlockedCounter(counter))
+								{
+									changed = true;
+								}
 								break;
 							default:
 								break;
@@ -2439,12 +2476,16 @@ public:
 						switch (flag)
 						{
 							case la::avdecc::entity::StreamOutputCounterValidFlag::StreamStart:
-								node->setStreamStartCounter(counter);
-								changed = true;
+								if (node->setStreamStartCounter(counter))
+								{
+									changed = true;
+								}
 								break;
 							case la::avdecc::entity::StreamOutputCounterValidFlag::StreamStop:
-								node->setStreamStopCounter(counter);
-								changed = true;
+								if (node->setStreamStopCounter(counter))
+								{
+									changed = true;
+								}
 								break;
 							default:
 								break;
