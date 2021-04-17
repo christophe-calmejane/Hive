@@ -81,6 +81,11 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
+class ControllerModelSortFilterProxy : public QSortFilterProxyModel
+{
+public:
+};
+
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
 {
 public:
@@ -88,6 +93,8 @@ public:
 		: _parent(parent)
 		, _controllerModel(new avdecc::ControllerModel(parent)) // parent takes ownership of the object -> 'new' required
 	{
+		_controllerProxyModel.setSourceModel(_controllerModel);
+
 		// Setup common UI
 		setupUi(parent);
 
@@ -130,6 +137,7 @@ public:
 	// Private Slots
 	Q_SLOT void currentControllerChanged();
 	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
+	Q_SLOT void saveControllerDynamicHeaderState();
 
 	// Private methods
 	void setupAdvancedView(Defaults const& defaults);
@@ -163,6 +171,7 @@ public:
 	QLabel _controllerEntityIDLabel{ _parent };
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
+	ControllerModelSortFilterProxy _controllerProxyModel{};
 	bool _shown{ false };
 	SettingsSignaler _settingsSignaler{};
 };
@@ -322,13 +331,23 @@ void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 	}
 
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto const entityID = _controllerModel->controlledEntityID(index);
+
+	// CAUTION, this view uses a proxy, we must remap the index
+	auto const sourceIndex = _controllerProxyModel.mapToSource(index);
+	auto const entityID = _controllerModel->controlledEntityID(sourceIndex);
+
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
 	if (controlledEntity)
 	{
 		entityInspector->setControlledEntityID(entityID);
 	}
+}
+
+void MainWindowImpl::saveControllerDynamicHeaderState()
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 }
 
 // Private methods
@@ -418,7 +437,7 @@ void MainWindowImpl::createToolbars()
 
 void MainWindowImpl::createControllerView()
 {
-	controllerTableView->setModel(_controllerModel);
+	controllerTableView->setModel(&_controllerProxyModel);
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -426,6 +445,7 @@ void MainWindowImpl::createControllerView()
 
 	// Disable row resizing
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	controllerTableView->setSortingEnabled(true);
 
 	// The table view does not take ownership on the item delegate
 	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ _parent } };
@@ -439,6 +459,7 @@ void MainWindowImpl::createControllerView()
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), errorItemDelegate);
 	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
+	_controllerDynamicHeaderView.setSectionsClickable(true);
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
@@ -611,18 +632,18 @@ void MainWindowImpl::connectSignals()
 		});
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
-	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionChanged, this,
-		[this]()
-		{
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
-		});
+	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionChanged, this, &MainWindowImpl::saveControllerDynamicHeaderState);
+	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionClicked, this, &MainWindowImpl::saveControllerDynamicHeaderState);
 
 	connect(controllerTableView, &QTableView::doubleClicked, this,
 		[this](QModelIndex const& index)
 		{
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto const entityID = _controllerModel->controlledEntityID(index);
+
+			// CAUTION, this view uses a proxy, we must remap the index
+			auto const sourceIndex = _controllerProxyModel.mapToSource(index);
+			auto const entityID = _controllerModel->controlledEntityID(sourceIndex);
+
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
@@ -637,10 +658,12 @@ void MainWindowImpl::connectSignals()
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
+			// CAUTION, this view uses a proxy, we must remap the index
 			auto const index = controllerTableView->indexAt(pos);
+			auto const sourceIndex = _controllerProxyModel.mapToSource(index);
 
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto const entityID = _controllerModel->controlledEntityID(index);
+			auto const entityID = _controllerModel->controlledEntityID(sourceIndex);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity)
@@ -1221,7 +1244,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "ave" || ext == "ans")
+		if (ext == "ave" || ext == "ans" || ext == "json")
 		{
 			event->acceptProposedAction();
 			return;
@@ -1307,10 +1330,15 @@ void MainWindow::dropEvent(QDropEvent* event)
 		auto const ext = fi.suffix();
 
 		// AVDECC Virtual Entity
-		if (ext == "ave")
+		if (ext == "ave" || ext == "json")
 		{
 			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
-			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+
+			if (ext == "ave")
+				 
+				{
+					flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+				}
 			auto [error, message] = loadEntity(u.toLocalFile(), flags);
 			if (!!error)
 			{
