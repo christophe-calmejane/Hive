@@ -119,6 +119,7 @@ public:
 			InterfaceDown = 1u << 0, /**< The AVB interface is down (or at least one for the intersection of 2 RedundantNodes) */
 			WrongDomain = 1u << 1, /**< The AVB domains do not match (connection is possible, but stream reservation will fail) */
 			WrongFormat = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener) */
+			MediaLocked = 1u << 3, /**< The Stream is Connected and Media Locked (Milan only) */
 		};
 		using Flags = la::avdecc::utils::EnumBitfield<Flag>;
 

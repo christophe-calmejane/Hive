@@ -47,6 +47,16 @@ static inline void drawCircle(QPainter* painter, QRect const& rect)
 	painter->drawEllipse(rect.adjusted(2, 2, -3, -3));
 }
 
+static inline void drawMediaLocked(QPainter* painter, QRect const& rect)
+{
+	auto const col = color::value(color::Name::Gray, color::Shade::ShadeA700);
+	painter->setBrush(QBrush{ col, Qt::SolidPattern });
+	painter->setPen(QPen{ col, 1 });
+	auto const center = rect.center();
+	auto const insideRect = QRect{ center.x() - 1, center.y() - 1, 2, 2 };
+	painter->drawEllipse(insideRect);
+}
+
 static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const wrongFormatHasPriorityOverInterfaceDown)
 {
 	static auto const White = color::value(color::Name::Gray, color::Shade::Shade300);
@@ -212,12 +222,20 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawCircle(painter, rect);
+		if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+		{
+			drawMediaLocked(painter, rect);
+		}
 	};
 	auto const drawRedundantStreamIntersection = [painter, &rect, state, flags](auto const brush, auto const penColor, auto const penWidth)
 	{
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawDiamond(painter, rect);
+		if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+		{
+			drawMediaLocked(painter, rect);
+		}
 	};
 
 	switch (type)

@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- More color explanation in the Connection Matrix legend
+- Visualization of a Connected and Media Locked stream in Connection Matrix intersection (same information than the header arrow), Milan Only
+- Confirmation dialog when trying to disconnect a Media Locked stream whose Talker is not visible on the network
+
+### Fixed
+- Matrix being refreshed more than required
 
 ## [1.2.4] - 2021-04-02
 ### Added
