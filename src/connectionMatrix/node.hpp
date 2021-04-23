@@ -63,61 +63,61 @@ public:
 	virtual ~Node() = default;
 
 	// Returns node type
-	Type type() const;
+	Type type() const noexcept;
 
 	// Returns true if node type is OfflineOutputStream
-	bool isOfflineOutputStreamNode() const;
+	bool isOfflineOutputStreamNode() const noexcept;
 
 	// Returns true if node type is Entity
-	bool isEntityNode() const;
+	bool isEntityNode() const noexcept;
 
 	// Returns true if node type is either RedundantOutput or RedundantInput
-	bool isRedundantNode() const;
+	bool isRedundantNode() const noexcept;
 
 	// Returns true if node type is either RedundantOutputStream or RedundantInputStream
-	bool isRedundantStreamNode() const;
+	bool isRedundantStreamNode() const noexcept;
 
 	// Returns true if node type is either RedundantOutputStream, RedundantInputStream, OutputStream or InputStream
-	bool isStreamNode() const;
+	bool isStreamNode() const noexcept;
 
 	// Returns true if node type is either OutputChannel or InputChannel
-	bool isChannelNode() const;
+	bool isChannelNode() const noexcept;
 
 	// Returns the entity ID
-	la::avdecc::UniqueIdentifier const& entityID() const;
+	la::avdecc::UniqueIdentifier const& entityID() const noexcept;
 
 	// Returns the parent node
-	Node const* parent() const;
+	Node const* parent() const noexcept;
 
 	// Returns the parent node
-	Node* parent();
+	Node* parent() noexcept;
 
 	// Returns the EntityNode (top ancestor)
-	EntityNode const* entityNode() const;
+	EntityNode const* entityNode() const noexcept;
 
 	// Returns the EntityNode (top ancestor)
-	EntityNode* entityNode();
+	EntityNode* entityNode() noexcept;
 
 	// Returns true if this node has a parent (false for an entity)
-	bool hasParent() const;
+	bool hasParent() const noexcept;
 
 	// Returns the name of this node (entity name, stream name, .. etc)
-	QString const& name() const;
+	QString const& name() const noexcept;
 
 	// Returns the index of the node in its parent childen
-	int index() const;
+	int index() const noexcept;
 
 	// Returns the index child in this node children list, -1 if the child is not related
-	int indexOf(Node const* child) const;
+	int indexOf(Node const* child) const noexcept;
 
 	// Returns the child node at index, null if not found
-	Node* childAt(int index);
+	Node* childAt(int index) noexcept;
 
 	// Returns the child node at index, null if not found
-	Node const* childAt(int index) const;
+	Node const* childAt(int index) const noexcept;
 
 	// Returns the number of children
-	int childrenCount() const;
+	int childrenCount() const noexcept;
 
 	// Visitor policy that visit all node types
 	struct CompleteHierarchyPolicy
@@ -153,7 +153,7 @@ public:
 	using Visitor = std::function<void(Node*)>;
 
 	template<typename Policy = CompleteHierarchyPolicy>
-	void accept(Visitor const& visitor, bool const childrenOnly = false) const
+	void accept(Visitor const& visitor, bool const childrenOnly = false) const noexcept
 	{
 		if (!childrenOnly)
 		{
@@ -170,9 +170,9 @@ public:
 	}
 
 protected:
-	Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent);
+	Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent) noexcept;
 
-	void setName(QString const& name);
+	void setName(QString const& name) noexcept;
 
 protected:
 	// Node type
@@ -196,10 +196,10 @@ class OfflineOutputStreamNode : public Node
 	friend class ModelPrivate;
 
 public:
-	static OfflineOutputStreamNode* create();
+	static OfflineOutputStreamNode* create() noexcept;
 
 protected:
-	OfflineOutputStreamNode();
+	OfflineOutputStreamNode() noexcept;
 };
 
 class EntityNode : public Node
@@ -207,11 +207,11 @@ class EntityNode : public Node
 	friend class ModelPrivate;
 
 public:
-	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan);
+	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept;
 
 	// Visitor pattern that is called on every stream node that matches avbInterfaceIndex
 	using AvbInterfaceIndexVisitor = std::function<void(class StreamNode*)>;
-	void accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const;
+	void accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const noexcept;
 
 	bool isMilan() const noexcept;
 	la::avdecc::entity::model::ClusterIndex getStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const;
@@ -222,7 +222,7 @@ public:
 	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> getOutputAudioMappings() const noexcept;
 
 protected:
-	EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan);
+	EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept;
 	void setStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept;
 	void setStreamPortOutputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept;
 	void setInputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortInputIndex, la::avdecc::entity::model::AudioMappings const& mappings) noexcept;
@@ -241,18 +241,18 @@ class RedundantNode : public Node
 	friend class ModelPrivate;
 
 public:
-	static RedundantNode* createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
-	static RedundantNode* createInputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
+	static RedundantNode* createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
+	static RedundantNode* createInputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 
 	// Static entity model data
-	la::avdecc::controller::model::VirtualIndex const& redundantIndex() const;
+	la::avdecc::controller::model::VirtualIndex const& redundantIndex() const noexcept;
 
 	// Cached data from the controller
-	TriState lockedState() const; // StreamInput only
-	bool isStreaming() const; // StreamOutput only
+	TriState lockedState() const noexcept; // StreamInput only
+	bool isStreaming() const noexcept; // StreamOutput only
 
 protected:
-	RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex);
+	RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 
 	void setLockedState(TriState const lockedState) noexcept; // StreamInput only
 	void setIsStreaming(bool const isStreaming) noexcept; // StreamOutput only
@@ -268,40 +268,40 @@ class StreamNode : public Node
 	friend class ModelPrivate;
 
 public:
-	static StreamNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-	static StreamNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
+	static StreamNode* createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept;
+	static StreamNode* createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept;
 
-	static StreamNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-	static StreamNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
+	static StreamNode* createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept;
+	static StreamNode* createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept;
 
 	// Static entity model data
-	la::avdecc::entity::model::StreamIndex const& streamIndex() const;
-	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const;
+	la::avdecc::entity::model::StreamIndex const& streamIndex() const noexcept;
+	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const noexcept;
 
 	// Cached data from the controller
-	la::avdecc::entity::model::StreamFormat const& streamFormat() const;
-	la::avdecc::UniqueIdentifier const& grandMasterID() const;
-	std::uint8_t const& grandMasterDomain() const;
-	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const;
-	bool isRunning() const;
-	TriState lockedState() const; // StreamInput only
-	bool isStreaming() const; // StreamOutput only
-	la::avdecc::entity::model::StreamInputConnectionInfo const& streamInputConnectionInformation() const;
+	la::avdecc::entity::model::StreamFormat const& streamFormat() const noexcept;
+	la::avdecc::UniqueIdentifier const& grandMasterID() const noexcept;
+	std::uint8_t const& grandMasterDomain() const noexcept;
+	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const noexcept;
+	bool isRunning() const noexcept;
+	TriState lockedState() const noexcept; // StreamInput only
+	bool isStreaming() const noexcept; // StreamOutput only
+	la::avdecc::entity::model::StreamInputConnectionInfo const& streamInputConnectionInformation() const noexcept;
 
 protected:
-	StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
+	StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept;
 
-	void setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat);
-	void setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID);
-	void setGrandMasterDomain(std::uint8_t const grandMasterDomain);
-	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus);
-	void setRunning(bool isRunning);
-	bool setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus); // StreamInput only
-	bool setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
-	bool setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamInput only
-	bool setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
-	bool setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value); // StreamOutput only
-	void setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info);
+	void setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept;
+	void setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID) noexcept;
+	void setGrandMasterDomain(std::uint8_t const grandMasterDomain) noexcept;
+	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus) noexcept;
+	void setRunning(bool isRunning) noexcept;
+	bool setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus) noexcept; // StreamInput only
+	bool setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamInput only
+	bool setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamInput only
+	bool setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamOutput only
+	bool setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamOutput only
+	void setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept;
 	void computeLockedState() noexcept;
 	void computeIsStreaming() noexcept;
 
@@ -328,17 +328,17 @@ class ChannelNode : public Node
 	friend class ModelPrivate;
 
 public:
-	static ChannelNode* createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
-	static ChannelNode* createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification);
+	static ChannelNode* createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification) noexcept;
+	static ChannelNode* createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification) noexcept;
 
 	// Static entity model data
-	avdecc::ChannelIdentification const& channelIdentification() const;
+	avdecc::ChannelIdentification const& channelIdentification() const noexcept;
 
-	la::avdecc::entity::model::ClusterIndex clusterIndex() const;
-	std::uint16_t channelIndex() const;
+	la::avdecc::entity::model::ClusterIndex clusterIndex() const noexcept;
+	std::uint16_t channelIndex() const noexcept;
 
 protected:
-	ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification);
+	ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification) noexcept;
 
 protected:
 	avdecc::ChannelIdentification const _channelIdentification;

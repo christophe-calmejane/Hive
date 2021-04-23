@@ -388,6 +388,14 @@ void View::onIntersectionClicked(QModelIndex const& index)
 			auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
 			auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
 
+			if (intersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked))
+			{
+				auto result = QMessageBox::question(this, "", "This Listener is receiving data although the Talker is not visible on the Network. Are you sure you want to disconnect?");
+				if (result != QMessageBox::StandardButton::Yes)
+				{
+					break;
+				}
+			}
 			for (auto const& connectableStream : intersectionData.smartConnectableStreams)
 			{
 				auto const areConnected = connectableStream.isConnected || connectableStream.isFastConnecting;

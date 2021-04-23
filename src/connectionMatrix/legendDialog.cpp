@@ -99,12 +99,12 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 
 		auto* sectionLayout = new QGridLayout{ sectionGroupBox };
 
-		for (auto const& section : sections)
+		for (auto const& [sectionTitle, sectionType, sectionState, sectionFlags] : sections)
 		{
-			auto const& sectionTitle = std::get<0>(section);
-			auto const& sectionType = std::get<1>(section);
-			auto const& sectionState = std::get<2>(section);
-			auto const& sectionFlags = std::get<3>(section);
+			//auto const& sectionTitle = std::get<0>(section);
+			//auto const& sectionType = std::get<1>(section);
+			//auto const& sectionState = std::get<2>(section);
+			//auto const& sectionFlags = std::get<3>(section);
 
 			auto const row = sectionLayout->rowCount();
 
@@ -132,9 +132,12 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 		{ "Connectable but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown } },
 
 		{ "Connected and no detectable error found", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{} },
+		{ "Connected and Media Locked (Milan Only)", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::MediaLocked } },
 		{ "Connected but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain } },
 		{ "Connected but incompatible stream format", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormat } },
 		{ "Connected but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown } },
+		{ "Connected but Talker not detected on the Network (probably Offline)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{} },
+		{ "Connected and Media Locked but Talker not detected on the Network (but Online)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::MediaLocked } },
 
 		{ "Partially connected Redundant Stream Pair", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::PartiallyConnected, Model::IntersectionData::Flags{} },
 	};
