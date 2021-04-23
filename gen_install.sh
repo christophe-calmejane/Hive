@@ -170,8 +170,9 @@ getSignatureHash()
 generateAppcast()
 {
 	local fileName="$1"
-	local marketingVersion="$2"
-	local isRelease=$3
+	local buildNumber="$2"
+	local marketingVersion="$3"
+	local isRelease=$4
 
 	local appcastFile="appcastItem-${marketingVersion}.xml"
 	local baseURL="${params["appcast_releases"]}"
@@ -225,7 +226,8 @@ generateAppcast()
 	fi
 
 	# Common Appcast Item footer
-	echo "				sparkle:version=\"${marketingVersion}\"" >> "$appcastFile"
+	echo "				sparkle:shortVersionString=\"${marketingVersion}\"" >> "$appcastFile"
+	echo "				sparkle:version=\"${buildNumber}\"" >> "$appcastFile"
 	echo "				length=\"${fileSize}\"" >> "$appcastFile"
 	echo "				type=\"application/octet-stream\"" >> "$appcastFile"
 	echo "			/>" >> "$appcastFile"
@@ -565,12 +567,14 @@ beta_tag=""
 build_tag=""
 is_release=1
 releaseVersion="${versionSplit[0]}.${versionSplit[1]}.${versionSplit[2]}"
-internalVersion="${releaseVersion}"
+internalVersion="$((${versionSplit[0]} * 1000000 + ${versionSplit[1]} * 1000 + ${versionSplit[2]}))"
 if [ ${#versionSplit[*]} -eq 4 ]; then
 	beta_tag="-beta${versionSplit[3]}"
 	build_tag="+$(git rev-parse --short HEAD)"
 	is_release=0
 	internalVersion="${internalVersion}.${versionSplit[3]}"
+else
+	internalVersion="${internalVersion}.999"
 fi
 
 if isWindows; then
@@ -695,7 +699,7 @@ if isMac; then
 	rm -f "${fullInstallerName}" &> /dev/null
 fi
 
-generateAppcast "${appcastInstallerName}" "${releaseVersion}${beta_tag}" $is_release
+generateAppcast "${appcastInstallerName}" "${internalVersion}" "${releaseVersion}${beta_tag}" $is_release
 
 echo ""
 echo "Do not forget to upload:"
