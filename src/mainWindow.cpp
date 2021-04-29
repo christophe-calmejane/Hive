@@ -84,6 +84,12 @@ Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 class ControllerModelSortFilterProxy : public QSortFilterProxyModel
 {
 public:
+	// Helpers
+	la::avdecc::UniqueIdentifier controlledEntityID(QModelIndex const& index) const
+	{
+		auto const sourceIndex = mapToSource(index);
+		return static_cast<avdecc::ControllerModel const*>(sourceModel())->getControlledEntityID(sourceIndex);
+	}
 };
 
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
@@ -331,11 +337,7 @@ void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 	}
 
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-
-	// CAUTION, this view uses a proxy, we must remap the index
-	auto const sourceIndex = _controllerProxyModel.mapToSource(index);
-	auto const entityID = _controllerModel->controlledEntityID(sourceIndex);
-
+	auto const entityID = _controllerProxyModel.controlledEntityID(index);
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
 	if (controlledEntity)
@@ -639,11 +641,7 @@ void MainWindowImpl::connectSignals()
 		[this](QModelIndex const& index)
 		{
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-
-			// CAUTION, this view uses a proxy, we must remap the index
-			auto const sourceIndex = _controllerProxyModel.mapToSource(index);
-			auto const entityID = _controllerModel->controlledEntityID(sourceIndex);
-
+			auto const entityID = _controllerProxyModel.controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
@@ -663,7 +661,7 @@ void MainWindowImpl::connectSignals()
 			auto const sourceIndex = _controllerProxyModel.mapToSource(index);
 
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto const entityID = _controllerModel->controlledEntityID(sourceIndex);
+			auto const entityID = _controllerProxyModel.controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity)
@@ -1244,7 +1242,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "ave" || ext == "ans" || ext == "json")
+		if (ext == "ave" || ext == "ans")
 		{
 			event->acceptProposedAction();
 			return;
@@ -1330,15 +1328,10 @@ void MainWindow::dropEvent(QDropEvent* event)
 		auto const ext = fi.suffix();
 
 		// AVDECC Virtual Entity
-		if (ext == "ave" || ext == "json")
+		if (ext == "ave")
 		{
 			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
 
-			if (ext == "ave")
-				 
-				{
-					flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
-				}
 			auto [error, message] = loadEntity(u.toLocalFile(), flags);
 			if (!!error)
 			{
