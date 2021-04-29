@@ -41,6 +41,7 @@ QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
 QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
 QString const organizationName{ "@PROJECT_COMPANYNAME@" };
 QString const buildArchitecture{ "@PROJECT_ARCH@" };
+QString const buildNumber{ "@LA_BUILD_NUMBER@" };
 #ifdef DEBUG
 QString const buildConfiguration{ "Debug" };
 #else // !DEBUG

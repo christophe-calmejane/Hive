@@ -111,7 +111,7 @@ static inline std::string getStdString(NSString* nsString)
 
 @end
 
-void Sparkle::init(std::string const& signature) noexcept
+void Sparkle::init(std::string const& /*internalNumber*/, std::string const& signature) noexcept
 {
 	auto* const updater = [SUUpdater sharedUpdater];
 

@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
 		if (signatureFile.open(QIODevice::ReadOnly))
 		{
 			auto content = QString(signatureFile.readAll());
-			Sparkle::getInstance().init(content.toStdString());
+			Sparkle::getInstance().init(hive::internals::buildNumber.toStdString(), content.toStdString());
 		}
 	}
 

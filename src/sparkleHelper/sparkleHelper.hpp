@@ -44,7 +44,7 @@ public:
 
 	/* Initialization methods */
 	// Must be called before any other methods, and as soon as possible
-	void init(std::string const& signature) noexcept;
+	void init(std::string const& internalNumber, std::string const& signature) noexcept;
 	// Must be called to start the background check process, but not before the UI is visible and configuration methods have been called
 	void start() noexcept;
 
