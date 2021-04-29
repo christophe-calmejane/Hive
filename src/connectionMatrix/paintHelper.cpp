@@ -203,7 +203,7 @@ QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orien
 	return path;
 }
 
-void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot)
 {
 	painter->setRenderHint(QPainter::Antialiasing);
 
@@ -217,24 +217,30 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	{
 		painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
 	};
-	auto const drawSingleStreamIntersection = [painter, &rect, state, flags](auto const brush, auto const penColor, auto const penWidth)
+	auto const drawSingleStreamIntersection = [painter, &rect, state, flags, drawMediaLockedDot](auto const brush, auto const penColor, auto const penWidth)
 	{
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawCircle(painter, rect);
-		if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+		if (drawMediaLockedDot)
 		{
-			drawMediaLocked(painter, rect);
+			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+			{
+				drawMediaLocked(painter, rect);
+			}
 		}
 	};
-	auto const drawRedundantStreamIntersection = [painter, &rect, state, flags](auto const brush, auto const penColor, auto const penWidth)
+	auto const drawRedundantStreamIntersection = [painter, &rect, state, flags, drawMediaLockedDot](auto const brush, auto const penColor, auto const penWidth)
 	{
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawDiamond(painter, rect);
-		if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+		if (drawMediaLockedDot)
 		{
-			drawMediaLocked(painter, rect);
+			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+			{
+				drawMediaLocked(painter, rect);
+			}
 		}
 	};
 

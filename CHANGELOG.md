@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - More color explanation in the Connection Matrix legend
 - Visualization of a Connected and Media Locked stream in Connection Matrix intersection (same information than the header arrow), Milan Only
+  - Can be enabled/disabled in Settings
 - Confirmation dialog when trying to disconnect a Media Locked stream whose Talker is not visible on the network
 
 ### Fixed

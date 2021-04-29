@@ -191,6 +191,16 @@
       <item row="2" column="1">
        <widget class="QCheckBox" name="alwaysShowArrowEndConnectionMatrixCheckBox"/>
       </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="showMediaLockedDotLabel">
+        <property name="text">
+         <string>Show Media Locked State (Dot) In Intersection</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QCheckBox" name="showMediaLockedDotCheckBox"/>
+      </item>
      </layout>
     </widget>
    </item>

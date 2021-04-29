@@ -139,6 +139,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::ConnectionMatrix_ChannelMode);
 	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowTip);
 	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowEnd);
+	settings.registerSetting(settings::ConnectionMatrix_ShowMediaLockedDot);
 
 	// Network
 	settings.registerSetting(settings::Network_ProtocolType);

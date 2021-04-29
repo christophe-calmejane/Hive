@@ -88,6 +88,7 @@ View::View(QWidget* parent)
 	settings.registerSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
 	settings.registerSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
 	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings.registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
 	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 
 	// react on connection completed signals to show error messages.
@@ -103,6 +104,7 @@ View::~View()
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
 	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
 	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
@@ -542,6 +544,13 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		auto const mode = channelMode ? Model::Mode::Channel : Model::Mode::Stream;
 
 		_model->setMode(mode);
+
+		forceFilter();
+	}
+	else if (name == settings::ConnectionMatrix_ShowMediaLockedDot.name)
+	{
+		auto const drawDot = value.toBool();
+		_itemDelegate->setDrawMediaLockedDot(drawDot);
 
 		forceFilter();
 	}

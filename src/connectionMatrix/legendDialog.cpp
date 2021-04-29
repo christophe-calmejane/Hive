@@ -74,7 +74,7 @@ private:
 	{
 		Q_UNUSED(event);
 		QPainter painter{ this };
-		paintHelper::drawCapabilities(&painter, rect(), _type, _state, _flags);
+		paintHelper::drawCapabilities(&painter, rect(), _type, _state, _flags, true);
 	}
 
 private:
@@ -86,9 +86,14 @@ private:
 LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool const isTransposed, QWidget* parent)
 	: QDialog{ parent }
 {
+	// Configure settings observers
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+
+	// Configure UI
 	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection Matrix Legend");
 
-	using Section = std::tuple<QString, Model::IntersectionData::Type, Model::IntersectionData::State, Model::IntersectionData::Flags>;
+	using Section = std::tuple<QString, Model::IntersectionData::Type, Model::IntersectionData::State, Model::IntersectionData::Flags, bool>;
 	using Sections = std::vector<Section>;
 
 	// Add section helper lambda
@@ -99,47 +104,45 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 
 		auto* sectionLayout = new QGridLayout{ sectionGroupBox };
 
-		for (auto const& [sectionTitle, sectionType, sectionState, sectionFlags] : sections)
+		for (auto const& [sectionTitle, sectionType, sectionState, sectionFlags, isMediaLockedDot] : sections)
 		{
-			//auto const& sectionTitle = std::get<0>(section);
-			//auto const& sectionType = std::get<1>(section);
-			//auto const& sectionState = std::get<2>(section);
-			//auto const& sectionFlags = std::get<3>(section);
+			if (!isMediaLockedDot || _drawMediaLockedDot)
+			{
+				auto const row = sectionLayout->rowCount();
 
-			auto const row = sectionLayout->rowCount();
+				auto* capabilitiesLabel = new CapabilitiesLabel{ sectionType, sectionState, sectionFlags, sectionGroupBox };
+				sectionLayout->addWidget(capabilitiesLabel, row, 0);
 
-			auto* capabilitiesLabel = new CapabilitiesLabel{ sectionType, sectionState, sectionFlags, sectionGroupBox };
-			sectionLayout->addWidget(capabilitiesLabel, row, 0);
-
-			auto* descriptionLabel = new QLabel{ sectionTitle, sectionGroupBox };
-			sectionLayout->addWidget(descriptionLabel, row, 1);
+				auto* descriptionLabel = new QLabel{ sectionTitle, sectionGroupBox };
+				sectionLayout->addWidget(descriptionLabel, row, 1);
+			}
 		}
 
 		_layout.addWidget(sectionGroupBox);
 	};
 
 	Sections shapeSections = {
-		{ "Entity connection summary (Not working yet)", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
-		{ "Connection status for a Simple stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
-		{ "Redundant Stream Pair connection summary", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
-		{ "Connection status for the individual stream of a Redundant Stream Pair", Model::IntersectionData::Type::RedundantStream_RedundantStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
+		{ "Entity connection summary (Not working yet)", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
+		{ "Connection status for a Simple stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
+		{ "Redundant Stream Pair connection summary", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
+		{ "Connection status for the individual stream of a Redundant Stream Pair", Model::IntersectionData::Type::RedundantStream_RedundantStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
 	};
 
 	Sections colorCodeSections = {
-		{ "Connectable without detectable error", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{} },
-		{ "Connectable but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain } },
-		{ "Connectable but incompatible stream format", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormat } },
-		{ "Connectable but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown } },
+		{ "Connectable without detectable error", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
+		{ "Connectable but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain }, false },
+		{ "Connectable but incompatible stream format", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormat }, false },
+		{ "Connectable but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown }, false },
 
-		{ "Connected and no detectable error found", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{} },
-		{ "Connected and Media Locked (Milan Only)", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::MediaLocked } },
-		{ "Connected but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain } },
-		{ "Connected but incompatible stream format", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormat } },
-		{ "Connected but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown } },
-		{ "Connected but Talker not detected on the Network (probably Offline)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{} },
-		{ "Connected and Media Locked but Talker not detected on the Network (but Online)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::MediaLocked } },
+		{ "Connected and no detectable error found", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{}, false },
+		{ "Connected and Media Locked (Milan Only)", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::MediaLocked }, true },
+		{ "Connected but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain }, false },
+		{ "Connected but incompatible stream format", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormat }, false },
+		{ "Connected but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown }, false },
+		{ "Connected but Talker not detected on the Network (probably Offline)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{}, false },
+		{ "Connected and Media Locked but Talker not detected on the Network (but Online)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::MediaLocked }, true },
 
-		{ "Partially connected Redundant Stream Pair", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::PartiallyConnected, Model::IntersectionData::Flags{} },
+		{ "Partially connected Redundant Stream Pair", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::PartiallyConnected, Model::IntersectionData::Flags{}, false },
 	};
 
 	// Add a section for the Arrows
@@ -196,6 +199,22 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 	// Add a Close Button
 	connect(&_closeButton, &QPushButton::clicked, this, &QDialog::accept);
 	_layout.addWidget(&_closeButton);
+}
+
+LegendDialog::~LegendDialog()
+{
+	// Remove settings observers
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+}
+
+void LegendDialog::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
+{
+	if (name == settings::ConnectionMatrix_ShowMediaLockedDot.name)
+	{
+		auto const drawDot = value.toBool();
+		_drawMediaLockedDot = drawDot;
+	}
 }
 
 } // namespace connectionMatrix

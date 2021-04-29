@@ -26,10 +26,13 @@ namespace connectionMatrix
 class ItemDelegate final : public QStyledItemDelegate
 {
 public:
-	using QStyledItemDelegate::QStyledItemDelegate;
+	ItemDelegate(bool const drawMediaLockedDot, QObject* parent = nullptr);
+	void setDrawMediaLockedDot(bool const drawMediaLockedDot) noexcept;
 
 private:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+
+	bool _drawMediaLockedDot{ false };
 };
 
 } // namespace connectionMatrix

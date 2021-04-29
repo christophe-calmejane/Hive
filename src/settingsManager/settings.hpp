@@ -43,6 +43,7 @@ static SettingsManager::SettingDefault ConnectionMatrix_Transpose = { "avdecc/co
 static SettingsManager::SettingDefault ConnectionMatrix_ChannelMode = { "avdecc/connectionMatrix/channelMode", false };
 static SettingsManager::SettingDefault ConnectionMatrix_AlwaysShowArrowTip = { "avdecc/connectionMatrix/alwaysShowArrowTip", false };
 static SettingsManager::SettingDefault ConnectionMatrix_AlwaysShowArrowEnd = { "avdecc/connectionMatrix/alwaysShowArrowEnd", false };
+static SettingsManager::SettingDefault ConnectionMatrix_ShowMediaLockedDot = { "avdecc/connectionMatrix/showMediaLockedDot", true };
 
 // Network settings
 static SettingsManager::SettingDefault Network_ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
