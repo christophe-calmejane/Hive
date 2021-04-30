@@ -348,6 +348,16 @@ do
 			gen_cmake_additional_options+=("$1")
 			cmake_generator="$1"
 			;;
+		-arch)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -arch option, see help (-h)"
+				exit 4
+			fi
+			arch="$1"
+			gen_cmake_additional_options+=("-arch")
+			gen_cmake_additional_options+=("$arch")
+			;;
 		-t)
 			if isWindows; then
 				shift
