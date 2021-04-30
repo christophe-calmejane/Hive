@@ -151,6 +151,15 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
 	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
 
+	// Check settings version
+	auto mustResetViewSettings = false;
+	auto const settingsVersion = settings.getValue(settings::ViewSettingsVersion).toInt();
+	if (settingsVersion != settings::ViewSettingsCurrentVersion)
+	{
+		mustResetViewSettings = true;
+	}
+	settings.setValue(settings::ViewSettingsVersion, settings::ViewSettingsCurrentVersion);
+
 	// Load fonts
 	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/
 	{
@@ -204,7 +213,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Load main window
-	auto window = MainWindow{};
+	auto window = MainWindow{ mustResetViewSettings };
 	//window.show(); // This forces the creation of the window // Don't try to show it, it blinks sometimes (and window.hide() seems to create the window too)
 	window.hide(); // Immediately hides it (even though it was not actually shown since processEvents was not called)
 

@@ -95,8 +95,9 @@ public:
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
 {
 public:
-	MainWindowImpl(::MainWindow* parent)
-		: _parent(parent)
+	MainWindowImpl(bool const mustResetViewSettings, ::MainWindow* parent)
+		: _mustResetViewSettings{ mustResetViewSettings }
+		, _parent(parent)
 		, _controllerModel(new avdecc::ControllerModel(parent)) // parent takes ownership of the object -> 'new' required
 	{
 		_controllerProxyModel.setSourceModel(_controllerModel);
@@ -180,6 +181,7 @@ public:
 	ControllerModelSortFilterProxy _controllerProxyModel{};
 	bool _shown{ false };
 	SettingsSignaler _settingsSignaler{};
+	bool _mustResetViewSettings{ false };
 };
 
 void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
@@ -564,10 +566,13 @@ void MainWindowImpl::loadSettings()
 	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting;
 	action->setChecked(true);
 
-	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
-	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
-	entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
-	splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
+	if (!_mustResetViewSettings)
+	{
+		_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
+		loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
+		entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
+		splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
+	}
 
 	// Configure settings observers
 	settings.registerSettingObserver(settings::Network_ProtocolType.name, this);
@@ -1446,9 +1451,9 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	}
 }
 
-MainWindow::MainWindow(QWidget* parent)
+MainWindow::MainWindow(bool const mustResetViewSettings, QWidget* parent)
 	: QMainWindow(parent)
-	, _pImpl(new MainWindowImpl(this))
+	, _pImpl(new MainWindowImpl(mustResetViewSettings, this))
 {
 	// Set title
 	setWindowTitle(hive::internals::applicationLongName + " - Version " + QCoreApplication::applicationVersion());
@@ -1457,9 +1462,12 @@ MainWindow::MainWindow(QWidget* parent)
 	setAcceptDrops(true);
 
 	// Restore geometry
-	auto& settings = settings::SettingsManager::getInstance();
-	restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
-	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+	if (!mustResetViewSettings)
+	{
+		auto& settings = settings::SettingsManager::getInstance();
+		restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
+		restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+	}
 }
 
 MainWindow::~MainWindow() noexcept
