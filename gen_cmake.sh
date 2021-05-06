@@ -48,7 +48,8 @@ if isMac; then
 	fi
 	generator="Xcode"
 	getMachineArch default_arch
-	supportedArchs+=("${default_arch}")
+	supportedArchs+=("x64")
+	supportedArchs+=("arm64")
 else
 	# Use cmake from the path
 	if isWindows; then
@@ -373,6 +374,22 @@ then
 			;;
 		*)
 			echo "ERROR: Unknown android arch: ${arch} (add support for it)"
+			exit 4
+			;;
+	esac
+
+# Set macOS target architecture, otherwise Cmake targets the architecture of the host
+elif [ "${platform}" == "mac" ];
+then
+	case "${arch}" in
+		x64)
+			add_cmake_opt+=("-DCMAKE_OSX_ARCHITECTURES=x86_64")
+			;;
+		arm64)
+			add_cmake_opt+=("-DCMAKE_OSX_ARCHITECTURES=arm64")
+			;;
+		*)
+			echo "ERROR: Unknown macOS arch: ${arch} (add support for it)"
 			exit 4
 			;;
 	esac
