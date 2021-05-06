@@ -37,9 +37,10 @@
 #	include <QDebug>
 #endif
 
-#ifdef _WIN32
+#ifdef Q_CC_MSVC
+#	pragma warning(push)
 #	pragma warning(disable : 4127) // "conditional expression is constant" due to QVector compilation warning
-#endif // _WIN32
+#endif
 
 namespace connectionMatrix
 {
@@ -878,3 +879,7 @@ void HeaderView::handleEditMappingsClicked(la::avdecc::UniqueIdentifier const en
 }
 
 } // namespace connectionMatrix
+
+#ifdef Q_CC_MSVC
+#	pragma warning(pop)
+#endif
