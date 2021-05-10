@@ -571,62 +571,69 @@ private:
 											continue;
 										}
 
-										// the source stream channel is connected to the corresponding target stream channel.
-										if (mapping.streamIndex == listenerStream.streamIndex && mapping.streamChannel == sourceStreamChannel)
+										try
 										{
-											auto connectionInformation = std::make_shared<TargetConnectionInformation>();
-
-											connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(streamConnectionInfo.talkerStream);
-											connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(listenerStream);
-
-											auto primaryListenerStreamIndex{ 0u };
-											auto primaryTalkerStreamIndex{ 0u };
-											auto primaryStreamIndexIt = relevantPrimaryStreamIndexes.find(mapping.streamIndex);
-											if (primaryStreamIndexIt != relevantPrimaryStreamIndexes.end())
+											// the source stream channel is connected to the corresponding target stream channel.
+											if (mapping.streamIndex == listenerStream.streamIndex && mapping.streamChannel == sourceStreamChannel)
 											{
-												primaryListenerStreamIndex = primaryStreamIndexIt->first;
-												primaryTalkerStreamIndex = streamConnectionInfo.talkerStream.streamIndex;
-											}
-											else
-											{
-												auto streamIndex = relevantRedundantStreamIndexes.find(mapping.streamIndex);
-												if (streamIndex != relevantRedundantStreamIndexes.end())
+												auto connectionInformation = std::make_shared<TargetConnectionInformation>();
+
+												connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(streamConnectionInfo.talkerStream);
+												connectionInformation->targetVirtualIndex = getRedundantVirtualIndexFromInputStreamIndex(listenerStream);
+
+												auto primaryListenerStreamIndex{ 0u };
+												auto primaryTalkerStreamIndex{ 0u };
+												auto primaryStreamIndexIt = relevantPrimaryStreamIndexes.find(mapping.streamIndex);
+												if (primaryStreamIndexIt != relevantPrimaryStreamIndexes.end())
 												{
-													// if we land in here the primary is not connected, but a secundary is.
-													primaryListenerStreamIndex = streamIndex->second;
-													primaryTalkerStreamIndex = controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
+													primaryListenerStreamIndex = primaryStreamIndexIt->first;
+													primaryTalkerStreamIndex = streamConnectionInfo.talkerStream.streamIndex;
 												}
-											}
+												else
+												{
+													auto streamIndex = relevantRedundantStreamIndexes.find(mapping.streamIndex);
+													if (streamIndex != relevantRedundantStreamIndexes.end())
+													{
+														// if we land in here the primary is not connected, but a secundary is.
+														primaryListenerStreamIndex = streamIndex->second;
+														primaryTalkerStreamIndex = controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
+													}
+												}
 
-											connectionInformation->targetEntityId = listenerStream.entityID;
-											connectionInformation->streamChannel = sourceStreamChannel;
-											connectionInformation->sourceStreamIndex = primaryTalkerStreamIndex;
-											connectionInformation->targetStreamIndex = primaryListenerStreamIndex;
-											if (connectionInformation->sourceVirtualIndex && connectionInformation->targetVirtualIndex)
-											{
-												// both redundant
-												connectionInformation->streamPairs = getRedundantStreamIndexPairs(listenerStream.entityID, *connectionInformation->sourceVirtualIndex, connectionInformation->targetEntityId, *connectionInformation->targetVirtualIndex);
-											}
-											else
-											{
-												connectionInformation->streamPairs = { std::make_pair(connectionInformation->sourceStreamIndex, connectionInformation->targetStreamIndex) };
-											}
+												connectionInformation->targetEntityId = listenerStream.entityID;
+												connectionInformation->streamChannel = sourceStreamChannel;
+												connectionInformation->sourceStreamIndex = primaryTalkerStreamIndex;
+												connectionInformation->targetStreamIndex = primaryListenerStreamIndex;
+												if (connectionInformation->sourceVirtualIndex && connectionInformation->targetVirtualIndex)
+												{
+													// both redundant
+													connectionInformation->streamPairs = getRedundantStreamIndexPairs(listenerStream.entityID, *connectionInformation->sourceVirtualIndex, connectionInformation->targetEntityId, *connectionInformation->targetVirtualIndex);
+												}
+												else
+												{
+													connectionInformation->streamPairs = { std::make_pair(connectionInformation->sourceStreamIndex, connectionInformation->targetStreamIndex) };
+												}
 
-											connectionInformation->targetClusterChannels.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
-											connectionInformation->targetAudioUnitIndex = audioUnitKV.first;
-											if (streamPortInputKV.second.staticModel)
-											{
-												connectionInformation->targetBaseCluster = streamPortInputKV.second.staticModel->baseCluster;
+												connectionInformation->targetClusterChannels.push_back(std::make_pair(mapping.clusterOffset, mapping.clusterChannel));
+												connectionInformation->targetAudioUnitIndex = audioUnitKV.first;
+												if (streamPortInputKV.second.staticModel)
+												{
+													connectionInformation->targetBaseCluster = streamPortInputKV.second.staticModel->baseCluster;
+												}
+												connectionInformation->targetStreamPortIndex = streamPortInputKV.first;
+												connectionInformation->isSourceRedundant = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, stream.first).isRedundant;
+												connectionInformation->isTargetRedundant = targetControlledEntity->getStreamInputNode(targetConfigurationNode.descriptorIndex, mapping.streamIndex).isRedundant;
+
+												// prevent doubled entries for redundant connected streams
+												processedListenerChannels.insert(listenerClusterChannel);
+
+												// add connection to the result data
+												result->targets.push_back(connectionInformation);
 											}
-											connectionInformation->targetStreamPortIndex = streamPortInputKV.first;
-											connectionInformation->isSourceRedundant = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, stream.first).isRedundant;
-											connectionInformation->isTargetRedundant = targetControlledEntity->getStreamInputNode(targetConfigurationNode.descriptorIndex, mapping.streamIndex).isRedundant;
-
-											// prevent doubled entries for redundant connected streams
-											processedListenerChannels.insert(listenerClusterChannel);
-
-											// add connection to the result data
-											result->targets.push_back(connectionInformation);
+										}
+										catch (la::avdecc::controller::ControlledEntity::Exception const& e)
+										{
+											LOG_HIVE_ERROR(QString("ChannelConnectionManager::getChannelConnections throw an exception (%1). Please dump Full Network State from File menu and send the file for support.").arg(e.what()));
 										}
 									}
 								}
