@@ -29,7 +29,7 @@ class MainWindow : public QMainWindow
 	Q_OBJECT
 public:
 	// Constructor
-	MainWindow(QWidget* parent = nullptr);
+	MainWindow(bool const mustResetViewSettings, QWidget* parent = nullptr);
 	virtual ~MainWindow() noexcept;
 
 	// Deleted compiler auto-generated methods

@@ -28,6 +28,8 @@
 
 namespace settings
 {
+static constexpr auto ViewSettingsCurrentVersion = 2;
+
 // Settings with a default initial value
 static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVersion", "" };
 static SettingsManager::SettingDefault UserProfile = { "userProfile", la::avdecc::utils::to_integral(profiles::ProfileType::None) };
@@ -57,6 +59,7 @@ static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "av
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
 static SettingsManager::Setting InterfaceID = { "interfaceID" };
+static SettingsManager::Setting ViewSettingsVersion = { "viewSettingsVersion" }; // Must match ViewSettingsCurrentVersion
 static SettingsManager::Setting ControllerDynamicHeaderViewState = { "controllerDynamicHeaderView/state" };
 static SettingsManager::Setting LoggerDynamicHeaderViewState = { "loggerDynamicHeaderView/state" };
 static SettingsManager::Setting EntityInspectorState = { "entityInspector/state" };

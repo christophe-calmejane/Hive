@@ -1031,7 +1031,7 @@ QVariant ControllerModel::headerData(int section, Qt::Orientation orientation, i
 	return d->headerData(section, orientation, role);
 }
 
-la::avdecc::UniqueIdentifier ControllerModel::controlledEntityID(QModelIndex const& index) const
+la::avdecc::UniqueIdentifier ControllerModel::getControlledEntityID(QModelIndex const& index) const
 {
 	Q_D(const ControllerModel);
 	return d->controlledEntityID(index);
