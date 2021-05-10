@@ -57,6 +57,7 @@
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
 #include <QtMate/widgets/dynamicHeaderView.hpp>
+#include <QtMate/widgets/headerViewSortSectionFilter.hpp>
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
 #include <la/avdecc/networkInterfaceHelper.hpp>
@@ -90,50 +91,6 @@ public:
 		auto const sourceIndex = mapToSource(index);
 		return static_cast<avdecc::ControllerModel const*>(sourceModel())->getControlledEntityID(sourceIndex);
 	}
-};
-
-// This class is intended to be used on a QHeaderView's viewport, in order to disable sorting on a list of sections.
-// It swallows MouseButtonPress and MouseButtonRelease that may happen on these sections to disable the sorting mechanism.
-// By default, all sections are disabled, call ::enable() to make a section clickable/sortable.
-class QHeaderViewSectionMouseEventFilter : public QObject
-{
-public:
-	QHeaderViewSectionMouseEventFilter(QHeaderView* headerView, QObject* parent = nullptr)
-		: QObject{ parent }
-		, _headerView{ headerView }
-	{
-		_headerView->viewport()->installEventFilter(this);
-	}
-	
-	void disable(int logicalIndex)
-	{
-		_enabledSectionSet.remove(logicalIndex);
-	}
-	
-	void enable(int logicalIndex)
-	{
-		_enabledSectionSet.insert(logicalIndex);
-	}
-	
-private:
-	virtual bool eventFilter(QObject* object, QEvent* event) override
-	{
-		if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease)
-		{
-			auto* ev = static_cast<QMouseEvent*>(event);
-			auto const logicalIndexUnderTheMouse = _headerView->logicalIndexAt(ev->pos());
-			if (!_enabledSectionSet.contains(logicalIndexUnderTheMouse))
-			{
-				return true;
-			}
-		}
-		
-		return false;
-	}
-	
-private:
-	QHeaderView* _headerView{};
-	QSet<int> _enabledSectionSet{};
 };
 
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
@@ -221,7 +178,7 @@ public:
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
-	QHeaderViewSectionMouseEventFilter _controllerHeaderSectionMouseEventFilter{ &_controllerDynamicHeaderView };
+	qtMate::widgets::HeaderViewSortSectionFilter _controllerHeaderSectionSortFilter{ &_controllerDynamicHeaderView };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
 	ControllerModelSortFilterProxy _controllerProxyModel{};
 	bool _shown{ false };
@@ -511,12 +468,15 @@ void MainWindowImpl::createControllerView()
 	_controllerDynamicHeaderView.setSectionsClickable(true);
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
-	
+
 	// Configure sortable sections
-	_controllerHeaderSectionMouseEventFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility));
-	_controllerHeaderSectionMouseEventFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
-	_controllerHeaderSectionMouseEventFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name));
-	_controllerHeaderSectionMouseEventFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName));
 
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 }
