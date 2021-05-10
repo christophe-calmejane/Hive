@@ -1299,7 +1299,11 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "ave" || ext == "ans")
+		if (ext == "ave" || ext == "ans"
+#ifdef DEBUG
+				|| ext == "json"
+#endif // DEBUG
+		)
 		{
 			event->acceptProposedAction();
 			return;
@@ -1388,8 +1392,8 @@ void MainWindow::dropEvent(QDropEvent* event)
 		if (ext == "ave")
 		{
 			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
-
-			auto [error, message] = loadEntity(u.toLocalFile(), flags);
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+			auto [error, message] = loadEntity(f, flags);
 			if (!!error)
 			{
 				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
@@ -1398,7 +1402,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 					if (choice == QMessageBox::StandardButton::Yes)
 					{
 						flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-						auto const result = loadEntity(u.toLocalFile(), flags);
+						auto const result = loadEntity(f, flags);
 						error = std::get<0>(result);
 						message = std::get<1>(result);
 						// Fallthrough to warning message
@@ -1416,12 +1420,28 @@ void MainWindow::dropEvent(QDropEvent* event)
 		{
 			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
 			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
-			auto [error, message] = loadNetworkState(u.toLocalFile(), flags);
+			auto [error, message] = loadNetworkState(f, flags);
 			if (!!error)
 			{
 				QMessageBox::warning(this, "Failed to load Network State", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
 			}
 		}
+
+#ifdef DEBUG
+		// Any kind of file, we have to autodetect
+		else if (ext == "json")
+		{
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+			// Start with AVE file type
+			auto [error, message] = loadEntity(f, flags);
+			if (!!error)
+			{
+				// Then try ANS file type
+				loadNetworkState(f, flags);
+			}
+		}
+#endif // DEBUG
 	}
 }
 
