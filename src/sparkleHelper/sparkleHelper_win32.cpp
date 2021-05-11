@@ -97,6 +97,10 @@ void Sparkle::init(std::string const& internalNumber, std::string const& signatu
 				{
 					sparkle._logHandler("Automatic update failed", LogLevel::Warn);
 				}
+				if (sparkle._updateFailedHandler)
+				{
+					sparkle._updateFailedHandler();
+				}
 			});
 
 		// Get current Check For Updates value

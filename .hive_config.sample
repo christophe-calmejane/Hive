@@ -22,6 +22,12 @@ appcast_releases=https://www.kikisoft.com/Hive/appcast-release.xml
 # Appcast URL for Hive Betas - Only use https URLs (except for debugging when using localhost)
 appcast_betas=https://www.kikisoft.com/Hive/appcast-beta.xml
 
+# Fallback appcast URL for Hive Releases, in case main URL doesn't work - Only use https URLs (except for debugging when using localhost)
+appcast_releases_fallback=https://www.kikisoft.com/Hive/appcast-release.xml
+
+# Fallback appcast URL for Hive Betas, in case main URL doesn't work - Only use https URLs (except for debugging when using localhost)
+appcast_betas_fallback=https://www.kikisoft.com/Hive/appcast-beta.xml
+
 ################ Debug Symbols
 # Windows symstore.exe location (cygwin, mixed or windows path style ; Don't use quotes) - Can be a network path
 #symbols_symstore_path=c:/Program Files (x86)/Windows Kits/10/Debuggers/x86/symstore.exe

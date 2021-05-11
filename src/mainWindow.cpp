@@ -184,6 +184,8 @@ public:
 	bool _shown{ false };
 	SettingsSignaler _settingsSignaler{};
 	bool _mustResetViewSettings{ false };
+	bool _usingBetaAppcast{ false };
+	bool _usingBackupAppcast{ false };
 };
 
 void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
@@ -1117,6 +1119,28 @@ void MainWindowImpl::connectSignals()
 					break;
 			}
 		});
+	sparkle.setUpdateFailedHandler(
+		[this]()
+		{
+			QMetaObject::invokeMethod(this,
+				[this]()
+				{
+					if (!_usingBackupAppcast)
+					{
+						QMessageBox::information(_parent, "", "Trying with fallback autoupdate URL.", QMessageBox::StandardButton::Ok);
+						_usingBackupAppcast = true;
+						// Use backup appcast
+						if (_usingBetaAppcast)
+						{
+							Sparkle::getInstance().setAppcastUrl(hive::internals::appcastBetasFallbackUrl);
+						}
+						else
+						{
+							Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesFallbackUrl);
+						}
+					}
+				});
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
@@ -1474,10 +1498,12 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	{
 		if (value.toBool())
 		{
+			_usingBetaAppcast = true;
 			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastBetasUrl);
 		}
 		else
 		{
+			_usingBetaAppcast = false;
 			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesUrl);
 		}
 	}
