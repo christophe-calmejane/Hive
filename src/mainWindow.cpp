@@ -184,6 +184,8 @@ public:
 	bool _shown{ false };
 	SettingsSignaler _settingsSignaler{};
 	bool _mustResetViewSettings{ false };
+	bool _usingBetaAppcast{ false };
+	bool _usingBackupAppcast{ false };
 };
 
 void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
@@ -1117,6 +1119,42 @@ void MainWindowImpl::connectSignals()
 					break;
 			}
 		});
+	sparkle.setUpdateFailedHandler(
+		[this]()
+		{
+			QMetaObject::invokeMethod(this,
+				[this]()
+				{
+					if (!_usingBackupAppcast)
+					{
+						_usingBackupAppcast = true;
+						auto fallbackUrl = std::string{};
+						auto setFallback = false;
+						// Use backup appcast
+						if (_usingBetaAppcast)
+						{
+							if (hive::internals::appcastBetasFallbackUrl != hive::internals::appcastBetasUrl)
+							{
+								setFallback = true;
+								fallbackUrl = hive::internals::appcastBetasFallbackUrl;
+							}
+						}
+						else
+						{
+							if (hive::internals::appcastReleasesFallbackUrl != hive::internals::appcastReleasesUrl)
+							{
+								setFallback = true;
+								fallbackUrl = hive::internals::appcastReleasesFallbackUrl;
+							}
+						}
+						if (setFallback)
+						{
+							Sparkle::getInstance().setAppcastUrl(fallbackUrl);
+							LOG_HIVE_WARN("Trying autoupdate fallback URL");
+						}
+					}
+				});
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
@@ -1474,10 +1512,12 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	{
 		if (value.toBool())
 		{
+			_usingBetaAppcast = true;
 			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastBetasUrl);
 		}
 		else
 		{
+			_usingBetaAppcast = false;
 			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesUrl);
 		}
 	}

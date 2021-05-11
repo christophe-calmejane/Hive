@@ -35,6 +35,7 @@ public:
 	using IsShutdownAllowedHandler = std::function<bool()>;
 	using ShutdownRequestHandler = std::function<void()>;
 	using LogHandler = std::function<void(std::string const& message, LogLevel const level)>;
+	using UpdateFailedHandler = std::function<void()>;
 
 	static Sparkle& getInstance() noexcept
 	{
@@ -67,6 +68,14 @@ public:
 	{
 		return _logHandler;
 	}
+	void setUpdateFailedHandler(UpdateFailedHandler const& updateFailedHandler) noexcept
+	{
+		_updateFailedHandler = updateFailedHandler;
+	}
+	UpdateFailedHandler const& getUpdateFailedHandler() const noexcept
+	{
+		return _updateFailedHandler;
+	}
 
 	/* Requests methods */
 	void manualCheckForUpdate() noexcept;
@@ -92,4 +101,5 @@ private:
 	IsShutdownAllowedHandler _isShutdownAllowedHandler{ nullptr };
 	ShutdownRequestHandler _shutdownRequestHandler{ nullptr };
 	LogHandler _logHandler{ nullptr };
+	UpdateFailedHandler _updateFailedHandler{ nullptr };
 };

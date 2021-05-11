@@ -99,10 +99,19 @@ static inline std::string getStdString(NSString* nsString)
 }
 
 - (void)updater:(SUUpdater*)updater didAbortWithError:(NSError*)error {
-	auto const& handler = Sparkle::getInstance().getLogHandler();
-	if (handler)
 	{
-		handler(std::string{ "Automatic update failed: " } + getStdString([error description]), Sparkle::LogLevel::Warn);
+		auto const& handler = Sparkle::getInstance().getLogHandler();
+		if (handler)
+		{
+			handler(std::string{ "Automatic update failed: " } + getStdString([error description]), Sparkle::LogLevel::Warn);
+		}
+	}
+	{
+		auto const& handler = Sparkle::getInstance().getUpdateFailedHandler();
+		if (handler)
+		{
+			handler();
+		}
 	}
 }
 

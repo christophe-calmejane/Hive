@@ -524,6 +524,16 @@ fi
 gen_cmake_additional_options+=("-a")
 gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas"]}")
 
+if [ "x${params["appcast_releases_fallback"]}" != "x" ]; then
+	gen_cmake_additional_options+=("-a")
+	gen_cmake_additional_options+=("-DHIVE_APPCAST_RELEASES_FALLBACK_URL=${params["appcast_releases_fallback"]}")
+fi
+
+if [ "x${params["appcast_betas_fallback"]}" != "x" ]; then
+	gen_cmake_additional_options+=("-a")
+	gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_FALLBACK_URL=${params["appcast_betas_fallback"]}")
+fi
+
 # Build marketing options
 marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
 
