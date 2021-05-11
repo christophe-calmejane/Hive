@@ -19,6 +19,7 @@
 
 #include "channelConnectionManager.hpp"
 #include "helper.hpp"
+#include "hiveLogItems.hpp"
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
