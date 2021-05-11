@@ -1127,16 +1127,30 @@ void MainWindowImpl::connectSignals()
 				{
 					if (!_usingBackupAppcast)
 					{
-						QMessageBox::information(_parent, "", "Trying with fallback autoupdate URL.", QMessageBox::StandardButton::Ok);
 						_usingBackupAppcast = true;
+						auto fallbackUrl = std::string{};
+						auto setFallback = false;
 						// Use backup appcast
 						if (_usingBetaAppcast)
 						{
-							Sparkle::getInstance().setAppcastUrl(hive::internals::appcastBetasFallbackUrl);
+							if (hive::internals::appcastBetasFallbackUrl != hive::internals::appcastBetasUrl)
+							{
+								setFallback = true;
+								fallbackUrl = hive::internals::appcastBetasFallbackUrl;
+							}
 						}
 						else
 						{
-							Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesFallbackUrl);
+							if (hive::internals::appcastReleasesFallbackUrl != hive::internals::appcastReleasesUrl)
+							{
+								setFallback = true;
+								fallbackUrl = hive::internals::appcastReleasesFallbackUrl;
+							}
+						}
+						if (setFallback)
+						{
+							Sparkle::getInstance().setAppcastUrl(fallbackUrl);
+							LOG_HIVE_WARN("Trying autoupdate fallback URL");
 						}
 					}
 				});
