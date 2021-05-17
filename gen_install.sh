@@ -261,7 +261,8 @@ if isMac; then
 	fi
 	generator="Xcode"
 	getMachineArch default_arch
-	supportedArchs+=("${default_arch}")
+	supportedArchs+=("x64")
+	supportedArchs+=("arm64")
 else
 	# Use cmake from the path
 	cmake_path="cmake"
