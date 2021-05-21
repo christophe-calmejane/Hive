@@ -82,7 +82,7 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
-class ControllerModelSortFilterProxy : public QSortFilterProxyModel
+class ControllerModelSortFilterProxy final : public QSortFilterProxyModel
 {
 public:
 	// Helpers
