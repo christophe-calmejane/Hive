@@ -59,6 +59,7 @@ static void qtMessageHandler(QtMsgType msgType, QMessageLogContext const& logCon
 #if defined(Q_OS_WIN32) && defined(HAVE_BUGTRAP)
 #	define BUGREPORTER_CATCH_EXCEPTIONS
 #	include <Windows.h>
+#	include <DbgHelp.h>
 #	include "BugTrap.h"
 
 void setupBugReporter()
@@ -66,6 +67,9 @@ void setupBugReporter()
 	BT_InstallSehFilter();
 
 	BT_SetTerminate();
+#ifndef HIVE_IS_RELEASE_VERSION
+	BT_SetDumpType(MiniDumpWithDataSegs | MiniDumpWithFullMemory);
+#endif
 	BT_SetSupportEMail("christophe.calmejane@l-acoustics.com");
 	BT_SetFlags(BTF_DETAILEDMODE | BTF_ATTACHREPORT | BTF_SHOWADVANCEDUI | BTF_DESCRIBEERROR);
 	BT_SetSupportServer("hive-crash-reports.changeip.org", 9999);

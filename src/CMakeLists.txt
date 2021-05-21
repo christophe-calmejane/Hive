@@ -267,6 +267,11 @@ if(BUILD_HIVE_APPLICATION)
 	# Setup common options
 	setup_executable_options(${PROJECT_NAME})
 
+	# Additional compile definitions
+	if(HIVE_IS_RELEASE_VERSION)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE HIVE_IS_RELEASE_VERSION)
+	endif()
+
 	# Link libraries
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_static)
 
