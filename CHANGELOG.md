@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Matrix being refreshed more than required
 - [Unhandled exception causing crash](https://github.com/christophe-calmejane/Hive/issues/101)
 - Entity properly show identification if discovered while actively identifying
+- [Frequent app hang when multiple Milan entities are on the network and streaming](https://github.com/christophe-calmejane/Hive/issues/104)
 
 ## [1.2.4] - 2021-04-02
 ### Added
