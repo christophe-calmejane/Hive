@@ -103,6 +103,7 @@ set(HEADER_FILES_COMMON
 	defaults.hpp
 	deviceDetailsDialog.hpp
 	deviceDetailsChannelTableModel.hpp
+	deviceDetailsStreamFormatTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
 	firmwareUploadDialog.hpp
@@ -169,6 +170,7 @@ set(SOURCE_FILES_COMMON
 	aboutDialog.cpp
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
+	deviceDetailsStreamFormatTableModel.cpp
 	firmwareUploadDialog.cpp
 	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp

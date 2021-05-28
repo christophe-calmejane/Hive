@@ -30,6 +30,7 @@
 
 #include "ui_deviceDetailsDialog.h"
 #include "deviceDetailsChannelTableModel.hpp"
+#include "deviceDetailsStreamFormatTableModel.hpp"
 #include "internals/config.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
@@ -61,6 +62,7 @@ private:
 
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelReceive;
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelTransmit;
+	DeviceDetailsStreamFormatTableModel _deviceDetailsStreamFormatTableModel;
 
 public:
 	/**
@@ -82,20 +84,26 @@ public:
 
 		// setup the table view data models.
 		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
-		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
 		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
-		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
 		tableViewReceive->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
-		tableViewTransmit->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
-
 		tableViewReceive->setModel(&_deviceDetailsChannelTableModelReceive);
+
+		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
+		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
+		tableViewTransmit->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
+
+		tableViewStreamFormat->setItemDelegateForColumn(static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamOutputFormat), new StreamFormatItemDelegate(tableViewStreamFormat));
+		tableViewStreamFormat->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+		tableViewStreamFormat->setModel(&_deviceDetailsStreamFormatTableModel);
 
 		// disable row resize
 		QHeaderView* verticalHeaderReceive = tableViewReceive->verticalHeader();
 		verticalHeaderReceive->setSectionResizeMode(QHeaderView::Fixed);
 		QHeaderView* verticalHeaderTransmit = tableViewTransmit->verticalHeader();
 		verticalHeaderTransmit->setSectionResizeMode(QHeaderView::Fixed);
+		QHeaderView* verticalHeaderStreamFormat = tableViewStreamFormat->verticalHeader();
+		verticalHeaderStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
 
 		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
 		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
@@ -105,6 +113,7 @@ public:
 
 		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
@@ -155,6 +164,8 @@ public:
 				return;
 			}
 			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
+
+			_deviceDetailsStreamFormatTableModel.setControlledEntityID(entityID);
 
 			if (!leaveOutGeneralData)
 			{
@@ -234,6 +245,8 @@ public:
 			tableViewReceive->resizeRowsToContents();
 			tableViewTransmit->resizeColumnsToContents();
 			tableViewTransmit->resizeRowsToContents();
+			tableViewStreamFormat->resizeColumnsToContents();
+			tableViewStreamFormat->resizeRowsToContents();
 		}
 	}
 
@@ -265,7 +278,7 @@ public:
 		}
 
 		//iterate over the changes and write them via avdecc
-		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
+		auto changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
 		for (auto e : changesReceive.keys())
 		{
 			auto rxChanges = changesReceive.value(e);
@@ -279,7 +292,7 @@ public:
 			}
 		}
 
-		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
+		auto changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
 		for (auto e : changesTransmit.keys())
 		{
 			auto txChanges = changesTransmit.value(e);
@@ -348,6 +361,8 @@ public:
 		_deviceDetailsChannelTableModelReceive.resetChangedData();
 		_deviceDetailsChannelTableModelReceive.removeAllNodes();
 
+		_deviceDetailsStreamFormatTableModel.resetChangedData();
+
 		// read out actual data again
 		loadCurrentControlledEntity(_entityID, false);
 	}
@@ -411,6 +426,17 @@ public:
 					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 				}
 			}
+		}
+
+		auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+		for (auto const& streamOutput : configurationNode.streamOutputs)
+		{
+			_deviceDetailsStreamFormatTableModel.addNode(streamOutput.first, streamOutput.second.descriptorType, streamOutput.second.dynamicModel->streamFormat);
+		}
+		for (auto i = 0; i < _deviceDetailsStreamFormatTableModel.rowCount(); i++)
+		{
+			auto modIdx = _deviceDetailsStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamOutputFormat), QModelIndex());
+			tableViewStreamFormat->openPersistentEditor(modIdx);
 		}
 	}
 
