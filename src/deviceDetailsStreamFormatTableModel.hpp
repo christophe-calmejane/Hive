@@ -38,9 +38,8 @@ class DeviceDetailsStreamFormatTableModelPrivate;
 */
 enum class DeviceDetailsStreamFormatTableModelColumn
 {
-	//StreamOutputNumber,
-	StreamOutputName,
-	StreamOutputFormat,
+	StreamName,
+	StreamFormat,
 
 };
 
@@ -101,6 +100,7 @@ public:
 	void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
 
 private:
+
 };
 
 //**************************************************************

@@ -196,14 +196,14 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 	}
 	switch (column)
 	{
-		case DeviceDetailsStreamFormatTableModelColumn::StreamOutputName:
+		case DeviceDetailsStreamFormatTableModelColumn::StreamName:
 		{
 			auto const& streamFormatData = _nodes.at(index.row());
 			if (role == Qt::DisplayRole || role == Qt::EditRole)
 			{
-				if (_hasChangesMap.contains(streamFormatData.streamIndex) && _hasChangesMap.value(streamFormatData.streamIndex)->contains(DeviceDetailsStreamFormatTableModelColumn::StreamOutputName))
+				if (_hasChangesMap.contains(streamFormatData.streamIndex) && _hasChangesMap.value(streamFormatData.streamIndex)->contains(DeviceDetailsStreamFormatTableModelColumn::StreamName))
 				{
-					return _hasChangesMap.value(streamFormatData.streamIndex)->value(DeviceDetailsStreamFormatTableModelColumn::StreamOutputName);
+					return _hasChangesMap.value(streamFormatData.streamIndex)->value(DeviceDetailsStreamFormatTableModelColumn::StreamName);
 				}
 				else
 				{
@@ -251,7 +251,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 			}
 			break;
 		}
-		case DeviceDetailsStreamFormatTableModelColumn::StreamOutputFormat:
+		case DeviceDetailsStreamFormatTableModelColumn::StreamFormat:
 		{
 			if (role == Qt::DisplayRole)
 			{
@@ -286,7 +286,7 @@ bool DeviceDetailsStreamFormatTableModelPrivate::setData(QModelIndex const& inde
 		auto const column = static_cast<DeviceDetailsStreamFormatTableModelColumn>(index.column());
 		switch (column)
 		{
-			case DeviceDetailsStreamFormatTableModelColumn::StreamOutputName:
+			case DeviceDetailsStreamFormatTableModelColumn::StreamName:
 			{
 				if (value.toString() != data(index, role))
 				{
@@ -295,7 +295,7 @@ bool DeviceDetailsStreamFormatTableModelPrivate::setData(QModelIndex const& inde
 					{
 						_hasChangesMap.insert(streamIndex, new QMap<DeviceDetailsStreamFormatTableModelColumn, QVariant>());
 					}
-					_hasChangesMap.value(streamIndex)->insert(DeviceDetailsStreamFormatTableModelColumn::StreamOutputName, value.toString());
+					_hasChangesMap.value(streamIndex)->insert(DeviceDetailsStreamFormatTableModelColumn::StreamName, value.toString());
 					emit q->dataEdited();
 				}
 				break;
@@ -320,9 +320,13 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::headerData(int section, Qt:
 		{
 			switch (static_cast<DeviceDetailsStreamFormatTableModelColumn>(section))
 			{
-				case DeviceDetailsStreamFormatTableModelColumn::StreamOutputName:
-					return avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::StreamOutput) + " Name";
-				case DeviceDetailsStreamFormatTableModelColumn::StreamOutputFormat:
+				case DeviceDetailsStreamFormatTableModelColumn::StreamName:
+					if (static_cast<size_t>(section) >= _nodes.size())
+					{
+						return {};
+					}
+					return avdecc::helper::descriptorTypeToString(_nodes.at(section).streamType) + " Name";
+				case DeviceDetailsStreamFormatTableModelColumn::StreamFormat:
 					return "Format";
 				default:
 					break;
@@ -349,7 +353,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::headerData(int section, Qt:
 */
 Qt::ItemFlags DeviceDetailsStreamFormatTableModelPrivate::flags(QModelIndex const& index) const
 {
-	if (index.column() == static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamOutputFormat))
+	if (index.column() == static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat))
 	{
 		return Qt::ItemIsEnabled | Qt::ItemIsEditable;
 	}
@@ -572,12 +576,15 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 
 void StreamFormatItemDelegate::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
-	qDebug(__FUNCTION__);
+	Q_UNUSED(editor);
+	Q_UNUSED(index);
 }
 
 void StreamFormatItemDelegate::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
 {
-	qDebug(__FUNCTION__);
+	Q_UNUSED(editor);
+	Q_UNUSED(model);
+	Q_UNUSED(index);
 }
 
 #include "deviceDetailsStreamFormatTableModel.moc"

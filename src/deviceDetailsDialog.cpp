@@ -62,7 +62,8 @@ private:
 
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelReceive;
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelTransmit;
-	DeviceDetailsStreamFormatTableModel _deviceDetailsStreamFormatTableModel;
+	DeviceDetailsStreamFormatTableModel _deviceDetailsInputStreamFormatTableModel;
+	DeviceDetailsStreamFormatTableModel _deviceDetailsOutputStreamFormatTableModel;
 
 public:
 	/**
@@ -93,17 +94,23 @@ public:
 		tableViewTransmit->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
 
-		tableViewStreamFormat->setItemDelegateForColumn(static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamOutputFormat), new StreamFormatItemDelegate(tableViewStreamFormat));
-		tableViewStreamFormat->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
-		tableViewStreamFormat->setModel(&_deviceDetailsStreamFormatTableModel);
+		tableViewInputStreamFormat->setItemDelegateForColumn(static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), new StreamFormatItemDelegate(tableViewInputStreamFormat));
+		tableViewInputStreamFormat->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+		tableViewInputStreamFormat->setModel(&_deviceDetailsInputStreamFormatTableModel);
+
+		tableViewOutputStreamFormat->setItemDelegateForColumn(static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), new StreamFormatItemDelegate(tableViewOutputStreamFormat));
+		tableViewOutputStreamFormat->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+		tableViewOutputStreamFormat->setModel(&_deviceDetailsOutputStreamFormatTableModel);
 
 		// disable row resize
 		QHeaderView* verticalHeaderReceive = tableViewReceive->verticalHeader();
 		verticalHeaderReceive->setSectionResizeMode(QHeaderView::Fixed);
 		QHeaderView* verticalHeaderTransmit = tableViewTransmit->verticalHeader();
 		verticalHeaderTransmit->setSectionResizeMode(QHeaderView::Fixed);
-		QHeaderView* verticalHeaderStreamFormat = tableViewStreamFormat->verticalHeader();
-		verticalHeaderStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
+		QHeaderView* verticalHeaderInputStreamFormat = tableViewInputStreamFormat->verticalHeader();
+		verticalHeaderInputStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
+		QHeaderView* verticalHeaderOutputStreamFormat = tableViewOutputStreamFormat->verticalHeader();
+		verticalHeaderOutputStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
 
 		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
 		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
@@ -113,7 +120,8 @@ public:
 
 		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
-		connect(&_deviceDetailsStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsInputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsOutputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
@@ -165,7 +173,8 @@ public:
 			}
 			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
 
-			_deviceDetailsStreamFormatTableModel.setControlledEntityID(entityID);
+			_deviceDetailsInputStreamFormatTableModel.setControlledEntityID(entityID);
+			_deviceDetailsOutputStreamFormatTableModel.setControlledEntityID(entityID);
 
 			if (!leaveOutGeneralData)
 			{
@@ -245,8 +254,10 @@ public:
 			tableViewReceive->resizeRowsToContents();
 			tableViewTransmit->resizeColumnsToContents();
 			tableViewTransmit->resizeRowsToContents();
-			tableViewStreamFormat->resizeColumnsToContents();
-			tableViewStreamFormat->resizeRowsToContents();
+			tableViewInputStreamFormat->resizeColumnsToContents();
+			tableViewInputStreamFormat->resizeRowsToContents();
+			tableViewOutputStreamFormat->resizeColumnsToContents();
+			tableViewOutputStreamFormat->resizeRowsToContents();
 		}
 	}
 
@@ -361,7 +372,8 @@ public:
 		_deviceDetailsChannelTableModelReceive.resetChangedData();
 		_deviceDetailsChannelTableModelReceive.removeAllNodes();
 
-		_deviceDetailsStreamFormatTableModel.resetChangedData();
+		_deviceDetailsInputStreamFormatTableModel.resetChangedData();
+		_deviceDetailsOutputStreamFormatTableModel.resetChangedData();
 
 		// read out actual data again
 		loadCurrentControlledEntity(_entityID, false);
@@ -429,14 +441,23 @@ public:
 		}
 
 		auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+		for (auto const& streamInput : configurationNode.streamInputs)
+		{
+			_deviceDetailsInputStreamFormatTableModel.addNode(streamInput.first, streamInput.second.descriptorType, streamInput.second.dynamicModel->streamFormat);
+		}
+		for (auto i = 0; i < _deviceDetailsInputStreamFormatTableModel.rowCount(); i++)
+		{
+			auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+			tableViewInputStreamFormat->openPersistentEditor(modIdx);
+		}
 		for (auto const& streamOutput : configurationNode.streamOutputs)
 		{
-			_deviceDetailsStreamFormatTableModel.addNode(streamOutput.first, streamOutput.second.descriptorType, streamOutput.second.dynamicModel->streamFormat);
+			_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutput.first, streamOutput.second.descriptorType, streamOutput.second.dynamicModel->streamFormat);
 		}
-		for (auto i = 0; i < _deviceDetailsStreamFormatTableModel.rowCount(); i++)
+		for (auto i = 0; i < _deviceDetailsOutputStreamFormatTableModel.rowCount(); i++)
 		{
-			auto modIdx = _deviceDetailsStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamOutputFormat), QModelIndex());
-			tableViewStreamFormat->openPersistentEditor(modIdx);
+			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+			tableViewOutputStreamFormat->openPersistentEditor(modIdx);
 		}
 	}
 
