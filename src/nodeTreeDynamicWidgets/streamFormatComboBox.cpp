@@ -102,3 +102,13 @@ void StreamFormatComboBox::setCurrentStreamFormat(StreamFormat const& streamForm
 	_previousFormat = streamFormat;
 	setCurrentText(streamFormatString);
 }
+
+StreamFormatComboBox::StreamFormats const& StreamFormatComboBox::getStreamFormats()
+{
+	return _streamFormats;
+}
+
+StreamFormatComboBox::StreamFormat const& StreamFormatComboBox::getCurrentStreamFormat()
+{
+	return _previousFormat;
+}
