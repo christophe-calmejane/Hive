@@ -73,6 +73,19 @@ struct StreamFormatTableRowEntry
 		this->streamFormat = streamFormat;
 	}
 
+	static constexpr size_t size()
+	{
+		return sizeof(streamIndex) + sizeof(streamType) + sizeof(streamFormat);
+	}
+	constexpr friend bool operator==(StreamFormatTableRowEntry const& lhs, StreamFormatTableRowEntry const& rhs) noexcept
+	{
+		return (lhs.streamIndex == rhs.streamIndex) && (lhs.streamType == rhs.streamType) && (lhs.streamFormat == rhs.streamFormat);
+	}
+	constexpr friend bool operator!=(StreamFormatTableRowEntry const& lhs, StreamFormatTableRowEntry const& rhs) noexcept
+	{
+		return !operator==(lhs, rhs);
+	}
+
 	la::avdecc::entity::model::StreamIndex streamIndex;
 	la::avdecc::entity::model::DescriptorType streamType;
 	la::avdecc::entity::model::StreamFormat streamFormat;

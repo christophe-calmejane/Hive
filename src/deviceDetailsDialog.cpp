@@ -276,84 +276,121 @@ public:
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
-		// set all data
-		if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
+		try
 		{
-			manager.setEntityName(_entityID, lineEditDeviceName->text());
-			_expectedChanges++;
-		}
-		if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
-		{
-			manager.setEntityGroupName(_entityID, lineEditGroupName->text());
-			_expectedChanges++;
-		}
-
-		//iterate over the changes and write them via avdecc
-		auto changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
-		for (auto e : changesReceive.keys())
-		{
-			auto rxChanges = changesReceive.value(e);
-			for (auto f : rxChanges->keys())
+			// set all data
+			if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
 			{
-				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
-				{
-					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, rxChanges->value(f).toString());
-					_expectedChanges++;
-				}
+				manager.setEntityName(_entityID, lineEditDeviceName->text());
+				_expectedChanges++;
 			}
-		}
-
-		auto changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
-		for (auto e : changesTransmit.keys())
-		{
-			auto txChanges = changesTransmit.value(e);
-			for (auto f : txChanges->keys())
+			if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
 			{
-				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
-				{
-					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, txChanges->value(f).toString());
-					_expectedChanges++;
-				}
+				manager.setEntityGroupName(_entityID, lineEditGroupName->text());
+				_expectedChanges++;
 			}
-		}
 
-		// apply the new stream info (latency)
-		if (_userSelectedLatency)
-		{
-			auto const controlledEntity = manager.getControlledEntity(_entityID);
-			if (controlledEntity)
+			// iterate over the rx/tx channels table changes and write them via avdecc
+			auto changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
+			for (auto descriptorIdx : changesReceive.keys())
 			{
-				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-				for (auto const& streamOutput : configurationNode.streamOutputs)
+				auto rxChanges = changesReceive.value(descriptorIdx);
+				for (auto col : rxChanges->keys())
 				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
-					auto const streamType = streamFormatInfo->getType();
-					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+					if (col == DeviceDetailsChannelTableModelColumn::ChannelName)
 					{
-						// skip clock stream
-						continue;
-					}
-					auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
-					if (streamLatency != *_userSelectedLatency)
-					{
-						auto streamInfo = la::avdecc::entity::model::StreamInfo{};
-						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
-						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
-
-						// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
-						// TODO: needs update of library:
-						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
+						manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, descriptorIdx, rxChanges->value(col).toString());
+						_expectedChanges++;
 					}
 				}
 			}
-		}
 
-		// applying the new configuration shall be done as the last step, as it may change everything displayed.
-		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
-		if (_previousConfigurationIndex != _activeConfigurationIndex)
+			auto changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
+			for (auto descriptorIdx : changesTransmit.keys())
+			{
+				auto txChanges = changesTransmit.value(descriptorIdx);
+				for (auto col : txChanges->keys())
+				{
+					if (col == DeviceDetailsChannelTableModelColumn::ChannelName)
+					{
+						manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, descriptorIdx, txChanges->value(col).toString());
+						_expectedChanges++;
+					}
+				}
+			}
+
+			// iterate over the stream format table changes, collect them into a list and write them via avdecc
+			auto changedStreamFormats = QList<StreamFormatTableRowEntry>();
+			for (auto& descriptorIdx : _deviceDetailsInputStreamFormatTableModel.getChanges().keys())
+			{
+				auto sfChanges = _deviceDetailsInputStreamFormatTableModel.getChanges().value(descriptorIdx);
+				for (auto col : sfChanges->keys())
+					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
+						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
+			}
+			for (auto& descriptorIdx : _deviceDetailsOutputStreamFormatTableModel.getChanges().keys())
+			{
+				auto sfChanges = _deviceDetailsOutputStreamFormatTableModel.getChanges().value(descriptorIdx);
+				for (auto col : sfChanges->keys())
+					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
+						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
+			}
+			for (auto const& streamFormatData : changedStreamFormats)
+			{
+				if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
+				{
+					manager.setStreamInputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
+					_expectedChanges++;
+				}
+				else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+				{
+					manager.setStreamOutputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
+					_expectedChanges++;
+				}
+			}
+
+			// apply the new stream info (latency)
+			if (_userSelectedLatency)
+			{
+				auto const controlledEntity = manager.getControlledEntity(_entityID);
+				if (controlledEntity)
+				{
+					auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+					for (auto const& streamOutput : configurationNode.streamOutputs)
+					{
+						auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+						auto const streamType = streamFormatInfo->getType();
+						if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+						{
+							// skip clock stream
+							continue;
+						}
+						auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
+						if (streamLatency != *_userSelectedLatency)
+						{
+							auto streamInfo = la::avdecc::entity::model::StreamInfo{};
+							streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
+							streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+
+							// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
+							// TODO: needs update of library:
+							manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
+						}
+					}
+				}
+			}
+
+			// applying the new configuration shall be done as the last step, as it may change everything displayed.
+			// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
+			if (_previousConfigurationIndex != _activeConfigurationIndex)
+			{
+				manager.setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
+				_expectedChanges++;
+			}
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const& e)
 		{
-			manager.setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
-			_expectedChanges++;
+			LOG_HIVE_ERROR(QString("%1 throws an exception (%2). Please dump Full Network State from File menu and send the file for support.").arg(__FUNCTION__).arg(e.what()));
 		}
 	}
 
@@ -373,7 +410,9 @@ public:
 		_deviceDetailsChannelTableModelReceive.removeAllNodes();
 
 		_deviceDetailsInputStreamFormatTableModel.resetChangedData();
+		_deviceDetailsInputStreamFormatTableModel.removeAllNodes();
 		_deviceDetailsOutputStreamFormatTableModel.resetChangedData();
+		_deviceDetailsOutputStreamFormatTableModel.removeAllNodes();
 
 		// read out actual data again
 		loadCurrentControlledEntity(_entityID, false);
@@ -617,6 +656,7 @@ public:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName:
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat:
 					_gottenChanges++;
 					break;
 				default:

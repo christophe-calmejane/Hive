@@ -253,7 +253,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 		}
 		case DeviceDetailsStreamFormatTableModelColumn::StreamFormat:
 		{
-			if (role == Qt::DisplayRole)
+			if (role == Qt::DisplayRole || role == Qt::EditRole)
 			{
 				try
 				{
@@ -290,15 +290,43 @@ bool DeviceDetailsStreamFormatTableModelPrivate::setData(QModelIndex const& inde
 			{
 				if (value.toString() != data(index, role))
 				{
-					auto const& streamIndex = _nodes.at(index.row()).streamIndex;
-					if (!_hasChangesMap.contains(streamIndex))
+					try
 					{
-						_hasChangesMap.insert(streamIndex, new QMap<DeviceDetailsStreamFormatTableModelColumn, QVariant>());
+						auto const& streamIndex = _nodes.at(index.row()).streamIndex;
+						if (!_hasChangesMap.contains(streamIndex))
+						{
+							_hasChangesMap.insert(streamIndex, new QMap<DeviceDetailsStreamFormatTableModelColumn, QVariant>());
+						}
+						_hasChangesMap.value(streamIndex)->insert(column, value.toString());
 					}
-					_hasChangesMap.value(streamIndex)->insert(DeviceDetailsStreamFormatTableModelColumn::StreamName, value.toString());
+					catch (...)
+					{
+						return false;
+					}
 					emit q->dataEdited();
 				}
 				break;
+			}
+			case DeviceDetailsStreamFormatTableModelColumn::StreamFormat:
+			{
+				auto currentDataValue = data(index, role).value<StreamFormatTableRowEntry>();
+				if (value.canConvert<StreamFormatTableRowEntry>() && (value.value<StreamFormatTableRowEntry>() != currentDataValue))
+				{
+					try
+					{
+						auto const& streamIndex = currentDataValue.streamIndex;
+						if (!_hasChangesMap.contains(streamIndex))
+						{
+							_hasChangesMap.insert(streamIndex, new QMap<DeviceDetailsStreamFormatTableModelColumn, QVariant>());
+						}
+						_hasChangesMap.value(streamIndex)->insert(column, value);
+					}
+					catch (...)
+					{
+						return false;
+					}
+					emit q->dataEdited();
+				}
 			}
 			default:
 				break;
@@ -511,16 +539,15 @@ StreamFormatTableRowEntry const& DeviceDetailsStreamFormatTableModel::tableDataA
 */
 QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-	auto const& model = static_cast < const DeviceDetailsStreamFormatTableModel*>(index.model());
-	auto const entityID = model ? model->getControlledEntityID() : la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
-	auto data = index.data();
-	auto streamFormatData = qvariant_cast<StreamFormatTableRowEntry>(data);
+	auto model = static_cast<const DeviceDetailsStreamFormatTableModel*>(index.model());
+	auto const delegateEntityID = model ? model->getControlledEntityID() : la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
+	auto streamFormatData = qvariant_cast<StreamFormatTableRowEntry>(index.data());
 
 	la::avdecc::entity::model::StreamNodeStaticModel const* staticModel = nullptr;
 	la::avdecc::entity::model::StreamNodeDynamicModel const* dynamicModel = nullptr;
 
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto controlledEntity = manager.getControlledEntity(entityID);
+	auto controlledEntity = manager.getControlledEntity(delegateEntityID);
 	if (controlledEntity)
 	{
 		auto const& entityNode = controlledEntity->getEntityNode();
@@ -543,7 +570,7 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 		}
 	}
 
-	auto* formatComboBox = new StreamFormatComboBox(entityID, parent);
+	auto* formatComboBox = new StreamFormatComboBox(delegateEntityID, parent);
 	if (staticModel)
 		formatComboBox->setStreamFormats(staticModel->formats);
 	if (dynamicModel)
@@ -551,24 +578,21 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 
 	// Send changes
 	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
-		[this, formatComboBox, entityID, streamFormatData](la::avdecc::entity::model::StreamFormat const& streamFormat)
+		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const& streamFormat)
 		{
-			if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
-			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamInputFormat(entityID, streamFormatData.streamIndex, streamFormat);
-			}
-			else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(entityID, streamFormatData.streamIndex, streamFormat);
-			}
+			auto* p = const_cast<StreamFormatItemDelegate*>(this);
+			emit p->commitData(formatComboBox);
 		});
 
 	// Listen for changes
 	connect(&manager, &hive::modelsLibrary::ControllerManager::streamFormatChanged, formatComboBox,
-		[this, formatComboBox, entityID, streamFormatData](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
+		[this, formatComboBox, delegateEntityID, streamFormatData](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 		{
-			if (entityID == entityID && descriptorType == streamFormatData.streamType && streamIndex == streamFormatData.streamIndex)
+			if (entityID == delegateEntityID && descriptorType == streamFormatData.streamType && streamIndex == streamFormatData.streamIndex)
 				formatComboBox->setCurrentStreamFormat(streamFormat);
+
+			auto* p = const_cast<StreamFormatItemDelegate*>(this);
+			emit p->commitData(formatComboBox);
 		});
 
 	return formatComboBox;
@@ -580,11 +604,18 @@ void StreamFormatItemDelegate::setEditorData(QWidget* editor, const QModelIndex&
 	Q_UNUSED(index);
 }
 
-void StreamFormatItemDelegate::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
+/**
+* This is used to set changed stream format dropdown value.
+*/
+void StreamFormatItemDelegate::setModelData(QWidget* editor, QAbstractItemModel* model, QModelIndex const& index) const
 {
-	Q_UNUSED(editor);
-	Q_UNUSED(model);
-	Q_UNUSED(index);
+	auto* edit = static_cast<StreamFormatComboBox*>(editor);
+	if (edit != nullptr && edit->getCurrentStreamFormat().isValid())
+	{
+		auto newStreamFormatData = qvariant_cast<StreamFormatTableRowEntry>(index.data());
+		newStreamFormatData.streamFormat = edit->getCurrentStreamFormat();
+		model->setData(index, QVariant::fromValue<StreamFormatTableRowEntry>(newStreamFormatData), Qt::EditRole);
+	}
 }
 
 #include "deviceDetailsStreamFormatTableModel.moc"
