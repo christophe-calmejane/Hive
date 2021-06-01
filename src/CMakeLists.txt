@@ -302,6 +302,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Don't use Wall on MSVC, it prints too many stupid warnings
 	target_compile_options(${PROJECT_NAME}_static PRIVATE /W3)
+	target_compile_options(${PROJECT_NAME} PRIVATE /W3)
 else()
 	message(FATAL_ERROR "Unsupported Compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()
