@@ -443,7 +443,6 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				try
 				{
 					QVariantList connectionLines;
-					int innerRow = 0;
 					auto const& connectionInfo = _nodes.at(index.row()).connectionInformation;
 					for (auto const& connection : connectionInfo->targets)
 					{
@@ -510,7 +509,6 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())));
 								}
 							}
-							innerRow++;
 						}
 					}
 					return connectionLines;
