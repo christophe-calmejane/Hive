@@ -470,6 +470,50 @@ private:
 		return disconnectedStreams;
 	}
 
+	std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t> getListenerClusterChannelForStreamChannel(la::avdecc::UniqueIdentifier const& listenerEntityId, la::avdecc::entity::model::StreamIndex const& streamIndex, la::avdecc::entity::model::ClusterIndex const& streamChannel) const
+	{
+		try
+		{
+			auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(listenerEntityId);
+			if (controlledEntity)
+			{
+				if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+				{
+					auto const& entityNode = controlledEntity->getEntityNode();
+					if (entityNode.dynamicModel)
+					{
+						auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+
+						for (auto const& audioUnitKV : configurationNode.audioUnits)
+						{
+							for (auto const& streamPortInputKV : audioUnitKV.second.streamPortInputs)
+							{
+								if (streamPortInputKV.second.dynamicModel)
+								{
+									auto const& listenerMappings = streamPortInputKV.second.dynamicModel->dynamicAudioMap;
+									for (auto const& listenerMapping : listenerMappings)
+									{
+										if (listenerMapping.streamIndex == streamIndex && listenerMapping.streamChannel == streamChannel)
+										{
+											return std::make_pair(listenerMapping.clusterOffset, listenerMapping.clusterChannel);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		catch (...)
+		{
+			return std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>();
+		}
+		
+		return std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>();
+	}
+
 	/**
 	* Gets all connections of a given talker entity's audioCluster to listener side audioClusters.
 	* 
@@ -703,25 +747,51 @@ private:
 													{
 														// only talker redundant - add a second connection redundantTalker->Listener to reflect that
 														auto redundantTalkerStreamPair = getRedundantTalkerStreamIndexPair(listenerStream.entityID, connectionInformation->sourceStreamIndex, *connectionInformation->sourceVirtualIndex, connectionInformation->targetEntityId, connectionInformation->targetStreamIndex);
-														auto secondConnectionInformation = std::make_shared<TargetConnectionInformation>(*connectionInformation);
+
+														auto secondConnectionInformation = std::make_shared<TargetConnectionInformation>();
+														secondConnectionInformation->targetEntityId = listenerStream.entityID;
+														secondConnectionInformation->streamChannel = sourceStreamChannel;
 														secondConnectionInformation->sourceStreamIndex = redundantTalkerStreamPair.first;
 														secondConnectionInformation->targetStreamIndex = redundantTalkerStreamPair.second;
 														secondConnectionInformation->streamPairs = { redundantTalkerStreamPair };
 
+														auto targetClusterChannel = getListenerClusterChannelForStreamChannel(secondConnectionInformation->targetEntityId, secondConnectionInformation->targetStreamIndex, secondConnectionInformation->streamChannel);
+														secondConnectionInformation->targetClusterChannels.push_back(targetClusterChannel);
+														secondConnectionInformation->targetAudioUnitIndex = listenerAudioUnitKV.first;
+														if (streamPortInputKV.second.staticModel)
+															secondConnectionInformation->targetBaseCluster = streamPortInputKV.second.staticModel->baseCluster;
+														secondConnectionInformation->targetStreamPortIndex = streamPortInputKV.first;
+														secondConnectionInformation->isSourceRedundant = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, sourceStream).isRedundant;
+														secondConnectionInformation->isTargetRedundant = targetControlledEntity->getStreamInputNode(targetConfigurationNode.descriptorIndex, listenerMapping.streamIndex).isRedundant;
+
 														// add second connection to the result data
-														result->targets.push_back(secondConnectionInformation);
+														if (!secondConnectionInformation->isEqualTo(*connectionInformation))
+															result->targets.push_back(secondConnectionInformation);
 													}
 													else if (connectionInformation->targetVirtualIndex)
 													{
 														// only listener redundant - add a second connection Talker->redundantListener to reflect that
 														auto redundantListenerStreamPair = getRedundantListenerStreamIndexPair(listenerStream.entityID, connectionInformation->sourceStreamIndex, connectionInformation->targetEntityId, connectionInformation->targetStreamIndex, *connectionInformation->targetVirtualIndex);
-														auto secondConnectionInformation = std::make_shared<TargetConnectionInformation>(*connectionInformation);
+
+														auto secondConnectionInformation = std::make_shared<TargetConnectionInformation>();
+														secondConnectionInformation->targetEntityId = listenerStream.entityID;
+														secondConnectionInformation->streamChannel = sourceStreamChannel;
 														secondConnectionInformation->sourceStreamIndex = redundantListenerStreamPair.first;
 														secondConnectionInformation->targetStreamIndex = redundantListenerStreamPair.second;
 														secondConnectionInformation->streamPairs = { redundantListenerStreamPair };
 
+														auto targetClusterChannel = getListenerClusterChannelForStreamChannel(secondConnectionInformation->targetEntityId, secondConnectionInformation->targetStreamIndex, secondConnectionInformation->streamChannel);
+														secondConnectionInformation->targetClusterChannels.push_back(targetClusterChannel);
+														secondConnectionInformation->targetAudioUnitIndex = listenerAudioUnitKV.first;
+														if (streamPortInputKV.second.staticModel)
+															secondConnectionInformation->targetBaseCluster = streamPortInputKV.second.staticModel->baseCluster;
+														secondConnectionInformation->targetStreamPortIndex = streamPortInputKV.first;
+														secondConnectionInformation->isSourceRedundant = controlledEntity->getStreamOutputNode(configurationNode.descriptorIndex, sourceStream).isRedundant;
+														secondConnectionInformation->isTargetRedundant = targetControlledEntity->getStreamInputNode(targetConfigurationNode.descriptorIndex, listenerMapping.streamIndex).isRedundant;
+
 														// add second connection to the result data
-														result->targets.push_back(secondConnectionInformation);
+														if (!secondConnectionInformation->isEqualTo(*connectionInformation))
+															result->targets.push_back(secondConnectionInformation);
 													}
 												}
 
@@ -729,7 +799,7 @@ private:
 										}
 										catch (la::avdecc::controller::ControlledEntity::Exception const& e)
 										{
-											LOG_HIVE_ERROR(QString("ChannelConnectionManager::getChannelConnections throw an exception (%1). Please dump Full Network State from File menu and send the file for support.").arg(e.what()));
+											LOG_HIVE_ERROR(QString("ChannelConnectionManager::getChannelConnections threw an exception (%1). Please dump Full Network State from File menu and send the file for support.").arg(e.what()));
 										}
 									}
 								}
