@@ -514,6 +514,35 @@ private:
 		return std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>();
 	}
 
+	std::pair<std::map<la::avdecc::entity::model::StreamIndex, std::vector<la::avdecc::entity::model::StreamIndex>>, std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>> const createPrimToRedListenerStreamsRelationMaps(la::avdecc::controller::model::ConfigurationNode const& targetConfigurationNode) const
+	{
+		auto primToRedundantListenerStreamsMap = std::map<la::avdecc::entity::model::StreamIndex, std::vector<la::avdecc::entity::model::StreamIndex>>{}; // map of primary stream index to all associated redundant streams
+		auto redundantToPrimListenerStreamMap = std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>{}; // map of redundant stream to its associated primary stream
+		for (auto const& redundantStreamInput : targetConfigurationNode.redundantStreamInputs)
+		{
+			auto primaryStreamIndex = redundantStreamInput.second.primaryStream->descriptorIndex;
+			auto redundantStreams = std::vector<la::avdecc::entity::model::StreamIndex>{};
+			for (auto const& [redundantStreamIndex, redundantStream] : redundantStreamInput.second.redundantStreams)
+			{
+				if (redundantStreamIndex != primaryStreamIndex)
+				{
+					redundantStreams.push_back(redundantStreamIndex);
+					redundantToPrimListenerStreamMap.emplace(redundantStreamIndex, primaryStreamIndex);
+				}
+			}
+			primToRedundantListenerStreamsMap.emplace(primaryStreamIndex, redundantStreams);
+		}
+		for (auto const& streamInput : targetConfigurationNode.streamInputs)
+		{
+			if (!streamInput.second.isRedundant)
+			{
+				primToRedundantListenerStreamsMap.emplace(streamInput.first, std::vector<la::avdecc::entity::model::StreamIndex>{});
+			}
+		}
+
+		return std::make_pair(primToRedundantListenerStreamsMap, redundantToPrimListenerStreamMap);
+	}
+	 
 	/**
 	* Gets all connections of a given talker entity's audioCluster to listener side audioClusters.
 	* 
@@ -631,30 +660,8 @@ private:
 						auto const& targetConfigurationNode = targetControlledEntity->getConfigurationNode(targetEntityNode.dynamicModel->currentConfiguration);
 
 						// Now collect all streams of the listener entity that was found to be connected to the sourceEntityId that is underinvestigation in this method
-						// This is done in a map (primary:multiRedundant) for all indices and a second map with the reverse information on which redundant stream belongs to which primary stream
-						auto primToRedundantListenerStreamsMap = std::map<la::avdecc::entity::model::StreamIndex, std::vector<la::avdecc::entity::model::StreamIndex>>{}; // map of primary stream index to all associated redundant streams
-						auto redundantToPrimListenerStreamMap = std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>{}; // map of redundant stream to its associated primary stream
-						for (auto const& redundantStreamInput : targetConfigurationNode.redundantStreamInputs)
-						{
-							auto primaryStreamIndex = redundantStreamInput.second.primaryStream->descriptorIndex;
-							auto redundantStreams = std::vector<la::avdecc::entity::model::StreamIndex>{};
-							for (auto const& [redundantStreamIndex, redundantStream] : redundantStreamInput.second.redundantStreams)
-							{
-								if (redundantStreamIndex != primaryStreamIndex)
-								{
-									redundantStreams.push_back(redundantStreamIndex);
-									redundantToPrimListenerStreamMap.emplace(redundantStreamIndex, primaryStreamIndex);
-								}
-							}
-							primToRedundantListenerStreamsMap.emplace(primaryStreamIndex, redundantStreams);
-						}
-						for (auto const& streamInput : targetConfigurationNode.streamInputs)
-						{
-							if (!streamInput.second.isRedundant)
-							{
-								primToRedundantListenerStreamsMap.emplace(streamInput.first, std::vector<la::avdecc::entity::model::StreamIndex>{});
-							}
-						}
+						// This is done in a pair of maps - one (primary:multiRedundant) for all indices and a second map with the reverse information on which redundant stream belongs to which primary stream
+						auto const primToRedListenerStreamsRelationMaps = createPrimToRedListenerStreamsRelationMaps(targetConfigurationNode);
 
 						// find correct index of audio unit and stream port index:
 						for (auto const& listenerAudioUnitKV : targetConfigurationNode.audioUnits)
@@ -677,6 +684,9 @@ private:
 											// the source stream channel is connected to the corresponding target stream channel.
 											if (listenerMapping.streamIndex == listenerStream.streamIndex && listenerMapping.streamChannel == sourceStreamChannel)
 											{
+												auto const& primToRedundantListenerStreamsMap = primToRedListenerStreamsRelationMaps.first; // first pair element is the previously created primary:multiRedundant listener streams map
+												auto const& redundantToPrimListenerStreamMap = primToRedListenerStreamsRelationMaps.second; // second pair ele
+
 												auto connectionInformation = std::make_shared<TargetConnectionInformation>();
 
 												connectionInformation->sourceVirtualIndex = getRedundantVirtualIndexFromOutputStreamIndex(streamConnectionInfo.talkerStream);
@@ -706,7 +716,6 @@ private:
 														primaryListenerStreamIndex = streamIndex->second;
 														primaryTalkerStreamIndex = controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
 													}
-													
 												}
 
 												// fill in the basics of the connection
@@ -794,7 +803,6 @@ private:
 															result->targets.push_back(secondConnectionInformation);
 													}
 												}
-
 											}
 										}
 										catch (la::avdecc::controller::ControlledEntity::Exception const& e)
