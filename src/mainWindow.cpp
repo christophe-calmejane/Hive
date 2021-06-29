@@ -97,9 +97,9 @@ class MainWindowImpl final : public QObject, public Ui::MainWindow, public setti
 {
 public:
 	MainWindowImpl(bool const mustResetViewSettings, ::MainWindow* parent)
-		: _mustResetViewSettings{ mustResetViewSettings }
-		, _parent(parent)
+		: _parent(parent)
 		, _controllerModel(new avdecc::ControllerModel(parent)) // parent takes ownership of the object -> 'new' required
+		, _mustResetViewSettings{ mustResetViewSettings }
 	{
 		_controllerProxyModel.setSourceModel(_controllerModel);
 

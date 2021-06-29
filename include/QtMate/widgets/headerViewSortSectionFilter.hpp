@@ -51,7 +51,7 @@ public:
 	}
 
 private:
-	virtual bool eventFilter(QObject* object, QEvent* event) override
+	virtual bool eventFilter(QObject* /*object*/, QEvent* event) override
 	{
 		if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease)
 		{
