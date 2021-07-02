@@ -27,6 +27,7 @@
 #include <QFile>
 #include <QSplashScreen>
 #include <QtGlobal>
+#include <QCommandLineParser>
 
 #include <iostream>
 #include <chrono>
@@ -89,6 +90,20 @@ int main(int argc, char* argv[])
 	// Create the Qt Application
 	QApplication app(argc, argv);
 
+	// Parse command line
+	auto parser = QCommandLineParser{};
+	auto const ansLoadOption = QCommandLineOption("ans", "Loads a network state file (.ans)", "NetworkStateFile");
+	parser.addOption(ansLoadOption);
+	parser.addHelpOption();
+	parser.addVersionOption();
+
+	parser.process(app);
+	auto ansFilesToLoad = QStringList{};
+	for (auto const& value : parser.values(ansLoadOption))
+	{
+		ansFilesToLoad.append(value);
+	}
+
 	// Runtime sanity check on Avdecc Library compilation options
 	{
 		auto const options = la::avdecc::getCompileOptions();
@@ -130,7 +145,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Load main window
-	auto window = MainWindow{};
+	auto window = MainWindow{ ansFilesToLoad };
 	window.show();
 
 	auto retValue = int{ 0u };
