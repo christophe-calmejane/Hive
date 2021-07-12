@@ -67,9 +67,9 @@ void setupBugReporter()
 	BT_InstallSehFilter();
 
 	BT_SetTerminate();
-#ifndef HIVE_IS_RELEASE_VERSION
+#	ifndef HIVE_IS_RELEASE_VERSION
 	BT_SetDumpType(MiniDumpWithDataSegs | MiniDumpWithFullMemory);
-#endif
+#	endif
 	BT_SetSupportEMail("christophe.calmejane@l-acoustics.com");
 	BT_SetFlags(BTF_DETAILEDMODE | BTF_ATTACHREPORT | BTF_SHOWADVANCEDUI | BTF_DESCRIBEERROR);
 	BT_SetSupportServer("hive-crash-reports.changeip.org", 9999);
