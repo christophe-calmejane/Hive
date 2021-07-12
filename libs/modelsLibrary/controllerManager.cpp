@@ -655,12 +655,12 @@ private:
 		}
 
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), streamIndex, counters, checkForChange]()
+			[this, entityID = entity->getEntity().getEntityID(), streamIndex, counters, checkForChange = std::move(checkForChange)]()
 			{
 				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
 				{
 					auto changed = false;
-					for (auto const [flag, counter] : counters)
+					for (auto const [flag, counter] : checkForChange)
 					{
 						changed |= errorCounterFlags->setStreamInputCounter(streamIndex, flag, counter);
 					}
