@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Unhandled exception causing crash](https://github.com/christophe-calmejane/Hive/issues/101)
 - Entity properly show identification if discovered while actively identifying
 - [Frequent app hang when multiple Milan entities are on the network and streaming](https://github.com/christophe-calmejane/Hive/issues/104)
+- _Device Details Dialog_ 'Receive'/'Transmit' tables to correctly show connections resulting from connections of a single talker stream to multiple listener streams on a receiving device
+- _Device Details Dialog_ 'Receive'/'Transmit' tables to show correct connection status WrongDomain when domain numbers mismatch
 
 ## [1.2.4] - 2021-04-02
 ### Added
