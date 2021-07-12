@@ -66,17 +66,10 @@ bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avd
 	return false;
 }
 
-// Returns true if domains are compatible
-bool isCompatibleDomain(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& talkerLinkStatus, la::avdecc::UniqueIdentifier const& talkerGrandMasterID, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& listenerLinkStatus, la::avdecc::UniqueIdentifier const& listenerGrandMasterID)
+// Returns true if the gptp domain number and grandmasterId are the same for talker and listener
+bool isSameDomain(la::avdecc::entity::model::AvbInterfaceNodeDynamicModel const& talkerDynamicInterfaceNode, la::avdecc::entity::model::AvbInterfaceNodeDynamicModel const& listenerDynamicInterfaceNode) noexcept
 {
-	// If either is down, no need to check the domain, it makes no sense (so return compatible)
-	if (talkerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down)
-	{
-		return true;
-	}
-
-	// Check both have the same grandmaster
-	return talkerGrandMasterID == listenerGrandMasterID;
+	return talkerDynamicInterfaceNode.gptpGrandmasterID == listenerDynamicInterfaceNode.gptpGrandmasterID && talkerDynamicInterfaceNode.gptpDomainNumber == listenerDynamicInterfaceNode.gptpDomainNumber;
 }
 
 // Returns the connection status of the given talker-listener pair.
@@ -101,13 +94,13 @@ DeviceDetailsChannelTableModel::ConnectionStatus calculateConnectionStatus(la::a
 	auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
 	auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationNode.descriptorIndex, talkerAvbInterfaceIndex);
 	auto talkerStreamFormat = talkerOutputStreamNode.dynamicModel->streamFormat;
-	auto talkerGrandMasterID = talkerAvbInterfaceNode.dynamicModel->gptpGrandmasterID;
+	auto const talkerDynamicInterfaceNode = talkerAvbInterfaceNode.dynamicModel;
 	auto talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
 
 	auto const listenerAvbInterfaceIndex{ listenerInputStreamNode.staticModel->avbInterfaceIndex };
 	auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerConfigurationNode.descriptorIndex, listenerAvbInterfaceIndex);
 	auto listenerStreamFormat = listenerInputStreamNode.dynamicModel->streamFormat;
-	auto listenerGrandMasterID = listenerAvbInterfaceNode.dynamicModel->gptpGrandmasterID;
+	auto const listenerDynamicInterfaceNode = listenerAvbInterfaceNode.dynamicModel;
 	auto listenerInterfaceLinkStatus = listenerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
 
 	if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
@@ -130,7 +123,7 @@ DeviceDetailsChannelTableModel::ConnectionStatus calculateConnectionStatus(la::a
 		status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::InterfaceDown);
 	}
 
-	if (isCompatibleDomain(talkerInterfaceLinkStatus, talkerGrandMasterID, listenerInterfaceLinkStatus, listenerGrandMasterID))
+	if (isSameDomain(*talkerDynamicInterfaceNode, *listenerDynamicInterfaceNode))
 	{
 		status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongDomain);
 	}
@@ -443,7 +436,6 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 				try
 				{
 					QVariantList connectionLines;
-					int innerRow = 0;
 					auto const& connectionInfo = _nodes.at(index.row()).connectionInformation;
 					for (auto const& connection : connectionInfo->targets)
 					{
@@ -510,7 +502,6 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())));
 								}
 							}
-							innerRow++;
 						}
 					}
 					return connectionLines;
