@@ -313,7 +313,6 @@ do
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
-				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 			fi
 			echo " -no-sym -> Do not deploy debug symbols (Default: Do deploy)"
 			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
@@ -387,15 +386,6 @@ do
 		-64)
 			echo "ERROR: -64 option is deprecated, use -arch x64 instead"
 			exit 4
-			;;
-		-vs2017)
-			if isWindows; then
-				toolset="v141"
-				gen_cmake_additional_options+=("-vs2017")
-			else
-				echo "ERROR: -vs2017 option is only supported on Windows platform"
-				exit 4
-			fi
 			;;
 		-id)
 			echo "ERROR: -id option is deprecated, please use the new ${configFile} file (see ${configFile}.sample for an example config file)"

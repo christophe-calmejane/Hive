@@ -78,7 +78,6 @@ outputFolder=""
 outputFolderForced=0
 add_cmake_opt=()
 useVSclang=0
-useVS2017=0
 signingId=""
 doSign=0
 signtoolOptions="$default_signtoolOptions"
@@ -101,7 +100,6 @@ do
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
-				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 				echo " -clang -> Compile using clang for VisualStudio"
 				echo " -signtool-opt <options> -> Windows code signing options (Default: $default_signtoolOptions)"
 			fi
@@ -197,14 +195,6 @@ do
 		-64)
 			echo "ERROR: -64 option is deprecated, use -arch x64 instead"
 			exit 4
-			;;
-		-vs2017)
-			if isWindows; then
-				useVS2017=1
-			else
-				echo "ERROR: -vs2017 option is only supported on Windows platform"
-				exit 4
-			fi
 			;;
 		-clang)
 			if isWindows; then
@@ -466,12 +456,6 @@ if isMac; then
 	fi
 	dsaPubKey="$(< resources/dsa_pub.pem)"
 	add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
-fi
-
-# Using -vs2017 option
-if [ $useVS2017 -eq 1 ]; then
-	generator="Visual Studio 15 2017"
-	toolset="v141"
 fi
 
 # Using -clang option (shortcut to auto-define the toolset)
