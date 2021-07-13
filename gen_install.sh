@@ -313,7 +313,6 @@ do
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
-				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
 				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 			fi
 			echo " -no-sym -> Do not deploy debug symbols (Default: Do deploy)"
@@ -386,13 +385,8 @@ do
 			fi
 			;;
 		-64)
-			if isWindows; then
-				arch="x64"
-				gen_cmake_additional_options+=("-64")
-			else
-				echo "ERROR: -64 option is only supported on Windows platform"
-				exit 4
-			fi
+			echo "ERROR: -64 option is deprecated, use -arch x64 instead"
+			exit 4
 			;;
 		-vs2017)
 			if isWindows; then
