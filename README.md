@@ -42,8 +42,8 @@ You can only use an application-password, **not your Apple ID account password**
 - In the Security section, click Generate Password below App-Specific Passwords
 - Follow the steps on your screen
 
-To save the password in your keychain, do the following:
-- `xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u AccountEmailAdrs -p AppSpecificPwd`
+To save the password in your keychain, do the following. It is strongly suggested to specify the Login Keychain with `--keychain` (use `security list-keychains` to get your Login Keychain filepath):
+- `xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u AccountEmailAdrs -p AppSpecificPwd --keychain LoginKeychainPath`
 
 ## MacOS runtime specificities
 
