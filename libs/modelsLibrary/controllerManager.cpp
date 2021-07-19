@@ -442,7 +442,7 @@ private:
 		auto const& e = entity->getEntity();
 		emit entityCapabilitiesChanged(e.getEntityID(), e.getEntityCapabilities());
 	}
-	virtual void onEntityAssociationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
+	virtual void onEntityAssociationIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const& e = entity->getEntity();
 		auto const associationID = e.getAssociationID();
