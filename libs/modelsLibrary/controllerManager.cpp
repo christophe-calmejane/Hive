@@ -552,6 +552,10 @@ private:
 	{
 		emit clockDomainNameChanged(entity->getEntity().getEntityID(), configurationIndex, clockDomainIndex, QString::fromStdString(clockDomainName));
 	}
+	virtual void onAssociationIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::optional<la::avdecc::UniqueIdentifier> const associationID) noexcept override
+	{
+		emit associationIDChanged(entity->getEntity().getEntityID(), associationID);
+	}
 	virtual void onAudioUnitSamplingRateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept override
 	{
 		emit audioUnitSamplingRateChanged(entity->getEntity().getEntityID(), audioUnitIndex, samplingRate);
@@ -1470,6 +1474,27 @@ private:
 		}
 	}
 
+	virtual void setAssociationID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::UniqueIdentifier const associationID, SetAssociationIDHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAssociationID);
+			controller->setAssociationID(targetEntityID, associationID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAssociationID, status);
+					}
+				});
+		}
+	}
+
 	virtual void setAudioUnitSamplingRate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate, SetAudioUnitSamplingRateHandler const& handler) noexcept override
 	{
 		auto controller = getController();
@@ -1974,6 +1999,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Control Name";
 		case AecpCommandType::SetClockDomainName:
 			return "Set Clock Domain Name";
+		case AecpCommandType::SetAssociationID:
+			return "Set Association ID";
 		case AecpCommandType::SetSamplingRate:
 			return "Set Sampling Rate";
 		case AecpCommandType::SetClockSource:

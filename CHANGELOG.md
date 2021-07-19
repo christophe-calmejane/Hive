@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Can be enabled/disabled in Settings
 - Confirmation dialog when trying to disconnect a Media Locked stream whose Talker is not visible on the network
 - [Possibility to sort entities by column](https://github.com/christophe-calmejane/Hive/issues/81)
+- Possibility to change AssociationID for devices supporting it
 
 ### Fixed
 - Matrix being refreshed more than required
