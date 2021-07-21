@@ -35,6 +35,7 @@ public:
 	using IsShutdownAllowedHandler = std::function<bool()>;
 	using ShutdownRequestHandler = std::function<void()>;
 	using LogHandler = std::function<void(std::string const& message, LogLevel const level)>;
+	using UpdateFailedHandler = std::function<void()>;
 
 	static Sparkle& getInstance() noexcept
 	{
@@ -44,7 +45,7 @@ public:
 
 	/* Initialization methods */
 	// Must be called before any other methods, and as soon as possible
-	void init(std::string const& signature) noexcept;
+	void init(std::string const& internalNumber, std::string const& signature) noexcept;
 	// Must be called to start the background check process, but not before the UI is visible and configuration methods have been called
 	void start() noexcept;
 
@@ -66,6 +67,14 @@ public:
 	LogHandler const& getLogHandler() const noexcept
 	{
 		return _logHandler;
+	}
+	void setUpdateFailedHandler(UpdateFailedHandler const& updateFailedHandler) noexcept
+	{
+		_updateFailedHandler = updateFailedHandler;
+	}
+	UpdateFailedHandler const& getUpdateFailedHandler() const noexcept
+	{
+		return _updateFailedHandler;
 	}
 
 	/* Requests methods */
@@ -92,4 +101,5 @@ private:
 	IsShutdownAllowedHandler _isShutdownAllowedHandler{ nullptr };
 	ShutdownRequestHandler _shutdownRequestHandler{ nullptr };
 	LogHandler _logHandler{ nullptr };
+	UpdateFailedHandler _updateFailedHandler{ nullptr };
 };

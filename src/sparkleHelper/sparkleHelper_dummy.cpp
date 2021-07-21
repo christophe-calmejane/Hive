@@ -19,7 +19,7 @@
 
 #include "sparkleHelper.hpp"
 
-void Sparkle::init(std::string const& /*signature*/) noexcept
+void Sparkle::init(std::string const& /*internalNumber*/, std::string const& /*signature*/) noexcept
 {
 	_initialized = true;
 }

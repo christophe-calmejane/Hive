@@ -23,7 +23,6 @@ fi
 
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
-default_VisualGeneratorArch="Win32"
 default_VisualToolset="v142"
 default_VisualToolchain="x64"
 default_VisualArch="x86"
@@ -48,13 +47,13 @@ if isMac; then
 	fi
 	generator="Xcode"
 	getMachineArch default_arch
-	supportedArchs+=("${default_arch}")
+	supportedArchs+=("x64")
+	supportedArchs+=("arm64")
 else
 	# Use cmake from the path
 	if isWindows; then
 		cmake_path="cmake.exe"
 		generator="$default_VisualGenerator"
-		generator_arch="$default_VisualGeneratorArch"
 		toolset="$default_VisualToolset"
 		toolchain="$default_VisualToolchain"
 		default_arch="$default_VisualArch"
@@ -79,7 +78,6 @@ outputFolder=""
 outputFolderForced=0
 add_cmake_opt=()
 useVSclang=0
-useVS2017=0
 signingId=""
 doSign=0
 signtoolOptions="$default_signtoolOptions"
@@ -102,8 +100,6 @@ do
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
-				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
-				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 				echo " -clang -> Compile using clang for VisualStudio"
 				echo " -signtool-opt <options> -> Windows code signing options (Default: $default_signtoolOptions)"
 			fi
@@ -197,21 +193,8 @@ do
 			fi
 			;;
 		-64)
-			if isWindows; then
-				generator="Visual Studio 15 2017 Win64"
-				arch="x64" # Changing arch not default_arch, as this is not a cross-compilation option
-			else
-				echo "ERROR: -64 option is only supported on Windows platform"
-				exit 4
-			fi
-			;;
-		-vs2017)
-			if isWindows; then
-				useVS2017=1
-			else
-				echo "ERROR: -vs2017 option is only supported on Windows platform"
-				exit 4
-			fi
+			echo "ERROR: -64 option is deprecated, use -arch x64 instead"
+			exit 4
 			;;
 		-clang)
 			if isWindows; then
@@ -358,8 +341,24 @@ if [[ ! " ${supportedArchs[@]} " =~ " ${arch} " ]]; then
 	exit 4
 fi
 
+# Set correct generator architecture on Windows
+if [ "${platform}" == "win" ];
+then
+	case "${arch}" in
+		x86)
+			generator_arch="Win32"
+			;;
+		x64)
+			generator_arch="x64"
+			;;
+		*)
+			echo "ERROR: Unknown windows arch: ${arch} (add support for it)"
+			exit 4
+			;;
+	esac
+
 # Special case for Android cross-compilation, we must set the correct ABI
-if [ "${platform}" == "android" ];
+elif [ "${platform}" == "android" ];
 then
 	case "${arch}" in
 		x86)
@@ -373,6 +372,22 @@ then
 			;;
 		*)
 			echo "ERROR: Unknown android arch: ${arch} (add support for it)"
+			exit 4
+			;;
+	esac
+
+# Set macOS target architecture, otherwise Cmake targets the architecture of the host
+elif [ "${platform}" == "mac" ];
+then
+	case "${arch}" in
+		x64)
+			add_cmake_opt+=("-DCMAKE_OSX_ARCHITECTURES=x86_64")
+			;;
+		arm64)
+			add_cmake_opt+=("-DCMAKE_OSX_ARCHITECTURES=arm64")
+			;;
+		*)
+			echo "ERROR: Unknown macOS arch: ${arch} (add support for it)"
 			exit 4
 			;;
 	esac
@@ -441,12 +456,6 @@ if isMac; then
 	fi
 	dsaPubKey="$(< resources/dsa_pub.pem)"
 	add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
-fi
-
-# Using -vs2017 option
-if [ $useVS2017 -eq 1 ]; then
-	generator="Visual Studio 15 2017"
-	toolset="v141"
 fi
 
 # Using -clang option (shortcut to auto-define the toolset)

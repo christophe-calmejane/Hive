@@ -394,13 +394,18 @@ private:
 	{
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+
+		// Create the CounterTracker in this thread as it will try to lock the ControlledEntity
+		auto const entityID = entity->getEntity().getEntityID();
+		auto tracker = ErrorCounterTracker{ entityID };
+
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), enumerationTime = entity->getEnumerationTime()]()
+			[this, entityID, tracker = std::move(tracker), enumerationTime = entity->getEnumerationTime()]()
 			{
 				{
 					auto const lg = std::lock_guard{ _lock };
 					_entities.insert(entityID);
-					_entityErrorCounterTrackers[entityID] = ErrorCounterTracker{ entityID };
+					_entityErrorCounterTrackers[entityID] = std::move(tracker);
 				}
 
 				emit entityOnline(entityID, enumerationTime);
@@ -437,7 +442,7 @@ private:
 		auto const& e = entity->getEntity();
 		emit entityCapabilitiesChanged(e.getEntityID(), e.getEntityCapabilities());
 	}
-	virtual void onEntityAssociationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
+	virtual void onEntityAssociationIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const& e = entity->getEntity();
 		auto const associationID = e.getAssociationID();
@@ -547,6 +552,10 @@ private:
 	{
 		emit clockDomainNameChanged(entity->getEntity().getEntityID(), configurationIndex, clockDomainIndex, QString::fromStdString(clockDomainName));
 	}
+	virtual void onAssociationIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::optional<la::avdecc::UniqueIdentifier> const associationID) noexcept override
+	{
+		emit associationIDChanged(entity->getEntity().getEntityID(), associationID);
+	}
 	virtual void onAudioUnitSamplingRateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept override
 	{
 		emit audioUnitSamplingRateChanged(entity->getEntity().getEntityID(), audioUnitIndex, samplingRate);
@@ -601,60 +610,72 @@ private:
 	}
 	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept override
 	{
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+
 		auto const entityID = entity->getEntity().getEntityID();
 
-		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+		// As we don't want to manipulate stored counter errors from this thread, we have to check for which counter flag we'll want to detect a change
+		auto checkForChange = la::avdecc::entity::model::StreamInputCounters{};
+		for (auto const [flag, counter] : counters)
 		{
-			auto changed = false;
-
-			for (auto const [flag, counter] : counters)
+			switch (flag)
 			{
-				switch (flag)
+				case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
 				{
-					case la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked:
+					try
 					{
-						try
+						auto const& entityNode = entity->getEntityNode();
+						auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+						if (streamNode.dynamicModel->connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 						{
-							auto const& entityNode = entity->getEntityNode();
-							auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
-							if (streamNode.dynamicModel->connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
-							{
-								// Only consider MediaUnlocked as an error if the stream is connected, otherwise juste ignore this
-								break;
-							}
-						}
-						catch (la::avdecc::controller::ControlledEntity::Exception const&)
-						{
-							// Ignore exception
+							// Only consider MediaUnlocked as an error if the stream is connected, otherwise juste ignore this
 							break;
 						}
-						catch (...)
-						{
-							// Uncaught exception
-							AVDECC_ASSERT(false, "Uncaught exception");
-							break;
-						}
-						[[fallthrough]];
 					}
-					case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
-					case la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch:
-					case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
-					case la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp:
-					case la::avdecc::entity::StreamInputCounterValidFlag::UnsupportedFormat:
-						changed |= errorCounterFlags->setStreamInputCounter(streamIndex, flag, counter);
+					catch (la::avdecc::controller::ControlledEntity::Exception const&)
+					{
+						// Ignore exception
 						break;
-					default:
+					}
+					catch (...)
+					{
+						// Uncaught exception
+						AVDECC_ASSERT(false, "Uncaught exception");
 						break;
+					}
+					[[fallthrough]];
 				}
-			}
-
-			if (changed)
-			{
-				emit streamInputErrorCounterChanged(entityID, streamIndex, errorCounterFlags->getStreamInputErrorCounters(streamIndex));
+				case la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted:
+				case la::avdecc::entity::StreamInputCounterValidFlag::SeqNumMismatch:
+				case la::avdecc::entity::StreamInputCounterValidFlag::LateTimestamp:
+				case la::avdecc::entity::StreamInputCounterValidFlag::EarlyTimestamp:
+				case la::avdecc::entity::StreamInputCounterValidFlag::UnsupportedFormat:
+					checkForChange[flag] = counter;
+					break;
+				default:
+					break;
 			}
 		}
 
-		emit streamInputCountersChanged(entityID, streamIndex, counters);
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), streamIndex, counters, checkForChange = std::move(checkForChange)]()
+			{
+				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				{
+					auto changed = false;
+					for (auto const [flag, counter] : checkForChange)
+					{
+						changed |= errorCounterFlags->setStreamInputCounter(streamIndex, flag, counter);
+					}
+					if (changed)
+					{
+						emit streamInputErrorCounterChanged(entityID, streamIndex, errorCounterFlags->getStreamInputErrorCounters(streamIndex));
+					}
+				}
+
+				emit streamInputCountersChanged(entityID, streamIndex, counters);
+			});
 	}
 	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters) noexcept override
 	{
@@ -683,45 +704,57 @@ private:
 	// Statistics
 	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
-		auto const entityID = entity->getEntity().getEntityID();
-
-		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
-		{
-			if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpRetries, value))
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), value]()
 			{
-				emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
-			}
-		}
+				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				{
+					if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpRetries, value))
+					{
+						emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+					}
+				}
 
-		emit aecpRetryCounterChanged(entityID, value);
+				emit aecpRetryCounterChanged(entityID, value);
+			});
 	}
 	virtual void onAecpTimeoutCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
-		auto const entityID = entity->getEntity().getEntityID();
-
-		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
-		{
-			if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpTimeouts, value))
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), value]()
 			{
-				emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
-			}
-		}
+				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				{
+					if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpTimeouts, value))
+					{
+						emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+					}
+				}
 
-		emit aecpTimeoutCounterChanged(entity->getEntity().getEntityID(), value);
+				emit aecpTimeoutCounterChanged(entityID, value);
+			});
 	}
 	virtual void onAecpUnexpectedResponseCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
-		auto const entityID = entity->getEntity().getEntityID();
-
-		if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
-		{
-			if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpUnexpectedResponses, value))
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), value]()
 			{
-				emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
-			}
-		}
+				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				{
+					if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpUnexpectedResponses, value))
+					{
+						emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+					}
+				}
 
-		emit aecpUnexpectedResponseCounterChanged(entity->getEntity().getEntityID(), value);
+				emit aecpUnexpectedResponseCounterChanged(entityID, value);
+			});
 	}
 	virtual void onAecpResponseAverageTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::chrono::milliseconds const& value) noexcept override
 	{
@@ -843,6 +876,16 @@ private:
 			return controller->serializeControlledEntityAsJson(entityID, filePath.toStdString(), flags, dumpSource.toStdString());
 		}
 		return { la::avdecc::jsonSerializer::SerializationError::InternalError, "Controller offline" };
+	}
+
+	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntitiesFromJsonNetworkState(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->loadVirtualEntitiesFromJsonNetworkState(filePath.toStdString(), flags, true);
+		}
+		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
 	}
 
 	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept override
@@ -1431,6 +1474,27 @@ private:
 		}
 	}
 
+	virtual void setAssociationID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::UniqueIdentifier const associationID, SetAssociationIDHandler const& handler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAssociationID);
+			controller->setAssociationID(targetEntityID, associationID,
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAssociationID, status);
+					}
+				});
+		}
+	}
+
 	virtual void setAudioUnitSamplingRate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate, SetAudioUnitSamplingRateHandler const& handler) noexcept override
 	{
 		auto controller = getController();
@@ -1935,6 +1999,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Control Name";
 		case AecpCommandType::SetClockDomainName:
 			return "Set Clock Domain Name";
+		case AecpCommandType::SetAssociationID:
+			return "Set Association ID";
 		case AecpCommandType::SetSamplingRate:
 			return "Set Sampling Rate";
 		case AecpCommandType::SetClockSource:

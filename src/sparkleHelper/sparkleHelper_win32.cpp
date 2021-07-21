@@ -22,7 +22,28 @@
 #include <winsparkle.h>
 #include <Windows.h>
 
-void Sparkle::init(std::string const& signature) noexcept
+#include <string>
+#include <stdexcept>
+
+inline std::wstring utf8ToWideChar(std::string const& str)
+{
+	auto const sizeHint = str.size(); // WideChar size cannot exceed the number of multi-bytes
+	auto result = std::wstring(static_cast<std::wstring::size_type>(sizeHint), std::wstring::value_type{ 0 }); // Brace-initialization constructor prevents the use of {}
+
+	// Try to convert
+	auto const convertedLength = MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), result.data(), static_cast<int>(sizeHint));
+	if (convertedLength == 0)
+	{
+		throw std::invalid_argument("Failed to convert from MultiByte to WideChar");
+	}
+
+	// Adjust size
+	result.resize(convertedLength);
+
+	return result;
+}
+
+void Sparkle::init(std::string const& internalNumber, std::string const& signature) noexcept
 {
 	try
 	{
@@ -30,6 +51,14 @@ void Sparkle::init(std::string const& signature) noexcept
 		win_sparkle_set_langid(::GetThreadUILanguage());
 		// Set our DSA public key
 		win_sparkle_set_dsa_pub_pem(signature.c_str());
+		// Set internal number
+		try
+		{
+			win_sparkle_set_app_build_version(utf8ToWideChar(internalNumber).c_str());
+		}
+		catch (std::invalid_argument const&)
+		{
+		}
 
 		// Set callbacks to handle application shutdown when an update is starting
 		win_sparkle_set_can_shutdown_callback(
@@ -67,6 +96,10 @@ void Sparkle::init(std::string const& signature) noexcept
 				if (sparkle._logHandler)
 				{
 					sparkle._logHandler("Automatic update failed", LogLevel::Warn);
+				}
+				if (sparkle._updateFailedHandler)
+				{
+					sparkle._updateFailedHandler();
 				}
 			});
 

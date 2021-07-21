@@ -23,22 +23,25 @@
 
 namespace connectionMatrix
 {
-Node::Type Node::type() const
+/* ************************************************************ */
+/* Node                                                         */
+/* ************************************************************ */
+Node::Type Node::type() const noexcept
 {
 	return _type;
 }
 
-bool Node::isOfflineOutputStreamNode() const
+bool Node::isOfflineOutputStreamNode() const noexcept
 {
 	return _type == Type::OfflineOutputStream;
 }
 
-bool Node::isEntityNode() const
+bool Node::isEntityNode() const noexcept
 {
 	return _type == Type::Entity;
 }
 
-bool Node::isRedundantNode() const
+bool Node::isRedundantNode() const noexcept
 {
 	switch (_type)
 	{
@@ -50,7 +53,7 @@ bool Node::isRedundantNode() const
 	}
 }
 
-bool Node::isRedundantStreamNode() const
+bool Node::isRedundantStreamNode() const noexcept
 {
 	switch (_type)
 	{
@@ -62,7 +65,7 @@ bool Node::isRedundantStreamNode() const
 	}
 }
 
-bool Node::isStreamNode() const
+bool Node::isStreamNode() const noexcept
 {
 	switch (_type)
 	{
@@ -76,7 +79,7 @@ bool Node::isStreamNode() const
 	}
 }
 
-bool Node::isChannelNode() const
+bool Node::isChannelNode() const noexcept
 {
 	switch (_type)
 	{
@@ -88,22 +91,22 @@ bool Node::isChannelNode() const
 	}
 }
 
-la::avdecc::UniqueIdentifier const& Node::entityID() const
+la::avdecc::UniqueIdentifier const& Node::entityID() const noexcept
 {
 	return _entityID;
 }
 
-Node const* Node::parent() const
+Node const* Node::parent() const noexcept
 {
 	return _parent;
 }
 
-Node* Node::parent()
+Node* Node::parent() noexcept
 {
 	return _parent;
 }
 
-EntityNode const* Node::entityNode() const
+EntityNode const* Node::entityNode() const noexcept
 {
 	auto* node = this;
 
@@ -115,28 +118,28 @@ EntityNode const* Node::entityNode() const
 	return static_cast<EntityNode const*>(node);
 }
 
-EntityNode* Node::entityNode()
+EntityNode* Node::entityNode() noexcept
 {
 	// Implemented over entityNode() const overload
 	return const_cast<EntityNode*>(static_cast<Node const*>(this)->entityNode());
 }
 
-bool Node::hasParent() const
+bool Node::hasParent() const noexcept
 {
 	return _parent != nullptr;
 }
 
-QString const& Node::name() const
+QString const& Node::name() const noexcept
 {
 	return _name;
 }
 
-int Node::index() const
+int Node::index() const noexcept
 {
 	return _parent ? _parent->indexOf(this) : 0;
 }
 
-int Node::indexOf(Node const* child) const
+int Node::indexOf(Node const* child) const noexcept
 {
 	auto const predicate = [child](auto const& item)
 	{
@@ -151,7 +154,7 @@ int Node::indexOf(Node const* child) const
 	return static_cast<int>(index);
 }
 
-Node* Node::childAt(int index)
+Node* Node::childAt(int index) noexcept
 {
 	if (index < 0 || index >= childrenCount())
 	{
@@ -161,7 +164,7 @@ Node* Node::childAt(int index)
 	return _children.at(index).get();
 }
 
-Node const* Node::childAt(int index) const
+Node const* Node::childAt(int index) const noexcept
 {
 	if (index < 0 || index >= childrenCount())
 	{
@@ -171,12 +174,12 @@ Node const* Node::childAt(int index) const
 	return _children.at(index).get();
 }
 
-int Node::childrenCount() const
+int Node::childrenCount() const noexcept
 {
 	return static_cast<int>(_children.size());
 }
 
-Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent)
+Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent) noexcept
 	: _type{ type }
 	, _entityID{ entityID }
 	, _parent{ parent }
@@ -188,28 +191,31 @@ Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* 
 	}
 }
 
-void Node::setName(QString const& name)
+void Node::setName(QString const& name) noexcept
 {
 	_name = name;
 }
 
-OfflineOutputStreamNode* OfflineOutputStreamNode::create()
+OfflineOutputStreamNode* OfflineOutputStreamNode::create() noexcept
 {
 	return new OfflineOutputStreamNode{};
 }
 
-OfflineOutputStreamNode::OfflineOutputStreamNode()
+OfflineOutputStreamNode::OfflineOutputStreamNode() noexcept
 	: Node{ Type::OfflineOutputStream, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), nullptr }
 {
 	setName("Offline Streams");
 }
 
-EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan)
+/* ************************************************************ */
+/* EntityNode                                                   */
+/* ************************************************************ */
+EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept
 {
 	return new EntityNode{ entityID, isMilan };
 }
 
-void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const
+void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const noexcept
 {
 	Node::accept(
 		[&avbInterfaceIndex, &visitor](Node* node)
@@ -225,7 +231,7 @@ void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbIn
 		});
 }
 
-EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan)
+EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept
 	: Node{ Type::Entity, entityID, nullptr }
 	, _isMilan{ isMilan }
 {
@@ -302,27 +308,30 @@ std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entit
 	return _outputMappings;
 }
 
-RedundantNode* RedundantNode::createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex)
+/* ************************************************************ */
+/* RedundantNode                                                */
+/* ************************************************************ */
+RedundantNode* RedundantNode::createOutputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept
 {
 	return new RedundantNode{ Type::RedundantOutput, parent, redundantIndex };
 }
 
-RedundantNode* RedundantNode::createInputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex)
+RedundantNode* RedundantNode::createInputNode(EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept
 {
 	return new RedundantNode{ Type::RedundantInput, parent, redundantIndex };
 }
 
-la::avdecc::controller::model::VirtualIndex const& RedundantNode::redundantIndex() const
+la::avdecc::controller::model::VirtualIndex const& RedundantNode::redundantIndex() const noexcept
 {
 	return _redundantIndex;
 }
 
-Node::TriState RedundantNode::lockedState() const
+Node::TriState RedundantNode::lockedState() const noexcept
 {
 	return _lockedState;
 }
 
-bool RedundantNode::isStreaming() const
+bool RedundantNode::isStreaming() const noexcept
 {
 	return _isStreaming;
 }
@@ -337,146 +346,153 @@ void RedundantNode::setIsStreaming(bool const isStreaming) noexcept
 	_isStreaming = isStreaming;
 }
 
-RedundantNode::RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex)
+RedundantNode::RedundantNode(Type const type, EntityNode& parent, la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept
 	: Node{ type, parent.entityID(), &parent }
 	, _redundantIndex{ redundantIndex }
 {
 }
 
-StreamNode* StreamNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+/* ************************************************************ */
+/* StreamNode                                                   */
+/* ************************************************************ */
+StreamNode* StreamNode::createRedundantOutputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
 {
 	return new StreamNode{ Type::RedundantOutputStream, parent, streamIndex, avbInterfaceIndex };
 }
 
-StreamNode* StreamNode::createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+StreamNode* StreamNode::createRedundantInputNode(RedundantNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
 {
 	return new StreamNode{ Type::RedundantInputStream, parent, streamIndex, avbInterfaceIndex };
 }
 
-StreamNode* StreamNode::createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+StreamNode* StreamNode::createOutputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
 {
 	return new StreamNode{ Type::OutputStream, parent, streamIndex, avbInterfaceIndex };
 }
 
-StreamNode* StreamNode::createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+StreamNode* StreamNode::createInputNode(EntityNode& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
 {
 	return new StreamNode{ Type::InputStream, parent, streamIndex, avbInterfaceIndex };
 }
 
-la::avdecc::entity::model::StreamIndex const& StreamNode::streamIndex() const
+la::avdecc::entity::model::StreamIndex const& StreamNode::streamIndex() const noexcept
 {
 	return _streamIndex;
 }
 
-la::avdecc::entity::model::AvbInterfaceIndex const& StreamNode::avbInterfaceIndex() const
+la::avdecc::entity::model::AvbInterfaceIndex const& StreamNode::avbInterfaceIndex() const noexcept
 {
 	return _avbInterfaceIndex;
 }
 
-la::avdecc::entity::model::StreamFormat const& StreamNode::streamFormat() const
+la::avdecc::entity::model::StreamFormat const& StreamNode::streamFormat() const noexcept
 {
 	return _streamFormat;
 }
 
-la::avdecc::UniqueIdentifier const& StreamNode::grandMasterID() const
+la::avdecc::UniqueIdentifier const& StreamNode::grandMasterID() const noexcept
 {
 	return _grandMasterID;
 }
 
-std::uint8_t const& StreamNode::grandMasterDomain() const
+std::uint8_t const& StreamNode::grandMasterDomain() const noexcept
 {
 	return _grandMasterDomain;
 }
 
-la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& StreamNode::interfaceLinkStatus() const
+la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& StreamNode::interfaceLinkStatus() const noexcept
 {
 	return _interfaceLinkStatus;
 }
 
-bool StreamNode::isRunning() const
+bool StreamNode::isRunning() const noexcept
 {
 	return _isRunning;
 }
 
-Node::TriState StreamNode::lockedState() const
+Node::TriState StreamNode::lockedState() const noexcept
 {
 	return _lockedState;
 }
 
-bool StreamNode::isStreaming() const
+bool StreamNode::isStreaming() const noexcept
 {
 	return _isStreaming;
 }
 
-la::avdecc::entity::model::StreamInputConnectionInfo const& StreamNode::streamInputConnectionInformation() const
+la::avdecc::entity::model::StreamInputConnectionInfo const& StreamNode::streamInputConnectionInformation() const noexcept
 {
 	return _streamInputConnectionInfo;
 }
 
-StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
 	: Node{ type, parent.entityID(), &parent }
 	, _streamIndex{ streamIndex }
 	, _avbInterfaceIndex{ avbInterfaceIndex }
 {
 }
 
-void StreamNode::setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat)
+void StreamNode::setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept
 {
 	_streamFormat = streamFormat;
 }
 
-void StreamNode::setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID)
+void StreamNode::setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID) noexcept
 {
 	_grandMasterID = grandMasterID;
 }
 
-void StreamNode::setGrandMasterDomain(std::uint8_t const grandMasterDomain)
+void StreamNode::setGrandMasterDomain(std::uint8_t const grandMasterDomain) noexcept
 {
 	_grandMasterDomain = grandMasterDomain;
 }
 
-void StreamNode::setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus)
+void StreamNode::setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus) noexcept
 {
 	_interfaceLinkStatus = interfaceLinkStatus;
 }
 
-void StreamNode::setRunning(bool isRunning)
+void StreamNode::setRunning(bool isRunning) noexcept
 {
 	_isRunning = isRunning;
 }
 
-bool StreamNode::setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus)
+bool StreamNode::setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus) noexcept
 {
-	if (_probingStatus != probingStatus)
-	{
-		_probingStatus = probingStatus;
-		return true;
-	}
-
-	return false;
+	auto const changed = _probingStatus != probingStatus;
+	_probingStatus = probingStatus;
+	return changed;
 }
 
-void StreamNode::setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept
 {
+	auto const changed = _mediaLockedCounter != value;
 	_mediaLockedCounter = value;
+	return changed;
 }
 
-void StreamNode::setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept
 {
+	auto const changed = _mediaUnlockedCounter != value;
 	_mediaUnlockedCounter = value;
+	return changed;
 }
 
-void StreamNode::setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept
 {
+	auto const changed = _streamStartCounter != value;
 	_streamStartCounter = value;
+	return changed;
 }
 
-void StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value)
+bool StreamNode::setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept
 {
+	auto const changed = _streamStopCounter != value;
 	_streamStopCounter = value;
+	return changed;
 }
 
-void StreamNode::setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info)
+void StreamNode::setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
 {
 	_streamInputConnectionInfo = info;
 }
@@ -523,32 +539,35 @@ void StreamNode::computeIsStreaming() noexcept
 	return;
 }
 
-ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)
+/* ************************************************************ */
+/* ChannelNode                                                  */
+/* ************************************************************ */
+ChannelNode* ChannelNode::createOutputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification) noexcept
 {
 	return new ChannelNode{ Type::OutputChannel, parent, channelIdentification };
 }
 
-ChannelNode* ChannelNode::createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification)
+ChannelNode* ChannelNode::createInputNode(EntityNode& parent, avdecc::ChannelIdentification const& channelIdentification) noexcept
 {
 	return new ChannelNode{ Type::InputChannel, parent, channelIdentification };
 }
 
-avdecc::ChannelIdentification const& ChannelNode::channelIdentification() const
+avdecc::ChannelIdentification const& ChannelNode::channelIdentification() const noexcept
 {
 	return _channelIdentification;
 }
 
-la::avdecc::entity::model::ClusterIndex ChannelNode::clusterIndex() const
+la::avdecc::entity::model::ClusterIndex ChannelNode::clusterIndex() const noexcept
 {
 	return _channelIdentification.clusterIndex;
 }
 
-std::uint16_t ChannelNode::channelIndex() const
+std::uint16_t ChannelNode::channelIndex() const noexcept
 {
 	return _channelIdentification.clusterChannel;
 }
 
-ChannelNode::ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification)
+ChannelNode::ChannelNode(Type const type, Node& parent, avdecc::ChannelIdentification const& channelIdentification) noexcept
 	: Node{ type, parent.entityID(), &parent }
 	, _channelIdentification{ channelIdentification }
 {

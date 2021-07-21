@@ -170,8 +170,9 @@ getSignatureHash()
 generateAppcast()
 {
 	local fileName="$1"
-	local marketingVersion="$2"
-	local isRelease=$3
+	local buildNumber="$2"
+	local marketingVersion="$3"
+	local isRelease=$4
 
 	local appcastFile="appcastItem-${marketingVersion}.xml"
 	local baseURL="${params["appcast_releases"]}"
@@ -225,7 +226,8 @@ generateAppcast()
 	fi
 
 	# Common Appcast Item footer
-	echo "				sparkle:version=\"${marketingVersion}\"" >> "$appcastFile"
+	echo "				sparkle:shortVersionString=\"${marketingVersion}\"" >> "$appcastFile"
+	echo "				sparkle:version=\"${buildNumber}\"" >> "$appcastFile"
 	echo "				length=\"${fileSize}\"" >> "$appcastFile"
 	echo "				type=\"application/octet-stream\"" >> "$appcastFile"
 	echo "			/>" >> "$appcastFile"
@@ -259,7 +261,8 @@ if isMac; then
 	fi
 	generator="Xcode"
 	getMachineArch default_arch
-	supportedArchs+=("${default_arch}")
+	supportedArchs+=("x64")
+	supportedArchs+=("arm64")
 else
 	# Use cmake from the path
 	cmake_path="cmake"
@@ -310,8 +313,6 @@ do
 			if isWindows; then
 				echo " -t <visual toolset> -> Force visual toolset (Default: $toolset)"
 				echo " -tc <visual toolchain> -> Force visual toolchain (Default: $toolchain)"
-				echo " -64 -> Generate the 64 bits version of the project (Default: 32)"
-				echo " -vs2017 -> Compile using VS 2017 compiler instead of the default one"
 			fi
 			echo " -no-sym -> Do not deploy debug symbols (Default: Do deploy)"
 			echo " -no-signing -> Do not sign binaries (Default: Do signing)"
@@ -346,6 +347,16 @@ do
 			gen_cmake_additional_options+=("$1")
 			cmake_generator="$1"
 			;;
+		-arch)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -arch option, see help (-h)"
+				exit 4
+			fi
+			arch="$1"
+			gen_cmake_additional_options+=("-arch")
+			gen_cmake_additional_options+=("$arch")
+			;;
 		-t)
 			if isWindows; then
 				shift
@@ -373,22 +384,8 @@ do
 			fi
 			;;
 		-64)
-			if isWindows; then
-				arch="x64"
-				gen_cmake_additional_options+=("-64")
-			else
-				echo "ERROR: -64 option is only supported on Windows platform"
-				exit 4
-			fi
-			;;
-		-vs2017)
-			if isWindows; then
-				toolset="v141"
-				gen_cmake_additional_options+=("-vs2017")
-			else
-				echo "ERROR: -vs2017 option is only supported on Windows platform"
-				exit 4
-			fi
+			echo "ERROR: -64 option is deprecated, use -arch x64 instead"
+			exit 4
 			;;
 		-id)
 			echo "ERROR: -id option is deprecated, please use the new ${configFile} file (see ${configFile}.sample for an example config file)"
@@ -512,6 +509,16 @@ fi
 gen_cmake_additional_options+=("-a")
 gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas"]}")
 
+if [ "x${params["appcast_releases_fallback"]}" != "x" ]; then
+	gen_cmake_additional_options+=("-a")
+	gen_cmake_additional_options+=("-DHIVE_APPCAST_RELEASES_FALLBACK_URL=${params["appcast_releases_fallback"]}")
+fi
+
+if [ "x${params["appcast_betas_fallback"]}" != "x" ]; then
+	gen_cmake_additional_options+=("-a")
+	gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_FALLBACK_URL=${params["appcast_betas_fallback"]}")
+fi
+
 # Build marketing options
 marketing_options="-DMARKETING_VERSION_DIGITS=${key_digits} -DMARKETING_VERSION_POSTFIX=${key_postfix}"
 
@@ -565,12 +572,14 @@ beta_tag=""
 build_tag=""
 is_release=1
 releaseVersion="${versionSplit[0]}.${versionSplit[1]}.${versionSplit[2]}"
-internalVersion="${releaseVersion}"
+internalVersion="$((${versionSplit[0]} * 1000000 + ${versionSplit[1]} * 1000 + ${versionSplit[2]}))"
 if [ ${#versionSplit[*]} -eq 4 ]; then
 	beta_tag="-beta${versionSplit[3]}"
 	build_tag="+$(git rev-parse --short HEAD)"
 	is_release=0
 	internalVersion="${internalVersion}.${versionSplit[3]}"
+else
+	internalVersion="${internalVersion}.999"
 fi
 
 if isWindows; then
@@ -695,7 +704,7 @@ if isMac; then
 	rm -f "${fullInstallerName}" &> /dev/null
 fi
 
-generateAppcast "${appcastInstallerName}" "${releaseVersion}${beta_tag}" $is_release
+generateAppcast "${appcastInstallerName}" "${internalVersion}" "${releaseVersion}${beta_tag}" $is_release
 
 echo ""
 echo "Do not forget to upload:"

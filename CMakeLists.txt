@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.18.4)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.4)
+set(HIVE_VERSION 1.2.5)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -36,6 +36,14 @@ if(NOT HIVE_APPCAST_BETAS_URL)
 	set(HIVE_APPCAST_BETAS_URL "https://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
 endif()
 message(STATUS "Appcast URL for Hive Betas defined to: ${HIVE_APPCAST_BETAS_URL}")
+if(NOT HIVE_APPCAST_RELEASES_FALLBACK_URL)
+	set(HIVE_APPCAST_RELEASES_FALLBACK_URL "${HIVE_APPCAST_RELEASES_URL}" CACHE STRING "Appcast Fallback URL for Hive Releases" FORCE)
+endif()
+message(STATUS "Appcast fallback URL for Hive Releases defined to: ${HIVE_APPCAST_RELEASES_FALLBACK_URL}")
+if(NOT HIVE_APPCAST_BETAS_FALLBACK_URL)
+	set(HIVE_APPCAST_BETAS_FALLBACK_URL "${HIVE_APPCAST_BETAS_URL}" CACHE STRING "Appcast Fallback URL for Hive Betas" FORCE)
+endif()
+message(STATUS "Appcast fallback URL for Hive Betas defined to: ${HIVE_APPCAST_BETAS_FALLBACK_URL}")
 if(APPLE AND NOT HIVE_DSA_PUB_KEY)
 	message(FATAL_ERROR "DSA Public Key not set in HIVE_DSA_PUB_KEY CMake Variable")
 endif()
@@ -203,8 +211,10 @@ endif()
 # Compute Full Friendly Version String (Visible)
 if(${HIVE_VERSION_BETA} STREQUAL "0")
 	set(HIVE_FRIENDLY_VERSION "${HIVE_VERSION_MAJOR}.${HIVE_VERSION_MINOR}.${HIVE_VERSION_PATCH}")
+	set(HIVE_IS_RELEASE_VERSION TRUE)
 else()
 	set(HIVE_FRIENDLY_VERSION "${HIVE_VERSION_MAJOR}.${HIVE_VERSION_MINOR}.${HIVE_VERSION_PATCH}-beta${HIVE_VERSION_BETA}")
+	set(HIVE_IS_RELEASE_VERSION FALSE)
 endif()
 
 # Install paramaters

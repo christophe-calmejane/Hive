@@ -57,7 +57,7 @@ public:
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 	// Helpers
-	la::avdecc::UniqueIdentifier controlledEntityID(QModelIndex const& index) const;
+	la::avdecc::UniqueIdentifier getControlledEntityID(QModelIndex const& index) const;
 
 private:
 	QScopedPointer<ControllerModelPrivate> const d_ptr;

@@ -249,6 +249,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControllerModelPrivate::handleEntityOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOnline, this, &ControllerModelPrivate::handleEntityRedundantInterfaceOnline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOffline, this, &ControllerModelPrivate::handleEntityRedundantInterfaceOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::associationIDChanged, this, &ControllerModelPrivate::handleAssociationIDChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStarted, this, &ControllerModelPrivate::handleIdentificationStarted);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStopped, this, &ControllerModelPrivate::handleIdentificationStopped);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::handleEntityNameChanged);
@@ -725,6 +726,17 @@ private:
 		}
 	}
 
+	void handleAssociationIDChanged(la::avdecc::UniqueIdentifier const& entityID, std::optional<la::avdecc::UniqueIdentifier> const associationID)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			auto& data = _entities[*row];
+			data.associationID = associationID;
+
+			dataChanged(*row, ControllerModel::Column::AssociationID);
+		}
+	}
+
 	void handleIdentificationStarted(la::avdecc::UniqueIdentifier const& entityID)
 	{
 		if (auto const row = entityRow(entityID))
@@ -1031,7 +1043,7 @@ QVariant ControllerModel::headerData(int section, Qt::Orientation orientation, i
 	return d->headerData(section, orientation, role);
 }
 
-la::avdecc::UniqueIdentifier ControllerModel::controlledEntityID(QModelIndex const& index) const
+la::avdecc::UniqueIdentifier ControllerModel::getControlledEntityID(QModelIndex const& index) const
 {
 	Q_D(const ControllerModel);
 	return d->controlledEntityID(index);

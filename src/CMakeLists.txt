@@ -267,6 +267,11 @@ if(BUILD_HIVE_APPLICATION)
 	# Setup common options
 	setup_executable_options(${PROJECT_NAME})
 
+	# Additional compile definitions
+	if(HIVE_IS_RELEASE_VERSION)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE HIVE_IS_RELEASE_VERSION)
+	endif()
+
 	# Link libraries
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_static)
 
@@ -293,10 +298,11 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
 	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-everything)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare)
+	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-unused-parameter)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Don't use Wall on MSVC, it prints too many stupid warnings
 	target_compile_options(${PROJECT_NAME}_static PRIVATE /W3)
+	target_compile_options(${PROJECT_NAME} PRIVATE /W3)
 else()
 	message(FATAL_ERROR "Unsupported Compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()

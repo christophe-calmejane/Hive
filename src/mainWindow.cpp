@@ -57,6 +57,7 @@
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
 #include <QtMate/widgets/dynamicHeaderView.hpp>
+#include <QtMate/widgets/headerViewSortSectionFilter.hpp>
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
 #include <la/avdecc/networkInterfaceHelper.hpp>
@@ -81,13 +82,27 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
+class ControllerModelSortFilterProxy final : public QSortFilterProxyModel
+{
+public:
+	// Helpers
+	la::avdecc::UniqueIdentifier controlledEntityID(QModelIndex const& index) const
+	{
+		auto const sourceIndex = mapToSource(index);
+		return static_cast<avdecc::ControllerModel const*>(sourceModel())->getControlledEntityID(sourceIndex);
+	}
+};
+
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
 {
 public:
-	MainWindowImpl(::MainWindow* parent)
+	MainWindowImpl(bool const mustResetViewSettings, ::MainWindow* parent)
 		: _parent(parent)
 		, _controllerModel(new avdecc::ControllerModel(parent)) // parent takes ownership of the object -> 'new' required
+		, _mustResetViewSettings{ mustResetViewSettings }
 	{
+		_controllerProxyModel.setSourceModel(_controllerModel);
+
 		// Setup common UI
 		setupUi(parent);
 
@@ -130,6 +145,7 @@ public:
 	// Private Slots
 	Q_SLOT void currentControllerChanged();
 	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
+	Q_SLOT void saveControllerDynamicHeaderState();
 
 	// Private methods
 	void setupAdvancedView(Defaults const& defaults);
@@ -162,9 +178,14 @@ public:
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
+	qtMate::widgets::HeaderViewSortSectionFilter _controllerHeaderSectionSortFilter{ &_controllerDynamicHeaderView };
 	avdecc::ControllerModel* _controllerModel{ nullptr };
+	ControllerModelSortFilterProxy _controllerProxyModel{};
 	bool _shown{ false };
 	SettingsSignaler _settingsSignaler{};
+	bool _mustResetViewSettings{ false };
+	bool _usingBetaAppcast{ false };
+	bool _usingBackupAppcast{ false };
 };
 
 void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
@@ -322,13 +343,19 @@ void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 	}
 
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto const entityID = _controllerModel->controlledEntityID(index);
+	auto const entityID = _controllerProxyModel.controlledEntityID(index);
 	auto controlledEntity = manager.getControlledEntity(entityID);
 
 	if (controlledEntity)
 	{
 		entityInspector->setControlledEntityID(entityID);
 	}
+}
+
+void MainWindowImpl::saveControllerDynamicHeaderState()
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 }
 
 // Private methods
@@ -418,7 +445,7 @@ void MainWindowImpl::createToolbars()
 
 void MainWindowImpl::createControllerView()
 {
-	controllerTableView->setModel(_controllerModel);
+	controllerTableView->setModel(&_controllerProxyModel);
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
 	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -426,6 +453,7 @@ void MainWindowImpl::createControllerView()
 
 	// Disable row resizing
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	controllerTableView->setSortingEnabled(true);
 
 	// The table view does not take ownership on the item delegate
 	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ _parent } };
@@ -439,8 +467,19 @@ void MainWindowImpl::createControllerView()
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), errorItemDelegate);
 	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
+	_controllerDynamicHeaderView.setSectionsClickable(true);
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
+
+	// Configure sortable sections
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID));
+	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName));
+
 	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 }
 
@@ -541,10 +580,13 @@ void MainWindowImpl::loadSettings()
 	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting;
 	action->setChecked(true);
 
-	_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
-	loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
-	entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
-	splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
+	if (!_mustResetViewSettings)
+	{
+		_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
+		loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
+		entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
+		splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
+	}
 
 	// Configure settings observers
 	settings.registerSettingObserver(settings::Network_ProtocolType.name, this);
@@ -611,18 +653,14 @@ void MainWindowImpl::connectSignals()
 		});
 
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
-	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionChanged, this,
-		[this]()
-		{
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
-		});
+	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionChanged, this, &MainWindowImpl::saveControllerDynamicHeaderState);
+	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionClicked, this, &MainWindowImpl::saveControllerDynamicHeaderState);
 
 	connect(controllerTableView, &QTableView::doubleClicked, this,
 		[this](QModelIndex const& index)
 		{
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto const entityID = _controllerModel->controlledEntityID(index);
+			auto const entityID = _controllerProxyModel.controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
@@ -637,10 +675,12 @@ void MainWindowImpl::connectSignals()
 	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
+			// CAUTION, this view uses a proxy, we must remap the index
 			auto const index = controllerTableView->indexAt(pos);
+			auto const sourceIndex = _controllerProxyModel.mapToSource(index);
 
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto const entityID = _controllerModel->controlledEntityID(index);
+			auto const entityID = _controllerProxyModel.controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity)
@@ -1079,6 +1119,42 @@ void MainWindowImpl::connectSignals()
 					break;
 			}
 		});
+	sparkle.setUpdateFailedHandler(
+		[this]()
+		{
+			QMetaObject::invokeMethod(this,
+				[this]()
+				{
+					if (!_usingBackupAppcast)
+					{
+						_usingBackupAppcast = true;
+						auto fallbackUrl = std::string{};
+						auto setFallback = false;
+						// Use backup appcast
+						if (_usingBetaAppcast)
+						{
+							if (hive::internals::appcastBetasFallbackUrl != hive::internals::appcastBetasUrl)
+							{
+								setFallback = true;
+								fallbackUrl = hive::internals::appcastBetasFallbackUrl;
+							}
+						}
+						else
+						{
+							if (hive::internals::appcastReleasesFallbackUrl != hive::internals::appcastReleasesUrl)
+							{
+								setFallback = true;
+								fallbackUrl = hive::internals::appcastReleasesFallbackUrl;
+							}
+						}
+						if (setFallback)
+						{
+							Sparkle::getInstance().setAppcastUrl(fallbackUrl);
+							LOG_HIVE_WARN("Trying autoupdate fallback URL");
+						}
+					}
+				});
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
@@ -1221,7 +1297,11 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "ave" /* || ext == "ans"*/)
+		if (ext == "ave" || ext == "ans"
+#ifdef DEBUG
+				|| ext == "json"
+#endif // DEBUG
+		)
 		{
 			event->acceptProposedAction();
 			return;
@@ -1233,9 +1313,8 @@ void MainWindow::dropEvent(QDropEvent* event)
 {
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
-	auto const loadEntity = [&manager](auto const& filePath, auto const flags)
+	auto const getErrorString = [](auto const error, auto const& message)
 	{
-		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
 		auto msg = QString{};
 		if (!!error)
 		{
@@ -1271,6 +1350,9 @@ void MainWindow::dropEvent(QDropEvent* event)
 				case la::avdecc::jsonSerializer::DeserializationError::NotCompliant:
 					msg = message.c_str();
 					break;
+				case la::avdecc::jsonSerializer::DeserializationError::Incomplete:
+					msg = message.c_str();
+					break;
 				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
 					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
 					break;
@@ -1283,7 +1365,19 @@ void MainWindow::dropEvent(QDropEvent* event)
 					break;
 			}
 		}
-		return std::make_tuple(error, msg);
+		return msg;
+	};
+
+	auto const loadEntity = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
+	};
+
+	auto const loadNetworkState = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
 	};
 
 	for (auto const& u : event->mimeData()->urls())
@@ -1297,7 +1391,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 		{
 			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
 			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
-			auto [error, message] = loadEntity(u.toLocalFile(), flags);
+			auto [error, message] = loadEntity(f, flags);
 			if (!!error)
 			{
 				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
@@ -1306,7 +1400,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 					if (choice == QMessageBox::StandardButton::Yes)
 					{
 						flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-						auto const result = loadEntity(u.toLocalFile(), flags);
+						auto const result = loadEntity(f, flags);
 						error = std::get<0>(result);
 						message = std::get<1>(result);
 						// Fallthrough to warning message
@@ -1314,15 +1408,38 @@ void MainWindow::dropEvent(QDropEvent* event)
 				}
 				if (!!error)
 				{
-					QMessageBox::warning(this, "Failed to load JSON entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+					QMessageBox::warning(this, "Failed to load Entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
 				}
 			}
 		}
 
 		// AVDECC Network State
-		//else if (ext == "ans")
-		//{
-		//}
+		else if (ext == "ans")
+		{
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+			auto [error, message] = loadNetworkState(f, flags);
+			if (!!error)
+			{
+				QMessageBox::warning(this, "Failed to load Network State", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+			}
+		}
+
+#ifdef DEBUG
+		// Any kind of file, we have to autodetect
+		else if (ext == "json")
+		{
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+			// Start with AVE file type
+			auto [error, message] = loadEntity(f, flags);
+			if (!!error)
+			{
+				// Then try ANS file type
+				loadNetworkState(f, flags);
+			}
+		}
+#endif // DEBUG
 	}
 }
 
@@ -1395,18 +1512,20 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 	{
 		if (value.toBool())
 		{
+			_usingBetaAppcast = true;
 			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastBetasUrl);
 		}
 		else
 		{
+			_usingBetaAppcast = false;
 			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesUrl);
 		}
 	}
 }
 
-MainWindow::MainWindow(QWidget* parent)
+MainWindow::MainWindow(bool const mustResetViewSettings, QWidget* parent)
 	: QMainWindow(parent)
-	, _pImpl(new MainWindowImpl(this))
+	, _pImpl(new MainWindowImpl(mustResetViewSettings, this))
 {
 	// Set title
 	setWindowTitle(hive::internals::applicationLongName + " - Version " + QCoreApplication::applicationVersion());
@@ -1415,9 +1534,12 @@ MainWindow::MainWindow(QWidget* parent)
 	setAcceptDrops(true);
 
 	// Restore geometry
-	auto& settings = settings::SettingsManager::getInstance();
-	restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
-	restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+	if (!mustResetViewSettings)
+	{
+		auto& settings = settings::SettingsManager::getInstance();
+		restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
+		restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+	}
 }
 
 MainWindow::~MainWindow() noexcept

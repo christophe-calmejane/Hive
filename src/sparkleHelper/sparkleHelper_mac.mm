@@ -99,10 +99,19 @@ static inline std::string getStdString(NSString* nsString)
 }
 
 - (void)updater:(SUUpdater*)updater didAbortWithError:(NSError*)error {
-	auto const& handler = Sparkle::getInstance().getLogHandler();
-	if (handler)
 	{
-		handler(std::string{ "Automatic update failed: " } + getStdString([error description]), Sparkle::LogLevel::Warn);
+		auto const& handler = Sparkle::getInstance().getLogHandler();
+		if (handler)
+		{
+			handler(std::string{ "Automatic update failed: " } + getStdString([error description]), Sparkle::LogLevel::Warn);
+		}
+	}
+	{
+		auto const& handler = Sparkle::getInstance().getUpdateFailedHandler();
+		if (handler)
+		{
+			handler();
+		}
 	}
 }
 
@@ -111,7 +120,7 @@ static inline std::string getStdString(NSString* nsString)
 
 @end
 
-void Sparkle::init(std::string const& signature) noexcept
+void Sparkle::init(std::string const& /*internalNumber*/, std::string const& signature) noexcept
 {
 	auto* const updater = [SUUpdater sharedUpdater];
 

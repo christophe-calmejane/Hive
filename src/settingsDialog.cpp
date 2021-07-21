@@ -104,6 +104,12 @@ private:
 			auto const lock = QSignalBlocker{ alwaysShowArrowEndConnectionMatrixCheckBox };
 			alwaysShowArrowEndConnectionMatrixCheckBox->setChecked(settings.getValue(settings::ConnectionMatrix_AlwaysShowArrowEnd.name).toBool());
 		}
+
+		// Show Media Locked Dot
+		{
+			auto const lock = QSignalBlocker{ showMediaLockedDotCheckBox };
+			showMediaLockedDotCheckBox->setChecked(settings.getValue(settings::ConnectionMatrix_ShowMediaLockedDot.name).toBool());
+		}
 	}
 
 	void loadControllerSettings()
@@ -253,6 +259,12 @@ void SettingsDialog::on_alwaysShowArrowEndConnectionMatrixCheckBox_toggled(bool 
 {
 	auto& settings = settings::SettingsManager::getInstance();
 	settings.setValue(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, checked);
+}
+
+void SettingsDialog::on_showMediaLockedDotCheckBox_toggled(bool checked)
+{
+	auto& settings = settings::SettingsManager::getInstance();
+	settings.setValue(settings::ConnectionMatrix_ShowMediaLockedDot.name, checked);
 }
 
 void SettingsDialog::on_discoveryDelayLineEdit_returnPressed()

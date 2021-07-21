@@ -4,6 +4,25 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2021-07-21
+### Added
+- More color explanation in the Connection Matrix legend
+- Visualization of a Connected and Media Locked stream in Connection Matrix intersection (same information than the header arrow), Milan Only
+  - Can be enabled/disabled in Settings
+- Confirmation dialog when trying to disconnect a Media Locked stream whose Talker is not visible on the network
+- [Possibility to sort entities by column](https://github.com/christophe-calmejane/Hive/issues/81)
+- Possibility to change AssociationID for devices supporting it
+- Support for ANS files loading (only to create virtual entities)
+
+### Fixed
+- Matrix being refreshed more than required
+- [Unhandled exception causing crash](https://github.com/christophe-calmejane/Hive/issues/101)
+- Entity properly show identification if discovered while actively identifying
+- [Frequent app hang when multiple Milan entities are on the network and streaming](https://github.com/christophe-calmejane/Hive/issues/104)
+- _Device Details Dialog_ 'Receive'/'Transmit' tables to correctly show connections resulting from connections of a single talker stream to multiple listener streams on a receiving device
+- _Device Details Dialog_ 'Receive'/'Transmit' tables to show correct connection status WrongDomain when domain numbers mismatch
+- [AssociationID field not always accurately displayed](https://github.com/christophe-calmejane/Hive/issues/45)
+
 ## [1.2.4] - 2021-04-02
 ### Added
 - New CLI tool to dump AEM from entities: AEMDumper

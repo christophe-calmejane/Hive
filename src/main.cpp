@@ -59,6 +59,7 @@ static void qtMessageHandler(QtMsgType msgType, QMessageLogContext const& logCon
 #if defined(Q_OS_WIN32) && defined(HAVE_BUGTRAP)
 #	define BUGREPORTER_CATCH_EXCEPTIONS
 #	include <Windows.h>
+#	include <DbgHelp.h>
 #	include "BugTrap.h"
 
 void setupBugReporter()
@@ -66,6 +67,9 @@ void setupBugReporter()
 	BT_InstallSehFilter();
 
 	BT_SetTerminate();
+#	ifndef HIVE_IS_RELEASE_VERSION
+	BT_SetDumpType(MiniDumpWithDataSegs | MiniDumpWithFullMemory);
+#	endif
 	BT_SetSupportEMail("christophe.calmejane@l-acoustics.com");
 	BT_SetFlags(BTF_DETAILEDMODE | BTF_ATTACHREPORT | BTF_SHOWADVANCEDUI | BTF_DESCRIBEERROR);
 	BT_SetSupportServer("hive-crash-reports.changeip.org", 9999);
@@ -139,6 +143,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::ConnectionMatrix_ChannelMode);
 	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowTip);
 	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowEnd);
+	settings.registerSetting(settings::ConnectionMatrix_ShowMediaLockedDot);
 
 	// Network
 	settings.registerSetting(settings::Network_ProtocolType);
@@ -149,6 +154,15 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::Controller_DiscoveryDelay);
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
 	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
+
+	// Check settings version
+	auto mustResetViewSettings = false;
+	auto const settingsVersion = settings.getValue(settings::ViewSettingsVersion).toInt();
+	if (settingsVersion != settings::ViewSettingsCurrentVersion)
+	{
+		mustResetViewSettings = true;
+	}
+	settings.setValue(settings::ViewSettingsVersion, settings::ViewSettingsCurrentVersion);
 
 	// Load fonts
 	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/
@@ -198,12 +212,12 @@ int main(int argc, char* argv[])
 		if (signatureFile.open(QIODevice::ReadOnly))
 		{
 			auto content = QString(signatureFile.readAll());
-			Sparkle::getInstance().init(content.toStdString());
+			Sparkle::getInstance().init(hive::internals::buildNumber.toStdString(), content.toStdString());
 		}
 	}
 
 	// Load main window
-	auto window = MainWindow{};
+	auto window = MainWindow{ mustResetViewSettings };
 	//window.show(); // This forces the creation of the window // Don't try to show it, it blinks sometimes (and window.hide() seems to create the window too)
 	window.hide(); // Immediately hides it (even though it was not actually shown since processEvents was not called)
 

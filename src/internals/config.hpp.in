@@ -41,6 +41,7 @@ QString const readableCopyright{ "@PROJECT_READABLE_COPYRIGHT@" };
 QString const organizationDomain{ "@PROJECT_DOMAINNAME@" };
 QString const organizationName{ "@PROJECT_COMPANYNAME@" };
 QString const buildArchitecture{ "@PROJECT_ARCH@" };
+QString const buildNumber{ "@LA_BUILD_NUMBER@" };
 #ifdef DEBUG
 QString const buildConfiguration{ "Debug" };
 #else // !DEBUG
@@ -48,6 +49,8 @@ QString const buildConfiguration{ "Release" };
 #endif // DEBUG
 std::string const appcastReleasesUrl{ "@HIVE_APPCAST_RELEASES_URL@" };
 std::string const appcastBetasUrl{ "@HIVE_APPCAST_BETAS_URL@" };
+std::string const appcastReleasesFallbackUrl{ "@HIVE_APPCAST_RELEASES_FALLBACK_URL@" };
+std::string const appcastBetasFallbackUrl{ "@HIVE_APPCAST_BETAS_FALLBACK_URL@" };
 
 } // namespace internals
 } // namespace hive

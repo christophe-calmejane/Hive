@@ -28,6 +28,7 @@ set(HEADER_FILES_PUBLIC
 	${PROJECT_ROOT_DIR}/include/QtMate/widgets/comboBox.hpp
 	${PROJECT_ROOT_DIR}/include/QtMate/widgets/dynamicHeaderView.hpp
 	${PROJECT_ROOT_DIR}/include/QtMate/widgets/flatIconButton.hpp
+	${PROJECT_ROOT_DIR}/include/QtMate/widgets/headerViewSortSectionFilter.hpp
 	${PROJECT_ROOT_DIR}/include/QtMate/widgets/tableView.hpp
 	${PROJECT_ROOT_DIR}/include/QtMate/widgets/textEntry.hpp
 	${PROJECT_ROOT_DIR}/include/QtMate/widgets/tickableMenu.hpp

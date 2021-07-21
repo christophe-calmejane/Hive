@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "settingsManager/settings.hpp"
+
 #include <QtMate/material/color.hpp>
 
 #include <QDialog>
@@ -28,15 +30,20 @@
 
 namespace connectionMatrix
 {
-class LegendDialog : public QDialog
+class LegendDialog : public QDialog, private settings::SettingsManager::Observer
 {
 	Q_OBJECT
 public:
 	LegendDialog(qtMate::material::color::Name const& colorName, bool const isTransposed, QWidget* parent = nullptr);
+	~LegendDialog();
 
 private:
+	// settings::SettingsManager::Observer overrides
+	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
+
 	QVBoxLayout _layout{ this };
 	QPushButton _closeButton{ "Close", this };
+	bool _drawMediaLockedDot{ false };
 };
 
 } // namespace connectionMatrix

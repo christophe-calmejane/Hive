@@ -30,6 +30,18 @@
 
 namespace connectionMatrix
 {
+ItemDelegate::ItemDelegate(bool const drawMediaLockedDot, QObject* parent)
+	: QStyledItemDelegate{ parent }
+	, _drawMediaLockedDot{ drawMediaLockedDot }
+{
+}
+
+void ItemDelegate::setDrawMediaLockedDot(bool const drawMediaLockedDot) noexcept
+{
+	_drawMediaLockedDot = drawMediaLockedDot;
+}
+
+
 void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	// Sometimes when the model is transposed with hidden rows/columns, hidden items are asked to be drawn
@@ -58,7 +70,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 
 	auto const& intersectionData = static_cast<Model const*>(index.model())->intersectionData(index);
 
-	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags);
+	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags, _drawMediaLockedDot);
 }
 
 } // namespace connectionMatrix

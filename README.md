@@ -22,6 +22,7 @@ Precompiled binaries for macOS and Windows [can be found here](http://www.kikiso
 - Copy `.hive_config.sample` to `.hive_config`, then edit it for installer customization
 - Run the `setup_fresh_env.sh` script that should properly setup your working copy
 - Run the `gen_cmake.sh` script with whatever optional parameters required (run *gen_cmake.sh -h* to display the help)
+  - [Linux only] For Ubuntu users, install the `qtbase5-dev` package and make sure the major and minor version matche what Hive requires. The pass the following option to `gen_cmake.sh`: `-qt5dir /usr/lib/x86_64-linux-gnu/cmake/Qt5/`
 - Go into the generated output folder
 - Open the generated solution
 - Compile everything
@@ -41,8 +42,8 @@ You can only use an application-password, **not your Apple ID account password**
 - In the Security section, click Generate Password below App-Specific Passwords
 - Follow the steps on your screen
 
-To save the password in your keychain, do the following:
-- `xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u AccountEmailAdrs -p AppSpecificPwd`
+To save the password in your keychain, do the following. It is strongly suggested to specify the Login Keychain with `--keychain` (use `security list-keychains` to get your Login Keychain filepath):
+- `xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u AccountEmailAdrs -p AppSpecificPwd --keychain LoginKeychainPath`
 
 ## MacOS runtime specificities
 
