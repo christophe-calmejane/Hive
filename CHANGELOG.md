@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.2.5] - 2021-07-21
 ### Added
 - More color explanation in the Connection Matrix legend
 - Visualization of a Connected and Media Locked stream in Connection Matrix intersection (same information than the header arrow), Milan Only
@@ -12,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Confirmation dialog when trying to disconnect a Media Locked stream whose Talker is not visible on the network
 - [Possibility to sort entities by column](https://github.com/christophe-calmejane/Hive/issues/81)
 - Possibility to change AssociationID for devices supporting it
+- Support for ANS files loading (only to create virtual entities)
 
 ### Fixed
 - Matrix being refreshed more than required
@@ -29,7 +32,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for Controller to Entity Identification (right-click an entity in the list)
 - [Added a daemon on macOS to setup pcap access rights for non-root execution](https://github.com/christophe-calmejane/Hive/issues/50)
 - Automatic view scrolling when dragging a channel mapping near the edges of the window (Dynamic Mappings Editor View)
-- Support for ANS files loading (only to create virtual entities)
 
 ### Changed
 - macOS minimum version is now 10.12 (due to Qt update)
