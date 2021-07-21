@@ -50,6 +50,7 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcept;
 QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) noexcept;
 
+QString msrpFailureCodeToString(la::avdecc::entity::model::MsrpFailureCode const msrpFailureCode) noexcept;
 QString probingStatusToString(la::avdecc::entity::model::ProbingStatus const status) noexcept;
 
 QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) noexcept;

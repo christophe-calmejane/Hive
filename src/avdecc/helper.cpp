@@ -384,6 +384,56 @@ QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) no
 	return str;
 }
 
+QString msrpFailureCodeToString(la::avdecc::entity::model::MsrpFailureCode const msrpFailureCode) noexcept
+{
+	switch (msrpFailureCode)
+	{
+		case la::avdecc::entity::model::MsrpFailureCode::NoFailure:
+			return "No Failure";
+		case la::avdecc::entity::model::MsrpFailureCode::InsufficientBandwidth:
+			return "Insufficient Bandwidth";
+		case la::avdecc::entity::model::MsrpFailureCode::InsufficientResources:
+			return "Insufficient Resources";
+		case la::avdecc::entity::model::MsrpFailureCode::InsufficientTrafficClassBandwidth:
+			return "Insufficient Traffic Class Bandwidth";
+		case la::avdecc::entity::model::MsrpFailureCode::StreamIDInUse:
+			return "Stream ID In Use";
+		case la::avdecc::entity::model::MsrpFailureCode::StreamDestinationAddressInUse:
+			return "Stream Destination Address In Use";
+		case la::avdecc::entity::model::MsrpFailureCode::StreamPreemptedByHigherRank:
+			return "Stream Preempted By Higher Rank";
+		case la::avdecc::entity::model::MsrpFailureCode::LatencyHasChanged:
+			return "Latency Has Changed";
+		case la::avdecc::entity::model::MsrpFailureCode::EgressPortNotAVBCapable:
+			return "Egress Port Not AVB Capable";
+		case la::avdecc::entity::model::MsrpFailureCode::UseDifferentDestinationAddress:
+			return "Use Different Destination Address";
+		case la::avdecc::entity::model::MsrpFailureCode::OutOfMSRPResources:
+			return "Out Of MSRP Resources";
+		case la::avdecc::entity::model::MsrpFailureCode::OutOfMMRPResources:
+			return "Out Of MMRP Resources";
+		case la::avdecc::entity::model::MsrpFailureCode::CannotStoreDestinationAddress:
+			return "Cannot Store Destination Address";
+		case la::avdecc::entity::model::MsrpFailureCode::PriorityIsNotAnSRCLass:
+			return "Priority Is Not An SR Class";
+		case la::avdecc::entity::model::MsrpFailureCode::MaxFrameSizeTooLarge:
+			return "Max Frame Size Too Large";
+		case la::avdecc::entity::model::MsrpFailureCode::MaxFanInPortsLimitReached:
+			return "Max Fan In Ports Limit Reached";
+		case la::avdecc::entity::model::MsrpFailureCode::FirstValueChangedForStreamID:
+			return "First Value Changed For Stream ID";
+		case la::avdecc::entity::model::MsrpFailureCode::VlanBlockedOnEgress:
+			return "Vlan Blocked On Egress";
+		case la::avdecc::entity::model::MsrpFailureCode::VlanTaggingDisabledOnEgress:
+			return "Vlan Tagging Disabled On Egress";
+		case la::avdecc::entity::model::MsrpFailureCode::SrClassPriorityMismatch:
+			return "SR Class Priority Mismatch";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
+
 QString probingStatusToString(la::avdecc::entity::model::ProbingStatus const status) noexcept
 {
 	switch (status)

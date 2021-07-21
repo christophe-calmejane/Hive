@@ -272,7 +272,14 @@ private:
 			auto const& e = entity.getEntity();
 			auto const entityCaps = e.getEntityCapabilities();
 			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::forceNumeric(entityCaps.value()), avdecc::helper::capabilitiesToString(entityCaps));
-			addTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString("Not Set"));
+			if (entityCaps.test(la::avdecc::entity::EntityCapability::AssociationIDSupported))
+			{
+				addEditableTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString(""), hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, {});
+			}
+			else
+			{
+				addTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString("Not Set"));
+			}
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
@@ -1095,6 +1102,17 @@ public:
 						{
 						}
 						break;
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID:
+						try
+						{
+							auto const associationID = static_cast<la::avdecc::UniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::UniqueIdentifier::value_type>(textEntry->text().toStdString().c_str()));
+							hive::modelsLibrary::ControllerManager::getInstance().setAssociationID(_controlledEntityID, associationID);
+						}
+						catch (std::invalid_argument const& e)
+						{
+							QMessageBox::warning(q_ptr, "", QString("Cannot set Association ID: Invalid EID: %1").arg(e.what()));
+						}
+						break;
 					default:
 						break;
 				}
@@ -1241,6 +1259,18 @@ public:
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && clockDomainIndex == cdIndex)
 								textEntry->setText(clockDomainName);
+						});
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID:
+				{
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::associationIDChanged, textEntry,
+						[this, textEntry](la::avdecc::UniqueIdentifier const entityID, std::optional<la::avdecc::UniqueIdentifier> const& associationID)
+						{
+							if (entityID == _controlledEntityID)
+							{
+								textEntry->setText(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
+							}
 						});
 					break;
 				}
