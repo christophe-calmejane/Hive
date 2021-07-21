@@ -249,6 +249,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControllerModelPrivate::handleEntityOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOnline, this, &ControllerModelPrivate::handleEntityRedundantInterfaceOnline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOffline, this, &ControllerModelPrivate::handleEntityRedundantInterfaceOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::associationIDChanged, this, &ControllerModelPrivate::handleAssociationIDChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStarted, this, &ControllerModelPrivate::handleIdentificationStarted);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStopped, this, &ControllerModelPrivate::handleIdentificationStopped);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ControllerModelPrivate::handleEntityNameChanged);
@@ -722,6 +723,17 @@ private:
 				dataChanged(*row, ControllerModel::Column::GrandmasterID);
 				dataChanged(*row, ControllerModel::Column::GptpDomain);
 			}
+		}
+	}
+
+	void handleAssociationIDChanged(la::avdecc::UniqueIdentifier const& entityID, std::optional<la::avdecc::UniqueIdentifier> const associationID)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			auto& data = _entities[*row];
+			data.associationID = associationID;
+
+			dataChanged(*row, ControllerModel::Column::AssociationID);
 		}
 	}
 
