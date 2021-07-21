@@ -262,7 +262,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	}
 	if (streamDynamicInfo.msrpFailureCode && streamDynamicInfo.msrpFailureBridgeID)
 	{
-		setStringValue(_msrpFailureCode, QString::number(*streamDynamicInfo.msrpFailureCode));
+		setStringValue(_msrpFailureCode, QString("%1 (%2)").arg(hive::modelsLibrary::helper::toHexQString(la::avdecc::utils::to_integral(*streamDynamicInfo.msrpFailureCode), true, true)).arg(avdecc::helper::msrpFailureCodeToString(*streamDynamicInfo.msrpFailureCode)));
 		setStringValue(_msrpFailureBridgeID, hive::modelsLibrary::helper::toHexQString(*streamDynamicInfo.msrpFailureBridgeID, true, true));
 	}
 	else
