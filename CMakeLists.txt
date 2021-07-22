@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.18.4)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.5)
+set(HIVE_VERSION 1.2.6)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -58,9 +58,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # Default Component
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "Hive")
-
-# Set minimum OSX version
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.12 CACHE INTERNAL "Force the target to be at least a Mac OS X 10.12" FORCE)
 
 # Enable cmake folders
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -161,6 +158,7 @@ set(PROJECT_READABLE_COPYRIGHT "Copyright ${PROJECT_COPYRIGHT_YEAR}, ${PROJECT_A
 set(PROJECT_ROOT_DIR "${PROJECT_SOURCE_DIR}")
 set(HIVE_RESOURCES_FOLDER "${PROJECT_ROOT_DIR}/resources")
 set(PROJECT_ARCH "32-bit")
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13 CACHE INTERNAL "Force the target to be at least a Mac OS X 10.13" FORCE)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(PROJECT_ARCH "64-bit")
 endif()

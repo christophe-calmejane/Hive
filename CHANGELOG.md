@@ -4,6 +4,10 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2021-07-22
+### Changed
+- [Minimum required macOS version set to 10.13 (required by Qt 5.15)](https://github.com/christophe-calmejane/Hive/issues/103)
+
 ## [1.2.5] - 2021-07-21
 ### Added
 - More color explanation in the Connection Matrix legend
