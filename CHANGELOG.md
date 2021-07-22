@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.2.6] - 2021-07-22
+### Changed
+- [Minimum required macOS version set to 10.13 (required by Qt 5.15)](https://github.com/christophe-calmejane/Hive/issues/103)
+
 ## [1.2.5] - 2021-07-21
 ### Added
 - More color explanation in the Connection Matrix legend
@@ -15,9 +19,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Possibility to sort entities by column](https://github.com/christophe-calmejane/Hive/issues/81)
 - Possibility to change AssociationID for devices supporting it
 - Support for ANS files loading (only to create virtual entities)
-
-### Changed
-- [Minimum required macOS version set to 10.13 (required by Qt 5.15)](https://github.com/christophe-calmejane/Hive/issues/103)
 
 ### Fixed
 - Matrix being refreshed more than required
