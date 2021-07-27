@@ -8,7 +8,7 @@ Hive is a pro audio Avdecc (IEEE Std 1722.1) controller. Hive allows you to insp
 
 ## Precompiled binaries
 
-Precompiled binaries for macOS and Windows [can be found here](http://www.kikisoft.com/Hive).
+Precompiled binaries for macOS and Windows [can be found here](https://github.com/christophe-calmejane/Hive/releases).
 
 ## Minimum requirements for compilation
 
