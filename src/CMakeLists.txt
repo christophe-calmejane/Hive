@@ -98,6 +98,7 @@ set(HEADER_FILES_COMMON
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/asPathWidget.hpp
+	processHelper/processHelper.hpp
 	profiles/profiles.hpp
 	profiles/profileSelectionDialog.hpp
 	profiles/profileWidget.hpp
@@ -221,17 +222,30 @@ set(SOURCE_FILES_APP
 	main.cpp
 )
 
+# OS-specific files and options
+set(OSDEP_SOURCE_FILES "")
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+	list(APPEND OSDEP_SOURCE_FILES processHelper/processHelper_macos.mm)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	list(APPEND OSDEP_SOURCE_FILES processHelper/processHelper_win32.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	list(APPEND OSDEP_SOURCE_FILES processHelper/processHelper_unix.cpp)
+else()
+	message(FATAL_ERROR "Unsupported system: ${CMAKE_SYSTEM_NAME}")
+endif()
+
 # Group source files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
 source_group("Header Files\\\\Generated" FILES ${HEADER_FILES_GENERATED})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files\\OS-Dep Files" FILES ${OSDEP_SOURCE_FILES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON})
 source_group(TREE ${HIVE_RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
 source_group("Resource Files\\\\Generated" FILES ${RESOURCE_FILES_GENERATED})
 source_group("Configure Input Files" FILES ${CONFIGURE_IN_FILES})
 
 # Define static library to be used by main application and unit tests
-add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON} ${CONFIGURE_IN_FILES})
+add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${OSDEP_SOURCE_FILES} ${UI_FILES_COMMON} ${CONFIGURE_IN_FILES})
 
 # Setup common options
 cu_setup_library_options(${PROJECT_NAME}_static)
