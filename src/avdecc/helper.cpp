@@ -414,7 +414,7 @@ QString msrpFailureCodeToString(la::avdecc::entity::model::MsrpFailureCode const
 			return "Out Of MMRP Resources";
 		case la::avdecc::entity::model::MsrpFailureCode::CannotStoreDestinationAddress:
 			return "Cannot Store Destination Address";
-		case la::avdecc::entity::model::MsrpFailureCode::PriorityIsNotAnSRCLass:
+		case la::avdecc::entity::model::MsrpFailureCode::PriorityIsNotAnSRClass:
 			return "Priority Is Not An SR Class";
 		case la::avdecc::entity::model::MsrpFailureCode::MaxFrameSizeTooLarge:
 			return "Max Frame Size Too Large";
