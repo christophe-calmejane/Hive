@@ -112,7 +112,7 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
 	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-everything)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare)
+	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-maybe-uninitialized)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Don't use Wall on MSVC, it prints too many stupid warnings
 	target_compile_options(${PROJECT_NAME}_static PRIVATE /W3)
@@ -124,7 +124,7 @@ if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
 		target_compile_options(${PROJECT_NAME}_shared PRIVATE -W -Wno-everything)
 	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-		target_compile_options(${PROJECT_NAME}_shared PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare)
+		target_compile_options(${PROJECT_NAME}_shared PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-maybe-uninitialized)
 	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		# Don't use Wall on MSVC, it prints too many stupid warnings
 		target_compile_options(${PROJECT_NAME}_shared PRIVATE /W3)
