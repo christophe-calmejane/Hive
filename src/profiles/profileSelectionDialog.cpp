@@ -46,6 +46,7 @@ ProfileSelectionDialog::ProfileSelectionDialog(QWidget* parent)
 	// Describe and add profiles
 	addProfile("Standard (Default)", "Intended for standard users, application engineers.\nChoose this if in doubt.", "face", ProfileType::Standard);
 	addProfile("Advanced", "Intended for advanced users and developers.", "school", ProfileType::Developer);
+	addProfile("Matrix", "Intended for users who just need to establish simple connections.", "border_clear", ProfileType::Matrix);
 }
 
 ProfileType ProfileSelectionDialog::selectedProfile() const
