@@ -28,6 +28,7 @@ enum class ProfileType
 	None = 0,
 	Standard = 1,
 	Developer = 2,
+	Matrix = 3,
 
 	Default = Standard
 };

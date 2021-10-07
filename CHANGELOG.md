@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- [New 'Matrix' layout with only the connection matrix displayed by default](https://github.com/christophe-calmejane/Hive/issues/109)
+
+### Fixed
+- [Main window's size not properly restored on macOS](https://github.com/christophe-calmejane/Hive/issues/108)
 
 ## [1.2.6] - 2021-07-22
 ### Changed

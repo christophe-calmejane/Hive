@@ -120,10 +120,12 @@ public:
 	MainWindowImpl& operator=(MainWindowImpl&&) = delete;
 
 	// Private Structs
-	struct Defaults
+	struct VisibilityDefaults
 	{
 		// MainWindow widgets
-		bool mainWindow_Toolbar_Visible{ true };
+		bool mainWindow_ControllerToolbar_Visible{ true };
+		bool mainWindow_UtilitiesToolbar_Visible{ true };
+		bool mainWindow_EntitiesList_Visible{ true };
 		bool mainWindow_Inspector_Visible{ true };
 		bool mainWindow_Logger_Visible{ true };
 
@@ -148,7 +150,8 @@ public:
 	Q_SLOT void saveControllerDynamicHeaderState();
 
 	// Private methods
-	void setupAdvancedView(Defaults const& defaults);
+	void setupAdvancedView(VisibilityDefaults const& defaults);
+	void setupMatrixProfile();
 	void setupStandardProfile();
 	void setupDeveloperProfile();
 	void setupProfile();
@@ -188,7 +191,7 @@ public:
 	bool _usingBackupAppcast{ false };
 };
 
-void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
+void MainWindowImpl::setupAdvancedView(VisibilityDefaults const& defaults)
 {
 	// Create "view" sub-menu
 	createViewMenu();
@@ -227,7 +230,9 @@ void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
 	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults::ui::AdvancedView::ColumnWidth_Name);
 
-	controllerToolBar->setVisible(defaults.mainWindow_Toolbar_Visible);
+	controllerToolBar->setVisible(defaults.mainWindow_ControllerToolbar_Visible);
+	utilitiesToolBar->setVisible(defaults.mainWindow_UtilitiesToolbar_Visible);
+	controllerTableView->setVisible(defaults.mainWindow_EntitiesList_Visible);
 	entityInspectorDockWidget->setVisible(defaults.mainWindow_Inspector_Visible);
 	loggerDockWidget->setVisible(defaults.mainWindow_Logger_Visible);
 
@@ -245,14 +250,19 @@ void MainWindowImpl::setupAdvancedView(Defaults const& defaults)
 	avdecc::ChannelConnectionManager::getInstance();
 }
 
+void MainWindowImpl::setupMatrixProfile()
+{
+	setupAdvancedView(VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
+}
+
 void MainWindowImpl::setupStandardProfile()
 {
-	setupAdvancedView(Defaults{ true, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
+	setupAdvancedView(VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
 }
 
 void MainWindowImpl::setupDeveloperProfile()
 {
-	setupAdvancedView(Defaults{});
+	setupAdvancedView(VisibilityDefaults{});
 }
 
 void MainWindowImpl::setupProfile()
@@ -273,6 +283,9 @@ void MainWindowImpl::setupProfile()
 			break;
 		case profiles::ProfileType::Developer:
 			setupDeveloperProfile();
+			break;
+		case profiles::ProfileType::Matrix:
+			setupMatrixProfile();
 			break;
 	}
 }
