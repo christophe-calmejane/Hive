@@ -216,10 +216,16 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	// Load main window
+	// Load main window (and all associated resources) while the splashscreen is displayed
 	auto window = MainWindow{ mustResetViewSettings };
-	//window.show(); // This forces the creation of the window // Don't try to show it, it blinks sometimes (and window.hide() seems to create the window too)
-	window.hide(); // Immediately hides it (even though it was not actually shown since processEvents was not called)
+
+#if defined(Q_OS_MACOS)
+	// The native window has to be created before the first processEvents() for the initial position and size to be correctly set.
+	// On macOS show() is required because obj-c lazy init is being used to create the view (move/resize will be ignored until actually created).
+	// We don't want to do the same on Windows/Linux as the window would actually be shown then hidden immediately causing a small blink.
+	window.show();
+	window.hide();
+#endif
 
 	/* Loading done - Keep the splashscreen displayed until specified delay */
 	do
@@ -231,6 +237,7 @@ int main(int argc, char* argv[])
 
 	/* Ok, kill the splashscreen and show the main window */
 	splash.close();
+	window.setReady();
 	window.show();
 
 	auto retValue = int{ 0u };

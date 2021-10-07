@@ -1216,56 +1216,59 @@ void MainWindow::showEvent(QShowEvent* event)
 {
 	QMainWindow::showEvent(event);
 
-	static std::once_flag once;
-	std::call_once(once,
-		[this]()
-		{
-			_pImpl->_shown = true;
-			auto& settings = settings::SettingsManager::getInstance();
+	if (_isReady)
+	{
+		static std::once_flag once;
+		std::call_once(once,
+			[this]()
+			{
+				_pImpl->_shown = true;
+				auto& settings = settings::SettingsManager::getInstance();
 
-			// Start Sparkle
-			{
-				Sparkle::getInstance().start();
-			}
-			// Check if we have a network interface selected and start controller
-			{
-				auto const interfaceID = _pImpl->_interfaceComboBox.currentData().toString();
-				if (interfaceID.isEmpty())
+				// Start Sparkle
 				{
+					Sparkle::getInstance().start();
+				}
+				// Check if we have a network interface selected and start controller
+				{
+					auto const interfaceID = _pImpl->_interfaceComboBox.currentData().toString();
+					if (interfaceID.isEmpty())
+					{
+						// Postpone the dialog creation
+						QTimer::singleShot(0,
+							[this]()
+							{
+								QMessageBox::warning(this, "", "No Network Interface selected.\nPlease choose one in the Toolbar.");
+							});
+					}
+					else
+					{
+						// Postpone Controller start
+						QTimer::singleShot(0,
+							[this]()
+							{
+								_pImpl->currentControllerChanged();
+							});
+					}
+				}
+				// Check if this is the first time we launch a new Hive version
+				{
+					auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
+					settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
+
+					// Do not show the ChangeLog during first ever launch, or if the last launched version is the same than current one
+					if (lastVersion.isEmpty() || lastVersion == hive::internals::cmakeVersionString)
+						return;
+
 					// Postpone the dialog creation
 					QTimer::singleShot(0,
-						[this]()
+						[this, versionString = std::move(lastVersion)]()
 						{
-							QMessageBox::warning(this, "", "No Network Interface selected.\nPlease choose one in the Toolbar.");
+							_pImpl->showChangeLog("What's New", versionString);
 						});
 				}
-				else
-				{
-					// Postpone Controller start
-					QTimer::singleShot(0,
-						[this]()
-						{
-							_pImpl->currentControllerChanged();
-						});
-				}
-			}
-			// Check if this is the first time we launch a new Hive version
-			{
-				auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
-				settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
-
-				// Do not show the ChangeLog during first ever launch, or if the last launched version is the same than current one
-				if (lastVersion.isEmpty() || lastVersion == hive::internals::cmakeVersionString)
-					return;
-
-				// Postpone the dialog creation
-				QTimer::singleShot(0,
-					[this, versionString = std::move(lastVersion)]()
-					{
-						_pImpl->showChangeLog("What's New", versionString);
-					});
-			}
-		});
+			});
+	}
 }
 
 void MainWindow::closeEvent(QCloseEvent* event)
@@ -1545,4 +1548,9 @@ MainWindow::MainWindow(bool const mustResetViewSettings, QWidget* parent)
 MainWindow::~MainWindow() noexcept
 {
 	delete _pImpl;
+}
+
+void MainWindow::setReady() noexcept
+{
+	_isReady = true;
 }
