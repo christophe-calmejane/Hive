@@ -32,6 +32,9 @@ public:
 	MainWindow(bool const mustResetViewSettings, QWidget* parent = nullptr);
 	virtual ~MainWindow() noexcept;
 
+	// Public methods
+	void setReady() noexcept;
+
 	// Deleted compiler auto-generated methods
 	MainWindow(MainWindow const&) = delete;
 	MainWindow(MainWindow&&) = delete;
@@ -47,4 +50,5 @@ private:
 
 	// Private variables
 	MainWindowImpl* _pImpl{ nullptr };
+	bool _isReady{ false };
 };
