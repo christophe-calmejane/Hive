@@ -33,8 +33,14 @@ struct QStringHash
 
 namespace settings
 {
-class SettingsManagerImpl : public SettingsManager
+class SettingsManagerImpl final : public SettingsManager
 {
+public:
+	virtual void destroy() noexcept override
+	{
+		delete this;
+	}
+
 private:
 	virtual void registerSetting(SettingDefault const& setting) noexcept override
 	{
@@ -68,7 +74,7 @@ private:
 		return _settings.value(name);
 	}
 
-	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification) noexcept override
+	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification) const noexcept override
 	{
 		if (AVDECC_ASSERT_WITH_RET(_settings.contains(name), "registerSettingObserver not allowed for a Setting without initial Value"))
 		{
@@ -88,7 +94,7 @@ private:
 		}
 	}
 
-	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) noexcept override
+	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) const noexcept override
 	{
 		auto const observersIt = _observers.find(name);
 		if (observersIt != _observers.end())
@@ -103,7 +109,7 @@ private:
 		}
 	}
 
-	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) noexcept override
+	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) const noexcept override
 	{
 		if (AVDECC_ASSERT_WITH_RET(_settings.contains(name), "triggerSettingObserver not allowed for a Setting without initial Value"))
 		{
@@ -125,14 +131,13 @@ private:
 
 	// Private Members
 	QSettings _settings{};
-	std::unordered_map<QString, Subject, QStringHash> _observers{};
+	mutable std::unordered_map<QString, Subject, QStringHash> _observers{};
 };
 
-SettingsManager& SettingsManager::getInstance() noexcept
+/** SettingsManager Entry point */
+SettingsManager* SettingsManager::createRawSettingsManager()
 {
-	static SettingsManagerImpl s_Manager{};
-
-	return s_Manager;
+	return new SettingsManagerImpl();
 }
 
 } // namespace settings

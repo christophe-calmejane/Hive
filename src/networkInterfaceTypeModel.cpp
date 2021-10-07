@@ -47,14 +47,14 @@ public:
 			// Update associated setting if requested
 			if (updateSettings)
 			{
-				auto& settings = settings::SettingsManager::getInstance();
+				auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 				switch (type)
 				{
 					case la::avdecc::networkInterface::Interface::Type::Ethernet:
-						settings.setValue(settings::Network_InterfaceTypeEthernet.name, active);
+						settings->setValue(settings::Network_InterfaceTypeEthernet.name, active);
 						break;
 					case la::avdecc::networkInterface::Interface::Type::WiFi:
-						settings.setValue(settings::Network_InterfaceTypeWiFi.name, active);
+						settings->setValue(settings::Network_InterfaceTypeWiFi.name, active);
 						break;
 					default:
 						AVDECC_ASSERT(false, "Unhandled interface type");
@@ -110,17 +110,17 @@ NetworkInterfaceTypeModel::NetworkInterfaceTypeModel(QObject* parent)
 	: QAbstractListModel{ parent }
 	, d_ptr{ new NetworkInterfaceTypeModelPrivate{ this } }
 {
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
-	settings.registerSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->registerSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
+	settings->registerSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
 }
 
 NetworkInterfaceTypeModel::~NetworkInterfaceTypeModel()
 {
 	// Remove settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
-	settings.unregisterSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->unregisterSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
+	settings->unregisterSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
 }
 
 void NetworkInterfaceTypeModel::setActive(la::avdecc::networkInterface::Interface::Type const type, bool const active)

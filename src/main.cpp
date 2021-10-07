@@ -129,7 +129,9 @@ int main(int argc, char* argv[])
 #endif
 
 	// Register settings (creating default value if none was saved before)
-	auto& settings = settings::SettingsManager::getInstance();
+	auto settingsManager = settings::SettingsManager::create();
+	auto& settings = *settingsManager;
+	app.setProperty(settings::SettingsManager::PropertyName, QVariant::fromValue(settingsManager.get()));
 
 	// General
 	settings.registerSetting(settings::LastLaunchedVersion);

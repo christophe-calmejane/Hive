@@ -76,9 +76,9 @@ ActiveNetworkInterfacesModel::ActiveNetworkInterfacesModel(QObject* parent)
 	: QSortFilterProxyModel{ parent }
 	, d_ptr{ new ActiveNetworkInterfacesModelPrivate{ this } }
 {
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
-	settings.registerSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->registerSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
+	settings->registerSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
 
 	setSourceModel(&d_ptr->_model);
 
@@ -89,9 +89,9 @@ ActiveNetworkInterfacesModel::ActiveNetworkInterfacesModel(QObject* parent)
 ActiveNetworkInterfacesModel::~ActiveNetworkInterfacesModel()
 {
 	// Remove settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
-	settings.unregisterSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->unregisterSettingObserver(settings::Network_InterfaceTypeWiFi.name, d_ptr.get());
+	settings->unregisterSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
 }
 
 bool ActiveNetworkInterfacesModel::isEnabled(QString const& id) const noexcept
