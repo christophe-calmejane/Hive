@@ -83,13 +83,13 @@ View::View(QWidget* parent)
 	connect(this, &QTableView::customContextMenuRequested, this, &View::onCustomContextMenuRequested);
 
 	// Configure settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowTip.name, this);
-	settings.registerSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
-	settings.registerSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
-	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
-	settings.registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
-	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->registerSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowTip.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 
 	// react on connection completed signals to show error messages.
 	auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
@@ -99,13 +99,13 @@ View::View(QWidget* parent)
 View::~View()
 {
 	// Remove settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowTip.name, this);
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
-	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowTip.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_AlwaysShowArrowEnd.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
 void View::onIntersectionClicked(QModelIndex const& index)

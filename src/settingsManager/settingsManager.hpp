@@ -23,6 +23,9 @@
 #include <QVariant>
 #include <la/avdecc/utils.hpp>
 
+#include <memory>
+#include <optional>
+
 namespace settings
 {
 class SettingsManager
@@ -31,6 +34,8 @@ protected:
 	using Subject = la::avdecc::utils::TypedSubject<struct SubjectTag, std::mutex>;
 
 public:
+	static constexpr auto PropertyName = "SettingsManager";
+	using UniquePointer = std::unique_ptr<SettingsManager, void (*)(SettingsManager*)>;
 	using Setting = QString;
 	struct SettingDefault
 	{
@@ -44,21 +49,55 @@ public:
 		virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept = 0;
 	};
 
-	static SettingsManager& getInstance() noexcept;
+	/**
+	* @brief Factory method to create a new SettingsManager.
+	* @details Creates a new SettingsManager as a unique pointer.
+	* @param[in] iniFilePath If specified, Settings file to use. Otherwise the default file will be used.
+	* @return A new SettingsManager as a SettingsManager::UniquePointer.
+	*/
+	static UniquePointer create(std::optional<QString> const& iniFilePath)
+	{
+		auto deleter = [](SettingsManager* self)
+		{
+			self->destroy();
+		};
+		return UniquePointer(createRawSettingsManager(iniFilePath), deleter);
+	}
+
+	//static SettingsManager& getInstance() noexcept;
 
 	virtual void registerSetting(SettingDefault const& setting) noexcept = 0;
 
 	virtual void setValue(Setting const& name, QVariant const& value, Observer const* const dontNotifyObserver = nullptr) noexcept = 0;
 	virtual QVariant getValue(Setting const& name) const noexcept = 0;
 
-	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification = true) noexcept = 0;
-	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
-	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) noexcept = 0;
+	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification = true) const noexcept = 0;
+	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) const noexcept = 0;
+	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) const noexcept = 0;
 
 	virtual QString getFilePath() const noexcept = 0;
 
+	// Deleted compiler auto-generated methods
+	SettingsManager(SettingsManager&&) = delete;
+	SettingsManager(SettingsManager const&) = delete;
+	SettingsManager& operator=(SettingsManager const&) = delete;
+	SettingsManager& operator=(SettingsManager&&) = delete;
+
 protected:
-	SettingsManager() = default;
+	/** Constructor */
+	SettingsManager() noexcept = default;
+
+	/** Destructor */
+	virtual ~SettingsManager() noexcept = default;
+
+private:
+	/** Entry point */
+	static SettingsManager* createRawSettingsManager(std::optional<QString> const& iniFilePath);
+
+	/** Destroy method for COM-like interface */
+	virtual void destroy() noexcept = 0;
 };
+
+Q_DECLARE_METATYPE(settings::SettingsManager*);
 
 } // namespace settings

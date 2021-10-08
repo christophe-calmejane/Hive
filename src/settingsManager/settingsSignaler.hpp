@@ -22,7 +22,11 @@
 #include "settingsManager.hpp"
 
 #include <QObject>
+#include <QApplication>
 
+/**
+ * @brief Helper class to convert Settings Observer events to Qt Signals
+*/
 class SettingsSignaler : public QObject, public settings::SettingsManager::Observer
 {
 	Q_OBJECT
@@ -38,8 +42,8 @@ public:
 	{
 		if (!_started)
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
+			auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 			_started = true;
 		}
 	}
@@ -48,8 +52,8 @@ public:
 	{
 		if (_started)
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
+			auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 			_started = false;
 		}
 	}

@@ -17,6 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "internals/config.hpp"
 #include "settingsManager.hpp"
 #include <la/avdecc/utils.hpp>
 #include <QSettings>
@@ -33,20 +34,38 @@ struct QStringHash
 
 namespace settings
 {
-class SettingsManagerImpl : public SettingsManager
+class SettingsManagerImpl final : public SettingsManager
 {
+public:
+	SettingsManagerImpl(std::optional<QString> const& iniFilePath) noexcept
+	{
+		if (iniFilePath)
+		{
+			_settings = std::make_unique<QSettings>(*iniFilePath, QSettings::Format::IniFormat);
+		}
+		else
+		{
+			_settings = std::make_unique<QSettings>(QSettings::Format::IniFormat, QSettings::Scope::UserScope, hive::internals::organizationName, hive::internals::applicationShortName);
+		}
+	}
+
+	virtual void destroy() noexcept override
+	{
+		delete this;
+	}
+
 private:
 	virtual void registerSetting(SettingDefault const& setting) noexcept override
 	{
-		if (!_settings.contains(setting.name))
+		if (!_settings->contains(setting.name))
 		{
-			_settings.setValue(setting.name, setting.initialValue);
+			_settings->setValue(setting.name, setting.initialValue);
 		}
 	}
 
 	virtual void setValue(Setting const& name, QVariant const& value, Observer const* const dontNotifyObserver) noexcept override
 	{
-		_settings.setValue(name, value);
+		_settings->setValue(name, value);
 
 		// Notify observers
 		auto const observersIt = _observers.find(name);
@@ -65,12 +84,12 @@ private:
 
 	virtual QVariant getValue(Setting const& name) const noexcept override
 	{
-		return _settings.value(name);
+		return _settings->value(name);
 	}
 
-	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification) noexcept override
+	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification) const noexcept override
 	{
-		if (AVDECC_ASSERT_WITH_RET(_settings.contains(name), "registerSettingObserver not allowed for a Setting without initial Value"))
+		if (AVDECC_ASSERT_WITH_RET(_settings->contains(name), "registerSettingObserver not allowed for a Setting without initial Value"))
 		{
 			auto& observers = _observers[name];
 			try
@@ -78,7 +97,7 @@ private:
 				observers.registerObserver(observer);
 				if (triggerFirstNotification)
 				{
-					auto const value = _settings.value(name);
+					auto const value = _settings->value(name);
 					la::avdecc::utils::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, value);
 				}
 			}
@@ -88,7 +107,7 @@ private:
 		}
 	}
 
-	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) noexcept override
+	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) const noexcept override
 	{
 		auto const observersIt = _observers.find(name);
 		if (observersIt != _observers.end())
@@ -103,16 +122,16 @@ private:
 		}
 	}
 
-	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) noexcept override
+	virtual void triggerSettingObserver(Setting const& name, Observer* const observer) const noexcept override
 	{
-		if (AVDECC_ASSERT_WITH_RET(_settings.contains(name), "triggerSettingObserver not allowed for a Setting without initial Value"))
+		if (AVDECC_ASSERT_WITH_RET(_settings->contains(name), "triggerSettingObserver not allowed for a Setting without initial Value"))
 		{
 			auto const observersIt = _observers.find(name);
 			if (observersIt != _observers.end())
 			{
 				if (observersIt->second.isObserverRegistered(observer))
 				{
-					la::avdecc::utils::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, _settings.value(name));
+					la::avdecc::utils::invokeProtectedMethod(&Observer::onSettingChanged, observer, name, _settings->value(name));
 				}
 			}
 		}
@@ -120,19 +139,18 @@ private:
 
 	virtual QString getFilePath() const noexcept override
 	{
-		return _settings.fileName();
+		return _settings->fileName();
 	}
 
 	// Private Members
-	QSettings _settings{};
-	std::unordered_map<QString, Subject, QStringHash> _observers{};
+	std::unique_ptr<QSettings> _settings{ nullptr };
+	mutable std::unordered_map<QString, Subject, QStringHash> _observers{};
 };
 
-SettingsManager& SettingsManager::getInstance() noexcept
+/** SettingsManager Entry point */
+SettingsManager* SettingsManager::createRawSettingsManager(std::optional<QString> const& iniFilePath)
 {
-	static SettingsManagerImpl s_Manager{};
-
-	return s_Manager;
+	return new SettingsManagerImpl(iniFilePath);
 }
 
 } // namespace settings

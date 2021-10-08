@@ -223,15 +223,15 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::statisticsErrorCounterChanged);
 
 		// Configure settings observers
-		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
+		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+		settings->registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
 
 	~ControlledEntityTreeWidgetPrivate()
 	{
 		// Remove settings observers
-		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
+		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+		settings->unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	}
 
 	Q_SLOT void controllerOffline()

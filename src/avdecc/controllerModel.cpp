@@ -271,17 +271,17 @@ public:
 		connect(&logoCache, &hive::widgetModelsLibrary::EntityLogoCache::imageChanged, this, &ControllerModelPrivate::handleImageChanged);
 
 		// Register to settings::SettingsManager
-		auto& settings = settings::SettingsManager::getInstance();
-		settings.registerSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
-		settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
+		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+		settings->registerSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
+		settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 	}
 
 	virtual ~ControllerModelPrivate()
 	{
 		// Remove settings observers
-		auto& settings = settings::SettingsManager::getInstance();
-		settings.unregisterSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
-		settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
+		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+		settings->unregisterSettingObserver(settings::General_AutomaticPNGDownloadEnabled.name, this);
+		settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 	}
 
 	int rowCount() const

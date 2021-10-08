@@ -270,9 +270,9 @@ void MainWindowImpl::setupDeveloperProfile()
 void MainWindowImpl::setupProfile()
 {
 	// Update the UI and other stuff, based on the current Profile
-	auto& settings = settings::SettingsManager::getInstance();
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	auto const userProfile = settings.getValue(settings::UserProfile.name).value<profiles::ProfileType>();
+	auto const userProfile = settings->getValue(settings::UserProfile.name).value<profiles::ProfileType>();
 
 	switch (userProfile)
 	{
@@ -294,9 +294,9 @@ void MainWindowImpl::setupProfile()
 
 void MainWindowImpl::currentControllerChanged()
 {
-	auto& settings = settings::SettingsManager::getInstance();
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	auto const protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const protocolType = settings->getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	// Check for No ProtocolInterface
@@ -323,7 +323,7 @@ void MainWindowImpl::currentControllerChanged()
 		return;
 	}
 
-	settings.setValue(settings::InterfaceID, interfaceID);
+	settings->setValue(settings::InterfaceID, interfaceID);
 
 	try
 	{
@@ -369,8 +369,8 @@ void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 
 void MainWindowImpl::saveControllerDynamicHeaderState()
 {
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 }
 
 // Private methods
@@ -405,6 +405,8 @@ void MainWindowImpl::createViewMenu()
 
 void MainWindowImpl::createToolbars()
 {
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+
 	// Controller Toolbar
 	{
 		auto* interfaceLabel = new QLabel("Interface");
@@ -413,7 +415,7 @@ void MainWindowImpl::createToolbars()
 		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
 
 		// The combobox takes ownership of the item delegate
-		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings::SettingsManager::getInstance().getValue(settings::General_ThemeColorIndex.name).toInt()) };
+		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
 		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
 		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, interfaceComboBoxItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
@@ -461,6 +463,8 @@ void MainWindowImpl::createToolbars()
 
 void MainWindowImpl::createControllerView()
 {
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+
 	controllerTableView->setModel(&_controllerProxyModel);
 	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -479,7 +483,7 @@ void MainWindowImpl::createControllerView()
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
 
 	// The table view does not take ownership on the item delegate
-	auto* errorItemDelegate{ new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings::SettingsManager::getInstance().getValue(settings::General_ThemeColorIndex.name).toInt()), _parent } };
+	auto* errorItemDelegate{ new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()), _parent } };
 	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), errorItemDelegate);
 	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
@@ -541,11 +545,11 @@ void MainWindowImpl::checkNpfStatus()
 
 void MainWindowImpl::loadSettings()
 {
-	auto& settings = settings::SettingsManager::getInstance();
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	LOG_HIVE_DEBUG("Settings location: " + settings.getFilePath());
+	LOG_HIVE_DEBUG("Settings location: " + settings->getFilePath());
 
-	auto const networkInterfaceId = settings.getValue(settings::InterfaceID).toString();
+	auto const networkInterfaceId = settings->getValue(settings::InterfaceID).toString();
 	auto const networkInterfaceIndex = _interfaceComboBox.findData(networkInterfaceId);
 
 	// Select the interface from the settings, if present and active
@@ -559,7 +563,7 @@ void MainWindowImpl::loadSettings()
 	}
 
 	// Check if currently saved ProtocolInterface is supported
-	auto protocolType = settings.getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto protocolType = settings->getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
 	auto supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
 	if (!supportedTypes.test(protocolType))
 	{
@@ -588,31 +592,31 @@ void MainWindowImpl::loadSettings()
 			protocolType = la::avdecc::protocol::ProtocolInterface::Type::None;
 		}
 		// Save the new ProtocolInterface to the settings, before we call registerSettingObserver
-		settings.setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+		settings->setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
 	}
 
 	// Configure connectionMatrix mode
-	auto const channelMode = settings.getValue(settings::ConnectionMatrix_ChannelMode.name).toBool();
+	auto const channelMode = settings->getValue(settings::ConnectionMatrix_ChannelMode.name).toBool();
 	auto* action = channelMode ? actionChannelModeRouting : actionStreamModeRouting;
 	action->setChecked(true);
 
 	if (!_mustResetViewSettings)
 	{
-		_controllerDynamicHeaderView.restoreState(settings.getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
-		loggerView->header()->restoreState(settings.getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
-		entityInspector->restoreState(settings.getValue(settings::EntityInspectorState).toByteArray());
-		splitter->restoreState(settings.getValue(settings::SplitterState).toByteArray());
+		_controllerDynamicHeaderView.restoreState(settings->getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
+		loggerView->header()->restoreState(settings->getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
+		entityInspector->restoreState(settings->getValue(settings::EntityInspectorState).toByteArray());
+		splitter->restoreState(settings->getValue(settings::SplitterState).toByteArray());
 	}
 
 	// Configure settings observers
-	settings.registerSettingObserver(settings::Network_ProtocolType.name, this);
-	settings.registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
-	settings.registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
-	settings.registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
-	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
-	settings.registerSettingObserver(settings::General_ThemeColorIndex.name, this);
-	settings.registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
-	settings.registerSettingObserver(settings::General_CheckForBetaVersions.name, this);
+	settings->registerSettingObserver(settings::Network_ProtocolType.name, this);
+	settings->registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
+	settings->registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+	settings->registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
+	settings->registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
+	settings->registerSettingObserver(settings::General_CheckForBetaVersions.name, this);
 
 	// Start the SettingsSignaler
 	_settingsSignaler.start();
@@ -661,8 +665,8 @@ void MainWindowImpl::connectSignals()
 		[this](bool checked)
 		{
 			// Update settings
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.setValue(settings::ConnectionMatrix_ChannelMode.name, checked);
+			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->setValue(settings::ConnectionMatrix_ChannelMode.name, checked);
 			// Toggle
 			auto* action = checked ? actionChannelModeRouting : actionStreamModeRouting;
 			action->setChecked(true);
@@ -943,22 +947,22 @@ void MainWindowImpl::connectSignals()
 	connect(entityInspector, &EntityInspector::stateChanged, this,
 		[this]()
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.setValue(settings::EntityInspectorState, entityInspector->saveState());
+			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->setValue(settings::EntityInspectorState, entityInspector->saveState());
 		});
 
 	connect(loggerView->header(), &qtMate::widgets::DynamicHeaderView::sectionChanged, this,
 		[this]()
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.setValue(settings::LoggerDynamicHeaderViewState, loggerView->header()->saveState());
+			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->setValue(settings::LoggerDynamicHeaderViewState, loggerView->header()->saveState());
 		});
 
 	connect(splitter, &QSplitter::splitterMoved, this,
 		[this]()
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			settings.setValue(settings::SplitterState, splitter->saveState());
+			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->setValue(settings::SplitterState, splitter->saveState());
 		});
 
 	// Connect ControllerManager events
@@ -1084,8 +1088,8 @@ void MainWindowImpl::connectSignals()
 		[this]()
 		{
 			// Toggle mode (stream based vs. channel based routing matrix) in settings
-			auto& settings = settings::SettingsManager::getInstance();
-			auto const channelModeActiveInverted = !settings.getValue(settings::ConnectionMatrix_ChannelMode.name).toBool();
+			auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			auto const channelModeActiveInverted = !settings->getValue(settings::ConnectionMatrix_ChannelMode.name).toBool();
 			auto* action = channelModeActiveInverted ? actionChannelModeRouting : actionStreamModeRouting;
 			action->setChecked(true);
 		});
@@ -1095,8 +1099,8 @@ void MainWindowImpl::connectSignals()
 	connect(reloadStyleSheet, &QShortcut::activated, _parent,
 		[this]()
 		{
-			auto& settings = settings::SettingsManager::getInstance();
-			auto const themeColorIndex = settings.getValue(settings::General_ThemeColorIndex.name).toInt();
+			auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			auto const themeColorIndex = settings->getValue(settings::General_ThemeColorIndex.name).toInt();
 			auto const colorName = qtMate::material::color::Palette::name(themeColorIndex);
 			updateStyleSheet(colorName, QString{ RESOURCES_ROOT_DIR } + "/style.qss");
 			LOG_HIVE_DEBUG("StyleSheet reloaded");
@@ -1239,7 +1243,7 @@ void MainWindow::showEvent(QShowEvent* event)
 			[this]()
 			{
 				_pImpl->_shown = true;
-				auto& settings = settings::SettingsManager::getInstance();
+				auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
 				// Start Sparkle
 				{
@@ -1269,8 +1273,8 @@ void MainWindow::showEvent(QShowEvent* event)
 				}
 				// Check if this is the first time we launch a new Hive version
 				{
-					auto lastVersion = settings.getValue(settings::LastLaunchedVersion.name).toString();
-					settings.setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
+					auto lastVersion = settings->getValue(settings::LastLaunchedVersion.name).toString();
+					settings->setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
 
 					// Do not show the ChangeLog during first ever launch, or if the last launched version is the same than current one
 					if (lastVersion.isEmpty() || lastVersion == hive::internals::cmakeVersionString)
@@ -1289,21 +1293,21 @@ void MainWindow::showEvent(QShowEvent* event)
 
 void MainWindow::closeEvent(QCloseEvent* event)
 {
-	auto& settings = settings::SettingsManager::getInstance();
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
 	// Save window geometry
-	settings.setValue(settings::MainWindowGeometry, saveGeometry());
-	settings.setValue(settings::MainWindowState, saveState());
+	settings->setValue(settings::MainWindowGeometry, saveGeometry());
+	settings->setValue(settings::MainWindowState, saveState());
 
 	// Remove settings observers
-	settings.unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
-	settings.unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
-	settings.unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
-	settings.unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
-	settings.unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
-	settings.unregisterSettingObserver(settings::General_AutomaticCheckForUpdates.name, _pImpl);
-	settings.unregisterSettingObserver(settings::General_CheckForBetaVersions.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
+	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
+	settings->unregisterSettingObserver(settings::General_AutomaticCheckForUpdates.name, _pImpl);
+	settings->unregisterSettingObserver(settings::General_CheckForBetaVersions.name, _pImpl);
 
 	qApp->closeAllWindows();
 
@@ -1555,9 +1559,9 @@ MainWindow::MainWindow(bool const mustResetViewSettings, QWidget* parent)
 	// Restore geometry
 	if (!mustResetViewSettings)
 	{
-		auto& settings = settings::SettingsManager::getInstance();
-		restoreGeometry(settings.getValue(settings::MainWindowGeometry).toByteArray());
-		restoreState(settings.getValue(settings::MainWindowState).toByteArray());
+		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+		restoreGeometry(settings->getValue(settings::MainWindowGeometry).toByteArray());
+		restoreState(settings->getValue(settings::MainWindowState).toByteArray());
 	}
 }
 

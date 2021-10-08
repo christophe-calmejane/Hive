@@ -27,6 +27,7 @@
 #include <QFile>
 #include <QSplashScreen>
 #include <QDesktopWidget>
+#include <QCommandLineParser>
 
 #include <iostream>
 #include <chrono>
@@ -128,8 +129,25 @@ int main(int argc, char* argv[])
 	}
 #endif
 
+	// Parse command line
+	auto parser = QCommandLineParser{};
+	auto const settingsFileOption = QCommandLineOption{ "settings", "Use the specified Settings file (.ini)", "Hive Settings" };
+	parser.addOption(settingsFileOption);
+	parser.addHelpOption();
+	parser.addVersionOption();
+
+	parser.process(app);
+
 	// Register settings (creating default value if none was saved before)
-	auto& settings = settings::SettingsManager::getInstance();
+	auto const settingsFileParsed = parser.value(settingsFileOption);
+	auto settingsFile = std::optional<QString>{};
+	if (!settingsFileParsed.isEmpty())
+	{
+		settingsFile = settingsFileParsed;
+	}
+	auto settingsManager = settings::SettingsManager::create(settingsFile);
+	auto& settings = *settingsManager;
+	app.setProperty(settings::SettingsManager::PropertyName, QVariant::fromValue(settingsManager.get()));
 
 	// General
 	settings.registerSetting(settings::LastLaunchedVersion);
