@@ -24,6 +24,7 @@
 #include <la/avdecc/utils.hpp>
 
 #include <memory>
+#include <optional>
 
 namespace settings
 {
@@ -51,15 +52,16 @@ public:
 	/**
 	* @brief Factory method to create a new SettingsManager.
 	* @details Creates a new SettingsManager as a unique pointer.
+	* @param[in] iniFilePath If specified, Settings file to use. Otherwise the default file will be used.
 	* @return A new SettingsManager as a SettingsManager::UniquePointer.
 	*/
-	static UniquePointer create()
+	static UniquePointer create(std::optional<QString> const& iniFilePath)
 	{
 		auto deleter = [](SettingsManager* self)
 		{
 			self->destroy();
 		};
-		return UniquePointer(createRawSettingsManager(), deleter);
+		return UniquePointer(createRawSettingsManager(iniFilePath), deleter);
 	}
 
 	//static SettingsManager& getInstance() noexcept;
@@ -90,7 +92,7 @@ protected:
 
 private:
 	/** Entry point */
-	static SettingsManager* createRawSettingsManager();
+	static SettingsManager* createRawSettingsManager(std::optional<QString> const& iniFilePath);
 
 	/** Destroy method for COM-like interface */
 	virtual void destroy() noexcept = 0;
