@@ -28,7 +28,7 @@
 
 namespace settings
 {
-static constexpr auto ViewSettingsCurrentVersion = 2;
+static constexpr auto ViewSettingsCurrentVersion = 3;
 
 // Settings with a default initial value
 static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVersion", "" };

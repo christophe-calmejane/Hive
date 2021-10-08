@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - [New 'Matrix' layout with only the connection matrix displayed by default](https://github.com/christophe-calmejane/Hive/issues/109)
 
+### Changed
+- Discovered Entities list is now dockable, with show/hide option from the View menu
+
 ### Fixed
 - [Main window's size not properly restored on macOS](https://github.com/christophe-calmejane/Hive/issues/108)
 

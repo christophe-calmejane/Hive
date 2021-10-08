@@ -232,7 +232,7 @@ void MainWindowImpl::setupAdvancedView(VisibilityDefaults const& defaults)
 
 	controllerToolBar->setVisible(defaults.mainWindow_ControllerToolbar_Visible);
 	utilitiesToolBar->setVisible(defaults.mainWindow_UtilitiesToolbar_Visible);
-	controllerTableView->setVisible(defaults.mainWindow_EntitiesList_Visible);
+	entitiesDockWidget->setVisible(defaults.mainWindow_EntitiesList_Visible);
 	entityInspectorDockWidget->setVisible(defaults.mainWindow_Inspector_Visible);
 	loggerDockWidget->setVisible(defaults.mainWindow_Logger_Visible);
 
@@ -242,6 +242,8 @@ void MainWindowImpl::setupAdvancedView(VisibilityDefaults const& defaults)
 	// Configure Widget parameters
 	splitter->setStretchFactor(0, 0); // Entities List has less weight than
 	splitter->setStretchFactor(1, 1); // the Matrix, as far as expand is concerned
+	_parent->setCorner(Qt::TopLeftCorner, Qt::LeftDockWidgetArea); // Give priority to vertical dock widget
+	_parent->setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea); // Give priority to vertical dock widget
 
 	// Connect all signals
 	connectSignals();
@@ -392,7 +394,8 @@ void MainWindowImpl::createViewMenu()
 	menuView->addAction(utilitiesToolBar->toggleViewAction());
 	menuView->addSeparator();
 
-	// Entity Inspector visibility toggle
+	// Main widgets visibility toggle
+	menuView->addAction(entitiesDockWidget->toggleViewAction());
 	menuView->addAction(entityInspectorDockWidget->toggleViewAction());
 	menuView->addSeparator();
 
