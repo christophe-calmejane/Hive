@@ -34,6 +34,7 @@
 #include <la/avdecc/logger.hpp>
 
 #include <QFont>
+#include <QApplication>
 
 #include <algorithm>
 #include <array>

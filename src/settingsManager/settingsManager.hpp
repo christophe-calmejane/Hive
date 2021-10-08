@@ -98,6 +98,6 @@ private:
 	virtual void destroy() noexcept = 0;
 };
 
-Q_DECLARE_METATYPE(settings::SettingsManager*);
-
 } // namespace settings
+
+Q_DECLARE_METATYPE(settings::SettingsManager*);

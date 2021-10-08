@@ -21,6 +21,7 @@
 #include "connectionMatrix/legendDialog.hpp"
 #include <QShortcut>
 #include <QPainter>
+#include <QApplication>
 
 namespace connectionMatrix
 {

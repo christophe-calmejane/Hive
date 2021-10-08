@@ -22,6 +22,8 @@
 
 #include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
 
+#include <QApplication>
+
 #include <unordered_set>
 
 class ActiveNetworkInterfacesModelPrivate : private settings::SettingsManager::Observer

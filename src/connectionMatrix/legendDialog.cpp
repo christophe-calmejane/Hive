@@ -25,6 +25,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QPainter>
+#include <QApplication>
 
 namespace connectionMatrix
 {
