@@ -17,11 +17,17 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "mainWindow.hpp"
+#include "internals/config.hpp"
+#include "settingsManager/settings.hpp"
+#include "profiles/profileSelectionDialog.hpp"
+
 #include <la/avdecc/utils.hpp>
+#include <sparkleHelper/sparkleHelper.hpp>
+#include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QApplication>
 #include <QFontDatabase>
-
 #include <QSharedMemory>
 #include <QMessageBox>
 #include <QFile>
@@ -31,14 +37,6 @@
 
 #include <iostream>
 #include <chrono>
-
-#include "mainWindow.hpp"
-#include "sparkleHelper/sparkleHelper.hpp"
-#include "internals/config.hpp"
-#include "settingsManager/settings.hpp"
-#include "profiles/profileSelectionDialog.hpp"
-
-#include <hive/modelsLibrary/controllerManager.hpp>
 
 #ifdef DEBUG
 #	define SPLASH_DELAY 0

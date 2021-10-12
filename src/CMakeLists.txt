@@ -7,9 +7,6 @@ setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
 
 # Find dependencies
 find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
-if(ENABLE_HIVE_FEATURE_SPARKLE)
-	find_package(Sparkle REQUIRED)
-endif()
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -98,7 +95,6 @@ set(HEADER_FILES_COMMON
 	settingsManager/settingsManager.hpp
 	settingsManager/settingsSignaler.hpp
 	settingsManager/settings.hpp
-	sparkleHelper/sparkleHelper.hpp
 	statistics/entityStatisticsTreeWidgetItem.hpp
 	settingsDialog.hpp
 	defaults.hpp
@@ -199,25 +195,6 @@ set(SOURCE_FILES_APP
 	main.cpp
 )
 
-if(NOT ENABLE_HIVE_FEATURE_SPARKLE)
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_dummy.cpp
-	)
-elseif(WIN32)
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_win32.cpp
-	)
-elseif(APPLE)
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_mac.mm
-	)
-	list(APPEND ADD_LINK_LIBS "-framework Foundation")
-else()
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_unix.cpp
-	)
-endif()
-
 # Group source files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
 source_group("Header Files" FILES ${HEADER_FILES_GENERATED})
@@ -250,7 +227,8 @@ if(ADD_LINK_LIBS)
 endif()
 if(ENABLE_HIVE_FEATURE_SPARKLE)
 	target_compile_options(${PROJECT_NAME}_static PUBLIC -DUSE_SPARKLE)
-	target_link_libraries(${PROJECT_NAME}_static PUBLIC Sparkle::lib)
+	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
+	target_link_libraries(${PROJECT_NAME}_static PUBLIC SparkleHelper::lib)
 endif()
 
 # Include directories

@@ -139,104 +139,6 @@ deploySymbols()
 	fi
 }
 
-getSignatureHash()
-{
-	local filePath="$1"
-	local privKey="$2"
-	local _retval="$3"
-	local result=""
-
-	if isWindows;
-	then
-		result=$(openssl dgst -sha1 -binary < "$filePath" | openssl dgst -sha1 -sign "$privKey" | openssl enc -base64)
-
-	elif isMac;
-	then
-		local signUpdateFile="3rdparty/sparkle/sign_update"
-		if [ ! -f "$signUpdateFile" ];
-		then
-			echo "ERROR: $signUpdateFile not found"
-			exit 1
-		fi
-		result=$(3rdparty/sparkle/sign_update "$filePath" | cut -d '"' -f 2)
-
-	else
-		echo "getSignatureHash: TODO"
-	fi
-
-	eval $_retval="'${result}'"
-}
-
-generateAppcast()
-{
-	local fileName="$1"
-	local buildNumber="$2"
-	local marketingVersion="$3"
-	local isRelease=$4
-
-	local appcastFile="appcastItem-${marketingVersion}.xml"
-	local baseURL="${params["appcast_releases"]}"
-	local subPath="release"
-
-	local fileSize
-	getFileSize "$fileName" fileSize
-
-	local fileSignature
-	getSignatureHash "$fileName" "resources/dsa_priv.pem" fileSignature
-
-	if [ "x$fileSignature" == "x" ];
-	then
-		echo "Failed to generate Appcast: Cannot sign file"
-		exit 1
-	fi
-
-	if [ $is_release -eq 0 ];
-	then
-		subPath="beta"
-		baseURL="${params["appcast_betas"]}"
-	fi
-
-	# Get URL of folder containing appcast file
-	baseURL="${baseURL%/*}/"
-
-	# Common Appcast Item header
-	echo "		<item>" > "$appcastFile"
-	echo "			<title>Version $marketingVersion</title>" >> "$appcastFile"
-	echo "			<sparkle:releaseNotesLink>" >> "$appcastFile"
-	echo "				${baseURL}changelog.php?lastKnownVersion=next" >> "$appcastFile"
-	echo "			</sparkle:releaseNotesLink>" >> "$appcastFile"
-	echo "			<pubDate>`date -R`</pubDate>" >> "$appcastFile"
-	echo "			<enclosure url=\"${baseURL}${subPath}/${fileName}\"" >> "$appcastFile"
-
-	# OS-dependant Item values
-	if isWindows;
-	then
-		echo "				sparkle:dsaSignature=\"${fileSignature}\"" >> "$appcastFile"
-		echo "				sparkle:installerArguments=\"/S /NOPCAP /LAUNCH\"" >> "$appcastFile"
-		echo "				sparkle:os=\"windows\"" >> "$appcastFile"
-
-	elif isMac;
-	then
-		echo "				sparkle:edSignature=\"${fileSignature}\"" >> "$appcastFile"
-		echo "				sparkle:os=\"macos\"" >> "$appcastFile"
-
-	else
-		echo "Appcast generation not support on this OS"
-		return;
-	fi
-
-	# Common Appcast Item footer
-	echo "				sparkle:shortVersionString=\"${marketingVersion}\"" >> "$appcastFile"
-	echo "				sparkle:version=\"${buildNumber}\"" >> "$appcastFile"
-	echo "				length=\"${fileSize}\"" >> "$appcastFile"
-	echo "				type=\"application/octet-stream\"" >> "$appcastFile"
-	echo "			/>" >> "$appcastFile"
-	echo "		</item>" >> "$appcastFile"
-
-	# Done
-	echo "Appcast item generated to file: $appcastFile (add it to tools/webserver/appcast-${subPath}.xml)"
-}
-
 # Default values
 default_VisualGenerator="Visual Studio 16 2019"
 default_VisualGeneratorArch="Win32"
@@ -704,7 +606,18 @@ if isMac; then
 	rm -f "${fullInstallerName}" &> /dev/null
 fi
 
-generateAppcast "${appcastInstallerName}" "${internalVersion}" "${releaseVersion}${beta_tag}" $is_release
+appcastURL="${params["appcast_releases"]}"
+installerSubUrl="release"
+if [ $is_release -eq 0 ];
+then
+	appcastURL="${params["appcast_betas"]}"
+	installerSubUrl="beta"
+fi
+# Get URL of folder containing appcast file
+updateBaseURL="${appcastURL%/*}/"
+
+# Generate appcast file
+3rdparty/sparkleHelper/scripts/generate_appcast.sh "${appcastInstallerName}" "${releaseVersion}${beta_tag}" "${internalVersion}" "resources/dsa_priv.pem" "${updateBaseURL}changelog.php?lastKnownVersion=next" "${updateBaseURL}${installerSubUrl}/${appcastInstallerName}" "/S /NOPCAP /LAUNCH"
 
 echo ""
 echo "Do not forget to upload:"

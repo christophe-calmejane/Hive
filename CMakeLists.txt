@@ -140,6 +140,11 @@ if(ENABLE_AVDECC_USE_FMTLIB)
 	set_target_properties(fmt PROPERTIES FOLDER "Libraries")
 endif()
 
+# Add SparkleHelper targets
+if(ENABLE_HIVE_FEATURE_SPARKLE)
+	add_subdirectory(3rdparty/sparkleHelper)
+endif()
+
 ############ Define some variables
 
 string(TIMESTAMP CURRENT_YEAR "%Y")

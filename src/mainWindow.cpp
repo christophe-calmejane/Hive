@@ -44,7 +44,6 @@
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
 #include "settingsManager/settingsSignaler.hpp"
-#include "sparkleHelper/sparkleHelper.hpp"
 #include "activeNetworkInterfacesModel.hpp"
 #include "aboutDialog.hpp"
 #include "deviceDetailsDialog.hpp"
@@ -61,6 +60,7 @@
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
 #include <la/avdecc/networkInterfaceHelper.hpp>
+#include <sparkleHelper/sparkleHelper.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>

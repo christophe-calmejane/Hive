@@ -16,16 +16,6 @@ ehthumbs.db
 # TMP "local" module
 /3rdparty/avdecc-local
 
-# WinSparkle
-/3rdparty/winsparkle/bin
-/3rdparty/winsparkle/include
-/3rdparty/winsparkle/lib
-
-# Sparkle
-/3rdparty/sparkle/Sparkle.framework
-/3rdparty/sparkle/generate_keys
-/3rdparty/sparkle/sign_update
-
 # Ignore .hive_config file
 /.hive_config
 
