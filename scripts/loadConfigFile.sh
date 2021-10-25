@@ -23,7 +23,8 @@ loadConfigFile()
 	if isMac ; then
 		local identityString="${params["identity"]}"
 		if [ "x$identityString" == "x" ]; then
-			echo "ERROR: macOS requires valid signing identity. Specify it in the ${configFile} file"
+			echo "ERROR: macOS requires valid signing identity. Specify it in the ${configFile} file among one of the following valid IDs:"
+			security find-identity -v -p codesigning | grep -Po "^[[:space:]]+[0-9]+\)[[:space:]]+[0-9A-Z]+[[:space:]]+\"\KDeveloper ID Application: [^(]+\([^)]+\)(?=\")"
 			exit 1
 		fi
 		security find-identity -v -p codesigning | grep "Developer ID" | grep "$identityString" &> /dev/null

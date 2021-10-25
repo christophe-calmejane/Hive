@@ -42,7 +42,7 @@ bool NetworkInterfacesListModel::isEnabled(QString const& id) const noexcept
 	return false;
 }
 
-la::avdecc::networkInterface::Interface::Type NetworkInterfacesListModel::getInterfaceType(QModelIndex const& index) const noexcept
+la::networkInterface::Interface::Type NetworkInterfacesListModel::getInterfaceType(QModelIndex const& index) const noexcept
 {
 	if (auto const optInterface = _model.networkInterface(static_cast<std::size_t>(index.row())))
 	{
@@ -50,12 +50,12 @@ la::avdecc::networkInterface::Interface::Type NetworkInterfacesListModel::getInt
 		return intfc.interfaceType;
 	}
 
-	return la::avdecc::networkInterface::Interface::Type::None;
+	return la::networkInterface::Interface::Type::None;
 }
 
-QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept
+QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::networkInterface::Interface::Type const type) noexcept
 {
-	static std::unordered_map<la::avdecc::networkInterface::Interface::Type, QIcon> s_icon;
+	static std::unordered_map<la::networkInterface::Interface::Type, QIcon> s_icon;
 
 	auto const it = s_icon.find(type);
 	if (it == std::end(s_icon))
@@ -64,10 +64,10 @@ QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::avdecc::networkInterface
 
 		switch (type)
 		{
-			case la::avdecc::networkInterface::Interface::Type::Ethernet:
+			case la::networkInterface::Interface::Type::Ethernet:
 				what = "settings_ethernet";
 				break;
-			case la::avdecc::networkInterface::Interface::Type::WiFi:
+			case la::networkInterface::Interface::Type::WiFi:
 				what = "wifi";
 				break;
 			default:

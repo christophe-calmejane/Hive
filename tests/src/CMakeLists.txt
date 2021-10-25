@@ -15,7 +15,7 @@ set(TESTS_SOURCE
 add_executable(Tests ${TESTS_SOURCE})
 
 # Setup common options
-setup_executable_options(Tests)
+cu_setup_executable_options(Tests)
 
 # Set IDE folder
 set_target_properties(Tests PROPERTIES FOLDER "Tests")

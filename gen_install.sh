@@ -11,7 +11,7 @@ callerFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the abs
 . "${callerFolderPath}scripts/loadConfigFile.sh"
 
 # Override default cmake options
-cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_HIVE_SIGNING=FALSE"
+cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_CODE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
@@ -402,23 +402,23 @@ if [ "x${params["appcast_releases"]}" == "x" ]; then
 	exit 4
 fi
 gen_cmake_additional_options+=("-a")
-gen_cmake_additional_options+=("-DHIVE_APPCAST_RELEASES_URL=${params["appcast_releases"]}")
+gen_cmake_additional_options+=("-DAPPCAST_RELEASES_URL=${params["appcast_releases"]}")
 
 if [ "x${params["appcast_betas"]}" == "x" ]; then
 	echo "ERROR: appcast_betas must not be empty in ${configFile} file"
 	exit 4
 fi
 gen_cmake_additional_options+=("-a")
-gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_URL=${params["appcast_betas"]}")
+gen_cmake_additional_options+=("-DAPPCAST_BETAS_URL=${params["appcast_betas"]}")
 
 if [ "x${params["appcast_releases_fallback"]}" != "x" ]; then
 	gen_cmake_additional_options+=("-a")
-	gen_cmake_additional_options+=("-DHIVE_APPCAST_RELEASES_FALLBACK_URL=${params["appcast_releases_fallback"]}")
+	gen_cmake_additional_options+=("-DAPPCAST_RELEASES_FALLBACK_URL=${params["appcast_releases_fallback"]}")
 fi
 
 if [ "x${params["appcast_betas_fallback"]}" != "x" ]; then
 	gen_cmake_additional_options+=("-a")
-	gen_cmake_additional_options+=("-DHIVE_APPCAST_BETAS_FALLBACK_URL=${params["appcast_betas_fallback"]}")
+	gen_cmake_additional_options+=("-DAPPCAST_BETAS_FALLBACK_URL=${params["appcast_betas_fallback"]}")
 fi
 
 # Build marketing options

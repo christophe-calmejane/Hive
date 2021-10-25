@@ -22,6 +22,7 @@ setupSparkleHelper()
 {
 	local sparkleHelperFolder="${callerFolderPath}3rdparty/sparkleHelper/"
 	local sparkleHelperScriptsFolder="${sparkleHelperFolder}scripts/"
+	local resourcesFolder="${callerFolderPath}resources"
 
 	# Call setup_fresh_env.sh from SparkleHelper
 	${sparkleHelperScriptsFolder}setup_fresh_env.sh
@@ -43,8 +44,7 @@ setupSparkleHelper()
 	fi
 
 	# Generate DSA keys
-	${sparkleHelperScriptsFolder}generate_dsa_keys.sh "${callerFolderPath}resources"
-
+	${sparkleHelperScriptsFolder}generate_dsa_keys.sh "${resourcesFolder}"
 }
 
 setupPCap()

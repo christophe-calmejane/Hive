@@ -59,7 +59,7 @@ public:
 		}
 
 		// Configure text
-		auto const configuredText = aboutLabel->text().arg(hive::internals::applicationLongName).arg(hive::internals::versionString).arg(hive::internals::buildArchitecture).arg(hive::internals::buildConfiguration).arg(la::avdecc::getVersion().c_str()).arg(avdeccOptions.c_str()).arg(la::avdecc::controller::getVersion().c_str()).arg(avdeccControllerOptions.c_str()).arg(hive::internals::originalAuthors).arg(hive::internals::projectURL);
+		auto const configuredText = aboutLabel->text().arg(hive::internals::applicationLongName).arg(hive::internals::versionString).arg(hive::internals::buildArchitecture).arg(hive::internals::buildConfiguration).arg(la::avdecc::getVersion().c_str()).arg(avdeccOptions.c_str()).arg(la::avdecc::controller::getVersion().c_str()).arg(avdeccControllerOptions.c_str()).arg(hive::internals::authors).arg(hive::internals::projectURL);
 		aboutLabel->setText(configuredText);
 
 		connect(legalNotices, &QPushButton::clicked, this, &AboutDialogImpl::on_legalNotices_clicked);

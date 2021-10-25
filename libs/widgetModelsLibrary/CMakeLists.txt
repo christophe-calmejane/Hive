@@ -1,7 +1,7 @@
 # Hive Widget Models Library CMake File
 
 # Declare project
-setup_project(${PROJECT_NAME}_widget_models ${HIVE_VERSION} "Hive Widget Models Library")
+cu_setup_project(${PROJECT_NAME}_widget_models ${HIVE_VERSION} "Hive Widget Models Library")
 
 # Find dependencies
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
@@ -38,14 +38,14 @@ set(HEADER_FILES_GENERATED
 )
 
 set(HEADER_FILES_PUBLIC
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/widgetModelsLibrary.hpp
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/painterHelper.hpp
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/entityLogoCache.hpp
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/qtUserRoles.hpp
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/errorItemDelegate.hpp
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/imageItemDelegate.hpp
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/networkInterfacesListModel.hpp
-	${PROJECT_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/widgetModelsLibrary.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/painterHelper.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/entityLogoCache.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/qtUserRoles.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/errorItemDelegate.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/imageItemDelegate.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/networkInterfacesListModel.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -72,12 +72,13 @@ source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
 # Define static library
 add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_PUBLIC} ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${PCH_FILES})
 
-# Enable precompiled headers
-set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME} ${PCH_SOURCE_NAME})
-
 # Setup common options
-setup_library_options(${PROJECT_NAME}_static "${PROJECT_NAME}_static")
+cu_setup_library_options(${PROJECT_NAME}_static)
 
+# Enable precompiled headers
+cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
+
+# Automatically generate MOC
 set_target_properties(${PROJECT_NAME}_static PROPERTIES
 	AUTOMOC ON
 )
@@ -92,12 +93,13 @@ if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	# Define shared library
 	add_library(${PROJECT_NAME}_shared SHARED ${HEADER_FILES_PUBLIC} ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${RESOURCE_FILES_GENERATED} ${PCH_FILES})
 
-	# Enable precompiled headers
-	set_precompiled_headers(${PROJECT_NAME}_shared ${PCH_HEADER_NAME} ${PCH_SOURCE_NAME})
-
 	# Setup common options
-	setup_library_options(${PROJECT_NAME}_shared "${PROJECT_NAME}_shared")
+	cu_setup_library_options(${PROJECT_NAME}_shared)
 
+	# Enable precompiled headers
+	cu_set_precompiled_headers(${PROJECT_NAME}_shared ${PCH_HEADER_NAME})
+
+	# Automatically generate MOC
 	set_target_properties(${PROJECT_NAME}_shared PROPERTIES
 		AUTOMOC ON
 	)

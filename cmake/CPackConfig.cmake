@@ -28,7 +28,7 @@ set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP ON)
 include(InstallRequiredSystemLibraries)
 
 # Define common variables
-set(COMMON_RESOURCES_FOLDER "${PROJECT_ROOT_DIR}/resources/")
+set(COMMON_RESOURCES_FOLDER "${CU_ROOT_DIR}/resources/")
 set(WIN32_RESOURCES_FOLDER "${COMMON_RESOURCES_FOLDER}win32/")
 set(MACOS_RESOURCES_FOLDER "${COMMON_RESOURCES_FOLDER}macOS/")
 if(WIN32)
@@ -59,7 +59,7 @@ if(NOT HIVE_INSTALLER_NAME)
 endif()
 set(CPACK_PACKAGE_FILE_NAME "${HIVE_INSTALLER_NAME}")
 unset(CPACK_RESOURCE_FILE_README)
-set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_ROOT_DIR}/COPYING.LESSER.txt")
+set(CPACK_RESOURCE_FILE_LICENSE "${CU_ROOT_DIR}/COPYING.LESSER.txt")
 set(CPACK_PACKAGE_ICON "${ICON_PATH}")
 
 # Advanced settings
@@ -88,11 +88,11 @@ else()
 		set(CPACK_GENERATOR NSIS)
 
 		# Set CMake module path to our own nsis template is used during nsis generation
-		set(CMAKE_MODULE_PATH ${PROJECT_ROOT_DIR}/installer/nsis ${CMAKE_MODULE_PATH})
+		set(CMAKE_MODULE_PATH ${CU_ROOT_DIR}/installer/nsis ${CMAKE_MODULE_PATH})
 
 		# Configure file with custom definitions for NSIS.
 		configure_file(
-			${PROJECT_ROOT_DIR}/installer/nsis/NSIS.definitions.nsh.in
+			${CU_ROOT_DIR}/installer/nsis/NSIS.definitions.nsh.in
 			${LA_TOP_LEVEL_BINARY_DIR}/NSIS.definitions.nsh
 		)
 
@@ -120,9 +120,9 @@ else()
 		")
 
 		# Extra install commands
-		install(FILES ${PROJECT_ROOT_DIR}/resources/win32/vc_redist.x86.exe DESTINATION . CONFIGURATIONS Release)
+		install(FILES ${CU_ROOT_DIR}/resources/win32/vc_redist.x86.exe DESTINATION . CONFIGURATIONS Release)
 		set(COMPONENT_NAME_WINPCAP WinPcap)
-		install(FILES ${PROJECT_ROOT_DIR}/resources/win32/WinPcap_4_1_3.exe DESTINATION . CONFIGURATIONS Release COMPONENT ${COMPONENT_NAME_WINPCAP})
+		install(FILES ${CU_ROOT_DIR}/resources/win32/WinPcap_4_1_3.exe DESTINATION . CONFIGURATIONS Release COMPONENT ${COMPONENT_NAME_WINPCAP})
 		set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}\n\
 			; Install the VS2017 redistributables\n\
 			ExecWait '\\\"$INSTDIR\\\\vc_redist.x86.exe\\\" /repair /quiet /norestart'\n\
@@ -168,9 +168,9 @@ else()
 		set(CPACK_GENERATOR productbuild)
 
 		# Set CMake module path to our own nsis template is used during nsis generation
-		set(CMAKE_MODULE_PATH ${PROJECT_ROOT_DIR}/installer/productbuild ${CMAKE_MODULE_PATH})
+		set(CMAKE_MODULE_PATH ${CU_ROOT_DIR}/installer/productbuild ${CMAKE_MODULE_PATH})
 
-		set(CPACK_PRODUCTBUILD_RESOURCES_DIR ${PROJECT_ROOT_DIR}/installer/productbuild/resources)
+		set(CPACK_PRODUCTBUILD_RESOURCES_DIR ${CU_ROOT_DIR}/installer/productbuild/resources)
 		set(CPACK_PRODUCTBUILD_BACKGROUND "background.png")
 		set(CPACK_PRODUCTBUILD_BACKGROUND_ALIGNMENT "bottomleft")
 		set(CPACK_PRODUCTBUILD_BACKGROUND_SCALING "proportional")
@@ -185,69 +185,70 @@ else()
 		string(REGEX REPLACE "([][+.*()^])" "\\\\\\1" ESCAPED_IDENTITY "${LA_INSTALLER_SIGNING_IDENTITY}")
 
 		# Create ChmodBPF install package
-		set(INSTALL_CHMODBPF_GENERATED_PKG "${CMAKE_BINARY_DIR}/install.ChmodBPF.pkg")
+		set(CHMODBPF_NAME "ChmodBPF")
+		set(INSTALL_CHMODBPF_GENERATED_PKG "${CMAKE_BINARY_DIR}/install.${CHMODBPF_NAME}.pkg")
 		add_custom_command(OUTPUT "${INSTALL_CHMODBPF_GENERATED_PKG}"
 			COMMAND find
-				"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/root"
+				"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root"
 				-type d
 				-exec chmod 755 "{}" +
 			COMMAND chmod 644
-				"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/root/Library/LaunchDaemons/com.KikiSoft.Hive.ChmodBPF.plist"
+				"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/LaunchDaemons/${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.plist"
 			COMMAND chmod 755
-				"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/root/Library/Application Support/Hive/ChmodBPF/ChmodBPF"
+				"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/Application Support/${PROJECT_NAME}/${CHMODBPF_NAME}/${CHMODBPF_NAME}"
 			COMMAND pkgbuild
-				--identifier com.KikiSoft.Hive.ChmodBPF.pkg
+				--identifier ${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.pkg
 				--version 1.1
 				--preserve-xattr
-				--root "${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/root"
+				--root "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root"
 				--sign ${ESCAPED_IDENTITY}
-				--scripts "${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/install-scripts"
+				--scripts "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-scripts"
 				${INSTALL_CHMODBPF_GENERATED_PKG}
 			DEPENDS
-				"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/root/Library/Application Support/Hive/ChmodBPF/ChmodBPF"
-				"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/root/Library/LaunchDaemons/com.KikiSoft.Hive.ChmodBPF.plist"
-				"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/install-scripts/postinstall"
+				"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/Application Support/${PROJECT_NAME}/${CHMODBPF_NAME}/${CHMODBPF_NAME}"
+				"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/LaunchDaemons/${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.plist"
+				"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-scripts/postinstall"
 		)
-		set(INSTALL_CHMODBPF_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Install ChmodBPF.pkg")
+		set(INSTALL_CHMODBPF_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Install ${CHMODBPF_NAME}.pkg")
 		add_custom_command(OUTPUT "${INSTALL_CHMODBPF_GENERATED_PRODUCT}"
 			COMMAND productbuild
-			--identifier com.KikiSoft.Hive.ChmodBPF.product
+			--identifier ${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.product
 			--version 1.1
 			--sign ${ESCAPED_IDENTITY}
-			--distribution "${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/install-distribution.xml"
+			--distribution "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-distribution.xml"
 			--package-path "${CMAKE_BINARY_DIR}"
 			${INSTALL_CHMODBPF_GENERATED_PRODUCT}
 		DEPENDS
-			"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/install-distribution.xml"
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-distribution.xml"
 			${INSTALL_CHMODBPF_GENERATED_PKG}
 		)
 		add_custom_target(install_chmodbpf_pkg ALL DEPENDS "${INSTALL_CHMODBPF_GENERATED_PRODUCT}")
 		install(PROGRAMS "${INSTALL_CHMODBPF_GENERATED_PRODUCT}" DESTINATION "${MACOS_INSTALL_FOLDER}" CONFIGURATIONS Release)
 
 		# Create ChmodBPF uninstall package
-		set(UNINSTALL_CHMODBPF_GENERATED_PKG "${CMAKE_BINARY_DIR}/uninstall.ChmodBPF.pkg")
+		set(UNINSTALL_CHMODBPF_GENERATED_PKG "${CMAKE_BINARY_DIR}/uninstall.${CHMODBPF_NAME}.pkg")
 		add_custom_command(OUTPUT "${UNINSTALL_CHMODBPF_GENERATED_PKG}"
 			COMMAND pkgbuild
-				--identifier com.KikiSoft.Hive.ChmodBPF.pkg
+				--identifier ${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.pkg
 				--version 1.1
 				--nopayload
 				--sign ${ESCAPED_IDENTITY}
-				--scripts "${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/uninstall-scripts"
+				--scripts "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-scripts"
 				${UNINSTALL_CHMODBPF_GENERATED_PKG}
 			DEPENDS
-				"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/uninstall-scripts/postinstall"
+				"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-scripts/postinstall"
 		)
-		set(UNINSTALL_CHMODBPF_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Uninstall ChmodBPF.pkg")
+		set(UNINSTALL_CHMODBPF_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Uninstall ${CHMODBPF_NAME}.pkg")
 		add_custom_command(OUTPUT "${UNINSTALL_CHMODBPF_GENERATED_PRODUCT}"
 			COMMAND productbuild
-			--identifier com.KikiSoft.Hive.ChmodBPF.product
+			--identifier ${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.product
 			--version 1.1
 			--sign ${ESCAPED_IDENTITY}
-			--distribution "${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/uninstall-distribution.xml"
+			--distribution "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-distribution.xml"
 			--package-path "${CMAKE_BINARY_DIR}"
 			${UNINSTALL_CHMODBPF_GENERATED_PRODUCT}
 		DEPENDS
-			"${PROJECT_ROOT_DIR}/installer/productbuild/ChmodBPF/uninstall-distribution.xml"
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-distribution.xml"
 			${UNINSTALL_CHMODBPF_GENERATED_PKG}
 		)
 		add_custom_target(uninstall_chmodbpf_pkg ALL DEPENDS "${UNINSTALL_CHMODBPF_GENERATED_PRODUCT}")
@@ -255,37 +256,37 @@ else()
 
 		# Create uninstall package
 		configure_file(
-			"${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/postinstall.in"
+			"${CU_ROOT_DIR}/installer/productbuild/uninstaller/postinstall.in"
 			"${CMAKE_BINARY_DIR}/uninstaller/install-scripts/postinstall"
 		)
-		set(UNINSTALL_HIVE_GENERATED_PKG "${CMAKE_BINARY_DIR}/uninstaller.pkg")
-		add_custom_command(OUTPUT "${UNINSTALL_HIVE_GENERATED_PKG}"
+		set(UNINSTALL_PROJECT_GENERATED_PKG "${CMAKE_BINARY_DIR}/uninstaller.pkg")
+		add_custom_command(OUTPUT "${UNINSTALL_PROJECT_GENERATED_PKG}"
 			COMMAND pkgbuild
-				--identifier com.KikiSoft.Hive.uninstaller.pkg
+				--identifier ${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.uninstaller.pkg
 				--version 1.0
 				--nopayload
 				--sign ${ESCAPED_IDENTITY}
 				--scripts "${CMAKE_BINARY_DIR}/uninstaller/install-scripts/"
-				"${UNINSTALL_HIVE_GENERATED_PKG}"
+				"${UNINSTALL_PROJECT_GENERATED_PKG}"
 			DEPENDS
-				"${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/postinstall.in"
+				"${CU_ROOT_DIR}/installer/productbuild/uninstaller/postinstall.in"
 				"${CMAKE_BINARY_DIR}/uninstaller/install-scripts/postinstall"
 		)
-		set(UNINSTALL_HIVE_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Uninstall ${CPACK_PACKAGE_NAME}.pkg")
-		add_custom_command(OUTPUT "${UNINSTALL_HIVE_GENERATED_PRODUCT}"
+		set(UNINSTALL_PROJECT_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Uninstall ${CPACK_PACKAGE_NAME}.pkg")
+		add_custom_command(OUTPUT "${UNINSTALL_PROJECT_GENERATED_PRODUCT}"
 			COMMAND productbuild
-				--identifier com.KikiSoft.Hive.uninstaller.product
+				--identifier ${PROJECT_DOMAIN_COUNTRY}.${PROJECT_COMPANYNAME}.${PROJECT_NAME}.uninstaller.product
 				--version 1.0
 				--sign ${ESCAPED_IDENTITY}
-				--distribution "${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/install-distribution.xml"
+				--distribution "${CU_ROOT_DIR}/installer/productbuild/uninstaller/install-distribution.xml"
 				--package-path "${CMAKE_BINARY_DIR}"
-				${UNINSTALL_HIVE_GENERATED_PRODUCT}
+				${UNINSTALL_PROJECT_GENERATED_PRODUCT}
 			DEPENDS
-				"${PROJECT_ROOT_DIR}/installer/productbuild/uninstaller/install-distribution.xml"
-				${UNINSTALL_HIVE_GENERATED_PKG}
+				"${CU_ROOT_DIR}/installer/productbuild/uninstaller/install-distribution.xml"
+				${UNINSTALL_PROJECT_GENERATED_PKG}
 		)
-		add_custom_target(uninstall_pkg ALL DEPENDS "${UNINSTALL_HIVE_GENERATED_PRODUCT}")
-		install(PROGRAMS "${UNINSTALL_HIVE_GENERATED_PRODUCT}" DESTINATION "${MACOS_INSTALL_FOLDER}")
+		add_custom_target(uninstall_pkg ALL DEPENDS "${UNINSTALL_PROJECT_GENERATED_PRODUCT}")
+		install(PROGRAMS "${UNINSTALL_PROJECT_GENERATED_PRODUCT}" DESTINATION "${MACOS_INSTALL_FOLDER}")
 
 		# Include CPack so we can call cpack_add_component
 		include(CPack REQUIRED)

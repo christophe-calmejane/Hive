@@ -1,6 +1,6 @@
 # CMake import target configuration file
 
-set(BUGTRAP_BASE_DIR "${PROJECT_ROOT_DIR}/3rdparty/bugtrap")
+set(BUGTRAP_BASE_DIR "${CU_ROOT_DIR}/3rdparty/bugtrap")
 
 set(BUGTRAP_ARCH_POSTFIX "")
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

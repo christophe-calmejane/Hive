@@ -91,8 +91,8 @@ int main(int argc, char* argv[])
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
-	QCoreApplication::setOrganizationDomain(hive::internals::organizationDomain);
-	QCoreApplication::setOrganizationName(hive::internals::organizationName);
+	QCoreApplication::setOrganizationDomain(hive::internals::companyDomain);
+	QCoreApplication::setOrganizationName(hive::internals::companyName);
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
 

@@ -19,13 +19,15 @@
 
 #include "hive/modelsLibrary/networkInterfacesModel.hpp"
 
+#include <la/avdecc/utils.hpp>
+
 #include <vector>
 
 namespace hive
 {
 namespace modelsLibrary
 {
-class NetworkInterfacesModel::pImpl : public QObject, public la::avdecc::networkInterface::NetworkInterfaceObserver
+class NetworkInterfacesModel::pImpl : public QObject, public la::networkInterface::NetworkInterfaceHelper::Observer
 {
 public:
 	pImpl(Model* const model, QObject* parent = nullptr)
@@ -80,7 +82,7 @@ private:
 	}
 
 	// la::avdecc::networkInterface::NetworkInterfaceObserver overrides
-	virtual void onInterfaceAdded(la::avdecc::networkInterface::Interface const& intfc) noexcept override
+	virtual void onInterfaceAdded(la::networkInterface::Interface const& intfc) noexcept override
 	{
 		QMetaObject::invokeMethod(this,
 			[this, intfc = intfc]()
@@ -95,7 +97,7 @@ private:
 				}
 			});
 	}
-	virtual void onInterfaceRemoved(la::avdecc::networkInterface::Interface const& intfc) noexcept override
+	virtual void onInterfaceRemoved(la::networkInterface::Interface const& intfc) noexcept override
 	{
 		QMetaObject::invokeMethod(this,
 			[this, id = intfc.id]()
@@ -111,7 +113,7 @@ private:
 				}
 			});
 	}
-	virtual void onInterfaceEnabledStateChanged(la::avdecc::networkInterface::Interface const& intfc, bool const isEnabled) noexcept override
+	virtual void onInterfaceEnabledStateChanged(la::networkInterface::Interface const& intfc, bool const isEnabled) noexcept override
 	{
 		QMetaObject::invokeMethod(this,
 			[this, id = intfc.id, isEnabled]()
@@ -126,7 +128,7 @@ private:
 				}
 			});
 	}
-	virtual void onInterfaceConnectedStateChanged(la::avdecc::networkInterface::Interface const& intfc, bool const isConnected) noexcept override
+	virtual void onInterfaceConnectedStateChanged(la::networkInterface::Interface const& intfc, bool const isConnected) noexcept override
 	{
 		QMetaObject::invokeMethod(this,
 			[this, id = intfc.id, isConnected]()
@@ -141,7 +143,7 @@ private:
 				}
 			});
 	}
-	virtual void onInterfaceAliasChanged(la::avdecc::networkInterface::Interface const& intfc, std::string const& alias) noexcept override
+	virtual void onInterfaceAliasChanged(la::networkInterface::Interface const& intfc, std::string const& alias) noexcept override
 	{
 		QMetaObject::invokeMethod(this,
 			[this, id = intfc.id, alias]()
@@ -156,11 +158,11 @@ private:
 				}
 			});
 	}
-	virtual void onInterfaceIPAddressInfosChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, la::avdecc::networkInterface::Interface::IPAddressInfos const& /*ipAddressInfos*/) noexcept override
+	virtual void onInterfaceIPAddressInfosChanged(la::networkInterface::Interface const& /*intfc*/, la::networkInterface::Interface::IPAddressInfos const& /*ipAddressInfos*/) noexcept override
 	{
 		// Don't care
 	}
-	virtual void onInterfaceGateWaysChanged(la::avdecc::networkInterface::Interface const& /*intfc*/, la::avdecc::networkInterface::Interface::Gateways const& /*gateways*/) noexcept override
+	virtual void onInterfaceGateWaysChanged(la::networkInterface::Interface const& /*intfc*/, la::networkInterface::Interface::Gateways const& /*gateways*/) noexcept override
 	{
 		// Don't care
 	}
@@ -168,16 +170,18 @@ private:
 	// Private Members
 	Model* _model{ nullptr };
 	std::vector<NetworkInterface> _interfaces{};
-	DECLARE_AVDECC_OBSERVER_GUARD(pImpl);
 };
 
 NetworkInterfacesModel::NetworkInterfacesModel(Model* const model, QObject* parent)
 	: _pImpl{ std::make_unique<pImpl>(model, parent) }
 {
-	la::avdecc::networkInterface::registerObserver(_pImpl.get());
+	la::networkInterface::NetworkInterfaceHelper::getInstance().registerObserver(_pImpl.get());
 }
 
-NetworkInterfacesModel::~NetworkInterfacesModel() = default;
+NetworkInterfacesModel::~NetworkInterfacesModel()
+{
+	la::networkInterface::NetworkInterfaceHelper::getInstance().unregisterObserver(_pImpl.get());
+}
 
 std::optional<std::reference_wrapper<NetworkInterfacesModel::NetworkInterface const>> NetworkInterfacesModel::networkInterface(std::size_t const index) const noexcept
 {

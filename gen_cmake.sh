@@ -5,7 +5,7 @@
 qtVersion="5.15.2"
 
 # Override default cmake options
-cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_HIVE_SIGNING=FALSE"
+cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_CODE_SIGNING=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
@@ -433,17 +433,17 @@ if isMac; then
 		echo "Binary signing is mandatory since macOS Catalina, forcing it using ID '$signingId' (TeamID '$teamId')"
 		doSign=1
 	fi
-	add_cmake_opt+=("-DLA_BINARY_SIGNING_IDENTITY=$signingId")
-	add_cmake_opt+=("-DLA_INSTALLER_SIGNING_IDENTITY=$signingInstallerId")
-	add_cmake_opt+=("-DLA_TEAM_IDENTIFIER=$teamId")
+	add_cmake_opt+=("-DCU_BINARY_SIGNING_IDENTITY=$signingId")
+	add_cmake_opt+=("-DCU_INSTALLER_SIGNING_IDENTITY=$signingInstallerId")
+	add_cmake_opt+=("-DCU_TEAM_IDENTIFIER=$teamId")
 fi
 
 if [ $doSign -eq 1 ]; then
-	add_cmake_opt+=("-DENABLE_HIVE_SIGNING=TRUE")
+	add_cmake_opt+=("-DENABLE_CODE_SIGNING=TRUE")
 	# Set signtool options if signing enabled on windows
 	if isWindows; then
 		if [ ! -z "$signtoolOptions" ]; then
-			add_cmake_opt+=("-DLA_SIGNTOOL_OPTIONS=$signtoolOptions")
+			add_cmake_opt+=("-DCU_SIGNTOOL_OPTIONS=$signtoolOptions")
 		fi
 	fi
 fi

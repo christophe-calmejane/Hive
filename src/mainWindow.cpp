@@ -59,7 +59,7 @@
 #include <QtMate/widgets/headerViewSortSectionFilter.hpp>
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
-#include <la/avdecc/networkInterfaceHelper.hpp>
+#include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 #include <sparkleHelper/sparkleHelper.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
