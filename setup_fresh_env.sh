@@ -25,23 +25,7 @@ setupSparkleHelper()
 	local resourcesFolder="${callerFolderPath}resources"
 
 	# Call setup_fresh_env.sh from SparkleHelper
-	${sparkleHelperScriptsFolder}setup_fresh_env.sh
-
-	getOS osName
-	if [[ $osName == "mac" ]];
-	then
-		echo -n "Codesigning Sparkle Framework... "
-		local log=$(codesign -s "${params['identity']}" --timestamp --deep --strict --force --options=runtime "${sparkleHelperFolder}3rdparty/sparkle/Sparkle.framework/Resources/Autoupdate.app" 2>&1)
-		if [ $? -ne 0 ];
-		then
-			echo "failed!"
-			echo ""
-			echo "Error log:"
-			echo $log
-			exit 1
-		fi
-		echo "done"
-	fi
+	${sparkleHelperScriptsFolder}setup_fresh_env.sh "${params['identity']}"
 
 	# Generate DSA keys
 	${sparkleHelperScriptsFolder}generate_dsa_keys.sh "${resourcesFolder}"
