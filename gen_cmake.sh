@@ -125,7 +125,7 @@ function extend_gc_fnc_precmake()
 	fi
 
 	add_cmake_opt+=("-DQt5_DIR=${Qt5dir}")
-	}
+}
 
 # execute gen_cmake script from bashUtils
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/gen_cmake.sh"
