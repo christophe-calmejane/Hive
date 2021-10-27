@@ -47,6 +47,76 @@ endmacro()
 # Declare a function that will be called before generating the ProductBuild package, to include custom commands
 macro(configure_PRODUCTBUILD_extra_commands)
 	set(CPACK_PRODUCTBUILD_RESOURCES_DIR ${CU_ROOT_DIR}/installer/productbuild/resources)
+
+	# Create ChmodBPF install package
+	set(CHMODBPF_NAME "ChmodBPF")
+	set(INSTALL_CHMODBPF_GENERATED_PKG "${CMAKE_BINARY_DIR}/install.${CHMODBPF_NAME}.pkg")
+	add_custom_command(OUTPUT "${INSTALL_CHMODBPF_GENERATED_PKG}"
+		COMMAND find
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root"
+			-type d
+			-exec chmod 755 "{}" +
+		COMMAND chmod 644
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/LaunchDaemons/${CU_COMPANY_DOMAIN}.${CU_PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.plist"
+		COMMAND chmod 755
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/Application Support/${PROJECT_NAME}/${CHMODBPF_NAME}/${CHMODBPF_NAME}"
+		COMMAND pkgbuild
+			--identifier ${CU_COMPANY_DOMAIN}.${CU_PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.pkg
+			--version 1.1
+			--preserve-xattr
+			--root "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root"
+			--sign ${ESCAPED_IDENTITY}
+			--scripts "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-scripts"
+			${INSTALL_CHMODBPF_GENERATED_PKG}
+		DEPENDS
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/Application Support/${PROJECT_NAME}/${CHMODBPF_NAME}/${CHMODBPF_NAME}"
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/root/Library/LaunchDaemons/${CU_COMPANY_DOMAIN}.${CU_PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.plist"
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-scripts/postinstall"
+	)
+	set(INSTALL_CHMODBPF_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Install ${CHMODBPF_NAME}.pkg")
+	add_custom_command(OUTPUT "${INSTALL_CHMODBPF_GENERATED_PRODUCT}"
+		COMMAND productbuild
+		--identifier ${CU_COMPANY_DOMAIN}.${CU_PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.product
+		--version 1.1
+		--sign ${ESCAPED_IDENTITY}
+		--distribution "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-distribution.xml"
+		--package-path "${CMAKE_BINARY_DIR}"
+		${INSTALL_CHMODBPF_GENERATED_PRODUCT}
+	DEPENDS
+		"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/install-distribution.xml"
+		${INSTALL_CHMODBPF_GENERATED_PKG}
+	)
+	add_custom_target(install_chmodbpf_pkg ALL DEPENDS "${INSTALL_CHMODBPF_GENERATED_PRODUCT}")
+	install(PROGRAMS "${INSTALL_CHMODBPF_GENERATED_PRODUCT}" DESTINATION "${MACOS_INSTALL_FOLDER}" CONFIGURATIONS Release)
+
+	# Create ChmodBPF uninstall package
+	set(UNINSTALL_CHMODBPF_GENERATED_PKG "${CMAKE_BINARY_DIR}/uninstall.${CHMODBPF_NAME}.pkg")
+	add_custom_command(OUTPUT "${UNINSTALL_CHMODBPF_GENERATED_PKG}"
+		COMMAND pkgbuild
+			--identifier ${CU_COMPANY_DOMAIN}.${CU_PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.pkg
+			--version 1.1
+			--nopayload
+			--sign ${ESCAPED_IDENTITY}
+			--scripts "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-scripts"
+			${UNINSTALL_CHMODBPF_GENERATED_PKG}
+		DEPENDS
+			"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-scripts/postinstall"
+	)
+	set(UNINSTALL_CHMODBPF_GENERATED_PRODUCT "${CMAKE_BINARY_DIR}/Uninstall ${CHMODBPF_NAME}.pkg")
+	add_custom_command(OUTPUT "${UNINSTALL_CHMODBPF_GENERATED_PRODUCT}"
+		COMMAND productbuild
+		--identifier ${CU_COMPANY_DOMAIN}.${CU_PROJECT_COMPANYNAME}.${PROJECT_NAME}.${CHMODBPF_NAME}.product
+		--version 1.1
+		--sign ${ESCAPED_IDENTITY}
+		--distribution "${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-distribution.xml"
+		--package-path "${CMAKE_BINARY_DIR}"
+		${UNINSTALL_CHMODBPF_GENERATED_PRODUCT}
+	DEPENDS
+		"${CU_ROOT_DIR}/installer/productbuild/${CHMODBPF_NAME}/uninstall-distribution.xml"
+		${UNINSTALL_CHMODBPF_GENERATED_PKG}
+	)
+	add_custom_target(uninstall_chmodbpf_pkg ALL DEPENDS "${UNINSTALL_CHMODBPF_GENERATED_PRODUCT}")
+	install(PROGRAMS "${UNINSTALL_CHMODBPF_GENERATED_PRODUCT}" DESTINATION "${MACOS_INSTALL_FOLDER}" CONFIGURATIONS Release)
 endmacro()
 
 # Declare a function that will be called before generating the NSIS package, to include custom components
@@ -59,7 +129,7 @@ if(WIN32)
 	set(CU_INSTALL_NSIS_HEADER_FILE_PATH "${CU_ROOT_DIR}/installer/nsis/header.bmp")
 	set(CU_INSTALL_NSIS_WELCOME_FILE_PATH "${CU_ROOT_DIR}/installer/nsis/welcome.bmp")
 elseif(APPLE)
-	set(CU_INSTALL_ICO_FILE_PATH "${CU_ROOT_DIR}/resources/macOS/Icon.icns")
+	set(CU_INSTALL_PRODUCTBUILD_BACKGROUND_FILE_PATH "background.png")
 endif()
 
 # Include common installer settings
