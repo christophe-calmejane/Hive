@@ -5,7 +5,7 @@ add_subdirectory(AEMDumper)
 
 ######## MsgPack2Json
 # Declare project
-cu_setup_project(msgPack2json "1.0" "Message Pack To JSON Converter")
+cu_setup_project(msgPack2json "1.0.0" "Message Pack To JSON Converter")
 
 add_executable(${PROJECT_NAME} msgPack2json.cpp)
 
@@ -20,7 +20,7 @@ cu_setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
 
 ######## Json2MsgPack
 # Declare project
-cu_setup_project(json2msgPack "1.0" "JSON To Message Pack Converter")
+cu_setup_project(json2msgPack "1.0.0" "JSON To Message Pack Converter")
 
 add_executable(${PROJECT_NAME} json2msgPack.cpp)
 

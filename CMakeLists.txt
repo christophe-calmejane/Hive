@@ -155,7 +155,7 @@ set(HIVE_RESOURCES_FOLDER "${CMAKE_CURRENT_LIST_DIR}/resources")
 
 # Install paramaters
 if(APPLE)
-	set(MACOS_INSTALL_FOLDER "${PROJECT_NAME} ${HIVE_MARKETING_VERSION}")
+	set(MACOS_INSTALL_FOLDER "${PROJECT_NAME} ${CU_PROJECT_MARKETING_VERSION}")
 	list(APPEND SDR_PARAMETERS "BUNDLE_DIR" "${MACOS_INSTALL_FOLDER}" "RUNTIME_DIR" "${MACOS_INSTALL_FOLDER}")
 else()
 	list(APPEND SDR_PARAMETERS)
@@ -185,10 +185,13 @@ if(BUILD_HIVE_TESTS)
 	add_subdirectory(tests)
 endif()
 
+# Add CPack
+if(ENABLE_HIVE_CPACK)
+	add_subdirectory(installer)
+endif()
+
 # Force Project as visual default target
 set_directory_properties(PROPERTIES VS_STARTUP_PROJECT ${PROJECT_NAME})
 
-# Add CPack
-if(ENABLE_HIVE_CPACK)
-	include(cmake/CPackConfig.cmake)
-endif()
+# Allow generator expressions in install(CODE/SCRIPT)
+cmake_policy(SET CMP0087 NEW)
