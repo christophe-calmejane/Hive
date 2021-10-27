@@ -30,7 +30,8 @@ macro(configure_NSIS_extra_commands)
 
 
 	# Install winpcap
-	install(FILES "${CU_ROOT_DIR}/installer/win32/WinPcap_4_1_3.exe" DESTINATION . CONFIGURATIONS Release)
+	set(COMPONENT_NAME_WINPCAP WinPcap)
+	install(FILES "${CU_ROOT_DIR}/installer/win32/WinPcap_4_1_3.exe" DESTINATION . CONFIGURATIONS Release COMPONENT ${COMPONENT_NAME_WINPCAP})
 	set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}\n\
 		; Install WinPcap\n\
 		ExecWait '\\\"$INSTDIR\\\\WinPcap_4_1_3.exe\\\"'\n\
@@ -38,14 +39,25 @@ macro(configure_NSIS_extra_commands)
 	)
 endmacro()
 
+# Declare a function that will be called before generating the NSIS package, to include custom components
+macro(configure_NSIS_extra_components)
+	cpack_add_component(${COMPONENT_NAME_WINPCAP} DISPLAY_NAME "WinPCap" DESCRIPTION "Installs WinPcap, necessary if not already installed on the system.")
+endmacro()
+
 # Declare a function that will be called before generating the ProductBuild package, to include custom commands
 macro(configure_PRODUCTBUILD_extra_commands)
 	set(CPACK_PRODUCTBUILD_RESOURCES_DIR ${CU_ROOT_DIR}/installer/productbuild/resources)
 endmacro()
 
+# Declare a function that will be called before generating the NSIS package, to include custom components
+macro(configure_PRODUCTBUILD_extra_components)
+endmacro()
+
 set(CU_INSTALL_LICENSE_FILE_PATH "${CU_ROOT_DIR}/COPYING.LESSER.txt")
 if(WIN32)
 	set(CU_INSTALL_ICO_FILE_PATH "${CU_ROOT_DIR}/resources/win32/Icon.ico")
+	set(CU_INSTALL_NSIS_HEADER_FILE_PATH "${CU_ROOT_DIR}/installer/nsis/header.bmp")
+	set(CU_INSTALL_NSIS_WELCOME_FILE_PATH "${CU_ROOT_DIR}/installer/nsis/welcome.bmp")
 elseif(APPLE)
 	set(CU_INSTALL_ICO_FILE_PATH "${CU_ROOT_DIR}/resources/macOS/Icon.icns")
 endif()
