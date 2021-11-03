@@ -46,10 +46,10 @@ QString const buildConfiguration{ "Debug" };
 #else // !DEBUG
 QString const buildConfiguration{ "Release" };
 #endif // DEBUG
-std::string const appcastReleasesUrl{ "@HIVE_APPCAST_RELEASES_URL@" };
-std::string const appcastBetasUrl{ "@HIVE_APPCAST_BETAS_URL@" };
-std::string const appcastReleasesFallbackUrl{ "@HIVE_APPCAST_RELEASES_FALLBACK_URL@" };
-std::string const appcastBetasFallbackUrl{ "@HIVE_APPCAST_BETAS_FALLBACK_URL@" };
+std::string const appcastReleasesUrl{ "@APPCAST_RELEASES_URL@" };
+std::string const appcastBetasUrl{ "@APPCAST_BETAS_URL@" };
+std::string const appcastReleasesFallbackUrl{ "@APPCAST_RELEASES_FALLBACK_URL@" };
+std::string const appcastBetasFallbackUrl{ "@APPCAST_BETAS_FALLBACK_URL@" };
 
 } // namespace internals
 } // namespace hive
