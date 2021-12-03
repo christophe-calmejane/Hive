@@ -105,7 +105,7 @@ setupSubmodules
 . "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
 # Include config file functions
-. "${callerFolderPath}scripts/load_config_file.sh"
+. "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/load_config_file.sh"
 
 # Load config file
 loadConfigFile
