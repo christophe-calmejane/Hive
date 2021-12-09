@@ -16,6 +16,9 @@
 #notarization_password=@keychain:AC_PASSWORD
 
 ################ Automatic check for update
+# Define to true if Sparkle is to be used, false otherwise
+use_sparkle=true
+
 # Appcast URL for Hive Releases - Only use https URLs (except for debugging when using localhost)
 appcast_releases=https://www.kikisoft.com/Hive/appcast-release.xml
 

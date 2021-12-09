@@ -93,9 +93,10 @@ setupPCap()
 	echo "done"
 }
 
-if [ ! -f ".hive_config" ]; then
-	echo "ERROR: You must create and configure a .hive_config file before running this script:"
-	echo "Copy .hive_config.sample file to .hive_config then edit it to your needs."
+configFile=".hive_config"
+if [ ! -f "${configFile}" ]; then
+	echo "ERROR: You must create and configure a ${configFile} file before running this script:"
+	echo "Copy ${configFile}.sample file to ${configFile} then edit it to your needs."
 	exit 1
 fi
 
@@ -110,11 +111,15 @@ setupSubmodules
 # Load config file
 loadConfigFile
 
-# Setup Sparkle
-setupSparkleHelper
+if [ "x${params["use_sparkle"]}" == "xtrue" ]; then
+	# Setup Sparkle
+	setupSparkleHelper
+fi
 
 # Setup PCap
 setupPCap
+
+echo "DO NOT REMOVE THIS FILE" > ".initialized"
 
 echo "All done!"
 

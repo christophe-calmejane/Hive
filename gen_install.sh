@@ -2,7 +2,7 @@
 # Useful script to generate installer
 
 ################# PROJECT SPECIFIC VARIABLES
-cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_CODE_SIGNING=FALSE"
+cmake_opt="-DBUILD_HIVE_TESTS=FALSE -DENABLE_HIVE_CPACK=TRUE -DENABLE_CODE_SIGNING=TRUE -DENABLE_HIVE_FEATURE_SPARKLE=FALSE"
 
 # Change the default key_digits value
 #default_keyDigits=0
@@ -13,25 +13,45 @@ cmake_opt="-DENABLE_HIVE_CPACK=TRUE -DENABLE_CODE_SIGNING=FALSE"
 selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
 # Check if setup_fresh_env has been called
-if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
+if [ ! -f "${selfFolderPath}.initialized" ]; then
 	echo "ERROR: Please run setup_fresh_env.sh (just once) after having cloned this repository."
 	exit 4
 fi
 
-# Get DSA public key (macOS needs it in the plist)
-if [[ $OSTYPE == darwin* ]]; then
+# Include utils functions
+. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
+
+# Include config file functions
+. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/load_config_file.sh"
+
+# Load config file
+configFile=".hive_config"
+loadConfigFile
+
+use_sparkle=0
+if [ "x${params["use_sparkle"]}" == "xtrue" ]; then
+	use_sparkle=1
+fi
+
+if [[ $use_sparkle -eq 1 && $OSTYPE == darwin* ]]; then
+	if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
+		echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
+		exit 4
+	fi
 	dsaPubKey="$(< "${selfFolderPath}resources/dsa_pub.pem")"
-	cmake_opt="${cmake_opt} -DHIVE_DSA_PUB_KEY=${dsaPubKey}"
+	cmake_opt="${cmake_opt} -DHIVE_DSA_PUB_KEY=${dsaPubKey} -DENABLE_HIVE_FEATURE_SPARKLE=TRUE"
 fi
 
 do_notarize=1
-do_appcast=1
+do_appcast=$use_sparkle
 function extend_gi_fnc_help()
 {
 	if isMac; then
 		echo " -no-notarize -> Do not notarize installer (Default: Do notarize)"
 	fi
-	echo " -no-appcast -> Do not generate appcast (Default: Do appcast)"
+	if [ $use_sparkle -eq 1 ]; then
+		echo " -no-appcast -> Do not generate appcast (Default: Do appcast)"
+	fi
 }
 
 function extend_gi_fnc_unhandled_arg()
@@ -42,14 +62,15 @@ function extend_gi_fnc_unhandled_arg()
 			return 1
 			;;
 		-no-appcast)
-			do_appcast=0
-			return 1
+			if [ $use_sparkle -eq 1 ]; then
+				do_appcast=0
+				return 1
+			fi
+			return 0
 			;;
 	esac
 	return 0
 }
-
-configFile=".hive_config"
 
 # execute gen_install script from bashUtils
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/gen_install.sh"

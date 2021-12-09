@@ -5,7 +5,7 @@
 qtVersion="5.15.2"
 
 # Override default cmake options
-cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_CODE_SIGNING=FALSE"
+cmake_opt="-DBUILD_HIVE_TESTS=TRUE -DENABLE_HIVE_CPACK=FALSE -DENABLE_CODE_SIGNING=FALSE -DENABLE_HIVE_FEATURE_SPARKLE=FALSE"
 
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
@@ -13,15 +13,28 @@ cmake_opt="-DENABLE_HIVE_CPACK=FALSE -DENABLE_CODE_SIGNING=FALSE"
 selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
 # Check if setup_fresh_env has been called
-if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
+if [ ! -f "${selfFolderPath}.initialized" ]; then
 	echo "ERROR: Please run setup_fresh_env.sh (just once) after having cloned this repository."
 	exit 4
 fi
 
-# Get DSA public key (macOS needs it in the plist)
-if [[ $OSTYPE == darwin* ]]; then
+# Include utils functions
+. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
+
+# Include config file functions
+. "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/load_config_file.sh"
+
+# Load config file
+configFile=".hive_config"
+loadConfigFile
+
+if [[ "x${params["use_sparkle"]}" == "xtrue" && $OSTYPE == darwin* ]]; then
+	if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
+		echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
+		exit 4
+	fi
 	dsaPubKey="$(< "${selfFolderPath}resources/dsa_pub.pem")"
-	cmake_opt="${cmake_opt} -DHIVE_DSA_PUB_KEY=${dsaPubKey}"
+	cmake_opt="${cmake_opt} -DHIVE_DSA_PUB_KEY=${dsaPubKey} -DENABLE_HIVE_FEATURE_SPARKLE=TRUE"
 fi
 
 useSources=0

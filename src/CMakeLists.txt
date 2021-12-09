@@ -3,9 +3,6 @@
 # Declare project
 cu_setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
 
-# Find dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
-
 # Configure files based on CMakeLists.txt version number
 configure_file(
 	internals/config.hpp.in
@@ -225,7 +222,8 @@ if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()
 if(ENABLE_HIVE_FEATURE_SPARKLE)
-	target_compile_options(${PROJECT_NAME}_static PUBLIC -DUSE_SPARKLE)
+	target_compile_definitions(${PROJECT_NAME}_static PUBLIC USE_SPARKLE)
+	# Link with SparkleHelper
 	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC SparkleHelper::lib)
 endif()

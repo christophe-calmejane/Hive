@@ -15,35 +15,37 @@ set(HIVE_VERSION 1.2.7.2)
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
 # Build options
-option(BUILD_HIVE_TESTS "Build Hive tests." TRUE)
+option(BUILD_HIVE_TESTS "Build Hive tests." FALSE)
 option(BUILD_HIVE_MODELS_SHARED_LIBRARY "Build Hive Models Shared Library (for external usage)." FALSE)
 option(BUILD_HIVE_APPLICATION "Build Hive main application." TRUE)
 # Install options
-option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." TRUE)
+option(ENABLE_HIVE_CPACK "Enable Hive installer generation target." FALSE)
 # Signing options
 option(ENABLE_CODE_SIGNING "Enable binaries signing." FALSE)
 # Enable features
-option(ENABLE_HIVE_FEATURE_SPARKLE "Use Sparkle for Hive auto-update" TRUE)
+option(ENABLE_HIVE_FEATURE_SPARKLE "Use Sparkle for Hive auto-update" FALSE)
 
 ############ Override from command line "CMake -D<PARAM>=<VALUE>"
 
 # Configuration options
-if(NOT APPCAST_RELEASES_URL)
-	set(APPCAST_RELEASES_URL "https://localhost/hive/appcast-release.xml" CACHE STRING "Appcast URL for Hive Releases" FORCE)
+if(ENABLE_HIVE_FEATURE_SPARKLE)
+	if(NOT APPCAST_RELEASES_URL)
+		set(APPCAST_RELEASES_URL "https://localhost/hive/appcast-release.xml" CACHE STRING "Appcast URL for Hive Releases" FORCE)
+	endif()
+	message(STATUS "Appcast URL for Hive Releases defined to: ${APPCAST_RELEASES_URL}")
+	if(NOT APPCAST_BETAS_URL)
+		set(APPCAST_BETAS_URL "https://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
+	endif()
+	message(STATUS "Appcast URL for Hive Betas defined to: ${APPCAST_BETAS_URL}")
+	if(NOT APPCAST_RELEASES_FALLBACK_URL)
+		set(APPCAST_RELEASES_FALLBACK_URL "${APPCAST_RELEASES_URL}" CACHE STRING "Appcast Fallback URL for Hive Releases" FORCE)
+	endif()
+	message(STATUS "Appcast fallback URL for Hive Releases defined to: ${APPCAST_RELEASES_FALLBACK_URL}")
+	if(NOT APPCAST_BETAS_FALLBACK_URL)
+		set(APPCAST_BETAS_FALLBACK_URL "${APPCAST_BETAS_URL}" CACHE STRING "Appcast Fallback URL for Hive Betas" FORCE)
+	endif()
+	message(STATUS "Appcast fallback URL for Hive Betas defined to: ${APPCAST_BETAS_FALLBACK_URL}")
 endif()
-message(STATUS "Appcast URL for Hive Releases defined to: ${APPCAST_RELEASES_URL}")
-if(NOT APPCAST_BETAS_URL)
-	set(APPCAST_BETAS_URL "https://localhost/hive/appcast-beta.xml" CACHE STRING "Appcast URL for Hive Betas" FORCE)
-endif()
-message(STATUS "Appcast URL for Hive Betas defined to: ${APPCAST_BETAS_URL}")
-if(NOT APPCAST_RELEASES_FALLBACK_URL)
-	set(APPCAST_RELEASES_FALLBACK_URL "${APPCAST_RELEASES_URL}" CACHE STRING "Appcast Fallback URL for Hive Releases" FORCE)
-endif()
-message(STATUS "Appcast fallback URL for Hive Releases defined to: ${APPCAST_RELEASES_FALLBACK_URL}")
-if(NOT APPCAST_BETAS_FALLBACK_URL)
-	set(APPCAST_BETAS_FALLBACK_URL "${APPCAST_BETAS_URL}" CACHE STRING "Appcast Fallback URL for Hive Betas" FORCE)
-endif()
-message(STATUS "Appcast fallback URL for Hive Betas defined to: ${APPCAST_BETAS_FALLBACK_URL}")
 if(APPLE AND NOT HIVE_DSA_PUB_KEY)
 	message(FATAL_ERROR "DSA Public Key not set in HIVE_DSA_PUB_KEY CMake Variable")
 endif()
@@ -69,7 +71,7 @@ set(CU_COPYRIGHT_HOLDER "Emilien Vallot, Christophe Calmejane and other contribu
 
 # Avdecc project location
 if(NOT AVDECC_BASE_FOLDER)
-	set(AVDECC_BASE_FOLDER "3rdparty/avdecc")
+	set(AVDECC_BASE_FOLDER "${CMAKE_CURRENT_LIST_DIR}/3rdparty/avdecc")
 endif()
 
 # Define base folder for cmakeUtils scripts
@@ -143,6 +145,9 @@ endif()
 # Add our cmake modules path
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required to find_package 3rd party modules that don't provide their CMake Config files
 
+# Find Qt dependencies
+find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+
 # Setup variables related to the project version
 cu_setup_project_version_variables(${HIVE_VERSION})
 
@@ -152,6 +157,13 @@ cu_setup_apple_minimum_versions(MACOS 10.13 IOS 11)
 ############ Define some variables
 
 set(HIVE_RESOURCES_FOLDER "${CMAKE_CURRENT_LIST_DIR}/resources")
+
+if(FALSE)
+	set(INSTALL_TEST_FLAG "INSTALL")
+endif()
+if(${ENABLE_CODE_SIGNING})
+	set(SIGN_FLAG "SIGN")
+endif()
 
 # Install paramaters
 if(APPLE)
