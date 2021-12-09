@@ -70,8 +70,16 @@ private:
 
 		// Automatic Check For Updates
 		{
+#ifdef USE_SPARKLE
 			auto const lock = QSignalBlocker{ automaticCheckForUpdatesCheckBox };
 			automaticCheckForUpdatesCheckBox->setChecked(settings->getValue(settings::General_AutomaticCheckForUpdates.name).toBool());
+#else // !USE_SPARKLE
+			automaticCheckForUpdatesLabel->setToolTip("Not compiled with auto-update support");
+			automaticCheckForUpdatesLabel->setEnabled(false);
+			automaticCheckForUpdatesCheckBox->setToolTip("Not compiled with auto-update support");
+			automaticCheckForUpdatesCheckBox->setEnabled(false);
+			automaticCheckForUpdatesCheckBox->setChecked(false);
+#endif // USE_SPARKLE
 		}
 
 		// Theme Color
@@ -118,11 +126,19 @@ private:
 
 		// Check For Beta Updates
 		{
+#ifdef USE_SPARKLE
 			auto const lock = QSignalBlocker{ checkForBetaVersionsCheckBox };
 			checkForBetaVersionsCheckBox->setChecked(settings->getValue(settings::General_CheckForBetaVersions.name).toBool());
 			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
 			checkForBetaVersionsLabel->setEnabled(enabled);
 			checkForBetaVersionsCheckBox->setEnabled(enabled);
+#else // !USE_SPARKLE
+			checkForBetaVersionsLabel->setToolTip("Not compiled with auto-update support");
+			checkForBetaVersionsLabel->setEnabled(false);
+			checkForBetaVersionsCheckBox->setToolTip("Not compiled with auto-update support");
+			checkForBetaVersionsCheckBox->setChecked(false);
+			checkForBetaVersionsCheckBox->setEnabled(false);
+#endif // USE_SPARKLE
 		}
 
 		// Discovery Delay

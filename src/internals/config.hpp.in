@@ -46,10 +46,12 @@ QString const buildConfiguration{ "Debug" };
 #else // !DEBUG
 QString const buildConfiguration{ "Release" };
 #endif // DEBUG
+#ifdef USE_SPARKLE
 std::string const appcastReleasesUrl{ "@APPCAST_RELEASES_URL@" };
 std::string const appcastBetasUrl{ "@APPCAST_BETAS_URL@" };
 std::string const appcastReleasesFallbackUrl{ "@APPCAST_RELEASES_FALLBACK_URL@" };
 std::string const appcastBetasFallbackUrl{ "@APPCAST_BETAS_FALLBACK_URL@" };
+#endif // USE_SPARKLE
 
 } // namespace internals
 } // namespace hive

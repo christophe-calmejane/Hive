@@ -60,7 +60,9 @@
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
+#ifdef USE_SPARKLE
 #include <sparkleHelper/sparkleHelper.hpp>
+#endif // USE_SPARKLE
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
@@ -1074,7 +1076,11 @@ void MainWindowImpl::connectSignals()
 	connect(actionCheckForUpdates, &QAction::triggered, this,
 		[]()
 		{
+#ifdef USE_SPARKLE
 			Sparkle::getInstance().manualCheckForUpdate();
+#else // !USE_SPARKLE
+			QMessageBox::information(nullptr, "Updates not supported", "Not compiled with auto-update support.");
+#endif // USE_SPARKLE
 		});
 
 
@@ -1107,6 +1113,7 @@ void MainWindowImpl::connectSignals()
 		});
 #endif
 
+#ifdef USE_SPARKLE
 	// Connect Sparkle events
 	auto& sparkle = Sparkle::getInstance();
 	sparkle.setIsShutdownAllowedHandler(
@@ -1175,6 +1182,7 @@ void MainWindowImpl::connectSignals()
 					}
 				});
 		});
+#endif // USE_SPARKLE
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
@@ -1245,10 +1253,12 @@ void MainWindow::showEvent(QShowEvent* event)
 				_pImpl->_shown = true;
 				auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
+#ifdef USE_SPARKLE
 				// Start Sparkle
 				{
 					Sparkle::getInstance().start();
 				}
+#endif // USE_SPARKLE
 				// Check if we have a network interface selected and start controller
 				{
 					auto const interfaceID = _pImpl->_interfaceComboBox.currentData().toString();
@@ -1527,6 +1537,7 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 		auto const colorName = qtMate::material::color::Palette::name(value.toInt());
 		updateStyleSheet(colorName, ":/style.qss");
 	}
+#ifdef USE_SPARKLE
 	else if (name == settings::General_AutomaticCheckForUpdates.name)
 	{
 		Sparkle::getInstance().setAutomaticCheckForUpdates(value.toBool());
@@ -1544,6 +1555,7 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 			Sparkle::getInstance().setAppcastUrl(hive::internals::appcastReleasesUrl);
 		}
 	}
+#endif // USE_SPARKLE
 }
 
 MainWindow::MainWindow(bool const mustResetViewSettings, QWidget* parent)
