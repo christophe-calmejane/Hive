@@ -278,12 +278,83 @@ public:
 
 		try
 		{
-			// set all data
+			// iterate over the stream format table changes, collect them into a list and write them via avdecc
+			auto changedStreamFormats = QList<StreamFormatTableRowEntry>();
+			// collect all STREAM_INPUT format changes
+			for (auto& descriptorIdx : _deviceDetailsInputStreamFormatTableModel.getChanges().keys())
+			{
+				auto sfChanges = _deviceDetailsInputStreamFormatTableModel.getChanges().value(descriptorIdx);
+				for (auto col : sfChanges->keys())
+					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
+						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
+			}
+			// collect all STREAM_OUTPUT format changes
+			for (auto& descriptorIdx : _deviceDetailsOutputStreamFormatTableModel.getChanges().keys())
+			{
+				auto sfChanges = _deviceDetailsOutputStreamFormatTableModel.getChanges().value(descriptorIdx);
+				for (auto col : sfChanges->keys())
+					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
+						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
+			}
+			// determin if any of the format changes is in conflict with currently set 'media clock domain' sampling rate and abort on user request
+			for (auto const& streamFormatData : changedStreamFormats)
+			{
+				auto hasSampleRateConflict = false;
+
+				auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatData.streamFormat);
+				auto& clockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
+				auto const& mediaClockMaster = clockConnectionManager.getMediaClockMaster(_entityID);
+				auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(mediaClockMaster.first);
+				if (streamFormatInfo && controlledEntity)
+				{
+					try
+					{
+						auto* audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
+						if (audioUnitDynModel)
+						{
+							auto const& streamFormatSampleRate = avdecc::helper::samplingRateToNominalRate(streamFormatInfo->getSamplingRate());
+							auto const& mediaClockMasterSampleRate = audioUnitDynModel->currentSamplingRate.getNominalSampleRate();
+							hasSampleRateConflict = (mediaClockMasterSampleRate != streamFormatSampleRate);
+						}
+					}
+					catch (la::avdecc::controller::ControlledEntity::Exception const&)
+					{
+					}
+				}
+
+				if (hasSampleRateConflict)
+				{
+					auto result = QMessageBox::warning(_dialog, "", "The selected stream formats are conflicting with the Media Clock Domain sample rate the device belongs to.\nContinue?", QMessageBox::StandardButton::Abort | QMessageBox::StandardButton::Ok, QMessageBox::StandardButton::Abort);
+					if (result == QMessageBox::StandardButton::Abort)
+					{
+						revertChanges();
+						return;
+					}
+				}
+			}
+			// apply the new stream formats
+			for (auto const& streamFormatData : changedStreamFormats)
+			{
+				if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
+				{
+					manager.setStreamInputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
+					_expectedChanges++;
+				}
+				else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+				{
+					manager.setStreamOutputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
+					_expectedChanges++;
+				}
+			}
+
+			// apply new device name
 			if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
 			{
 				manager.setEntityName(_entityID, lineEditDeviceName->text());
 				_expectedChanges++;
 			}
+
+			// apply new group name
 			if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
 			{
 				manager.setEntityGroupName(_entityID, lineEditGroupName->text());
@@ -316,36 +387,6 @@ public:
 						manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, descriptorIdx, txChanges->value(col).toString());
 						_expectedChanges++;
 					}
-				}
-			}
-
-			// iterate over the stream format table changes, collect them into a list and write them via avdecc
-			auto changedStreamFormats = QList<StreamFormatTableRowEntry>();
-			for (auto& descriptorIdx : _deviceDetailsInputStreamFormatTableModel.getChanges().keys())
-			{
-				auto sfChanges = _deviceDetailsInputStreamFormatTableModel.getChanges().value(descriptorIdx);
-				for (auto col : sfChanges->keys())
-					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
-						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
-			}
-			for (auto& descriptorIdx : _deviceDetailsOutputStreamFormatTableModel.getChanges().keys())
-			{
-				auto sfChanges = _deviceDetailsOutputStreamFormatTableModel.getChanges().value(descriptorIdx);
-				for (auto col : sfChanges->keys())
-					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
-						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
-			}
-			for (auto const& streamFormatData : changedStreamFormats)
-			{
-				if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
-				{
-					manager.setStreamInputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
-					_expectedChanges++;
-				}
-				else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-				{
-					manager.setStreamOutputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
-					_expectedChanges++;
 				}
 			}
 

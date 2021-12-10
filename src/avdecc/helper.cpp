@@ -1047,5 +1047,39 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept
 	}
 }
 
+double samplingRateToNominalRate(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate) noexcept
+{
+	switch (samplingRate)
+	{
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Hz_500:
+			return 500.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_8:
+			return 8000.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_16:
+			return 16000.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_24:
+			return 24000.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_32:
+			return 32000.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_44_1:
+			return 44100.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_48:
+			return 48000.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_88_2:
+			return 88200.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_96:
+			return 96000.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_176_4:
+			return 176400.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_192:
+			return 192000.0f;
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::UserDefined:
+		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Unknown:
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return {};
+	}
+}
+
 } // namespace helper
 } // namespace avdecc
