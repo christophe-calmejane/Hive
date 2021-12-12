@@ -301,19 +301,28 @@ public:
 			{
 				auto hasSampleRateConflict = false;
 
-				auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatData.streamFormat);
+				// get the 'media clock master' entity to be able to access its sampling rate
 				auto& clockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
 				auto const& mediaClockMaster = clockConnectionManager.getMediaClockMaster(_entityID);
 				auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(mediaClockMaster.first);
-				if (streamFormatInfo && controlledEntity)
+
+				if (controlledEntity)
 				{
 					try
 					{
+						// create a streamformatinfo to then derive the samplingrate for comparison purposes
+						auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatData.streamFormat);
 						auto* audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
-						if (audioUnitDynModel)
+						if (streamFormatInfo && audioUnitDynModel)
 						{
-							auto const& streamFormatSampleRate = avdecc::helper::samplingRateToNominalRate(streamFormatInfo->getSamplingRate());
-							auto const& mediaClockMasterSampleRate = audioUnitDynModel->currentSamplingRate.getNominalSampleRate();
+							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
+							auto const& streamFormatSampleRatePullAndBase = avdecc::helper::samplingRateToPullAndBaseFrequency(streamFormatInfo->getSamplingRate());
+							auto const& streamFormatSampleRate = la::avdecc::entity::model::SamplingRate(streamFormatSampleRatePullAndBase.first, streamFormatSampleRatePullAndBase.second);
+
+							// get the 'media clock domain' sampling rate from the 'media clock master's entities audioUnit
+							auto const& mediaClockMasterSampleRate = audioUnitDynModel->currentSamplingRate;
+
+							// if the 'media clock master' audioUnit SR and the streamFormat SR do not match, we have found a conflict that the user needs to be warned about
 							hasSampleRateConflict = (mediaClockMasterSampleRate != streamFormatSampleRate);
 						}
 					}
