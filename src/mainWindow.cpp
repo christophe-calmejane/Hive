@@ -61,7 +61,7 @@
 #include <QtMate/material/colorPalette.hpp>
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 #ifdef USE_SPARKLE
-#include <sparkleHelper/sparkleHelper.hpp>
+#	include <sparkleHelper/sparkleHelper.hpp>
 #endif // USE_SPARKLE
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
@@ -1259,6 +1259,7 @@ void MainWindow::showEvent(QShowEvent* event)
 					Sparkle::getInstance().start();
 				}
 #endif // USE_SPARKLE
+
 				// Check if we have a network interface selected and start controller
 				{
 					auto const interfaceID = _pImpl->_interfaceComboBox.currentData().toString();

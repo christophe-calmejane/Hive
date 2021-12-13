@@ -24,7 +24,7 @@
 
 #include <la/avdecc/utils.hpp>
 #ifdef USE_SPARKLE
-#include <sparkleHelper/sparkleHelper.hpp>
+#	include <sparkleHelper/sparkleHelper.hpp>
 #endif // USE_SPARKLE
 #include <hive/modelsLibrary/controllerManager.hpp>
 

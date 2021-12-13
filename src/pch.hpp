@@ -75,7 +75,7 @@
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
 #ifdef USE_SPARKLE
-#include "sparkleHelper/sparkleHelper.hpp"
+#	include "sparkleHelper/sparkleHelper.hpp"
 #endif // USE_SPARKLE
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
 
