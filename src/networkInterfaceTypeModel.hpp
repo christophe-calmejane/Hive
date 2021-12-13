@@ -21,7 +21,7 @@
 
 #include <QAbstractListModel>
 #include <QScopedPointer>
-#include <la/avdecc/networkInterfaceHelper.hpp>
+#include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 
 // Model for Network Interface Types, load and update the associated settings
 class NetworkInterfaceTypeModelPrivate;
@@ -31,8 +31,8 @@ public:
 	NetworkInterfaceTypeModel(QObject* parent = nullptr);
 	virtual ~NetworkInterfaceTypeModel();
 
-	void setActive(la::avdecc::networkInterface::Interface::Type const interfaceType, bool const active);
-	bool isActive(la::avdecc::networkInterface::Interface::Type const interfaceType) const;
+	void setActive(la::networkInterface::Interface::Type const interfaceType, bool const active);
+	bool isActive(la::networkInterface::Interface::Type const interfaceType) const;
 
 private:
 	// QAbstractListModel overrides

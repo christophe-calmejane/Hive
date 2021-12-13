@@ -74,7 +74,9 @@
 #include "profiles/profileSelectionDialog.hpp"
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
+#ifdef USE_SPARKLE
 #include "sparkleHelper/sparkleHelper.hpp"
+#endif // USE_SPARKLE
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
 
 // QtMate Library
@@ -106,9 +108,9 @@
 
 
 // Other Headers
+#include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/logger.hpp>
-#include <la/avdecc/networkInterfaceHelper.hpp>
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 #include <la/avdecc/internals/entityModel.hpp>

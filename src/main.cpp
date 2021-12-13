@@ -23,7 +23,9 @@
 #include "profiles/profileSelectionDialog.hpp"
 
 #include <la/avdecc/utils.hpp>
+#ifdef USE_SPARKLE
 #include <sparkleHelper/sparkleHelper.hpp>
+#endif // USE_SPARKLE
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QApplication>
@@ -91,8 +93,8 @@ int main(int argc, char* argv[])
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
-	QCoreApplication::setOrganizationDomain(hive::internals::organizationDomain);
-	QCoreApplication::setOrganizationName(hive::internals::organizationName);
+	QCoreApplication::setOrganizationDomain(hive::internals::companyDomain);
+	QCoreApplication::setOrganizationName(hive::internals::companyName);
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
 
@@ -222,6 +224,7 @@ int main(int argc, char* argv[])
 	/* Load everything we need */
 	std::chrono::time_point<std::chrono::system_clock> start{ std::chrono::system_clock::now() };
 
+#ifdef USE_SPARKLE
 	// Initialize Sparkle
 	{
 		QFile signatureFile(":/dsa_pub.pem");
@@ -231,6 +234,7 @@ int main(int argc, char* argv[])
 			Sparkle::getInstance().init(hive::internals::buildNumber.toStdString(), content.toStdString());
 		}
 	}
+#endif // USE_SPARKLE
 
 	// Load main window (and all associated resources) while the splashscreen is displayed
 	auto window = MainWindow{ mustResetViewSettings };

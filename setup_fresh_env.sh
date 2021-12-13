@@ -22,29 +22,13 @@ setupSparkleHelper()
 {
 	local sparkleHelperFolder="${callerFolderPath}3rdparty/sparkleHelper/"
 	local sparkleHelperScriptsFolder="${sparkleHelperFolder}scripts/"
+	local resourcesFolder="${callerFolderPath}resources"
 
 	# Call setup_fresh_env.sh from SparkleHelper
-	${sparkleHelperScriptsFolder}setup_fresh_env.sh
-
-	getOS osName
-	if [[ $osName == "mac" ]];
-	then
-		echo -n "Codesigning Sparkle Framework... "
-		local log=$(codesign -s "${params['identity']}" --timestamp --deep --strict --force --options=runtime "${sparkleHelperFolder}3rdparty/sparkle/Sparkle.framework/Resources/Autoupdate.app" 2>&1)
-		if [ $? -ne 0 ];
-		then
-			echo "failed!"
-			echo ""
-			echo "Error log:"
-			echo $log
-			exit 1
-		fi
-		echo "done"
-	fi
+	${sparkleHelperScriptsFolder}setup_fresh_env.sh "${params['identity']}"
 
 	# Generate DSA keys
-	${sparkleHelperScriptsFolder}generate_dsa_keys.sh "${callerFolderPath}resources"
-
+	${sparkleHelperScriptsFolder}generate_dsa_keys.sh "${resourcesFolder}"
 }
 
 setupPCap()
@@ -109,9 +93,10 @@ setupPCap()
 	echo "done"
 }
 
-if [ ! -f ".hive_config" ]; then
-	echo "ERROR: You must create and configure a .hive_config file before running this script:"
-	echo "Copy .hive_config.sample file to .hive_config then edit it to your needs."
+configFile=".hive_config"
+if [ ! -f "${configFile}" ]; then
+	echo "ERROR: You must create and configure a ${configFile} file before running this script:"
+	echo "Copy ${configFile}.sample file to ${configFile} then edit it to your needs."
 	exit 1
 fi
 
@@ -121,16 +106,20 @@ setupSubmodules
 . "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
 # Include config file functions
-. "${callerFolderPath}scripts/loadConfigFile.sh"
+. "${callerFolderPath}3rdparty/avdecc/scripts/bashUtils/load_config_file.sh"
 
 # Load config file
 loadConfigFile
 
-# Setup Sparkle
-setupSparkleHelper
+if [ "x${params["use_sparkle"]}" == "xtrue" ]; then
+	# Setup Sparkle
+	setupSparkleHelper
+fi
 
 # Setup PCap
 setupPCap
+
+echo "DO NOT REMOVE THIS FILE" > ".initialized"
 
 echo "All done!"
 

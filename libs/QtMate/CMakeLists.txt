@@ -1,7 +1,7 @@
 # QtMate library
 
 # Declare project
-setup_project(QtMate "1.0.0.1" "QtMate Library")
+cu_setup_project(QtMate "1.0.0.1" "QtMate Library")
 
 # Find dependencies
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
@@ -15,23 +15,23 @@ if(WIN32)
 endif()
 
 set(HEADER_FILES_PUBLIC
-	${PROJECT_ROOT_DIR}/include/QtMate/material/color.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/material/colorPalette.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/material/helper.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/graph/connection.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/graph/inputSocket.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/graph/node.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/graph/outputSocket.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/graph/socket.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/graph/type.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/graph/view.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/widgets/comboBox.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/widgets/dynamicHeaderView.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/widgets/flatIconButton.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/widgets/headerViewSortSectionFilter.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/widgets/tableView.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/widgets/textEntry.hpp
-	${PROJECT_ROOT_DIR}/include/QtMate/widgets/tickableMenu.hpp
+	${CU_ROOT_DIR}/include/QtMate/material/color.hpp
+	${CU_ROOT_DIR}/include/QtMate/material/colorPalette.hpp
+	${CU_ROOT_DIR}/include/QtMate/material/helper.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/connection.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/inputSocket.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/node.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/outputSocket.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/socket.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/type.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/view.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/comboBox.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/dynamicHeaderView.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/flatIconButton.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/headerViewSortSectionFilter.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/tableView.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/textEntry.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/tickableMenu.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -63,12 +63,13 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOUR
 # Define static library to be used by main application and unit tests
 add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_PUBLIC} ${HEADER_FILES_COMMON} ${SOURCE_FILES_COMMON} ${PCH_FILES})
 
-# Enable precompiled headers
-set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME} ${PCH_SOURCE_NAME})
-
 # Setup common options
-setup_library_options(${PROJECT_NAME}_static "${PROJECT_NAME}_static")
+cu_setup_library_options(${PROJECT_NAME}_static)
 
+# Enable precompiled headers
+cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
+
+# Automatically generate MOC
 set_target_properties(${PROJECT_NAME}_static PROPERTIES
 	AUTOMOC ON
 )

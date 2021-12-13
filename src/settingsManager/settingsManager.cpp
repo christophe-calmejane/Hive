@@ -45,7 +45,7 @@ public:
 		}
 		else
 		{
-			_settings = std::make_unique<QSettings>(QSettings::Format::IniFormat, QSettings::Scope::UserScope, hive::internals::organizationName, hive::internals::applicationShortName);
+			_settings = std::make_unique<QSettings>(QSettings::Format::IniFormat, QSettings::Scope::UserScope, hive::internals::companyName, hive::internals::applicationShortName);
 		}
 	}
 

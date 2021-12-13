@@ -30,11 +30,11 @@ public:
 	NetworkInterfaceTypeModelPrivate(NetworkInterfaceTypeModel* q)
 		: q_ptr{ q }
 	{
-		_typeInfo.insert({ la::avdecc::networkInterface::Interface::Type::Ethernet, { "Ethernet", false } });
-		_typeInfo.insert({ la::avdecc::networkInterface::Interface::Type::WiFi, { "WiFi", false } });
+		_typeInfo.insert({ la::networkInterface::Interface::Type::Ethernet, { "Ethernet", false } });
+		_typeInfo.insert({ la::networkInterface::Interface::Type::WiFi, { "WiFi", false } });
 	}
 
-	void setActive(la::avdecc::networkInterface::Interface::Type const type, bool const active, bool const updateSettings)
+	void setActive(la::networkInterface::Interface::Type const type, bool const active, bool const updateSettings)
 	{
 		Q_Q(NetworkInterfaceTypeModel);
 
@@ -52,10 +52,10 @@ public:
 				auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 				switch (type)
 				{
-					case la::avdecc::networkInterface::Interface::Type::Ethernet:
+					case la::networkInterface::Interface::Type::Ethernet:
 						settings->setValue(settings::Network_InterfaceTypeEthernet.name, active);
 						break;
-					case la::avdecc::networkInterface::Interface::Type::WiFi:
+					case la::networkInterface::Interface::Type::WiFi:
 						settings->setValue(settings::Network_InterfaceTypeWiFi.name, active);
 						break;
 					default:
@@ -71,7 +71,7 @@ public:
 		}
 	}
 
-	bool isActive(la::avdecc::networkInterface::Interface::Type const type) const
+	bool isActive(la::networkInterface::Interface::Type const type) const
 	{
 		auto const it = _typeInfo.find(type);
 		if (it != std::end(_typeInfo))
@@ -87,11 +87,11 @@ private:
 	{
 		if (name == settings::Network_InterfaceTypeEthernet.name)
 		{
-			setActive(la::avdecc::networkInterface::Interface::Type::Ethernet, value.toBool(), false);
+			setActive(la::networkInterface::Interface::Type::Ethernet, value.toBool(), false);
 		}
 		else if (name == settings::Network_InterfaceTypeWiFi.name)
 		{
-			setActive(la::avdecc::networkInterface::Interface::Type::WiFi, value.toBool(), false);
+			setActive(la::networkInterface::Interface::Type::WiFi, value.toBool(), false);
 		}
 	}
 
@@ -105,7 +105,7 @@ private:
 		bool active{ false };
 	};
 
-	std::map<la::avdecc::networkInterface::Interface::Type, Info> _typeInfo;
+	std::map<la::networkInterface::Interface::Type, Info> _typeInfo;
 };
 
 NetworkInterfaceTypeModel::NetworkInterfaceTypeModel(QObject* parent)
@@ -125,13 +125,13 @@ NetworkInterfaceTypeModel::~NetworkInterfaceTypeModel()
 	settings->unregisterSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());
 }
 
-void NetworkInterfaceTypeModel::setActive(la::avdecc::networkInterface::Interface::Type const type, bool const active)
+void NetworkInterfaceTypeModel::setActive(la::networkInterface::Interface::Type const type, bool const active)
 {
 	Q_D(NetworkInterfaceTypeModel);
 	d->setActive(type, active, true);
 }
 
-bool NetworkInterfaceTypeModel::isActive(la::avdecc::networkInterface::Interface::Type const type) const
+bool NetworkInterfaceTypeModel::isActive(la::networkInterface::Interface::Type const type) const
 {
 	Q_D(const NetworkInterfaceTypeModel);
 	return d->isActive(type);

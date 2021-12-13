@@ -395,7 +395,7 @@ MainWindow::MainWindow(QWidget* parent)
 	, _pImpl(new MainWindowImpl(this))
 {
 	// Set title
-	setWindowTitle(aemDumper::internals::applicationLongName + " - Version " + QCoreApplication::applicationVersion());
+	setWindowTitle(QCoreApplication::applicationName() + " - Version " + QCoreApplication::applicationVersion());
 }
 
 MainWindow::~MainWindow() noexcept

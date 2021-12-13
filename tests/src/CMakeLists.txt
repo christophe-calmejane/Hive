@@ -12,10 +12,14 @@ set(TESTS_SOURCE
 )
 
 # Define target
-add_executable(Tests ${TESTS_SOURCE})
+add_executable(Tests MACOSX_BUNDLE ${TESTS_SOURCE})
+
+if(ENABLE_HIVE_FEATURE_SPARKLE)
+	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
+endif()
 
 # Setup common options
-setup_executable_options(Tests)
+cu_setup_executable_options(Tests)
 
 # Set IDE folder
 set_target_properties(Tests PROPERTIES FOLDER "Tests")
@@ -23,7 +27,5 @@ set_target_properties(Tests PROPERTIES FOLDER "Tests")
 # Link with required libraries
 target_link_libraries(Tests PRIVATE gtest ${PROJECT_NAME}_static)
 
-# Set installation rule
-if(INSTALL_HIVE_TESTS)
-	install(TARGETS Tests RUNTIME CONFIGURATIONS Release DESTINATION bin)
-endif()
+# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
+cu_setup_deploy_runtime(Tests ${INSTALL_TEST_FLAG} ${SIGN_FLAG} ${SDR_PARAMETERS})

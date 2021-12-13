@@ -36,9 +36,9 @@
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/networkInterfacesModel.hpp>
+#include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/logger.hpp>
-#include <la/avdecc/networkInterfaceHelper.hpp>
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
 #include <la/avdecc/internals/entityModel.hpp>

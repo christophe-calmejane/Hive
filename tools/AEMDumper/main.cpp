@@ -79,8 +79,8 @@ int main(int argc, char* argv[])
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
 
-	QCoreApplication::setOrganizationDomain(aemDumper::internals::organizationDomain);
-	QCoreApplication::setOrganizationName(aemDumper::internals::organizationName);
+	QCoreApplication::setOrganizationDomain(aemDumper::internals::companyDomain);
+	QCoreApplication::setOrganizationName(aemDumper::internals::companyName);
 	QCoreApplication::setApplicationName(aemDumper::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(aemDumper::internals::versionString);
 

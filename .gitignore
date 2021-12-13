@@ -21,3 +21,6 @@ ehthumbs.db
 
 # Ignore PEM files
 /resources/*.pem
+
+# Ignore setup_fresh ran file
+/.initialized

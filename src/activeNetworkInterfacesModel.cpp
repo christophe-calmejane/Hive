@@ -37,18 +37,18 @@ public:
 private:
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override
 	{
-		auto type = la::avdecc::networkInterface::Interface::Type::None;
+		auto type = la::networkInterface::Interface::Type::None;
 
 		if (name == settings::Network_InterfaceTypeEthernet.name)
 		{
-			type = la::avdecc::networkInterface::Interface::Type::Ethernet;
+			type = la::networkInterface::Interface::Type::Ethernet;
 		}
 		else if (name == settings::Network_InterfaceTypeWiFi.name)
 		{
-			type = la::avdecc::networkInterface::Interface::Type::WiFi;
+			type = la::networkInterface::Interface::Type::WiFi;
 		}
 
-		if (!AVDECC_ASSERT_WITH_RET(type != la::avdecc::networkInterface::Interface::Type::None, "Invalid type"))
+		if (!AVDECC_ASSERT_WITH_RET(type != la::networkInterface::Interface::Type::None, "Invalid type"))
 		{
 			return;
 		}
@@ -71,7 +71,7 @@ private:
 	Q_DECLARE_PUBLIC(ActiveNetworkInterfacesModel);
 
 	hive::widgetModelsLibrary::NetworkInterfacesListModel _model{};
-	std::unordered_set<la::avdecc::networkInterface::Interface::Type> _allowedInterfaceTypes{};
+	std::unordered_set<la::networkInterface::Interface::Type> _allowedInterfaceTypes{};
 };
 
 ActiveNetworkInterfacesModel::ActiveNetworkInterfacesModel(QObject* parent)

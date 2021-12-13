@@ -1,12 +1,7 @@
 # Hive Sources CMake File
 
-set(HIVE_SOURCES_FOLDER ${CMAKE_CURRENT_SOURCE_DIR})
-
 # Declare project
-setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
-
-# Find dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+cu_setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -206,16 +201,17 @@ source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
 # Define static library to be used by main application and unit tests
 add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON})
 
-# Enable precompiled headers
-set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
-
 # Setup common options
-setup_library_options(${PROJECT_NAME}_static "${PROJECT_NAME}_static")
+cu_setup_library_options(${PROJECT_NAME}_static)
 
+# Automatically generate MOC and UI
 set_target_properties(${PROJECT_NAME}_static PROPERTIES
 	AUTOMOC ON
 	AUTOUIC ON
 )
+
+# Enable precompiled headers
+cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
 
 # Additional compile definitions
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
@@ -226,7 +222,8 @@ if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()
 if(ENABLE_HIVE_FEATURE_SPARKLE)
-	target_compile_options(${PROJECT_NAME}_static PUBLIC -DUSE_SPARKLE)
+	target_compile_definitions(${PROJECT_NAME}_static PUBLIC USE_SPARKLE)
+	# Link with SparkleHelper
 	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC SparkleHelper::lib)
 endif()
@@ -234,7 +231,7 @@ endif()
 # Include directories
 target_include_directories(${PROJECT_NAME}_static
 	PUBLIC
-		$<BUILD_INTERFACE:${PROJECT_ROOT_DIR}/src>
+		$<BUILD_INTERFACE:${CU_ROOT_DIR}/src>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
@@ -243,7 +240,7 @@ if(BUILD_HIVE_APPLICATION)
 	add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE ${HEADER_FILES_GENERATED} ${SOURCE_FILES_APP} ${RESOURCE_FILES} ${RESOURCE_FILES_GENERATED})
 
 	# Setup common options
-	setup_executable_options(${PROJECT_NAME})
+	cu_setup_executable_options(${PROJECT_NAME})
 
 	# Additional compile definitions
 	if(HIVE_IS_RELEASE_VERSION)
@@ -253,6 +250,7 @@ if(BUILD_HIVE_APPLICATION)
 	# Link libraries
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_static)
 
+	# Set auto RCC
 	set_target_properties(${PROJECT_NAME} PROPERTIES
 		AUTORCC ON
 	)
@@ -266,7 +264,7 @@ if(BUILD_HIVE_APPLICATION)
 	endif()
 
 	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
-	setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
+	cu_setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
 endif()
 
 ################
