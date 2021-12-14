@@ -1047,50 +1047,5 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept
 	}
 }
 
-std::pair<std::uint8_t, std::uint32_t> samplingRateToPullAndBaseFrequency(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate) noexcept
-{
-	switch (samplingRate)
-	{
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Hz_500:
-			//pull 0, base 500;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 500);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_8:
-			//pull 0, base 8000;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 8000);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_16:
-			//pull 0, base 16000;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 16000);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_24:
-			//pull 0, base 24000;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 24000);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_32:
-			//pull 0, base 32000;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 32000);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_44_1:
-			//pull 0, base 44100;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 44100);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_48:
-			//pull 0, base 48000;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 48000);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_88_2:
-			//pull 0, base 88200;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 88200);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_96:
-			//pull 0, base 96000;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 96000);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_176_4:
-			//pull 0, base 176400;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 176400);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_192:
-			//pull 0, base 192000;
-			return std::make_pair<std::uint8_t, std::uint32_t>(0, 192000);
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::UserDefined:
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Unknown:
-		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return {};
-	}
-}
-
 } // namespace helper
 } // namespace avdecc

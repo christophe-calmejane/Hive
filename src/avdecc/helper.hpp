@@ -71,7 +71,5 @@ QString certificationVersionToString(std::uint32_t const certificationVersion) n
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
 QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
 
-std::pair<std::uint8_t, std::uint32_t> samplingRateToPullAndBaseFrequency(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate) noexcept;
-
 } // namespace helper
 } // namespace avdecc

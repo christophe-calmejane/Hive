@@ -316,8 +316,7 @@ public:
 						if (streamFormatInfo && audioUnitDynModel)
 						{
 							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
-							auto const& streamFormatSampleRatePullAndBase = avdecc::helper::samplingRateToPullAndBaseFrequency(streamFormatInfo->getSamplingRate());
-							auto const& streamFormatSampleRate = la::avdecc::entity::model::SamplingRate(streamFormatSampleRatePullAndBase.first, streamFormatSampleRatePullAndBase.second);
+							auto const& streamFormatSampleRate = streamFormatInfo->getSamplingRate();
 
 							// get the 'media clock domain' sampling rate from the 'media clock master's entities audioUnit
 							auto const& mediaClockMasterSampleRate = audioUnitDynModel->currentSamplingRate;
@@ -328,6 +327,12 @@ public:
 					}
 					catch (la::avdecc::controller::ControlledEntity::Exception const&)
 					{
+						// Ignore exception
+					}
+					catch (...)
+					{
+						// Uncaught exception
+						AVDECC_ASSERT(false, "Uncaught exception");
 					}
 				}
 
