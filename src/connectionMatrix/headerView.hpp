@@ -25,6 +25,7 @@
 
 #include <QHeaderView>
 #include <QVector>
+#include <QRegularExpression>
 
 namespace connectionMatrix
 {
@@ -54,7 +55,7 @@ public:
 
 	// Set filter regexp that applies to entity
 	// i.e the complete entity hierarchy is visible (with respect of the current collapse/expand state) if the entity name matches pattern
-	void setFilterPattern(QRegExp const& pattern);
+	void setFilterPattern(QRegularExpression const& pattern);
 
 	// Expand all child nodes of each entity
 	void expandAll();
@@ -83,7 +84,7 @@ private:
 private:
 	bool const _isListenersHeader{ false };
 	QVector<SectionState> _sectionState;
-	QRegExp _pattern;
+	QRegularExpression _pattern;
 
 	bool _alwaysShowArrowTip{ false };
 	bool _alwaysShowArrowEnd{ false };

@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QTableView>
+#include <QRegularExpression>
 #include "settingsManager/settings.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 
@@ -46,7 +47,7 @@ private:
 	void onIntersectionClicked(QModelIndex const& index);
 	void onCustomContextMenuRequested(QPoint const& pos);
 	void onFilterChanged(QString const& filter);
-	void applyFilterPattern(QRegExp const& pattern);
+	void applyFilterPattern(QRegularExpression const& pattern);
 	void forceFilter();
 
 	// QTableView overrides

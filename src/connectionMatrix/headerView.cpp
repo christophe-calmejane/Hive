@@ -110,7 +110,7 @@ void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 	}
 }
 
-void HeaderView::setFilterPattern(QRegExp const& pattern)
+void HeaderView::setFilterPattern(QRegularExpression const& pattern)
 {
 	_pattern = pattern;
 	applyFilterPattern();

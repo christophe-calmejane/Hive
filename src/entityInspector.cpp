@@ -24,6 +24,7 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 
 #include <QHeaderView>
+#include <QIODevice>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
