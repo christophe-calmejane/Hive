@@ -49,6 +49,9 @@ endif()
 if(APPLE AND NOT HIVE_DSA_PUB_KEY)
 	message(FATAL_ERROR "DSA Public Key not set in HIVE_DSA_PUB_KEY CMake Variable")
 endif()
+if(NOT QT_MAJOR_VERSION)
+	set(QT_MAJOR_VERSION 5)
+endif()
 
 ############ CMake Configuration
 
@@ -146,7 +149,7 @@ endif()
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required to find_package 3rd party modules that don't provide their CMake Config files
 
 # Find Qt dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network REQUIRED)
 
 # Setup variables related to the project version
 cu_setup_project_version_variables(${HIVE_VERSION})
@@ -169,9 +172,8 @@ endif()
 if(APPLE)
 	set(MACOS_INSTALL_FOLDER "${PROJECT_NAME} ${CU_PROJECT_MARKETING_VERSION}")
 	list(APPEND SDR_PARAMETERS "BUNDLE_DIR" "${MACOS_INSTALL_FOLDER}" "RUNTIME_DIR" "${MACOS_INSTALL_FOLDER}")
-else()
-	list(APPEND SDR_PARAMETERS)
 endif()
+list(APPEND SDR_PARAMETERS QT_MAJOR_VERSION ${QT_MAJOR_VERSION})
 
 ############ Add projects
 

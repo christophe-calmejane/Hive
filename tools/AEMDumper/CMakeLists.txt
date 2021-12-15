@@ -4,7 +4,7 @@
 cu_setup_project(AEMDumper "1.0.0.1" "AEM Dumper")
 
 # Find dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network REQUIRED)
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -86,7 +86,7 @@ cu_setup_executable_options(${PROJECT_NAME})
 target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets Hive_models_static QtMate_static Hive_widget_models_static ${BUGREPORTER_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt${QT_MAJOR_VERSION}::Widgets Hive_models_static QtMate_static Hive_widget_models_static ${BUGREPORTER_LINK_LIBRARIES})
 
 # Include directories
 target_include_directories(${PROJECT_NAME}

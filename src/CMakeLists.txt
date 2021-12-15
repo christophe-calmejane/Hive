@@ -217,7 +217,7 @@ cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets Qt${QT_MAJOR_VERSION}::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()

@@ -4,7 +4,7 @@
 cu_setup_project(QtMate "1.0.0.1" "QtMate Library")
 
 # Find dependencies
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets REQUIRED)
 
 set(PCH_HEADER_NAME "pch.hpp")
 set(PCH_SOURCE_NAME "pch.cpp")
@@ -75,7 +75,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 )
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets)
 
 ###### We unfortunately have to reduce compiler warnings due to Qt not willing to fix it's mess (https://bugreports.qt.io/browse/QTBUG-35620)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")

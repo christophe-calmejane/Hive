@@ -4,7 +4,7 @@
 cu_setup_project(${PROJECT_NAME}_widget_models ${HIVE_VERSION} "Hive Widget Models Library")
 
 # Find dependencies
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets REQUIRED)
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -87,7 +87,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets PRIVATE Hive_models_static QtMate_static)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets PRIVATE Hive_models_static QtMate_static)
 
 if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	# Define shared library
@@ -108,7 +108,7 @@ if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	target_compile_definitions(${PROJECT_NAME}_shared PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 	# Link libraries
-	target_link_libraries(${PROJECT_NAME}_shared PUBLIC Qt5::Widgets PRIVATE Hive_models_static QtMate_static)
+	target_link_libraries(${PROJECT_NAME}_shared PUBLIC Qt${QT_MAJOR_VERSION}::Widgets PRIVATE Hive_models_static QtMate_static)
 
 endif()
 
