@@ -1356,7 +1356,7 @@ public:
 						auto data = file.readAll();
 
 						// Check length
-						if (maximumLength != 0 && data.size() > maximumLength)
+						if (maximumLength != 0 && static_cast<decltype(maximumLength)>(data.size()) > maximumLength)
 						{
 							QMessageBox::critical(q_ptr, "", "firmware image file is too large for this entity");
 							return;

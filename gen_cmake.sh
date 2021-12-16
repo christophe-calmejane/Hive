@@ -161,7 +161,7 @@ function extend_gc_fnc_precmake()
 		if isWindows; then
 			qtBasePath="${default_win_basePath}/${QtVersion}"
 			if [ "$arch" == "x64" ]; then
-				qtArch="msvc2017_64"
+				qtArch="${default_win_arch}_64"
 			else
 				qtArch="${default_win_arch}"
 			fi
