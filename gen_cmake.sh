@@ -34,15 +34,6 @@ fi
 configFile=".hive_config"
 loadConfigFile
 
-if [[ "x${params["use_sparkle"]}" == "xtrue" && $OSTYPE == darwin* ]]; then
-	if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
-		echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
-		exit 4
-	fi
-	dsaPubKey="$(< "${selfFolderPath}resources/dsa_pub.pem")"
-	cmake_opt="${cmake_opt} -DHIVE_DSA_PUB_KEY=${dsaPubKey} -DENABLE_HIVE_FEATURE_SPARKLE=TRUE"
-fi
-
 if isLinux; then
 	which g++ &> /dev/null
 	if [ $? -ne 0 ];
@@ -59,6 +50,13 @@ overrideQtVers=0
 QtVersion="${default_qt_version}"
 QtMajorVersion="${default_qt_version%%.*}"
 QtConfigFileName="Qt${QtMajorVersion}Config.cmake"
+useSparkle=0
+dsaFilePath="${selfFolderPath}resources/dsa_pub.pem"
+
+# Override defaults using config file
+if [[ "x${params["use_sparkle"]}" == "xtrue" ]]; then
+	useSparkle=1
+fi
 
 function build_qt_config_folder()
 {
@@ -96,6 +94,7 @@ function extend_gc_fnc_help()
 		build_qt_config_folder default_path "${default_linux_basePath}" "${default_linux_arch}" "${QtMajorVersion}"
 	fi
 
+	echo " -no-sparkle -> Disable sparkle usage, even if specified in config file"
 	echo " -qtvers <Qt Version> -> Override the default Qt version (v${default_qt_version}) with the specified one."
 	echo " -qtdir <Qt CMake Folder> -> Override default Qt path (${default_path}) with the specified one."
 	echo "Note: You can also use the -qtdir option to use Qt source instead of precompiled binaries (specify 'Src/qtbase' instead of binary arch)."
@@ -104,6 +103,10 @@ function extend_gc_fnc_help()
 function extend_gc_fnc_unhandled_arg()
 {
 	case "$1" in
+		-no-sparkle)
+			useSparkle=0
+			return 1
+			;;
 		-qtvers)
 			shift
 			if [ $# -lt 1 ]; then
@@ -130,6 +133,17 @@ function extend_gc_fnc_unhandled_arg()
 
 function extend_gc_fnc_postparse()
 {
+	# Get DSA public key (macOS needs it in the plist)
+	if [[ $useSparkle -eq 1 && $OSTYPE == darwin* ]]; then
+		if [ ! -f "${dsaFilePath}" ]; then
+			echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
+			exit 4
+		fi
+		dsaPubKey="$(< "${dsaFilePath}")"
+		add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
+		add_cmake_opt+=("-DENABLE_HIVE_FEATURE_SPARKLE=TRUE")
+	fi
+
 	# -qtvers is required if -qtdir is used
 	if [[ ${overrideQtDir} -eq 1 && ${overrideQtVers} -eq 0 ]]; then
 		echo "ERROR: -qtdir option requires -qtvers option, see help (-h)"
