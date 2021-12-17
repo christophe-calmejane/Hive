@@ -28,6 +28,7 @@
 #include <QVector>
 #include <QSettings>
 #include <QLabel>
+#include <QStringView>
 
 #ifdef DEBUG
 #	include <QFileInfo>
@@ -1213,7 +1214,7 @@ void MainWindowImpl::showChangeLog(QString const title, QString const versionStr
 		auto endPos = versionString.isEmpty() ? -1 : content.indexOf("## [" + versionString + "]");
 		if (endPos == -1)
 			endPos = content.size();
-		auto const changelog = QStringRef(&content, startPos, endPos - startPos);
+		auto const changelog = QStringView(content.data() + startPos, static_cast<qsizetype>(endPos - startPos));
 
 		auto buffer = changelog.toUtf8();
 		auto* mmiot = mkd_string(buffer.data(), buffer.size(), 0);

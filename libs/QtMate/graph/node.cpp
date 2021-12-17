@@ -132,8 +132,8 @@ void NodeItem::updateGeometry()
 	QFont font;
 	QFontMetrics fm(font);
 	auto const textHeight = static_cast<float>(fm.height());
-
-	auto const max = std::max(1, std::max(_inputs.size(), _outputs.size()));
+	using QtSizeType = decltype(std::declval<decltype(_inputs)>().size());
+	auto const max = std::max(static_cast<QtSizeType>(1), std::max(_inputs.size(), _outputs.size()));
 	auto const step = textHeight + PADDING * 2;
 
 	_height = step * max;

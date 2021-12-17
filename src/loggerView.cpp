@@ -121,12 +121,12 @@ LoggerView::LoggerView(QWidget* parent)
 	connect(actionSave, &QAction::triggered, this,
 		[this]()
 		{
-			auto search = QRegExp{ searchLineEdit->text() };
-			auto level = _levelFilterProxyModel.filterRegExp();
-			auto layer = _layerFilterProxyModel.filterRegExp();
+			auto search = QRegularExpression{ searchLineEdit->text() };
+			auto level = _levelFilterProxyModel.filterRegularExpression();
+			auto layer = _layerFilterProxyModel.filterRegularExpression();
 
 			// Check if a filter is applied
-			if (!search.isEmpty() || !level.isEmpty() || !layer.isEmpty())
+			if (!search.pattern().isEmpty() || !level.pattern().isEmpty() || !layer.pattern().isEmpty())
 			{
 				if (QMessageBox::Yes != QMessageBox::question(this, {}, "Apply filters to the saved output?"))
 				{
@@ -135,11 +135,6 @@ LoggerView::LoggerView(QWidget* parent)
 					layer = {};
 				}
 			}
-
-			// Make sure all our RegExp are CaseInsensitive
-			search.setCaseSensitivity(Qt::CaseInsensitive);
-			level.setCaseSensitivity(Qt::CaseInsensitive);
-			layer.setCaseSensitivity(Qt::CaseInsensitive);
 
 			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/%2_%3.log").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()).arg(QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss")), "*.log");
 			if (!filename.isEmpty())
@@ -153,7 +148,7 @@ LoggerView::LoggerView(QWidget* parent)
 		{
 			auto const pattern = searchLineEdit->text();
 			_searchFilterProxyModel.setFilterKeyColumn(3);
-			_searchFilterProxyModel.setFilterRegExp(pattern);
+			_searchFilterProxyModel.setFilterRegularExpression(pattern);
 			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
 
 			// Invoke view scroll in main thread (Queued, to be sure the view has been updated before calling scrollTo)
@@ -239,7 +234,8 @@ void LoggerView::createLayerFilterButton()
 
 			// Update the filter
 			_layerFilterProxyModel.setFilterKeyColumn(1);
-			_layerFilterProxyModel.setFilterRegExp(layerList.join('|'));
+			_layerFilterProxyModel.setFilterRegularExpression(layerList.join('|'));
+			_layerFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
 		});
 }
 
@@ -293,6 +289,7 @@ void LoggerView::createLevelFilterButton()
 
 			// Update the filter
 			_levelFilterProxyModel.setFilterKeyColumn(2);
-			_levelFilterProxyModel.setFilterRegExp(levelList.join('|'));
+			_levelFilterProxyModel.setFilterRegularExpression(levelList.join('|'));
+			_levelFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
 		});
 }

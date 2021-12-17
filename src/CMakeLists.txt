@@ -18,6 +18,10 @@ set(RESOURCE_FILES
 )
 set(RESOURCE_FILES_GENERATED)
 
+set(CONFIGURE_IN_FILES
+	internals/config.hpp.in
+)
+
 if(WIN32)
 	configure_file(
 		${HIVE_RESOURCES_FOLDER}/win32/Info.rc.in
@@ -25,6 +29,9 @@ if(WIN32)
 	)
 	list(APPEND RESOURCE_FILES_GENERATED
 		${CMAKE_CURRENT_BINARY_DIR}/Info.rc
+	)
+	list(APPEND CONFIGURE_IN_FILES
+		${HIVE_RESOURCES_FOLDER}/win32/Info.rc.in
 	)
 	
 	find_package(BugTrap REQUIRED)
@@ -192,14 +199,15 @@ set(SOURCE_FILES_APP
 
 # Group source files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
-source_group("Header Files" FILES ${HEADER_FILES_GENERATED})
+source_group("Header Files\\\\Generated" FILES ${HEADER_FILES_GENERATED})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON})
 source_group(TREE ${HIVE_RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
-source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
+source_group("Resource Files\\\\Generated" FILES ${RESOURCE_FILES_GENERATED})
+source_group("Configure Input Files" FILES ${CONFIGURE_IN_FILES})
 
 # Define static library to be used by main application and unit tests
-add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON})
+add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON} ${CONFIGURE_IN_FILES})
 
 # Setup common options
 cu_setup_library_options(${PROJECT_NAME}_static)
@@ -217,7 +225,7 @@ cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets Qt${QT_MAJOR_VERSION}::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()

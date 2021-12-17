@@ -34,8 +34,9 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QSplashScreen>
-#include <QDesktopWidget>
 #include <QCommandLineParser>
+#include <QScreen>
+#include <QtGlobal>
 
 #include <iostream>
 #include <chrono>
@@ -90,8 +91,10 @@ int main(int argc, char* argv[])
 
 	// Configure QT Application
 	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+#if QT_VERSION < 0x060000
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
+#endif // QT < 6
 
 	QCoreApplication::setOrganizationDomain(hive::internals::companyDomain);
 	QCoreApplication::setOrganizationName(hive::internals::companyName);
@@ -213,7 +216,7 @@ int main(int argc, char* argv[])
 	QWidget dummy;
 	auto const mainWindowGeometry = settings.getValue(settings::MainWindowGeometry).toByteArray();
 	dummy.restoreGeometry(mainWindowGeometry);
-	auto const availableScreenGeometry = QApplication::desktop()->screenGeometry(&dummy);
+	auto const availableScreenGeometry = dummy.screen()->availableGeometry();
 
 	// Center our splash screen on this target screen
 	splash.move(availableScreenGeometry.center() - logo.rect().center());

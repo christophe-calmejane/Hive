@@ -21,6 +21,7 @@
 
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <la/avdecc/utils.hpp>
 
 #include <QStandardPaths>
 #include <QFileInfo>
@@ -33,9 +34,9 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-inline uint qHash(EntityLogoCache::Type const type, uint seed = 0)
+inline auto qHash(EntityLogoCache::Type const type, uint seed = 0)
 {
-	return ::qHash(static_cast<int>(type), seed);
+	return ::qHash(la::avdecc::utils::to_integral(type), seed);
 }
 
 class EntityLogoCacheImpl : public EntityLogoCache

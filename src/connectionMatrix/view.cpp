@@ -480,10 +480,10 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 
 void View::onFilterChanged(QString const& filter)
 {
-	applyFilterPattern(QRegExp{ filter });
+	applyFilterPattern(QRegularExpression{ filter });
 }
 
-void View::applyFilterPattern(QRegExp const& pattern)
+void View::applyFilterPattern(QRegularExpression const& pattern)
 {
 	_verticalHeaderView->setFilterPattern(pattern);
 	_horizontalHeaderView->setFilterPattern(pattern);
@@ -491,7 +491,7 @@ void View::applyFilterPattern(QRegExp const& pattern)
 
 void View::forceFilter()
 {
-	applyFilterPattern(QRegExp{ _cornerWidget->filterText() });
+	applyFilterPattern(QRegularExpression{ _cornerWidget->filterText() });
 }
 
 void View::mouseMoveEvent(QMouseEvent* event)

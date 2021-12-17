@@ -137,7 +137,6 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDebug>
-#include <QDesktopWidget>
 #include <QDialog>
 #include <QDir>
 #include <QEvent>
@@ -155,6 +154,7 @@
 #include <QHBoxLayout>
 #include <QHash>
 #include <QHeaderView>
+#include <QIODevice>
 #include <QIcon>
 #include <QImage>
 #include <QInputDialog>
@@ -201,6 +201,7 @@
 #include <QString>
 #include <QStringList>
 #include <QStringListModel>
+#include <QStringView>
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QTableView>
