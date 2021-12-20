@@ -98,6 +98,7 @@ public:
 
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
 {
+	Q_OBJECT
 public:
 	MainWindowImpl(bool const mustResetViewSettings, ::MainWindow* parent)
 		: _parent(parent)
@@ -146,6 +147,9 @@ public:
 		bool controllerTableView_MediaClockMasterID_Visible{ true };
 		bool controllerTableView_MediaClockMasterName_Visible{ true };
 	};
+
+	// Private signals
+	Q_SIGNAL void selectedControlledEntityChanged(la::avdecc::UniqueIdentifier const eid);
 
 	// Private Slots
 	Q_SLOT void currentControllerChanged();
@@ -383,9 +387,7 @@ void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 		_selectedControlledEntity = entityID;
 	}
 
-	// TEMP TO BE MOVED TO A SIGNAL/SLOT towards the Inspector (so there is no more direct link from the Discovered Entities list and the Inspector)
-	// Change the Entity Inspector current entity
-	entityInspector->setControlledEntityID(_selectedControlledEntity);
+	emit selectedControlledEntityChanged(_selectedControlledEntity);
 }
 
 void MainWindowImpl::saveControllerDynamicHeaderState()
@@ -986,6 +988,9 @@ void MainWindowImpl::connectSignals()
 			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 			settings->setValue(settings::SplitterState, splitter->saveState());
 		});
+
+	// Connect EntityInspector with DiscoveredEntities selection
+	connect(this, &MainWindowImpl::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
 
 	// Connect ControllerManager events
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
@@ -1607,3 +1612,5 @@ void MainWindow::setReady() noexcept
 {
 	_isReady = true;
 }
+
+#include "mainWindow.moc"
