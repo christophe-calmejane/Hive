@@ -680,6 +680,11 @@ private:
 		if (auto const row = entityRow(entityID))
 		{
 			Q_Q(ControllerModel);
+
+			// Notify slots of the model the entity is going offline, BEFORE removing the row
+			emit q->entityOffline(entityID);
+
+			// Remove the row from the model
 			emit q->beginRemoveRows({}, *row, *row);
 
 			// Remove the entity from the model

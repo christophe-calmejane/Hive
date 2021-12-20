@@ -149,6 +149,7 @@ public:
 
 	// Private Slots
 	Q_SLOT void currentControllerChanged();
+	Q_SLOT void discoveredEntityOffline(la::avdecc::UniqueIdentifier const eid);
 	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
 	Q_SLOT void saveControllerDynamicHeaderState();
 
@@ -192,6 +193,7 @@ public:
 	bool _mustResetViewSettings{ false };
 	bool _usingBetaAppcast{ false };
 	bool _usingBackupAppcast{ false };
+	la::avdecc::UniqueIdentifier _selectedControlledEntity{};
 };
 
 void MainWindowImpl::setupAdvancedView(VisibilityDefaults const& defaults)
@@ -352,22 +354,38 @@ void MainWindowImpl::currentControllerChanged()
 	}
 }
 
+// When a DiscoveredEntity is going offline (model notification)
+void MainWindowImpl::discoveredEntityOffline(la::avdecc::UniqueIdentifier const eid)
+{
+	// The currently selected entity is going offline
+	if (eid == _selectedControlledEntity)
+	{
+		// Force deselecting the view, before the entity is removed from the list, otherwise another entity will automatically be selected (not desirable)
+		auto const invalidIndex = QModelIndex{};
+		controllerTableView->setCurrentIndex(invalidIndex);
+	}
+}
+
+// When the selected DiscoveredEntity changed (view's selection model notification)
 void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
 {
-	if (!index.isValid())
-	{
-		entityInspector->setControlledEntityID(la::avdecc::UniqueIdentifier{});
-		return;
-	}
-
-	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto const entityID = _controllerProxyModel.controlledEntityID(index);
-	auto controlledEntity = manager.getControlledEntity(entityID);
 
-	if (controlledEntity)
+	// Selection index is invalid (ie. no selection), or the currently selected entity doesn't exist
+	if (!index.isValid() || !entityID.isValid())
 	{
-		entityInspector->setControlledEntityID(entityID);
+		// Set currently selected ControlledEntity to nothing
+		_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
 	}
+	else
+	{
+		// Set currently selected ControlledEntity to the new entityID
+		_selectedControlledEntity = entityID;
+	}
+
+	// TEMP TO BE MOVED TO A SIGNAL/SLOT towards the Inspector (so there is no more direct link from the Discovered Entities list and the Inspector)
+	// Change the Entity Inspector current entity
+	entityInspector->setControlledEntityID(_selectedControlledEntity);
 }
 
 void MainWindowImpl::saveControllerDynamicHeaderState()
@@ -675,6 +693,7 @@ void MainWindowImpl::connectSignals()
 			action->setChecked(true);
 		});
 
+	connect(_controllerModel, &avdecc::ControllerModel::entityOffline, this, &MainWindowImpl::discoveredEntityOffline);
 	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
 	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionChanged, this, &MainWindowImpl::saveControllerDynamicHeaderState);
 	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionClicked, this, &MainWindowImpl::saveControllerDynamicHeaderState);
