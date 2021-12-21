@@ -389,18 +389,23 @@ int sortedIndexForEntity(Nodes const& list, la::avdecc::UniqueIdentifier const& 
 	return index;
 }
 
-// Build and returns a NodeSectionMap from nodes (quick access map for nodes)
-NodeSectionMap buildNodeSectionMap(Nodes const& nodes)
+// Build and returns a NodeSectionMap and a EntitySectionMap from nodes (quick access maps)
+std::pair<NodeSectionMap, EntitySectionMap> buildNodeSectionMaps(Nodes const& nodes)
 {
-	NodeSectionMap sectionMap;
+	NodeSectionMap nodeSectionMap;
+	EntitySectionMap entitySectionMap;
 
 	for (auto section = 0u; section < nodes.size(); ++section)
 	{
 		auto* node = nodes[section];
-		sectionMap.insert(std::make_pair(node, section));
+		if (node->type() == Node::Type::Entity)
+		{
+			entitySectionMap.insert(std::make_pair(node->entityID(), section));
+		}
+		nodeSectionMap.insert(std::make_pair(node, section));
 	}
 
-	return sectionMap;
+	return std::make_pair(nodeSectionMap, entitySectionMap);
 }
 
 // Return the index of a node contained in a NodeSectionMap
@@ -408,6 +413,17 @@ int indexOf(NodeSectionMap const& map, Node const* const node)
 {
 	auto const it = map.find(node);
 	if (!AVDECC_ASSERT_WITH_RET(it != std::end(map), "Index not found"))
+	{
+		return -1;
+	}
+	return it->second;
+}
+
+// Return the index of an EntityNode contained in a EntitySectionMap
+int indexOf(EntitySectionMap const& map, la::avdecc::UniqueIdentifier const entityID)
+{
+	auto const it = map.find(entityID);
+	if (it == std::end(map))
 	{
 		return -1;
 	}
@@ -1603,12 +1619,16 @@ public:
 
 	void rebuildTalkerSectionCache()
 	{
-		_talkerNodeSectionMap = priv::buildNodeSectionMap(_talkerNodes);
+		auto maps = priv::buildNodeSectionMaps(_talkerNodes);
+		_talkerNodeSectionMap = std::move(maps.first);
+		_talkerEntitySectionMap = std::move(maps.second);
 	}
 
 	void rebuildListenerSectionCache()
 	{
-		_listenerNodeSectionMap = priv::buildNodeSectionMap(_listenerNodes);
+		auto maps = priv::buildNodeSectionMaps(_listenerNodes);
+		_listenerNodeSectionMap = std::move(maps.first);
+		_listenerEntitySectionMap = std::move(maps.second);
 	}
 
 	// Build talker node hierarchy
@@ -2849,6 +2869,15 @@ private:
 		return priv::indexOf(_listenerNodeSectionMap, node);
 	}
 
+	// Returns ModelIndex for given entityID
+	QModelIndex indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept
+	{
+		auto const talkerSectionIndex = priv::indexOf(_talkerEntitySectionMap, entityID);
+		auto const listenerSectionIndex = priv::indexOf(_listenerEntitySectionMap, entityID);
+
+		return createIndex(talkerSectionIndex, listenerSectionIndex);
+	}
+
 	// Returns talker EntityNode for a given entityID
 	EntityNode* talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const
 	{
@@ -3292,7 +3321,9 @@ private:
 
 	// Node section quick access map (cache)
 	priv::NodeSectionMap _talkerNodeSectionMap;
+	priv::EntitySectionMap _talkerEntitySectionMap;
 	priv::NodeSectionMap _listenerNodeSectionMap;
+	priv::EntitySectionMap _listenerEntitySectionMap;
 
 	// Talker major intersection data matrix (cache)
 	std::deque<std::deque<Model::IntersectionData>> _intersectionData;
@@ -3497,6 +3528,60 @@ Model::Mode Model::mode() const
 {
 	Q_D(const Model);
 	return d->_mode;
+}
+
+QModelIndex Model::indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept
+{
+	Q_D(const Model);
+	return d->indexOf(entityID);
+}
+
+EntityNode const* Model::talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const noexcept
+{
+	Q_D(const Model);
+	return d->talkerNodeFromEntityID(entityID);
+}
+
+EntityNode const* Model::listenerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const noexcept
+{
+	Q_D(const Model);
+	return d->listenerNodeFromEntityID(entityID);
+}
+
+StreamNode const* Model::talkerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+{
+	Q_D(const Model);
+	return d->talkerStreamNode(entityID, streamIndex);
+}
+
+StreamNode const* Model::listenerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+{
+	Q_D(const Model);
+	return d->listenerStreamNode(entityID, streamIndex);
+}
+
+ChannelNode const* Model::talkerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept
+{
+	Q_D(const Model);
+	return d->talkerChannelNode(entityID, audioClusterIndex);
+}
+
+ChannelNode const* Model::listenerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept
+{
+	Q_D(const Model);
+	return d->listenerChannelNode(entityID, audioClusterIndex);
+}
+
+bool Model::hasTalkerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept
+{
+	Q_D(const Model);
+	return d->hasTalkerCluster(entityID, audioClusterIndex);
+}
+
+bool Model::hasListenerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept
+{
+	Q_D(const Model);
+	return d->hasListenerCluster(entityID, audioClusterIndex);
 }
 
 void Model::setTransposed(bool const transposed)

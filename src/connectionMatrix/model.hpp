@@ -48,6 +48,9 @@
 namespace connectionMatrix
 {
 class Node;
+class EntityNode;
+class StreamNode;
+class ChannelNode;
 class ModelPrivate;
 class Model : public QAbstractTableModel
 {
@@ -166,6 +169,31 @@ public:
 
 	// Returns the mode of the model
 	Mode mode() const;
+
+	// Returns ModelIndex for given entityID
+	QModelIndex indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
+
+	// Returns talker EntityNode for a given entityID
+	EntityNode const* talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
+
+	// Returns listener EntityNode for a given entityID
+	EntityNode const* listenerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
+
+	// Returns talker StreamNode for a given entityID + streamIndex
+	StreamNode const* talkerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept;
+
+	// Returns listener StreamNode for a given entityID + streamIndex
+	StreamNode const* listenerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept;
+
+	// Returns talker ChannelNode for a given entityID + audioClusterIndex
+	ChannelNode const* talkerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
+
+	// Returns listener ChannelNode for a given entityID + audioClusterIndex
+	ChannelNode const* listenerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
+
+	bool hasTalkerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
+
+	bool hasListenerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
 
 	// Set the transpose state of the model (default false, rows = talkers, columns = listeners)
 	void setTransposed(bool const transposed);

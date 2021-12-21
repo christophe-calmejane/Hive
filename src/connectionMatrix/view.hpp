@@ -43,6 +43,9 @@ public:
 	View(QWidget* parent = nullptr);
 	virtual ~View();
 
+	// Returns the index that refers to the given entityID
+	QModelIndex findEntityModelIndex(la::avdecc::UniqueIdentifier const& entityID) const;
+
 private:
 	void onIntersectionClicked(QModelIndex const& index);
 	void onCustomContextMenuRequested(QPoint const& pos);

@@ -813,6 +813,29 @@ void MainWindowImpl::connectSignals()
 
 	connect(controllerTableView, &discoveredEntities::View::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
 
+	connect(controllerTableView, &discoveredEntities::View::selectedControlledEntityChanged, entityInspector,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			static auto previousSelectedIndex = QModelIndex{};
+			auto const selectedIndex = routingTableView->findEntityModelIndex(entityID);
+
+			if (selectedIndex != previousSelectedIndex)
+			{
+				QFont font;
+
+				routingTableView->model()->setHeaderData(previousSelectedIndex.row(), Qt::Vertical, font, Qt::FontRole);
+				routingTableView->model()->setHeaderData(previousSelectedIndex.column(), Qt::Horizontal, font, Qt::FontRole);
+
+				previousSelectedIndex = selectedIndex;
+
+				font.setItalic(true);
+				font.setBold(true);
+
+				routingTableView->model()->setHeaderData(selectedIndex.row(), Qt::Vertical, font, Qt::FontRole);
+				routingTableView->model()->setHeaderData(selectedIndex.column(), Qt::Horizontal, font, Qt::FontRole);
+			}
+		});
+
 	// Connect EntityInspector signals
 	connect(entityInspector, &EntityInspector::stateChanged, this,
 		[this]()
