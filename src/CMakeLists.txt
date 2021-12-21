@@ -72,6 +72,7 @@ set(HEADER_FILES_COMMON
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
 	counters/streamOutputCountersTreeWidgetItem.hpp
+	discoveredEntities/view.hpp
 	mediaClock/mediaClockManagementDialog.hpp
 	mediaClock/domainTreeModel.hpp
 	mediaClock/unassignedListModel.hpp
@@ -116,6 +117,7 @@ set(HEADER_FILES_COMMON
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	windowsNpfHelper.hpp
+	visibilitySettings.hpp
 )
 
 set(SOURCE_FILES_COMMON
@@ -139,6 +141,7 @@ set(SOURCE_FILES_COMMON
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
 	counters/streamOutputCountersTreeWidgetItem.cpp
+	discoveredEntities/view.cpp
 	mediaClock/mediaClockManagementDialog.cpp
 	mediaClock/domainTreeModel.cpp
 	mediaClock/unassignedListModel.cpp
