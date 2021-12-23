@@ -22,6 +22,7 @@
 #include <QHeaderView>
 #include <QEvent>
 #include <QSet>
+#include <QMouseEvent>
 
 namespace qtMate
 {

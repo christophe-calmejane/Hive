@@ -53,6 +53,7 @@
 #include "multiFirmwareUpdateDialog.hpp"
 #include "defaults.hpp"
 #include "windowsNpfHelper.hpp"
+#include "visibilitySettings.hpp"
 
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
@@ -85,27 +86,14 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
-class ControllerModelSortFilterProxy final : public QSortFilterProxyModel
-{
-public:
-	// Helpers
-	la::avdecc::UniqueIdentifier controlledEntityID(QModelIndex const& index) const
-	{
-		auto const sourceIndex = mapToSource(index);
-		return static_cast<avdecc::ControllerModel const*>(sourceModel())->getControlledEntityID(sourceIndex);
-	}
-};
-
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
 {
+	Q_OBJECT
 public:
 	MainWindowImpl(bool const mustResetViewSettings, ::MainWindow* parent)
 		: _parent(parent)
-		, _controllerModel(new avdecc::ControllerModel(parent)) // parent takes ownership of the object -> 'new' required
 		, _mustResetViewSettings{ mustResetViewSettings }
 	{
-		_controllerProxyModel.setSourceModel(_controllerModel);
-
 		// Setup common UI
 		setupUi(parent);
 
@@ -122,38 +110,11 @@ public:
 	MainWindowImpl& operator=(MainWindowImpl const&) = delete;
 	MainWindowImpl& operator=(MainWindowImpl&&) = delete;
 
-	// Private Structs
-	struct VisibilityDefaults
-	{
-		// MainWindow widgets
-		bool mainWindow_ControllerToolbar_Visible{ true };
-		bool mainWindow_UtilitiesToolbar_Visible{ true };
-		bool mainWindow_EntitiesList_Visible{ true };
-		bool mainWindow_Inspector_Visible{ true };
-		bool mainWindow_Logger_Visible{ true };
-
-		// Controller Table View
-		bool controllerTableView_EntityLogo_Visible{ true };
-		bool controllerTableView_Compatibility_Visible{ true };
-		bool controllerTableView_Name_Visible{ true };
-		bool controllerTableView_Group_Visible{ true };
-		bool controllerTableView_AcquireState_Visible{ true };
-		bool controllerTableView_LockState_Visible{ true };
-		bool controllerTableView_GrandmasterID_Visible{ true };
-		bool controllerTableView_GptpDomain_Visible{ true };
-		bool controllerTableView_InterfaceIndex_Visible{ true };
-		bool controllerTableView_AssociationID_Visible{ true };
-		bool controllerTableView_MediaClockMasterID_Visible{ true };
-		bool controllerTableView_MediaClockMasterName_Visible{ true };
-	};
-
 	// Private Slots
 	Q_SLOT void currentControllerChanged();
-	Q_SLOT void currentControlledEntityChanged(QModelIndex const& index);
-	Q_SLOT void saveControllerDynamicHeaderState();
 
 	// Private methods
-	void setupAdvancedView(VisibilityDefaults const& defaults);
+	void setupAdvancedView(hive::VisibilityDefaults const& defaults);
 	void setupMatrixProfile();
 	void setupStandardProfile();
 	void setupDeveloperProfile();
@@ -161,7 +122,6 @@ public:
 	void registerMetaTypes();
 	void createViewMenu();
 	void createToolbars();
-	void createControllerView();
 	void checkNpfStatus();
 	void loadSettings();
 	void connectSignals();
@@ -183,10 +143,6 @@ public:
 	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
-	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
-	qtMate::widgets::HeaderViewSortSectionFilter _controllerHeaderSectionSortFilter{ &_controllerDynamicHeaderView };
-	avdecc::ControllerModel* _controllerModel{ nullptr };
-	ControllerModelSortFilterProxy _controllerProxyModel{};
 	bool _shown{ false };
 	SettingsSignaler _settingsSignaler{};
 	bool _mustResetViewSettings{ false };
@@ -194,7 +150,7 @@ public:
 	bool _usingBackupAppcast{ false };
 };
 
-void MainWindowImpl::setupAdvancedView(VisibilityDefaults const& defaults)
+void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 {
 	// Create "view" sub-menu
 	createViewMenu();
@@ -202,36 +158,8 @@ void MainWindowImpl::setupAdvancedView(VisibilityDefaults const& defaults)
 	// Create toolbars
 	createToolbars();
 
-	// Create the ControllerView widget
-	createControllerView();
-
-	// Initialize UI defaults
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), !defaults.controllerTableView_EntityLogo_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), !defaults.controllerTableView_Compatibility_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), !defaults.controllerTableView_Name_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), !defaults.controllerTableView_Group_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), !defaults.controllerTableView_AcquireState_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), !defaults.controllerTableView_LockState_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID), !defaults.controllerTableView_GrandmasterID_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), !defaults.controllerTableView_GptpDomain_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), !defaults.controllerTableView_InterfaceIndex_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationID), !defaults.controllerTableView_AssociationID_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID), !defaults.controllerTableView_MediaClockMasterID_Visible);
-	controllerTableView->setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), !defaults.controllerTableView_MediaClockMasterName_Visible);
-
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), defaults::ui::AdvancedView::ColumnWidth_Logo);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), defaults::ui::AdvancedView::ColumnWidth_Compatibility);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), defaults::ui::AdvancedView::ColumnWidth_Name);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), defaults::ui::AdvancedView::ColumnWidth_Group);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), defaults::ui::AdvancedView::ColumnWidth_GPTPDomain);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), defaults::ui::AdvancedView::ColumnWidth_InterfaceIndex);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	controllerTableView->setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults::ui::AdvancedView::ColumnWidth_Name);
+	// Setup the ControllerView widget
+	controllerTableView->setupView(defaults);
 
 	controllerToolBar->setVisible(defaults.mainWindow_ControllerToolbar_Visible);
 	utilitiesToolBar->setVisible(defaults.mainWindow_UtilitiesToolbar_Visible);
@@ -257,17 +185,17 @@ void MainWindowImpl::setupAdvancedView(VisibilityDefaults const& defaults)
 
 void MainWindowImpl::setupMatrixProfile()
 {
-	setupAdvancedView(VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
 }
 
 void MainWindowImpl::setupStandardProfile()
 {
-	setupAdvancedView(VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
 }
 
 void MainWindowImpl::setupDeveloperProfile()
 {
-	setupAdvancedView(VisibilityDefaults{});
+	setupAdvancedView(hive::VisibilityDefaults{});
 }
 
 void MainWindowImpl::setupProfile()
@@ -350,30 +278,6 @@ void MainWindowImpl::currentControllerChanged()
 		}
 #endif // __linux__
 	}
-}
-
-void MainWindowImpl::currentControlledEntityChanged(QModelIndex const& index)
-{
-	if (!index.isValid())
-	{
-		entityInspector->setControlledEntityID(la::avdecc::UniqueIdentifier{});
-		return;
-	}
-
-	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto const entityID = _controllerProxyModel.controlledEntityID(index);
-	auto controlledEntity = manager.getControlledEntity(entityID);
-
-	if (controlledEntity)
-	{
-		entityInspector->setControlledEntityID(entityID);
-	}
-}
-
-void MainWindowImpl::saveControllerDynamicHeaderState()
-{
-	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
-	settings->setValue(settings::ControllerDynamicHeaderViewState, _controllerDynamicHeaderView.saveState());
 }
 
 // Private methods
@@ -462,48 +366,6 @@ void MainWindowImpl::createToolbars()
 	controllerToolBar->setStyleSheet("QToolBar QLabel { padding-bottom: 5; }");
 	utilitiesToolBar->setStyleSheet("QToolBar QLabel { padding-bottom: 5; }");
 #endif
-}
-
-void MainWindowImpl::createControllerView()
-{
-	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
-
-	controllerTableView->setModel(&_controllerProxyModel);
-	controllerTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
-	controllerTableView->setSelectionMode(QAbstractItemView::SingleSelection);
-	controllerTableView->setContextMenuPolicy(Qt::CustomContextMenu);
-	controllerTableView->setFocusPolicy(Qt::ClickFocus);
-
-	// Disable row resizing
-	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
-	controllerTableView->setSortingEnabled(true);
-
-	// The table view does not take ownership on the item delegate
-	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ _parent } };
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), imageItemDelegate);
-
-	// The table view does not take ownership on the item delegate
-	auto* errorItemDelegate{ new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()), _parent } };
-	controllerTableView->setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), errorItemDelegate);
-	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
-
-	_controllerDynamicHeaderView.setSectionsClickable(true);
-	_controllerDynamicHeaderView.setHighlightSections(false);
-	_controllerDynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
-
-	// Configure sortable sections
-	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility));
-	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
-	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name));
-	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group));
-	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID));
-	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID));
-	_controllerHeaderSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName));
-
-	controllerTableView->setHorizontalHeader(&_controllerDynamicHeaderView);
 }
 
 void MainWindowImpl::checkNpfStatus()
@@ -605,7 +467,7 @@ void MainWindowImpl::loadSettings()
 
 	if (!_mustResetViewSettings)
 	{
-		_controllerDynamicHeaderView.restoreState(settings->getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
+		controllerTableView->restoreState();
 		loggerView->header()->restoreState(settings->getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
 		entityInspector->restoreState(settings->getValue(settings::EntityInspectorState).toByteArray());
 		splitter->restoreState(settings->getValue(settings::SplitterState).toByteArray());
@@ -675,15 +537,11 @@ void MainWindowImpl::connectSignals()
 			action->setChecked(true);
 		});
 
-	connect(controllerTableView->selectionModel(), &QItemSelectionModel::currentChanged, this, &MainWindowImpl::currentControlledEntityChanged);
-	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionChanged, this, &MainWindowImpl::saveControllerDynamicHeaderState);
-	connect(&_controllerDynamicHeaderView, &qtMate::widgets::DynamicHeaderView::sectionClicked, this, &MainWindowImpl::saveControllerDynamicHeaderState);
-
-	connect(controllerTableView, &QTableView::doubleClicked, this,
-		[this](QModelIndex const& index)
+	// Connect discoveredEntities::view signals
+	connect(controllerTableView, &discoveredEntities::View::doubleClicked, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto const entityID = _controllerProxyModel.controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
@@ -695,20 +553,26 @@ void MainWindowImpl::connectSignals()
 			}
 		});
 
-	connect(controllerTableView, &QTableView::customContextMenuRequested, this,
-		[this](QPoint const& pos)
+	connect(controllerTableView, &discoveredEntities::View::contextMenuRequested, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, QPoint const& pos)
 		{
-			// CAUTION, this view uses a proxy, we must remap the index
-			auto const index = controllerTableView->indexAt(pos);
-			auto const sourceIndex = _controllerProxyModel.mapToSource(index);
-
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto const entityID = _controllerProxyModel.controlledEntityID(index);
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			if (controlledEntity)
 			{
 				QMenu menu;
+
+				// Add header
+				{
+					auto* action = menu.addAction("Entity: " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
+					auto font = action->font();
+					font.setBold(true);
+					action->setFont(font);
+					action->setEnabled(false);
+					menu.addSeparator();
+				}
+
 				auto const& entity = controlledEntity->getEntity();
 				auto const entityModelID = entity.getEntityModelID();
 				auto const isAemSupported = entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported);
@@ -947,6 +811,9 @@ void MainWindowImpl::connectSignals()
 			}
 		});
 
+	connect(controllerTableView, &discoveredEntities::View::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
+
+	// Connect EntityInspector signals
 	connect(entityInspector, &EntityInspector::stateChanged, this,
 		[this]()
 		{
@@ -1588,3 +1455,5 @@ void MainWindow::setReady() noexcept
 {
 	_isReady = true;
 }
+
+#include "mainWindow.moc"

@@ -59,6 +59,10 @@ public:
 	// Helpers
 	la::avdecc::UniqueIdentifier getControlledEntityID(QModelIndex const& index) const;
 
+	// Signals
+	// Notification for when the entity is going offline, BEFORE any model notifications for removed rows
+	Q_SIGNAL void entityOffline(la::avdecc::UniqueIdentifier const entityID);
+
 private:
 	QScopedPointer<ControllerModelPrivate> const d_ptr;
 	Q_DECLARE_PRIVATE(ControllerModel)

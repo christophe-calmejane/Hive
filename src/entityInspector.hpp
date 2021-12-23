@@ -44,7 +44,7 @@ public:
 
 	EntityInspector(QWidget* parent = nullptr);
 
-	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
+	Q_SLOT void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
 	la::avdecc::UniqueIdentifier controlledEntityID() const;
 
 	QByteArray saveState(int version = 0) const;

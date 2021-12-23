@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Discovered Entities list is now dockable, with show/hide option from the View menu
 - Application settings are now saved in the .ini format (whatever the platform)
+- If the currently selected entity goes offline, active selection is removed instead of randomly choosing another entity
 
 ### Fixed
 - [Main window's size not properly restored on macOS](https://github.com/christophe-calmejane/Hive/issues/108)
