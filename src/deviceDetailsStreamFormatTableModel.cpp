@@ -353,7 +353,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::headerData(int section, Qt:
 					{
 						return {};
 					}
-					return avdecc::helper::descriptorTypeToString(_nodes.at(section).streamType) + " Name";
+					return QString("%1 Name").arg(_nodes.at(section).streamType == la::avdecc::entity::model::DescriptorType::StreamInput ? "Stream Input" : "Stream Output");
 				case DeviceDetailsStreamFormatTableModelColumn::StreamFormat:
 					return "Format";
 				default:
