@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [New 'Matrix' layout with only the connection matrix displayed by default](https://github.com/christophe-calmejane/Hive/issues/109)
 - Command line option to specify the application settings file to use
 - Currently selected entity is highlighted is connection matrix
+- _Device Details Dialog_ tab 'Stream Format' for simplified user access to stream format settings
 
 ### Changed
 - Discovered Entities list is now dockable, with show/hide option from the View menu
