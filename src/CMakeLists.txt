@@ -118,6 +118,7 @@ set(HEADER_FILES_COMMON
 	nodeVisitor.hpp
 	windowsNpfHelper.hpp
 	visibilitySettings.hpp
+	listViewSelectionToMatrixModelController.hpp
 )
 
 set(SOURCE_FILES_COMMON
@@ -181,6 +182,7 @@ set(SOURCE_FILES_COMMON
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	windowsNpfHelper.cpp
+	listViewSelectionToMatrixModelController.cpp
 )
 
 set(UI_FILES_COMMON

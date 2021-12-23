@@ -108,6 +108,11 @@ View::~View()
 	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
+QModelIndex View::findEntityModelIndex(la::avdecc::UniqueIdentifier const& entityID) const
+{
+	return _model->indexOf(entityID);
+}
+
 void View::onIntersectionClicked(QModelIndex const& index)
 {
 	auto const& intersectionData = _model->intersectionData(index);

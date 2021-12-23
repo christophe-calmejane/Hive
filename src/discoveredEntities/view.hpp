@@ -54,6 +54,7 @@ public:
 
 	void setupView(hive::VisibilityDefaults const& defaults) noexcept;
 	void restoreState() noexcept;
+	la::avdecc::UniqueIdentifier selectedControlledEntity() const noexcept;
 
 	// Public signals
 	Q_SIGNAL void selectedControlledEntityChanged(la::avdecc::UniqueIdentifier const entityID);

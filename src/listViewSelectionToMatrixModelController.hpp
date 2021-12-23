@@ -19,18 +19,20 @@
 
 #pragma once
 
-#include <Qt>
+#include <QObject>
+#include <QModelIndex>
 
-namespace hive
+#include "discoveredEntities/view.hpp"
+#include "connectionMatrix/model.hpp"
+
+// Mini controller linking discoveredEntities::View selection to connectionMatrix::Model::SelectedEntityRole
+class ListViewSelectionToMatrixModelController final : public QObject
 {
-namespace widgetModelsLibrary
-{
-enum class QtUserRoles
-{
-	ImageRole = Qt::UserRole + 1001, /**< Role used for Image representation */
-	ErrorRole, /**< Role used for Error representation */
-	SelectedEntityRole, /**< Role used for Entity Selection representation */
+public:
+	// Constructor
+	ListViewSelectionToMatrixModelController(discoveredEntities::View* listView, connectionMatrix::Model* matrixModel, QObject* parent = nullptr);
+
+private:
+	// Private members
+	QModelIndex _selectedIndex{};
 };
-
-} // namespace widgetModelsLibrary
-} // namespace hive
