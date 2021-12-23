@@ -34,6 +34,7 @@
 #include "internals/config.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
+#include "avdecc/hiveLogItems.hpp"
 
 // **************************************************************
 // class DeviceDetailsDialogImpl
