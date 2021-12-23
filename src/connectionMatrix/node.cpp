@@ -134,6 +134,16 @@ QString const& Node::name() const noexcept
 	return _name;
 }
 
+bool Node::selected() const noexcept
+{
+	return _isSelected;
+}
+
+void Node::setSelected(bool const isSelected) noexcept
+{
+	_isSelected = isSelected;
+}
+
 int Node::index() const noexcept
 {
 	return _parent ? _parent->indexOf(this) : 0;

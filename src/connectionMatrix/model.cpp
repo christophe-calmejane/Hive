@@ -478,6 +478,54 @@ public:
 		connect(&channelConnectionManager, &avdecc::ChannelConnectionManager::listenerChannelConnectionsUpdate, this, &ModelPrivate::handleListenerChannelConnectionsUpdate);
 	}
 
+	// Returns talker header orientation
+	Qt::Orientation talkerOrientation() const
+	{
+		return !_transposed ? Qt::Vertical : Qt::Horizontal;
+	}
+
+	// Returns listener header orientation
+	Qt::Orientation listenerOrientation() const
+	{
+		return !_transposed ? Qt::Horizontal : Qt::Vertical;
+	}
+
+	// Returns the number of talker sections
+	int talkerSectionCount() const
+	{
+		return static_cast<int>(_talkerNodes.size());
+	}
+
+	// Returns the number of listener sections
+	int listenerSectionCount() const
+	{
+		return static_cast<int>(_listenerNodes.size());
+	}
+
+	// Extract talker section from index
+	int talkerIndex(QModelIndex const& index) const
+	{
+		return !_transposed ? index.row() : index.column();
+	}
+
+	// Extract listener section from index
+	int listenerIndex(QModelIndex const& index) const
+	{
+		return !_transposed ? index.column() : index.row();
+	}
+
+	// Returns true if section is a valid talker section, i.e. within [0, talkerSectionCount[
+	bool isValidTalkerSection(int section) const
+	{
+		return section >= 0 && section < talkerSectionCount();
+	}
+
+	// Returns true if section is a valid listener section, i.e. within [0, listenerSectionCount[
+	bool isValidListenerSection(int section) const
+	{
+		return section >= 0 && section < listenerSectionCount();
+	}
+
 #if ENABLE_CONNECTION_MATRIX_DEBUG
 	void dump() const
 	{
@@ -3194,56 +3242,8 @@ private:
 		listenerHeaderDataChanged(listener, notifyView, andParents, dirtyFlags);
 	}
 
-	// Returns talker header orientation
-	Qt::Orientation talkerOrientation() const
-	{
-		return !_transposed ? Qt::Vertical : Qt::Horizontal;
-	}
-
-	// Returns listener header orientation
-	Qt::Orientation listenerOrientation() const
-	{
-		return !_transposed ? Qt::Horizontal : Qt::Vertical;
-	}
-
-	// Returns the number of talker sections
-	int talkerSectionCount() const
-	{
-		return static_cast<int>(_talkerNodes.size());
-	}
-
-	// Returns the number of listener sections
-	int listenerSectionCount() const
-	{
-		return static_cast<int>(_listenerNodes.size());
-	}
-
-	// Extract talker section from index
-	int talkerIndex(QModelIndex const& index) const
-	{
-		return !_transposed ? index.row() : index.column();
-	}
-
-	// Extract listener section from index
-	int listenerIndex(QModelIndex const& index) const
-	{
-		return !_transposed ? index.column() : index.row();
-	}
-
-	// Returns true if section is a valid talker section, i.e. within [0, talkerSectionCount[
-	bool isValidTalkerSection(int section) const
-	{
-		return section >= 0 && section < talkerSectionCount();
-	}
-
-	// Returns true if section is a valid listener section, i.e. within [0, listenerSectionCount[
-	bool isValidListenerSection(int section) const
-	{
-		return section >= 0 && section < listenerSectionCount();
-	}
-
-	// Returns talker header data for sections (Qt::DisplayRole) at section
-	QString talkerHeaderData(int section) const
+	// Returns talker header name for sections (Qt::DisplayRole) at section
+	QString talkerHeaderName(int const section) const noexcept
 	{
 		if (!isValidTalkerSection(section))
 		{
@@ -3253,8 +3253,8 @@ private:
 		return _talkerNodes[section]->name();
 	}
 
-	// Returns listener header data for sections (Qt::DisplayRole) at section
-	QString listenerHeaderData(int section) const
+	// Returns listener header name for sections (Qt::DisplayRole) at section
+	QString listenerHeaderName(int const section) const noexcept
 	{
 		if (!isValidListenerSection(section))
 		{
@@ -3264,8 +3264,52 @@ private:
 		return _listenerNodes[section]->name();
 	}
 
+	// Returns talker header selected state for sections (Qt::DisplayRole) at section
+	bool talkerHeaderSelected(int const section) const noexcept
+	{
+		if (!isValidTalkerSection(section))
+		{
+			return false;
+		}
+
+		return _talkerNodes[section]->selected();
+	}
+
+	// Returns listener header selected state for sections (Qt::DisplayRole) at section
+	bool listenerHeaderSelected(int const section) const noexcept
+	{
+		if (!isValidListenerSection(section))
+		{
+			return false;
+		}
+
+		return _listenerNodes[section]->selected();
+	}
+
+	// Returns talker header selected state for sections (Qt::DisplayRole) at section
+	void setTalkerHeaderSelected(int const section, bool const isSelected) noexcept
+	{
+		if (isValidTalkerSection(section))
+		{
+			_talkerNodes[section]->setSelected(isSelected);
+		}
+	}
+
+	// Returns listener header selected state for sections (Qt::DisplayRole) at section
+	void setListenerHeaderSelected(int const section, bool const isSelected) noexcept
+	{
+		if (isValidListenerSection(section))
+		{
+			_listenerNodes[section]->setSelected(isSelected);
+		}
+	}
+
 	void clearCachedData()
 	{
+		Q_Q(Model);
+
+		emit q->cacheWillBeReset();
+
 		_talkerNodes.clear();
 		_listenerNodes.clear();
 		_talkerNodeSectionMap.clear();
@@ -3273,11 +3317,33 @@ private:
 		_intersectionData.clear();
 	}
 
+	void buildCachedData()
+	{
+		Q_Q(Model);
+
+		// Special Offline Output Stream node
+		insertOfflineOutputStreamNode();
+
+		// Rebuild the cache data for all known entities
+		for (auto const& [entityID, entityNode] : _talkerNodeMap)
+		{
+			insertTalkerNode(entityNode.get());
+		}
+
+		for (auto const& [entityID, entityNode] : _listenerNodeMap)
+		{
+			insertListenerNode(entityNode.get());
+		}
+
+		emit q->cacheHasBeenRebuilt();
+	}
+
 	void resetModel()
 	{
 		Q_Q(Model);
 
 		emit q->beginResetModel();
+
 		_talkerNodeMap.clear();
 		_listenerNodeMap.clear();
 
@@ -3288,9 +3354,10 @@ private:
 		_listenerChannelNodeMap.clear();
 
 		clearCachedData();
+
 		emit q->endResetModel();
 
-		q->setMode(q->mode(), true);
+		buildCachedData();
 	}
 
 private:
@@ -3395,31 +3462,51 @@ QVariant Model::headerData(int section, Qt::Orientation orientation, int role) c
 
 	if (role == Qt::DisplayRole)
 	{
-		if (!d->_transposed)
+		if (orientation == d->talkerOrientation())
 		{
-			if (orientation == Qt::Vertical)
-			{
-				return d->talkerHeaderData(section);
-			}
-			else
-			{
-				return d->listenerHeaderData(section);
-			}
+			return d->talkerHeaderName(section);
 		}
 		else
 		{
-			if (orientation == Qt::Vertical)
-			{
-				return d->listenerHeaderData(section);
-			}
-			else
-			{
-				return d->talkerHeaderData(section);
-			}
+			return d->listenerHeaderName(section);
+		}
+	}
+	else if (role == SelectedEntityRole)
+	{
+		if (orientation == d->talkerOrientation())
+		{
+			return d->talkerHeaderSelected(section);
+		}
+		else
+		{
+			return d->listenerHeaderSelected(section);
 		}
 	}
 
 	return {};
+}
+
+bool Model::setHeaderData(int section, Qt::Orientation orientation, QVariant const& value, int role)
+{
+	Q_D(Model);
+
+	if (role == SelectedEntityRole)
+	{
+		if (orientation == d->talkerOrientation())
+		{
+			d->setTalkerHeaderSelected(section, value.toBool());
+		}
+		else
+		{
+			d->setListenerHeaderSelected(section, value.toBool());
+		}
+
+		// Trigger refresh using DisplayRole
+		emit headerDataChanged(orientation, section, section);
+
+		return true;
+	}
+	return QAbstractTableModel::setHeaderData(section, orientation, value, role);
 }
 
 Node* Model::node(int section, Qt::Orientation orientation) const
@@ -3495,11 +3582,11 @@ Model::IntersectionData const& Model::intersectionData(QModelIndex const& index)
 	return d->_intersectionData[talkerSection][listenerSection];
 }
 
-void Model::setMode(Mode const mode, bool const force)
+void Model::setMode(Mode const mode)
 {
 	Q_D(Model);
 
-	if (mode != d->_mode || force)
+	if (mode != d->_mode)
 	{
 		emit beginResetModel();
 
@@ -3508,19 +3595,7 @@ void Model::setMode(Mode const mode, bool const force)
 
 		emit endResetModel();
 
-		// Special Offline Output Stream node
-		d->insertOfflineOutputStreamNode();
-
-		// Rebuild the cache data for all known entities
-		for (auto const& [entityID, entityNode] : d->_talkerNodeMap)
-		{
-			d->insertTalkerNode(entityNode.get());
-		}
-
-		for (auto const& [entityID, entityNode] : d->_listenerNodeMap)
-		{
-			d->insertListenerNode(entityNode.get());
-		}
+		d->buildCachedData();
 	}
 }
 
@@ -3591,8 +3666,13 @@ void Model::setTransposed(bool const transposed)
 	if (transposed != d->_transposed)
 	{
 		emit beginResetModel();
+
 		d->_transposed = transposed;
+		d->clearCachedData();
+
 		emit endResetModel();
+
+		d->buildCachedData();
 	}
 }
 

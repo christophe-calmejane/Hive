@@ -123,6 +123,15 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 			}
 		});
 
+	// Listen for model reset
+	connect(&_model, &QAbstractItemModel::modelAboutToBeReset, this,
+		[this]()
+		{
+			// Clear selected entity
+			_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
+			emit selectedControlledEntityChanged(_selectedControlledEntity);
+		});
+
 	// Listen for selection change
 	connect(selectionModel(), &QItemSelectionModel::currentChanged, this,
 		[this](QModelIndex const& index)
@@ -184,6 +193,11 @@ void View::restoreState() noexcept
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	_dynamicHeaderView.restoreState(settings->getValue(settings::ControllerDynamicHeaderViewState).toByteArray());
+}
+
+la::avdecc::UniqueIdentifier View::selectedControlledEntity() const noexcept
+{
+	return _selectedControlledEntity;
 }
 
 void View::saveDynamicHeaderState() const noexcept

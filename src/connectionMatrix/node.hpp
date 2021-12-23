@@ -104,6 +104,12 @@ public:
 	// Returns the name of this node (entity name, stream name, .. etc)
 	QString const& name() const noexcept;
 
+	// Returns true if the node is "selected"
+	bool selected() const noexcept;
+
+	// Change the selected state
+	void setSelected(bool const isSelected) noexcept;
+
 	// Returns the index of the node in its parent childen
 	int index() const noexcept;
 
@@ -186,6 +192,9 @@ protected:
 
 	// Node name
 	QString _name;
+
+	// Is Selected
+	bool _isSelected{ false };
 
 	// Holds the children
 	std::vector<std::unique_ptr<Node>> _children;

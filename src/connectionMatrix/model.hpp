@@ -24,7 +24,7 @@
 #define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 1
 #define ENABLE_CONNECTION_MATRIX_TOOLTIP 1
 
-#include <QAbstractTableModel>
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/internals/entityModel.hpp>
 
@@ -38,6 +38,7 @@
 #	define ENABLE_CONNECTION_MATRIX_TOOLTIP 0
 #endif // !DEBUG
 
+#include <QAbstractTableModel>
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 #	include <QVariantAnimation>
 #	include <QColor>
@@ -54,7 +55,9 @@ class ChannelNode;
 class ModelPrivate;
 class Model : public QAbstractTableModel
 {
+	Q_OBJECT
 public:
+	static constexpr auto SelectedEntityRole = la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::SelectedEntityRole);
 	enum class Mode
 	{
 		None,
@@ -154,6 +157,7 @@ public:
 	virtual int columnCount(QModelIndex const& parent = {}) const override;
 	virtual QVariant data(QModelIndex const& index, int role = Qt::DisplayRole) const override;
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+	virtual bool setHeaderData(int section, Qt::Orientation orientation, QVariant const& value, int role = Qt::EditRole) override;
 
 	// Returns node for the given section and orientation, nullptr otherwise
 	Node* node(int section, Qt::Orientation orientation) const;
@@ -165,7 +169,7 @@ public:
 	IntersectionData const& intersectionData(QModelIndex const& index) const;
 
 	// Set the model mode
-	void setMode(Mode const mode, bool const force = false);
+	void setMode(Mode const mode);
 
 	// Returns the mode of the model
 	Mode mode() const;
@@ -207,6 +211,10 @@ public:
 	// Visitor pattern that performs a hierarchy traversal according with respect of the current mode
 	using Visitor = std::function<void(Node*)>;
 	void accept(Node* node, Visitor const& visitor, bool const childrenOnly = false) const;
+
+	// Public signals
+	Q_SIGNAL void cacheWillBeReset();
+	Q_SIGNAL void cacheHasBeenRebuilt();
 
 private:
 	QScopedPointer<ModelPrivate> d_ptr;
