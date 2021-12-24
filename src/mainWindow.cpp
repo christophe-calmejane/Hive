@@ -59,7 +59,6 @@
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
 #include <QtMate/widgets/dynamicHeaderView.hpp>
-#include <QtMate/widgets/headerViewSortSectionFilter.hpp>
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>

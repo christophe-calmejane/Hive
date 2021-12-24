@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - [Main window's size not properly restored on macOS](https://github.com/christophe-calmejane/Hive/issues/108)
+- Default sort entities list column is EntityID instead of Logo (which is not sortable)
 
 ## [1.2.6] - 2021-07-22
 ### Changed

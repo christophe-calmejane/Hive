@@ -65,6 +65,9 @@ private:
 	void saveDynamicHeaderState() const noexcept;
 	SortFilterProxy const& model() const noexcept;
 
+	// qtMate::widgets::TableView overrides
+	virtual void showEvent(QShowEvent* event) override;
+
 	// Slots
 	//void handleCreateChannelConnectionsFinished(avdecc::CreateConnectionsInfo const& info);
 

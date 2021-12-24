@@ -184,11 +184,6 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	_settingsSignaler.start();
 }
 
-SortFilterProxy const& View::model() const noexcept
-{
-	return _proxyModel;
-}
-
 void View::restoreState() noexcept
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
@@ -206,5 +201,26 @@ void View::saveDynamicHeaderState() const noexcept
 	settings->setValue(settings::ControllerDynamicHeaderViewState, _dynamicHeaderView.saveState());
 }
 
+SortFilterProxy const& View::model() const noexcept
+{
+	return _proxyModel;
+}
+
+void View::showEvent(QShowEvent* event)
+{
+	qtMate::widgets::TableView::showEvent(event);
+
+	static std::once_flag once;
+	std::call_once(once,
+		[this]()
+		{
+			// Set default sort section, if current is unsortable
+			if (!_headerSectionSortFilter.isEnabled(_dynamicHeaderView.sortIndicatorSection()))
+			{
+				_dynamicHeaderView.setSortIndicator(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), Qt::SortOrder::DescendingOrder);
+				saveDynamicHeaderState();
+			}
+		});
+}
 
 } // namespace discoveredEntities
