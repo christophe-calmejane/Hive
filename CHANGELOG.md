@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.2.7] - 2021-12-24
 ### Added
 - [New 'Matrix' layout with only the connection matrix displayed by default](https://github.com/christophe-calmejane/Hive/issues/109)
 - Command line option to specify the application settings file to use
