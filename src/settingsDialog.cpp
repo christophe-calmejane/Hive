@@ -169,7 +169,7 @@ private:
 			auto const lock = QSignalBlocker{ protocolComboBox };
 			populateProtocolComboBox();
 
-			auto const type = settings->getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+			auto const type = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
 			auto const index = protocolComboBox->findData(QVariant::fromValue(type));
 			protocolComboBox->setCurrentIndex(index);
 		}
@@ -305,5 +305,5 @@ void SettingsDialog::on_protocolComboBox_currentIndexChanged(int /*index*/)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	auto const type = _pImpl->protocolComboBox->currentData().value<la::avdecc::protocol::ProtocolInterface::Type>();
-	settings->setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(type));
+	settings->setValue(settings::Network_ProtocolType.name, type);
 }

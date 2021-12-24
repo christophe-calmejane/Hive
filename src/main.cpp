@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Read saved profile
-	auto const userProfile = settings.getValue(settings::UserProfile.name).value<profiles::ProfileType>();
+	auto const userProfile = settings.getValue<profiles::ProfileType>(settings::UserProfile.name);
 
 	// First time launch, ask the user to choose a profile
 	if (userProfile == profiles::ProfileType::None)
@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
 		auto profileSelectionDialog = profiles::ProfileSelectionDialog{};
 		profileSelectionDialog.exec();
 		auto const profile = profileSelectionDialog.selectedProfile();
-		settings.setValue(settings::UserProfile.name, la::avdecc::utils::to_integral(profile));
+		settings.setValue(settings::UserProfile.name, profile);
 	}
 
 	auto const logo = QPixmap{ ":/Logo.png" };

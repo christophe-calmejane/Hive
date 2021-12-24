@@ -64,12 +64,35 @@ public:
 		return UniquePointer(createRawSettingsManager(iniFilePath), deleter);
 	}
 
-	//static SettingsManager& getInstance() noexcept;
-
 	virtual void registerSetting(SettingDefault const& setting) noexcept = 0;
 
-	virtual void setValue(Setting const& name, QVariant const& value, Observer const* const dontNotifyObserver = nullptr) noexcept = 0;
-	virtual QVariant getValue(Setting const& name) const noexcept = 0;
+	template<typename ValueType = QVariant>
+	void setValue(Setting const& name, ValueType&& value, Observer const* const dontNotifyObserver = nullptr) noexcept
+	{
+		if constexpr (std::is_enum_v<std::decay_t<ValueType>>)
+		{
+			// Enums are stored as integral values
+			setValueInternal(name, static_cast<std::underlying_type_t<std::decay_t<ValueType>>>(value), dontNotifyObserver);
+		}
+		else
+		{
+			setValueInternal(name, std::forward<ValueType>(value), dontNotifyObserver);
+		}
+	}
+
+	template<typename ValueType = QVariant>
+	ValueType getValue(Setting const& name) const noexcept
+	{
+		if constexpr (std::is_enum_v<ValueType>)
+		{
+			// Enums are stored as integral values
+			return static_cast<ValueType>(getValueInternal(name).value<std::underlying_type_t<ValueType>>());
+		}
+		else
+		{
+			return getValueInternal(name);
+		}
+	}
 
 	virtual void registerSettingObserver(Setting const& name, Observer* const observer, bool const triggerFirstNotification = true) const noexcept = 0;
 	virtual void unregisterSettingObserver(Setting const& name, Observer* const observer) const noexcept = 0;
@@ -89,6 +112,9 @@ protected:
 
 	/** Destructor */
 	virtual ~SettingsManager() noexcept = default;
+
+	virtual void setValueInternal(Setting const& name, QVariant const& value, Observer const* const dontNotifyObserver) noexcept = 0;
+	virtual QVariant getValueInternal(Setting const& name) const noexcept = 0;
 
 private:
 	/** Entry point */

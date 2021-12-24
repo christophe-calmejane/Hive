@@ -209,7 +209,7 @@ void MainWindowImpl::setupProfile()
 	// Update the UI and other stuff, based on the current Profile
 	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	auto const userProfile = settings->getValue(settings::UserProfile.name).value<profiles::ProfileType>();
+	auto const userProfile = settings->getValue<profiles::ProfileType>(settings::UserProfile.name);
 
 	switch (userProfile)
 	{
@@ -233,7 +233,7 @@ void MainWindowImpl::currentControllerChanged()
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	auto const protocolType = settings->getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto const protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	// Check for No ProtocolInterface
@@ -434,7 +434,7 @@ void MainWindowImpl::loadSettings()
 	}
 
 	// Check if currently saved ProtocolInterface is supported
-	auto protocolType = settings->getValue(settings::Network_ProtocolType.name).value<la::avdecc::protocol::ProtocolInterface::Type>();
+	auto protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
 	auto supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
 	if (!supportedTypes.test(protocolType))
 	{
@@ -463,7 +463,7 @@ void MainWindowImpl::loadSettings()
 			protocolType = la::avdecc::protocol::ProtocolInterface::Type::None;
 		}
 		// Save the new ProtocolInterface to the settings, before we call registerSettingObserver
-		settings->setValue(settings::Network_ProtocolType.name, la::avdecc::utils::to_integral(protocolType));
+		settings->setValue(settings::Network_ProtocolType.name, protocolType);
 	}
 
 	// Configure connectionMatrix mode

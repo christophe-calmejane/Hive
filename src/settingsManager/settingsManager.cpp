@@ -63,7 +63,7 @@ private:
 		}
 	}
 
-	virtual void setValue(Setting const& name, QVariant const& value, Observer const* const dontNotifyObserver) noexcept override
+	virtual void setValueInternal(Setting const& name, QVariant const& value, Observer const* const dontNotifyObserver) noexcept override
 	{
 		_settings->setValue(name, value);
 
@@ -82,7 +82,7 @@ private:
 		}
 	}
 
-	virtual QVariant getValue(Setting const& name) const noexcept override
+	virtual QVariant getValueInternal(Setting const& name) const noexcept override
 	{
 		return _settings->value(name);
 	}
