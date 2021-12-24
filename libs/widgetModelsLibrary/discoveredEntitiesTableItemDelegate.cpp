@@ -31,11 +31,17 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 	// Override default options according to the model current state
 	auto basePainterOption = option;
 
+	// Clear focus state if any
+	if (basePainterOption.state & QStyle::State_HasFocus)
+	{
+		basePainterOption.state &= ~QStyle::State_HasFocus;
+	}
+
 	// Subscribed to unsol
 	auto const subscribedToUnsol = index.data(la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole)).toBool();
 	if (!subscribedToUnsol)
 	{
-		if (option.state & QStyle::StateFlag::State_Selected)
+		if (basePainterOption.state & QStyle::StateFlag::State_Selected)
 		{
 			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::BlueGray, qtMate::material::color::DefaultShade);
 			painter->fillRect(basePainterOption.rect, brush);
