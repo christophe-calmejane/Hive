@@ -126,39 +126,31 @@ QString lockStateToString(la::avdecc::controller::model::LockState const& lockSt
 	}
 }
 
-QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate) noexcept
+QString samplingRateToString(la::avdecc::entity::model::SamplingRate const& samplingRate) noexcept
 {
-	switch (samplingRate)
+	auto const freq = static_cast<std::uint32_t>(samplingRate.getNominalSampleRate());
+	if (freq != 0)
 	{
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Hz_500:
-			return "500Hz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_8:
-			return "8kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_16:
-			return "16kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_24:
-			return "24kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_32:
-			return "32kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_44_1:
-			return "44.1kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_48:
-			return "48kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_88_2:
-			return "88.2kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_96:
-			return "96kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_176_4:
-			return "176.4kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::kHz_192:
-			return "192kHz";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::UserDefined:
-			return "UserDefinedFreq";
-		case la::avdecc::entity::model::StreamFormatInfo::SamplingRate::Unknown:
-		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return {};
+		if (freq < 1000)
+		{
+			return QString("%1Hz").arg(freq);
+		}
+		else
+		{
+			// Round to nearest integer but keep one decimal part
+			auto const freqRounded = freq / 1000;
+			auto const freqDecimal = (freq % 1000) / 100;
+			if (freqDecimal == 0)
+			{
+				return QString("%1kHz").arg(freqRounded);
+			}
+			else
+			{
+				return QString("%1.%2kHz").arg(freqRounded).arg(freqDecimal);
+			}
+		}
 	}
+	return "Unknown";
 }
 
 QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format) noexcept
@@ -414,7 +406,7 @@ QString msrpFailureCodeToString(la::avdecc::entity::model::MsrpFailureCode const
 			return "Out Of MMRP Resources";
 		case la::avdecc::entity::model::MsrpFailureCode::CannotStoreDestinationAddress:
 			return "Cannot Store Destination Address";
-		case la::avdecc::entity::model::MsrpFailureCode::PriorityIsNotAnSRCLass:
+		case la::avdecc::entity::model::MsrpFailureCode::PriorityIsNotAnSRClass:
 			return "Priority Is Not An SR Class";
 		case la::avdecc::entity::model::MsrpFailureCode::MaxFrameSizeTooLarge:
 			return "Max Frame Size Too Large";

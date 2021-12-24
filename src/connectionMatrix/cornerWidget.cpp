@@ -21,6 +21,7 @@
 #include "connectionMatrix/legendDialog.hpp"
 #include <QShortcut>
 #include <QPainter>
+#include <QApplication>
 
 namespace connectionMatrix
 {
@@ -97,15 +98,15 @@ CornerWidget::CornerWidget(QWidget* parent)
 		});
 
 	// Configure settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 }
 
 CornerWidget::~CornerWidget()
 {
 	// Remove settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 }
 
 void CornerWidget::setColor(qtMate::material::color::Name const name)

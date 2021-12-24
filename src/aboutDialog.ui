@@ -84,7 +84,7 @@
 	&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;%1&lt;/span&gt;&lt;/p&gt;
 	&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;Version %2 (%3 %4 build)&lt;/span&gt;&lt;/p&gt;
 	&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:9pt;&quot;&gt;&lt;br /&gt;&lt;/span&gt;AVDECC Library Version %5 (with options: %6)&lt;br /&gt;AVDECC
-		Controller Library Version %7 (with options: %8)&lt;/p&gt;
+		Controller Library Version %7 (with options: %8)&lt;br /&gt;Qt open source Version %11&lt;/p&gt;
 	&lt;p&gt;&lt;br /&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;About this software:&lt;/span&gt;&lt;/p&gt;
 	&lt;table border=&quot;0&quot; style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;&quot; cellspacing=&quot;2&quot;
 		cellpadding=&quot;0&quot;&gt;

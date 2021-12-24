@@ -38,7 +38,7 @@ QString descriptorTypeToString(la::avdecc::entity::model::DescriptorType const& 
 QString acquireStateToString(la::avdecc::controller::model::AcquireState const& acquireState, la::avdecc::UniqueIdentifier const& owningController) noexcept;
 QString lockStateToString(la::avdecc::controller::model::LockState const& lockState, la::avdecc::UniqueIdentifier const& lockingController) noexcept;
 
-QString samplingRateToString(la::avdecc::entity::model::StreamFormatInfo::SamplingRate const& samplingRate) noexcept;
+QString samplingRateToString(la::avdecc::entity::model::SamplingRate const& samplingRate) noexcept;
 QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format) noexcept;
 QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const& node) noexcept;
 

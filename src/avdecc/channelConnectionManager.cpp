@@ -545,7 +545,7 @@ private:
 
 	/**
 	* Gets all connections of a given talker entity's audioCluster to listener side audioClusters.
-	* 
+	*
 	* @param sourceEntityId					The id of the talker entity to get connection information to listeners for.
 	* @param sourceChannelIdentification	The talker side channel information to get the connections to listeners for.
 	* @return The connection results stored in a struct.

@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <la/avdecc/networkInterfaceHelper.hpp>
+#include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 
 #include <QAbstractListModel>
 
@@ -43,7 +43,7 @@ public:
 		std::string name{};
 		bool isEnabled{ false };
 		bool isConnected{ false };
-		la::avdecc::networkInterface::Interface::Type interfaceType{ la::avdecc::networkInterface::Interface::Type::None };
+		la::networkInterface::Interface::Type interfaceType{ la::networkInterface::Interface::Type::None };
 	};
 
 	using Model = NetworkInterfacesAbstractListModel;

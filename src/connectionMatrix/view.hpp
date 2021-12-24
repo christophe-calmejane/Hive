@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QTableView>
+#include <QRegularExpression>
 #include "settingsManager/settings.hpp"
 #include "avdecc/channelConnectionManager.hpp"
 
@@ -42,11 +43,14 @@ public:
 	View(QWidget* parent = nullptr);
 	virtual ~View();
 
+	// Returns the index that refers to the given entityID
+	QModelIndex findEntityModelIndex(la::avdecc::UniqueIdentifier const& entityID) const;
+
 private:
 	void onIntersectionClicked(QModelIndex const& index);
 	void onCustomContextMenuRequested(QPoint const& pos);
 	void onFilterChanged(QString const& filter);
-	void applyFilterPattern(QRegExp const& pattern);
+	void applyFilterPattern(QRegularExpression const& pattern);
 	void forceFilter();
 
 	// QTableView overrides

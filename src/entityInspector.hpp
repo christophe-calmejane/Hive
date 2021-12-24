@@ -29,6 +29,7 @@
 
 #include <QSplitter>
 #include <QLayout>
+#include <QApplication>
 
 class EntityInspector : public QWidget
 {
@@ -43,7 +44,7 @@ public:
 
 	EntityInspector(QWidget* parent = nullptr);
 
-	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
+	Q_SLOT void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
 	la::avdecc::UniqueIdentifier controlledEntityID() const;
 
 	QByteArray saveState(int version = 0) const;
@@ -64,6 +65,6 @@ private:
 	QSplitter _splitter{ Qt::Vertical, this };
 	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
 	NodeTreeWidget _nodeTreeWiget{ this };
-	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ qtMate::material::color::Palette::name(settings::SettingsManager::getInstance().getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	SettingsSignaler _settingsSignaler{};
 };

@@ -105,7 +105,7 @@ QList<QPair<std::optional<la::avdecc::entity::model::SamplingRate>, QString>> Do
 QPair<std::optional<la::avdecc::entity::model::SamplingRate>, QString> DomainTreeItem::domainSamplingRate() const
 {
 	auto domainSampleRate = m_itemData.getDomainSamplingRate();
-	return domainSampleRate ? qMakePair<std::optional<la::avdecc::entity::model::SamplingRate>, QString>(domainSampleRate, QString::number((domainSampleRate) / 1000) + " kHz") : qMakePair<std::optional<la::avdecc::entity::model::SamplingRate>, QString>(std::nullopt, "-");
+	return domainSampleRate ? qMakePair<std::optional<la::avdecc::entity::model::SamplingRate>, QString>(domainSampleRate, QString("%1 kHz").arg((domainSampleRate) / 1000)) : qMakePair<std::optional<la::avdecc::entity::model::SamplingRate>, QString>(std::nullopt, "-");
 }
 
 /**

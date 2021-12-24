@@ -1,10 +1,10 @@
 # Hive Models Library CMake File
 
 # Declare project
-setup_project(${PROJECT_NAME}_models ${HIVE_VERSION} "Hive Models Library")
+cu_setup_project(${PROJECT_NAME}_models ${HIVE_VERSION} "Hive Models Library")
 
 # Find dependencies
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets REQUIRED)
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -38,11 +38,11 @@ set(HEADER_FILES_GENERATED
 )
 
 set(HEADER_FILES_PUBLIC
-	${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/modelsLibrary.hpp
-	${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/helper.hpp
-	${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
-	${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/networkInterfacesModel.hpp
-	${PROJECT_ROOT_DIR}/include/hive/modelsLibrary/discoveredEntitiesModel.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/modelsLibrary.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/helper.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkInterfacesModel.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/discoveredEntitiesModel.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -67,12 +67,13 @@ source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
 # Define static library
 add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_PUBLIC} ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${PCH_FILES})
 
-# Enable precompiled headers
-set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME} ${PCH_SOURCE_NAME})
-
 # Setup common options
-setup_library_options(${PROJECT_NAME}_static "${PROJECT_NAME}_static")
+cu_setup_library_options(${PROJECT_NAME}_static)
 
+# Enable precompiled headers
+cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
+
+# Automatically generate MOC
 set_target_properties(${PROJECT_NAME}_static PROPERTIES
 	AUTOMOC ON
 )
@@ -81,18 +82,19 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Core la_avdecc_controller_cxx)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Core la_avdecc_controller_cxx)
 
 if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	# Define shared library
 	add_library(${PROJECT_NAME}_shared SHARED ${HEADER_FILES_PUBLIC} ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${RESOURCE_FILES_GENERATED} ${PCH_FILES})
 
-	# Enable precompiled headers
-	set_precompiled_headers(${PROJECT_NAME}_shared ${PCH_HEADER_NAME} ${PCH_SOURCE_NAME})
-
 	# Setup common options
-	setup_library_options(${PROJECT_NAME}_shared "${PROJECT_NAME}_shared")
+	cu_setup_library_options(${PROJECT_NAME}_shared)
 
+	# Enable precompiled headers
+	cu_set_precompiled_headers(${PROJECT_NAME}_shared ${PCH_HEADER_NAME})
+
+	# Automatically generate MOC
 	set_target_properties(${PROJECT_NAME}_shared PROPERTIES
 		AUTOMOC ON
 	)
@@ -101,7 +103,7 @@ if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	target_compile_definitions(${PROJECT_NAME}_shared PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 	# Link libraries
-	target_link_libraries(${PROJECT_NAME}_shared PUBLIC Qt5::Core la_avdecc_controller_cxx)
+	target_link_libraries(${PROJECT_NAME}_shared PUBLIC Qt${QT_MAJOR_VERSION}::Core la_avdecc_controller_cxx)
 
 endif()
 
@@ -112,7 +114,7 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
 	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-everything)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare)
+	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-maybe-uninitialized)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Don't use Wall on MSVC, it prints too many stupid warnings
 	target_compile_options(${PROJECT_NAME}_static PRIVATE /W3)
@@ -124,7 +126,7 @@ if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
 		target_compile_options(${PROJECT_NAME}_shared PRIVATE -W -Wno-everything)
 	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-		target_compile_options(${PROJECT_NAME}_shared PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare)
+		target_compile_options(${PROJECT_NAME}_shared PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-maybe-uninitialized)
 	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		# Don't use Wall on MSVC, it prints too many stupid warnings
 		target_compile_options(${PROJECT_NAME}_shared PRIVATE /W3)

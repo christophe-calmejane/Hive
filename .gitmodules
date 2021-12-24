@@ -4,3 +4,6 @@
 [submodule "3rdparty/discount"]
 	path = 3rdparty/discount
 	url = https://github.com/christophe-calmejane/discount.git
+[submodule "3rdparty/sparkleHelper"]
+	path = 3rdparty/sparkleHelper
+	url = https://github.com/christophe-calmejane/sparkleHelper.git

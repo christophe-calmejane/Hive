@@ -47,7 +47,7 @@ DiscoveredInterfaceTreeWidgetItem::DiscoveredInterfaceTreeWidgetItem(la::avdecc:
 	_validTime->setText(0, "Valid Time (2sec periods)");
 
 	// Set static info
-	_macAddress->setText(1, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(interfaceInfo.macAddress, true)));
+	_macAddress->setText(1, QString::fromStdString(la::networkInterface::NetworkInterfaceHelper::macAddressToString(interfaceInfo.macAddress, true)));
 	_validTime->setText(1, QString::number(interfaceInfo.validTime)); // TODO: Should be a dynamic value, which requires an avdecc controller event
 
 	// Update dynamic info right now

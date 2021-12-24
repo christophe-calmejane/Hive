@@ -16,6 +16,9 @@
     <height>32</height>
    </size>
   </property>
+  <property name="dockOptions">
+   <set>QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks</set>
+  </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout" stretch="0">
     <property name="spacing">
@@ -38,7 +41,6 @@
       <property name="orientation">
        <enum>Qt::Vertical</enum>
       </property>
-      <widget class="qtMate::widgets::TableView" name="controllerTableView"/>
       <widget class="connectionMatrix::View" name="routingTableView"/>
      </widget>
     </item>
@@ -145,6 +147,18 @@
     <bool>false</bool>
    </attribute>
   </widget>
+  <widget class="QDockWidget" name="entitiesDockWidget">
+   <property name="allowedAreas">
+    <set>Qt::BottomDockWidgetArea|Qt::TopDockWidgetArea</set>
+   </property>
+   <property name="windowTitle">
+    <string>Discovered Entities</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>4</number>
+   </attribute>
+   <widget class="discoveredEntities::View" name="controllerTableView"/>
+  </widget>
   <action name="actionQuit">
    <property name="text">
     <string>&amp;Quit</string>
@@ -220,9 +234,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>qtMate::widgets::TableView</class>
+   <class>discoveredEntities::View</class>
    <extends>QTableView</extends>
-   <header>QtMate/widgets/tableView.hpp</header>
+   <header>discoveredEntities/view.hpp</header>
   </customwidget>
   <customwidget>
    <class>EntityInspector</class>

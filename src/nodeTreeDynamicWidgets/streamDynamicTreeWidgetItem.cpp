@@ -238,7 +238,7 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	}
 	if (streamDynamicInfo.streamDestMac)
 	{
-		setStringValue(_streamDestMac, QString::fromStdString(la::avdecc::networkInterface::macAddressToString(*streamDynamicInfo.streamDestMac, true)));
+		setStringValue(_streamDestMac, QString::fromStdString(la::networkInterface::NetworkInterfaceHelper::macAddressToString(*streamDynamicInfo.streamDestMac, true)));
 	}
 	else
 	{

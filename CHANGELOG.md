@@ -4,6 +4,22 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2021-12-24
+### Added
+- [New 'Matrix' layout with only the connection matrix displayed by default](https://github.com/christophe-calmejane/Hive/issues/109)
+- Command line option to specify the application settings file to use
+- Currently selected entity is highlighted is connection matrix
+- _Device Details Dialog_ tab 'Stream Format' for simplified user access to stream format settings
+
+### Changed
+- Discovered Entities list is now dockable, with show/hide option from the View menu
+- Application settings are now saved in the .ini format (whatever the platform)
+- If the currently selected entity goes offline, active selection is removed instead of randomly choosing another entity
+
+### Fixed
+- [Main window's size not properly restored on macOS](https://github.com/christophe-calmejane/Hive/issues/108)
+- Default sort entities list column is EntityID instead of Logo (which is not sortable)
+
 ## [1.2.6] - 2021-07-22
 ### Changed
 - [Minimum required macOS version set to 10.13 (required by Qt 5.15)](https://github.com/christophe-calmejane/Hive/issues/103)

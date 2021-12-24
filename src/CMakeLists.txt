@@ -1,15 +1,7 @@
 # Hive Sources CMake File
 
-set(HIVE_SOURCES_FOLDER ${CMAKE_CURRENT_SOURCE_DIR})
-
 # Declare project
-setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
-
-# Find dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
-if(ENABLE_HIVE_FEATURE_SPARKLE)
-	find_package(Sparkle REQUIRED)
-endif()
+cu_setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -26,6 +18,10 @@ set(RESOURCE_FILES
 )
 set(RESOURCE_FILES_GENERATED)
 
+set(CONFIGURE_IN_FILES
+	internals/config.hpp.in
+)
+
 if(WIN32)
 	configure_file(
 		${HIVE_RESOURCES_FOLDER}/win32/Info.rc.in
@@ -33,6 +29,9 @@ if(WIN32)
 	)
 	list(APPEND RESOURCE_FILES_GENERATED
 		${CMAKE_CURRENT_BINARY_DIR}/Info.rc
+	)
+	list(APPEND CONFIGURE_IN_FILES
+		${HIVE_RESOURCES_FOLDER}/win32/Info.rc.in
 	)
 	
 	find_package(BugTrap REQUIRED)
@@ -73,6 +72,7 @@ set(HEADER_FILES_COMMON
 	counters/clockDomainCountersTreeWidgetItem.hpp
 	counters/streamInputCountersTreeWidgetItem.hpp
 	counters/streamOutputCountersTreeWidgetItem.hpp
+	discoveredEntities/view.hpp
 	mediaClock/mediaClockManagementDialog.hpp
 	mediaClock/domainTreeModel.hpp
 	mediaClock/unassignedListModel.hpp
@@ -98,12 +98,12 @@ set(HEADER_FILES_COMMON
 	settingsManager/settingsManager.hpp
 	settingsManager/settingsSignaler.hpp
 	settingsManager/settings.hpp
-	sparkleHelper/sparkleHelper.hpp
 	statistics/entityStatisticsTreeWidgetItem.hpp
 	settingsDialog.hpp
 	defaults.hpp
 	deviceDetailsDialog.hpp
 	deviceDetailsChannelTableModel.hpp
+	deviceDetailsStreamFormatTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
 	firmwareUploadDialog.hpp
@@ -118,6 +118,8 @@ set(HEADER_FILES_COMMON
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	windowsNpfHelper.hpp
+	visibilitySettings.hpp
+	listViewSelectionToMatrixModelController.hpp
 )
 
 set(SOURCE_FILES_COMMON
@@ -141,6 +143,7 @@ set(SOURCE_FILES_COMMON
 	counters/clockDomainCountersTreeWidgetItem.cpp
 	counters/streamInputCountersTreeWidgetItem.cpp
 	counters/streamOutputCountersTreeWidgetItem.cpp
+	discoveredEntities/view.cpp
 	mediaClock/mediaClockManagementDialog.cpp
 	mediaClock/domainTreeModel.cpp
 	mediaClock/unassignedListModel.cpp
@@ -167,6 +170,7 @@ set(SOURCE_FILES_COMMON
 	aboutDialog.cpp
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
+	deviceDetailsStreamFormatTableModel.cpp
 	firmwareUploadDialog.cpp
 	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp
@@ -180,6 +184,7 @@ set(SOURCE_FILES_COMMON
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	windowsNpfHelper.cpp
+	listViewSelectionToMatrixModelController.cpp
 )
 
 set(UI_FILES_COMMON
@@ -199,64 +204,49 @@ set(SOURCE_FILES_APP
 	main.cpp
 )
 
-if(NOT ENABLE_HIVE_FEATURE_SPARKLE)
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_dummy.cpp
-	)
-elseif(WIN32)
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_win32.cpp
-	)
-elseif(APPLE)
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_mac.mm
-	)
-	list(APPEND ADD_LINK_LIBS "-framework Foundation")
-else()
-	list(APPEND SOURCE_FILES_COMMON
-		sparkleHelper/sparkleHelper_unix.cpp
-	)
-endif()
-
 # Group source files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
-source_group("Header Files" FILES ${HEADER_FILES_GENERATED})
+source_group("Header Files\\\\Generated" FILES ${HEADER_FILES_GENERATED})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON})
 source_group(TREE ${HIVE_RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
-source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
+source_group("Resource Files\\\\Generated" FILES ${RESOURCE_FILES_GENERATED})
+source_group("Configure Input Files" FILES ${CONFIGURE_IN_FILES})
 
 # Define static library to be used by main application and unit tests
-add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON})
-
-# Enable precompiled headers
-set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
+add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON} ${CONFIGURE_IN_FILES})
 
 # Setup common options
-setup_library_options(${PROJECT_NAME}_static "${PROJECT_NAME}_static")
+cu_setup_library_options(${PROJECT_NAME}_static)
 
+# Automatically generate MOC and UI
 set_target_properties(${PROJECT_NAME}_static PROPERTIES
 	AUTOMOC ON
 	AUTOUIC ON
 )
 
+# Enable precompiled headers
+cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
+
 # Additional compile definitions
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt5::Widgets Qt5::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets Qt${QT_MAJOR_VERSION}::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()
 if(ENABLE_HIVE_FEATURE_SPARKLE)
-	target_compile_options(${PROJECT_NAME}_static PUBLIC -DUSE_SPARKLE)
-	target_link_libraries(${PROJECT_NAME}_static PUBLIC Sparkle::lib)
+	target_compile_definitions(${PROJECT_NAME}_static PUBLIC USE_SPARKLE)
+	# Link with SparkleHelper
+	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
+	target_link_libraries(${PROJECT_NAME}_static PUBLIC SparkleHelper::lib)
 endif()
 
 # Include directories
 target_include_directories(${PROJECT_NAME}_static
 	PUBLIC
-		$<BUILD_INTERFACE:${PROJECT_ROOT_DIR}/src>
+		$<BUILD_INTERFACE:${CU_ROOT_DIR}/src>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
@@ -265,7 +255,7 @@ if(BUILD_HIVE_APPLICATION)
 	add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE ${HEADER_FILES_GENERATED} ${SOURCE_FILES_APP} ${RESOURCE_FILES} ${RESOURCE_FILES_GENERATED})
 
 	# Setup common options
-	setup_executable_options(${PROJECT_NAME})
+	cu_setup_executable_options(${PROJECT_NAME})
 
 	# Additional compile definitions
 	if(HIVE_IS_RELEASE_VERSION)
@@ -275,6 +265,7 @@ if(BUILD_HIVE_APPLICATION)
 	# Link libraries
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_static)
 
+	# Set auto RCC
 	set_target_properties(${PROJECT_NAME} PROPERTIES
 		AUTORCC ON
 	)
@@ -288,7 +279,7 @@ if(BUILD_HIVE_APPLICATION)
 	endif()
 
 	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
-	setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
+	cu_setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
 endif()
 
 ################
@@ -298,7 +289,7 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
 	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-everything)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-unused-parameter)
+	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-unused-parameter -Wno-maybe-uninitialized)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Don't use Wall on MSVC, it prints too many stupid warnings
 	target_compile_options(${PROJECT_NAME}_static PRIVATE /W3)

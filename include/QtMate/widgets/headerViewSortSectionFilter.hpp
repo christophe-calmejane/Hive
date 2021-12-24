@@ -22,6 +22,7 @@
 #include <QHeaderView>
 #include <QEvent>
 #include <QSet>
+#include <QMouseEvent>
 
 namespace qtMate
 {
@@ -50,16 +51,24 @@ public:
 		_enabledSectionSet.insert(logicalIndex);
 	}
 
+	bool isEnabled(int logicalIndex)
+	{
+		return _enabledSectionSet.contains(logicalIndex);
+	}
+
 private:
 	virtual bool eventFilter(QObject* /*object*/, QEvent* event) override
 	{
 		if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease)
 		{
 			auto* ev = static_cast<QMouseEvent*>(event);
-			auto const logicalIndexUnderTheMouse = _headerView->logicalIndexAt(ev->pos());
-			if (!_enabledSectionSet.contains(logicalIndexUnderTheMouse))
+			if (ev->button() == Qt::MouseButton::LeftButton)
 			{
-				return true;
+				auto const logicalIndexUnderTheMouse = _headerView->logicalIndexAt(ev->pos());
+				if (!_enabledSectionSet.contains(logicalIndexUnderTheMouse))
+				{
+					return true;
+				}
 			}
 		}
 

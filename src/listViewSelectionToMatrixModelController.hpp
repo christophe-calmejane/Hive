@@ -17,52 +17,22 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "sparkleHelper.hpp"
+#pragma once
 
-void Sparkle::init(std::string const& /*internalNumber*/, std::string const& /*signature*/) noexcept
+#include <QObject>
+#include <QModelIndex>
+
+#include "discoveredEntities/view.hpp"
+#include "connectionMatrix/model.hpp"
+
+// Mini controller linking discoveredEntities::View selection to connectionMatrix::Model::SelectedEntityRole
+class ListViewSelectionToMatrixModelController final : public QObject
 {
-	//
-}
+public:
+	// Constructor
+	ListViewSelectionToMatrixModelController(discoveredEntities::View* listView, connectionMatrix::Model* matrixModel, QObject* parent = nullptr);
 
-void Sparkle::start() noexcept
-{
-	if (!_initialized)
-	{
-		return;
-	}
-
-	_started = true;
-}
-
-void Sparkle::setAutomaticCheckForUpdates(bool const checkForUpdates) noexcept
-{
-	if (!_initialized)
-	{
-		return;
-	}
-
-	_checkForUpdates = checkForUpdates;
-}
-
-void Sparkle::setAppcastUrl(std::string const& appcastUrl) noexcept
-{
-	if (!_initialized)
-	{
-		return;
-	}
-
-	_appcastUrl = appcastUrl;
-}
-
-void Sparkle::manualCheckForUpdate() noexcept
-{
-	if (!_initialized)
-	{
-		return;
-	}
-}
-
-Sparkle::~Sparkle() noexcept
-{
-	//
-}
+private:
+	// Private members
+	QModelIndex _selectedIndex{};
+};

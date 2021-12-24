@@ -31,9 +31,9 @@ class NetworkInterfacesListModel : public hive::modelsLibrary::NetworkInterfaces
 {
 public:
 	bool isEnabled(QString const& id) const noexcept;
-	la::avdecc::networkInterface::Interface::Type getInterfaceType(QModelIndex const& index) const noexcept;
+	la::networkInterface::Interface::Type getInterfaceType(QModelIndex const& index) const noexcept;
 
-	static QIcon interfaceTypeIcon(la::avdecc::networkInterface::Interface::Type const type) noexcept;
+	static QIcon interfaceTypeIcon(la::networkInterface::Interface::Type const type) noexcept;
 
 private:
 	// hive::modelsLibrary::NetworkInterfacesAbstractListModel overrides

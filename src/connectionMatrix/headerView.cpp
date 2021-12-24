@@ -110,7 +110,7 @@ void HeaderView::restoreSectionState(QVector<SectionState> const& sectionState)
 	}
 }
 
-void HeaderView::setFilterPattern(QRegExp const& pattern)
+void HeaderView::setFilterPattern(QRegularExpression const& pattern)
 {
 	_pattern = pattern;
 	applyFilterPattern();
@@ -351,7 +351,8 @@ QSize HeaderView::sizeHint() const
 void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalIndex) const
 {
 	auto* model = static_cast<Model*>(this->model());
-	auto* node = model->node(logicalIndex, orientation());
+	auto const orientation = this->orientation();
+	auto* node = model->node(logicalIndex, orientation);
 
 	if (!node)
 	{
@@ -452,9 +453,9 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 			break;
 	}
 
-	auto isSelected{ false };
+	auto isSelected = false;
 
-	if (orientation() == Qt::Horizontal)
+	if (orientation == Qt::Horizontal)
 	{
 		isSelected = selectionModel()->isColumnSelected(logicalIndex, {});
 	}
@@ -476,13 +477,13 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto const arrowOffset{ 20 * nodeLevel };
 
 	// Draw the main background arrow
-	painter->fillPath(paintHelper::buildHeaderArrowPath(rect, orientation(), _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 0), backgroundColor);
+	painter->fillPath(paintHelper::buildHeaderArrowPath(rect, orientation, _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 0), backgroundColor);
 
 	// Draw the small arrow, if needed
 	if (arrowColor)
 	{
-		auto path = paintHelper::buildHeaderArrowPath(rect, orientation(), _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 5);
-		if (orientation() == Qt::Horizontal)
+		auto path = paintHelper::buildHeaderArrowPath(rect, orientation, _isTransposed, _alwaysShowArrowTip, _alwaysShowArrowEnd, arrowOffset, arrowSize, 5);
+		if (orientation == Qt::Horizontal)
 		{
 			path.translate(0, 10);
 		}
@@ -499,7 +500,7 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	auto textLeftOffset = 0;
 	auto textRightOffset = 0;
 	auto r = QRect(0, 0, rect.width(), rect.height());
-	if (orientation() == Qt::Horizontal)
+	if (orientation == Qt::Horizontal)
 	{
 		r.setWidth(rect.height());
 		r.setHeight(rect.width());
@@ -531,6 +532,15 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	{
 		painter->setPen(foregroundColor);
 	}
+
+	auto const isSelectedEntity = model->headerData(logicalIndex, orientation, Model::SelectedEntityRole).toBool();
+	auto font = painter->font();
+	if (isSelectedEntity)
+	{
+		font.setBold(isSelectedEntity);
+		font.setPointSize(font.pointSize() + 1);
+	}
+	painter->setFont(font);
 
 	painter->drawText(textRect, Qt::AlignVCenter, elidedText);
 	painter->restore();

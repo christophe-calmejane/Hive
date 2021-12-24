@@ -34,6 +34,9 @@ public:
 	void setStreamFormats(StreamFormats const& streamFormats);
 	void setCurrentStreamFormat(StreamFormat const& streamFormat);
 
+	StreamFormats const& getStreamFormats() const noexcept;
+	StreamFormat const& getCurrentStreamFormat() const noexcept;
+
 	Q_SIGNAL void currentFormatChanged(StreamFormat const& streamFormat);
 
 private:

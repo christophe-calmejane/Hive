@@ -25,6 +25,7 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QPainter>
+#include <QApplication>
 
 namespace connectionMatrix
 {
@@ -87,8 +88,8 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 	: QDialog{ parent }
 {
 	// Configure settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
 
 	// Configure UI
 	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection Matrix Legend");
@@ -204,8 +205,8 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 LegendDialog::~LegendDialog()
 {
 	// Remove settings observers
-	auto& settings = settings::SettingsManager::getInstance();
-	settings.unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
 }
 
 void LegendDialog::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept

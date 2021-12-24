@@ -435,7 +435,7 @@ private:
 
 			auto const* const model = node.staticModel;
 
-			addTextItem(descriptorItem, "MAC Address", la::avdecc::networkInterface::macAddressToString(model->macAddress, true));
+			addTextItem(descriptorItem, "MAC Address", la::networkInterface::NetworkInterfaceHelper::macAddressToString(model->macAddress, true));
 			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->interfaceFlags.value()), avdecc::helper::flagsToString(model->interfaceFlags));
 			addTextItem(descriptorItem, "Clock Identity", hive::modelsLibrary::helper::uniqueIdentifierToString(model->clockIdentity));
 			addTextItem(descriptorItem, "Priority 1", hive::modelsLibrary::helper::toHexQString(model->priority1, true, true));
@@ -1356,7 +1356,7 @@ public:
 						auto data = file.readAll();
 
 						// Check length
-						if (maximumLength != 0 && data.size() > maximumLength)
+						if (maximumLength != 0 && static_cast<decltype(maximumLength)>(data.size()) > maximumLength)
 						{
 							QMessageBox::critical(q_ptr, "", "firmware image file is too large for this entity");
 							return;

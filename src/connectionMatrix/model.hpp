@@ -24,7 +24,7 @@
 #define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 1
 #define ENABLE_CONNECTION_MATRIX_TOOLTIP 1
 
-#include <QAbstractTableModel>
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/internals/entityModel.hpp>
 
@@ -38,6 +38,7 @@
 #	define ENABLE_CONNECTION_MATRIX_TOOLTIP 0
 #endif // !DEBUG
 
+#include <QAbstractTableModel>
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 #	include <QVariantAnimation>
 #	include <QColor>
@@ -48,10 +49,15 @@
 namespace connectionMatrix
 {
 class Node;
+class EntityNode;
+class StreamNode;
+class ChannelNode;
 class ModelPrivate;
 class Model : public QAbstractTableModel
 {
+	Q_OBJECT
 public:
+	static constexpr auto SelectedEntityRole = la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::SelectedEntityRole);
 	enum class Mode
 	{
 		None,
@@ -151,6 +157,7 @@ public:
 	virtual int columnCount(QModelIndex const& parent = {}) const override;
 	virtual QVariant data(QModelIndex const& index, int role = Qt::DisplayRole) const override;
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+	virtual bool setHeaderData(int section, Qt::Orientation orientation, QVariant const& value, int role = Qt::EditRole) override;
 
 	// Returns node for the given section and orientation, nullptr otherwise
 	Node* node(int section, Qt::Orientation orientation) const;
@@ -162,10 +169,35 @@ public:
 	IntersectionData const& intersectionData(QModelIndex const& index) const;
 
 	// Set the model mode
-	void setMode(Mode const mode, bool const force = false);
+	void setMode(Mode const mode);
 
 	// Returns the mode of the model
 	Mode mode() const;
+
+	// Returns ModelIndex for given entityID
+	QModelIndex indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
+
+	// Returns talker EntityNode for a given entityID
+	EntityNode const* talkerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
+
+	// Returns listener EntityNode for a given entityID
+	EntityNode const* listenerNodeFromEntityID(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
+
+	// Returns talker StreamNode for a given entityID + streamIndex
+	StreamNode const* talkerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept;
+
+	// Returns listener StreamNode for a given entityID + streamIndex
+	StreamNode const* listenerStreamNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept;
+
+	// Returns talker ChannelNode for a given entityID + audioClusterIndex
+	ChannelNode const* talkerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
+
+	// Returns listener ChannelNode for a given entityID + audioClusterIndex
+	ChannelNode const* listenerChannelNode(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
+
+	bool hasTalkerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
+
+	bool hasListenerCluster(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::entity::model::ClusterIndex const& audioClusterIndex) const noexcept;
 
 	// Set the transpose state of the model (default false, rows = talkers, columns = listeners)
 	void setTransposed(bool const transposed);
@@ -179,6 +211,10 @@ public:
 	// Visitor pattern that performs a hierarchy traversal according with respect of the current mode
 	using Visitor = std::function<void(Node*)>;
 	void accept(Node* node, Visitor const& visitor, bool const childrenOnly = false) const;
+
+	// Public signals
+	Q_SIGNAL void cacheWillBeReset();
+	Q_SIGNAL void cacheHasBeenRebuilt();
 
 private:
 	QScopedPointer<ModelPrivate> d_ptr;

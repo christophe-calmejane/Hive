@@ -1,12 +1,10 @@
 # Hive Sources CMake File
 
-set(HIVE_RESOURCES_FOLDER "${PROJECT_ROOT_DIR}/resources")
-
 # Declare project
-setup_project(AEMDumper "1.0.0.1" "AEM Dumper")
+cu_setup_project(AEMDumper "1.0.0.1" "AEM Dumper")
 
 # Find dependencies
-find_package(Qt5 COMPONENTS Widgets;Network REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network REQUIRED)
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -41,11 +39,11 @@ elseif(APPLE)
 endif()
 
 set(HEADER_FILES_SHARED
-	${PROJECT_ROOT_DIR}/src/avdecc/helper.hpp
+	${CU_ROOT_DIR}/src/avdecc/helper.hpp
 )
 
 set(SOURCE_FILES_SHARED
-	${PROJECT_ROOT_DIR}/src/avdecc/helper.cpp
+	${CU_ROOT_DIR}/src/avdecc/helper.cpp
 )
 
 set(HEADER_FILES_GENERATED
@@ -82,21 +80,22 @@ source_group("Resource Files" FILES ${RESOURCE_FILES_GENERATED})
 add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE ${HEADER_FILES_SHARED} ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_SHARED} ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP} ${RESOURCE_FILES} ${RESOURCE_FILES_GENERATED} ${UI_FILES_COMMON})
 
 # Setup common options
-setup_executable_options(${PROJECT_NAME})
+cu_setup_executable_options(${PROJECT_NAME})
 
 # Additional compile definitions
 target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets Hive_models_static QtMate_static Hive_widget_models_static ${BUGREPORTER_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt${QT_MAJOR_VERSION}::Widgets Hive_models_static QtMate_static Hive_widget_models_static ${BUGREPORTER_LINK_LIBRARIES})
 
 # Include directories
 target_include_directories(${PROJECT_NAME}
 	PUBLIC
-		$<BUILD_INTERFACE:${PROJECT_ROOT_DIR}/src>
+		$<BUILD_INTERFACE:${CU_ROOT_DIR}/src>
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
+# Automatically generate MOC, UI and RCC
 set_target_properties(${PROJECT_NAME} PROPERTIES
 	AUTOMOC ON
 	AUTOUIC ON
@@ -112,7 +111,7 @@ if(APPLE)
 endif()
 
 # Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
-setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
+cu_setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
 
 ################
 ################

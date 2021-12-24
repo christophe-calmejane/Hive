@@ -30,9 +30,11 @@
 
 #include "ui_deviceDetailsDialog.h"
 #include "deviceDetailsChannelTableModel.hpp"
+#include "deviceDetailsStreamFormatTableModel.hpp"
 #include "internals/config.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
+#include "avdecc/hiveLogItems.hpp"
 
 // **************************************************************
 // class DeviceDetailsDialogImpl
@@ -61,6 +63,8 @@ private:
 
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelReceive;
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelTransmit;
+	DeviceDetailsStreamFormatTableModel _deviceDetailsInputStreamFormatTableModel;
+	DeviceDetailsStreamFormatTableModel _deviceDetailsOutputStreamFormatTableModel;
 
 public:
 	/**
@@ -82,20 +86,32 @@ public:
 
 		// setup the table view data models.
 		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
-		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
 		tableViewReceive->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
-		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
 		tableViewReceive->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
-		tableViewTransmit->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
-
 		tableViewReceive->setModel(&_deviceDetailsChannelTableModelReceive);
+
+		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), new ConnectionStateItemDelegate());
+		tableViewTransmit->setItemDelegateForColumn(static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), new ConnectionInfoItemDelegate());
+		tableViewTransmit->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
 		tableViewTransmit->setModel(&_deviceDetailsChannelTableModelTransmit);
+
+		tableViewInputStreamFormat->setItemDelegateForColumn(static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), new StreamFormatItemDelegate(tableViewInputStreamFormat));
+		tableViewInputStreamFormat->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+		tableViewInputStreamFormat->setModel(&_deviceDetailsInputStreamFormatTableModel);
+
+		tableViewOutputStreamFormat->setItemDelegateForColumn(static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), new StreamFormatItemDelegate(tableViewOutputStreamFormat));
+		tableViewOutputStreamFormat->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+		tableViewOutputStreamFormat->setModel(&_deviceDetailsOutputStreamFormatTableModel);
 
 		// disable row resize
 		QHeaderView* verticalHeaderReceive = tableViewReceive->verticalHeader();
 		verticalHeaderReceive->setSectionResizeMode(QHeaderView::Fixed);
 		QHeaderView* verticalHeaderTransmit = tableViewTransmit->verticalHeader();
 		verticalHeaderTransmit->setSectionResizeMode(QHeaderView::Fixed);
+		QHeaderView* verticalHeaderInputStreamFormat = tableViewInputStreamFormat->verticalHeader();
+		verticalHeaderInputStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
+		QHeaderView* verticalHeaderOutputStreamFormat = tableViewOutputStreamFormat->verticalHeader();
+		verticalHeaderOutputStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
 
 		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
 		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
@@ -105,6 +121,8 @@ public:
 
 		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsInputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsOutputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
@@ -155,6 +173,9 @@ public:
 				return;
 			}
 			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
+
+			_deviceDetailsInputStreamFormatTableModel.setControlledEntityID(entityID);
+			_deviceDetailsOutputStreamFormatTableModel.setControlledEntityID(entityID);
 
 			if (!leaveOutGeneralData)
 			{
@@ -234,6 +255,10 @@ public:
 			tableViewReceive->resizeRowsToContents();
 			tableViewTransmit->resizeColumnsToContents();
 			tableViewTransmit->resizeRowsToContents();
+			tableViewInputStreamFormat->resizeColumnsToContents();
+			tableViewInputStreamFormat->resizeRowsToContents();
+			tableViewOutputStreamFormat->resizeColumnsToContents();
+			tableViewOutputStreamFormat->resizeRowsToContents();
 		}
 	}
 
@@ -252,84 +277,176 @@ public:
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
-		// set all data
-		if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
+		try
 		{
-			manager.setEntityName(_entityID, lineEditDeviceName->text());
-			_expectedChanges++;
-		}
-		if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
-		{
-			manager.setEntityGroupName(_entityID, lineEditGroupName->text());
-			_expectedChanges++;
-		}
-
-		//iterate over the changes and write them via avdecc
-		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
-		for (auto e : changesReceive.keys())
-		{
-			auto rxChanges = changesReceive.value(e);
-			for (auto f : rxChanges->keys())
+			// iterate over the stream format table changes, collect them into a list and write them via avdecc
+			auto changedStreamFormats = QList<StreamFormatTableRowEntry>();
+			// collect all STREAM_INPUT format changes
+			for (auto& descriptorIdx : _deviceDetailsInputStreamFormatTableModel.getChanges().keys())
 			{
-				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
+				auto sfChanges = _deviceDetailsInputStreamFormatTableModel.getChanges().value(descriptorIdx);
+				for (auto col : sfChanges->keys())
+					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
+						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
+			}
+			// collect all STREAM_OUTPUT format changes
+			for (auto& descriptorIdx : _deviceDetailsOutputStreamFormatTableModel.getChanges().keys())
+			{
+				auto sfChanges = _deviceDetailsOutputStreamFormatTableModel.getChanges().value(descriptorIdx);
+				for (auto col : sfChanges->keys())
+					if (col == DeviceDetailsStreamFormatTableModelColumn::StreamFormat && sfChanges->value(col).canConvert<StreamFormatTableRowEntry>())
+						changedStreamFormats.append(sfChanges->value(col).value<StreamFormatTableRowEntry>());
+			}
+			// determin if any of the format changes is in conflict with currently set 'media clock domain' sampling rate and abort on user request
+			for (auto const& streamFormatData : changedStreamFormats)
+			{
+				auto hasSampleRateConflict = false;
+
+				// get the 'media clock master' entity to be able to access its sampling rate
+				auto& clockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
+				auto const& mediaClockMaster = clockConnectionManager.getMediaClockMaster(_entityID);
+				auto controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(mediaClockMaster.first);
+
+				if (controlledEntity)
 				{
-					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, rxChanges->value(f).toString());
+					try
+					{
+						// create a streamformatinfo to then derive the samplingrate for comparison purposes
+						auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatData.streamFormat);
+						auto* audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
+						if (streamFormatInfo && audioUnitDynModel)
+						{
+							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
+							auto const& streamFormatSampleRate = streamFormatInfo->getSamplingRate();
+
+							// get the 'media clock domain' sampling rate from the 'media clock master's entities audioUnit
+							auto const& mediaClockMasterSampleRate = audioUnitDynModel->currentSamplingRate;
+
+							// if the 'media clock master' audioUnit SR and the streamFormat SR do not match, we have found a conflict that the user needs to be warned about
+							hasSampleRateConflict = (mediaClockMasterSampleRate != streamFormatSampleRate);
+						}
+					}
+					catch (la::avdecc::controller::ControlledEntity::Exception const&)
+					{
+						// Ignore exception
+					}
+					catch (...)
+					{
+						// Uncaught exception
+						AVDECC_ASSERT(false, "Uncaught exception");
+					}
+				}
+
+				if (hasSampleRateConflict)
+				{
+					auto result = QMessageBox::warning(_dialog, "", "The selected stream formats are conflicting with the Media Clock Domain sample rate the device belongs to.\nContinue?", QMessageBox::StandardButton::Abort | QMessageBox::StandardButton::Ok, QMessageBox::StandardButton::Abort);
+					if (result == QMessageBox::StandardButton::Abort)
+					{
+						revertChanges();
+						return;
+					}
+				}
+			}
+			// apply the new stream formats
+			for (auto const& streamFormatData : changedStreamFormats)
+			{
+				if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
+				{
+					manager.setStreamInputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
+					_expectedChanges++;
+				}
+				else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+				{
+					manager.setStreamOutputFormat(_entityID, streamFormatData.streamIndex, streamFormatData.streamFormat);
 					_expectedChanges++;
 				}
 			}
-		}
 
-		QMap<la::avdecc::entity::model::DescriptorIndex, QMap<DeviceDetailsChannelTableModelColumn, QVariant>*> changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
-		for (auto e : changesTransmit.keys())
-		{
-			auto txChanges = changesTransmit.value(e);
-			for (auto f : txChanges->keys())
+			// apply new device name
+			if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
 			{
-				if (f == DeviceDetailsChannelTableModelColumn::ChannelName)
-				{
-					manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, e, txChanges->value(f).toString());
-					_expectedChanges++;
-				}
+				manager.setEntityName(_entityID, lineEditDeviceName->text());
+				_expectedChanges++;
 			}
-		}
 
-		// apply the new stream info (latency)
-		if (_userSelectedLatency)
-		{
-			auto const controlledEntity = manager.getControlledEntity(_entityID);
-			if (controlledEntity)
+			// apply new group name
+			if (_hasChangesMap.contains(lineEditGroupName) && _hasChangesMap[lineEditGroupName])
 			{
-				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-				for (auto const& streamOutput : configurationNode.streamOutputs)
-				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
-					auto const streamType = streamFormatInfo->getType();
-					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
-					{
-						// skip clock stream
-						continue;
-					}
-					auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
-					if (streamLatency != *_userSelectedLatency)
-					{
-						auto streamInfo = la::avdecc::entity::model::StreamInfo{};
-						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
-						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+				manager.setEntityGroupName(_entityID, lineEditGroupName->text());
+				_expectedChanges++;
+			}
 
-						// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
-						// TODO: needs update of library:
-						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
+			// iterate over the rx/tx channels table changes and write them via avdecc
+			auto changesReceive = _deviceDetailsChannelTableModelReceive.getChanges();
+			for (auto descriptorIdx : changesReceive.keys())
+			{
+				auto rxChanges = changesReceive.value(descriptorIdx);
+				for (auto col : rxChanges->keys())
+				{
+					if (col == DeviceDetailsChannelTableModelColumn::ChannelName)
+					{
+						manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, descriptorIdx, rxChanges->value(col).toString());
+						_expectedChanges++;
 					}
 				}
 			}
-		}
 
-		// applying the new configuration shall be done as the last step, as it may change everything displayed.
-		// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
-		if (_previousConfigurationIndex != _activeConfigurationIndex)
+			auto changesTransmit = _deviceDetailsChannelTableModelTransmit.getChanges();
+			for (auto descriptorIdx : changesTransmit.keys())
+			{
+				auto txChanges = changesTransmit.value(descriptorIdx);
+				for (auto col : txChanges->keys())
+				{
+					if (col == DeviceDetailsChannelTableModelColumn::ChannelName)
+					{
+						manager.setAudioClusterName(_entityID, *_activeConfigurationIndex, descriptorIdx, txChanges->value(col).toString());
+						_expectedChanges++;
+					}
+				}
+			}
+
+			// apply the new stream info (latency)
+			if (_userSelectedLatency)
+			{
+				auto const controlledEntity = manager.getControlledEntity(_entityID);
+				if (controlledEntity)
+				{
+					auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+					for (auto const& streamOutput : configurationNode.streamOutputs)
+					{
+						auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+						auto const streamType = streamFormatInfo->getType();
+						if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+						{
+							// skip clock stream
+							continue;
+						}
+						auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
+						if (streamLatency != *_userSelectedLatency)
+						{
+							auto streamInfo = la::avdecc::entity::model::StreamInfo{};
+							streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
+							streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+
+							// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
+							// TODO: needs update of library:
+							manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
+						}
+					}
+				}
+			}
+
+			// applying the new configuration shall be done as the last step, as it may change everything displayed.
+			// TODO: All streams have to be stopped for this to function. So this needs a state machine / task sequence.
+			if (_previousConfigurationIndex != _activeConfigurationIndex)
+			{
+				manager.setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
+				_expectedChanges++;
+			}
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const& e)
 		{
-			manager.setConfiguration(_entityID, *_activeConfigurationIndex); // this needs a handler to make it sequential.
-			_expectedChanges++;
+			LOG_HIVE_ERROR(QString("%1 throws an exception (%2). Please dump Full Network State from File menu and send the file for support.").arg(__FUNCTION__).arg(e.what()));
 		}
 	}
 
@@ -347,6 +464,11 @@ public:
 		_deviceDetailsChannelTableModelTransmit.removeAllNodes();
 		_deviceDetailsChannelTableModelReceive.resetChangedData();
 		_deviceDetailsChannelTableModelReceive.removeAllNodes();
+
+		_deviceDetailsInputStreamFormatTableModel.resetChangedData();
+		_deviceDetailsInputStreamFormatTableModel.removeAllNodes();
+		_deviceDetailsOutputStreamFormatTableModel.resetChangedData();
+		_deviceDetailsOutputStreamFormatTableModel.removeAllNodes();
 
 		// read out actual data again
 		loadCurrentControlledEntity(_entityID, false);
@@ -411,6 +533,26 @@ public:
 					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
 				}
 			}
+		}
+
+		auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+		for (auto const& streamInput : configurationNode.streamInputs)
+		{
+			_deviceDetailsInputStreamFormatTableModel.addNode(streamInput.first, streamInput.second.descriptorType, streamInput.second.dynamicModel->streamFormat);
+		}
+		for (auto i = 0; i < _deviceDetailsInputStreamFormatTableModel.rowCount(); i++)
+		{
+			auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+			tableViewInputStreamFormat->openPersistentEditor(modIdx);
+		}
+		for (auto const& streamOutput : configurationNode.streamOutputs)
+		{
+			_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutput.first, streamOutput.second.descriptorType, streamOutput.second.dynamicModel->streamFormat);
+		}
+		for (auto i = 0; i < _deviceDetailsOutputStreamFormatTableModel.rowCount(); i++)
+		{
+			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+			tableViewOutputStreamFormat->openPersistentEditor(modIdx);
 		}
 	}
 
@@ -570,6 +712,7 @@ public:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName:
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat:
 					_gottenChanges++;
 					break;
 				default:

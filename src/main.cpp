@@ -17,27 +17,29 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <la/avdecc/utils.hpp>
-
-#include <QApplication>
-#include <QFontDatabase>
-
-#include <QSharedMemory>
-#include <QMessageBox>
-#include <QFile>
-#include <QSplashScreen>
-#include <QDesktopWidget>
-
-#include <iostream>
-#include <chrono>
-
 #include "mainWindow.hpp"
-#include "sparkleHelper/sparkleHelper.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 #include "profiles/profileSelectionDialog.hpp"
 
+#include <la/avdecc/utils.hpp>
+#ifdef USE_SPARKLE
+#	include <sparkleHelper/sparkleHelper.hpp>
+#endif // USE_SPARKLE
 #include <hive/modelsLibrary/controllerManager.hpp>
+
+#include <QApplication>
+#include <QFontDatabase>
+#include <QSharedMemory>
+#include <QMessageBox>
+#include <QFile>
+#include <QSplashScreen>
+#include <QCommandLineParser>
+#include <QScreen>
+#include <QtGlobal>
+
+#include <iostream>
+#include <chrono>
 
 #ifdef DEBUG
 #	define SPLASH_DELAY 0
@@ -89,11 +91,13 @@ int main(int argc, char* argv[])
 
 	// Configure QT Application
 	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+#if QT_VERSION < 0x060000
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
+#endif // QT < 6
 
-	QCoreApplication::setOrganizationDomain(hive::internals::organizationDomain);
-	QCoreApplication::setOrganizationName(hive::internals::organizationName);
+	QCoreApplication::setOrganizationDomain(hive::internals::companyDomain);
+	QCoreApplication::setOrganizationName(hive::internals::companyName);
 	QCoreApplication::setApplicationName(hive::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
 
@@ -128,8 +132,25 @@ int main(int argc, char* argv[])
 	}
 #endif
 
+	// Parse command line
+	auto parser = QCommandLineParser{};
+	auto const settingsFileOption = QCommandLineOption{ "settings", "Use the specified Settings file (.ini)", "Hive Settings" };
+	parser.addOption(settingsFileOption);
+	parser.addHelpOption();
+	parser.addVersionOption();
+
+	parser.process(app);
+
 	// Register settings (creating default value if none was saved before)
-	auto& settings = settings::SettingsManager::getInstance();
+	auto const settingsFileParsed = parser.value(settingsFileOption);
+	auto settingsFile = std::optional<QString>{};
+	if (!settingsFileParsed.isEmpty())
+	{
+		settingsFile = settingsFileParsed;
+	}
+	auto settingsManager = settings::SettingsManager::create(settingsFile);
+	auto& settings = *settingsManager;
+	app.setProperty(settings::SettingsManager::PropertyName, QVariant::fromValue(settingsManager.get()));
 
 	// General
 	settings.registerSetting(settings::LastLaunchedVersion);
@@ -177,7 +198,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Read saved profile
-	auto const userProfile = settings.getValue(settings::UserProfile.name).value<profiles::ProfileType>();
+	auto const userProfile = settings.getValue<profiles::ProfileType>(settings::UserProfile.name);
 
 	// First time launch, ask the user to choose a profile
 	if (userProfile == profiles::ProfileType::None)
@@ -185,7 +206,7 @@ int main(int argc, char* argv[])
 		auto profileSelectionDialog = profiles::ProfileSelectionDialog{};
 		profileSelectionDialog.exec();
 		auto const profile = profileSelectionDialog.selectedProfile();
-		settings.setValue(settings::UserProfile.name, la::avdecc::utils::to_integral(profile));
+		settings.setValue(settings::UserProfile.name, profile);
 	}
 
 	auto const logo = QPixmap{ ":/Logo.png" };
@@ -195,7 +216,7 @@ int main(int argc, char* argv[])
 	QWidget dummy;
 	auto const mainWindowGeometry = settings.getValue(settings::MainWindowGeometry).toByteArray();
 	dummy.restoreGeometry(mainWindowGeometry);
-	auto const availableScreenGeometry = QApplication::desktop()->screenGeometry(&dummy);
+	auto const availableScreenGeometry = dummy.screen()->availableGeometry();
 
 	// Center our splash screen on this target screen
 	splash.move(availableScreenGeometry.center() - logo.rect().center());
@@ -206,6 +227,7 @@ int main(int argc, char* argv[])
 	/* Load everything we need */
 	std::chrono::time_point<std::chrono::system_clock> start{ std::chrono::system_clock::now() };
 
+#ifdef USE_SPARKLE
 	// Initialize Sparkle
 	{
 		QFile signatureFile(":/dsa_pub.pem");
@@ -215,11 +237,18 @@ int main(int argc, char* argv[])
 			Sparkle::getInstance().init(hive::internals::buildNumber.toStdString(), content.toStdString());
 		}
 	}
+#endif // USE_SPARKLE
 
-	// Load main window
+	// Load main window (and all associated resources) while the splashscreen is displayed
 	auto window = MainWindow{ mustResetViewSettings };
-	//window.show(); // This forces the creation of the window // Don't try to show it, it blinks sometimes (and window.hide() seems to create the window too)
-	window.hide(); // Immediately hides it (even though it was not actually shown since processEvents was not called)
+
+#if defined(Q_OS_MACOS)
+	// The native window has to be created before the first processEvents() for the initial position and size to be correctly set.
+	// On macOS show() is required because obj-c lazy init is being used to create the view (move/resize will be ignored until actually created).
+	// We don't want to do the same on Windows/Linux as the window would actually be shown then hidden immediately causing a small blink.
+	window.show();
+	window.hide();
+#endif
 
 	/* Loading done - Keep the splashscreen displayed until specified delay */
 	do
@@ -231,6 +260,7 @@ int main(int argc, char* argv[])
 
 	/* Ok, kill the splashscreen and show the main window */
 	splash.close();
+	window.setReady();
 	window.show();
 
 	auto retValue = int{ 0u };

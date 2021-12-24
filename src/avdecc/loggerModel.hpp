@@ -19,8 +19,10 @@
 
 #pragma once
 
-#include <QAbstractTableModel>
 #include <la/avdecc/logger.hpp>
+
+#include <QAbstractTableModel>
+#include <QRegularExpression>
 
 namespace avdecc
 {
@@ -42,9 +44,9 @@ public:
 
 	struct SaveConfiguration
 	{
-		QRegExp search{};
-		QRegExp level{};
-		QRegExp layer{};
+		QRegularExpression search{};
+		QRegularExpression level{};
+		QRegularExpression layer{};
 	};
 
 	void save(QString const& filename, SaveConfiguration const& saveConfiguration) const;

@@ -26,7 +26,7 @@
 #include <QMessageBox>
 #include <QFile>
 #include <QSplashScreen>
-#include <QDesktopWidget>
+#include <QtGlobal>
 
 #include <iostream>
 #include <chrono>
@@ -76,11 +76,13 @@ int main(int argc, char* argv[])
 
 	// Configure QT Application
 	QCoreApplication::setAttribute(Qt::AA_UseStyleSheetPropagationInWidgetStyles, true);
+#if QT_VERSION < 0x060000
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
+#endif // QT < 6
 
-	QCoreApplication::setOrganizationDomain(aemDumper::internals::organizationDomain);
-	QCoreApplication::setOrganizationName(aemDumper::internals::organizationName);
+	QCoreApplication::setOrganizationDomain(aemDumper::internals::companyDomain);
+	QCoreApplication::setOrganizationName(aemDumper::internals::companyName);
 	QCoreApplication::setApplicationName(aemDumper::internals::applicationShortName);
 	QCoreApplication::setApplicationVersion(aemDumper::internals::versionString);
 
