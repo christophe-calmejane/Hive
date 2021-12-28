@@ -578,7 +578,7 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 
 	// Send changes
 	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
-		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const& streamFormat)
+		[this, formatComboBox]([[maybe_unused]] la::avdecc::entity::model::StreamFormat const previousStreamFormat, [[maybe_unused]] la::avdecc::entity::model::StreamFormat const newStreamFormat)
 		{
 			auto* p = const_cast<StreamFormatItemDelegate*>(this);
 			emit p->commitData(formatComboBox);

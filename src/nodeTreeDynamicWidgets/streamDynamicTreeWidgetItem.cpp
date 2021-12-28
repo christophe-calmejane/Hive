@@ -25,6 +25,7 @@
 #include <hive/modelsLibrary/helper.hpp>
 
 #include <QMenu>
+#include <QMessageBox>
 
 static inline void setNoValue(QTreeWidgetItem* const widget)
 {
@@ -57,15 +58,34 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 	// Send changes
 	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
-		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const& streamFormat)
+		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const previousStreamFormat, la::avdecc::entity::model::StreamFormat const newStreamFormat)
 		{
 			if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				auto const entity = manager.getControlledEntity(_entityID);
+				if (entity)
+				{
+					auto const invalidMappings = entity->getStreamPortInputInvalidAudioMappingsForStreamFormat(_streamIndex, newStreamFormat);
+					if (!invalidMappings.empty())
+					{
+						auto result = QMessageBox::warning(reinterpret_cast<QTreeWidget*>(QTreeWidgetItem::parent()), "", "One or more StreamInput mapping will be invalid once the format is changed.\nAutomatically remove invalid one(s)?", QMessageBox::StandardButton::Abort | QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::Yes);
+						if (result == QMessageBox::StandardButton::Abort)
+						{
+							formatComboBox->setCurrentStreamFormat(previousStreamFormat);
+							return;
+						}
+						for (auto const& [streamPortIndex, mappings] : invalidMappings)
+						{
+							manager.removeStreamPortInputAudioMappings(_entityID, streamPortIndex, mappings);
+						}
+					}
+				}
+				manager.setStreamInputFormat(_entityID, _streamIndex, newStreamFormat);
 			}
 			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, newStreamFormat);
 			}
 		});
 

@@ -37,7 +37,7 @@ public:
 	StreamFormats const& getStreamFormats() const noexcept;
 	StreamFormat const& getCurrentStreamFormat() const noexcept;
 
-	Q_SIGNAL void currentFormatChanged(StreamFormat const& streamFormat);
+	Q_SIGNAL void currentFormatChanged(la::avdecc::entity::model::StreamFormat const previousStreamFormat, la::avdecc::entity::model::StreamFormat const newStreamFormat);
 
 private:
 	StreamFormats _streamFormats{};

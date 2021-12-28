@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Automatically _fixing_ invalid mapping when changing stream input format
+
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground
 - Currently highlighted entity in connection matrix incorrect when an entity comes online or offline

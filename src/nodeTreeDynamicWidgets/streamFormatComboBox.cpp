@@ -48,8 +48,12 @@ StreamFormatComboBox::StreamFormatComboBox(la::avdecc::UniqueIdentifier const en
 				}
 			}
 
+			auto const previous = _previousFormat;
 			setCurrentStreamFormat(streamFormat);
-			emit currentFormatChanged(streamFormat);
+			if (previous != streamFormat)
+			{
+				emit currentFormatChanged(previous, streamFormat);
+			}
 		});
 }
 
