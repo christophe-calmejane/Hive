@@ -32,6 +32,7 @@ void TableView::mousePressEvent(QMouseEvent* event)
 	if (!index.isValid())
 	{
 		setCurrentIndex(index);
+		emit clicked(index);
 	}
 	else
 	{
