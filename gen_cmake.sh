@@ -134,14 +134,16 @@ function extend_gc_fnc_unhandled_arg()
 function extend_gc_fnc_postparse()
 {
 	# Get DSA public key (macOS needs it in the plist)
-	if [[ $useSparkle -eq 1 && $OSTYPE == darwin* ]]; then
-		if [ ! -f "${dsaFilePath}" ]; then
-			echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
-			exit 4
-		fi
-		dsaPubKey="$(< "${dsaFilePath}")"
-		add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
+	if [ $useSparkle -eq 1 ]; then
 		add_cmake_opt+=("-DENABLE_HIVE_FEATURE_SPARKLE=TRUE")
+		if [[ $OSTYPE == darwin* ]]; then
+			if [ ! -f "${dsaFilePath}" ]; then
+				echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
+				exit 4
+			fi
+			dsaPubKey="$(< "${dsaFilePath}")"
+			add_cmake_opt+=("-DHIVE_DSA_PUB_KEY=${dsaPubKey}")
+		fi
 	fi
 
 	# -qtvers is required if -qtdir is used

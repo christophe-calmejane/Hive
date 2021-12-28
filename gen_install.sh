@@ -33,13 +33,17 @@ if [ "x${params["use_sparkle"]}" == "xtrue" ]; then
 	use_sparkle=1
 fi
 
-if [[ $use_sparkle -eq 1 && $OSTYPE == darwin* ]]; then
-	if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
-		echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
-		exit 4
+if [ $use_sparkle -eq 1 ]; then
+	cmake_opt="${cmake_opt} -DENABLE_HIVE_FEATURE_SPARKLE=TRUE"
+	if [[ $OSTYPE == darwin* ]]; then
+		# Get DSA public key (macOS needs it in the plist)
+		if [ ! -f "${selfFolderPath}resources/dsa_pub.pem" ]; then
+			echo "ERROR: Please run setup_fresh_env.sh (just once) after having having changed use_sparkle value in config file."
+			exit 4
+		fi
+		dsaPubKey="$(< "${selfFolderPath}resources/dsa_pub.pem")"
+		cmake_opt="${cmake_opt} -DHIVE_DSA_PUB_KEY=${dsaPubKey}"
 	fi
-	dsaPubKey="$(< "${selfFolderPath}resources/dsa_pub.pem")"
-	cmake_opt="${cmake_opt} -DHIVE_DSA_PUB_KEY=${dsaPubKey} -DENABLE_HIVE_FEATURE_SPARKLE=TRUE"
 fi
 
 do_notarize=1
