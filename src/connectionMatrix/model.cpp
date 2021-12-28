@@ -1667,16 +1667,26 @@ public:
 
 	void rebuildTalkerSectionCache()
 	{
+		Q_Q(Model);
+		emit q->indexesWillChange();
+
 		auto maps = priv::buildNodeSectionMaps(_talkerNodes);
 		_talkerNodeSectionMap = std::move(maps.first);
 		_talkerEntitySectionMap = std::move(maps.second);
+
+		emit q->indexesHaveChanged();
 	}
 
 	void rebuildListenerSectionCache()
 	{
+		Q_Q(Model);
+		emit q->indexesWillChange();
+
 		auto maps = priv::buildNodeSectionMaps(_listenerNodes);
 		_listenerNodeSectionMap = std::move(maps.first);
 		_listenerEntitySectionMap = std::move(maps.second);
+
+		emit q->indexesHaveChanged();
 	}
 
 	// Build talker node hierarchy
@@ -3308,7 +3318,7 @@ private:
 	{
 		Q_Q(Model);
 
-		emit q->cacheWillBeReset();
+		emit q->indexesWillChange();
 
 		_talkerNodes.clear();
 		_listenerNodes.clear();
@@ -3335,7 +3345,7 @@ private:
 			insertListenerNode(entityNode.get());
 		}
 
-		emit q->cacheHasBeenRebuilt();
+		emit q->indexesHaveChanged();
 	}
 
 	void resetModel()

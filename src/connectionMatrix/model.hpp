@@ -213,8 +213,8 @@ public:
 	void accept(Node* node, Visitor const& visitor, bool const childrenOnly = false) const;
 
 	// Public signals
-	Q_SIGNAL void cacheWillBeReset();
-	Q_SIGNAL void cacheHasBeenRebuilt();
+	Q_SIGNAL void indexesWillChange();
+	Q_SIGNAL void indexesHaveChanged();
 
 private:
 	QScopedPointer<ModelPrivate> d_ptr;

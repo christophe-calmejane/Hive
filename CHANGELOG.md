@@ -7,12 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground
+- Currently highlighted entity in connection matrix incorrect when an entity comes online or offline
 
 ## [1.2.7] - 2021-12-24
 ### Added
 - [New 'Matrix' layout with only the connection matrix displayed by default](https://github.com/christophe-calmejane/Hive/issues/109)
 - Command line option to specify the application settings file to use
-- Currently selected entity is highlighted is connection matrix
+- Currently selected entity is highlighted in connection matrix
 - _Device Details Dialog_ tab 'Stream Format' for simplified user access to stream format settings
 
 ### Changed

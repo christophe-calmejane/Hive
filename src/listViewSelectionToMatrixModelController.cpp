@@ -37,17 +37,17 @@ ListViewSelectionToMatrixModelController::ListViewSelectionToMatrixModelControll
 			}
 		});
 
-	connect(matrixModel, &connectionMatrix::Model::cacheWillBeReset, matrixModel,
+	connect(matrixModel, &connectionMatrix::Model::indexesWillChange, matrixModel,
 		[this, matrixModel]()
 		{
-			// Cache will reset as will indexes, unselect the currently selected index
+			// Indexes will change, unselect the currently selected index
 			matrixModel->setHeaderData(_selectedIndex.row(), Qt::Vertical, false, connectionMatrix::Model::SelectedEntityRole);
 			matrixModel->setHeaderData(_selectedIndex.column(), Qt::Horizontal, false, connectionMatrix::Model::SelectedEntityRole);
 		});
-	connect(matrixModel, &connectionMatrix::Model::cacheHasBeenRebuilt, matrixModel,
+	connect(matrixModel, &connectionMatrix::Model::indexesHaveChanged, matrixModel,
 		[this, listView, matrixModel]()
 		{
-			// Cache has rebuilt as have indexes, re-compute selected index and re-select the currently selected index
+			// Indexes will change, re-compute selected index and re-select the currently selected index
 			_selectedIndex = matrixModel->indexOf(listView->selectedControlledEntity());
 			matrixModel->setHeaderData(_selectedIndex.row(), Qt::Vertical, true, connectionMatrix::Model::SelectedEntityRole);
 			matrixModel->setHeaderData(_selectedIndex.column(), Qt::Horizontal, true, connectionMatrix::Model::SelectedEntityRole);
