@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- First entity might be automatically inspected (but not selected) when Hive goes to foreground
 
 ## [1.2.7] - 2021-12-24
 ### Added

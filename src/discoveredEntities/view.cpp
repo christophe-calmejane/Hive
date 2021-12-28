@@ -133,10 +133,11 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 		});
 
 	// Listen for selection change
-	connect(selectionModel(), &QItemSelectionModel::currentChanged, this,
+	connect(this, &QTableView::clicked, this,
 		[this](QModelIndex const& index)
 		{
 			auto const entityID = _proxyModel.controlledEntityID(index);
+			auto previousEntityID = _selectedControlledEntity;
 
 			// Selection index is invalid (ie. no selection), or the currently selected entity doesn't exist
 			if (!index.isValid() || !entityID.isValid())
@@ -150,7 +151,10 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 				_selectedControlledEntity = entityID;
 			}
 
-			emit selectedControlledEntityChanged(_selectedControlledEntity);
+			if (previousEntityID != _selectedControlledEntity)
+			{
+				emit selectedControlledEntityChanged(_selectedControlledEntity);
+			}
 		});
 
 	// Automatic saving of dynamic header state when changed
