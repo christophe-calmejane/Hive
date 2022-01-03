@@ -288,7 +288,8 @@ public:
 	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const noexcept;
 
 	// Cached data from the controller
-	la::avdecc::entity::model::StreamFormat const& streamFormat() const noexcept;
+	la::avdecc::entity::model::StreamFormat streamFormat() const noexcept;
+	la::avdecc::entity::model::StreamFormats const& streamFormats() const noexcept;
 	la::avdecc::UniqueIdentifier const& grandMasterID() const noexcept;
 	std::uint8_t const& grandMasterDomain() const noexcept;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const noexcept;
@@ -301,6 +302,7 @@ protected:
 	StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept;
 
 	void setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept;
+	void setStreamFormats(la::avdecc::entity::model::StreamFormats const& streamFormat) noexcept;
 	void setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID) noexcept;
 	void setGrandMasterDomain(std::uint8_t const grandMasterDomain) noexcept;
 	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus) noexcept;
@@ -318,6 +320,7 @@ protected:
 	la::avdecc::entity::model::StreamIndex const _streamIndex;
 	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex;
 	la::avdecc::entity::model::StreamFormat _streamFormat{ la::avdecc::entity::model::StreamFormat::getNullStreamFormat() };
+	la::avdecc::entity::model::StreamFormats _streamFormats{};
 	la::avdecc::UniqueIdentifier _grandMasterID;
 	std::uint8_t _grandMasterDomain;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus _interfaceLinkStatus{ la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown };

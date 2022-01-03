@@ -105,11 +105,13 @@ DeviceDetailsChannelTableModel::ConnectionStatus calculateConnectionStatus(la::a
 
 	if (la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat))
 	{
-		status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongFormat);
+		status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible);
+		status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible);
 	}
 	else
 	{
-		status.flags.set(connectionMatrix::Model::IntersectionData::Flag::WrongFormat);
+		//la::avdecc::controller::Controller::chooseBestStreamFormat
+		status.flags.set(connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible);
 	}
 
 	auto const interfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;

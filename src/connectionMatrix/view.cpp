@@ -435,19 +435,15 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 
 		if ((talkerNodeType == Node::Type::OutputStream && listenerNodeType == Node::Type::InputStream) || (talkerNodeType == Node::Type::RedundantOutputStream && listenerNodeType == Node::Type::RedundantInputStream))
 		{
-#pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
-			if (intersectionData.flags.test(Model::IntersectionData::Flag::WrongFormat))
+			if (intersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible))
 			{
 				QMenu menu;
 
-				auto* matchTalkerAction = menu.addAction("Match formats using Talker");
-				auto* matchListenerAction = menu.addAction("Match formats using Listener");
+				auto* matchTalkerAction = menu.addAction("Adapt format to Talker's");
 				menu.addSeparator();
 				menu.addAction("Cancel");
 
-#pragma message("TODO: setEnabled() based on format compatibility -> If talker can be set from listener, and vice versa.")
 				matchTalkerAction->setEnabled(true);
-				matchListenerAction->setEnabled(true);
 
 				auto const talkerID = intersectionData.talker->entityID();
 				auto const listenerID = intersectionData.listener->entityID();
@@ -463,12 +459,8 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 					if (action == matchTalkerAction)
 					{
 						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+						// TODO: Use smartChangeInputStreamFormat
 						manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode->streamFormat());
-					}
-					else if (action == matchListenerAction)
-					{
-						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-						manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode->streamFormat());
 					}
 				}
 			}

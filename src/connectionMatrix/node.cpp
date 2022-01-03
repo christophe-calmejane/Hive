@@ -395,9 +395,14 @@ la::avdecc::entity::model::AvbInterfaceIndex const& StreamNode::avbInterfaceInde
 	return _avbInterfaceIndex;
 }
 
-la::avdecc::entity::model::StreamFormat const& StreamNode::streamFormat() const noexcept
+la::avdecc::entity::model::StreamFormat StreamNode::streamFormat() const noexcept
 {
 	return _streamFormat;
+}
+
+la::avdecc::entity::model::StreamFormats const& StreamNode::streamFormats() const noexcept
+{
+	return _streamFormats;
 }
 
 la::avdecc::UniqueIdentifier const& StreamNode::grandMasterID() const noexcept
@@ -445,6 +450,11 @@ StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model:
 void StreamNode::setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept
 {
 	_streamFormat = streamFormat;
+}
+
+void StreamNode::setStreamFormats(la::avdecc::entity::model::StreamFormats const& streamFormats) noexcept
+{
+	_streamFormats = streamFormats;
 }
 
 void StreamNode::setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID) noexcept

@@ -65,6 +65,7 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
 	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
 	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
+	static auto const Grey = color::value(color::Name::Gray, color::Shade::Shade600);
 	//static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
@@ -72,7 +73,8 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	auto const connected = state != Model::IntersectionData::State::NotConnected;
 	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
-	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
+	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
+	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
 
 	if (state == Model::IntersectionData::State::PartiallyConnected)
 	{
@@ -82,9 +84,13 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	{
 		if (interfaceDown)
 		{
-			if (wrongFormat && wrongFormatHasPriorityOverInterfaceDown)
+			if (wrongFormatPossible && wrongFormatHasPriorityOverInterfaceDown)
 			{
 				brushColor = Yellow;
+			}
+			else if (wrongFormatImpossible && wrongFormatHasPriorityOverInterfaceDown)
+			{
+				brushColor = connected ? Yellow : Grey;
 			}
 			else
 			{
@@ -95,9 +101,13 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 		{
 			brushColor = Red;
 		}
-		else if (wrongFormat)
+		else if (wrongFormatPossible)
 		{
 			brushColor = Yellow;
+		}
+		else if (wrongFormatImpossible)
+		{
+			brushColor = connected ? Yellow : Grey;
 		}
 		else
 		{
