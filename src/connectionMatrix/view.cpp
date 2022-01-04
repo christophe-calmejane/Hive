@@ -458,9 +458,7 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 
 					if (action == matchTalkerAction)
 					{
-						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-						// TODO: Use smartChangeInputStreamFormat
-						manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode->streamFormat());
+						avdecc::helper::smartChangeInputStreamFormat(this, true, listenerID, listenerStreamIndex, talkerStreamNode->streamFormat(), this, nullptr);
 					}
 				}
 			}

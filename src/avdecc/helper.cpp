@@ -23,6 +23,8 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <la/avdecc/utils.hpp>
 
+#include <QMessageBox>
+
 #include <cctype>
 
 namespace avdecc
@@ -1044,6 +1046,71 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";
+	}
+}
+
+void smartChangeInputStreamFormat(QWidget* const parent, bool const autoRemoveMappings, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, QObject* context, std::function<void(hive::modelsLibrary::CommandsExecutor::ExecutorResult const result)> const& handler) noexcept
+{
+	AVDECC_ASSERT(context != nullptr, "context must not be nullptr");
+
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto const entity = manager.getControlledEntity(entityID);
+	if (entity)
+	{
+		// Check if we need to remove mappings
+		try
+		{
+			auto const invalidMappings = entity->getStreamPortInputInvalidAudioMappingsForStreamFormat(streamIndex, streamFormat);
+			if (!invalidMappings.empty() && parent != nullptr && !autoRemoveMappings)
+			{
+				auto result = QMessageBox::warning(parent, "", "One or more StreamInput mapping will be invalid once the format is changed.\nAutomatically remove invalid one(s)?", QMessageBox::StandardButton::Abort | QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::Yes);
+				if (result == QMessageBox::StandardButton::Abort)
+				{
+					la::avdecc::utils::invokeProtectedHandler(handler, hive::modelsLibrary::CommandsExecutor::ExecutorResult{ hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::Aborted });
+					return;
+				}
+			}
+			manager.createCommandsExecutor(entityID, true,
+				[parent, streamIndex, streamFormat, context, handler, &invalidMappings](hive::modelsLibrary::CommandsExecutor& executor)
+				{
+					for (auto const& [streamPortIndex, mappings] : invalidMappings)
+					{
+						executor.addAemCommand(&hive::modelsLibrary::ControllerManager::removeStreamPortInputAudioMappings, streamPortIndex, mappings);
+					}
+					executor.addAemCommand(&hive::modelsLibrary::ControllerManager::setStreamInputFormat, streamIndex, streamFormat);
+					context->connect(&executor, &hive::modelsLibrary::CommandsExecutor::executionComplete, context,
+						[parent, handler](hive::modelsLibrary::CommandsExecutor::ExecutorResult const result)
+						{
+							if (parent != nullptr)
+							{
+								switch (result.getResult())
+								{
+									case hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::Success:
+									case hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::Aborted: // No need for a message when aborted
+										break;
+									case hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::UnknownEntity:
+										QMessageBox::warning(parent, "", "Failed to change Stream Format:<br> Unknown Entity");
+										break;
+									case hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::AemError:
+										QMessageBox::warning(parent, "", "Failed to change Stream Format:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(result.getAemStatus())));
+										break;
+									default:
+										QMessageBox::warning(parent, "", "Failed to change Stream Format:<br> Unknown Error");
+										break;
+								}
+							}
+							la::avdecc::utils::invokeProtectedHandler(handler, result);
+						});
+				});
+		}
+		catch (...)
+		{
+			la::avdecc::utils::invokeProtectedHandler(handler, hive::modelsLibrary::CommandsExecutor::ExecutorResult{ hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::InternalError });
+		}
+	}
+	else
+	{
+		la::avdecc::utils::invokeProtectedHandler(handler, hive::modelsLibrary::CommandsExecutor::ExecutorResult{ hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::UnknownEntity });
 	}
 }
 

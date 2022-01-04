@@ -17,6 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "commandsExecutorImpl.hpp"
 #include "hive/modelsLibrary/controllerManager.hpp"
 
 #include <la/avdecc/logger.hpp>
@@ -371,6 +372,15 @@ public:
 
 	~ControllerManagerImpl() noexcept
 	{
+		// Invalidate all executors
+		{
+			auto const lg = std::lock_guard{ _lock };
+			for (auto& [ex, executor] : _commandsExecutors)
+			{
+				executor->invalidate();
+			}
+		}
+
 		// The controller should already have been destroyed by now, but just in case, clean it we don't want further notifications
 		if (!AVDECC_ASSERT_WITH_RET(!_controller, "Controller should have been destroyed before the singleton destructor is called"))
 		{
@@ -1894,6 +1904,29 @@ private:
 		}
 	}
 
+	virtual void createCommandsExecutor(la::avdecc::UniqueIdentifier const entityID, bool const requestExclusiveAccess, std::function<void(hive::modelsLibrary::CommandsExecutor&)> const& handler) noexcept override
+	{
+		auto executor = std::make_unique<CommandsExecutorImpl>(this, entityID, requestExclusiveAccess);
+		auto& ex = *executor;
+		la::avdecc::utils::invokeProtectedHandler(handler, ex);
+		if (!!ex)
+		{
+			// Store the executor
+			{
+				auto const lg = std::lock_guard{ _lock };
+				_commandsExecutors.emplace(executor.get(), std::move(executor));
+			}
+			// Sets the completion handler
+			ex.setCompletionHandler(
+				[this](CommandsExecutorImpl const* const executor)
+				{
+					auto const lg = std::lock_guard{ _lock };
+					_commandsExecutors.erase(executor);
+				});
+			// Start execution
+			ex.exec();
+		}
+	}
 
 	virtual void foreachEntity(ControlledEntityCallback const& callback) noexcept override
 	{
@@ -1951,6 +1984,7 @@ private:
 	mutable std::mutex _lock{}; // Data members exclusive access
 	std::set<la::avdecc::UniqueIdentifier> _entities; // Online entities
 	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterTracker, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterTrackers; // Entities error counter flags
+	std::unordered_map<CommandsExecutorImpl const*, std::unique_ptr<CommandsExecutorImpl>> _commandsExecutors{};
 	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };
 	bool _fullAemEnumeration{ false };

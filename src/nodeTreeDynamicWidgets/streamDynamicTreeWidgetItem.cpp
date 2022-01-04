@@ -57,31 +57,19 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 	parent->setItemWidget(currentFormatItem, 1, formatComboBox);
 
 	// Send changes
-	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
-		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const previousStreamFormat, la::avdecc::entity::model::StreamFormat const newStreamFormat)
+	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, formatComboBox,
+		[this, parent, formatComboBox](la::avdecc::entity::model::StreamFormat const previousStreamFormat, la::avdecc::entity::model::StreamFormat const newStreamFormat)
 		{
 			if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
-				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-				auto const entity = manager.getControlledEntity(_entityID);
-				if (entity)
-				{
-					auto const invalidMappings = entity->getStreamPortInputInvalidAudioMappingsForStreamFormat(_streamIndex, newStreamFormat);
-					if (!invalidMappings.empty())
+				avdecc::helper::smartChangeInputStreamFormat(parent, false, _entityID, _streamIndex, newStreamFormat, formatComboBox,
+					[this, parent, formatComboBox, previousStreamFormat](hive::modelsLibrary::CommandsExecutor::ExecutorResult const result)
 					{
-						auto result = QMessageBox::warning(reinterpret_cast<QTreeWidget*>(QTreeWidgetItem::parent()), "", "One or more StreamInput mapping will be invalid once the format is changed.\nAutomatically remove invalid one(s)?", QMessageBox::StandardButton::Abort | QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::Yes);
-						if (result == QMessageBox::StandardButton::Abort)
+						if (result.getResult() != hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::Success)
 						{
 							formatComboBox->setCurrentStreamFormat(previousStreamFormat);
-							return;
 						}
-						for (auto const& [streamPortIndex, mappings] : invalidMappings)
-						{
-							manager.removeStreamPortInputAudioMappings(_entityID, streamPortIndex, mappings);
-						}
-					}
-				}
-				manager.setStreamInputFormat(_entityID, _streamIndex, newStreamFormat);
+					});
 			}
 			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{

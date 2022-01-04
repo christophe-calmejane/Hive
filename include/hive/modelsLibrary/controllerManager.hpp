@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "commandsExecutor.hpp"
 #include <la/avdecc/controller/avdeccController.hpp>
 
 #include <memory>
@@ -245,6 +246,9 @@ public:
 
 	/** Requests an ExclusiveAccessToken for the specified entityID. If the call succeeded (AemCommandStatus::Success), a valid token will be returned. */
 	virtual void requestExclusiveAccess(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType const type, RequestExclusiveAccessHandler const& handler) noexcept = 0;
+
+	/** Creates a CommandsExecutor for the specified entityID, optionally requesting exclusive access to the entity. The executor will be passed to the handler (in the calling thread) and will start as soon as the handler returns. */
+	virtual void createCommandsExecutor(la::avdecc::UniqueIdentifier const entityID, bool const requestExclusiveAccess, std::function<void(hive::modelsLibrary::CommandsExecutor&)> const& handler) noexcept = 0;
 
 	using ControlledEntityCallback = std::function<void(la::avdecc::UniqueIdentifier const&, la::avdecc::controller::ControlledEntity const&)>;
 	virtual void foreachEntity(ControlledEntityCallback const& callback) noexcept = 0;
