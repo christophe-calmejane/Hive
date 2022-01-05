@@ -75,6 +75,10 @@ QString certificationVersionToString(std::uint32_t const certificationVersion) n
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
 QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
 
+QString generateDumpSourceString(QString const& shortName, QString const& version) noexcept;
+bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept;
+bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept;
+
 /**
  * @brief Changes the stream input format of an entity, removing invalid mappings if any.
  * @details Synchronous method that will check if any mapping would become dangling after the format change, in which case it will ask the user if it wants to proceed (modal popup).

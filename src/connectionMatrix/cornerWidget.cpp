@@ -34,7 +34,7 @@ QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
 CornerWidget::CornerWidget(QWidget* parent)
 	: QWidget{ parent }
 {
-	_searchLineEdit.setPlaceholderText("Entity Filter (RegEx)");
+	_searchLineEdit.setPlaceholderText("Entity Name Filter (RegEx)");
 
 	_horizontalExpandButton.setToolTip("Expand");
 	_horizontalCollapseButton.setToolTip("Collapse");

@@ -34,17 +34,6 @@
 
 namespace discoveredEntities
 {
-class SortFilterProxy final : public QSortFilterProxyModel
-{
-public:
-	// Helpers
-	la::avdecc::UniqueIdentifier controlledEntityID(QModelIndex const& index) const
-	{
-		auto const sourceIndex = mapToSource(index);
-		return static_cast<avdecc::ControllerModel const*>(sourceModel())->getControlledEntityID(sourceIndex);
-	}
-};
-
 class View final : public qtMate::widgets::TableView
 {
 	Q_OBJECT
@@ -63,8 +52,8 @@ public:
 
 private:
 	void saveDynamicHeaderState() const noexcept;
-	SortFilterProxy const& model() const noexcept;
 	void clearSelection() noexcept;
+	la::avdecc::UniqueIdentifier controlledEntityIDAtIndex(QModelIndex const& index) const noexcept;
 
 	// qtMate::widgets::TableView overrides
 	virtual void showEvent(QShowEvent* event) override;
@@ -74,7 +63,7 @@ private:
 
 private:
 	avdecc::ControllerModel _model{ this };
-	SortFilterProxy _proxyModel{};
+	QSortFilterProxyModel _proxyModel{};
 	qtMate::widgets::DynamicHeaderView _dynamicHeaderView{ Qt::Horizontal, this };
 	qtMate::widgets::HeaderViewSortSectionFilter _headerSectionSortFilter{ &_dynamicHeaderView };
 	hive::widgetModelsLibrary::ImageItemDelegate _imageItemDelegate{ this };
