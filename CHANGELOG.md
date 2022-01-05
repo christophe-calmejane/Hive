@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - [Automatically _fixing_ invalid mapping when changing stream input format](https://github.com/christophe-calmejane/Hive/issues/44)
-- [New matrix color code for stream format incompatibility (ie. no format exist in listener's list that would fit for the talker's current format)](https://github.com/christophe-calmejane/Hive/issues/29)
+- [New matrix color code (grey) for stream format incompatibility (ie. no format exist in listener's list that would fit for the talker's current format)](https://github.com/christophe-calmejane/Hive/issues/29)
 
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground
