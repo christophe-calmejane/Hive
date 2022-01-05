@@ -435,6 +435,10 @@ void MainWindowImpl::loadSettings()
 	// Check if currently saved ProtocolInterface is supported
 	auto protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
 	auto supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
+	// Remove Virtual Protocol Interface in Release
+#ifndef DEBUG
+	supportedTypes.reset(la::avdecc::protocol::ProtocolInterface::Type::Virtual);
+#endif
 	if (!supportedTypes.test(protocolType))
 	{
 		auto const wasConfigured = protocolType != la::avdecc::protocol::ProtocolInterface::Type::None;
@@ -443,10 +447,6 @@ void MainWindowImpl::loadSettings()
 		{
 			LOG_HIVE_WARN(QString("Previously configured Network Protocol is no longer supported: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
 		}
-		// Remove Virtual Protocol Interface in Release
-#ifndef DEBUG
-		supportedTypes.reset(la::avdecc::protocol::ProtocolInterface::Type::Virtual);
-#endif
 		// If at least one type remains, use it
 		if (!supportedTypes.empty())
 		{
