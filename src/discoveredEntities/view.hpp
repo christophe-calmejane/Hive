@@ -64,6 +64,7 @@ public:
 private:
 	void saveDynamicHeaderState() const noexcept;
 	SortFilterProxy const& model() const noexcept;
+	void clearSelection() noexcept;
 
 	// qtMate::widgets::TableView overrides
 	virtual void showEvent(QShowEvent* event) override;

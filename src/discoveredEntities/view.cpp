@@ -104,7 +104,6 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
 	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults::ui::AdvancedView::ColumnWidth_Name);
 
-
 	// Connect all signals
 
 	// Connect the error item delegate with theme color changes
@@ -118,8 +117,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 			if (eid == _selectedControlledEntity)
 			{
 				// Force deselecting the view, before the entity is removed from the list, otherwise another entity will automatically be selected (not desirable)
-				auto const invalidIndex = QModelIndex{};
-				setCurrentIndex(invalidIndex);
+				clearSelection();
 			}
 		});
 
@@ -128,8 +126,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 		[this]()
 		{
 			// Clear selected entity
-			_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
-			emit selectedControlledEntityChanged(_selectedControlledEntity);
+			clearSelection();
 		});
 
 	// Listen for selection change
@@ -208,6 +205,17 @@ void View::saveDynamicHeaderState() const noexcept
 SortFilterProxy const& View::model() const noexcept
 {
 	return _proxyModel;
+}
+
+void View::clearSelection() noexcept
+{
+	// Clear selected index
+	auto const invalidIndex = QModelIndex{};
+	setCurrentIndex(invalidIndex);
+	// And selected entity
+	_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
+	// Signal the change
+	emit selectedControlledEntityChanged(_selectedControlledEntity);
 }
 
 void View::showEvent(QShowEvent* event)
