@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -34,7 +34,7 @@ QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
 CornerWidget::CornerWidget(QWidget* parent)
 	: QWidget{ parent }
 {
-	_searchLineEdit.setPlaceholderText("Entity Filter (RegEx)");
+	_searchLineEdit.setPlaceholderText("Entity Name Filter (RegEx)");
 
 	_horizontalExpandButton.setToolTip("Expand");
 	_horizontalCollapseButton.setToolTip("Collapse");
@@ -89,7 +89,7 @@ CornerWidget::CornerWidget(QWidget* parent)
 	connect(&_verticalExpandButton, &QPushButton::clicked, this, &CornerWidget::horizontalExpandClicked);
 	connect(&_verticalCollapseButton, &QPushButton::clicked, this, &CornerWidget::horizontalCollapseClicked);
 
-	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	auto* searchShortcut = new QShortcut{ QKeySequence::FindNext, this };
 	connect(searchShortcut, &QShortcut::activated, this,
 		[this]()
 		{

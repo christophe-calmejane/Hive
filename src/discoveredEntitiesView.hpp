@@ -19,20 +19,29 @@
 
 #pragma once
 
-#include <QObject>
-#include <QModelIndex>
-
 #include "discoveredEntities/view.hpp"
-#include "connectionMatrix/model.hpp"
+#include "visibilitySettings.hpp"
 
-// Mini controller linking discoveredEntities::View selection to connectionMatrix::Model::SelectedEntityRole
-class ListViewSelectionToMatrixModelController final : public QObject
+#include <QtMate/widgets/flatIconButton.hpp>
+
+#include <QWidget>
+#include <QLineEdit>
+
+class DiscoveredEntitiesView : public QWidget
 {
+	Q_OBJECT
 public:
-	// Constructor
-	ListViewSelectionToMatrixModelController(discoveredEntities::View* listView, connectionMatrix::Model* matrixModel, QObject* parent = nullptr);
+	DiscoveredEntitiesView(QWidget* parent = nullptr);
+
+	void setupView(hive::VisibilityDefaults const& defaults) noexcept;
+	discoveredEntities::View* entitiesTableView() noexcept;
+	void setInspectorGeometry(QByteArray const& geometry) noexcept;
 
 private:
-	// Private members
-	QModelIndex _selectedIndex{};
+	discoveredEntities::View _entitiesView{ this };
+	QLineEdit _searchLineEdit{ this };
+	QSortFilterProxyModel _searchFilterProxyModel{ this };
+	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Hive", "remove_connections", this };
+	qtMate::widgets::FlatIconButton _clearAllErrorsButton{ "Hive", "clear_errors", this };
+	QByteArray _inspectorGeometry{};
 };

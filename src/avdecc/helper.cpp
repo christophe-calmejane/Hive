@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -1047,6 +1047,36 @@ QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";
 	}
+}
+
+QString generateDumpSourceString(QString const& shortName, QString const& version) noexcept
+{
+	static auto s_DumpSource = QString{ "%1 v%2 using L-Acoustics AVDECC Controller v%3" }.arg(shortName).arg(version).arg(la::avdecc::controller::getVersion().c_str());
+
+	return s_DumpSource;
+}
+
+bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept
+{
+	if (entityModelID)
+	{
+		auto const [vendorID, deviceID, modelID] = la::avdecc::entity::model::splitEntityModelID(entityModelID);
+		return vendorID != 0x00000000 && vendorID != 0x00FFFFFF;
+	}
+	return false;
+}
+
+bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept
+{
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto controlledEntity = manager.getControlledEntity(entityID);
+
+	if (controlledEntity)
+	{
+		return controlledEntity->isEntityModelValidForCaching();
+	}
+
+	return true;
 }
 
 void smartChangeInputStreamFormat(QWidget* const parent, bool const autoRemoveMappings, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, QObject* context, std::function<void(hive::modelsLibrary::CommandsExecutor::ExecutorResult const result)> const& handler) noexcept

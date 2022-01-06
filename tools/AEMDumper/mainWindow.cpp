@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,6 +19,8 @@
 
 #include "ui_mainWindow.h"
 #include "mainWindow.hpp"
+#include "avdecc/helper.hpp"
+
 #include <QtWidgets>
 #include <QMessageBox>
 #include <QFile>
@@ -98,7 +100,6 @@ public:
 	void createToolbars();
 	void createControllerView();
 	void connectSignals();
-	static QString generateDumpSourceString() noexcept;
 
 	// Private members
 	::MainWindow* _parent{ nullptr };
@@ -297,7 +298,7 @@ void MainWindowImpl::connectSignals()
 								{
 									flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
 								}
-								auto [error, message] = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
+								auto [error, message] = manager.serializeControlledEntityAsJson(entityID, filename, flags, avdecc::helper::generateDumpSourceString(aemDumper::internals::applicationShortName, aemDumper::internals::versionString));
 								if (!error)
 								{
 									QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
@@ -310,7 +311,7 @@ void MainWindowImpl::connectSignals()
 										if (choice == QMessageBox::StandardButton::Yes)
 										{
 											flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
+											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags, avdecc::helper::generateDumpSourceString(aemDumper::internals::applicationShortName, aemDumper::internals::versionString));
 											error = std::get<0>(result);
 											message = std::get<1>(result);
 											if (!error)
@@ -381,13 +382,6 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	qApp->closeAllWindows();
 
 	QMainWindow::closeEvent(event);
-}
-
-QString MainWindowImpl::generateDumpSourceString() noexcept
-{
-	static auto s_DumpSource = QString{ "%1 v%2 using L-Acoustics AVDECC Controller v%3" }.arg(aemDumper::internals::applicationShortName).arg(aemDumper::internals::versionString).arg(la::avdecc::controller::getVersion().c_str());
-
-	return s_DumpSource;
 }
 
 MainWindow::MainWindow(QWidget* parent)

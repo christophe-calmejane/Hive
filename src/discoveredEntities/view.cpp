@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -130,10 +130,17 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 		});
 
 	// Listen for selection change
-	connect(this, &QTableView::clicked, this,
-		[this](QModelIndex const& index)
+	connect(selectionModel(), &QItemSelectionModel::selectionChanged, this,
+		[this](QItemSelection const& selected, QItemSelection const& deselected)
 		{
-			auto const entityID = _proxyModel.controlledEntityID(index);
+			auto index = QModelIndex{};
+			auto const& selectedIndexes = selected.indexes();
+			if (!selectedIndexes.empty())
+			{
+				index = *selectedIndexes.begin();
+			}
+
+			auto const entityID = controlledEntityIDAtIndex(index);
 			auto previousEntityID = _selectedControlledEntity;
 
 			// Selection index is invalid (ie. no selection), or the currently selected entity doesn't exist
@@ -161,7 +168,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	connect(this, &QTableView::doubleClicked, this,
 		[this](QModelIndex const& index)
 		{
-			auto const entityID = _proxyModel.controlledEntityID(index);
+			auto const entityID = controlledEntityIDAtIndex(index);
 
 			if (entityID.isValid())
 			{
@@ -172,14 +179,10 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	connect(this, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
-			// CAUTION, this view uses a proxy, we must remap the index
 			auto const index = indexAt(pos);
-			auto const sourceIndex = _proxyModel.mapToSource(index);
-
-			auto const entityID = _proxyModel.controlledEntityID(index);
+			auto const entityID = controlledEntityIDAtIndex(index);
 			emit contextMenuRequested(entityID, pos);
 		});
-
 
 	// Start the settings signaler service (will trigger all known signals)
 	_settingsSignaler.start();
@@ -202,11 +205,6 @@ void View::saveDynamicHeaderState() const noexcept
 	settings->setValue(settings::ControllerDynamicHeaderViewState, _dynamicHeaderView.saveState());
 }
 
-SortFilterProxy const& View::model() const noexcept
-{
-	return _proxyModel;
-}
-
 void View::clearSelection() noexcept
 {
 	// Clear selected index
@@ -216,6 +214,13 @@ void View::clearSelection() noexcept
 	_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
 	// Signal the change
 	emit selectedControlledEntityChanged(_selectedControlledEntity);
+}
+
+la::avdecc::UniqueIdentifier View::controlledEntityIDAtIndex(QModelIndex const& index) const noexcept
+{
+	auto const* m = static_cast<QSortFilterProxyModel const*>(model());
+	auto const sourceIndex = m->mapToSource(index);
+	return _model.getControlledEntityID(sourceIndex);
 }
 
 void View::showEvent(QShowEvent* event)

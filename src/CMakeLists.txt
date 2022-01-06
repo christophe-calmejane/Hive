@@ -106,6 +106,7 @@ set(HEADER_FILES_COMMON
 	deviceDetailsStreamFormatTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
+	discoveredEntitiesView.hpp
 	firmwareUploadDialog.hpp
 	multiFirmwareUpdateDialog.hpp
 	mainWindow.hpp
@@ -174,6 +175,7 @@ set(SOURCE_FILES_COMMON
 	firmwareUploadDialog.cpp
 	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp
+	discoveredEntitiesView.cpp
 	mainWindow.cpp
 	settingsDialog.cpp
 	aecpCommandComboBox.cpp

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -74,6 +74,10 @@ QString certificationVersionToString(std::uint32_t const certificationVersion) n
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
 QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
+
+QString generateDumpSourceString(QString const& shortName, QString const& version) noexcept;
+bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept;
+bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept;
 
 /**
  * @brief Changes the stream input format of an entity, removing invalid mappings if any.
