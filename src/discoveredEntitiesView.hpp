@@ -42,6 +42,6 @@ private:
 	QLineEdit _searchLineEdit{ this };
 	QSortFilterProxyModel _searchFilterProxyModel{ this };
 	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Material Icons", "refresh", this };
-	qtMate::widgets::FlatIconButton _clearAllErrorsButton{ "Material Icons", "refresh", this };
+	qtMate::widgets::FlatIconButton _clearAllErrorsButton{ "Hive", "clear_errors", this };
 	QByteArray _inspectorGeometry{};
 };

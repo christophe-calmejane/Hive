@@ -3,7 +3,7 @@ FontName: Hive
 FullName: Hive
 FamilyName: Hive
 Weight: Book
-Copyright: Copyright (C) 2017-2019, Emilien Vallot, Christophe Calmejane and other contributors\n\nThis file is part of Hive.\n\nHive is free software: you can redistribute it and/or modify\nit under the terms of the GNU Lesser General Public License as published by\nthe Free Software Foundation, either version 3 of the License, or\n(at your option) any later version.\n\nHive is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU Lesser General Public License for more details.\n\nYou should have received a copy of the GNU Lesser General Public License\nalong with Hive.  If not, see <http://www.gnu.org/licenses/>.\n
+Copyright: Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors\n\nThis file is part of Hive.\n\nHive is free software: you can redistribute it and/or modify\nit under the terms of the GNU Lesser General Public License as published by\nthe Free Software Foundation, either version 3 of the License, or\n(at your option) any later version.\n\nHive is distributed in the hope that it will be useful,\nbut WITHOUT ANY WARRANTY; without even the implied warranty of\nMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\nGNU Lesser General Public License for more details.\n\nYou should have received a copy of the GNU Lesser General Public License\nalong with Hive.  If not, see <http://www.gnu.org/licenses/>.\n
 Version: 1.0
 ItalicAngle: 0
 UnderlinePosition: -150
@@ -22,7 +22,7 @@ OS2Version: 4
 OS2_WeightWidthSlopeOnly: 0
 OS2_UseTypoMetrics: 1
 CreationTime: 1551823031
-ModificationTime: 1561736218
+ModificationTime: 1641461520
 PfmFamily: 17
 TTFWeight: 400
 TTFWidth: 5
@@ -66,7 +66,7 @@ NameList: AGL For New Fonts
 DisplaySize: -48
 AntiAlias: 1
 FitToEm: 0
-WinInfo: 0 39 14
+WinInfo: 0 38 14
 BeginPrivate: 0
 EndPrivate
 Grid
@@ -90,7 +90,7 @@ Grid
   Named: "left"
 EndSplineSet
 TeXData: 1 0 0 346030 173015 115343 0 1048576 115343 783286 444596 497025 792723 393216 433062 380633 303038 157286 324010 404750 52429 2506097 1059062 262144
-BeginChars: 40 40
+BeginChars: 41 41
 
 StartChar: uniE000
 Encoding: 37 57344 0
@@ -944,6 +944,50 @@ SplineSet
 EndSplineSet
 LCarets2: 14 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 Ligature2: "'rlig' Required Ligatures in Latin lookup 0" f i r m w a r e underscore u p l o a d
+EndChar
+
+StartChar: uniE003
+Encoding: 40 57347 40
+Width: 512
+VWidth: 0
+LayerCount: 2
+Fore
+SplineSet
+24 458 m 1,0,-1
+ 54 488 l 1,1,-1
+ 488 51 l 1,2,-1
+ 462 24 l 1,3,-1
+ 24 458 l 1,0,-1
+335.573242188 448 m 1,4,-1
+ 448 335.573242188 l 1,5,-1
+ 448 176.426757812 l 1,6,-1
+ 335.573242188 64 l 1,7,-1
+ 176.426757812 64 l 1,8,-1
+ 64 176.426757812 l 1,9,-1
+ 64 335.573242188 l 1,10,-1
+ 176.426757812 448 l 1,11,-1
+ 335.573242188 448 l 1,4,-1
+405.333007812 194.133789062 m 1,12,-1
+ 405.333007812 317.866210938 l 1,13,-1
+ 317.866210938 405.333007812 l 1,14,-1
+ 194.133789062 405.333007812 l 1,15,-1
+ 106.666992188 317.866210938 l 1,16,-1
+ 106.666992188 194.133789062 l 1,17,-1
+ 194.133789062 106.666992188 l 1,18,-1
+ 317.866210938 106.666992188 l 1,19,-1
+ 405.333007812 194.133789062 l 1,12,-1
+234.666992188 234.666992188 m 1,20,-1
+ 234.666992188 362.666992188 l 1,21,-1
+ 277.333007812 362.666992188 l 1,22,-1
+ 277.333007812 234.666992188 l 1,23,-1
+ 234.666992188 234.666992188 l 1,20,-1
+234.666992188 149.333007812 m 1,24,-1
+ 234.666992188 192 l 1,25,-1
+ 277.333007812 192 l 1,26,-1
+ 277.333007812 149.333007812 l 1,27,-1
+ 234.666992188 149.333007812 l 1,24,-1
+EndSplineSet
+Ligature2: "'rlig' Required Ligatures in Latin lookup 0" c l e a r underscore e r r o r s
 EndChar
 EndChars
 EndSplineFont
