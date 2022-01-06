@@ -89,7 +89,7 @@ CornerWidget::CornerWidget(QWidget* parent)
 	connect(&_verticalExpandButton, &QPushButton::clicked, this, &CornerWidget::horizontalExpandClicked);
 	connect(&_verticalCollapseButton, &QPushButton::clicked, this, &CornerWidget::horizontalCollapseClicked);
 
-	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	auto* searchShortcut = new QShortcut{ QKeySequence::FindNext, this };
 	connect(searchShortcut, &QShortcut::activated, this,
 		[this]()
 		{

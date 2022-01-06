@@ -35,6 +35,7 @@
 #include <QMenu>
 #include <QAction>
 #include <QFileDialog>
+#include <QShortcut>
 
 DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 	: QWidget{ parent }
@@ -359,6 +360,14 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 					}
 				}
 			}
+		});
+
+	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	connect(searchShortcut, &QShortcut::activated, this,
+		[this]()
+		{
+			_searchLineEdit.setFocus(Qt::MouseFocusReason);
+			_searchLineEdit.selectAll();
 		});
 }
 
