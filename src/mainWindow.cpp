@@ -536,6 +536,26 @@ void MainWindowImpl::connectSignals()
 
 	connect(discoveredEntitiesView->entitiesTableView(), &discoveredEntities::View::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
 
+	connect(discoveredEntitiesView, &DiscoveredEntitiesView::filterChanged, routingTableView,
+		[this](QString const& filter)
+		{
+			if (discoveredEntitiesView->isFilterLinked())
+			{
+				routingTableView->talkerFilterLineEdit()->setText(filter);
+				routingTableView->listenerFilterLineEdit()->setText(filter);
+			}
+		});
+	connect(discoveredEntitiesView, &DiscoveredEntitiesView::filterLinkStateChanged, routingTableView,
+		[this](bool const isLinked, QString const& filter)
+		{
+			auto* const talkerFilter = routingTableView->talkerFilterLineEdit();
+			auto* const listenerFilter = routingTableView->listenerFilterLineEdit();
+			talkerFilter->setEnabled(!isLinked);
+			listenerFilter->setEnabled(!isLinked);
+			talkerFilter->setText(isLinked ? filter : "");
+			listenerFilter->setText(isLinked ? filter : "");
+		});
+
 	// Connect EntityInspector signals
 	connect(entityInspector, &EntityInspector::stateChanged, this,
 		[this]()

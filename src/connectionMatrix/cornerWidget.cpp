@@ -131,6 +131,11 @@ QString CornerWidget::filterText() const
 	return _searchLineEdit.text();
 }
 
+QLineEdit* CornerWidget::filterLineEdit() noexcept
+{
+	return &_searchLineEdit;
+}
+
 void CornerWidget::paintEvent(QPaintEvent*)
 {
 	QPainter painter{ this };

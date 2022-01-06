@@ -36,6 +36,7 @@
 #include <QAction>
 #include <QFileDialog>
 #include <QShortcut>
+#include <QRegularExpression>
 
 DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 	: QWidget{ parent }
@@ -51,6 +52,9 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 		{
 			horizontalLayout->addWidget(&_searchLineEdit);
 			_searchLineEdit.setPlaceholderText(QCoreApplication::translate("DiscoveredEntitiesView", "Entity Name Filter (RegEx)", nullptr));
+		}
+		{
+			horizontalLayout->addWidget(&_filterLinkedCheckbox);
 		}
 		{
 			auto* const horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
@@ -76,10 +80,18 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 	connect(&_searchLineEdit, &QLineEdit::textChanged, &_searchLineEdit,
 		[this]()
 		{
-			auto const pattern = QRegularExpression{ _searchLineEdit.text() };
+			auto const& text = _searchLineEdit.text();
+			auto const pattern = QRegularExpression{ text };
 			_searchFilterProxyModel.setFilterKeyColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name));
 			_searchFilterProxyModel.setFilterRegularExpression(pattern);
 			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
+			emit filterChanged(text);
+		});
+
+	connect(&_filterLinkedCheckbox, &QCheckBox::stateChanged, &_filterLinkedCheckbox,
+		[this](int state)
+		{
+			emit filterLinkStateChanged(static_cast<Qt::CheckState>(state) == Qt::CheckState::Checked, _searchLineEdit.text());
 		});
 
 	connect(&_removeAllConnectionsButton, &qtMate::widgets::FlatIconButton::clicked, &_removeAllConnectionsButton,
@@ -116,6 +128,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 					});
 			}
 		});
+
 	connect(&_clearAllErrorsButton, &qtMate::widgets::FlatIconButton::clicked, &_clearAllErrorsButton,
 		[this]()
 		{
@@ -408,4 +421,14 @@ discoveredEntities::View* DiscoveredEntitiesView::entitiesTableView() noexcept
 void DiscoveredEntitiesView::setInspectorGeometry(QByteArray const& geometry) noexcept
 {
 	_inspectorGeometry = geometry;
+}
+
+QString DiscoveredEntitiesView::filterText() const noexcept
+{
+	return _filterLinkedCheckbox.text();
+}
+
+bool DiscoveredEntitiesView::isFilterLinked() const noexcept
+{
+	return _filterLinkedCheckbox.isChecked();
 }

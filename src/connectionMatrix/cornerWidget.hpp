@@ -43,6 +43,7 @@ public:
 	bool isTransposed() const;
 
 	QString filterText() const;
+	QLineEdit* filterLineEdit() noexcept;
 
 signals:
 	void filterChanged(QString const& filter);

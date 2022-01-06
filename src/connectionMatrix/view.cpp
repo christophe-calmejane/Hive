@@ -113,6 +113,18 @@ QModelIndex View::findEntityModelIndex(la::avdecc::UniqueIdentifier const& entit
 	return _model->indexOf(entityID);
 }
 
+QLineEdit* View::talkerFilterLineEdit() noexcept
+{
+	// Right now, we are using a single widget for talker and listener filtering
+	return _cornerWidget->filterLineEdit();
+}
+
+QLineEdit* View::listenerFilterLineEdit() noexcept
+{
+	// Right now, we are using a single widget for talker and listener filtering
+	return _cornerWidget->filterLineEdit();
+}
+
 void View::onIntersectionClicked(QModelIndex const& index)
 {
 	auto const& intersectionData = _model->intersectionData(index);

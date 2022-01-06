@@ -45,6 +45,8 @@ public:
 
 	// Returns the index that refers to the given entityID
 	QModelIndex findEntityModelIndex(la::avdecc::UniqueIdentifier const& entityID) const;
+	QLineEdit* talkerFilterLineEdit() noexcept;
+	QLineEdit* listenerFilterLineEdit() noexcept;
 
 private:
 	void onIntersectionClicked(QModelIndex const& index);
