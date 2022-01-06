@@ -41,7 +41,7 @@ private:
 	discoveredEntities::View _entitiesView{ this };
 	QLineEdit _searchLineEdit{ this };
 	QSortFilterProxyModel _searchFilterProxyModel{ this };
-	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Material Icons", "refresh", this };
+	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Hive", "remove_connections", this };
 	qtMate::widgets::FlatIconButton _clearAllErrorsButton{ "Hive", "clear_errors", this };
 	QByteArray _inspectorGeometry{};
 };
