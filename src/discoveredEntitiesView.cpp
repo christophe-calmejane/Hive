@@ -18,7 +18,23 @@
 */
 
 #include "discoveredEntitiesView.hpp"
+#include "deviceDetailsDialog.hpp"
+#include "entityInspector.hpp"
+#include "avdecc/helper.hpp"
 #include "internals/config.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/widgetModelsLibrary/entityLogoCache.hpp>
+
+#include <QStandardPaths>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QSpacerItem>
+#include <QMessageBox>
+#include <QMenu>
+#include <QAction>
+#include <QFileDialog>
 
 DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 	: QWidget{ parent }
