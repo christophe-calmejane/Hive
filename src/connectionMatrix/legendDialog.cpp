@@ -132,8 +132,8 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 	Sections colorCodeSections = {
 		{ "Connectable without detectable error", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
 		{ "Connectable but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain }, false },
-		{ "Connectable but stream format must be changed", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormatPossible }, false },
-		{ "Connectable but no compatible stream format exist", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormatImpossible }, false },
+		{ "Connectable but Listener stream format must be changed to match Talker's current one", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormatPossible }, false },
+		{ "Connectable but no compatible Listener stream format exists to match Talker's current one", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormatImpossible }, false },
 		{ "Connectable but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown }, false },
 
 		{ "Connected and no detectable error found", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{}, false },
