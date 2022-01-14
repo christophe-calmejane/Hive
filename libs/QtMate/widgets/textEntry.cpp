@@ -46,6 +46,7 @@ public:
 		auto abort = false;
 		auto swallow = false;
 		auto clearFocus = false;
+		auto gotValidationKeyEvent = false;
 
 		switch (event->type())
 		{
@@ -68,6 +69,7 @@ public:
 					case Qt::Key_Enter:
 						_validated = true;
 						clearFocus = true;
+						gotValidationKeyEvent = true;
 						break;
 					case Qt::Key_Tab:
 						// Swallow tab
@@ -86,12 +88,20 @@ public:
 			QSignalBlocker lock(q);
 			q->setText(_focusInText);
 			clearFocus = true;
+
+			emit q->canceled();
 		}
 
 		if (clearFocus)
 		{
 			QSignalBlocker lock(q);
 			q->clearFocus();
+		}
+
+		// Only send signal if we just got the validation key (event filter might be called for other events while _validated is true)
+		if (gotValidationKeyEvent)
+		{
+			emit q->validated(_focusInText, q->text());
 		}
 
 		return swallow;
