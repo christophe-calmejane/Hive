@@ -22,14 +22,14 @@
 class AecpCommandComboBoxPrivate : public QObject
 {
 public:
-	AecpCommandComboBoxPrivate(AecpCommandComboBox* q, la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType)
+	AecpCommandComboBoxPrivate(AecpCommandComboBox* q, la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex)
 		: q_ptr(q)
 		, _entityID(entityID)
 		, _commandType(commandType)
 	{
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this,
-			[this](la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+			[this](la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 			{
 				if (entityID != _entityID)
 				{
@@ -37,6 +37,11 @@ public:
 				}
 
 				if (commandType != _commandType)
+				{
+					return;
+				}
+
+				if (descriptorIndex != _descriptorIndex)
 				{
 					return;
 				}
@@ -61,13 +66,14 @@ protected:
 
 	la::avdecc::UniqueIdentifier const _entityID;
 	hive::modelsLibrary::ControllerManager::AecpCommandType const _commandType;
+	la::avdecc::entity::model::DescriptorIndex _descriptorIndex{};
 
 	int _previousIndex{ -1 };
 };
 
-AecpCommandComboBox::AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, QWidget* parent)
+AecpCommandComboBox::AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QWidget* parent)
 	: ComboBox(parent)
-	, d_ptr(new AecpCommandComboBoxPrivate(this, entityID, commandType))
+	, d_ptr(new AecpCommandComboBoxPrivate(this, entityID, commandType, descriptorIndex))
 {
 }
 

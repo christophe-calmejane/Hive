@@ -85,13 +85,13 @@ public:
 				item->setText(0, "Current Value");
 				if (_isReadOnly)
 				{
-					auto label = new QLabel(QString::number(val.currentValue));
+					auto* label = new QLabel(QString::number(val.currentValue));
 					parent->setItemWidget(item, 1, label);
 					_widgets.push_back(label);
 				}
 				else
 				{
-					auto comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl);
+					auto* comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
 					parent->setItemWidget(item, 1, comboBox);
 
 					auto const range = static_cast<value_size>(staticVal.maximum - staticVal.minimum);

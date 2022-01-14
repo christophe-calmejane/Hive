@@ -29,7 +29,7 @@ class AecpCommandComboBox : public qtMate::widgets::ComboBox
 	Q_OBJECT
 
 public:
-	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, QWidget* parent = nullptr);
+	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QWidget* parent = nullptr);
 	~AecpCommandComboBox();
 
 protected:

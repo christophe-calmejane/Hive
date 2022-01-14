@@ -24,8 +24,8 @@
 
 Q_DECLARE_METATYPE(la::avdecc::entity::model::StreamFormat)
 
-StreamFormatComboBox::StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, QWidget* parent)
-	: AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat, parent)
+StreamFormatComboBox::StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, QWidget* parent)
+	: AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat, streamIndex, parent)
 {
 	// Send changes
 	connect(this, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
