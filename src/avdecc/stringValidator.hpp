@@ -24,19 +24,24 @@
 
 namespace avdecc
 {
-class StringValidator : public QValidator
+template<int MaxLength>
+class FixedSizeStringValidator : public QValidator
 {
 public:
-	static StringValidator* getSharedInstance() noexcept
-	{
-		static auto s_instance = StringValidator{};
-
-		return &s_instance;
-	}
-
 	virtual State validate(QString& input, int& /*pos*/) const override
 	{
-		return input.toUtf8().length() <= la::avdecc::entity::model::AvdeccFixedString::MaxLength ? State::Acceptable : State::Invalid;
+		return input.toUtf8().length() <= MaxLength ? State::Acceptable : State::Invalid;
+	}
+};
+
+class AvdeccStringValidator : public FixedSizeStringValidator<la::avdecc::entity::model::AvdeccFixedString::MaxLength>
+{
+public:
+	static AvdeccStringValidator* getSharedInstance() noexcept
+	{
+		static auto s_instance = AvdeccStringValidator{};
+
+		return &s_instance;
 	}
 };
 } // namespace avdecc

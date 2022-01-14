@@ -969,7 +969,7 @@ public:
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, itemName);
 
-		auto* textEntry = new qtMate::widgets::TextEntry(itemValue, avdecc::StringValidator::getSharedInstance());
+		auto* textEntry = new qtMate::widgets::TextEntry(itemValue, avdecc::AvdeccStringValidator::getSharedInstance());
 
 		q->setItemWidget(item, 1, textEntry);
 
