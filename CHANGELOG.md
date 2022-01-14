@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Button to remove all active connections](https://github.com/christophe-calmejane/Hive/issues/107)
 - Search filter for discovered entities (currently only by name)
 
+### Changed
+- All editable text fields now restore the previous value in case the entity rejects the new one
+
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground
 - Currently highlighted entity in connection matrix incorrect when an entity comes online or offline
