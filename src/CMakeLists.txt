@@ -111,6 +111,7 @@ set(HEADER_FILES_COMMON
 	multiFirmwareUpdateDialog.hpp
 	mainWindow.hpp
 	aecpCommandComboBox.hpp
+	aecpCommandTextEntry.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	mappingMatrix.hpp
@@ -179,6 +180,7 @@ set(SOURCE_FILES_COMMON
 	mainWindow.cpp
 	settingsDialog.cpp
 	aecpCommandComboBox.cpp
+	aecpCommandTextEntry.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
 	activeNetworkInterfacesModel.cpp
