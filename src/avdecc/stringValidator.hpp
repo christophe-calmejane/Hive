@@ -21,6 +21,7 @@
 
 #include <QValidator>
 #include <la/avdecc/internals/entityModelTypes.hpp>
+#include <la/avdecc/internals/entityModelControlValues.hpp>
 
 namespace avdecc
 {
@@ -44,4 +45,16 @@ public:
 		return &s_instance;
 	}
 };
+
+class ControlUTF8StringValidator : public FixedSizeStringValidator<la::avdecc::entity::model::UTF8StringValueStatic::MaxLength>
+{
+public:
+	static ControlUTF8StringValidator* getSharedInstance() noexcept
+	{
+		static auto s_instance = ControlUTF8StringValidator{};
+
+		return &s_instance;
+	}
+};
+
 } // namespace avdecc
