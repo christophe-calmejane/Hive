@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Button to clear errors for all entities](https://github.com/christophe-calmejane/Hive/issues/77)
 - [Button to remove all active connections](https://github.com/christophe-calmejane/Hive/issues/107)
 - Search filter for discovered entities (currently only by name)
+- [Support for UTF8 Control values](https://github.com/christophe-calmejane/Hive/issues/113)
 
 ### Changed
 - All editable text fields now restore the previous value in case the entity rejects the new one
