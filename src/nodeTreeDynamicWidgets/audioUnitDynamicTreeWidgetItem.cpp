@@ -31,7 +31,7 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 	auto* currentSamplingRateItem = new QTreeWidgetItem(this);
 	currentSamplingRateItem->setText(0, "Sampling Rate");
 
-	_samplingRate = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate);
+	_samplingRate = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate, audioUnitIndex);
 	parent->setItemWidget(currentSamplingRateItem, 1, _samplingRate);
 
 	for (auto const samplingRate : staticModel->samplingRates)

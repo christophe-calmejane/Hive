@@ -11,11 +11,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Button to clear errors for all entities](https://github.com/christophe-calmejane/Hive/issues/77)
 - [Button to remove all active connections](https://github.com/christophe-calmejane/Hive/issues/107)
 - Search filter for discovered entities (currently only by name)
+- [Support for UTF8 Control values](https://github.com/christophe-calmejane/Hive/issues/113)
+- [Support for Array Control values](https://github.com/christophe-calmejane/Hive/issues/114)
+
+### Changed
+- All editable text fields now restore the previous value in case the entity rejects the new one
 
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground
 - Currently highlighted entity in connection matrix incorrect when an entity comes online or offline
 - Adapting listener's format to talker's format from the matrix (contextual menu)
+- [No values displayed to signed Linear Control Values](https://github.com/christophe-calmejane/Hive/issues/115)
 
 ## [1.2.7] - 2021-12-24
 ### Added

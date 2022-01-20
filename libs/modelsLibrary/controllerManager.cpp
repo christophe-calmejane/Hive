@@ -932,7 +932,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::IdentifyEntity, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::IdentifyEntity, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1076,7 +1076,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::AcquireEntity);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::AcquireEntity, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->acquireEntity(targetEntityID, isPersistent,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const owningEntity) noexcept
 				{
@@ -1086,7 +1086,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::AcquireEntity, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::AcquireEntity, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1097,7 +1097,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->releaseEntity(targetEntityID,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const /*owningEntity*/) noexcept
 				{
@@ -1107,7 +1107,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::ReleaseEntity, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1118,7 +1118,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::LockEntity);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::LockEntity, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->lockEntity(targetEntityID,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const lockingEntity) noexcept
 				{
@@ -1128,7 +1128,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::LockEntity, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::LockEntity, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1139,7 +1139,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::UnlockEntity);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::UnlockEntity, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->unlockEntity(targetEntityID,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const /*lockingEntity*/) noexcept
 				{
@@ -1149,7 +1149,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::UnlockEntity, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::UnlockEntity, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1160,11 +1160,11 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetConfiguration);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, la::avdecc::entity::model::DescriptorIndex{ 0u }); // Must NOT use configurationIndex here as it is a parameter, NOT the descriptor the configuration applies to (which is EntityDescriptor Index 0)
 			controller->setConfiguration(targetEntityID, configurationIndex,
 				[this, targetEntityID](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
-					emit endAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, status);
+					emit endAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 				});
 		}
 	}
@@ -1174,9 +1174,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, streamIndex);
 			controller->setStreamInputFormat(targetEntityID, streamIndex, streamFormat,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1184,7 +1184,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, streamIndex, status);
 					}
 				});
 		}
@@ -1195,9 +1195,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, streamIndex);
 			controller->setStreamOutputFormat(targetEntityID, streamIndex, streamFormat,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1205,7 +1205,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamFormat, streamIndex, status);
 					}
 				});
 		}
@@ -1216,9 +1216,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, streamIndex);
 			controller->setStreamOutputInfo(targetEntityID, streamIndex, streamInfo,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1226,7 +1226,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamInfo, streamIndex, status);
 					}
 				});
 		}
@@ -1237,7 +1237,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetEntityName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetEntityName, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->setEntityName(targetEntityID, name.toStdString(),
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
@@ -1247,7 +1247,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityName, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1258,7 +1258,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetEntityGroupName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetEntityGroupName, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->setEntityGroupName(targetEntityID, name.toStdString(),
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
@@ -1268,7 +1268,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityGroupName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetEntityGroupName, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1279,9 +1279,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetConfigurationName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetConfigurationName, configurationIndex);
 			controller->setConfigurationName(targetEntityID, configurationIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, configurationIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1289,7 +1289,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetConfigurationName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetConfigurationName, configurationIndex, status);
 					}
 				});
 		}
@@ -1300,9 +1300,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAudioUnitName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAudioUnitName, audioUnitIndex);
 			controller->setAudioUnitName(targetEntityID, configurationIndex, audioUnitIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, audioUnitIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1310,7 +1310,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioUnitName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioUnitName, audioUnitIndex, status);
 					}
 				});
 		}
@@ -1321,9 +1321,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamName, streamIndex);
 			controller->setStreamInputName(targetEntityID, configurationIndex, streamIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1331,7 +1331,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, streamIndex, status);
 					}
 				});
 		}
@@ -1342,9 +1342,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetStreamName, streamIndex);
 			controller->setStreamOutputName(targetEntityID, configurationIndex, streamIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1352,7 +1352,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, streamIndex, status);
 					}
 				});
 		}
@@ -1363,9 +1363,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAvbInterfaceName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAvbInterfaceName, avbInterfaceIndex);
 			controller->setAvbInterfaceName(targetEntityID, configurationIndex, avbInterfaceIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, avbInterfaceIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1373,7 +1373,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetAvbInterfaceName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAvbInterfaceName, avbInterfaceIndex, status);
 					}
 				});
 		}
@@ -1384,9 +1384,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockSourceName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockSourceName, clockSourceIndex);
 			controller->setClockSourceName(targetEntityID, configurationIndex, clockSourceIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, clockSourceIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1394,7 +1394,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSourceName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSourceName, clockSourceIndex, status);
 					}
 				});
 		}
@@ -1405,9 +1405,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetMemoryObjectName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetMemoryObjectName, memoryObjectIndex);
 			controller->setMemoryObjectName(targetEntityID, configurationIndex, memoryObjectIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, memoryObjectIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1415,7 +1415,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetMemoryObjectName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetMemoryObjectName, memoryObjectIndex, status);
 					}
 				});
 		}
@@ -1426,9 +1426,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAudioClusterName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAudioClusterName, audioClusterIndex);
 			controller->setAudioClusterName(targetEntityID, configurationIndex, audioClusterIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, audioClusterIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1436,7 +1436,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioClusterName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAudioClusterName, audioClusterIndex, status);
 					}
 				});
 		}
@@ -1447,9 +1447,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetControlName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetControlName, controlIndex);
 			controller->setControlName(targetEntityID, configurationIndex, controlIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, controlIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1457,7 +1457,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetControlName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetControlName, controlIndex, status);
 					}
 				});
 		}
@@ -1468,9 +1468,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockDomainName);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockDomainName, clockDomainIndex);
 			controller->setClockDomainName(targetEntityID, configurationIndex, clockDomainIndex, name.toStdString(),
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, clockDomainIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1478,7 +1478,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockDomainName, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockDomainName, clockDomainIndex, status);
 					}
 				});
 		}
@@ -1489,7 +1489,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAssociationID);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetAssociationID, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->setAssociationID(targetEntityID, associationID,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
@@ -1499,7 +1499,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetAssociationID, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetAssociationID, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
 					}
 				});
 		}
@@ -1510,9 +1510,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetSamplingRate);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetSamplingRate, audioUnitIndex);
 			controller->setAudioUnitSamplingRate(targetEntityID, audioUnitIndex, samplingRate,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, audioUnitIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1520,7 +1520,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetSamplingRate, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetSamplingRate, audioUnitIndex, status);
 					}
 				});
 		}
@@ -1531,9 +1531,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockSource);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetClockSource, clockDomainIndex);
 			controller->setClockSource(targetEntityID, clockDomainIndex, clockSourceIndex,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, clockDomainIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1541,7 +1541,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSource, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetClockSource, clockDomainIndex, status);
 					}
 				});
 		}
@@ -1552,9 +1552,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::SetControl);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::SetControl, controlIndex);
 			controller->setControlValues(targetEntityID, controlIndex, controlValues,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, controlIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1562,7 +1562,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::SetControl, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetControl, controlIndex, status);
 					}
 				});
 		}
@@ -1573,9 +1573,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::StartStream);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::StartStream, streamIndex);
 			controller->startStreamInput(targetEntityID, streamIndex,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1583,7 +1583,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, streamIndex, status);
 					}
 				});
 		}
@@ -1594,9 +1594,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::StopStream);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::StopStream, streamIndex);
 			controller->stopStreamInput(targetEntityID, streamIndex,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1604,7 +1604,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, streamIndex, status);
 					}
 				});
 		}
@@ -1615,9 +1615,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::StartStream);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::StartStream, streamIndex);
 			controller->startStreamOutput(targetEntityID, streamIndex,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1625,7 +1625,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartStream, streamIndex, status);
 					}
 				});
 		}
@@ -1636,9 +1636,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::StopStream);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::StopStream, streamIndex);
 			controller->stopStreamOutput(targetEntityID, streamIndex,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1646,7 +1646,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::StopStream, streamIndex, status);
 					}
 				});
 		}
@@ -1657,9 +1657,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, streamPortIndex);
 			controller->addStreamPortInputAudioMappings(targetEntityID, streamPortIndex, mappings,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamPortIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1667,7 +1667,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, streamPortIndex, status);
 					}
 				});
 		}
@@ -1678,9 +1678,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, streamPortIndex);
 			controller->addStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamPortIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1688,7 +1688,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::AddStreamPortAudioMappings, streamPortIndex, status);
 					}
 				});
 		}
@@ -1699,9 +1699,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, streamPortIndex);
 			controller->removeStreamPortInputAudioMappings(targetEntityID, streamPortIndex, mappings,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamPortIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1709,7 +1709,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, streamPortIndex, status);
 					}
 				});
 		}
@@ -1720,9 +1720,9 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings);
+			emit beginAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, streamPortIndex);
 			controller->removeStreamPortOutputAudioMappings(targetEntityID, streamPortIndex, mappings,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, streamPortIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1730,7 +1730,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::RemoveStreamPortAudioMappings, streamPortIndex, status);
 					}
 				});
 		}
@@ -1743,10 +1743,10 @@ private:
 		{
 			if (!handler)
 			{
-				emit beginAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation);
+				emit beginAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation, descriptorIndex);
 			}
 			controller->startStoreAndRebootMemoryObjectOperation(targetEntityID, descriptorIndex,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
+				[this, targetEntityID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
 				{
 					if (handler)
 					{
@@ -1754,7 +1754,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartStoreAndRebootMemoryObjectOperation, descriptorIndex, status);
 					}
 				});
 		}
@@ -1767,10 +1767,10 @@ private:
 		{
 			if (!handler)
 			{
-				emit beginAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation);
+				emit beginAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation, descriptorIndex);
 			}
 			controller->startUploadMemoryObjectOperation(targetEntityID, descriptorIndex, dataLength,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
+				[this, targetEntityID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID) noexcept
 				{
 					if (handler)
 					{
@@ -1778,7 +1778,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::StartUploadMemoryObjectOperation, descriptorIndex, status);
 					}
 				});
 		}
@@ -1791,10 +1791,10 @@ private:
 		{
 			if (!handler)
 			{
-				emit beginAecpCommand(targetEntityID, AecpCommandType::AbortOperation);
+				emit beginAecpCommand(targetEntityID, AecpCommandType::AbortOperation, descriptorIndex);
 			}
 			controller->abortOperation(targetEntityID, descriptorType, descriptorIndex, operationID,
-				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, descriptorIndex, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
 					if (handler)
 					{
@@ -1802,7 +1802,7 @@ private:
 					}
 					else
 					{
-						emit endAecpCommand(targetEntityID, AecpCommandType::AbortOperation, status);
+						emit endAecpCommand(targetEntityID, AecpCommandType::AbortOperation, descriptorIndex, status);
 					}
 				});
 		}

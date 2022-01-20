@@ -29,7 +29,7 @@ public:
 	using StreamFormat = la::avdecc::entity::model::StreamFormat;
 	using StreamFormats = std::set<StreamFormat>;
 
-	StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, QWidget* parent = nullptr);
+	StreamFormatComboBox(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, QWidget* parent = nullptr);
 
 	void setStreamFormats(StreamFormats const& streamFormats);
 	void setCurrentStreamFormat(StreamFormat const& streamFormat);

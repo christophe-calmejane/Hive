@@ -570,7 +570,7 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 		}
 	}
 
-	auto* formatComboBox = new StreamFormatComboBox(delegateEntityID, parent);
+	auto* formatComboBox = new StreamFormatComboBox(delegateEntityID, streamFormatData.streamIndex, parent);
 	if (staticModel)
 		formatComboBox->setStreamFormats(staticModel->formats);
 	if (dynamicModel)

@@ -699,7 +699,7 @@ public:
 	* @param cmdType		The executed command type.
 	* @param commandStatus  The status of the command.
 	*/
-	void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
+	void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::model::DescriptorIndex /*descriptorIndex*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
 	{
 		// TODO propably show message when a command failed.
 		if (entityID == _entityID)

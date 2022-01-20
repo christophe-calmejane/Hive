@@ -20,22 +20,19 @@
 #pragma once
 
 #include <hive/modelsLibrary/controllerManager.hpp>
-#include <QtMate/widgets/comboBox.hpp>
+#include <QtMate/widgets/textEntry.hpp>
 
-// ComboBox that watches an Aecp command result, restoring the previous index if the command fails
-class AecpCommandComboBoxPrivate;
-class AecpCommandComboBox : public qtMate::widgets::ComboBox
+// TextEntry that watches an Aecp command result, restoring the previous value if the command fails
+class AecpCommandTextEntryPrivate;
+class AecpCommandTextEntry : public qtMate::widgets::TextEntry
 {
 	Q_OBJECT
 
 public:
-	AecpCommandComboBox(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QWidget* parent = nullptr);
-	~AecpCommandComboBox();
-
-protected:
-	virtual void showPopup() override;
+	AecpCommandTextEntry(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& text, std::optional<QValidator*> validator = std::nullopt, QWidget* parent = nullptr);
+	~AecpCommandTextEntry();
 
 private:
-	AecpCommandComboBoxPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(AecpCommandComboBox);
+	AecpCommandTextEntryPrivate* const d_ptr{ nullptr };
+	Q_DECLARE_PRIVATE(AecpCommandTextEntry);
 };

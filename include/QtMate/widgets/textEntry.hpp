@@ -29,8 +29,9 @@ namespace qtMate
 namespace widgets
 {
 /** A TextEntry with rollback feature when receiving ESC key or FocusOut event */
-class TextEntry final : public QLineEdit
+class TextEntry : public QLineEdit
 {
+	Q_OBJECT
 public:
 	TextEntry(QString const& text, std::optional<QValidator*> validator = std::nullopt, QWidget* parent = nullptr);
 	TextEntry(QWidget* parent = nullptr);
@@ -39,6 +40,10 @@ public:
 	void setText(QString const& text);
 
 	using QLineEdit::setValidator;
+
+	// Public signals
+	Q_SIGNAL void validated(QString const& oldText, QString const& newText);
+	Q_SIGNAL void canceled();
 
 protected:
 	using QLineEdit::setFocusPolicy;

@@ -23,6 +23,7 @@
 #include "aboutDialog.hpp"
 #include "activeNetworkInterfacesModel.hpp"
 #include "aecpCommandComboBox.hpp"
+#include "aecpCommandTextEntry.hpp"
 #include "controlledEntityTreeWidget.hpp"
 #include "defaults.hpp"
 #include "deviceDetailsChannelTableModel.hpp"
