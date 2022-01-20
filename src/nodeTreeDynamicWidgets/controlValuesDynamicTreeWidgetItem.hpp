@@ -97,7 +97,7 @@ public:
 					auto* comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
 					parent->setItemWidget(item, 1, comboBox);
 
-					auto const range = static_cast<value_size>(staticVal.maximum - staticVal.minimum);
+					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
 					auto stepsCount = size_t{ 1 };
 					if (staticVal.step != value_size{ 0 })
 					{

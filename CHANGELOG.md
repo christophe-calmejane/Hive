@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground
 - Currently highlighted entity in connection matrix incorrect when an entity comes online or offline
 - Adapting listener's format to talker's format from the matrix (contextual menu)
+- [No values displayed to signed Linear Control Values](https://github.com/christophe-calmejane/Hive/issues/115)
 
 ## [1.2.7] - 2021-12-24
 ### Added
