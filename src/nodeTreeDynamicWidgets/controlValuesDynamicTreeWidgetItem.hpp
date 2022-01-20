@@ -20,6 +20,7 @@
 #pragma once
 
 #include "avdecc/helper.hpp"
+#include "avdecc/stringValidator.hpp"
 #include "aecpCommandComboBox.hpp"
 #include "aecpCommandTextEntry.hpp"
 #include "avdecc/hiveLogItems.hpp"
@@ -186,6 +187,142 @@ private:
 
 					QSignalBlocker const lg{ comboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
 					auto const index = comboBox->findData(QVariant::fromValue(val.currentValue));
+					comboBox->setCurrentIndex(index);
+				}
+
+				++valNumber;
+			}
+		}
+	}
+
+	bool _isValid{ false };
+	bool _isReadOnly{ false };
+	std::vector<QWidget*> _widgets{};
+};
+
+/** Array Values */
+template<class StaticValueType, class DynamicValueType>
+class ArrayControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
+{
+	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
+
+public:
+	ArrayControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
+		: ControlValuesDynamicTreeWidgetItem{ entityID, controlIndex, staticModel, dynamicModel, parent }
+	{
+		_isReadOnly = staticModel.controlValueType.isReadOnly();
+
+		try
+		{
+			auto const& staticVal = staticModel.values.getValues<StaticValueType>();
+			auto const dynamicValues = dynamicModel.values.getValues<DynamicValueType>();
+			auto const dynamicCount = dynamicValues.countValues();
+
+			auto valNumber = size_t{ 0u };
+			for (auto const& val : dynamicValues.currentValues)
+			{
+				auto* valueItem = new QTreeWidgetItem(this);
+				valueItem->setText(0, QString("Value %1").arg(valNumber));
+
+				auto* item = new QTreeWidgetItem(valueItem);
+				item->setText(0, "Current Value");
+				if (_isReadOnly)
+				{
+					auto* label = new QLabel(QString::number(val));
+					parent->setItemWidget(item, 1, label);
+					_widgets.push_back(label);
+				}
+				else
+				{
+					auto* comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
+					parent->setItemWidget(item, 1, comboBox);
+
+					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
+					auto stepsCount = size_t{ 1 };
+					if (staticVal.step != value_size{ 0 })
+					{
+						stepsCount += static_cast<size_t>(range / staticVal.step);
+						if constexpr (std::is_integral_v<value_size>)
+						{
+							if ((range % staticVal.step) != 0)
+							{
+								// This should probably be detected by the AVDECC library
+								LOG_HIVE_WARN("ControlValues not valid: Range not evenly divisible by Step");
+							}
+						}
+					}
+					for (auto i = size_t{ 0u }; i < stepsCount; ++i)
+					{
+						auto const possibleValue = static_cast<value_size>(staticVal.minimum + i * staticVal.step);
+						comboBox->addItem(QString::number(possibleValue), QVariant::fromValue(possibleValue));
+					}
+
+					// Send changes
+					connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+						[this]()
+						{
+							sendControlValues();
+						});
+
+					_widgets.push_back(comboBox);
+				}
+
+				++valNumber;
+			}
+
+			_isValid = true;
+
+			// Update now
+			updateValues(dynamicModel.values);
+		}
+		catch (...)
+		{
+		}
+	}
+
+private:
+	void sendControlValues() noexcept
+	{
+		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
+		{
+			auto values = DynamicValueType{};
+
+			for (auto const* item : _widgets)
+			{
+				auto const* comboBox = static_cast<AecpCommandComboBox const*>(item);
+				values.currentValues.push_back(comboBox->currentData().value<value_size>());
+			}
+
+			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) });
+		}
+	}
+
+	virtual void updateValues(la::avdecc::entity::model::ControlValues const& controlValues) noexcept override
+	{
+		if (_isValid)
+		{
+			if (controlValues.size() != _widgets.size())
+			{
+				// This should probably be detected by the AVDECC library
+				LOG_HIVE_WARN("ControlValues update not valid: Static/Dynamic count mismatch");
+				return;
+			}
+
+			auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
+			auto valNumber = size_t{ 0u };
+			for (auto const& val : dynamicValues.currentValues)
+			{
+				if (_isReadOnly)
+				{
+					auto* label = static_cast<QLabel*>(_widgets[valNumber]);
+					label->setText(QString::number(val));
+				}
+				else
+				{
+					auto* comboBox = static_cast<AecpCommandComboBox*>(_widgets[valNumber]);
+
+					QSignalBlocker const lg{ comboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
+					auto const index = comboBox->findData(QVariant::fromValue(val));
 					comboBox->setCurrentIndex(index);
 				}
 
