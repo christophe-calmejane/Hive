@@ -1100,7 +1100,7 @@ void smartChangeInputStreamFormat(QWidget* const parent, bool const autoRemoveMa
 					return;
 				}
 			}
-			manager.createCommandsExecutor(entityID, true,
+			manager.createCommandsExecutor(entityID, !invalidMappings.empty(),
 				[parent, streamIndex, streamFormat, context, handler, &invalidMappings](hive::modelsLibrary::CommandsExecutor& executor)
 				{
 					for (auto const& [streamPortIndex, mappings] : invalidMappings)
