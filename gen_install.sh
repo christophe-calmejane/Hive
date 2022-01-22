@@ -21,6 +21,9 @@ fi
 # Include utils functions
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
+# Include config file extension
+. "${selfFolderPath}extend_config_file.sh"
+
 # Include config file functions
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/load_config_file.sh"
 

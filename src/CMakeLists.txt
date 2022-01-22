@@ -81,6 +81,7 @@ set(HEADER_FILES_COMMON
 	mediaClock/abstractTreeItem.hpp
 	mediaClock/domainTreeItem.hpp
 	mediaClock/entityTreeItem.hpp
+	newsFeed/newsFeed.hpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.hpp
@@ -154,6 +155,7 @@ set(SOURCE_FILES_COMMON
 	mediaClock/abstractTreeItem.cpp
 	mediaClock/domainTreeItem.cpp
 	mediaClock/entityTreeItem.cpp
+	newsFeed/newsFeed.cpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.cpp

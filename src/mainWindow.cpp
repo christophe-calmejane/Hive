@@ -41,6 +41,7 @@
 #include "avdecc/controllerModel.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
+#include "newsFeed/newsFeed.hpp"
 #include "internals/config.hpp"
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
@@ -126,6 +127,7 @@ public:
 	void loadSettings();
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
+	void showNewsFeed(QString const& news);
 	void updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename);
 
 	// settings::SettingsManager::Observer overrides
@@ -852,6 +854,50 @@ void MainWindowImpl::showChangeLog(QString const title, QString const versionStr
 	}
 }
 
+void MainWindowImpl::showNewsFeed(QString const& news)
+{
+	// Create dialog popup
+	QDialog dialog{ _parent };
+	QVBoxLayout layout{ &dialog };
+	QTextBrowser view;
+	layout.addWidget(&view);
+	dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "News");
+	dialog.resize(800, 600);
+	QPushButton closeButton{ "Close" };
+	connect(&closeButton, &QPushButton::clicked, &dialog,
+		[&dialog]()
+		{
+			dialog.accept();
+		});
+	layout.addWidget(&closeButton);
+
+	view.setContextMenuPolicy(Qt::NoContextMenu);
+	view.setOpenExternalLinks(true);
+
+	auto buffer = news.toUtf8();
+	auto* mmiot = mkd_string(buffer.data(), buffer.size(), 0);
+	if (mmiot == nullptr)
+		return;
+	std::unique_ptr<MMIOT, std::function<void(MMIOT*)>> scopedMmiot{ mmiot, [](MMIOT* ptr)
+		{
+			if (ptr != nullptr)
+				mkd_cleanup(ptr);
+		} };
+
+	if (mkd_compile(mmiot, 0) == 0)
+		return;
+
+	char* docPointer{ nullptr };
+	auto const docLength = mkd_document(mmiot, &docPointer);
+	if (docLength == 0)
+		return;
+
+	view.setHtml(QString::fromUtf8(docPointer, docLength));
+
+	// Run dialog
+	dialog.exec();
+}
+
 void MainWindow::showEvent(QShowEvent* event)
 {
 	QMainWindow::showEvent(event);
@@ -900,15 +946,36 @@ void MainWindow::showEvent(QShowEvent* event)
 					settings->setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
 
 					// Do not show the ChangeLog during first ever launch, or if the last launched version is the same than current one
-					if (lastVersion.isEmpty() || lastVersion == hive::internals::cmakeVersionString)
-						return;
-
-					// Postpone the dialog creation
-					QTimer::singleShot(0,
-						[this, versionString = std::move(lastVersion)]()
+					if (!lastVersion.isEmpty() && lastVersion != hive::internals::cmakeVersionString)
+					{
+						// Postpone the dialog creation
+						QTimer::singleShot(0,
+							[this, versionString = std::move(lastVersion)]()
+							{
+								_pImpl->showChangeLog("What's New", versionString);
+							});
+					}
+				}
+				// Check if we need to show the News Feed
+				{
+					auto& newsFeed = NewsFeed::getInstance();
+					connect(&newsFeed, &NewsFeed::newsAvailable, this,
+						[this](QString const& news, std::uint64_t const serverTimestamp)
 						{
-							_pImpl->showChangeLog("What's New", versionString);
+							auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+							if (serverTimestamp > settings->getValue(settings::LastCheckTime.name).value<std::uint32_t>())
+							{
+								settings->setValue(settings::LastCheckTime.name, serverTimestamp);
+							}
+
+							if (!news.isEmpty())
+							{
+								_pImpl->showNewsFeed(news);
+							}
 						});
+
+					auto const lastCheckTime = settings->getValue(settings::LastCheckTime.name).value<std::uint32_t>();
+					newsFeed.checkForNews(lastCheckTime);
 				}
 			});
 	}

@@ -27,6 +27,9 @@ fi
 # Include utils functions
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
+# Include config file extension
+. "${selfFolderPath}extend_config_file.sh"
+
 # Include config file functions
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/load_config_file.sh"
 
@@ -207,6 +210,9 @@ function extend_gc_fnc_precmake()
 
 	add_cmake_opt+=("-DCMAKE_PREFIX_PATH=${QtDir}")
 	add_cmake_opt+=("-DQT_MAJOR_VERSION=${QtMajorVersion}")
+
+	# Add NewsFeeds
+	add_cmake_opt+=("-DNEWSFEED_URL=${params["newsfeed_url"]}")
 }
 
 function extend_gc_fnc_props_summary()

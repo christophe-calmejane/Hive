@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Search filter for discovered entities (currently only by name)
 - [Support for UTF8 Control values](https://github.com/christophe-calmejane/Hive/issues/113)
 - [Support for Array Control values](https://github.com/christophe-calmejane/Hive/issues/114)
+- Possibility to push a news feed to Hive for important notices
 
 ### Changed
 - All editable text fields now restore the previous value in case the entity rejects the new one
