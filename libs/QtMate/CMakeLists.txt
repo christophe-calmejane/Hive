@@ -25,6 +25,7 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/QtMate/graph/socket.hpp
 	${CU_ROOT_DIR}/include/QtMate/graph/type.hpp
 	${CU_ROOT_DIR}/include/QtMate/graph/view.hpp
+	${CU_ROOT_DIR}/include/QtMate/widgets/autoSizeLabel.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/comboBox.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/dynamicHeaderView.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/flatIconButton.hpp
@@ -47,6 +48,7 @@ set(SOURCE_FILES_COMMON
 	graph/outputSocket.cpp
 	graph/socket.cpp
 	graph/view.cpp
+	widgets/autoSizeLabel.cpp
 	widgets/comboBox.cpp
 	widgets/dynamicHeaderView.cpp
 	widgets/flatIconButton.cpp
