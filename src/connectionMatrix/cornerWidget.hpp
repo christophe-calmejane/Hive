@@ -63,11 +63,12 @@ private:
 
 private:
 	QGridLayout _layout{ this };
-	QWidget _buttonContainer{ this };
-	qtMate::widgets::AutoSizeLabel _title{ &_buttonContainer };
-	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
-	QPushButton _button{ "Show Legend", &_buttonContainer };
-	QLineEdit _searchLineEdit{ &_buttonContainer };
+	QWidget _centerContainer{ this };
+	qtMate::widgets::AutoSizeLabel _title{ &_centerContainer };
+	QVBoxLayout _centerContainerLayout{ &_centerContainer };
+	QPushButton _legendButton{ "Show Legend", &_centerContainer };
+	QLineEdit _searchLineEdit{ &_centerContainer };
+	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Hive", "remove_connections", &_centerContainer };
 
 	QHBoxLayout _horizontalLayout;
 	qtMate::widgets::FlatIconButton _horizontalExpandButton{ "Material Icons", "expand_more" };

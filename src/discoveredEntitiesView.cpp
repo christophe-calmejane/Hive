@@ -61,10 +61,6 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 			horizontalLayout->addItem(horizontalSpacer);
 		}
 		{
-			horizontalLayout->addWidget(&_removeAllConnectionsButton);
-			_removeAllConnectionsButton.setToolTip(QCoreApplication::translate("DiscoveredEntitiesView", "Remove all active connections", nullptr));
-		}
-		{
 			horizontalLayout->addWidget(&_clearAllErrorsButton);
 			_clearAllErrorsButton.setToolTip(QCoreApplication::translate("DiscoveredEntitiesView", "Clear all error counters", nullptr));
 		}
@@ -92,41 +88,6 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 		[this](int state)
 		{
 			emit filterLinkStateChanged(static_cast<Qt::CheckState>(state) == Qt::CheckState::Checked, _searchLineEdit.text());
-		});
-
-	connect(&_removeAllConnectionsButton, &qtMate::widgets::FlatIconButton::clicked, &_removeAllConnectionsButton,
-		[this]()
-		{
-			if (QMessageBox::Yes == QMessageBox::question(this, {}, "Are you sure you want to remove all established connections?"))
-			{
-				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-				manager.foreachEntity(
-					[&manager](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& entity)
-					{
-						try
-						{
-							auto const& configNode = entity.getCurrentConfigurationNode();
-							for (auto const& [streamIndex, streamNode] : configNode.streamInputs)
-							{
-								if (streamNode.dynamicModel != nullptr)
-								{
-									auto const& connectionInfo = streamNode.dynamicModel->connectionInfo;
-									if (connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
-									{
-										// Ignore result handler
-										manager.disconnectStream(connectionInfo.talkerStream.entityID, connectionInfo.talkerStream.streamIndex, entityID, streamIndex,
-											[](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
-											{
-											});
-									}
-								}
-							}
-						}
-						catch (...)
-						{
-						}
-					});
-			}
 		});
 
 	connect(&_clearAllErrorsButton, &qtMate::widgets::FlatIconButton::clicked, &_clearAllErrorsButton,

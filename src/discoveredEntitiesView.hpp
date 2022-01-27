@@ -49,7 +49,6 @@ private:
 	QLineEdit _searchLineEdit{ this };
 	QSortFilterProxyModel _searchFilterProxyModel{ this };
 	QCheckBox _filterLinkedCheckbox{ "Link with Matrix Filter", this };
-	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Hive", "remove_connections", this };
 	qtMate::widgets::FlatIconButton _clearAllErrorsButton{ "Hive", "clear_errors", this };
 	QByteArray _inspectorGeometry{};
 };
