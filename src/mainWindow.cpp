@@ -139,7 +139,7 @@ public:
 	ActiveNetworkInterfacesModel _activeNetworkInterfacesModel{ _parent };
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
 	qtMate::widgets::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
-	qtMate::widgets::FlatIconButton _discoverButton{ "Material Icons", "cast", _parent };
+	qtMate::widgets::FlatIconButton _discoverButton{ "Hive", "radar", _parent };
 	qtMate::widgets::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
 	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
@@ -347,7 +347,7 @@ void MainWindowImpl::createToolbars()
 	// Utilities Toolbar
 	{
 		_refreshControllerButton.setToolTip("Reload Controller");
-		_discoverButton.setToolTip("Force Entities Discovery");
+		_discoverButton.setToolTip("Discover Entities");
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
