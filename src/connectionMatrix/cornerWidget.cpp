@@ -72,6 +72,7 @@ CornerWidget::CornerWidget(QWidget* parent)
 
 	_horizontalPlaceholder.setFixedHeight(20);
 	_verticalPlaceholder.setFixedWidth(20);
+	_title.setAlignment(Qt::AlignHCenter);
 
 	// Connect button
 	connect(&_button, &QPushButton::clicked, this,
@@ -188,7 +189,7 @@ void CornerWidget::onSettingChanged(settings::SettingsManager::Setting const& na
 	if (name == settings::ConnectionMatrix_ChannelMode.name)
 	{
 		auto const channelMode = value.toBool();
-		_title.setText(channelMode ? "<b>Channel Based Connections</b>" : "<b>Stream Based Connections</b>");
+		_title.setText(channelMode ? "<b>Channel Connections</b>" : "<b>Stream Connections</b>");
 	}
 }
 

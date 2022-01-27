@@ -21,6 +21,7 @@
 
 #include "settingsManager/settings.hpp"
 
+#include <QtMate/widgets/autoSizeLabel.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
 
 #include <QWidget>
@@ -63,7 +64,7 @@ private:
 private:
 	QGridLayout _layout{ this };
 	QWidget _buttonContainer{ this };
-	QLabel _title{ &_buttonContainer };
+	qtMate::widgets::AutoSizeLabel _title{ &_buttonContainer };
 	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
 	QPushButton _button{ "Show Legend", &_buttonContainer };
 	QLineEdit _searchLineEdit{ &_buttonContainer };
