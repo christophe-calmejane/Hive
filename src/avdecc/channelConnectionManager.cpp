@@ -2591,7 +2591,7 @@ private:
 					if (deviceConnection->targetAudioUnitIndex == *listenerChannelIdentification.audioUnitIndex && deviceConnection->targetStreamPortIndex == *talkerChannelIdentification.streamPortIndex && targetClusterKV.first == talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster && targetClusterKV.second == talkerChannelIdentification.clusterChannel)
 					{
 						std::vector<StreamIdentificationPair> result;
-						for (auto const [talkerStreamIndex, listenerStreamIndex] : deviceConnection->streamPairs)
+						for (auto const& [talkerStreamIndex, listenerStreamIndex] : deviceConnection->streamPairs)
 						{
 							la::avdecc::entity::model::StreamIdentification streamTalker{ talkerEntityId, talkerStreamIndex };
 							la::avdecc::entity::model::StreamIdentification streamListener{ listenerEntityId, listenerStreamIndex };

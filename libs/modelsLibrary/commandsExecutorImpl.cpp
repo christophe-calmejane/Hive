@@ -58,7 +58,7 @@ void CommandsExecutorImpl::addCommand(Command&& command) noexcept
 	_commands.emplace_back(std::move(command));
 }
 
-void CommandsExecutorImpl::processAECPResult(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+void CommandsExecutorImpl::processAECPResult(la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 {
 	if (!status)
 	{
@@ -122,7 +122,7 @@ void CommandsExecutorImpl::exec() noexcept
 	if (!_commands.empty() && _requestExclusiveAccess)
 	{
 		_manager->requestExclusiveAccess(_entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType::Lock,
-			[this](auto const entityID, auto const status, auto&& token)
+			[this](auto const /*entityID*/, auto const status, auto&& token)
 			{
 				// Failed to get the exclusive access
 				if (!status || !token)
@@ -136,6 +136,7 @@ void CommandsExecutorImpl::exec() noexcept
 						// Otherwise signal the error result and return
 						case la::avdecc::entity::ControllerEntity::AemCommandStatus::UnknownEntity:
 							signalResult(CommandsExecutor::ExecutorResult{ CommandsExecutor::ExecutorResult::Result::UnknownEntity, status });
+							break;
 						default:
 							signalResult(CommandsExecutor::ExecutorResult{ CommandsExecutor::ExecutorResult::Result::AemError, status });
 							return;
@@ -201,6 +202,8 @@ la::avdecc::entity::ControllerEntity::AemCommandStatus CommandsExecutor::Executo
 	return _aemStatus;
 }
 
+CommandsExecutor::CommandsExecutor() noexcept {}
+CommandsExecutor::~CommandsExecutor() noexcept {}
 
 } // namespace modelsLibrary
 } // namespace hive

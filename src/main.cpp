@@ -38,7 +38,7 @@
 #include <QScreen>
 #include <QtGlobal>
 #if QT_VERSION < 0x050F00
-#include <QDesktopWidget>
+#	include <QDesktopWidget>
 #endif // Qt < 5.15.0
 
 #include <iostream>

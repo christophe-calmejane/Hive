@@ -105,6 +105,8 @@ private:
 	QNetworkAccessManager _webCtrlRelease{};
 };
 
+NewsFeed::NewsFeed() noexcept {}
+
 NewsFeed& NewsFeed::getInstance() noexcept
 {
 	static NewsFeedImpl s_newsFeed{};

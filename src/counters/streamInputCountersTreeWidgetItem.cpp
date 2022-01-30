@@ -53,7 +53,7 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	};
 
 	// Create fields
-	for (auto const nameKV : s_counterNames)
+	for (auto const& nameKV : s_counterNames)
 	{
 		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, this };
 		widget->setText(0, nameKV.second);

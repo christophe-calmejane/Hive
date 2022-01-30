@@ -965,7 +965,7 @@ void MainWindow::showEvent(QShowEvent* event)
 							auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 							if (serverTimestamp > settings->getValue(settings::LastCheckTime.name).value<std::uint32_t>())
 							{
-								settings->setValue(settings::LastCheckTime.name, serverTimestamp);
+								settings->setValue(settings::LastCheckTime.name, QVariant::fromValue(serverTimestamp));
 							}
 
 							if (!news.isEmpty())

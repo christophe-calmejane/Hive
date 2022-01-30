@@ -101,10 +101,10 @@ protected:
 	using Command = std::function<void()>;
 
 	/** Constructor */
-	CommandsExecutor() noexcept = default;
+	CommandsExecutor() noexcept;
 
 	/** Destructor */
-	virtual ~CommandsExecutor() noexcept = default;
+	virtual ~CommandsExecutor() noexcept;
 
 private:
 	virtual ControllerManager* getControllerManager() noexcept = 0;

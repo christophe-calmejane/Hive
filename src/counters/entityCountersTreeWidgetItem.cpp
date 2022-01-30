@@ -37,7 +37,7 @@ EntityCountersTreeWidgetItem::EntityCountersTreeWidgetItem(la::avdecc::UniqueIde
 	};
 
 	// Create fields
-	for (auto const nameKV : s_counterNames)
+	for (auto const& nameKV : s_counterNames)
 	{
 		auto* widget = new QTreeWidgetItem(this);
 		widget->setText(0, nameKV.second);

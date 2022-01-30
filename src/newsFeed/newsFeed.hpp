@@ -45,5 +45,5 @@ public:
 	NewsFeed& operator=(NewsFeed&&) = delete;
 
 protected:
-	NewsFeed() noexcept = default;
+	NewsFeed() noexcept;
 };
