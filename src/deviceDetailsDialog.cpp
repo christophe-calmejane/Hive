@@ -313,6 +313,9 @@ public:
 					{
 						// create a streamformatinfo to then derive the samplingrate for comparison purposes
 						auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatData.streamFormat);
+						if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamFormatInfo->getType())
+							continue;
+
 						auto* audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
 						if (streamFormatInfo && audioUnitDynModel)
 						{
