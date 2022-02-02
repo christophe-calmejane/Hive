@@ -4,15 +4,6 @@
 # Override default cmake options
 cmake_opt="-DBUILD_HIVE_TESTS=TRUE -DENABLE_HIVE_CPACK=FALSE -DENABLE_CODE_SIGNING=FALSE -DENABLE_HIVE_FEATURE_SPARKLE=FALSE"
 
-# Default values
-default_qt_version="5.15.2"
-default_win_basePath="C:/Qt"
-default_win_arch="msvc2019"
-default_mac_basePath="/Applications/Qt"
-default_mac_arch="clang_64"
-default_linux_basePath="/usr/lib"
-default_linux_arch="$(g++ -dumpmachine)"
-
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
 # Get absolute folder for this script
@@ -23,6 +14,9 @@ if [ ! -f "${selfFolderPath}.initialized" ]; then
 	echo "ERROR: Please run setup_fresh_env.sh (just once) after having cloned this repository."
 	exit 4
 fi
+
+# Include default values
+. "${selfFolderPath}.defaults.sh"
 
 # Include utils functions
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
@@ -61,41 +55,10 @@ if [[ "x${params["use_sparkle"]}" == "xtrue" ]]; then
 	useSparkle=1
 fi
 
-function build_qt_config_folder()
-{
-	local _retval="$1"
-	local basePath="$2"
-	local arch="$3"
-	local majorVers="$4"
-	local result=""
-
-	if isWindows; then
-		result="${basePath}/${arch}/lib/cmake"
-	elif isMac; then
-		result="${basePath}/${arch}/lib/cmake"
-	elif isLinux; then
-		which g++ &> /dev/null
-		if [ $? -ne 0 ];
-		then
-			echo "ERROR: g++ not found"
-			exit 4
-		fi
-		result="${basePath}/${arch}/cmake"
-	fi
-
-	eval $_retval="'${result}'"
-}
-
 function extend_gc_fnc_help()
 {
 	local default_path=""
-	if isWindows; then
-		build_qt_config_folder default_path "${default_win_basePath}/${default_qt_version}" "${default_win_arch}" "${QtMajorVersion}"
-	elif isMac; then
-		build_qt_config_folder default_path "${default_mac_basePath}/${default_qt_version}" "${default_mac_arch}" "${QtMajorVersion}"
-	elif isLinux; then
-		build_qt_config_folder default_path "${default_linux_basePath}" "${default_linux_arch}" "${QtMajorVersion}"
-	fi
+	get_default_qt_path default_path
 
 	echo " -no-sparkle -> Disable sparkle usage, even if specified in config file"
 	echo " -qtvers <Qt Version> -> Override the default Qt version (v${default_qt_version}) with the specified one."
