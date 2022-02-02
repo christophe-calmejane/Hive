@@ -649,8 +649,6 @@ private:
 	 */
 	bool isMediaClockDomainConflictingWithStreamFormats(avdecc::mediaClock::MCEntityDomainMapping const& domains) noexcept
 	{
-		auto hasSampleRateConflict = false;
-
 		MCEntityDomainMapping domainModel(domains);
 		for (const auto& entityKV : domainModel.getEntityMediaClockMasterMappings())
 		{
@@ -658,15 +656,14 @@ private:
 			auto const& domainIndexes = entityKV.second;
 			if (!domainIndexes.empty())
 			{
-				auto domainSampleRate = domainModel.getMediaClockDomains().find(domainIndexes.at(0))->second.getDomainSamplingRate();
-
 				auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				auto const controlledEntity = manager.getControlledEntity(entityId);
 				if (controlledEntity)
 				{
 					if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 					{
-						return false; // TODO
+						// If not even an AVB Entity Model is supported, a conflict cannot exist
+						return false;
 					}
 
 					try
