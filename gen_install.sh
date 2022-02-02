@@ -18,6 +18,9 @@ if [ ! -f "${selfFolderPath}.initialized" ]; then
 	exit 4
 fi
 
+# Include default values
+. "${selfFolderPath}.defaults.sh"
+
 # Include utils functions
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/utils.sh"
 
@@ -53,6 +56,11 @@ do_notarize=1
 do_appcast=$use_sparkle
 function extend_gi_fnc_help()
 {
+	local default_path=""
+	get_default_qt_path default_path
+
+	echo " -qtvers <Qt Version> -> Override the default Qt version (v${default_qt_version}) with the specified one."
+	echo " -qtdir <Qt CMake Folder> -> Override default Qt path (${default_path}) with the specified one."
 	if isMac; then
 		echo " -no-notarize -> Do not notarize installer (Default: Do notarize)"
 	fi
@@ -64,6 +72,26 @@ function extend_gi_fnc_help()
 function extend_gi_fnc_unhandled_arg()
 {
 	case "$1" in
+		-qtvers)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -qtvers option, see help (-h)"
+				exit 4
+			fi
+			gen_cmake_additional_options+=("-qtvers")
+			gen_cmake_additional_options+=("$1")
+			return 2
+			;;
+		-qtdir)
+			shift
+			if [ $# -lt 1 ]; then
+				echo "ERROR: Missing parameter for -qtdir option, see help (-h)"
+				exit 4
+			fi
+			gen_cmake_additional_options+=("-qtdir")
+			gen_cmake_additional_options+=("$1")
+			return 2
+			;;
 		-no-notarize)
 			do_notarize=0
 			return 1
