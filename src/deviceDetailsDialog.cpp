@@ -130,6 +130,7 @@ public:
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &DeviceDetailsDialogImpl::entityOnline);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &DeviceDetailsDialogImpl::entityOffline);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
@@ -684,12 +685,33 @@ public:
 	/**
 	* If the displayed entity goes offline, this dialog is closed automatically.
 	*/
+	void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const /*enumerationTime*/)
+	{
+		if (_entityID == entityID)
+		{
+			// when this dialog exists, the entity it refers to cannot come online unless something is bugged (dialog shall only exist for online entities)
+		}
+		else
+		{
+			_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
+		}
+	}
+
+	/**
+	* If the displayed entity goes offline, this dialog is closed automatically.
+	*/
 	void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
 		if (_entityID == entityID)
 		{
 			// close this dialog
 			_dialog->close();
+		}
+		else
+		{
+			_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
 		}
 	}
 

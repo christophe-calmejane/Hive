@@ -268,16 +268,22 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 		if (node.connectionInformation->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 		{
+			// update the node connection information (forward)
 			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
-			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
-			auto end = q->index(static_cast<int>(_nodes.size()), static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+
+			// trigger updating the model
+			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+			auto end = q->index(static_cast<int>(_nodes.size() - 1), static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
 		}
 		else
 		{
 			if (node.connectionInformation->sourceEntityId == entityId)
 			{
+				// update the node connection information (reverse)
 				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
+
+				// trigger updating the model
 				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
 				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
 				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
