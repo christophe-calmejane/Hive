@@ -262,7 +262,8 @@ void DeviceDetailsChannelTableModelPrivate::resetChangedData()
 void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc::UniqueIdentifier const& entityId)
 {
 	Q_Q(DeviceDetailsChannelTableModel);
-	int row = 0;
+	auto row = 0;
+	auto updateModel = false;
 	for (auto& node : _nodes)
 	{
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
@@ -270,11 +271,7 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 		{
 			// update the node connection information (forward)
 			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
-
-			// trigger updating the model
-			auto begin = q->index(0, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
-			auto end = q->index(static_cast<int>(_nodes.size() - 1), static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
-			q->dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
+			updateModel = true;
 		}
 		else
 		{
@@ -282,13 +279,19 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 			{
 				// update the node connection information (reverse)
 				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
-
-				// trigger updating the model
-				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
-				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
-				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
-				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
+				updateModel = true;
 			}
+		}
+
+		if (updateModel)
+		{
+			// trigger updating the model
+			auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
+			if (indexConnection.isValid())
+				q->dataChanged(indexConnection, indexConnection, { Qt::DisplayRole });
+			auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+			if (indexConnectionStatus.isValid())
+				q->dataChanged(indexConnectionStatus, indexConnectionStatus, { Qt::DisplayRole });
 		}
 
 		row++;
@@ -301,7 +304,8 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(std::set<std::pair<la::avdecc::UniqueIdentifier, avdecc::ChannelIdentification>> channels)
 {
 	Q_Q(DeviceDetailsChannelTableModel);
-	int row = 0;
+	auto row = 0;
+	auto updateModel = false;
 	for (auto& node : _nodes)
 	{
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
@@ -310,21 +314,27 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(std::set<st
 			// in the case of the talker we can't know which channels have to be updated without getting the changes from the ChannelConnectionManager
 			// therefor all talkers are updated for now. To improve on this talker connections would need to be cached in the ChannelConnectionManager like the listenerChannelConnections are cached.
 			node.connectionInformation = channelConnectionManager.getChannelConnections(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
-			auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
-			q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
-			auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
-			q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
+			updateModel = true;
 		}
 		else
 		{
 			if (channels.find(std::make_pair(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo)) != channels.end())
 			{
+				// update the node connection information (reverse)
 				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
-				auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
-				q->dataChanged(indexConnection, indexConnection, QVector<int>(Qt::DisplayRole));
-				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
-				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
+				updateModel = true;
 			}
+		}
+
+		if (updateModel)
+		{
+			// trigger updating the model
+			auto indexConnection = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::Connection), QModelIndex());
+			if (indexConnection.isValid())
+				q->dataChanged(indexConnection, indexConnection, { Qt::DisplayRole });
+			auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ConnectionStatus), QModelIndex());
+			if (indexConnectionStatus.isValid())
+				q->dataChanged(indexConnectionStatus, indexConnectionStatus, { Qt::DisplayRole });
 		}
 
 		row++;
@@ -345,7 +355,8 @@ void DeviceDetailsChannelTableModelPrivate::updateAudioClusterName(la::avdecc::U
 			if (entityID == node.connectionInformation->sourceEntityId && configurationIndex == node.connectionInformation->sourceClusterChannelInfo->configurationIndex && audioClusterIndex == node.connectionInformation->sourceClusterChannelInfo->clusterIndex)
 			{
 				auto indexConnectionStatus = q->index(row, static_cast<int>(DeviceDetailsChannelTableModelColumn::ChannelName), QModelIndex());
-				q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
+				if (indexConnectionStatus.isValid())
+					q->dataChanged(indexConnectionStatus, indexConnectionStatus, QVector<int>(Qt::DisplayRole));
 			}
 		}
 		row++;
