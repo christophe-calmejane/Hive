@@ -275,9 +275,10 @@ void DeviceDetailsChannelTableModelPrivate::channelConnectionsUpdate(la::avdecc:
 		}
 		else
 		{
-			if (node.connectionInformation->sourceEntityId == entityId)
+			// if either the connectionInfo source or one of the targets is the entity that the call refers to...
+			if (node.connectionInformation->sourceEntityId == entityId || std::find_if(node.connectionInformation->targets.begin(), node.connectionInformation->targets.end(), [entityId](std::shared_ptr<avdecc::TargetConnectionInformation>& targetInfo) { return (targetInfo->targetEntityId == entityId); }) != node.connectionInformation->targets.end())
 			{
-				// update the node connection information (reverse)
+				// ...update the node connection information (reverse)
 				node.connectionInformation = channelConnectionManager.getChannelConnectionsReverse(node.connectionInformation->sourceEntityId, *node.connectionInformation->sourceClusterChannelInfo);
 				updateModel = true;
 			}
