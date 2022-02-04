@@ -124,6 +124,17 @@ public:
 		connect(&_deviceDetailsInputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsOutputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
+		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataChanged, this, [this](const QModelIndex& /*topLeft*/, const QModelIndex& /*bottomRight*/, const QVector<int>& /*roles*/)
+			{
+				if (tableViewReceive)
+					tableViewReceive->viewport()->update();
+			});
+		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataChanged, this, [this](const QModelIndex& /*topLeft*/, const QModelIndex& /*bottomRight*/, const QVector<int>& /*roles*/)
+			{
+				if (tableViewTransmit)
+					tableViewTransmit->viewport()->update();
+			});
+
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
