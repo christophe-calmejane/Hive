@@ -1476,7 +1476,10 @@ void SampleRateDomainDelegate::paint(QPainter* painter, QStyleOptionViewItem con
 		editor.getLabel()->setText(elidedText);
 		for (auto const& sampleRate : sampleRates)
 		{
-			editor.getComboBox()->addItem(sampleRate.second, sampleRate.first->getValue());
+			if (sampleRate.first)
+			{
+				editor.getComboBox()->addItem(sampleRate.second, sampleRate.first->getValue());
+			}
 		}
 		if (selectedSampleRate.first)
 		{
