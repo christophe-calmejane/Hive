@@ -547,6 +547,9 @@ public:
 	 */
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 	{
+		if (node.isRedundant)
+			return;
+
 		// add the streaminput node to the model
 		_deviceDetailsInputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
 
@@ -561,6 +564,9 @@ public:
 	 */
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
 	{
+		if (node.isRedundant)
+			return;
+
 		// add the streamoutput node to the model
 		_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
 
@@ -615,9 +621,40 @@ public:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::ClockDomainNode const& /*node*/) noexcept override {}
 
 	/**
-	* Ignored.
+	 * Method to process every incoming redundantstream node.
+	 * This implementation takes the primary stream and adds the format of it to the model (StreamInput or -Output) used for StreamFormat tab and opens the corresponding persistent editor in the new row.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamNode const& /*node*/) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	{
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			auto const& streamInputNode = static_cast<const la::avdecc::controller::model::StreamInputNode*>(node.primaryStream);
+
+			if (streamInputNode)
+			{
+				// add the streaminput node to the model
+				_deviceDetailsInputStreamFormatTableModel.addNode(streamInputNode->descriptorIndex, streamInputNode->descriptorType, streamInputNode->dynamicModel->streamFormat);
+
+				// open the persistent editor for the just added streaminput
+				auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+				tableViewInputStreamFormat->openPersistentEditor(modIdx);
+			}
+		}
+		else if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			auto const& streamOutputNode = static_cast<const la::avdecc::controller::model::StreamOutputNode*>(node.primaryStream);
+
+			if (streamOutputNode)
+			{
+				// add the streamoutput node to the model
+				_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutputNode->descriptorIndex, streamOutputNode->descriptorType, streamOutputNode->dynamicModel->streamFormat);
+
+				// open the persistent editor for the just added streamoutput
+				auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+				tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+			}
+		}
+	}
 
 	/**
 	* Ignored.
