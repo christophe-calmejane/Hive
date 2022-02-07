@@ -499,8 +499,10 @@ public:
 	}
 
 	/**
-	* Add every transmit and receive node into the table.
-	*/
+	 * Method to process every incoming audiounit node.
+	 * This implementation uses the audiounit node to derive the channel connections for Receive and Transmit tab from it
+	 * and adds them to the corresponding models.
+	 */
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		if (!controlledEntity)
@@ -537,37 +539,35 @@ public:
 				}
 			}
 		}
-
-		auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-		for (auto const& streamInput : configurationNode.streamInputs)
-		{
-			_deviceDetailsInputStreamFormatTableModel.addNode(streamInput.first, streamInput.second.descriptorType, streamInput.second.dynamicModel->streamFormat);
-		}
-		for (auto i = 0; i < _deviceDetailsInputStreamFormatTableModel.rowCount(); i++)
-		{
-			auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-			tableViewInputStreamFormat->openPersistentEditor(modIdx);
-		}
-		for (auto const& streamOutput : configurationNode.streamOutputs)
-		{
-			_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutput.first, streamOutput.second.descriptorType, streamOutput.second.dynamicModel->streamFormat);
-		}
-		for (auto i = 0; i < _deviceDetailsOutputStreamFormatTableModel.rowCount(); i++)
-		{
-			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-			tableViewOutputStreamFormat->openPersistentEditor(modIdx);
-		}
 	}
 
 	/**
-	* Ignored.
-	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& /*node*/) noexcept override {}
+	 * Method to process every incoming streaminput node.
+	 * This implementation adds the format of the streaminput to the model used for StreamFormat tab and opens the corresponding persistent editor in the new row.
+	 */
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+	{
+		// add the streaminput node to the model
+		_deviceDetailsInputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
+
+		// open the persistent editor for the just added streaminput
+		auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+		tableViewInputStreamFormat->openPersistentEditor(modIdx);
+	}
 
 	/**
-	* Ignored.
-	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamOutputNode const& /*node*/) noexcept override {}
+	 * Method to process every incoming streamoutput node.
+	 * This implementation adds the format of the streamoutput to the model used for StreamFormat tab and opens the corresponding persistent editor in the new row.
+	 */
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	{
+		// add the streamoutput node to the model
+		_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
+
+		// open the persistent editor for the just added streamoutput
+		auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+		tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+	}
 
 	/**
 	* Ignored.
