@@ -714,7 +714,7 @@ bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& v
 		if (treeItem->type() == AbstractTreeItem::Domain)
 		{
 			auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
-			if (*domainTreeItem->domainSamplingRate().first != value.toUInt())
+			if (domainTreeItem->domainSamplingRate().first && *domainTreeItem->domainSamplingRate().first != value.toUInt())
 			{
 				domainTreeItem->setDomainSamplingRate(la::avdecc::entity::model::SamplingRate(value.toUInt()));
 				emit q->domainSetupChanged();
