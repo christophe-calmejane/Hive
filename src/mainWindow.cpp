@@ -418,7 +418,7 @@ void MainWindowImpl::loadSettings()
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	LOG_HIVE_DEBUG("Settings location: " + settings->getFilePath());
+	LOG_HIVE_INFO("Settings location: " + settings->getFilePath());
 
 	auto const networkInterfaceId = settings->getValue(settings::InterfaceID).toString();
 	auto const networkInterfaceIndex = _interfaceComboBox.findData(networkInterfaceId);
