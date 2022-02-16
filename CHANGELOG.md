@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Currently highlighted entity in connection matrix incorrect when an entity comes online or offline
 - Adapting listener's format to talker's format from the matrix (contextual menu)
 - [No values displayed to signed Linear Control Values](https://github.com/christophe-calmejane/Hive/issues/115)
+- _Device Details Dialog_ tab 'Stream Format' showing redundant streams and incorrectly handling format changes when applying
 
 ## [1.2.7] - 2021-12-24
 ### Added
