@@ -152,7 +152,7 @@ public:
 	virtual void applyMediaClockDomainModel(MCEntityDomainMapping const& domains) noexcept = 0;
 	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
 	virtual bool isMediaClockDomainManageable(la::avdecc::UniqueIdentifier const& entityId) noexcept = 0;
-
+	virtual bool isMediaClockDomainConflictingWithStreamFormats(MCEntityDomainMapping const& domains) noexcept = 0;
 
 	// Signals
 	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds);
