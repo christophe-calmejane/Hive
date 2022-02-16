@@ -124,12 +124,26 @@ public:
 		connect(&_deviceDetailsInputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsOutputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
+		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataChanged, this,
+			[this](const QModelIndex& /*topLeft*/, const QModelIndex& /*bottomRight*/, const QVector<int>& /*roles*/)
+			{
+				if (tableViewReceive)
+					tableViewReceive->viewport()->update();
+			});
+		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataChanged, this,
+			[this](const QModelIndex& /*topLeft*/, const QModelIndex& /*bottomRight*/, const QVector<int>& /*roles*/)
+			{
+				if (tableViewTransmit)
+					tableViewTransmit->viewport()->update();
+			});
+
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &DeviceDetailsDialogImpl::entityOnline);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &DeviceDetailsDialogImpl::entityOffline);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
@@ -724,12 +738,33 @@ public:
 	/**
 	* If the displayed entity goes offline, this dialog is closed automatically.
 	*/
+	void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const /*enumerationTime*/)
+	{
+		if (_entityID == entityID)
+		{
+			// when this dialog exists, the entity it refers to cannot come online unless something is bugged (dialog shall only exist for online entities)
+		}
+		else
+		{
+			_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
+		}
+	}
+
+	/**
+	* If the displayed entity goes offline, this dialog is closed automatically.
+	*/
 	void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
 		if (_entityID == entityID)
 		{
 			// close this dialog
 			_dialog->close();
+		}
+		else
+		{
+			_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
 		}
 	}
 
