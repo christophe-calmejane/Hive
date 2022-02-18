@@ -117,7 +117,7 @@ if isMac; then
 	# Call notarization
 	if [ $do_notarize -eq 1 ]; then
 		if [ ! "x${params["notarization_username"]}" == "x" ]; then
-			"${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh" "${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
+			"${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh" "${deliverablesFolder}${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
 			if [ $? -ne 0 ]; then
 				echo "Failed to notarize installer"
 				exit 1
@@ -127,8 +127,8 @@ if isMac; then
 
 	# Tar the installer as Sparkle do not support PKG
 	appcastInstallerName="${fullInstallerName}.tar"
-	tar cvf "${appcastInstallerName}" "${fullInstallerName}" &> /dev/null
-	rm -f "${fullInstallerName}" &> /dev/null
+	tar cvf "${deliverablesFolder}${appcastInstallerName}" "${deliverablesFolder}${fullInstallerName}" &> /dev/null
+	rm -f "${deliverablesFolder}${fullInstallerName}" &> /dev/null
 fi
 
 # Generate appcast
@@ -144,13 +144,21 @@ if [ $do_appcast -eq 1 ]; then
 	updateBaseURL="${appcastURL%/*}/"
 
 	# Generate appcast file
-	"${selfFolderPath}3rdparty/sparkleHelper/scripts/generate_appcast.sh" "${appcastInstallerName}" "${releaseVersion}${beta_tag}" "${internalVersion}" "resources/dsa_priv.pem" "${updateBaseURL}changelog.php?lastKnownVersion=next" "${updateBaseURL}${installerSubUrl}/${appcastInstallerName}" "/S /NOPCAP /LAUNCH"
+	"${selfFolderPath}3rdparty/sparkleHelper/scripts/generate_appcast.sh" "${deliverablesFolder}${appcastInstallerName}" "${releaseVersion}${beta_tag}" "${internalVersion}" "resources/dsa_priv.pem" "${updateBaseURL}changelog.php?lastKnownVersion=next" "${updateBaseURL}${installerSubUrl}/${appcastInstallerName}" "/S /NOPCAP /LAUNCH"
 
-	echo ""
+	# Move appcast file to deliverablesFolder
+	mv "appcastItem-${releaseVersion}${beta_tag}.xml" "${deliverablesFolder}"
+
+	# Copy CHANGELOG.MD to deliverablesFolder
+	cp "${selfFolderPath}CHANGELOG.md" "${deliverablesFolder}"
+
 	echo "Do not forget to upload:"
 	echo " - CHANGELOG.MD"
 	echo " - Installer file: ${appcastInstallerName}"
 	echo " - Updated appcast file(s)"
 fi
+
+echo ""
+echo "All files copied to ${deliverablesFolder}"
 
 exit 0

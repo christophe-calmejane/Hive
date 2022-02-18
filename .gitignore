@@ -1,6 +1,7 @@
 # CMake build directories
 /_build*
 /_install*
+/_deliverables
 
 # CPack generation directory and archives
 _CPack_Packages/
