@@ -109,8 +109,6 @@ function extend_gi_fnc_unhandled_arg()
 
 # execute gen_install script from bashUtils
 . "${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/gen_install.sh"
-# Get path again, might be altered by previous call
-selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
 appcastInstallerName="${fullInstallerName}"
 
@@ -124,8 +122,6 @@ if isMac; then
 				echo "Failed to notarize installer"
 				exit 1
 			fi
-			# Get path again, might be altered by previous call
-			selfFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 		fi
 	fi
 
