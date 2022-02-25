@@ -29,7 +29,7 @@
 		<key>NSHumanReadableCopyright</key>
 		<string>${CU_PROJECT_READABLE_COPYRIGHT}</string>
 		<key>NSHighResolutionCapable</key>
-		<string>True</string>
+		<true/>
 		<key>NSRequiresAquaSystemAppearance</key>
 		<true/>
 		<key>CSResourcesFileMapped</key>
