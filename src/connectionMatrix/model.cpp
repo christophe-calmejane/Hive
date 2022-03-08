@@ -2009,20 +2009,20 @@ public:
 		}
 
 		auto const entityID = node->entityID();
-
 		auto const flattendedNodes = priv::flattenEntityNode(node, _mode);
-		auto const childrenCount = static_cast<int>(flattendedNodes.size()) - 1;
+		auto const nodesCount = flattendedNodes.size();
 
-		// Always return if count is negative
-		if (!AVDECC_ASSERT_WITH_RET(childrenCount >= 0, "children count should never be negative"))
+		// Not a single node to display
+		if (nodesCount == 0)
 		{
 			return;
 		}
 
+		auto const childrenCount = static_cast<int>(nodesCount) - 1;
 		if constexpr (std::is_same_v<NodeType, EntityNode>)
 		{
-			// This entity has nothing to display in this mode
-			if (childrenCount <= 0)
+			// Do not display an EntityNode if it has no child
+			if (childrenCount == 0)
 			{
 				return;
 			}
@@ -2081,16 +2081,16 @@ public:
 		}
 
 		auto const entityID = node->entityID();
-
 		auto const flattendedNodes = priv::flattenEntityNode(node, _mode);
-		auto const childrenCount = static_cast<int>(flattendedNodes.size()) - 1;
+		auto const nodesCount = flattendedNodes.size();
 
-		// This entity has nothing to display in this mode
-		if (childrenCount <= 0)
+		// Not a single node to display
+		if (nodesCount == 0)
 		{
 			return;
 		}
 
+		auto const childrenCount = static_cast<int>(nodesCount) - 1;
 		auto const first = priv::sortedIndexForEntity(_listenerNodes, entityID);
 		auto const last = first + childrenCount;
 
