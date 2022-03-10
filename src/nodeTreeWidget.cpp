@@ -303,29 +303,45 @@ private:
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
 
-			auto* configurationComboBox = new AecpCommandComboBox(_controlledEntityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfiguration, node.descriptorIndex);
-
+			auto* configurationComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ConfigurationIndex>();
+			auto configurations = std::remove_pointer_t<decltype(configurationComboBox)>::Data{};
 			for (auto const& it : node.configurations)
 			{
-				configurationComboBox->addItem(QString::number(it.first) + ": " + hive::modelsLibrary::helper::configurationName(&entity, it.second), it.first);
+				configurations.insert(it.first);
 			}
+			configurationComboBox->setAllData(configurations,
+				[this](auto const& configurationIndex)
+				{
+					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+					auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
 
-			auto currentConfigurationComboBoxIndex = configurationComboBox->findData(node.dynamicModel->currentConfiguration);
+					if (controlledEntity)
+					{
+						try
+						{
+							auto const& entity = *controlledEntity;
+							auto const& configurationNode = entity.getConfigurationNode(configurationIndex);
+							return QString::number(configurationIndex) + ": " + hive::modelsLibrary::helper::configurationName(&entity, configurationNode);
+						}
+						catch (...)
+						{
+							// Ignore exception
+						}
+					}
+					return QString::number(configurationIndex);
+				});
+
 			q->setItemWidget(currentConfigurationItem, 1, configurationComboBox);
 
 			// Send changes
-			connect(configurationComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-				[this, configurationComboBox, node]()
+			configurationComboBox->setDataChangedHandler(
+				[this, configurationComboBox](auto const& previousConfiguration, auto const& newConfiguration)
 				{
-					auto const configurationIndex = configurationComboBox->currentData().value<la::avdecc::entity::model::ConfigurationIndex>();
-					hive::modelsLibrary::ControllerManager::getInstance().setConfiguration(_controlledEntityID, configurationIndex);
+					hive::modelsLibrary::ControllerManager::getInstance().setConfiguration(_controlledEntityID, newConfiguration, configurationComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfiguration, previousConfiguration));
 				});
 
-			// Initialize current value
-			{
-				QSignalBlocker const lg{ configurationComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-				configurationComboBox->setCurrentIndex(currentConfigurationComboBoxIndex);
-			}
+			// Update now
+			configurationComboBox->setCurrentData(node.dynamicModel->currentConfiguration);
 		}
 
 		// Counters (if supported by the entity)
@@ -732,11 +748,12 @@ private:
 			auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
 			currentSourceItem->setText(0, "Current Clock Source");
 
-			auto* sourceComboBox = new AecpCommandComboBox(_controlledEntityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource, node.descriptorIndex);
-
+			auto* sourceComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ClockSourceIndex>();
+			auto clockSources = std::remove_pointer_t<decltype(sourceComboBox)>::Data{};
 			for (auto const sourceIndex : model->clockSources)
 			{
-				try
+				clockSources.insert(sourceIndex);
+				/*try
 				{
 					auto const& clockSourceNode = controlledEntity->getClockSourceNode(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, sourceIndex);
 					auto const name = QString::number(sourceIndex) + ": '" + hive::modelsLibrary::helper::objectName(controlledEntity, clockSourceNode) + "' (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
@@ -744,19 +761,37 @@ private:
 				}
 				catch (...)
 				{
-				}
+				}*/
 			}
+			sourceComboBox->setAllData(clockSources,
+				[this](auto const& sourceIndex)
+				{
+					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+					auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
 
-			auto const currentSourceComboBoxIndex = sourceComboBox->findData(dynamicModel->clockSourceIndex);
+					if (controlledEntity)
+					{
+						try
+						{
+							auto const& entity = *controlledEntity;
+							auto const& clockSourceNode = entity.getClockSourceNode(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, sourceIndex);
+							return QString::number(sourceIndex) + ": " + hive::modelsLibrary::helper::objectName(&entity, clockSourceNode) + " (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
+						}
+						catch (...)
+						{
+							// Ignore exception
+						}
+					}
+					return QString::number(sourceIndex);
+				});
+
 			q->setItemWidget(currentSourceItem, 1, sourceComboBox);
 
 			// Send changes
-			connect(sourceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-				[this, sourceComboBox, node]()
+			sourceComboBox->setDataChangedHandler(
+				[this, sourceComboBox, clockDomainIndex = node.descriptorIndex](auto const& previousSourceIndex, auto const& newSourceIndex)
 				{
-					auto const clockDomainIndex = node.descriptorIndex;
-					auto const sourceIndex = sourceComboBox->currentData().value<la::avdecc::entity::model::ClockSourceIndex>();
-					hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, sourceIndex);
+					hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, newSourceIndex, sourceComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource, previousSourceIndex));
 				});
 
 			// Listen for changes
@@ -765,21 +800,12 @@ private:
 				{
 					if (entityID == _controlledEntityID && clockDomainIndex == domainIndex)
 					{
-						auto index = sourceComboBox->findData(QVariant::fromValue(sourceIndex));
-						AVDECC_ASSERT(index != -1, "Index not found");
-						if (index != -1)
-						{
-							QSignalBlocker const lg{ sourceComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-							sourceComboBox->setCurrentIndex(index);
-						}
+						sourceComboBox->setCurrentData(sourceIndex);
 					}
 				});
 
-			// Initialize current value
-			{
-				QSignalBlocker const lg{ sourceComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-				sourceComboBox->setCurrentIndex(currentSourceComboBoxIndex);
-			}
+			// Update now
+			sourceComboBox->setCurrentData(dynamicModel->clockSourceIndex);
 		}
 
 		// Counters (if supported by the entity)

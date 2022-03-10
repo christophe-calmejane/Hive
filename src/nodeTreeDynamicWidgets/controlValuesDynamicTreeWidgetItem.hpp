@@ -58,6 +58,7 @@ template<class StaticValueType, class DynamicValueType>
 class LinearControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
 	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
+	using ComboboxType = AecpCommandComboBox<value_size>;
 
 public:
 	LinearControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
@@ -95,7 +96,7 @@ public:
 				}
 				else
 				{
-					auto* comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
+					auto* comboBox = new ComboboxType();
 					parent->setItemWidget(item, 1, comboBox);
 
 					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
@@ -112,17 +113,23 @@ public:
 							}
 						}
 					}
+					auto data = typename std::remove_pointer_t<decltype(comboBox)>::Data{};
 					for (auto i = size_t{ 0u }; i < stepsCount; ++i)
 					{
 						auto const possibleValue = static_cast<value_size>(staticVal.minimum + i * staticVal.step);
-						comboBox->addItem(QString::number(possibleValue), QVariant::fromValue(possibleValue));
+						data.insert(possibleValue);
 					}
+					comboBox->setAllData(data,
+						[](auto const& value)
+						{
+							return QString::number(value);
+						});
 
 					// Send changes
-					connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-						[this]()
+					comboBox->setDataChangedHandler(
+						[this, comboBox](auto const& previousValue, auto const& newValue)
 						{
-							sendControlValues();
+							sendControlValues(comboBox, previousValue);
 						});
 
 					_widgets.push_back(comboBox);
@@ -142,7 +149,7 @@ public:
 	}
 
 private:
-	void sendControlValues() noexcept
+	void sendControlValues(ComboboxType* const changedComboxbox, value_size const previousValue) noexcept
 	{
 		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
 		{
@@ -150,14 +157,28 @@ private:
 
 			for (auto const* item : _widgets)
 			{
-				auto const* comboBox = static_cast<AecpCommandComboBox const*>(item);
+				auto const* comboBox = static_cast<ComboboxType const*>(item);
 				auto value = typename DynamicValueType::value_type{};
-				value.currentValue = comboBox->currentData().value<value_size>();
+				value.currentValue = comboBox->getCurrentData();
 
 				values.addValue(std::move(value));
 			}
 
-			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) });
+			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) },
+				[this, changedComboxbox, previousValue](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+				{
+					QMetaObject::invokeMethod(this,
+						[this, changedComboxbox, previousValue, status]()
+						{
+							if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+							{
+								changedComboxbox->setCurrentData(previousValue);
+
+								QMessageBox::warning(changedComboxbox, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+							}
+							changedComboxbox->setEnabled(true);
+						});
+				});
 		}
 	}
 
@@ -183,11 +204,8 @@ private:
 				}
 				else
 				{
-					auto* comboBox = static_cast<AecpCommandComboBox*>(_widgets[valNumber]);
-
-					QSignalBlocker const lg{ comboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-					auto const index = comboBox->findData(QVariant::fromValue(val.currentValue));
-					comboBox->setCurrentIndex(index);
+					auto* comboBox = static_cast<ComboboxType*>(_widgets[valNumber]);
+					comboBox->setCurrentData(val.currentValue);
 				}
 
 				++valNumber;
@@ -234,7 +252,7 @@ public:
 				}
 				else
 				{
-					auto* comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
+					auto* comboBox = new AecpCommandComboBoxOLD(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
 					parent->setItemWidget(item, 1, comboBox);
 
 					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
@@ -289,7 +307,7 @@ private:
 
 			for (auto const* item : _widgets)
 			{
-				auto const* comboBox = static_cast<AecpCommandComboBox const*>(item);
+				auto const* comboBox = static_cast<AecpCommandComboBoxOLD const*>(item);
 				values.currentValues.push_back(comboBox->currentData().value<value_size>());
 			}
 
@@ -319,7 +337,7 @@ private:
 				}
 				else
 				{
-					auto* comboBox = static_cast<AecpCommandComboBox*>(_widgets[valNumber]);
+					auto* comboBox = static_cast<AecpCommandComboBoxOLD*>(_widgets[valNumber]);
 
 					QSignalBlocker const lg{ comboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
 					auto const index = comboBox->findData(QVariant::fromValue(val));

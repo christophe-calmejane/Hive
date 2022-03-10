@@ -923,6 +923,7 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
+			emit beginAecpCommand(targetEntityID, AecpCommandType::IdentifyEntity, la::avdecc::entity::model::DescriptorIndex{ 0u });
 			controller->identifyEntity(targetEntityID, duration,
 				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
@@ -1155,16 +1156,23 @@ private:
 		}
 	}
 
-	virtual void setConfiguration(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex) noexcept override
+	virtual void setConfiguration(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, SetConfigurationHandler const& handler = {}) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
 		{
 			emit beginAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, la::avdecc::entity::model::DescriptorIndex{ 0u }); // Must NOT use configurationIndex here as it is a parameter, NOT the descriptor the configuration applies to (which is EntityDescriptor Index 0)
 			controller->setConfiguration(targetEntityID, configurationIndex,
-				[this, targetEntityID](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				[this, targetEntityID, handler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
 				{
-					emit endAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
+					if (handler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(handler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetConfiguration, la::avdecc::entity::model::DescriptorIndex{ 0u }, status);
+					}
 				});
 		}
 	}
