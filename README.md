@@ -18,6 +18,7 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 
 ## Compilation
 
+- Check and install [la_avdecc compilation requirements](https://github.com/L-Acoustics/avdecc/blob/master/README.md) for your system
 - Clone this repository
 - Copy `.hive_config.sample` to `.hive_config`, then edit it for installer customization
 - Run the `setup_fresh_env.sh` script that should properly setup your working copy
