@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Warning popup for _Media Clock Management Dialog_ domain SampleRate changes that conflict with entity current StreamFormat settings
 
 ### Changed
-- Control descriptors now use a SpinBox instead of a ComboBox for improved performance and usability
+- [Control descriptors now use a SpinBox instead of a ComboBox for improved performance and usability](https://github.com/christophe-calmejane/Hive/issues/116)
 - All editable fields (text, combobox, spinbox) now restore the previous value in case the entity rejects the new one
 
 ### Fixed
