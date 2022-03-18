@@ -806,7 +806,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, responseHandler);
+							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, nullptr, responseHandler);
 							return true;
 						}
 					}
@@ -854,7 +854,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, responseHandler);
+							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, nullptr, responseHandler);
 							return true;
 						}
 					}
@@ -901,7 +901,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, responseHandler);
+							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, nullptr, responseHandler);
 							return true;
 						}
 					}
@@ -1569,7 +1569,7 @@ private:
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-							manager.setAudioUnitSamplingRate(entityId, audioUnitIndex, sampleRate, responseHandler);
+							manager.setAudioUnitSamplingRate(entityId, audioUnitIndex, sampleRate, nullptr, responseHandler);
 							return true;
 						});
 				}

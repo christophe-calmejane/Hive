@@ -71,7 +71,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 			}
 			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, newStreamFormat, formatComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat, previousStreamFormat));
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, newStreamFormat, formatComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat), formatComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat, previousStreamFormat));
 			}
 		});
 

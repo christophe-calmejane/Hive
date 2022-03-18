@@ -162,12 +162,3 @@ protected:
 	DataChangedHandler _dataChangedHandler{};
 	DataToStringHandler _dataToStringHandler{};
 };
-
-class AecpCommandComboBoxOLD final : public qtMate::widgets::ComboBox
-{
-public:
-	AecpCommandComboBoxOLD(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QWidget* parent = nullptr)
-		: qtMate::widgets::ComboBox{ parent }
-	{
-	}
-};

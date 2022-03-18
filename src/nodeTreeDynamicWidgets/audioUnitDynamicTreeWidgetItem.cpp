@@ -44,7 +44,7 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 	_samplingRate->setDataChangedHandler(
 		[this](auto const& previousSamplingRate, auto const& samplingRate)
 		{
-			hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate, _samplingRate->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate, previousSamplingRate));
+			hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate, _samplingRate->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate), _samplingRate->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate, previousSamplingRate));
 		});
 
 	// Listen for changes

@@ -111,6 +111,7 @@ set(HEADER_FILES_COMMON
 	multiFirmwareUpdateDialog.hpp
 	mainWindow.hpp
 	aecpCommandComboBox.hpp
+	aecpCommandSpinBox.hpp
 	aecpCommandTextEntry.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp

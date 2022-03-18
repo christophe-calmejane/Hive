@@ -20,52 +20,45 @@
 #pragma once
 
 #include <hive/modelsLibrary/controllerManager.hpp>
-#include <QtMate/widgets/textEntry.hpp>
 
-#include <QMessageBox>
+#include <QSpinBox>
 #include <QString>
 
-// TextEntry that watches an Aecp command result, restoring the previous value if the command fails
-class AecpCommandTextEntryPrivate;
-class AecpCommandTextEntry : public qtMate::widgets::TextEntry
-{
-	Q_OBJECT
+#include <functional>
+#include <vector>
+#include <set>
+#include <string>
 
-public:
-	AecpCommandTextEntry(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& text, std::optional<QValidator*> validator = std::nullopt, QWidget* parent = nullptr);
-	~AecpCommandTextEntry();
-
-private:
-	AecpCommandTextEntryPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(AecpCommandTextEntry);
-};
-
-namespace experimental
-{
-class AecpCommandTextEntry : public qtMate::widgets::TextEntry
+template<typename DataType>
+class AecpCommandSpinBox : public QSpinBox
 {
 public:
-	using DataChangedHandler = std::function<void(QString const& previousData, QString const& newData)>;
-	using DataType = QString;
+	using DataChangedHandler = std::function<void(DataType const& previousData, DataType const& newData)>;
+	using Data = std::set<DataType>;
 	using AecpBeginCommandHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID)>;
 	using AecpResultHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 
-	AecpCommandTextEntry(QString const& text, std::optional<QValidator*> validator = std::nullopt, QWidget* parent = nullptr)
-		: qtMate::widgets::TextEntry{ text, validator, parent }
+	static_assert(std::is_integral_v<DataType> && sizeof(DataType) <= 4, "AecpCommandSpinBox only support integral types up to 32 bits");
+
+	AecpCommandSpinBox(QWidget* parent = nullptr)
+		: QSpinBox{ parent }
 		, _parent{ parent }
 	{
 		// Send changes
-		connect(this, &qtMate::widgets::TextEntry::validated, this,
-			[this](QString const& oldText, QString const& newText)
+		connect(this, QOverload<int>::of(&QSpinBox::valueChanged), this,
+			[this](int value)
 			{
+				auto newData = static_cast<DataType>(value);
+				// Save previous data before it's changed
+				auto const previous = _previousData;
 				// Update to new data
-				setCurrentData(newText);
+				setCurrentData(newData);
 				// If new data is different than previous one, call handler
-				if (oldText != newText)
+				if (previous != newData)
 				{
 					if (_dataChangedHandler)
 					{
-						_dataChangedHandler(oldText, newText);
+						_dataChangedHandler(previous, newData);
 					}
 				}
 			});
@@ -80,7 +73,14 @@ public:
 	{
 		auto const lg = QSignalBlocker{ this }; // Block internal signals
 		_previousData = data;
-		setText(data);
+		setValue(static_cast<int>(data));
+	}
+
+	void setRangeAndStep(DataType const minimum, DataType const maximum, std::uint32_t const step) noexcept
+	{
+		auto const lg = QSignalBlocker{ this }; // Block internal signals
+		setRange(static_cast<int>(minimum), static_cast<int>(maximum));
+		setSingleStep(static_cast<int>(step));
 	}
 
 	DataType const& getCurrentData() const noexcept
@@ -115,10 +115,12 @@ public:
 	}
 
 protected:
-	using qtMate::widgets::TextEntry::setText;
-	using qtMate::widgets::TextEntry::text;
+	using QSpinBox::setMinimum;
+	using QSpinBox::setMaximum;
+	using QSpinBox::setRange;
+	using QSpinBox::setSingleStep;
 	QWidget* _parent{ nullptr };
+	Data _data{};
 	DataType _previousData{};
 	DataChangedHandler _dataChangedHandler{};
 };
-} // namespace experimental

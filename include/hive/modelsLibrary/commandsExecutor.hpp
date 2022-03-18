@@ -70,6 +70,10 @@ public:
 	void addAemCommand(ManagerMethod&& method, Parameters&&... params) noexcept
 	{
 		addCommand(std::bind(std::forward<ManagerMethod>(method), getControllerManager(), getEntityID(), std::forward<Parameters>(params)...,
+			[](la::avdecc::UniqueIdentifier const /*entityID*/)
+			{
+				// TODO: Might be used for progress notification
+			},
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 			{
 				processAECPResult(entityID, status);
