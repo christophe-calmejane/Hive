@@ -19,11 +19,10 @@
 
 #include "deviceDetailsStreamFormatTableModel.hpp"
 #include "ui_deviceDetailsDialog.h"
+#include "streamFormatComboBox.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 #include "avdecc/helper.hpp"
-
-#include "nodeTreeDynamicWidgets/streamFormatComboBox.hpp"
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
@@ -570,15 +569,19 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 		}
 	}
 
-	auto* formatComboBox = new StreamFormatComboBox(delegateEntityID, streamFormatData.streamIndex, parent);
+	auto* formatComboBox = new StreamFormatComboBox(parent);
 	if (staticModel)
+	{
 		formatComboBox->setStreamFormats(staticModel->formats);
+	}
 	if (dynamicModel)
+	{
 		formatComboBox->setCurrentStreamFormat(dynamicModel->streamFormat);
+	}
 
 	// Send changes
-	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
-		[this, formatComboBox]([[maybe_unused]] la::avdecc::entity::model::StreamFormat const previousStreamFormat, [[maybe_unused]] la::avdecc::entity::model::StreamFormat const newStreamFormat)
+	formatComboBox->setDataChangedHandler(
+		[this, formatComboBox]([[maybe_unused]] la::avdecc::entity::model::StreamFormat const& previousStreamFormat, [[maybe_unused]] la::avdecc::entity::model::StreamFormat const& newStreamFormat)
 		{
 			auto* p = const_cast<StreamFormatItemDelegate*>(this);
 			emit p->commitData(formatComboBox);

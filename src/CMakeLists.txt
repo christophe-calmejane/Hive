@@ -91,7 +91,6 @@ set(HEADER_FILES_COMMON
 	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.hpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
-	nodeTreeDynamicWidgets/streamFormatComboBox.hpp
 	nodeTreeDynamicWidgets/asPathWidget.hpp
 	profiles/profiles.hpp
 	profiles/profileSelectionDialog.hpp
@@ -112,6 +111,7 @@ set(HEADER_FILES_COMMON
 	multiFirmwareUpdateDialog.hpp
 	mainWindow.hpp
 	aecpCommandComboBox.hpp
+	aecpCommandSpinBox.hpp
 	aecpCommandTextEntry.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
@@ -121,6 +121,7 @@ set(HEADER_FILES_COMMON
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	windowsNpfHelper.hpp
+	streamFormatComboBox.hpp
 	visibilitySettings.hpp
 	listViewSelectionToMatrixModelController.hpp
 )
@@ -165,7 +166,6 @@ set(SOURCE_FILES_COMMON
 	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.cpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
-	nodeTreeDynamicWidgets/streamFormatComboBox.cpp
 	nodeTreeDynamicWidgets/asPathWidget.cpp
 	profiles/profileSelectionDialog.cpp
 	profiles/profileWidget.cpp
@@ -181,8 +181,6 @@ set(SOURCE_FILES_COMMON
 	discoveredEntitiesView.cpp
 	mainWindow.cpp
 	settingsDialog.cpp
-	aecpCommandComboBox.cpp
-	aecpCommandTextEntry.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
 	activeNetworkInterfacesModel.cpp

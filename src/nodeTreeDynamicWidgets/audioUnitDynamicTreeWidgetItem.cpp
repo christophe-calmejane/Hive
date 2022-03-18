@@ -31,22 +31,20 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 	auto* currentSamplingRateItem = new QTreeWidgetItem(this);
 	currentSamplingRateItem->setText(0, "Sampling Rate");
 
-	_samplingRate = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate, audioUnitIndex);
+	_samplingRate = new AecpCommandComboBox<la::avdecc::entity::model::SamplingRate>();
 	parent->setItemWidget(currentSamplingRateItem, 1, _samplingRate);
-
-	for (auto const samplingRate : staticModel->samplingRates)
-	{
+	_samplingRate->setAllData(staticModel->samplingRates,
+		[](auto const& samplingRate)
+		{
 #pragma message("TODO: Add a helper method in Hive to convert the returned double value to human readable kHz")
-		auto const readableSamplingRate = QString("%1 Hz").arg(samplingRate.getNominalSampleRate());
-		_samplingRate->addItem(readableSamplingRate, QVariant::fromValue(samplingRate));
-	}
+			return QString("%1 Hz").arg(samplingRate.getNominalSampleRate());
+		});
 
 	// Send changes
-	connect(_samplingRate, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-		[this]()
+	_samplingRate->setDataChangedHandler(
+		[this](auto const& previousSamplingRate, auto const& samplingRate)
 		{
-			auto const samplingRate = _samplingRate->currentData().value<la::avdecc::entity::model::SamplingRate>();
-			hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate);
+			hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitSamplingRate(_entityID, _audioUnitIndex, samplingRate, _samplingRate->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate), _samplingRate->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetSamplingRate, previousSamplingRate));
 		});
 
 	// Listen for changes
@@ -65,7 +63,5 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 
 void AudioUnitDynamicTreeWidgetItem::updateSamplingRate(la::avdecc::entity::model::SamplingRate const samplingRate)
 {
-	QSignalBlocker const lg{ _samplingRate }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-	auto const index = _samplingRate->findData(QVariant::fromValue(samplingRate));
-	_samplingRate->setCurrentIndex(index);
+	_samplingRate->setCurrentData(samplingRate);
 }

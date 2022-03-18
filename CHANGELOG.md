@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Warning popup for _Media Clock Management Dialog_ domain SampleRate changes that conflict with entity current StreamFormat settings
 
 ### Changed
-- All editable text fields now restore the previous value in case the entity rejects the new one
+- [Control descriptors now use a SpinBox instead of a ComboBox for improved performance and usability](https://github.com/christophe-calmejane/Hive/issues/116)
+- All editable fields (text, combobox, spinbox) now restore the previous value in case the entity rejects the new one
 
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [No values displayed to signed Linear Control Values](https://github.com/christophe-calmejane/Hive/issues/115)
 - _Device Details Dialog_ tab 'Stream Format' showing redundant streams and incorrectly handling format changes when applying
 - _Device Details Dialog_ 'Receive'/'Transmit' tables to correctly update channel connections when entity comes online or offline
+- Combobox fields always properly restore previous value in case of command failure
 
 ## [1.2.7] - 2021-12-24
 ### Added

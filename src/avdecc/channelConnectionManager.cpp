@@ -1988,7 +1988,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setStreamOutputFormat(talkerEntityId, talkerStreamIndex, *compatibleStreamFormats.first, responseHandler);
+							manager.setStreamOutputFormat(talkerEntityId, talkerStreamIndex, *compatibleStreamFormats.first, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2008,7 +2008,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setStreamInputFormat(listenerEntityId, newStreamConnection.second, *compatibleStreamFormats.second, responseHandler);
+							manager.setStreamInputFormat(listenerEntityId, newStreamConnection.second, *compatibleStreamFormats.second, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2251,7 +2251,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.removeStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, responseHandler);
+							manager.removeStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2277,7 +2277,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.addStreamPortOutputAudioMappings(talkerEntityId, mapping.first, mapping.second, responseHandler);
+							manager.addStreamPortOutputAudioMappings(talkerEntityId, mapping.first, mapping.second, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2301,7 +2301,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.addStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, responseHandler);
+							manager.addStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, nullptr, responseHandler);
 							return true;
 						});
 				}

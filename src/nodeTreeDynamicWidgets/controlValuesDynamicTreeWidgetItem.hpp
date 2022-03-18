@@ -23,6 +23,7 @@
 #include "avdecc/stringValidator.hpp"
 #include "aecpCommandComboBox.hpp"
 #include "aecpCommandTextEntry.hpp"
+#include "aecpCommandSpinBox.hpp"
 #include "avdecc/hiveLogItems.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
@@ -58,6 +59,8 @@ template<class StaticValueType, class DynamicValueType>
 class LinearControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
 	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
+	static constexpr auto UseSpinBox = std::conditional_t < std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type > ();
+	using WidgetType = std::conditional_t<UseSpinBox, AecpCommandSpinBox<value_size>, AecpCommandComboBox<value_size>>;
 
 public:
 	LinearControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
@@ -95,8 +98,8 @@ public:
 				}
 				else
 				{
-					auto* comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
-					parent->setItemWidget(item, 1, comboBox);
+					auto* widget = new WidgetType{};
+					parent->setItemWidget(item, 1, widget);
 
 					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
 					auto stepsCount = size_t{ 1 };
@@ -112,20 +115,34 @@ public:
 							}
 						}
 					}
-					for (auto i = size_t{ 0u }; i < stepsCount; ++i)
+
+					if constexpr (UseSpinBox)
 					{
-						auto const possibleValue = static_cast<value_size>(staticVal.minimum + i * staticVal.step);
-						comboBox->addItem(QString::number(possibleValue), QVariant::fromValue(possibleValue));
+						widget->setRangeAndStep(staticVal.minimum, staticVal.maximum, staticVal.step);
+					}
+					else
+					{
+						auto data = typename std::remove_pointer_t<decltype(widget)>::Data{};
+						for (auto i = size_t{ 0u }; i < stepsCount; ++i)
+						{
+							auto const possibleValue = static_cast<value_size>(staticVal.minimum + i * staticVal.step);
+							data.insert(possibleValue);
+						}
+						widget->setAllData(data,
+							[](auto const& value)
+							{
+								return QString::number(value);
+							});
 					}
 
 					// Send changes
-					connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-						[this]()
+					widget->setDataChangedHandler(
+						[this, widget](auto const& previousValue, auto const& newValue)
 						{
-							sendControlValues();
+							sendControlValues(widget, previousValue);
 						});
 
-					_widgets.push_back(comboBox);
+					_widgets.push_back(widget);
 				}
 
 				++valNumber;
@@ -142,7 +159,7 @@ public:
 	}
 
 private:
-	void sendControlValues() noexcept
+	void sendControlValues(WidgetType* const changedWidget, value_size const previousValue) noexcept
 	{
 		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
 		{
@@ -150,14 +167,32 @@ private:
 
 			for (auto const* item : _widgets)
 			{
-				auto const* comboBox = static_cast<AecpCommandComboBox const*>(item);
+				auto const* widget = static_cast<WidgetType const*>(item);
 				auto value = typename DynamicValueType::value_type{};
-				value.currentValue = comboBox->currentData().value<value_size>();
+				value.currentValue = widget->getCurrentData();
 
 				values.addValue(std::move(value));
 			}
 
-			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) });
+			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) },
+				[this, changedWidget](la::avdecc::UniqueIdentifier const /*entityID*/)
+				{
+					changedWidget->setEnabled(false);
+				},
+				[this, changedWidget, previousValue](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+				{
+					QMetaObject::invokeMethod(this,
+						[this, changedWidget, previousValue, status]()
+						{
+							if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+							{
+								changedWidget->setCurrentData(previousValue);
+
+								QMessageBox::warning(changedWidget, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+							}
+							changedWidget->setEnabled(true);
+						});
+				});
 		}
 	}
 
@@ -183,11 +218,8 @@ private:
 				}
 				else
 				{
-					auto* comboBox = static_cast<AecpCommandComboBox*>(_widgets[valNumber]);
-
-					QSignalBlocker const lg{ comboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-					auto const index = comboBox->findData(QVariant::fromValue(val.currentValue));
-					comboBox->setCurrentIndex(index);
+					auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
+					widget->setCurrentData(val.currentValue);
 				}
 
 				++valNumber;
@@ -205,6 +237,8 @@ template<class StaticValueType, class DynamicValueType>
 class ArrayControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
 	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
+	static constexpr auto UseSpinBox = std::conditional_t < std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type > ();
+	using WidgetType = std::conditional_t<UseSpinBox, AecpCommandSpinBox<value_size>, AecpCommandComboBox<value_size>>;
 
 public:
 	ArrayControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
@@ -234,8 +268,8 @@ public:
 				}
 				else
 				{
-					auto* comboBox = new AecpCommandComboBox(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex);
-					parent->setItemWidget(item, 1, comboBox);
+					auto* widget = new WidgetType{};
+					parent->setItemWidget(item, 1, widget);
 
 					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
 					auto stepsCount = size_t{ 1 };
@@ -251,20 +285,34 @@ public:
 							}
 						}
 					}
-					for (auto i = size_t{ 0u }; i < stepsCount; ++i)
+
+					if constexpr (UseSpinBox)
 					{
-						auto const possibleValue = static_cast<value_size>(staticVal.minimum + i * staticVal.step);
-						comboBox->addItem(QString::number(possibleValue), QVariant::fromValue(possibleValue));
+						widget->setRangeAndStep(staticVal.minimum, staticVal.maximum, staticVal.step);
+					}
+					else
+					{
+						auto data = typename std::remove_pointer_t<decltype(widget)>::Data{};
+						for (auto i = size_t{ 0u }; i < stepsCount; ++i)
+						{
+							auto const possibleValue = static_cast<value_size>(staticVal.minimum + i * staticVal.step);
+							data.insert(possibleValue);
+						}
+						widget->setAllData(data,
+							[](auto const& value)
+							{
+								return QString::number(value);
+							});
 					}
 
 					// Send changes
-					connect(comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-						[this]()
+					widget->setDataChangedHandler(
+						[this, widget](auto const& previousValue, auto const& newValue)
 						{
-							sendControlValues();
+							sendControlValues(widget, previousValue);
 						});
 
-					_widgets.push_back(comboBox);
+					_widgets.push_back(widget);
 				}
 
 				++valNumber;
@@ -281,7 +329,7 @@ public:
 	}
 
 private:
-	void sendControlValues() noexcept
+	void sendControlValues(WidgetType* const changedWidget, value_size const previousValue) noexcept
 	{
 		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
 		{
@@ -289,11 +337,29 @@ private:
 
 			for (auto const* item : _widgets)
 			{
-				auto const* comboBox = static_cast<AecpCommandComboBox const*>(item);
-				values.currentValues.push_back(comboBox->currentData().value<value_size>());
+				auto const* widget = static_cast<WidgetType const*>(item);
+				values.currentValues.push_back(widget->getCurrentData());
 			}
 
-			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) });
+			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) },
+				[this, changedWidget](la::avdecc::UniqueIdentifier const /*entityID*/)
+				{
+					changedWidget->setEnabled(false);
+				},
+				[this, changedWidget, previousValue](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+				{
+					QMetaObject::invokeMethod(this,
+						[this, changedWidget, previousValue, status]()
+						{
+							if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+							{
+								changedWidget->setCurrentData(previousValue);
+
+								QMessageBox::warning(changedWidget, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+							}
+							changedWidget->setEnabled(true);
+						});
+				});
 		}
 	}
 
@@ -319,11 +385,8 @@ private:
 				}
 				else
 				{
-					auto* comboBox = static_cast<AecpCommandComboBox*>(_widgets[valNumber]);
-
-					QSignalBlocker const lg{ comboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-					auto const index = comboBox->findData(QVariant::fromValue(val));
-					comboBox->setCurrentIndex(index);
+					auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
+					widget->setCurrentData(val);
 				}
 
 				++valNumber;
@@ -342,6 +405,7 @@ class UTF8ControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWi
 	//using value_size = typename DynamicValueType::control_value_details_traits::size_type;
 	using StaticValueType = la::avdecc::entity::model::UTF8StringValueStatic;
 	using DynamicValueType = la::avdecc::entity::model::UTF8StringValueDynamic;
+	using WidgetType = AecpCommandTextEntry;
 
 public:
 	UTF8ControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
@@ -372,17 +436,17 @@ public:
 			}
 			else
 			{
-				auto* textEntry = new AecpCommandTextEntry(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex, text, avdecc::ControlUTF8StringValidator::getSharedInstance());
-				parent->setItemWidget(item, 1, textEntry);
+				auto* widget = new WidgetType{ text, avdecc::ControlUTF8StringValidator::getSharedInstance() };
+				parent->setItemWidget(item, 1, widget);
 
 				// Send changes
-				connect(textEntry, &AecpCommandTextEntry::validated, textEntry,
-					[this](QString const& /*oldText*/, QString const& /*newText*/)
+				widget->setDataChangedHandler(
+					[this, widget](QString const& oldText, QString const& /*newText*/)
 					{
-						sendControlValues();
+						sendControlValues(widget, oldText);
 					});
 
-				_widget = textEntry;
+				_widget = widget;
 			}
 
 			_isValid = true;
@@ -396,16 +460,34 @@ public:
 	}
 
 private:
-	void sendControlValues() noexcept
+	void sendControlValues(WidgetType* const changedWidget, QString const& previousValue) noexcept
 	{
 		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
 		{
 			auto values = DynamicValueType{};
 
-			auto const* textEntry = static_cast<AecpCommandTextEntry const*>(_widget);
-			auto data = textEntry->text().toUtf8();
+			auto const* widget = static_cast<WidgetType const*>(_widget);
+			auto data = widget->getCurrentData().toUtf8();
 			std::memcpy(values.currentValue.data(), data.constData(), std::min(static_cast<size_t>(data.size()), values.currentValue.size()));
-			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) });
+			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) },
+				[this, changedWidget](la::avdecc::UniqueIdentifier const /*entityID*/)
+				{
+					changedWidget->setEnabled(false);
+				},
+				[this, changedWidget, previousValue](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+				{
+					QMetaObject::invokeMethod(this,
+						[this, changedWidget, previousValue, status]()
+						{
+							if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+							{
+								changedWidget->setCurrentData(previousValue);
+
+								QMessageBox::warning(changedWidget, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+							}
+							changedWidget->setEnabled(true);
+						});
+				});
 		}
 	}
 
@@ -430,10 +512,8 @@ private:
 			}
 			else
 			{
-				auto* textEntry = static_cast<AecpCommandTextEntry*>(_widget);
-
-				QSignalBlocker const lg{ textEntry }; // Block internal signals
-				textEntry->setText(text);
+				auto* widget = static_cast<WidgetType*>(_widget);
+				widget->setCurrentData(text);
 			}
 		}
 	}

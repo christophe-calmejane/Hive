@@ -612,22 +612,22 @@ void processMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::en
 		{
 			if constexpr (Remove)
 			{
-				manager.removeStreamPortInputAudioMappings(entityID, streamPortIndex, m, handler);
+				manager.removeStreamPortInputAudioMappings(entityID, streamPortIndex, m, nullptr, handler);
 			}
 			else
 			{
-				manager.addStreamPortInputAudioMappings(entityID, streamPortIndex, m, handler);
+				manager.addStreamPortInputAudioMappings(entityID, streamPortIndex, m, nullptr, handler);
 			}
 		}
 		else if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 		{
 			if constexpr (Remove)
 			{
-				manager.removeStreamPortOutputAudioMappings(entityID, streamPortIndex, m, handler);
+				manager.removeStreamPortOutputAudioMappings(entityID, streamPortIndex, m, nullptr, handler);
 			}
 			else
 			{
-				manager.addStreamPortOutputAudioMappings(entityID, streamPortIndex, m, handler);
+				manager.addStreamPortOutputAudioMappings(entityID, streamPortIndex, m, nullptr, handler);
 			}
 		}
 		else

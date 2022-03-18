@@ -50,15 +50,13 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 	la::avdecc::entity::model::StreamNodeDynamicModel const* const dynamicModel = inputDynamicModel ? static_cast<decltype(dynamicModel)>(inputDynamicModel) : static_cast<decltype(dynamicModel)>(outputDynamicModel);
 
-	auto* formatComboBox = new StreamFormatComboBox{ _entityID, _streamIndex };
+	auto* formatComboBox = new StreamFormatComboBox{};
 	formatComboBox->setStreamFormats(staticModel->formats);
-	formatComboBox->setCurrentStreamFormat(dynamicModel->streamFormat);
-
 	parent->setItemWidget(currentFormatItem, 1, formatComboBox);
 
 	// Send changes
-	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, formatComboBox,
-		[this, parent, formatComboBox](la::avdecc::entity::model::StreamFormat const previousStreamFormat, la::avdecc::entity::model::StreamFormat const newStreamFormat)
+	formatComboBox->setDataChangedHandler(
+		[this, parent, formatComboBox](auto const& previousStreamFormat, auto const& newStreamFormat)
 		{
 			if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
@@ -73,7 +71,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 			}
 			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, newStreamFormat);
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, newStreamFormat, formatComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat), formatComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat, previousStreamFormat));
 			}
 		});
 
@@ -82,8 +80,13 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		[this, formatComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 		{
 			if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
+			{
 				formatComboBox->setCurrentStreamFormat(streamFormat);
+			}
 		});
+
+	// Update now
+	formatComboBox->setCurrentStreamFormat(dynamicModel->streamFormat);
 
 	//
 

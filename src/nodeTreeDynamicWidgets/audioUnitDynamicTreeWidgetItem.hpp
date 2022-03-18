@@ -44,5 +44,5 @@ private:
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::AudioUnitIndex const _audioUnitIndex{ 0u };
 
-	AecpCommandComboBox* _samplingRate{ nullptr };
+	AecpCommandComboBox<la::avdecc::entity::model::SamplingRate>* _samplingRate{ nullptr };
 };
