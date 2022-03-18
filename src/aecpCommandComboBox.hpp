@@ -155,6 +155,7 @@ protected:
 	using QComboBox::addItem;
 	using QComboBox::setCurrentIndex;
 	using QComboBox::currentData;
+	using QComboBox::currentIndexChanged;
 	QWidget* _parent{ nullptr };
 	Data _data{};
 	DataType _previousData{};

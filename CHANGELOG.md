@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Warning popup for _Media Clock Management Dialog_ domain SampleRate changes that conflict with entity current StreamFormat settings
 
 ### Changed
-- All editable text fields now restore the previous value in case the entity rejects the new one
+- Control descriptors now use a SpinBox instead of a ComboBox for improved performance and usability
+- All editable fields (text, combobox, spinbox) now restore the previous value in case the entity rejects the new one
 
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground

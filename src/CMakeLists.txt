@@ -181,7 +181,6 @@ set(SOURCE_FILES_COMMON
 	discoveredEntitiesView.cpp
 	mainWindow.cpp
 	settingsDialog.cpp
-	aecpCommandTextEntry.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
 	activeNetworkInterfacesModel.cpp

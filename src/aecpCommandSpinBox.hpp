@@ -119,6 +119,7 @@ protected:
 	using QSpinBox::setMaximum;
 	using QSpinBox::setRange;
 	using QSpinBox::setSingleStep;
+	using QSpinBox::valueChanged;
 	QWidget* _parent{ nullptr };
 	Data _data{};
 	DataType _previousData{};

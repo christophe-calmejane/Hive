@@ -41,8 +41,6 @@
 #include <vector>
 #include <cstring> // std::memcpy
 
-using namespace experimental;
-
 class ControlValuesDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
@@ -61,7 +59,7 @@ template<class StaticValueType, class DynamicValueType>
 class LinearControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
 	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
-	static constexpr auto UseSpinBox = std::conditional_t<std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type>();
+	static constexpr auto UseSpinBox = std::conditional_t < std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type > ();
 	using WidgetType = std::conditional_t<UseSpinBox, AecpCommandSpinBox<value_size>, AecpCommandComboBox<value_size>>;
 
 public:
@@ -239,7 +237,7 @@ template<class StaticValueType, class DynamicValueType>
 class ArrayControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
 	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
-	static constexpr auto UseSpinBox = std::conditional_t<std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type>();
+	static constexpr auto UseSpinBox = std::conditional_t < std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type > ();
 	using WidgetType = std::conditional_t<UseSpinBox, AecpCommandSpinBox<value_size>, AecpCommandComboBox<value_size>>;
 
 public:
@@ -312,8 +310,7 @@ public:
 						[this, widget](auto const& previousValue, auto const& newValue)
 						{
 							sendControlValues(widget, previousValue);
-						}
-					);
+						});
 
 					_widgets.push_back(widget);
 				}
@@ -408,6 +405,7 @@ class UTF8ControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWi
 	//using value_size = typename DynamicValueType::control_value_details_traits::size_type;
 	using StaticValueType = la::avdecc::entity::model::UTF8StringValueStatic;
 	using DynamicValueType = la::avdecc::entity::model::UTF8StringValueDynamic;
+	using WidgetType = AecpCommandTextEntry;
 
 public:
 	UTF8ControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
@@ -438,17 +436,17 @@ public:
 			}
 			else
 			{
-				auto* textEntry = new AecpCommandTextEntry(entityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl, controlIndex, text, avdecc::ControlUTF8StringValidator::getSharedInstance());
-				parent->setItemWidget(item, 1, textEntry);
+				auto* widget = new WidgetType{ text, avdecc::ControlUTF8StringValidator::getSharedInstance() };
+				parent->setItemWidget(item, 1, widget);
 
 				// Send changes
-				connect(textEntry, &AecpCommandTextEntry::validated, textEntry,
-					[this](QString const& /*oldText*/, QString const& /*newText*/)
+				widget->setDataChangedHandler(
+					[this, widget](QString const& oldText, QString const& /*newText*/)
 					{
-						sendControlValues();
+						sendControlValues(widget, oldText);
 					});
 
-				_widget = textEntry;
+				_widget = widget;
 			}
 
 			_isValid = true;
@@ -462,16 +460,34 @@ public:
 	}
 
 private:
-	void sendControlValues() noexcept
+	void sendControlValues(WidgetType* const changedWidget, QString const& previousValue) noexcept
 	{
 		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
 		{
 			auto values = DynamicValueType{};
 
-			auto const* textEntry = static_cast<AecpCommandTextEntry const*>(_widget);
-			auto data = textEntry->text().toUtf8();
+			auto const* widget = static_cast<WidgetType const*>(_widget);
+			auto data = widget->getCurrentData().toUtf8();
 			std::memcpy(values.currentValue.data(), data.constData(), std::min(static_cast<size_t>(data.size()), values.currentValue.size()));
-			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) });
+			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) },
+				[this, changedWidget](la::avdecc::UniqueIdentifier const /*entityID*/)
+				{
+					changedWidget->setEnabled(false);
+				},
+				[this, changedWidget, previousValue](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+				{
+					QMetaObject::invokeMethod(this,
+						[this, changedWidget, previousValue, status]()
+						{
+							if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+							{
+								changedWidget->setCurrentData(previousValue);
+
+								QMessageBox::warning(changedWidget, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+							}
+							changedWidget->setEnabled(true);
+						});
+				});
 		}
 	}
 
@@ -496,10 +512,8 @@ private:
 			}
 			else
 			{
-				auto* textEntry = static_cast<AecpCommandTextEntry*>(_widget);
-
-				QSignalBlocker const lg{ textEntry }; // Block internal signals
-				textEntry->setText(text);
+				auto* widget = static_cast<WidgetType*>(_widget);
+				widget->setCurrentData(text);
 			}
 		}
 	}

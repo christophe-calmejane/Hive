@@ -1010,27 +1010,27 @@ public:
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, itemName);
 
-		auto* textEntry = new AecpCommandTextEntry(_controlledEntityID, commandType, descriptorIndex, itemValue, avdecc::AvdeccStringValidator::getSharedInstance());
+		auto* textEntry = new AecpCommandTextEntry(itemValue, avdecc::AvdeccStringValidator::getSharedInstance());
 
 		q->setItemWidget(item, 1, textEntry);
 
-		connect(textEntry, &AecpCommandTextEntry::validated, textEntry,
-			[this, commandType, descriptorIndex, customData](QString const& oldText, QString const& newText)
+		textEntry->setDataChangedHandler(
+			[this, textEntry, commandType, descriptorIndex, customData](QString const& oldText, QString const& newText)
 			{
 				// Send changes
 				switch (commandType)
 				{
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName:
-						hive::modelsLibrary::ControllerManager::getInstance().setEntityName(_controlledEntityID, newText);
+						hive::modelsLibrary::ControllerManager::getInstance().setEntityName(_controlledEntityID, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						break;
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
-						hive::modelsLibrary::ControllerManager::getInstance().setEntityGroupName(_controlledEntityID, newText);
+						hive::modelsLibrary::ControllerManager::getInstance().setEntityGroupName(_controlledEntityID, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName, oldText));
 						break;
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName:
 						try
 						{
 							auto const configIndex = std::any_cast<la::avdecc::entity::model::ConfigurationIndex>(customData);
-							hive::modelsLibrary::ControllerManager::getInstance().setConfigurationName(_controlledEntityID, configIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setConfigurationName(_controlledEntityID, configIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName, oldText));
 						}
 						catch (...)
 						{
@@ -1042,7 +1042,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AudioUnitIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const audioUnitIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitName(_controlledEntityID, configIndex, audioUnitIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitName(_controlledEntityID, configIndex, audioUnitIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName, oldText));
 						}
 						catch (...)
 						{
@@ -1056,9 +1056,13 @@ public:
 							auto const streamType = std::get<1>(customTuple);
 							auto const streamIndex = std::get<2>(customTuple);
 							if (streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
-								hive::modelsLibrary::ControllerManager::getInstance().setStreamInputName(_controlledEntityID, configIndex, streamIndex, newText);
+							{
+								hive::modelsLibrary::ControllerManager::getInstance().setStreamInputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							}
 							else if (streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-								hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputName(_controlledEntityID, configIndex, streamIndex, newText);
+							{
+								hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							}
 						}
 						catch (...)
 						{
@@ -1070,7 +1074,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AvbInterfaceIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const avbInterfaceIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAvbInterfaceName(_controlledEntityID, configIndex, avbInterfaceIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setAvbInterfaceName(_controlledEntityID, configIndex, avbInterfaceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1082,7 +1086,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockSourceIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const clockSourceIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setClockSourceName(_controlledEntityID, configIndex, clockSourceIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setClockSourceName(_controlledEntityID, configIndex, clockSourceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1094,7 +1098,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::MemoryObjectIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const memoryObjectIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setMemoryObjectName(_controlledEntityID, configIndex, memoryObjectIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setMemoryObjectName(_controlledEntityID, configIndex, memoryObjectIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1106,7 +1110,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClusterIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const audioClusterIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAudioClusterName(_controlledEntityID, configIndex, audioClusterIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setAudioClusterName(_controlledEntityID, configIndex, audioClusterIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1118,7 +1122,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ControlIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const controlIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setControlName(_controlledEntityID, configIndex, controlIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setControlName(_controlledEntityID, configIndex, controlIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1130,7 +1134,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockDomainIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const clockDomainIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setClockDomainName(_controlledEntityID, configIndex, clockDomainIndex, newText);
+							hive::modelsLibrary::ControllerManager::getInstance().setClockDomainName(_controlledEntityID, configIndex, clockDomainIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1140,7 +1144,7 @@ public:
 						try
 						{
 							auto const associationID = static_cast<la::avdecc::UniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::UniqueIdentifier::value_type>(newText.toStdString().c_str()));
-							hive::modelsLibrary::ControllerManager::getInstance().setAssociationID(_controlledEntityID, associationID);
+							hive::modelsLibrary::ControllerManager::getInstance().setAssociationID(_controlledEntityID, associationID, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (std::invalid_argument const& e)
 						{
@@ -1162,7 +1166,7 @@ public:
 						[this, textEntry](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
 						{
 							if (entityID == _controlledEntityID)
-								textEntry->setText(entityName);
+								textEntry->setCurrentData(entityName);
 						});
 					break;
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
@@ -1170,7 +1174,7 @@ public:
 						[this, textEntry](la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName)
 						{
 							if (entityID == _controlledEntityID)
-								textEntry->setText(entityGroupName);
+								textEntry->setCurrentData(entityGroupName);
 						});
 					break;
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName:
@@ -1180,7 +1184,7 @@ public:
 						[this, textEntry, configIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& configurationName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex)
-								textEntry->setText(configurationName);
+								textEntry->setCurrentData(configurationName);
 						});
 					break;
 				}
@@ -1193,7 +1197,7 @@ public:
 						[this, textEntry, configIndex, auIndex = audioUnitIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& audioUnitName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && audioUnitIndex == auIndex)
-								textEntry->setText(audioUnitName);
+								textEntry->setCurrentData(audioUnitName);
 						});
 					break;
 				}
@@ -1207,7 +1211,7 @@ public:
 						[this, textEntry, configIndex, streamType, strIndex = streamIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& streamName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && descriptorType == streamType && streamIndex == strIndex)
-								textEntry->setText(streamName);
+								textEntry->setCurrentData(streamName);
 						});
 					break;
 				}
@@ -1220,7 +1224,7 @@ public:
 						[this, textEntry, configIndex, aiIndex = avbInterfaceIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& avbInterfaceName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && avbInterfaceIndex == aiIndex)
-								textEntry->setText(avbInterfaceName);
+								textEntry->setCurrentData(avbInterfaceName);
 						});
 					break;
 				}
@@ -1233,7 +1237,7 @@ public:
 						[this, textEntry, configIndex, csIndex = clockSourceIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& clockSourceName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && clockSourceIndex == csIndex)
-								textEntry->setText(clockSourceName);
+								textEntry->setCurrentData(clockSourceName);
 						});
 					break;
 				}
@@ -1246,7 +1250,7 @@ public:
 						[this, textEntry, configIndex, moIndex = memoryObjectIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& memoryObjectName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && memoryObjectIndex == moIndex)
-								textEntry->setText(memoryObjectName);
+								textEntry->setCurrentData(memoryObjectName);
 						});
 					break;
 				}
@@ -1259,7 +1263,7 @@ public:
 						[this, textEntry, configIndex, acIndex = audioClusterIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && audioClusterIndex == acIndex)
-								textEntry->setText(audioClusterName);
+								textEntry->setCurrentData(audioClusterName);
 						});
 					break;
 				}
@@ -1272,7 +1276,7 @@ public:
 						[this, textEntry, configIndex, cdIndex = controlIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && controlIndex == cdIndex)
-								textEntry->setText(controlName);
+								textEntry->setCurrentData(controlName);
 						});
 					break;
 				}
@@ -1285,7 +1289,7 @@ public:
 						[this, textEntry, configIndex, cdIndex = clockDomainIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& clockDomainName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && clockDomainIndex == cdIndex)
-								textEntry->setText(clockDomainName);
+								textEntry->setCurrentData(clockDomainName);
 						});
 					break;
 				}
@@ -1296,7 +1300,7 @@ public:
 						{
 							if (entityID == _controlledEntityID)
 							{
-								textEntry->setText(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
+								textEntry->setCurrentData(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
 							}
 						});
 					break;

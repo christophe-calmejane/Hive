@@ -25,23 +25,8 @@
 #include <QMessageBox>
 #include <QString>
 
-// TextEntry that watches an Aecp command result, restoring the previous value if the command fails
-class AecpCommandTextEntryPrivate;
-class AecpCommandTextEntry : public qtMate::widgets::TextEntry
-{
-	Q_OBJECT
+#include <functional>
 
-public:
-	AecpCommandTextEntry(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& text, std::optional<QValidator*> validator = std::nullopt, QWidget* parent = nullptr);
-	~AecpCommandTextEntry();
-
-private:
-	AecpCommandTextEntryPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(AecpCommandTextEntry);
-};
-
-namespace experimental
-{
 class AecpCommandTextEntry : public qtMate::widgets::TextEntry
 {
 public:
@@ -117,8 +102,8 @@ public:
 protected:
 	using qtMate::widgets::TextEntry::setText;
 	using qtMate::widgets::TextEntry::text;
+	using qtMate::widgets::TextEntry::validated;
 	QWidget* _parent{ nullptr };
 	DataType _previousData{};
 	DataChangedHandler _dataChangedHandler{};
 };
-} // namespace experimental
