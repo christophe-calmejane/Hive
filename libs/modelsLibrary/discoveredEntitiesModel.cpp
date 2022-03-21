@@ -99,6 +99,32 @@ private:
 	using EntityRowMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::size_t, la::avdecc::UniqueIdentifier::hash>;
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
 
+	ProtocolCompatibility computeProtocolCompatibility(std::optional<la::avdecc::entity::model::MilanInfo> const& milanInfo, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags)
+	{
+		if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
+		{
+			return ProtocolCompatibility::Misbehaving;
+		}
+		else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto const isRedundant = milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy);
+			auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= 0x01000000;
+
+			if (isCertifiedV1)
+			{
+				return isRedundant ? ProtocolCompatibility::MilanCertifiedRedundant : ProtocolCompatibility::MilanCertified;
+			}
+
+			return isRedundant ? ProtocolCompatibility::MilanRedundant : ProtocolCompatibility::Milan;
+		}
+		else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
+		{
+			return ProtocolCompatibility::IEEE;
+		}
+
+		return ProtocolCompatibility::NotCompliant;
+	}
+
 	inline bool isIndexValid(std::size_t const index) const noexcept
 	{
 		return index < _entities.size();
@@ -189,7 +215,7 @@ private:
 				}
 
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), entity.getCompatibilityFlags(), e.getEntityCapabilities(), entity.getAcquireState(), entity.getOwningControllerID(), entity.getLockState(), entity.getLockingControllerID(), gptpInfo, e.getAssociationID() };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), entity.getAcquireState(), entity.getOwningControllerID(), entity.getLockState(), entity.getLockingControllerID(), gptpInfo, e.getAssociationID() };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -297,8 +323,8 @@ private:
 				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				if (auto controlledEntity = manager.getControlledEntity(entityID))
 				{
-					data.compatibility = compatibilityFlags;
 					data.milanInfo = controlledEntity->getMilanInfo();
+					data.protocolCompatibility = computeProtocolCompatibility(data.milanInfo, compatibilityFlags);
 
 					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::Compatibility });
 				}

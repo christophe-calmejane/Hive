@@ -59,7 +59,9 @@ enum class Compatibility
 	NotCompliant,
 	IEEE,
 	Milan,
+	MilanCertified,
 	MilanRedundant,
+	MilanCertifiedRedundant,
 	Misbehaving,
 };
 
@@ -84,12 +86,15 @@ Compatibility computeCompatibility(std::optional<la::avdecc::entity::model::Mila
 	}
 	else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 	{
-		if (milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
+		auto const isRedundant = milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy);
+		auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= 0x01000000;
+
+		if (isCertifiedV1)
 		{
-			return Compatibility::MilanRedundant;
+			return isRedundant ? Compatibility::MilanCertifiedRedundant : Compatibility::MilanCertified;
 		}
 
-		return Compatibility::Milan;
+		return isRedundant ? Compatibility::MilanRedundant : Compatibility::Milan;
 	}
 	else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
 	{
@@ -363,7 +368,7 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityLogo)
 		{
-			if (role == hive::widgetModelsLibrary::ImageItemDelegate::ImageRole)
+			if (role == hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole || role == hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole)
 			{
 				if (data.aemSupported)
 				{
@@ -376,11 +381,23 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
 				{
 					try
 					{
-						return _compatibilityImages.at(data.compatibility);
+						return _compatibilityImagesLight.at(data.compatibility);
+					}
+					catch (std::out_of_range const&)
+					{
+						AVDECC_ASSERT(false, "Image missing");
+						return {};
+					}
+				}
+				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
+				{
+					try
+					{
+						return _compatibilityImagesDark.at(data.compatibility);
 					}
 					catch (std::out_of_range const&)
 					{
@@ -396,6 +413,9 @@ public:
 						case Compatibility::Milan:
 						case Compatibility::MilanRedundant:
 							return "MILAN compatible";
+						case Compatibility::MilanCertified:
+						case Compatibility::MilanCertifiedRedundant:
+							return "MILAN certified";
 						case Compatibility::IEEE:
 							return "IEEE 1722.1 compatible";
 						default:
@@ -409,7 +429,8 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
 				{
 					try
 					{
@@ -431,7 +452,8 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
 				{
 					try
 					{
@@ -792,7 +814,7 @@ private:
 			data.acquireState = computeAcquireState(acquireState);
 			data.acquireStateTooltip = helper::acquireStateToString(acquireState, owningEntity);
 
-			dataChanged(*row, ControllerModel::Column::AcquireState, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+			dataChanged(*row, ControllerModel::Column::AcquireState, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 		}
 	}
 
@@ -805,7 +827,7 @@ private:
 			data.lockState = computeLockState(lockState);
 			data.lockStateTooltip = helper::lockStateToString(lockState, lockingEntity);
 
-			dataChanged(*row, ControllerModel::Column::LockState, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+			dataChanged(*row, ControllerModel::Column::LockState, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 		}
 	}
 
@@ -917,7 +939,7 @@ private:
 		{
 			if (auto const row = entityRow(entityID))
 			{
-				dataChanged(*row, ControllerModel::Column::EntityLogo, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+				dataChanged(*row, ControllerModel::Column::EntityLogo, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 			}
 		}
 	}
@@ -937,7 +959,7 @@ private:
 				auto const topLeft = q->createIndex(0, column, nullptr);
 				auto const bottomRight = q->createIndex(rowCount(), column, nullptr);
 
-				emit q->dataChanged(topLeft, bottomRight, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+				emit q->dataChanged(topLeft, bottomRight, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 			}
 		}
 		else if (name == settings::General_ThemeColorIndex.name)
@@ -1002,12 +1024,23 @@ private:
 	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
 	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _identifingEntities;
 
-	std::unordered_map<Compatibility, QImage> _compatibilityImages{
+	std::unordered_map<Compatibility, QImage> _compatibilityImagesLight{
 		{ Compatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
 		{ Compatibility::IEEE, QImage{ ":/ieee.png" } },
-		{ Compatibility::Milan, QImage{ ":/milan.png" } },
+		{ Compatibility::Milan, QImage{ ":/Milan_Compatible.png" } },
+		{ Compatibility::MilanCertified, QImage{ ":/Milan_Certified.png" } },
 		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
-		{ Compatibility::MilanRedundant, QImage{ ":/milan_redundant.png" } },
+		{ Compatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible.png" } },
+		{ Compatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified.png" } },
+	};
+	std::unordered_map<Compatibility, QImage> _compatibilityImagesDark{
+		{ Compatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
+		{ Compatibility::IEEE, QImage{ ":/ieee.png" } },
+		{ Compatibility::Milan, QImage{ ":/Milan_Compatible_inv.png" } },
+		{ Compatibility::MilanCertified, QImage{ ":/Milan_Certified_inv.png" } },
+		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
+		{ Compatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible_inv.png" } },
+		{ Compatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified_inv.png" } },
 	};
 	std::unordered_map<ExclusiveAccessState, QImage> _excusiveAccessStateImages{
 		{ ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },

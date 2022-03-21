@@ -69,6 +69,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 
 	// Disable vertical header row resizing
 	verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	verticalHeader()->setDefaultSectionSize(34);
 
 	// Enable sorting
 	setSortingEnabled(true);
@@ -106,7 +107,8 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 
 	// Connect all signals
 
-	// Connect the error item delegate with theme color changes
+	// Connect the item delegates with theme color changes
+	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_imageItemDelegate, &hive::widgetModelsLibrary::ImageItemDelegate::setThemeColorName);
 	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
 	// Listen for entity going offline

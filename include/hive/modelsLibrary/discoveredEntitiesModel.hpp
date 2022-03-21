@@ -41,6 +41,17 @@ class DiscoveredEntitiesAbstractTableModel;
 class DiscoveredEntitiesModel
 {
 public:
+	enum class ProtocolCompatibility
+	{
+		NotCompliant,
+		IEEE,
+		Milan,
+		MilanCertified,
+		MilanRedundant,
+		MilanCertifiedRedundant,
+		Misbehaving,
+	};
+
 	struct GptpInfo
 	{
 		std::optional<la::avdecc::UniqueIdentifier> grandmasterID;
@@ -60,7 +71,7 @@ public:
 		QString name{};
 		QString groupName{};
 		bool isSubscribedToUnsol{ false };
-		la::avdecc::controller::ControlledEntity::CompatibilityFlags compatibility{};
+		ProtocolCompatibility protocolCompatibility{ ProtocolCompatibility::NotCompliant };
 		la::avdecc::entity::EntityCapabilities entityCapabilities{};
 		la::avdecc::controller::model::AcquireState acquireState{ la::avdecc::controller::model::AcquireState::Undefined };
 		la::avdecc::UniqueIdentifier owningController{};

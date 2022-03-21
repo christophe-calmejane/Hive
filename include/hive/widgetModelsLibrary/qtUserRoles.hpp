@@ -27,7 +27,8 @@ namespace widgetModelsLibrary
 {
 enum class QtUserRoles
 {
-	ImageRole = Qt::UserRole + 1001, /**< Role used for Image representation */
+	LightImageRole = Qt::UserRole + 1001, /**< Role used for Image representation as Light mode */
+	DarkImageRole, /**< Role used for Image representation as Dark mode */
 	ErrorRole, /**< Role used for Error representation */
 	SelectedEntityRole, /**< Role used for Entity Selection representation */
 };

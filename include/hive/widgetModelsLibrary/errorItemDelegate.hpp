@@ -37,7 +37,7 @@ class ErrorItemDelegate : public QStyledItemDelegate
 public:
 	static constexpr auto ErrorRole = la::avdecc::utils::to_integral(QtUserRoles::ErrorRole);
 
-	explicit ErrorItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+	ErrorItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 

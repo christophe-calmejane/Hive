@@ -19,8 +19,6 @@
 
 #include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
 
-#include <QtMate/material/color.hpp>
-
 #include <QPainter>
 
 namespace hive

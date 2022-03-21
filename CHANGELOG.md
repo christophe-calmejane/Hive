@@ -15,10 +15,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Support for Array Control values](https://github.com/christophe-calmejane/Hive/issues/114)
 - Possibility to push a news feed to Hive for important notices
 - Warning popup for _Media Clock Management Dialog_ domain SampleRate changes that conflict with entity current StreamFormat settings
+- Distinction between _Milan Compatible_ and _Milan Certified_ devices using new icons
 
 ### Changed
 - [Control descriptors now use a SpinBox instead of a ComboBox for improved performance and usability](https://github.com/christophe-calmejane/Hive/issues/116)
 - All editable fields (text, combobox, spinbox) now restore the previous value in case the entity rejects the new one
+- Using color inverted icons for Protocol Compatibility when highlighted with a dark color
 
 ### Fixed
 - First entity might be automatically inspected (but not selected) when Hive goes to foreground

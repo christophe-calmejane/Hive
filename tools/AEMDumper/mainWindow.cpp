@@ -193,7 +193,7 @@ void MainWindowImpl::createControllerView()
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
 	// The table view does not take ownership on the item delegate
-	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ _parent } };
+	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ qtMate::material::color::Name::Blue, _parent } }; // AEMDumper is currently not using Themes, so this color is just to properly init ImageItemDelegate
 	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_EntityLogo, imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_Compatibility, imageItemDelegate);
 
