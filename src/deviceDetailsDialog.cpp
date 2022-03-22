@@ -921,7 +921,9 @@ public:
 	*/
 	void comboBoxPredefinedPTChanged(QString const& /*text*/)
 	{
-		if (radioButton_PredefinedPT->isChecked() && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
+		auto const noUserSelectedLatencyYet = (_userSelectedLatency == std::nullopt);
+		auto const userSelectedLatencyChanged = (_userSelectedLatency != std::nullopt && *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt());
+		if (radioButton_PredefinedPT->isChecked() && (noUserSelectedLatencyYet || userSelectedLatencyChanged))
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
@@ -935,7 +937,9 @@ public:
 	*/
 	void radioButtonPredefinedPTClicked(bool state)
 	{
-		if (state && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
+		auto const noUserSelectedLatencyYet = (_userSelectedLatency == std::nullopt);
+		auto const userSelectedLatencyChanged = (_userSelectedLatency != std::nullopt && *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt());
+		if (state && (noUserSelectedLatencyYet || userSelectedLatencyChanged))
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
