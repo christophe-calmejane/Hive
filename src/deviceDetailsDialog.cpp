@@ -894,6 +894,7 @@ public:
 
 	/**
 	* Invoked whenever the entity name gets changed in the view.
+	* @param entityName The new entity name.
 	*/
 	void lineEditDeviceNameChanged(QString const& /*entityName*/)
 	{
@@ -914,8 +915,9 @@ public:
 	}
 
 	/**
-	* Invoked whenever the entity group name gets changed in the view.
-	* @param entityGroupName The new group name.
+	* Invoked whenever the comboboxes current value for predefined presentation time values is changed.
+	* @param text	The changed value is ignored, since the newly selected value is accessed
+	*				programmatically through the comboboxes' current QVariant value interpreted as integer.
 	*/
 	void comboBoxPredefinedPTChanged(QString const& /*text*/)
 	{
@@ -930,11 +932,12 @@ public:
 	}
 
 	/**
-	* Invoked whenever the entity group name gets changed in the view.
-	* @param entityGroupName The new group name.
+	* Invoked whenever the radio button for switching from custom presentation time value to one of the predefined ones is changed.
+	* @param state	The new radio button active state. Since only switching from custom to predefined is supported, only true is an expected value here.
 	*/
 	void radioButtonPredefinedPTClicked(bool state)
 	{
+		assert(state);
 		auto const noUserSelectedLatencyYet = (_userSelectedLatency == std::nullopt);
 		auto const userSelectedLatencyChanged = (_userSelectedLatency != std::nullopt && *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt());
 		if (state && (noUserSelectedLatencyYet || userSelectedLatencyChanged))
@@ -947,7 +950,6 @@ public:
 
 	/**
 	* Invoked whenever one of tables on the receive and transmit tabs is edited by the user.
-	* @param entityGroupName The new group name.
 	*/
 	void tableDataChanged()
 	{
