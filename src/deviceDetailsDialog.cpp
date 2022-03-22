@@ -423,32 +423,30 @@ public:
 			}
 
 			// apply the new stream info (latency)
-			if (_userSelectedLatency)
+			auto const controlledEntity = manager.getControlledEntity(_entityID);
+			if (controlledEntity)
 			{
-				auto const controlledEntity = manager.getControlledEntity(_entityID);
-				if (controlledEntity)
+				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+				for (auto const& streamOutput : configurationNode.streamOutputs)
 				{
-					auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-					for (auto const& streamOutput : configurationNode.streamOutputs)
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+					auto const streamType = streamFormatInfo->getType();
+					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
 					{
-						auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
-						auto const streamType = streamFormatInfo->getType();
-						if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
-						{
-							// skip clock stream
-							continue;
-						}
-						auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
-						if (streamLatency != *_userSelectedLatency)
-						{
-							auto streamInfo = la::avdecc::entity::model::StreamInfo{};
-							streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
-							streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+						// skip clock stream
+						continue;
+					}
+					auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
+					auto const latencyValuesValid = (streamLatency != std::nullopt && _userSelectedLatency != std::nullopt);
+					if (latencyValuesValid && *streamLatency != *_userSelectedLatency)
+					{
+						auto streamInfo = la::avdecc::entity::model::StreamInfo{};
+						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
+						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
 
-							// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
-							// TODO: needs update of library:
-							manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
-						}
+						// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
+						// TODO: needs update of library:
+						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
 					}
 				}
 			}
