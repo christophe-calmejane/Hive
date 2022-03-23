@@ -423,32 +423,30 @@ public:
 			}
 
 			// apply the new stream info (latency)
-			if (_userSelectedLatency)
+			auto const controlledEntity = manager.getControlledEntity(_entityID);
+			if (controlledEntity)
 			{
-				auto const controlledEntity = manager.getControlledEntity(_entityID);
-				if (controlledEntity)
+				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+				for (auto const& streamOutput : configurationNode.streamOutputs)
 				{
-					auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-					for (auto const& streamOutput : configurationNode.streamOutputs)
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+					auto const streamType = streamFormatInfo->getType();
+					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
 					{
-						auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
-						auto const streamType = streamFormatInfo->getType();
-						if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
-						{
-							// skip clock stream
-							continue;
-						}
-						auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
-						if (streamLatency != *_userSelectedLatency)
-						{
-							auto streamInfo = la::avdecc::entity::model::StreamInfo{};
-							streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
-							streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+						// skip clock stream
+						continue;
+					}
+					auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
+					auto const latencyValuesValid = (streamLatency != std::nullopt && _userSelectedLatency != std::nullopt);
+					if (latencyValuesValid && *streamLatency != *_userSelectedLatency)
+					{
+						auto streamInfo = la::avdecc::entity::model::StreamInfo{};
+						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
+						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
 
-							// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
-							// TODO: needs update of library:
-							manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
-						}
+						// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
+						// TODO: needs update of library:
+						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
 					}
 				}
 			}
@@ -896,6 +894,7 @@ public:
 
 	/**
 	* Invoked whenever the entity name gets changed in the view.
+	* @param entityName The new entity name.
 	*/
 	void lineEditDeviceNameChanged(QString const& /*entityName*/)
 	{
@@ -916,12 +915,15 @@ public:
 	}
 
 	/**
-	* Invoked whenever the entity group name gets changed in the view.
-	* @param entityGroupName The new group name.
+	* Invoked whenever the comboboxes current value for predefined presentation time values is changed.
+	* @param text	The changed value is ignored, since the newly selected value is accessed
+	*				programmatically through the comboboxes' current QVariant value interpreted as integer.
 	*/
 	void comboBoxPredefinedPTChanged(QString const& /*text*/)
 	{
-		if (radioButton_PredefinedPT->isChecked() && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
+		auto const noUserSelectedLatencyYet = (_userSelectedLatency == std::nullopt);
+		auto const userSelectedLatencyChanged = (_userSelectedLatency != std::nullopt && *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt());
+		if (radioButton_PredefinedPT->isChecked() && (noUserSelectedLatencyYet || userSelectedLatencyChanged))
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
@@ -930,12 +932,15 @@ public:
 	}
 
 	/**
-	* Invoked whenever the entity group name gets changed in the view.
-	* @param entityGroupName The new group name.
+	* Invoked whenever the radio button for switching from custom presentation time value to one of the predefined ones is changed.
+	* @param state	The new radio button active state. Since only switching from custom to predefined is supported, only true is an expected value here.
 	*/
 	void radioButtonPredefinedPTClicked(bool state)
 	{
-		if (state && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
+		assert(state);
+		auto const noUserSelectedLatencyYet = (_userSelectedLatency == std::nullopt);
+		auto const userSelectedLatencyChanged = (_userSelectedLatency != std::nullopt && *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt());
+		if (state && (noUserSelectedLatencyYet || userSelectedLatencyChanged))
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
@@ -945,7 +950,6 @@ public:
 
 	/**
 	* Invoked whenever one of tables on the receive and transmit tabs is edited by the user.
-	* @param entityGroupName The new group name.
 	*/
 	void tableDataChanged()
 	{
