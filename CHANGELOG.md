@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Possibility to push a news feed to Hive for important notices
 - Warning popup for _Media Clock Management Dialog_ domain SampleRate changes that conflict with entity current StreamFormat settings
 - Distinction between _Milan Compatible_ and _Milan Certified_ devices using new icons
+- Steam Input Diagnostic: Detection of MSRP latency greater than Talker's presentation time
 
 ### Changed
 - [Control descriptors now use a SpinBox instead of a ComboBox for improved performance and usability](https://github.com/christophe-calmejane/Hive/issues/116)
