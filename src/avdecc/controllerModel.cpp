@@ -266,6 +266,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::diagnosticsChanged, this, &ControllerModelPrivate::handleDiagnosticsChanged);
 
 		// Connect avdecc::mediaClock::MCDomainManager signals
 		auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
@@ -684,10 +685,12 @@ private:
 				// Update the cache
 				rebuildEntityRowMap();
 
-				// Initialize EntityWithError (only need to initialize Statistics which might change during enumeration and not trigger an event, contrary to Counters)
-				_entitiesWithErrorCounter[entityID].statisticsError = !manager.getStatisticsCounters(entityID).empty();
-
 				emit q->endInsertRows();
+
+				// Trigger Error Counters, Statistics and Diagnostics
+				// TODO: Error Counters
+				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
+				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
 			}
 		}
 		catch (...)
@@ -898,6 +901,33 @@ private:
 		}
 	}
 
+	void handleDiagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			auto const wasError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
+			auto nowInError = false;
+
+			// Clear previous streamsWithLatencyError values
+			_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+
+			// Rebuild it entirely
+			for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
+			{
+				if (isError)
+				{
+					_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
+					nowInError = true;
+				}
+			}
+
+			if (wasError != nowInError)
+			{
+				dataChanged(*row, ControllerModel::Column::EntityID);
+			}
+		}
+	}
+
 	// avdecc::mediaClock::MCDomainManager
 
 	void handleMediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const& changedEntities)
@@ -1015,9 +1045,10 @@ private:
 	{
 		bool statisticsError{ false };
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
 		constexpr bool hasError() const noexcept
 		{
-			return statisticsError || !streamsWithErrorCounter.empty();
+			return statisticsError || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
 		}
 	};
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;

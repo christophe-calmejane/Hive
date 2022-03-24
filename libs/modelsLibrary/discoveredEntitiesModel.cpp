@@ -58,6 +58,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &pImpl::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &pImpl::handleStreamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &pImpl::handleStatisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::diagnosticsChanged, this, &pImpl::handleDiagnosticsChanged);
 	}
 
 	std::optional<std::reference_wrapper<Entity const>> entity(std::size_t const index) const noexcept
@@ -90,9 +91,10 @@ private:
 	{
 		bool statisticsError{ false };
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
 		constexpr bool hasError() const noexcept
 		{
-			return statisticsError || !streamsWithErrorCounter.empty();
+			return statisticsError || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
 		}
 	};
 
@@ -226,10 +228,12 @@ private:
 				// Update the cache
 				rebuildEntityRowMap();
 
-				// Initialize EntityWithError (only need to initialize Statistics which might change during enumeration and not trigger an event, contrary to Counters)
-				_entitiesWithErrorCounter[entityID].statisticsError = !manager.getStatisticsCounters(entityID).empty();
-
 				emit _model->endInsertRows();
+
+				// Trigger Error Counters, Statistics and Diagnostics
+				// TODO: Error Counters
+				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
+				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
 			}
 		}
 		catch (...)
@@ -487,7 +491,7 @@ private:
 				_entitiesWithErrorCounter[entityID].streamsWithErrorCounter.erase(descriptorIndex);
 			}
 
-			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::StreamInput });
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::StreamInputCounters });
 		}
 	}
 
@@ -500,6 +504,35 @@ private:
 			_entitiesWithErrorCounter[entityID].statisticsError = !errorCounters.empty();
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::Statistics });
+		}
+	}
+
+	void handleDiagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics)
+	{
+		if (auto const index = indexOf(entityID))
+		{
+			auto const idx = *index;
+
+			auto const wasError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
+			auto nowInError = false;
+
+			// Clear previous streamsWithLatencyError values
+			_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+
+			// Rebuild it entirely
+			for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
+			{
+				if (isError)
+				{
+					_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
+					nowInError = true;
+				}
+			}
+
+			if (wasError != nowInError)
+			{
+				la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::StreamInputLatency });
+			}
 		}
 	}
 

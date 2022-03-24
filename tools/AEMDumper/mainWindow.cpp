@@ -193,7 +193,7 @@ void MainWindowImpl::createControllerView()
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
 	// The table view does not take ownership on the item delegate
-	auto* imageItemDelegate{ new hive::widgetModelsLibrary::ImageItemDelegate{ qtMate::material::color::Name::Blue, _parent } }; // AEMDumper is currently not using Themes, so this color is just to properly init ImageItemDelegate
+	auto* imageItemDelegate = new hive::widgetModelsLibrary::ImageItemDelegate{ qtMate::material::color::Name::DeepPurple, _parent }; // AEMDumper is not currently using Themes, so this color is just to properly init Dark Color for ImageItemDelegate
 	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_EntityLogo, imageItemDelegate);
 	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_Compatibility, imageItemDelegate);
 
@@ -384,12 +384,168 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	QMainWindow::closeEvent(event);
 }
 
+void MainWindow::dragEnterEvent([[maybe_unused]] QDragEnterEvent* event)
+{
+#ifdef DEBUG
+	for (auto const& u : event->mimeData()->urls())
+	{
+		auto const f = QFileInfo{ u.fileName() };
+		auto const ext = f.suffix();
+		if (ext == "ave" || ext == "ans" || ext == "json")
+		{
+			event->acceptProposedAction();
+			return;
+		}
+	}
+#endif // DEBUG
+}
+
+void MainWindow::dropEvent([[maybe_unused]] QDropEvent* event)
+{
+#ifdef DEBUG
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	auto const getErrorString = [](auto const error, auto const& message)
+	{
+		auto msg = QString{};
+		if (!!error)
+		{
+			switch (error)
+			{
+				case la::avdecc::jsonSerializer::DeserializationError::AccessDenied:
+					msg = "Access Denied";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::FileReadError:
+					msg = "Error Reading File";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
+					msg = "Unsupported Dump Version";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::ParseError:
+					msg = QString("Parse Error: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::MissingKey:
+					msg = QString("Missing Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidKey:
+					msg = QString("Invalid Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidValue:
+					msg = QString("Invalid Value: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::OtherError:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::DuplicateEntityID:
+					msg = QString("An Entity already exists with the same EntityID: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotCompliant:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::Incomplete:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
+					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InternalError:
+					msg = QString("Internal Error: %1").arg(message.c_str());
+					break;
+				default:
+					AVDECC_ASSERT(false, "Unknown Error");
+					msg = "Unknown Error";
+					break;
+			}
+		}
+		return msg;
+	};
+
+	auto const loadEntity = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
+	};
+
+	auto const loadNetworkState = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
+	};
+
+	for (auto const& u : event->mimeData()->urls())
+	{
+		auto const f = u.toLocalFile();
+		auto const fi = QFileInfo{ f };
+		auto const ext = fi.suffix();
+
+		// AVDECC Virtual Entity
+		if (ext == "ave")
+		{
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+			auto [error, message] = loadEntity(f, flags);
+			if (!!error)
+			{
+				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+				{
+					auto const choice = QMessageBox::question(this, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+					if (choice == QMessageBox::StandardButton::Yes)
+					{
+						flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+						auto const result = loadEntity(f, flags);
+						error = std::get<0>(result);
+						message = std::get<1>(result);
+						// Fallthrough to warning message
+					}
+				}
+				if (!!error)
+				{
+					QMessageBox::warning(this, "Failed to load Entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+				}
+			}
+		}
+
+		// AVDECC Network State
+		else if (ext == "ans")
+		{
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+			auto [error, message] = loadNetworkState(f, flags);
+			if (!!error)
+			{
+				QMessageBox::warning(this, "Failed to load Network State", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
+			}
+		}
+
+		// Any kind of file, we have to autodetect
+		else if (ext == "json")
+		{
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+			// Start with AVE file type
+			auto [error, message] = loadEntity(f, flags);
+			if (!!error)
+			{
+				// Then try ANS file type
+				loadNetworkState(f, flags);
+			}
+		}
+	}
+#endif // DEBUG
+}
+
+
 MainWindow::MainWindow(QWidget* parent)
 	: QMainWindow(parent)
 	, _pImpl(new MainWindowImpl(this))
 {
 	// Set title
 	setWindowTitle(QCoreApplication::applicationName() + " - Version " + QCoreApplication::applicationVersion());
+
+#ifdef DEBUG
+	// Register AcceptDrops so we can drop VirtualEntities as JSON
+	setAcceptDrops(true);
+#endif
 }
 
 MainWindow::~MainWindow() noexcept

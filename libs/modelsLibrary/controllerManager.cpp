@@ -39,13 +39,13 @@ public:
 	using SharedController = std::shared_ptr<la::avdecc::controller::Controller>;
 	using SharedConstController = std::shared_ptr<la::avdecc::controller::Controller const>;
 
-	class ErrorCounterTracker
+	class EntityDataCache
 	{
-		class InitCounterVisitor : public la::avdecc::controller::model::EntityModelVisitor
+		class InitVisitor : public la::avdecc::controller::model::EntityModelVisitor
 		{
 		public:
-			InitCounterVisitor(ErrorCounterTracker& errorCounterTracker)
-				: _errorCounterTracker{ errorCounterTracker }
+			InitVisitor(EntityDataCache& entityCache)
+				: _entityCache{ entityCache }
 			{
 			}
 
@@ -56,15 +56,24 @@ public:
 				// Initialize internal counter value, always setting lastClearCount to 0 (Statistics counters always start at 0 in the Controller, contrary to endpoint Counters) so that we directly see any error during enumeration
 				{
 					auto const counter = entity->getAecpRetryCounter();
-					_errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpRetries] = StatisticsCounterInfo{ counter, 0u };
+					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpRetries] = StatisticsCounterInfo{ counter, 0u };
 				}
 				{
 					auto const counter = entity->getAecpTimeoutCounter();
-					_errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpTimeouts] = StatisticsCounterInfo{ counter, 0u };
+					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpTimeouts] = StatisticsCounterInfo{ counter, 0u };
 				}
 				{
 					auto const counter = entity->getAecpUnexpectedResponseCounter();
-					_errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses] = StatisticsCounterInfo{ counter, 0u };
+					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses] = StatisticsCounterInfo{ counter, 0u };
+				}
+
+				// Get diagnostics
+				_entityCache._diagnostics = entity->getDiagnostics();
+
+				// Process each streams and update the LatencyError state
+				for (auto const& [streamIndex, isError] : _entityCache._diagnostics.streamInputOverLatency)
+				{
+					_entityCache._streamInputLatencyErrors[streamIndex] = isError;
 				}
 			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
@@ -74,21 +83,21 @@ public:
 					for (auto const [flag, counter] : *node.dynamicModel->counters)
 					{
 						// Initialize internal counter value
-						_errorCounterTracker._streamInputCounters[node.descriptorIndex][flag] = ErrorCounterInfo{ counter, counter };
+						_entityCache._streamInputCounters[node.descriptorIndex][flag] = ErrorCounterInfo{ counter, counter };
 					}
 				}
 			}
 
 		private:
-			ErrorCounterTracker& _errorCounterTracker;
+			EntityDataCache& _entityCache;
 		};
 
 		class ClearCounterVisitor : public la::avdecc::controller::model::EntityModelVisitor
 		{
 		public:
-			ClearCounterVisitor(ControllerManager& manager, ErrorCounterTracker& errorCounterTracker)
+			ClearCounterVisitor(ControllerManager& manager, EntityDataCache& entityCache)
 				: _manager{ manager }
-				, _errorCounterTracker{ errorCounterTracker }
+				, _entityCache{ entityCache }
 			{
 			}
 
@@ -97,22 +106,22 @@ public:
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityNode const& /*node*/) noexcept override
 			{
 				{
-					auto& counterInfo = _errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpRetries];
+					auto& counterInfo = _entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpRetries];
 					counterInfo.lastClearCount = counterInfo.currentCount;
 				}
 				{
-					auto& counterInfo = _errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpTimeouts];
+					auto& counterInfo = _entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpTimeouts];
 					counterInfo.lastClearCount = counterInfo.currentCount;
 				}
 				{
-					auto& counterInfo = _errorCounterTracker._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses];
+					auto& counterInfo = _entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses];
 					counterInfo.lastClearCount = counterInfo.currentCount;
 				}
 				emit _manager.statisticsErrorCounterChanged(entity->getEntity().getEntityID(), {});
 			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
-				for (auto& counterInfoKV : _errorCounterTracker._streamInputCounters[node.descriptorIndex])
+				for (auto& counterInfoKV : _entityCache._streamInputCounters[node.descriptorIndex])
 				{
 					auto& counterInfo = counterInfoKV.second;
 					counterInfo.lastClearCount = counterInfo.currentCount;
@@ -122,19 +131,19 @@ public:
 
 		private:
 			ControllerManager& _manager;
-			ErrorCounterTracker& _errorCounterTracker;
+			EntityDataCache& _entityCache;
 		};
 
 	public:
-		ErrorCounterTracker()
-			: ErrorCounterTracker{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() }
+		EntityDataCache()
+			: EntityDataCache{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() }
 		{
 		}
 
-		ErrorCounterTracker(la::avdecc::UniqueIdentifier const& entityID)
+		EntityDataCache(la::avdecc::UniqueIdentifier const& entityID)
 			: _entityID{ entityID }
 		{
-			InitCounterVisitor visitor{ *this };
+			InitVisitor visitor{ *this };
 			if (auto entity = ControllerManager::getInstance().getControlledEntity(_entityID))
 			{
 				entity->accept(&visitor, false);
@@ -287,6 +296,48 @@ public:
 			}
 		}
 
+		/* ************************************************************ */
+		/* Diagnostics                                                  */
+		/* ************************************************************ */
+		la::avdecc::controller::ControlledEntity::Diagnostics const& getDiagnostics() const noexcept
+		{
+			return _diagnostics;
+		}
+
+		void setDiagnostics(la::avdecc::controller::ControlledEntity::Diagnostics const& diags) noexcept
+		{
+			_diagnostics = diags;
+		}
+
+		bool getStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+		{
+			if (auto const streamIt = _streamInputLatencyErrors.find(streamIndex); streamIt != _streamInputLatencyErrors.end())
+			{
+				return streamIt->second;
+			}
+
+			return false;
+		}
+
+		bool setStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError) noexcept
+		{
+			// Get or create value
+			auto& latencyError = _streamInputLatencyErrors[streamIndex];
+
+			auto shouldNotify = false;
+
+			// Any change
+			if (isLatencyError != latencyError)
+			{
+				shouldNotify = true;
+			}
+
+			// Always update value
+			latencyError = isLatencyError;
+
+			return shouldNotify;
+		}
+
 	private:
 		struct ErrorCounterInfo
 		{
@@ -302,6 +353,8 @@ public:
 		la::avdecc::UniqueIdentifier _entityID{ la::avdecc::UniqueIdentifier::getNullUniqueIdentifier() };
 		std::unordered_map<la::avdecc::entity::model::StreamIndex, std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, ErrorCounterInfo>> _streamInputCounters{};
 		std::unordered_map<StatisticsErrorCounterFlag, StatisticsCounterInfo> _statisticsCounters{};
+		la::avdecc::controller::ControlledEntity::Diagnostics _diagnostics{};
+		std::unordered_map<la::avdecc::entity::model::StreamIndex, bool> _streamInputLatencyErrors{};
 	};
 
 	ControllerManagerImpl() noexcept
@@ -366,6 +419,7 @@ public:
 		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>("la::avdecc::controller::ControlledEntity::InterfaceLinkStatus");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::CompatibilityFlags>("la::avdecc::controller::ControlledEntity::CompatibilityFlags");
+		qRegisterMetaType<la::avdecc::controller::ControlledEntity::Diagnostics>("la::avdecc::controller::ControlledEntity::Diagnostics");
 		qRegisterMetaType<la::avdecc::controller::model::AcquireState>("la::avdecc::controller::model::AcquireState");
 		qRegisterMetaType<la::avdecc::controller::model::LockState>("la::avdecc::controller::model::LockState");
 	}
@@ -407,7 +461,7 @@ private:
 
 		// Create the CounterTracker in this thread as it will try to lock the ControlledEntity
 		auto const entityID = entity->getEntity().getEntityID();
-		auto tracker = ErrorCounterTracker{ entityID };
+		auto tracker = EntityDataCache{ entityID };
 
 		QMetaObject::invokeMethod(this,
 			[this, entityID, tracker = std::move(tracker), enumerationTime = entity->getEnumerationTime()]()
@@ -415,7 +469,7 @@ private:
 				{
 					auto const lg = std::lock_guard{ _lock };
 					_entities.insert(entityID);
-					_entityErrorCounterTrackers[entityID] = std::move(tracker);
+					_entityDataCache[entityID] = std::move(tracker);
 				}
 
 				emit entityOnline(entityID, enumerationTime);
@@ -431,7 +485,7 @@ private:
 				{
 					auto const lg = std::lock_guard{ _lock };
 					_entities.erase(entityID);
-					_entityErrorCounterTrackers.erase(entityID);
+					_entityDataCache.erase(entityID);
 				}
 
 				emit entityOffline(entityID);
@@ -671,16 +725,16 @@ private:
 		QMetaObject::invokeMethod(this,
 			[this, entityID = entity->getEntity().getEntityID(), streamIndex, counters, checkForChange = std::move(checkForChange)]()
 			{
-				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				if (auto* entityCache = entityCachedData(entityID))
 				{
 					auto changed = false;
 					for (auto const [flag, counter] : checkForChange)
 					{
-						changed |= errorCounterFlags->setStreamInputCounter(streamIndex, flag, counter);
+						changed |= entityCache->setStreamInputCounter(streamIndex, flag, counter);
 					}
 					if (changed)
 					{
-						emit streamInputErrorCounterChanged(entityID, streamIndex, errorCounterFlags->getStreamInputErrorCounters(streamIndex));
+						emit streamInputErrorCounterChanged(entityID, streamIndex, entityCache->getStreamInputErrorCounters(streamIndex));
 					}
 				}
 
@@ -719,11 +773,11 @@ private:
 		QMetaObject::invokeMethod(this,
 			[this, entityID = entity->getEntity().getEntityID(), value]()
 			{
-				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpRetries, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpRetries, value))
 					{
-						emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
@@ -737,11 +791,11 @@ private:
 		QMetaObject::invokeMethod(this,
 			[this, entityID = entity->getEntity().getEntityID(), value]()
 			{
-				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpTimeouts, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpTimeouts, value))
 					{
-						emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
@@ -755,11 +809,11 @@ private:
 		QMetaObject::invokeMethod(this,
 			[this, entityID = entity->getEntity().getEntityID(), value]()
 			{
-				if (auto* errorCounterFlags = entityErrorCounterTracker(entityID))
+				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (errorCounterFlags->setStatisticsCounter(StatisticsErrorCounterFlag::AecpUnexpectedResponses, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpUnexpectedResponses, value))
 					{
-						emit statisticsErrorCounterChanged(entityID, errorCounterFlags->getStatisticsErrorCounters());
+						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
@@ -773,6 +827,29 @@ private:
 	virtual void onAemAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
 		emit aemAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), value);
+	}
+	// Diagnostics
+	virtual void onDiagnosticsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::Diagnostics const& diags) noexcept override
+	{
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), diags]()
+			{
+				if (auto* entityCache = entityCachedData(entityID))
+				{
+					// Process each streams and update the LatencyError state
+					for (auto const& [streamIndex, isError] : diags.streamInputOverLatency)
+					{
+						if (entityCache->setStreamInputLatencyError(streamIndex, isError))
+						{
+							emit streamInputLatencyErrorChanged(entityID, streamIndex, isError);
+						}
+					}
+				}
+
+				emit diagnosticsChanged(entityID, diags);
+			});
 	}
 
 	// ControllerManager overrides
@@ -840,7 +917,7 @@ private:
 			{
 				auto const lg = std::lock_guard{ _lock };
 				_entities.clear();
-				_entityErrorCounterTrackers.clear();
+				_entityDataCache.clear();
 			}
 
 			// Notify
@@ -939,12 +1016,12 @@ private:
 		}
 	}
 
-	ErrorCounterTracker const* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	EntityDataCache const* entityCachedData(la::avdecc::UniqueIdentifier const entityID) const noexcept
 	{
 		auto const lg = std::lock_guard{ _lock };
 
-		auto const it = _entityErrorCounterTrackers.find(entityID);
-		if (it != std::end(_entityErrorCounterTrackers))
+		auto const it = _entityDataCache.find(entityID);
+		if (it != std::end(_entityDataCache))
 		{
 			return &it->second;
 		}
@@ -952,65 +1029,83 @@ private:
 		return nullptr;
 	}
 
-	ErrorCounterTracker* entityErrorCounterTracker(la::avdecc::UniqueIdentifier const entityID) noexcept
+	EntityDataCache* entityCachedData(la::avdecc::UniqueIdentifier const entityID) noexcept
 	{
-		return const_cast<ErrorCounterTracker*>(static_cast<ControllerManagerImpl const*>(this)->entityErrorCounterTracker(entityID));
+		return const_cast<EntityDataCache*>(static_cast<ControllerManagerImpl const*>(this)->entityCachedData(entityID));
 	}
 
 	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept override
 	{
-		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		if (auto* entityCache = entityCachedData(entityID))
 		{
-			return errorCounterTracker->getStreamInputErrorCounters(streamIndex);
+			return entityCache->getStreamInputErrorCounters(streamIndex);
 		}
 		return {};
 	}
 
 	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept override
 	{
-		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		if (auto* entityCache = entityCachedData(entityID))
 		{
-			if (errorCounterTracker->clearStreamInputCounter(streamIndex, flag))
+			if (entityCache->clearStreamInputCounter(streamIndex, flag))
 			{
-				emit streamInputErrorCounterChanged(entityID, streamIndex, errorCounterTracker->getStreamInputErrorCounters(streamIndex));
+				emit streamInputErrorCounterChanged(entityID, streamIndex, entityCache->getStreamInputErrorCounters(streamIndex));
 			}
 		}
 	}
 
 	virtual void clearAllStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept override
 	{
-		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		if (auto* entityCache = entityCachedData(entityID))
 		{
-			errorCounterTracker->clearAllStreamInputCounters();
+			entityCache->clearAllStreamInputCounters();
 		}
 	}
 
 	virtual StatisticsErrorCounters getStatisticsCounters(la::avdecc::UniqueIdentifier const entityID) const noexcept override
 	{
-		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		if (auto* entityCache = entityCachedData(entityID))
 		{
-			return errorCounterTracker->getStatisticsErrorCounters();
+			return entityCache->getStatisticsErrorCounters();
 		}
 		return {};
 	}
 
 	virtual void clearStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, StatisticsErrorCounterFlag const flag) noexcept override
 	{
-		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		if (auto* entityCache = entityCachedData(entityID))
 		{
-			if (errorCounterTracker->clearStatisticsCounter(flag))
+			if (entityCache->clearStatisticsCounter(flag))
 			{
-				emit statisticsErrorCounterChanged(entityID, errorCounterTracker->getStatisticsErrorCounters());
+				emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 			}
 		}
 	}
 
 	virtual void clearAllStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept override
 	{
-		if (auto* errorCounterTracker = entityErrorCounterTracker(entityID))
+		if (auto* entityCache = entityCachedData(entityID))
 		{
-			errorCounterTracker->clearAllStatisticsCounters();
+			entityCache->clearAllStatisticsCounters();
 		}
+	}
+
+	virtual la::avdecc::controller::ControlledEntity::Diagnostics getDiagnostics(la::avdecc::UniqueIdentifier const entityID) const noexcept override
+	{
+		if (auto* entityCache = entityCachedData(entityID))
+		{
+			return entityCache->getDiagnostics();
+		}
+		return {};
+	}
+
+	virtual bool getStreamInputLatencyError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept override
+	{
+		if (auto* entityCache = entityCachedData(entityID))
+		{
+			return entityCache->getStreamInputLatencyError(streamIndex);
+		}
+		return {};
 	}
 
 	/* Discovery Protocol (ADP) */
@@ -2227,7 +2322,7 @@ private:
 
 	mutable std::mutex _lock{}; // Data members exclusive access
 	std::set<la::avdecc::UniqueIdentifier> _entities; // Online entities
-	std::unordered_map<la::avdecc::UniqueIdentifier, ErrorCounterTracker, la::avdecc::UniqueIdentifier::hash> _entityErrorCounterTrackers; // Entities error counter flags
+	std::unordered_map<la::avdecc::UniqueIdentifier, EntityDataCache, la::avdecc::UniqueIdentifier::hash> _entityDataCache; // Entities cached data
 	std::unordered_map<CommandsExecutorImpl const*, std::unique_ptr<CommandsExecutorImpl>> _commandsExecutors{};
 	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };

@@ -221,6 +221,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControlledEntityTreeWidgetPrivate::entityOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::streamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::statisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputLatencyErrorChanged, this, &ControlledEntityTreeWidgetPrivate::handleStreamInputLatencyErrorChanged);
 
 		// Configure settings observers
 		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
@@ -285,6 +286,19 @@ public:
 		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::Entity, la::avdecc::entity::model::DescriptorIndex{ 0u } }))
 		{
 			item->setHasError(!errorCounters.empty());
+		}
+	}
+
+	Q_SLOT void handleStreamInputLatencyErrorChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError)
+	{
+		if (entityID != _controlledEntityID)
+		{
+			return;
+		}
+
+		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex }))
+		{
+			item->setHasError(isLatencyError);
 		}
 	}
 
@@ -675,7 +689,8 @@ private:
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex);
-		item->setHasError(!errorCounters.empty());
+		auto const errorLatency = manager.getStreamInputLatencyError(_controlledEntityID, node.descriptorIndex);
+		item->setHasError(!errorCounters.empty() || errorLatency);
 
 		connect(&manager, &hive::modelsLibrary::ControllerManager::streamNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)

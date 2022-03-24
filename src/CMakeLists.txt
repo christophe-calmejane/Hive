@@ -73,6 +73,7 @@ set(HEADER_FILES_COMMON
 	counters/streamInputCountersTreeWidgetItem.hpp
 	counters/streamOutputCountersTreeWidgetItem.hpp
 	discoveredEntities/view.hpp
+	diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp
 	mediaClock/mediaClockManagementDialog.hpp
 	mediaClock/domainTreeModel.hpp
 	mediaClock/unassignedListModel.hpp
@@ -148,6 +149,7 @@ set(SOURCE_FILES_COMMON
 	counters/streamInputCountersTreeWidgetItem.cpp
 	counters/streamOutputCountersTreeWidgetItem.cpp
 	discoveredEntities/view.cpp
+	diagnostics/streamInputDiagnosticsTreeWidgetItem.cpp
 	mediaClock/mediaClockManagementDialog.cpp
 	mediaClock/domainTreeModel.cpp
 	mediaClock/unassignedListModel.cpp

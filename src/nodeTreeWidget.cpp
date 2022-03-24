@@ -33,6 +33,7 @@
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "counters/streamOutputCountersTreeWidgetItem.hpp"
+#include "diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp"
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
 #include "firmwareUploadDialog.hpp"
 #include "aecpCommandComboBox.hpp"
@@ -416,10 +417,18 @@ private:
 		}
 
 		// Counters (if supported by the entity)
+		AVDECC_ASSERT(node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput, "Not sure why we test for StreamInput in the following statement, remove it?");
 		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
 			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
+		}
+
+		// Diagnostics
+		if (isActiveConfiguration)
+		{
+			auto* diagnosticsItem = new StreamInputDiagnosticsTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, controlledEntity->getDiagnostics(), q);
+			diagnosticsItem->setText(0, "Diagnostics");
 		}
 	}
 
