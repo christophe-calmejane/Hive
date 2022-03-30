@@ -846,6 +846,7 @@ private:
 							emit streamInputLatencyErrorChanged(entityID, streamIndex, isError);
 						}
 					}
+					entityCache->setDiagnostics(diags);
 				}
 
 				emit diagnosticsChanged(entityID, diags);
