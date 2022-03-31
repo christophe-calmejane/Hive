@@ -111,6 +111,12 @@ private:
 		{
 			auto const isRedundant = milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy);
 			auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= 0x01000000;
+			auto const isWarning = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning);
+
+			if (isWarning)
+			{
+				return isRedundant ? ProtocolCompatibility::MilanWarningRedundant : ProtocolCompatibility::MilanWarning;
+			}
 
 			if (isCertifiedV1)
 			{

@@ -47,8 +47,10 @@ public:
 		IEEE,
 		Milan,
 		MilanCertified,
+		MilanWarning,
 		MilanRedundant,
 		MilanCertifiedRedundant,
+		MilanWarningRedundant,
 		Misbehaving,
 	};
 
