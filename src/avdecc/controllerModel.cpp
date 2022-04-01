@@ -727,6 +727,9 @@ private:
 			auto const it = std::next(std::begin(_entities), *row);
 			_entities.erase(it);
 
+			// Wipe Errors
+			_entitiesWithErrorCounter.erase(entityID);
+
 			// Update the cache
 			rebuildEntityRowMap();
 
@@ -916,23 +919,35 @@ private:
 	{
 		if (auto const row = entityRow(entityID))
 		{
-			auto const wasError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
-			auto nowInError = false;
+			auto const wasRedundancyWarning = _entitiesWithErrorCounter[entityID].redundancyWarning;
+			auto const wasStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
 
-			// Clear previous streamsWithLatencyError values
-			_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+			auto nowRedundancyWarning = false;
+			auto nowStreamInputLatencyError = false;
 
-			// Rebuild it entirely
-			for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
+			// Redundancy Warning
 			{
-				if (isError)
+				_entitiesWithErrorCounter[entityID].redundancyWarning = diagnostics.redundancyWarning;
+				nowRedundancyWarning = diagnostics.redundancyWarning;
+			}
+
+			// Stream Input Latency Error
+			{
+				// Clear previous streamsWithLatencyError values
+				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+
+				// Rebuild it entirely
+				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
 				{
-					_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
-					nowInError = true;
+					if (isError)
+					{
+						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
+						nowStreamInputLatencyError = true;
+					}
 				}
 			}
 
-			if (wasError != nowInError)
+			if ((wasRedundancyWarning != nowRedundancyWarning) || (wasStreamInputLatencyError != nowStreamInputLatencyError))
 			{
 				dataChanged(*row, ControllerModel::Column::EntityID);
 			}
@@ -1055,11 +1070,12 @@ private:
 	struct EntityWithErrorCounter
 	{
 		bool statisticsError{ false };
+		bool redundancyWarning{ false };
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
 		constexpr bool hasError() const noexcept
 		{
-			return statisticsError || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
+			return statisticsError || redundancyWarning || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
 		}
 	};
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;

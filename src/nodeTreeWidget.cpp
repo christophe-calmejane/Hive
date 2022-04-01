@@ -33,6 +33,7 @@
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "counters/streamOutputCountersTreeWidgetItem.hpp"
+#include "diagnostics/entityDiagnosticsTreeWidgetItem.hpp"
 #include "diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp"
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
 #include "firmwareUploadDialog.hpp"
@@ -356,6 +357,12 @@ private:
 		{
 			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getEnumerationTime(), q);
 			statisticsItem->setText(0, "Statistics");
+		}
+
+		// Diagnostics
+		{
+			auto* diagnosticsItem = new EntityDiagnosticsTreeWidgetItem(_controlledEntityID, controlledEntity->getDiagnostics(), q);
+			diagnosticsItem->setText(0, "Diagnostics");
 		}
 	}
 

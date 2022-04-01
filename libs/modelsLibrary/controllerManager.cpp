@@ -838,6 +838,9 @@ private:
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
+					// Check for Redundancy Warning change
+					auto const redundancyWarnChanged = entityCache->getDiagnostics().redundancyWarning != diags.redundancyWarning;
+
 					// Process each streams and update the LatencyError state
 					for (auto const& [streamIndex, isError] : diags.streamInputOverLatency)
 					{
@@ -846,9 +849,18 @@ private:
 							emit streamInputLatencyErrorChanged(entityID, streamIndex, isError);
 						}
 					}
+
+					// Update diags cache
 					entityCache->setDiagnostics(diags);
+
+					// Notify
+					if (redundancyWarnChanged)
+					{
+						emit redundancyWarningChanged(entityID, diags.redundancyWarning);
+					}
 				}
 
+				// Always notify for diagnostics changed, even if not in cache
 				emit diagnosticsChanged(entityID, diags);
 			});
 	}
@@ -1096,6 +1108,15 @@ private:
 		if (auto* entityCache = entityCachedData(entityID))
 		{
 			return entityCache->getDiagnostics();
+		}
+		return {};
+	}
+
+	virtual bool isRedundancyWarning(la::avdecc::UniqueIdentifier const entityID) const noexcept override
+	{
+		if (auto* entityCache = entityCachedData(entityID))
+		{
+			return entityCache->getDiagnostics().redundancyWarning;
 		}
 		return {};
 	}

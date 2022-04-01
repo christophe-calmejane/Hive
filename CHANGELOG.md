@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Warning popup for _Media Clock Management Dialog_ domain SampleRate changes that conflict with entity current StreamFormat settings
 - Distinction between _Milan Compatible_ and _Milan Certified_ devices using new icons
 - Steam Input Diagnostic: Detection of MSRP latency greater than Talker's presentation time
+- Milan Redundancy Warning Diagnostic: Detection of both cables connected to the same network
 - Added _Milan Warning_ Protocol Compatibility value, for Milan devices that have non-critical specification implementation errors
 
 ### Changed

@@ -193,6 +193,7 @@ public:
 
 	/** Diagnostics */
 	virtual la::avdecc::controller::ControlledEntity::Diagnostics getDiagnostics(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	virtual bool isRedundancyWarning(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 	virtual bool getStreamInputLatencyError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 
 	/* Discovery Protocol (ADP) */
@@ -343,6 +344,7 @@ public:
 
 	/* Diagnostics signals */
 	Q_SIGNAL void diagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics);
+	Q_SIGNAL void redundancyWarningChanged(la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning);
 	Q_SIGNAL void streamInputLatencyErrorChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError);
 };
 

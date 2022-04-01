@@ -90,11 +90,12 @@ private:
 	struct EntityWithErrorCounter
 	{
 		bool statisticsError{ false };
+		bool redundancyWarning{ false };
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
 		constexpr bool hasError() const noexcept
 		{
-			return statisticsError || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
+			return statisticsError || redundancyWarning || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
 		}
 	};
 
@@ -259,6 +260,9 @@ private:
 			// Remove the entity from the model
 			auto const it = std::next(std::begin(_entities), idx);
 			_entities.erase(it);
+
+			// Wipe Errors
+			_entitiesWithErrorCounter.erase(entityID);
 
 			// Update the cache
 			rebuildEntityRowMap();
@@ -519,25 +523,49 @@ private:
 		{
 			auto const idx = *index;
 
-			auto const wasError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
-			auto nowInError = false;
+			auto const wasRedundancyWarning = _entitiesWithErrorCounter[entityID].redundancyWarning;
+			auto const wasStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
 
-			// Clear previous streamsWithLatencyError values
-			_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+			auto nowRedundancyWarning = false;
+			auto nowStreamInputLatencyError = false;
 
-			// Rebuild it entirely
-			for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
+			// Redundancy Warning
 			{
-				if (isError)
+				_entitiesWithErrorCounter[entityID].redundancyWarning = diagnostics.redundancyWarning;
+				nowRedundancyWarning = diagnostics.redundancyWarning;
+			}
+
+			// Stream Input Latency Error
+			{
+				// Clear previous streamsWithLatencyError values
+				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+
+				// Rebuild it entirely
+				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
 				{
-					_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
-					nowInError = true;
+					if (isError)
+					{
+						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
+						nowStreamInputLatencyError = true;
+					}
 				}
 			}
 
-			if (wasError != nowInError)
+			// Check what changed
+			auto errorCounterFlags = Model::ChangedErrorCounterFlags{};
+			if (wasRedundancyWarning != nowRedundancyWarning)
 			{
-				la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::StreamInputLatency });
+				errorCounterFlags.set(Model::ChangedErrorCounterFlag::RedundancyWarning);
+			}
+			if (wasStreamInputLatencyError != nowStreamInputLatencyError)
+			{
+				errorCounterFlags.set(Model::ChangedErrorCounterFlag::StreamInputLatency);
+			}
+
+			// Notify if something changed
+			if (!errorCounterFlags.empty())
+			{
+				la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, errorCounterFlags);
 			}
 		}
 	}
