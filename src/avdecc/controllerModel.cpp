@@ -60,8 +60,10 @@ enum class Compatibility
 	IEEE,
 	Milan,
 	MilanCertified,
+	MilanWarning,
 	MilanRedundant,
 	MilanCertifiedRedundant,
+	MilanWarningRedundant,
 	Misbehaving,
 };
 
@@ -88,6 +90,12 @@ Compatibility computeCompatibility(std::optional<la::avdecc::entity::model::Mila
 	{
 		auto const isRedundant = milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy);
 		auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= 0x01000000;
+		auto const isWarning = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning);
+
+		if (isWarning)
+		{
+			return isRedundant ? Compatibility::MilanWarningRedundant : Compatibility::MilanWarning;
+		}
 
 		if (isCertifiedV1)
 		{
@@ -266,6 +274,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::diagnosticsChanged, this, &ControllerModelPrivate::handleDiagnosticsChanged);
 
 		// Connect avdecc::mediaClock::MCDomainManager signals
 		auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
@@ -416,6 +425,9 @@ public:
 						case Compatibility::MilanCertified:
 						case Compatibility::MilanCertifiedRedundant:
 							return "MILAN certified";
+						case Compatibility::MilanWarning:
+						case Compatibility::MilanWarningRedundant:
+							return "MILAN with warnings";
 						case Compatibility::IEEE:
 							return "IEEE 1722.1 compatible";
 						default:
@@ -684,10 +696,12 @@ private:
 				// Update the cache
 				rebuildEntityRowMap();
 
-				// Initialize EntityWithError (only need to initialize Statistics which might change during enumeration and not trigger an event, contrary to Counters)
-				_entitiesWithErrorCounter[entityID].statisticsError = !manager.getStatisticsCounters(entityID).empty();
-
 				emit q->endInsertRows();
+
+				// Trigger Error Counters, Statistics and Diagnostics
+				// TODO: Error Counters
+				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
+				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
 			}
 		}
 		catch (...)
@@ -712,6 +726,9 @@ private:
 			// Remove the entity from the model
 			auto const it = std::next(std::begin(_entities), *row);
 			_entities.erase(it);
+
+			// Wipe Errors
+			_entitiesWithErrorCounter.erase(entityID);
 
 			// Update the cache
 			rebuildEntityRowMap();
@@ -898,6 +915,45 @@ private:
 		}
 	}
 
+	void handleDiagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			auto const wasRedundancyWarning = _entitiesWithErrorCounter[entityID].redundancyWarning;
+			auto const wasStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
+
+			auto nowRedundancyWarning = false;
+			auto nowStreamInputLatencyError = false;
+
+			// Redundancy Warning
+			{
+				_entitiesWithErrorCounter[entityID].redundancyWarning = diagnostics.redundancyWarning;
+				nowRedundancyWarning = diagnostics.redundancyWarning;
+			}
+
+			// Stream Input Latency Error
+			{
+				// Clear previous streamsWithLatencyError values
+				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+
+				// Rebuild it entirely
+				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
+				{
+					if (isError)
+					{
+						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
+						nowStreamInputLatencyError = true;
+					}
+				}
+			}
+
+			if ((wasRedundancyWarning != nowRedundancyWarning) || (wasStreamInputLatencyError != nowStreamInputLatencyError))
+			{
+				dataChanged(*row, ControllerModel::Column::EntityID);
+			}
+		}
+	}
+
 	// avdecc::mediaClock::MCDomainManager
 
 	void handleMediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const& changedEntities)
@@ -1014,10 +1070,12 @@ private:
 	struct EntityWithErrorCounter
 	{
 		bool statisticsError{ false };
+		bool redundancyWarning{ false };
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
 		constexpr bool hasError() const noexcept
 		{
-			return statisticsError || !streamsWithErrorCounter.empty();
+			return statisticsError || redundancyWarning || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
 		}
 	};
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
@@ -1029,18 +1087,22 @@ private:
 		{ Compatibility::IEEE, QImage{ ":/ieee.png" } },
 		{ Compatibility::Milan, QImage{ ":/Milan_Compatible.png" } },
 		{ Compatibility::MilanCertified, QImage{ ":/Milan_Certified.png" } },
-		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
+		{ Compatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning.png" } },
 		{ Compatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible.png" } },
 		{ Compatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified.png" } },
+		{ Compatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning.png" } },
+		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
 	};
 	std::unordered_map<Compatibility, QImage> _compatibilityImagesDark{
 		{ Compatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
 		{ Compatibility::IEEE, QImage{ ":/ieee.png" } },
 		{ Compatibility::Milan, QImage{ ":/Milan_Compatible_inv.png" } },
 		{ Compatibility::MilanCertified, QImage{ ":/Milan_Certified_inv.png" } },
-		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
+		{ Compatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning_inv.png" } },
 		{ Compatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible_inv.png" } },
 		{ Compatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified_inv.png" } },
+		{ Compatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning_inv.png" } },
+		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
 	};
 	std::unordered_map<ExclusiveAccessState, QImage> _excusiveAccessStateImages{
 		{ ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },

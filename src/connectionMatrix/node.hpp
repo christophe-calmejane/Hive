@@ -295,6 +295,7 @@ public:
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const noexcept;
 	bool isRunning() const noexcept;
 	TriState lockedState() const noexcept; // StreamInput only
+	bool isLatencyError() const noexcept; // StreamInput only
 	bool isStreaming() const noexcept; // StreamOutput only
 	la::avdecc::entity::model::StreamInputConnectionInfo const& streamInputConnectionInformation() const noexcept;
 
@@ -310,6 +311,7 @@ protected:
 	bool setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus) noexcept; // StreamInput only
 	bool setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamInput only
 	bool setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamInput only
+	bool setLatencyError(bool const isLatencyError) noexcept; // StreamInput only
 	bool setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamOutput only
 	bool setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamOutput only
 	void setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept;
@@ -328,6 +330,7 @@ protected:
 	std::optional<la::avdecc::entity::model::ProbingStatus> _probingStatus{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaLockedCounter{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaUnlockedCounter{ std::nullopt }; // StreamInput only
+	bool _isLatencyError{ false }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStartCounter{ std::nullopt }; // StreamOutput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStopCounter{ std::nullopt }; // StreamOutput only
 	la::avdecc::entity::model::StreamInputConnectionInfo _streamInputConnectionInfo{};

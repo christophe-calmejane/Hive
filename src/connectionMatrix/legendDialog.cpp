@@ -143,6 +143,7 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 		{ "Connected but at least one Network Interface is down", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown }, false },
 		{ "Connected but Talker not detected on the Network (probably Offline)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{}, false },
 		{ "Connected and Media Locked but Talker not detected on the Network (but Online)", Model::IntersectionData::Type::OfflineOutputStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::MediaLocked }, true },
+		{ "Connected but MSRP Latency exceeds Presentation Time", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::LatencyError }, true },
 
 		{ "Partially connected Redundant Stream Pair", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::PartiallyConnected, Model::IntersectionData::Flags{}, false },
 	};

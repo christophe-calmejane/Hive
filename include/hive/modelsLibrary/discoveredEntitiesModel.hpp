@@ -47,8 +47,10 @@ public:
 		IEEE,
 		Milan,
 		MilanCertified,
+		MilanWarning,
 		MilanRedundant,
 		MilanCertifiedRedundant,
+		MilanWarningRedundant,
 		Misbehaving,
 	};
 
@@ -120,7 +122,9 @@ public:
 	enum class ChangedErrorCounterFlag : std::uint32_t
 	{
 		Statistics = 1u << 0,
-		StreamInput = 1u << 1,
+		RedundancyWarning = 1u << 1,
+		StreamInputCounters = 1u << 2,
+		StreamInputLatency = 1u << 3,
 	};
 	using ChangedErrorCounterFlags = la::avdecc::utils::EnumBitfield<ChangedErrorCounterFlag>;
 

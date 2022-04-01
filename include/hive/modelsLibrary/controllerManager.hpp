@@ -185,9 +185,16 @@ public:
 	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept = 0;
 	virtual void clearAllStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+
+	/** Statistics */
 	virtual StatisticsErrorCounters getStatisticsCounters(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 	virtual void clearStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, StatisticsErrorCounterFlag const flag) noexcept = 0;
 	virtual void clearAllStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+
+	/** Diagnostics */
+	virtual la::avdecc::controller::ControlledEntity::Diagnostics getDiagnostics(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	virtual bool isRedundancyWarning(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	virtual bool getStreamInputLatencyError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 
 	/* Discovery Protocol (ADP) */
 	/** Enables entity advertising with available duration included between 2-62 seconds on the specified interfaceIndex if set, otherwise on all interfaces. */
@@ -334,6 +341,11 @@ public:
 	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
 	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters);
+
+	/* Diagnostics signals */
+	Q_SIGNAL void diagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics);
+	Q_SIGNAL void redundancyWarningChanged(la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning);
+	Q_SIGNAL void streamInputLatencyErrorChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError);
 };
 
 } // namespace modelsLibrary

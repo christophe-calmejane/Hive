@@ -47,14 +47,23 @@ static inline void drawCircle(QPainter* painter, QRect const& rect)
 	painter->drawEllipse(rect.adjusted(2, 2, -3, -3));
 }
 
-static inline void drawMediaLocked(QPainter* painter, QRect const& rect)
+static inline void drawCenterDot(QPainter* painter, QRect const& rect, QColor const& col, qreal const penWidth = 1)
 {
-	auto const col = color::value(color::Name::Gray, color::Shade::ShadeA700);
 	painter->setBrush(QBrush{ col, Qt::SolidPattern });
-	painter->setPen(QPen{ col, 1 });
+	painter->setPen(QPen{ col, penWidth });
 	auto const center = rect.center();
 	auto const insideRect = QRect{ center.x() - 1, center.y() - 1, 2, 2 };
 	painter->drawEllipse(insideRect);
+}
+
+static inline QColor getMediaLockedBrushColor() noexcept
+{
+	return color::value(color::Name::Gray, color::Shade::ShadeA700);
+}
+
+static inline QColor getLatencyErrorBrushColor() noexcept
+{
+	return color::value(color::Name::Red, color::Shade::Shade800);
 }
 
 static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const wrongFormatHasPriorityOverInterfaceDown)
@@ -232,11 +241,16 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawCircle(painter, rect);
-		if (drawMediaLockedDot)
+
+		if (flags.test(Model::IntersectionData::Flag::LatencyError))
+		{
+			drawCenterDot(painter, rect, getLatencyErrorBrushColor(), 3);
+		}
+		else if (drawMediaLockedDot)
 		{
 			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
 			{
-				drawMediaLocked(painter, rect);
+				drawCenterDot(painter, rect, getMediaLockedBrushColor());
 			}
 		}
 	};
@@ -245,11 +259,16 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawDiamond(painter, rect);
-		if (drawMediaLockedDot)
+
+		if (flags.test(Model::IntersectionData::Flag::LatencyError))
+		{
+			drawCenterDot(painter, rect, getLatencyErrorBrushColor(), 3);
+		}
+		else if (drawMediaLockedDot)
 		{
 			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
 			{
-				drawMediaLocked(painter, rect);
+				drawCenterDot(painter, rect, getMediaLockedBrushColor());
 			}
 		}
 	};

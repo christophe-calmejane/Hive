@@ -430,6 +430,11 @@ Node::TriState StreamNode::lockedState() const noexcept
 	return _lockedState;
 }
 
+bool StreamNode::isLatencyError() const noexcept
+{
+	return _isLatencyError;
+}
+
 bool StreamNode::isStreaming() const noexcept
 {
 	return _isStreaming;
@@ -495,6 +500,13 @@ bool StreamNode::setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCo
 {
 	auto const changed = _mediaUnlockedCounter != value;
 	_mediaUnlockedCounter = value;
+	return changed;
+}
+
+bool StreamNode::setLatencyError(bool const isLatencyError) noexcept
+{
+	auto const changed = _isLatencyError != isLatencyError;
+	_isLatencyError = isLatencyError;
 	return changed;
 }
 
