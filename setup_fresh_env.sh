@@ -3,6 +3,9 @@
 # Get absolute folder for this script
 callerFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
+# Include config file extension
+. "${callerFolderPath}extend_config_file.sh"
+
 setupSubmodules()
 {
 	echo -n "Fetching submodules... "
