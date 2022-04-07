@@ -87,7 +87,6 @@ public:
 		}
 
 		auto const inError = hasError();
-
 		setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::ErrorRole), inError);
 		setForeground(0, inError ? Qt::red : Qt::black);
 
@@ -109,6 +108,10 @@ public:
 	void setErrorBits(ErrorBits const errorBits) noexcept
 	{
 		_errorBits = errorBits;
+
+		auto const inError = hasError();
+		setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::ErrorRole), inError);
+		setForeground(0, inError ? Qt::red : Qt::black);
 	}
 
 	ErrorBits getErrorBits() const noexcept
