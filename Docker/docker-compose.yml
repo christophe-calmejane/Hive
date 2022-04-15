@@ -1,0 +1,44 @@
+version: '3.3'
+
+# Create a persistent volume across services
+volumes:
+  builds: {}
+
+services:
+  # Base builder image
+  builder:
+    image: builder:${TAG}
+    build:
+      context: .
+      dockerfile: builder_${TAG}/Dockerfile
+
+  # CMake configure service
+  gen_cmake:
+    image: builder:${TAG}
+    volumes:
+      - ../:/home/builder/sources:ro
+      - builds:/home/builder/builds
+    entrypoint: /bin/bash ./gen_cmake.sh -o ../builds/${BUILD_FOLDER}
+
+  # Build service
+  build:
+    image: builder:${TAG}
+    volumes:
+      - ../:/home/builder/sources:ro
+      - builds:/home/builder/builds
+    entrypoint: cmake --build ../builds/${BUILD_FOLDER}
+
+  # Shell service
+  shell:
+    image: builder:${TAG}
+    volumes:
+      - ../:/home/builder/sources:ro
+      - builds:/home/builder/builds
+    entrypoint: /bin/bash
+
+  run:
+    image: builder:${TAG}
+    volumes:
+      - builds:/home/builder/builds
+    entrypoint: ./bin/${APP}
+    working_dir: /home/builder/builds/${BUILD_FOLDER}/Install
