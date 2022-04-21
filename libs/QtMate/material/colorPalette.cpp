@@ -24,6 +24,7 @@
 #include <QPixmap>
 
 #include <unordered_map>
+#include <cassert>
 
 namespace qtMate
 {
