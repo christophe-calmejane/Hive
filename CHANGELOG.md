@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - _Device Details Dialog_ tab 'Stream Format' showing redundant streams and incorrectly handling format changes when applying
 - _Device Details Dialog_ 'Receive'/'Transmit' tables to correctly update channel connections when entity comes online or offline
 - Combobox fields always properly restore previous value in case of command failure
+- [Localized configuration name not correct for some multi-configurations devices](https://github.com/christophe-calmejane/Hive/issues/123)
 
 ## [1.2.7] - 2021-12-24
 ### Added

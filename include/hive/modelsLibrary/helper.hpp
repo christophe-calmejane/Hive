@@ -59,8 +59,20 @@ inline QString toHexQString(T const v, bool const zeroFilled = false, bool const
 QString toUpperCamelCase(std::string const& text) noexcept;
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
+QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept;
+
+template<class NodeType>
+QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, NodeType const& node) noexcept
+{
+	if (node.dynamicModel->objectName.empty())
+	{
+		return localizedString(*controlledEntity, configurationIndex, node.staticModel->localizedDescription);
+	}
+
+	return node.dynamicModel->objectName.data();
+}
 
 template<class NodeType>
 QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, NodeType const& node) noexcept
