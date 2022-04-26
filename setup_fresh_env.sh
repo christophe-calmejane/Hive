@@ -3,6 +3,9 @@
 # Get absolute folder for this script
 callerFolderPath="`cd "${BASH_SOURCE[0]%/*}"; pwd -P`/" # Command to get the absolute path
 
+# Include config file extension
+. "${callerFolderPath}extend_config_file.sh"
+
 setupSubmodules()
 {
 	echo -n "Fetching submodules... "
@@ -114,6 +117,13 @@ loadConfigFile
 if [ "x${params["use_sparkle"]}" == "xtrue" ]; then
 	# Setup Sparkle
 	setupSparkleHelper
+else
+	# Generate empty DSA keys for non-Sparkle builds
+	if [ ! -f "${callerFolderPath}resources/dsa_pub.pem" ]; then
+		echo -n "Generating empty DSA keys... "
+		echo "Sparkle disabled, this is an empty DSA Key. Remove this file when enabling Sparkle" > "${callerFolderPath}resources/dsa_pub.pem"
+		echo "done"
+	fi
 fi
 
 # Setup PCap

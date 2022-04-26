@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -23,6 +23,7 @@
 #include "aboutDialog.hpp"
 #include "activeNetworkInterfacesModel.hpp"
 #include "aecpCommandComboBox.hpp"
+#include "aecpCommandTextEntry.hpp"
 #include "controlledEntityTreeWidget.hpp"
 #include "defaults.hpp"
 #include "deviceDetailsChannelTableModel.hpp"

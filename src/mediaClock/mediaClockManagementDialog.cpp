@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -302,9 +302,7 @@ public:
 	*/
 	void button_ApplyChangesClicked()
 	{
-		_hasChanges = false;
-		adjustButtonStates();
-
+		// collect the current Media Clock Domain config scheme as is currently set by the user on UI
 		auto mediaClockMappings = _domainTreeModel.createMediaClockMappings();
 		auto unassignedEntities = _unassignedListModel.getAllItems();
 		for (const auto& unassignedEntity : unassignedEntities)
@@ -312,11 +310,25 @@ public:
 			mediaClockMappings.getEntityMediaClockMasterMappings().emplace(unassignedEntity, std::vector<avdecc::mediaClock::DomainIndex>());
 		}
 
+		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
+
+		// validate mediaClockMappings regarding conflicts in modified SRs with StreamFormats of the Entities involved
+		if (mediaClockManager.isMediaClockDomainConflictingWithStreamFormats(mediaClockMappings))
+		{
+			auto result = QMessageBox::warning(qobject_cast<QWidget*>(this), "", "The selected Media Clock Domain sample rates are conflicting with the stream formats of the devices belonging to them.\nContinue?", QMessageBox::StandardButton::Abort | QMessageBox::StandardButton::Ok, QMessageBox::StandardButton::Abort);
+			if (result == QMessageBox::StandardButton::Abort)
+			{
+				return;
+			}
+		}
+
+		_hasChanges = false;
+		adjustButtonStates();
+
 		_progressDialog = new QProgressDialog("Executing commands...", "Abort apply", 0, 100, qobject_cast<QWidget*>(this));
 		_progressDialog->setMinimumWidth(350);
 		_progressDialog->setWindowModality(Qt::WindowModal);
 		_progressDialog->setMinimumDuration(500);
-		auto& mediaClockManager = avdecc::mediaClock::MCDomainManager::getInstance();
 		mediaClockManager.applyMediaClockDomainModel(mediaClockMappings);
 	}
 

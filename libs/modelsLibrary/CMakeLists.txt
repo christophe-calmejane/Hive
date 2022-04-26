@@ -40,17 +40,20 @@ set(HEADER_FILES_GENERATED
 set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/modelsLibrary.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/helper.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/commandsExecutor.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkInterfacesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/discoveredEntitiesModel.hpp
 )
 
 set(HEADER_FILES_COMMON
+	commandsExecutorImpl.hpp
 )
 
 set(SOURCE_FILES_COMMON
 	modelsLibrary.cpp
 	helper.cpp
+	commandsExecutorImpl.cpp
 	controllerManager.cpp
 	networkInterfacesModel.cpp
 	discoveredEntitiesModel.cpp

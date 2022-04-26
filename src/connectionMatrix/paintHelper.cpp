@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -47,14 +47,23 @@ static inline void drawCircle(QPainter* painter, QRect const& rect)
 	painter->drawEllipse(rect.adjusted(2, 2, -3, -3));
 }
 
-static inline void drawMediaLocked(QPainter* painter, QRect const& rect)
+static inline void drawCenterDot(QPainter* painter, QRect const& rect, QColor const& col, qreal const penWidth = 1)
 {
-	auto const col = color::value(color::Name::Gray, color::Shade::ShadeA700);
 	painter->setBrush(QBrush{ col, Qt::SolidPattern });
-	painter->setPen(QPen{ col, 1 });
+	painter->setPen(QPen{ col, penWidth });
 	auto const center = rect.center();
 	auto const insideRect = QRect{ center.x() - 1, center.y() - 1, 2, 2 };
 	painter->drawEllipse(insideRect);
+}
+
+static inline QColor getMediaLockedBrushColor() noexcept
+{
+	return color::value(color::Name::Gray, color::Shade::ShadeA700);
+}
+
+static inline QColor getLatencyErrorBrushColor() noexcept
+{
+	return color::value(color::Name::Red, color::Shade::Shade800);
 }
 
 static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const wrongFormatHasPriorityOverInterfaceDown)
@@ -65,6 +74,7 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
 	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
 	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
+	static auto const Grey = color::value(color::Name::Gray, color::Shade::Shade600);
 	//static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
@@ -72,7 +82,8 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	auto const connected = state != Model::IntersectionData::State::NotConnected;
 	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
-	auto const wrongFormat = flags.test(Model::IntersectionData::Flag::WrongFormat);
+	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
+	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
 
 	if (state == Model::IntersectionData::State::PartiallyConnected)
 	{
@@ -82,20 +93,28 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	{
 		if (interfaceDown)
 		{
-			if (wrongFormat && wrongFormatHasPriorityOverInterfaceDown)
+			if (wrongFormatPossible && wrongFormatHasPriorityOverInterfaceDown)
 			{
 				brushColor = Yellow;
+			}
+			else if (wrongFormatImpossible && wrongFormatHasPriorityOverInterfaceDown)
+			{
+				brushColor = connected ? Yellow : Grey;
 			}
 			else
 			{
 				brushColor = Blue;
 			}
 		}
+		else if (wrongFormatImpossible)
+		{
+			brushColor = connected ? Yellow : Grey;
+		}
 		else if (wrongDomain)
 		{
 			brushColor = Red;
 		}
-		else if (wrongFormat)
+		else if (wrongFormatPossible)
 		{
 			brushColor = Yellow;
 		}
@@ -222,11 +241,16 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawCircle(painter, rect);
-		if (drawMediaLockedDot)
+
+		if (flags.test(Model::IntersectionData::Flag::LatencyError))
+		{
+			drawCenterDot(painter, rect, getLatencyErrorBrushColor(), 3);
+		}
+		else if (drawMediaLockedDot)
 		{
 			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
 			{
-				drawMediaLocked(painter, rect);
+				drawCenterDot(painter, rect, getMediaLockedBrushColor());
 			}
 		}
 	};
@@ -235,11 +259,16 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		painter->setBrush(brush);
 		painter->setPen(QPen{ penColor, penWidth });
 		drawDiamond(painter, rect);
-		if (drawMediaLockedDot)
+
+		if (flags.test(Model::IntersectionData::Flag::LatencyError))
+		{
+			drawCenterDot(painter, rect, getLatencyErrorBrushColor(), 3);
+		}
+		else if (drawMediaLockedDot)
 		{
 			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
 			{
-				drawMediaLocked(painter, rect);
+				drawCenterDot(painter, rect, getMediaLockedBrushColor());
 			}
 		}
 	};

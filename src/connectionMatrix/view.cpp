@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -111,6 +111,18 @@ View::~View()
 QModelIndex View::findEntityModelIndex(la::avdecc::UniqueIdentifier const& entityID) const
 {
 	return _model->indexOf(entityID);
+}
+
+QLineEdit* View::talkerFilterLineEdit() noexcept
+{
+	// Right now, we are using a single widget for talker and listener filtering
+	return _cornerWidget->filterLineEdit();
+}
+
+QLineEdit* View::listenerFilterLineEdit() noexcept
+{
+	// Right now, we are using a single widget for talker and listener filtering
+	return _cornerWidget->filterLineEdit();
 }
 
 void View::onIntersectionClicked(QModelIndex const& index)
@@ -430,52 +442,69 @@ void View::onCustomContextMenuRequested(QPoint const& pos)
 		}
 
 		auto const& intersectionData = _model->intersectionData(index);
-		auto talkerNodeType = intersectionData.talker->type();
-		auto listenerNodeType = intersectionData.listener->type();
 
-		if ((talkerNodeType == Node::Type::OutputStream && listenerNodeType == Node::Type::InputStream) || (talkerNodeType == Node::Type::RedundantOutputStream && listenerNodeType == Node::Type::RedundantInputStream))
+		if (intersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible))
 		{
-#pragma message("TODO: Call haveCompatibleFormats(talker, listener)")
-			if (intersectionData.flags.test(Model::IntersectionData::Flag::WrongFormat))
+			auto const* talkerStreamNode = static_cast<StreamNode const*>(nullptr);
+			auto const* listenerStreamNode = static_cast<StreamNode const*>(nullptr);
+
+			switch (intersectionData.type)
+			{
+				case Model::IntersectionData::Type::SingleStream_SingleStream:
+				case Model::IntersectionData::Type::RedundantStream_RedundantStream:
+				case Model::IntersectionData::Type::RedundantStream_SingleStream:
+				{
+					talkerStreamNode = static_cast<StreamNode const*>(intersectionData.talker);
+					listenerStreamNode = static_cast<StreamNode const*>(intersectionData.listener);
+					break;
+				}
+				case Model::IntersectionData::Type::Redundant_Redundant:
+				{
+					auto const* const talker = static_cast<RedundantNode*>(intersectionData.talker);
+					auto const* const listener = static_cast<RedundantNode*>(intersectionData.listener);
+					// Avdecc library guarantees that the order of the redundant pair is always Primary, then Secondary
+					talkerStreamNode = static_cast<StreamNode const*>(talker->childAt(0));
+					listenerStreamNode = static_cast<StreamNode const*>(listener->childAt(0));
+					break;
+				}
+				case Model::IntersectionData::Type::Redundant_SingleStream:
+				case Model::IntersectionData::Type::Redundant_RedundantStream:
+				{
+					// Talker is the redundant node
+					if (intersectionData.talker->type() == Node::Type::RedundantOutput)
+					{
+						talkerStreamNode = static_cast<StreamNode const*>(static_cast<RedundantNode const*>(intersectionData.talker)->childAt(0));
+						listenerStreamNode = static_cast<StreamNode const*>(intersectionData.listener);
+					}
+					// Listener is the redundant node
+					else
+					{
+						talkerStreamNode = static_cast<StreamNode const*>(intersectionData.talker);
+						listenerStreamNode = static_cast<StreamNode const*>(static_cast<RedundantNode const*>(intersectionData.listener)->childAt(0));
+					}
+					break;
+				}
+				default:
+					break;
+			}
+
+			if (talkerStreamNode != nullptr && listenerStreamNode != nullptr)
 			{
 				QMenu menu;
-
-				auto* matchTalkerAction = menu.addAction("Match formats using Talker");
-				auto* matchListenerAction = menu.addAction("Match formats using Listener");
+				auto* matchTalkerAction = menu.addAction("Adapt format to Talker's");
 				menu.addSeparator();
 				menu.addAction("Cancel");
-
-#pragma message("TODO: setEnabled() based on format compatibility -> If talker can be set from listener, and vice versa.")
 				matchTalkerAction->setEnabled(true);
-				matchListenerAction->setEnabled(true);
-
-				auto const talkerID = intersectionData.talker->entityID();
-				auto const listenerID = intersectionData.listener->entityID();
-
-				auto const* const talkerStreamNode = static_cast<StreamNode*>(intersectionData.talker);
-				auto const* const listenerStreamNode = static_cast<StreamNode*>(intersectionData.listener);
 
 				if (auto* action = menu.exec(viewport()->mapToGlobal(pos)))
 				{
-					auto const talkerStreamIndex = talkerStreamNode->streamIndex();
-					auto const listenerStreamIndex = listenerStreamNode->streamIndex();
-
 					if (action == matchTalkerAction)
 					{
-						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-						manager.setStreamInputFormat(listenerID, listenerStreamIndex, talkerStreamNode->streamFormat());
-					}
-					else if (action == matchListenerAction)
-					{
-						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-						manager.setStreamOutputFormat(talkerID, talkerStreamIndex, listenerStreamNode->streamFormat());
+						auto const listenerID = intersectionData.listener->entityID();
+						avdecc::helper::smartChangeInputStreamFormat(this, true, listenerID, listenerStreamNode->streamIndex(), talkerStreamNode->streamFormat(), this, nullptr);
 					}
 				}
 			}
-		}
-		else if (talkerNodeType == Node::Type::RedundantOutput && listenerNodeType == Node::Type::RedundantInput)
-		{
-			// TODO
 		}
 	}
 	catch (...)

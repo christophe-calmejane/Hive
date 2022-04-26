@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.18.4)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.7)
+set(HIVE_VERSION 1.2.8)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -49,6 +49,10 @@ if(ENABLE_HIVE_FEATURE_SPARKLE)
 	message(FATAL_ERROR "DSA Public Key not set in HIVE_DSA_PUB_KEY CMake Variable")
 	endif()
 endif()
+if(NOT NEWSFEED_URL)
+	set(NEWSFEED_URL "https://localhost/hive/news.php" CACHE STRING "Newsfeed URL for Hive" FORCE)
+endif()
+message(STATUS "Newsfeed URL for Hive defined to: ${NEWSFEED_URL}")
 if(NOT QT_MAJOR_VERSION)
 	set(QT_MAJOR_VERSION 5)
 endif()
@@ -67,7 +71,6 @@ set(CU_COMPANY_NAME "KikiSoft")
 set(CU_COMPANY_URL "https://github.com/christophe-calmejane/Hive")
 set(CU_COMPANY_DOMAIN "com")
 set(CU_PROJECT_PRODUCTDESCRIPTION "${CU_PROJECT_FULL_NAME}")
-set(CU_PROJECT_BUNDLEIDENTIFIER "${CU_COMPANY_DOMAIN}.${CU_COMPANY_NAME}.${PROJECT_NAME}")
 set(CU_PROJECT_CONTACT "christophe.calmejane@l-acoustics.com")
 set(CU_PROJECT_STARTING_YEAR "2017")
 set(CU_COPYRIGHT_HOLDER "Emilien Vallot, Christophe Calmejane and other contributors")

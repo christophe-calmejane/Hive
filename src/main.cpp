@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -37,6 +37,9 @@
 #include <QCommandLineParser>
 #include <QScreen>
 #include <QtGlobal>
+#if QT_VERSION < 0x050F00
+#	include <QDesktopWidget>
+#endif // Qt < 5.15.0
 
 #include <iostream>
 #include <chrono>
@@ -216,7 +219,11 @@ int main(int argc, char* argv[])
 	QWidget dummy;
 	auto const mainWindowGeometry = settings.getValue(settings::MainWindowGeometry).toByteArray();
 	dummy.restoreGeometry(mainWindowGeometry);
+#if QT_VERSION < 0x050F00
+	auto const availableScreenGeometry = QApplication::desktop()->screenGeometry(&dummy);
+#else // Qt >= 5.15.0
 	auto const availableScreenGeometry = dummy.screen()->availableGeometry();
+#endif // Qt < 5.15.0
 
 	// Center our splash screen on this target screen
 	splash.move(availableScreenGeometry.center() - logo.rect().center());

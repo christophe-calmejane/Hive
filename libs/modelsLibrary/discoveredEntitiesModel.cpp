@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -58,6 +58,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &pImpl::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &pImpl::handleStreamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &pImpl::handleStatisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::diagnosticsChanged, this, &pImpl::handleDiagnosticsChanged);
 	}
 
 	std::optional<std::reference_wrapper<Entity const>> entity(std::size_t const index) const noexcept
@@ -89,15 +90,49 @@ private:
 	struct EntityWithErrorCounter
 	{
 		bool statisticsError{ false };
+		bool redundancyWarning{ false };
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
 		constexpr bool hasError() const noexcept
 		{
-			return statisticsError || !streamsWithErrorCounter.empty();
+			return statisticsError || redundancyWarning || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
 		}
 	};
 
 	using EntityRowMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::size_t, la::avdecc::UniqueIdentifier::hash>;
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
+
+	ProtocolCompatibility computeProtocolCompatibility(std::optional<la::avdecc::entity::model::MilanInfo> const& milanInfo, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags)
+	{
+		if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
+		{
+			return ProtocolCompatibility::Misbehaving;
+		}
+		else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto const isRedundant = milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy);
+			auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= 0x01000000;
+			auto const isWarning = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning);
+
+			if (isWarning)
+			{
+				return isRedundant ? ProtocolCompatibility::MilanWarningRedundant : ProtocolCompatibility::MilanWarning;
+			}
+
+			if (isCertifiedV1)
+			{
+				return isRedundant ? ProtocolCompatibility::MilanCertifiedRedundant : ProtocolCompatibility::MilanCertified;
+			}
+
+			return isRedundant ? ProtocolCompatibility::MilanRedundant : ProtocolCompatibility::Milan;
+		}
+		else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
+		{
+			return ProtocolCompatibility::IEEE;
+		}
+
+		return ProtocolCompatibility::NotCompliant;
+	}
 
 	inline bool isIndexValid(std::size_t const index) const noexcept
 	{
@@ -189,7 +224,7 @@ private:
 				}
 
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), entity.getCompatibilityFlags(), e.getEntityCapabilities(), entity.getAcquireState(), entity.getOwningControllerID(), entity.getLockState(), entity.getLockingControllerID(), gptpInfo, e.getAssociationID() };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), entity.getAcquireState(), entity.getOwningControllerID(), entity.getLockState(), entity.getLockingControllerID(), gptpInfo, e.getAssociationID() };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -200,10 +235,12 @@ private:
 				// Update the cache
 				rebuildEntityRowMap();
 
-				// Initialize EntityWithError (only need to initialize Statistics which might change during enumeration and not trigger an event, contrary to Counters)
-				_entitiesWithErrorCounter[entityID].statisticsError = !manager.getStatisticsCounters(entityID).empty();
-
 				emit _model->endInsertRows();
+
+				// Trigger Error Counters, Statistics and Diagnostics
+				// TODO: Error Counters
+				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
+				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
 			}
 		}
 		catch (...)
@@ -223,6 +260,9 @@ private:
 			// Remove the entity from the model
 			auto const it = std::next(std::begin(_entities), idx);
 			_entities.erase(it);
+
+			// Wipe Errors
+			_entitiesWithErrorCounter.erase(entityID);
 
 			// Update the cache
 			rebuildEntityRowMap();
@@ -297,8 +337,8 @@ private:
 				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 				if (auto controlledEntity = manager.getControlledEntity(entityID))
 				{
-					data.compatibility = compatibilityFlags;
 					data.milanInfo = controlledEntity->getMilanInfo();
+					data.protocolCompatibility = computeProtocolCompatibility(data.milanInfo, compatibilityFlags);
 
 					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::Compatibility });
 				}
@@ -461,7 +501,7 @@ private:
 				_entitiesWithErrorCounter[entityID].streamsWithErrorCounter.erase(descriptorIndex);
 			}
 
-			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::StreamInput });
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::StreamInputCounters });
 		}
 	}
 
@@ -474,6 +514,59 @@ private:
 			_entitiesWithErrorCounter[entityID].statisticsError = !errorCounters.empty();
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::Statistics });
+		}
+	}
+
+	void handleDiagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics)
+	{
+		if (auto const index = indexOf(entityID))
+		{
+			auto const idx = *index;
+
+			auto const wasRedundancyWarning = _entitiesWithErrorCounter[entityID].redundancyWarning;
+			auto const wasStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
+
+			auto nowRedundancyWarning = false;
+			auto nowStreamInputLatencyError = false;
+
+			// Redundancy Warning
+			{
+				_entitiesWithErrorCounter[entityID].redundancyWarning = diagnostics.redundancyWarning;
+				nowRedundancyWarning = diagnostics.redundancyWarning;
+			}
+
+			// Stream Input Latency Error
+			{
+				// Clear previous streamsWithLatencyError values
+				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+
+				// Rebuild it entirely
+				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
+				{
+					if (isError)
+					{
+						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
+						nowStreamInputLatencyError = true;
+					}
+				}
+			}
+
+			// Check what changed
+			auto errorCounterFlags = Model::ChangedErrorCounterFlags{};
+			if (wasRedundancyWarning != nowRedundancyWarning)
+			{
+				errorCounterFlags.set(Model::ChangedErrorCounterFlag::RedundancyWarning);
+			}
+			if (wasStreamInputLatencyError != nowStreamInputLatencyError)
+			{
+				errorCounterFlags.set(Model::ChangedErrorCounterFlag::StreamInputLatency);
+			}
+
+			// Notify if something changed
+			if (!errorCounterFlags.empty())
+			{
+				la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, errorCounterFlags);
+			}
 		}
 	}
 

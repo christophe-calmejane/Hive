@@ -73,6 +73,8 @@ set(HEADER_FILES_COMMON
 	counters/streamInputCountersTreeWidgetItem.hpp
 	counters/streamOutputCountersTreeWidgetItem.hpp
 	discoveredEntities/view.hpp
+	diagnostics/entityDiagnosticsTreeWidgetItem.hpp
+	diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp
 	mediaClock/mediaClockManagementDialog.hpp
 	mediaClock/domainTreeModel.hpp
 	mediaClock/unassignedListModel.hpp
@@ -81,6 +83,7 @@ set(HEADER_FILES_COMMON
 	mediaClock/abstractTreeItem.hpp
 	mediaClock/domainTreeItem.hpp
 	mediaClock/entityTreeItem.hpp
+	newsFeed/newsFeed.hpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.hpp
@@ -90,7 +93,6 @@ set(HEADER_FILES_COMMON
 	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.hpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
-	nodeTreeDynamicWidgets/streamFormatComboBox.hpp
 	nodeTreeDynamicWidgets/asPathWidget.hpp
 	profiles/profiles.hpp
 	profiles/profileSelectionDialog.hpp
@@ -106,10 +108,13 @@ set(HEADER_FILES_COMMON
 	deviceDetailsStreamFormatTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
+	discoveredEntitiesView.hpp
 	firmwareUploadDialog.hpp
 	multiFirmwareUpdateDialog.hpp
 	mainWindow.hpp
 	aecpCommandComboBox.hpp
+	aecpCommandSpinBox.hpp
+	aecpCommandTextEntry.hpp
 	controlledEntityTreeWidget.hpp
 	entityInspector.hpp
 	mappingMatrix.hpp
@@ -118,6 +123,7 @@ set(HEADER_FILES_COMMON
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	windowsNpfHelper.hpp
+	streamFormatComboBox.hpp
 	visibilitySettings.hpp
 	listViewSelectionToMatrixModelController.hpp
 )
@@ -144,6 +150,8 @@ set(SOURCE_FILES_COMMON
 	counters/streamInputCountersTreeWidgetItem.cpp
 	counters/streamOutputCountersTreeWidgetItem.cpp
 	discoveredEntities/view.cpp
+	diagnostics/entityDiagnosticsTreeWidgetItem.cpp
+	diagnostics/streamInputDiagnosticsTreeWidgetItem.cpp
 	mediaClock/mediaClockManagementDialog.cpp
 	mediaClock/domainTreeModel.cpp
 	mediaClock/unassignedListModel.cpp
@@ -152,6 +160,7 @@ set(SOURCE_FILES_COMMON
 	mediaClock/abstractTreeItem.cpp
 	mediaClock/domainTreeItem.cpp
 	mediaClock/entityTreeItem.cpp
+	newsFeed/newsFeed.cpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.cpp
@@ -161,7 +170,6 @@ set(SOURCE_FILES_COMMON
 	nodeTreeDynamicWidgets/talkerStreamConnectionWidget.cpp
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.cpp
-	nodeTreeDynamicWidgets/streamFormatComboBox.cpp
 	nodeTreeDynamicWidgets/asPathWidget.cpp
 	profiles/profileSelectionDialog.cpp
 	profiles/profileWidget.cpp
@@ -174,9 +182,9 @@ set(SOURCE_FILES_COMMON
 	firmwareUploadDialog.cpp
 	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp
+	discoveredEntitiesView.cpp
 	mainWindow.cpp
 	settingsDialog.cpp
-	aecpCommandComboBox.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
 	activeNetworkInterfacesModel.cpp

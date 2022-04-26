@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -33,9 +33,12 @@
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "counters/streamOutputCountersTreeWidgetItem.hpp"
+#include "diagnostics/entityDiagnosticsTreeWidgetItem.hpp"
+#include "diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp"
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
 #include "firmwareUploadDialog.hpp"
 #include "aecpCommandComboBox.hpp"
+#include "aecpCommandTextEntry.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
@@ -123,6 +126,24 @@ class NodeTreeWidgetPrivate : public QObject, public NodeVisitor
 {
 	Q_OBJECT
 public:
+	class VisitControlValues
+	{
+	public:
+		virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
+		{
+			AVDECC_ASSERT(false, "Should not be there. Missing specialization?");
+			self->addTextItem(item, "Values", "Not supported (but should be), please report this bug");
+		}
+		virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
+		{
+			AVDECC_ASSERT(false, "Should not be there. Missing specialization?");
+			auto* dynamicItem = new QTreeWidgetItem(tree);
+			dynamicItem->setText(0, "Dynamic Info");
+			dynamicItem->setText(1, "Not supported (but should be), please report this bug");
+		}
+	};
+	using VisitControlValuesDispatchTable = std::unordered_map<la::avdecc::entity::model::ControlValueType::Type, std::unique_ptr<VisitControlValues>>;
+
 	NodeTreeWidgetPrivate(NodeTreeWidget* q)
 		: q_ptr(q)
 	{
@@ -209,8 +230,8 @@ private:
 			auto* nameItem = new QTreeWidgetItem(q);
 			nameItem->setText(0, "Names");
 
-			addEditableTextItem(nameItem, "Entity Name", hive::modelsLibrary::helper::entityName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, {});
-			addEditableTextItem(nameItem, "Group Name", hive::modelsLibrary::helper::groupName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName, {});
+			addEditableTextItem(nameItem, "Entity Name", hive::modelsLibrary::helper::entityName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, la::avdecc::entity::model::DescriptorIndex{ 0u }, {});
+			addEditableTextItem(nameItem, "Group Name", hive::modelsLibrary::helper::groupName(entity), hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName, la::avdecc::entity::model::DescriptorIndex{ 0u }, {});
 		}
 
 		// Static model
@@ -274,7 +295,7 @@ private:
 			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::forceNumeric(entityCaps.value()), avdecc::helper::capabilitiesToString(entityCaps));
 			if (entityCaps.test(la::avdecc::entity::EntityCapability::AssociationIDSupported))
 			{
-				addEditableTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString(""), hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, {});
+				addEditableTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString(""), hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, la::avdecc::entity::model::DescriptorIndex{ 0u }, {});
 			}
 			else
 			{
@@ -284,29 +305,45 @@ private:
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
 			currentConfigurationItem->setText(0, "Current Configuration");
 
-			auto* configurationComboBox = new AecpCommandComboBox(_controlledEntityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfiguration);
-
+			auto* configurationComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ConfigurationIndex>();
+			auto configurations = std::remove_pointer_t<decltype(configurationComboBox)>::Data{};
 			for (auto const& it : node.configurations)
 			{
-				configurationComboBox->addItem(QString::number(it.first) + ": " + hive::modelsLibrary::helper::configurationName(&entity, it.second), it.first);
+				configurations.insert(it.first);
 			}
+			configurationComboBox->setAllData(configurations,
+				[this](auto const& configurationIndex)
+				{
+					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+					auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
 
-			auto currentConfigurationComboBoxIndex = configurationComboBox->findData(node.dynamicModel->currentConfiguration);
+					if (controlledEntity)
+					{
+						try
+						{
+							auto const& entity = *controlledEntity;
+							auto const& configurationNode = entity.getConfigurationNode(configurationIndex);
+							return QString::number(configurationIndex) + ": " + hive::modelsLibrary::helper::configurationName(&entity, configurationNode);
+						}
+						catch (...)
+						{
+							// Ignore exception
+						}
+					}
+					return QString::number(configurationIndex);
+				});
+
 			q->setItemWidget(currentConfigurationItem, 1, configurationComboBox);
 
 			// Send changes
-			connect(configurationComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-				[this, configurationComboBox, node]()
+			configurationComboBox->setDataChangedHandler(
+				[this, configurationComboBox](auto const& previousConfiguration, auto const& newConfiguration)
 				{
-					auto const configurationIndex = configurationComboBox->currentData().value<la::avdecc::entity::model::ConfigurationIndex>();
-					hive::modelsLibrary::ControllerManager::getInstance().setConfiguration(_controlledEntityID, configurationIndex);
+					hive::modelsLibrary::ControllerManager::getInstance().setConfiguration(_controlledEntityID, newConfiguration, configurationComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfiguration), configurationComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfiguration, previousConfiguration));
 				});
 
-			// Initialize current value
-			{
-				QSignalBlocker const lg{ configurationComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-				configurationComboBox->setCurrentIndex(currentConfigurationComboBoxIndex);
-			}
+			// Update now
+			configurationComboBox->setCurrentData(node.dynamicModel->currentConfiguration);
 		}
 
 		// Counters (if supported by the entity)
@@ -321,19 +358,26 @@ private:
 			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getEnumerationTime(), q);
 			statisticsItem->setText(0, "Statistics");
 		}
+
+		// Diagnostics
+		{
+			auto* diagnosticsItem = new EntityDiagnosticsTreeWidgetItem(_controlledEntityID, controlledEntity->getDiagnostics(), q);
+			diagnosticsItem->setText(0, "Diagnostics");
+		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		// Always want to display dynamic information for configurations
-		createNameItem(controlledEntity, true, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName, node.descriptorIndex);
+		createNameItem(controlledEntity, true, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName, node.descriptorIndex, node.descriptorIndex, node.descriptorIndex);
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -358,7 +402,8 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorType, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -381,17 +426,26 @@ private:
 		}
 
 		// Counters (if supported by the entity)
+		AVDECC_ASSERT(node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput, "Not sure why we test for StreamInput in the following statement, remove it?");
 		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
 		{
 			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
+		}
+
+		// Diagnostics
+		if (isActiveConfiguration)
+		{
+			auto* diagnosticsItem = new StreamInputDiagnosticsTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, controlledEntity->getDiagnostics(), q);
+			diagnosticsItem->setText(0, "Diagnostics");
 		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorType, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -424,7 +478,8 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -469,7 +524,8 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -566,7 +622,8 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -615,11 +672,6 @@ private:
 		}
 	}
 
-	using VisitStaticControlValuesFunctor = std::function<void(NodeTreeWidgetPrivate*, la::avdecc::controller::ControlledEntity const*, QTreeWidgetItem*, la::avdecc::entity::model::ControlValues const&)>;
-	using VisitDynamicControlValuesFunctor = std::function<void(QTreeWidget*, la::avdecc::UniqueIdentifier, la::avdecc::entity::model::ControlIndex, la::avdecc::entity::model::ControlNodeStaticModel const&, la::avdecc::entity::model::ControlNodeDynamicModel const&)>;
-	using VisitControlValuesDispatchTable = std::unordered_map<la::avdecc::entity::model::ControlValueType::Type, std::pair<VisitStaticControlValuesFunctor, VisitDynamicControlValuesFunctor>>;
-	static void createControlValuesDispatchTable(VisitControlValuesDispatchTable& dispatchTable);
-
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept override
 	{
 		static auto s_Dispatch = VisitControlValuesDispatchTable{};
@@ -630,10 +682,12 @@ private:
 		}
 
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const* const staticModel = node.staticModel;
+		auto const* const dynamicModel = node.dynamicModel;
 		auto const valueType = staticModel->controlValueType.getType();
 
 		if (!staticModel->values)
@@ -662,12 +716,12 @@ private:
 			addTextItem(descriptorItem, "Values Type", avdecc::helper::controlValueTypeToString(valueType));
 			addTextItem(descriptorItem, "Values Writable", staticModel->controlValueType.isReadOnly() ? "False" : "True");
 			addTextItem(descriptorItem, "Values Valid", staticModel->controlValueType.isUnknown() ? "False" : "True");
-			addTextItem(descriptorItem, "Values Count", staticModel->values.size());
+			addTextItem(descriptorItem, "Values Count", dynamicModel->values.size());
 
 			// Display static values
 			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
 			{
-				it->second.first(this, controlledEntity, descriptorItem, staticModel->values);
+				it->second->visitStaticControlValues(this, controlledEntity, descriptorItem, *staticModel, *dynamicModel);
 			}
 			else
 			{
@@ -680,7 +734,7 @@ private:
 			// Display static values
 			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
 			{
-				it->second.second(q, _controlledEntityID, node.descriptorIndex, *staticModel, *node.dynamicModel);
+				it->second->visitDynamicControlValues(q, _controlledEntityID, node.descriptorIndex, *staticModel, *dynamicModel);
 			}
 			else
 			{
@@ -694,7 +748,8 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const* const model = node.staticModel;
@@ -717,31 +772,50 @@ private:
 			auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
 			currentSourceItem->setText(0, "Current Clock Source");
 
-			auto* sourceComboBox = new AecpCommandComboBox(_controlledEntityID, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource);
-
+			auto* sourceComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ClockSourceIndex>();
+			auto clockSources = std::remove_pointer_t<decltype(sourceComboBox)>::Data{};
 			for (auto const sourceIndex : model->clockSources)
 			{
-				try
+				clockSources.insert(sourceIndex);
+				/*try
 				{
-					auto const& clockSourceNode = controlledEntity->getClockSourceNode(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, sourceIndex);
+					auto const& clockSourceNode = controlledEntity->getClockSourceNode(configurationIndex, sourceIndex);
 					auto const name = QString::number(sourceIndex) + ": '" + hive::modelsLibrary::helper::objectName(controlledEntity, clockSourceNode) + "' (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
 					sourceComboBox->addItem(name, QVariant::fromValue(sourceIndex));
 				}
 				catch (...)
 				{
-				}
+				}*/
 			}
+			sourceComboBox->setAllData(clockSources,
+				[this, configurationIndex](auto const& sourceIndex)
+				{
+					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+					auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
 
-			auto const currentSourceComboBoxIndex = sourceComboBox->findData(dynamicModel->clockSourceIndex);
+					if (controlledEntity)
+					{
+						try
+						{
+							auto const& entity = *controlledEntity;
+							auto const& clockSourceNode = entity.getClockSourceNode(configurationIndex, sourceIndex);
+							return QString::number(sourceIndex) + ": " + hive::modelsLibrary::helper::objectName(&entity, clockSourceNode) + " (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
+						}
+						catch (...)
+						{
+							// Ignore exception
+						}
+					}
+					return QString::number(sourceIndex);
+				});
+
 			q->setItemWidget(currentSourceItem, 1, sourceComboBox);
 
 			// Send changes
-			connect(sourceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
-				[this, sourceComboBox, node]()
+			sourceComboBox->setDataChangedHandler(
+				[this, sourceComboBox, clockDomainIndex = node.descriptorIndex](auto const& previousSourceIndex, auto const& newSourceIndex)
 				{
-					auto const clockDomainIndex = node.descriptorIndex;
-					auto const sourceIndex = sourceComboBox->currentData().value<la::avdecc::entity::model::ClockSourceIndex>();
-					hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, sourceIndex);
+					hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, newSourceIndex, sourceComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource), sourceComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource, previousSourceIndex));
 				});
 
 			// Listen for changes
@@ -750,21 +824,12 @@ private:
 				{
 					if (entityID == _controlledEntityID && clockDomainIndex == domainIndex)
 					{
-						auto index = sourceComboBox->findData(QVariant::fromValue(sourceIndex));
-						AVDECC_ASSERT(index != -1, "Index not found");
-						if (index != -1)
-						{
-							QSignalBlocker const lg{ sourceComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-							sourceComboBox->setCurrentIndex(index);
-						}
+						sourceComboBox->setCurrentData(sourceIndex);
 					}
 				});
 
-			// Initialize current value
-			{
-				QSignalBlocker const lg{ sourceComboBox }; // Block internal signals so setCurrentIndex do not trigger "currentIndexChanged"
-				sourceComboBox->setCurrentIndex(currentSourceComboBoxIndex);
-			}
+			// Update now
+			sourceComboBox->setCurrentData(dynamicModel->clockSourceIndex);
 		}
 
 		// Counters (if supported by the entity)
@@ -778,13 +843,15 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& /*node*/) noexcept override
 	{
 		//createIdItem(&node);
+		//auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
 		//createNameItem(controlledEntity, isActiveConfiguration, node.clockDomainDescriptor, hive::modelsLibrary::ControllerManager::CommandType::None, {}); // SetName not supported yet
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName, std::make_tuple(controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex));
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -810,7 +877,7 @@ private:
 		// Dynamic model
 		if (isActiveConfiguration)
 		{
-			auto* dynamicItem = new MemoryObjectDynamicTreeWidgetItem(_controlledEntityID, controlledEntity->getEntityNode().dynamicModel->currentConfiguration, node.descriptorIndex, node.dynamicModel, q);
+			auto* dynamicItem = new MemoryObjectDynamicTreeWidgetItem(_controlledEntityID, configurationIndex, node.descriptorIndex, node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 	}
@@ -879,7 +946,7 @@ public:
 	}
 
 	template<class NodeType>
-	QTreeWidgetItem* createNameItem(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const showDynamicInformation, NodeType const& node, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, std::any const& customData)
+	QTreeWidgetItem* createNameItem(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const showDynamicInformation, NodeType const& node, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::any const& customData)
 	{
 		Q_Q(NodeTreeWidget);
 
@@ -890,7 +957,7 @@ public:
 		{
 			if (commandType != hive::modelsLibrary::ControllerManager::AecpCommandType::None)
 			{
-				addEditableTextItem(nameItem, "Name", node.dynamicModel->objectName.data(), commandType, customData);
+				addEditableTextItem(nameItem, "Name", node.dynamicModel->objectName.data(), commandType, descriptorIndex, customData);
 			}
 			else
 			{
@@ -904,7 +971,7 @@ public:
 
 		auto* localizedNameItem = new QTreeWidgetItem(nameItem);
 		localizedNameItem->setText(0, "Localized Name");
-		localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, node.staticModel->localizedDescription));
+		localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, configurationIndex, node.staticModel->localizedDescription));
 
 		return nameItem;
 	}
@@ -962,41 +1029,34 @@ public:
 	}
 
 	/** An editable text entry item */
-	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, std::any const& customData)
+	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::any const& customData)
 	{
 		Q_Q(NodeTreeWidget);
 
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, itemName);
 
-		auto* textEntry = new qtMate::widgets::TextEntry(itemValue, avdecc::StringValidator::getSharedInstance());
+		auto* textEntry = new AecpCommandTextEntry(itemValue, avdecc::AvdeccStringValidator::getSharedInstance());
 
 		q->setItemWidget(item, 1, textEntry);
 
-		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::beginAecpCommand, textEntry,
-			[this, commandType, textEntry](la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType cmdType)
-			{
-				if (entityID == _controlledEntityID && cmdType == commandType)
-					textEntry->setEnabled(false);
-			});
-
-		connect(textEntry, &qtMate::widgets::TextEntry::returnPressed, textEntry,
-			[this, textEntry, commandType, customData]()
+		textEntry->setDataChangedHandler(
+			[this, textEntry, commandType, descriptorIndex, customData](QString const& oldText, QString const& newText)
 			{
 				// Send changes
 				switch (commandType)
 				{
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName:
-						hive::modelsLibrary::ControllerManager::getInstance().setEntityName(_controlledEntityID, textEntry->text());
+						hive::modelsLibrary::ControllerManager::getInstance().setEntityName(_controlledEntityID, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						break;
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
-						hive::modelsLibrary::ControllerManager::getInstance().setEntityGroupName(_controlledEntityID, textEntry->text());
+						hive::modelsLibrary::ControllerManager::getInstance().setEntityGroupName(_controlledEntityID, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName, oldText));
 						break;
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName:
 						try
 						{
 							auto const configIndex = std::any_cast<la::avdecc::entity::model::ConfigurationIndex>(customData);
-							hive::modelsLibrary::ControllerManager::getInstance().setConfigurationName(_controlledEntityID, configIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setConfigurationName(_controlledEntityID, configIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName, oldText));
 						}
 						catch (...)
 						{
@@ -1008,7 +1068,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AudioUnitIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const audioUnitIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitName(_controlledEntityID, configIndex, audioUnitIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setAudioUnitName(_controlledEntityID, configIndex, audioUnitIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName, oldText));
 						}
 						catch (...)
 						{
@@ -1022,9 +1082,13 @@ public:
 							auto const streamType = std::get<1>(customTuple);
 							auto const streamIndex = std::get<2>(customTuple);
 							if (streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
-								hive::modelsLibrary::ControllerManager::getInstance().setStreamInputName(_controlledEntityID, configIndex, streamIndex, textEntry->text());
+							{
+								hive::modelsLibrary::ControllerManager::getInstance().setStreamInputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							}
 							else if (streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-								hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputName(_controlledEntityID, configIndex, streamIndex, textEntry->text());
+							{
+								hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							}
 						}
 						catch (...)
 						{
@@ -1036,7 +1100,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AvbInterfaceIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const avbInterfaceIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAvbInterfaceName(_controlledEntityID, configIndex, avbInterfaceIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setAvbInterfaceName(_controlledEntityID, configIndex, avbInterfaceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1048,7 +1112,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockSourceIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const clockSourceIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setClockSourceName(_controlledEntityID, configIndex, clockSourceIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setClockSourceName(_controlledEntityID, configIndex, clockSourceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1060,7 +1124,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::MemoryObjectIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const memoryObjectIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setMemoryObjectName(_controlledEntityID, configIndex, memoryObjectIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setMemoryObjectName(_controlledEntityID, configIndex, memoryObjectIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1072,7 +1136,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClusterIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const audioClusterIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAudioClusterName(_controlledEntityID, configIndex, audioClusterIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setAudioClusterName(_controlledEntityID, configIndex, audioClusterIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1084,7 +1148,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ControlIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const controlIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setControlName(_controlledEntityID, configIndex, controlIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setControlName(_controlledEntityID, configIndex, controlIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1096,7 +1160,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockDomainIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const clockDomainIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setClockDomainName(_controlledEntityID, configIndex, clockDomainIndex, textEntry->text());
+							hive::modelsLibrary::ControllerManager::getInstance().setClockDomainName(_controlledEntityID, configIndex, clockDomainIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (...)
 						{
@@ -1105,8 +1169,8 @@ public:
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID:
 						try
 						{
-							auto const associationID = static_cast<la::avdecc::UniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::UniqueIdentifier::value_type>(textEntry->text().toStdString().c_str()));
-							hive::modelsLibrary::ControllerManager::getInstance().setAssociationID(_controlledEntityID, associationID);
+							auto const associationID = static_cast<la::avdecc::UniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::UniqueIdentifier::value_type>(newText.toStdString().c_str()));
+							hive::modelsLibrary::ControllerManager::getInstance().setAssociationID(_controlledEntityID, associationID, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
 						}
 						catch (std::invalid_argument const& e)
 						{
@@ -1116,13 +1180,6 @@ public:
 					default:
 						break;
 				}
-			});
-
-		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::endAecpCommand, textEntry,
-			[this, commandType, textEntry](la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
-			{
-				if (entityID == _controlledEntityID && cmdType == commandType)
-					textEntry->setEnabled(true);
 			});
 
 		// Listen for changes
@@ -1135,7 +1192,7 @@ public:
 						[this, textEntry](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)
 						{
 							if (entityID == _controlledEntityID)
-								textEntry->setText(entityName);
+								textEntry->setCurrentData(entityName);
 						});
 					break;
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
@@ -1143,7 +1200,7 @@ public:
 						[this, textEntry](la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName)
 						{
 							if (entityID == _controlledEntityID)
-								textEntry->setText(entityGroupName);
+								textEntry->setCurrentData(entityGroupName);
 						});
 					break;
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName:
@@ -1153,7 +1210,7 @@ public:
 						[this, textEntry, configIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& configurationName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex)
-								textEntry->setText(configurationName);
+								textEntry->setCurrentData(configurationName);
 						});
 					break;
 				}
@@ -1166,7 +1223,7 @@ public:
 						[this, textEntry, configIndex, auIndex = audioUnitIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& audioUnitName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && audioUnitIndex == auIndex)
-								textEntry->setText(audioUnitName);
+								textEntry->setCurrentData(audioUnitName);
 						});
 					break;
 				}
@@ -1180,7 +1237,7 @@ public:
 						[this, textEntry, configIndex, streamType, strIndex = streamIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& streamName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && descriptorType == streamType && streamIndex == strIndex)
-								textEntry->setText(streamName);
+								textEntry->setCurrentData(streamName);
 						});
 					break;
 				}
@@ -1193,7 +1250,7 @@ public:
 						[this, textEntry, configIndex, aiIndex = avbInterfaceIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& avbInterfaceName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && avbInterfaceIndex == aiIndex)
-								textEntry->setText(avbInterfaceName);
+								textEntry->setCurrentData(avbInterfaceName);
 						});
 					break;
 				}
@@ -1206,7 +1263,7 @@ public:
 						[this, textEntry, configIndex, csIndex = clockSourceIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& clockSourceName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && clockSourceIndex == csIndex)
-								textEntry->setText(clockSourceName);
+								textEntry->setCurrentData(clockSourceName);
 						});
 					break;
 				}
@@ -1219,7 +1276,7 @@ public:
 						[this, textEntry, configIndex, moIndex = memoryObjectIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& memoryObjectName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && memoryObjectIndex == moIndex)
-								textEntry->setText(memoryObjectName);
+								textEntry->setCurrentData(memoryObjectName);
 						});
 					break;
 				}
@@ -1232,7 +1289,7 @@ public:
 						[this, textEntry, configIndex, acIndex = audioClusterIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && audioClusterIndex == acIndex)
-								textEntry->setText(audioClusterName);
+								textEntry->setCurrentData(audioClusterName);
 						});
 					break;
 				}
@@ -1245,7 +1302,7 @@ public:
 						[this, textEntry, configIndex, cdIndex = controlIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && controlIndex == cdIndex)
-								textEntry->setText(controlName);
+								textEntry->setCurrentData(controlName);
 						});
 					break;
 				}
@@ -1258,7 +1315,7 @@ public:
 						[this, textEntry, configIndex, cdIndex = clockDomainIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& clockDomainName)
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && clockDomainIndex == cdIndex)
-								textEntry->setText(clockDomainName);
+								textEntry->setCurrentData(clockDomainName);
 						});
 					break;
 				}
@@ -1269,7 +1326,7 @@ public:
 						{
 							if (entityID == _controlledEntityID)
 							{
-								textEntry->setText(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
+								textEntry->setCurrentData(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
 							}
 						});
 					break;
@@ -1371,6 +1428,8 @@ public:
 		}
 	}
 
+	static void createControlValuesDispatchTable(VisitControlValuesDispatchTable& dispatchTable);
+
 private:
 	NodeTreeWidget* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(NodeTreeWidget);
@@ -1378,33 +1437,15 @@ private:
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
 };
 
-namespace la::avdecc::entity::model
-{
-template<la::avdecc::entity::model::ControlValueType::Type Type>
-struct VisitStaticValuesTraits
-{
-	static void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlValues const& /*values*/) noexcept
-	{
-		AVDECC_ASSERT(false, "Should not be there. Missing specialized trait?");
-		self->addTextItem(item, "Values", "Not supported (but should be), please report this bug");
-	}
-	static void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
-	{
-		AVDECC_ASSERT(false, "Should not be there. Missing specialized trait?");
-		auto* dynamicItem = new QTreeWidgetItem(tree);
-		dynamicItem->setText(0, "Dynamic Info");
-		dynamicItem->setText(1, "Not supported (but should be), please report this bug");
-	}
-	static constexpr la::avdecc::entity::model::ControlValueType::Type control_value_type = Type;
-};
-
+/** Linear Values */
 template<class StaticValueType, class DynamicValueType>
-struct StaticLinearValuesTraits
+class VisitControlLinearValues final : public NodeTreeWidgetPrivate::VisitControlValues
 {
-	static void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlValues const& values) noexcept
+	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
 	{
-		auto valNumber = decltype(std::declval<decltype(values)>().size()){ 0u };
-		auto const linearValues = values.getValues<StaticValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
+		auto valNumber = decltype(std::declval<decltype(staticModel.values)>().size()){ 0u };
+		auto const linearValues = staticModel.values.getValues<StaticValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
+
 		for (auto const& val : linearValues.getValues())
 		{
 			auto* valueItem = new QTreeWidgetItem(item);
@@ -1423,68 +1464,78 @@ struct StaticLinearValuesTraits
 			++valNumber;
 		}
 	}
-	static void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept
+	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
 		auto* dynamicItem = new LinearControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
 	}
 };
 
-// Declare Traits for Linear Values
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int8_t>>>
+/** Array Values */
+template<typename SizeType, typename StaticValueType = la::avdecc::entity::model::ArrayValueStatic<SizeType>, typename DynamicValueType = la::avdecc::entity::model::ArrayValueDynamic<SizeType>>
+class VisitControlArrayValues final : public NodeTreeWidgetPrivate::VisitControlValues
 {
+	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
+	{
+		auto const& arrayValue = staticModel.values.getValues<StaticValueType>();
+
+		self->addTextItem(item, "Minimum", arrayValue.minimum);
+		self->addTextItem(item, "Maximum", arrayValue.maximum);
+		self->addTextItem(item, "Step", arrayValue.step);
+		self->addTextItem(item, "Default Value", arrayValue.defaultValue);
+		self->addTextItem(item, "Unit Type", ::avdecc::helper::controlValueUnitToString(arrayValue.unit.getUnit()));
+		self->addTextItem(item, "Unit Multiplier", arrayValue.unit.getMultiplier());
+		auto* localizedNameItem = new QTreeWidgetItem(item);
+		localizedNameItem->setText(0, "Localized Name");
+		localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, arrayValue.localizedName));
+	}
+	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	{
+		auto* dynamicItem = new ArrayControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
+		dynamicItem->setText(0, "Dynamic Info");
+	}
 };
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>>>
+
+/** UTF-8 String Value */
+class VisitControlUtf8Values final : public NodeTreeWidgetPrivate::VisitControlValues
 {
+public:
+	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
+	{
+		// Nothing to display
+	}
+	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	{
+		auto* dynamicItem = new UTF8ControlValuesDynamicTreeWidgetItem(entityID, controlIndex, staticModel, dynamicModel, tree);
+		dynamicItem->setText(0, "Dynamic Info");
+	}
 };
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int16_t>>>
-{
-};
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint16_t>>>
-{
-};
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int32_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int32_t>>>
-{
-};
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint32_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint32_t>>>
-{
-};
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int64_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int64_t>>>
-{
-};
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint64_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint64_t>>>
-{
-};
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<float>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<float>>>
-{
-};
-template<>
-struct VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble> : StaticLinearValuesTraits<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<double>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<double>>>
-{
-};
-} // namespace la::avdecc::entity::model
 
 void NodeTreeWidgetPrivate::createControlValuesDispatchTable(VisitControlValuesDispatchTable& dispatchTable)
 {
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat>::visitDynamicControlValues);
-	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble] = std::make_pair(la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble>::visitStaticControlValues, la::avdecc::entity::model::VisitStaticValuesTraits<la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble>::visitDynamicControlValues);
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int8_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int16_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt16] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint16_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt32] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int32_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int32_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt32] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint32_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint32_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt64] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int64_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int64_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt64] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint64_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint64_t>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<float>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<float>>>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<double>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<double>>>>();
+
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt8] = std::make_unique<VisitControlArrayValues<std::int8_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt8] = std::make_unique<VisitControlArrayValues<std::uint8_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt16] = std::make_unique<VisitControlArrayValues<std::int16_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt16] = std::make_unique<VisitControlArrayValues<std::uint16_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt32] = std::make_unique<VisitControlArrayValues<std::int32_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt32] = std::make_unique<VisitControlArrayValues<std::uint32_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt64] = std::make_unique<VisitControlArrayValues<std::int64_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt64] = std::make_unique<VisitControlArrayValues<std::uint64_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayFloat] = std::make_unique<VisitControlArrayValues<float>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayDouble] = std::make_unique<VisitControlArrayValues<double>>();
+
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlUtf8] = std::make_unique<VisitControlUtf8Values>();
 }
 
 NodeTreeWidget::NodeTreeWidget(QWidget* parent)

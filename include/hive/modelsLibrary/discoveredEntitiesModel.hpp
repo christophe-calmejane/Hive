@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -41,6 +41,19 @@ class DiscoveredEntitiesAbstractTableModel;
 class DiscoveredEntitiesModel
 {
 public:
+	enum class ProtocolCompatibility
+	{
+		NotCompliant,
+		IEEE,
+		Milan,
+		MilanCertified,
+		MilanWarning,
+		MilanRedundant,
+		MilanCertifiedRedundant,
+		MilanWarningRedundant,
+		Misbehaving,
+	};
+
 	struct GptpInfo
 	{
 		std::optional<la::avdecc::UniqueIdentifier> grandmasterID;
@@ -60,7 +73,7 @@ public:
 		QString name{};
 		QString groupName{};
 		bool isSubscribedToUnsol{ false };
-		la::avdecc::controller::ControlledEntity::CompatibilityFlags compatibility{};
+		ProtocolCompatibility protocolCompatibility{ ProtocolCompatibility::NotCompliant };
 		la::avdecc::entity::EntityCapabilities entityCapabilities{};
 		la::avdecc::controller::model::AcquireState acquireState{ la::avdecc::controller::model::AcquireState::Undefined };
 		la::avdecc::UniqueIdentifier owningController{};
@@ -109,7 +122,9 @@ public:
 	enum class ChangedErrorCounterFlag : std::uint32_t
 	{
 		Statistics = 1u << 0,
-		StreamInput = 1u << 1,
+		RedundancyWarning = 1u << 1,
+		StreamInputCounters = 1u << 2,
+		StreamInputLatency = 1u << 3,
 	};
 	using ChangedErrorCounterFlags = la::avdecc::utils::EnumBitfield<ChangedErrorCounterFlag>;
 

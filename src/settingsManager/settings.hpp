@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -33,6 +33,7 @@ static constexpr auto ViewSettingsCurrentVersion = 3;
 // Settings with a default initial value
 static SettingsManager::SettingDefault LastLaunchedVersion = { "LastLaunchedVersion", "" };
 static SettingsManager::SettingDefault UserProfile = { "userProfile", la::avdecc::utils::to_integral(profiles::ProfileType::None) };
+static SettingsManager::SettingDefault LastCheckTime = { "LastCheckTime", QVariant::fromValue(std::uint64_t{ 0u }) };
 
 // General settings
 static SettingsManager::SettingDefault General_AutomaticPNGDownloadEnabled = { "avdecc/general/enableAutomaticPNGDownload", false };

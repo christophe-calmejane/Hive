@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -28,6 +28,30 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility, QImage> s_compatibilityImagesLight{
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE, QImage{ ":/ieee.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan, QImage{ ":/Milan_Compatible.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified, QImage{ ":/Milan_Certified.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
+};
+
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility, QImage> s_compatibilityImagesDark{
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE, QImage{ ":/ieee.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan, QImage{ ":/Milan_Compatible_inv.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified, QImage{ ":/Milan_Certified_inv.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning_inv.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible_inv.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified_inv.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning_inv.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
+};
+
 DiscoveredEntitiesTableModel::DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags)
 	: _entityDataFlags{ entityDataFlags }
 	, _count{ static_cast<decltype(_count)>(_entityDataFlags.count()) }
@@ -169,7 +193,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						}
 						break;
 					}
-					case ImageItemDelegate::ImageRole:
+					case ImageItemDelegate::LightImageRole:
 					{
 						switch (entityDataFlag)
 						{
@@ -184,30 +208,45 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 							}
 							case EntityDataFlag::Compatibility:
 							{
-								if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
+								try
 								{
-									return QImage{ ":/misbehaving.png" };
+									return s_compatibilityImagesLight.at(entity.protocolCompatibility);
 								}
-								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+								catch (std::out_of_range const&)
 								{
-									if (entity.milanInfo)
-									{
-										if ((*entity.milanInfo).featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
-										{
-											return QImage{ ":/milan_redundant.png" };
-										}
-										return QImage{ ":/milan.png" };
-									}
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
 								}
-								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
+							}
+							default:
+								break;
+						}
+						break;
+					}
+					case ImageItemDelegate::DarkImageRole:
+					{
+						switch (entityDataFlag)
+						{
+							case EntityDataFlag::EntityLogo:
+							{
+								if (entity.isAemSupported)
 								{
-									return QImage{ ":/ieee.png" };
-								}
-								else
-								{
-									return QImage{ ":/not_compliant.png" };
+									auto& logoCache = EntityLogoCache::getInstance();
+									return logoCache.getImage(entity.entityID, EntityLogoCache::Type::Entity, true);
 								}
 								break;
+							}
+							case EntityDataFlag::Compatibility:
+							{
+								try
+								{
+									return s_compatibilityImagesDark.at(entity.protocolCompatibility);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
 							}
 							default:
 								break;
@@ -220,23 +259,24 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						{
 							case EntityDataFlag::Compatibility:
 							{
-								if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
+								switch (entity.protocolCompatibility)
 								{
-									return "Entity is sending incoherent values that can cause undefined behavior";
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving:
+										return "Entity is sending incoherent values that can cause undefined behavior";
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan:
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant:
+										return "MILAN compatible";
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified:
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant:
+										return "MILAN certified";
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning:
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant:
+										return "MILAN with warnings";
+									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE:
+										return "IEEE 1722.1 compatible";
+									default:
+										return "Not fully IEEE 1722.1 compliant";
 								}
-								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
-								{
-									return "MILAN compatible";
-								}
-								else if (entity.compatibility.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
-								{
-									return "IEEE 1722.1 compatible";
-								}
-								else
-								{
-									return "Not fully IEEE 1722.1 compliant";
-								}
-								break;
 							}
 							case EntityDataFlag::GrandmasterID:
 							{

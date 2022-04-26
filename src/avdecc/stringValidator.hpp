@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,22 +21,40 @@
 
 #include <QValidator>
 #include <la/avdecc/internals/entityModelTypes.hpp>
+#include <la/avdecc/internals/entityModelControlValues.hpp>
 
 namespace avdecc
 {
-class StringValidator : public QValidator
+template<int MaxLength>
+class FixedSizeStringValidator : public QValidator
 {
 public:
-	static StringValidator* getSharedInstance() noexcept
+	virtual State validate(QString& input, int& /*pos*/) const override
 	{
-		static auto s_instance = StringValidator{};
+		return input.toUtf8().length() <= MaxLength ? State::Acceptable : State::Invalid;
+	}
+};
+
+class AvdeccStringValidator : public FixedSizeStringValidator<la::avdecc::entity::model::AvdeccFixedString::MaxLength>
+{
+public:
+	static AvdeccStringValidator* getSharedInstance() noexcept
+	{
+		static auto s_instance = AvdeccStringValidator{};
 
 		return &s_instance;
 	}
+};
 
-	virtual State validate(QString& input, int& /*pos*/) const override
+class ControlUTF8StringValidator : public FixedSizeStringValidator<la::avdecc::entity::model::UTF8StringValueStatic::MaxLength>
+{
+public:
+	static ControlUTF8StringValidator* getSharedInstance() noexcept
 	{
-		return input.toUtf8().length() <= la::avdecc::entity::model::AvdeccFixedString::MaxLength ? State::Acceptable : State::Invalid;
+		static auto s_instance = ControlUTF8StringValidator{};
+
+		return &s_instance;
 	}
 };
+
 } // namespace avdecc

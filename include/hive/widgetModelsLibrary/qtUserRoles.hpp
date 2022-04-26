@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -27,7 +27,8 @@ namespace widgetModelsLibrary
 {
 enum class QtUserRoles
 {
-	ImageRole = Qt::UserRole + 1001, /**< Role used for Image representation */
+	LightImageRole = Qt::UserRole + 1001, /**< Role used for Image representation as Light mode */
+	DarkImageRole, /**< Role used for Image representation as Dark mode */
 	ErrorRole, /**< Role used for Error representation */
 	SelectedEntityRole, /**< Role used for Entity Selection representation */
 };

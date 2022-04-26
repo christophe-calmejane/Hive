@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -52,6 +52,7 @@ std::string const appcastBetasUrl{ "@APPCAST_BETAS_URL@" };
 std::string const appcastReleasesFallbackUrl{ "@APPCAST_RELEASES_FALLBACK_URL@" };
 std::string const appcastBetasFallbackUrl{ "@APPCAST_BETAS_FALLBACK_URL@" };
 #endif // USE_SPARKLE
+std::string const newsFeedUrl{ "@NEWSFEED_URL@" };
 
 } // namespace internals
 } // namespace hive

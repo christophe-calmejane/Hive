@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -311,7 +311,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 		item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::StartUpload));
 
 		// Query an OperationID to start the upload
-		manager.startUploadMemoryObjectOperation(entityID, descriptorIndex, _firmwareData.size(),
+		manager.startUploadMemoryObjectOperation(entityID, descriptorIndex, _firmwareData.size(), nullptr,
 			[this, item, widget, entityName, descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
 			{
 				// Handle the result of startUploadMemoryObjectOperation
@@ -370,7 +370,7 @@ void FirmwareUploadDialog::on_startPushButton_clicked()
 
 												// Query an OperationID to store the firmware and reboot
 												auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-												manager.startStoreAndRebootMemoryObjectOperation(entityID, descriptorIndex,
+												manager.startStoreAndRebootMemoryObjectOperation(entityID, descriptorIndex, nullptr,
 													[this, item, widget, entityName](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::entity::model::OperationID const operationID)
 													{
 														// Handle the result of startStoreAndRebootMemoryObjectOperation
@@ -421,7 +421,7 @@ void FirmwareUploadDialog::on_abortPushButton_clicked()
 
 		widget->setText(QString("%1: Aborted").arg(entityName));
 		item->setData(la::avdecc::utils::to_integral(ItemRole::UpdateState), QVariant::fromValue(UpdateState::Failed));
-		manager.abortOperation(entityID, la::avdecc::entity::model::DescriptorType::MemoryObject, descriptorIndex, operationID,
+		manager.abortOperation(entityID, la::avdecc::entity::model::DescriptorType::MemoryObject, descriptorIndex, operationID, nullptr,
 			[](la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*status*/)
 			{
 			});

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -152,7 +152,7 @@ public:
 	virtual void applyMediaClockDomainModel(MCEntityDomainMapping const& domains) noexcept = 0;
 	virtual bool checkGPTPInSync(la::avdecc::UniqueIdentifier const entityId) noexcept = 0;
 	virtual bool isMediaClockDomainManageable(la::avdecc::UniqueIdentifier const& entityId) noexcept = 0;
-
+	virtual bool isMediaClockDomainConflictingWithStreamFormats(MCEntityDomainMapping const& domains) noexcept = 0;
 
 	// Signals
 	Q_SIGNAL void mediaClockConnectionsUpdate(std::vector<la::avdecc::UniqueIdentifier> const& entityIds);

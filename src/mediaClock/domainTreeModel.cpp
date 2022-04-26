@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -714,7 +714,7 @@ bool DomainTreeModelPrivate::setData(QModelIndex const& index, QVariant const& v
 		if (treeItem->type() == AbstractTreeItem::Domain)
 		{
 			auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
-			if (*domainTreeItem->domainSamplingRate().first != value.toUInt())
+			if (domainTreeItem->domainSamplingRate().first && *domainTreeItem->domainSamplingRate().first != value.toUInt())
 			{
 				domainTreeItem->setDomainSamplingRate(la::avdecc::entity::model::SamplingRate(value.toUInt()));
 				emit q->domainSetupChanged();
@@ -1476,7 +1476,10 @@ void SampleRateDomainDelegate::paint(QPainter* painter, QStyleOptionViewItem con
 		editor.getLabel()->setText(elidedText);
 		for (auto const& sampleRate : sampleRates)
 		{
-			editor.getComboBox()->addItem(sampleRate.second, sampleRate.first->getValue());
+			if (sampleRate.first)
+			{
+				editor.getComboBox()->addItem(sampleRate.second, sampleRate.first->getValue());
+			}
 		}
 		if (selectedSampleRate.first)
 		{

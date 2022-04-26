@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -288,12 +288,14 @@ public:
 	la::avdecc::entity::model::AvbInterfaceIndex const& avbInterfaceIndex() const noexcept;
 
 	// Cached data from the controller
-	la::avdecc::entity::model::StreamFormat const& streamFormat() const noexcept;
+	la::avdecc::entity::model::StreamFormat streamFormat() const noexcept;
+	la::avdecc::entity::model::StreamFormats const& streamFormats() const noexcept;
 	la::avdecc::UniqueIdentifier const& grandMasterID() const noexcept;
 	std::uint8_t const& grandMasterDomain() const noexcept;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const& interfaceLinkStatus() const noexcept;
 	bool isRunning() const noexcept;
 	TriState lockedState() const noexcept; // StreamInput only
+	bool isLatencyError() const noexcept; // StreamInput only
 	bool isStreaming() const noexcept; // StreamOutput only
 	la::avdecc::entity::model::StreamInputConnectionInfo const& streamInputConnectionInformation() const noexcept;
 
@@ -301,6 +303,7 @@ protected:
 	StreamNode(Type const type, Node& parent, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept;
 
 	void setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept;
+	void setStreamFormats(la::avdecc::entity::model::StreamFormats const& streamFormat) noexcept;
 	void setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID) noexcept;
 	void setGrandMasterDomain(std::uint8_t const grandMasterDomain) noexcept;
 	void setInterfaceLinkStatus(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const interfaceLinkStatus) noexcept;
@@ -308,6 +311,7 @@ protected:
 	bool setProbingStatus(la::avdecc::entity::model::ProbingStatus const probingStatus) noexcept; // StreamInput only
 	bool setMediaLockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamInput only
 	bool setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamInput only
+	bool setLatencyError(bool const isLatencyError) noexcept; // StreamInput only
 	bool setStreamStartCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamOutput only
 	bool setStreamStopCounter(la::avdecc::entity::model::DescriptorCounter const value) noexcept; // StreamOutput only
 	void setStreamInputConnectionInformation(la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept;
@@ -318,6 +322,7 @@ protected:
 	la::avdecc::entity::model::StreamIndex const _streamIndex;
 	la::avdecc::entity::model::AvbInterfaceIndex const _avbInterfaceIndex;
 	la::avdecc::entity::model::StreamFormat _streamFormat{ la::avdecc::entity::model::StreamFormat::getNullStreamFormat() };
+	la::avdecc::entity::model::StreamFormats _streamFormats{};
 	la::avdecc::UniqueIdentifier _grandMasterID;
 	std::uint8_t _grandMasterDomain;
 	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus _interfaceLinkStatus{ la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown };
@@ -325,6 +330,7 @@ protected:
 	std::optional<la::avdecc::entity::model::ProbingStatus> _probingStatus{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaLockedCounter{ std::nullopt }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _mediaUnlockedCounter{ std::nullopt }; // StreamInput only
+	bool _isLatencyError{ false }; // StreamInput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStartCounter{ std::nullopt }; // StreamOutput only
 	std::optional<la::avdecc::entity::model::DescriptorCounter> _streamStopCounter{ std::nullopt }; // StreamOutput only
 	la::avdecc::entity::model::StreamInputConnectionInfo _streamInputConnectionInfo{};

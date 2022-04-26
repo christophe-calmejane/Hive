@@ -1,6 +1,6 @@
 # Hive
 
-Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 ## What is Hive
 
@@ -23,11 +23,11 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 - Copy `.hive_config.sample` to `.hive_config`, then edit it for installer customization
 - Run the `setup_fresh_env.sh` script that should properly setup your working copy
 - Run the `gen_cmake.sh` script with whatever optional parameters required (run *gen_cmake.sh -h* to display the help)
-  - [Linux only] For Ubuntu users, install the `qtbase5-dev` package and make sure the major and minor version matche what Hive requires. You can alternatively use the `-qtvers` and `-qtdir` options when invoking `gen_cmake.sh` if you want to use a different Qt version.
+  - [Linux only] For Ubuntu users, install the `qtbase5-dev` package and make sure the major and minor version matches what Hive requires. You can alternatively use the `-qtvers` and `-qtdir` options when invoking `gen_cmake.sh` if you want to use a different Qt version.
 - Go into the generated output folder
-- Open the generated solution
 - Compile everything
-- Compile the *install* target
+  - [macOS/Windows] Open the generated solution and compile from the IDE
+  - [Linux] Run `cmake --build . --config Release`
 
 ## Installer generation
 

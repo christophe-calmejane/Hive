@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -641,6 +641,81 @@ private:
 	}
 
 	/**
+	 * Checks if a given Media Clock Domain setup contains a sampling rate conflict
+	 * with one of the stream formats of devices belonging to it.
+	 * A Media Clock Domain setup that does not create conflicts is one that uses
+	 * a sampling rate for each domain that matches the sampling rates in the stream formats
+	 * configured for the streams of all devices belonging to that domain.
+	 */
+	bool isMediaClockDomainConflictingWithStreamFormats(avdecc::mediaClock::MCEntityDomainMapping const& domains) noexcept
+	{
+		MCEntityDomainMapping domainModel(domains);
+		for (const auto& entityKV : domainModel.getEntityMediaClockMasterMappings())
+		{
+			auto const& entityId = entityKV.first;
+			auto const& domainIndexes = entityKV.second;
+			if (!domainIndexes.empty())
+			{
+				auto const& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				auto const controlledEntity = manager.getControlledEntity(entityId);
+				if (controlledEntity)
+				{
+					if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+					{
+						// If not even an AVB Entity Model is supported, a conflict cannot exist
+						return false;
+					}
+
+					try
+					{
+						// get the 'media clock domain' pending sampling rate (change) from the domainModel
+						auto const& mediaClockMasterSampleRate = domainModel.getMediaClockDomains().find(domainIndexes.at(0))->second.getDomainSamplingRate();
+
+						auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+						for (auto const& streamInput : configurationNode.streamInputs)
+						{
+							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
+							auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel->streamFormat);
+							if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamFormatInfo->getType())
+								continue;
+
+							auto const& streamFormatSampleRate = streamFormatInfo->getSamplingRate();
+
+							// if the 'media clock master' audioUnit SR and the streamFormat SR do not match, we have found a conflict that the user needs to be warned about
+							if (mediaClockMasterSampleRate != streamFormatSampleRate)
+								return true;
+						}
+						for (auto const& streamOutput : configurationNode.streamOutputs)
+						{
+							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
+							auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+							if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamFormatInfo->getType())
+								continue;
+
+							auto const& streamFormatSampleRate = streamFormatInfo->getSamplingRate();
+
+							// if the 'media clock master' audioUnit SR and the streamFormat SR do not match, we have found a conflict that the user needs to be warned about
+							if (mediaClockMasterSampleRate != streamFormatSampleRate)
+								return true;
+						}
+					}
+					catch (la::avdecc::controller::ControlledEntity::Exception const&)
+					{
+						// Ignore exception
+					}
+					catch (...)
+					{
+						// Uncaught exception
+						AVDECC_ASSERT(false, "Uncaught exception");
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	* Checks if the domain mc master of an entity changed. The first index in the vector is the only one that matters.
 	* Other indexes are secondary masters and are not of relevance here.
 	* @param oldEntityDomainMapping The domain indexes of an entity that was determined using createMediaClockDomainModel method at an earlier timepoint.
@@ -731,7 +806,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, responseHandler);
+							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, nullptr, responseHandler);
 							return true;
 						}
 					}
@@ -779,7 +854,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, responseHandler);
+							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, nullptr, responseHandler);
 							return true;
 						}
 					}
@@ -826,7 +901,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, responseHandler);
+							manager.setClockSource(entityId, clockDomainIndex, clockSource.first, nullptr, responseHandler);
 							return true;
 						}
 					}
@@ -1494,7 +1569,7 @@ private:
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-							manager.setAudioUnitSamplingRate(entityId, audioUnitIndex, sampleRate, responseHandler);
+							manager.setAudioUnitSamplingRate(entityId, audioUnitIndex, sampleRate, nullptr, responseHandler);
 							return true;
 						});
 				}

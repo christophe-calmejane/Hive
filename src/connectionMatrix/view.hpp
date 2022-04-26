@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -45,6 +45,8 @@ public:
 
 	// Returns the index that refers to the given entityID
 	QModelIndex findEntityModelIndex(la::avdecc::UniqueIdentifier const& entityID) const;
+	QLineEdit* talkerFilterLineEdit() noexcept;
+	QLineEdit* listenerFilterLineEdit() noexcept;
 
 private:
 	void onIntersectionClicked(QModelIndex const& index);

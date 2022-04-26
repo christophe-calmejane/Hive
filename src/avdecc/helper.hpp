@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,14 +19,18 @@
 
 #pragma once
 
-#include <QString>
-#include <QObject>
-#include <QIcon>
-#include <functional>
 #include <la/avdecc/controller/avdeccController.hpp>
 #include <la/avdecc/internals/streamFormatInfo.hpp>
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/logger.hpp>
+#include <hive/modelsLibrary/commandsExecutor.hpp>
+
+#include <QString>
+#include <QObject>
+#include <QIcon>
+#include <QWidget>
+
+#include <functional>
 
 namespace avdecc
 {
@@ -70,6 +74,23 @@ QString certificationVersionToString(std::uint32_t const certificationVersion) n
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
 QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;
+
+QString generateDumpSourceString(QString const& shortName, QString const& version) noexcept;
+bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept;
+bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept;
+
+/**
+ * @brief Changes the stream input format of an entity, removing invalid mappings if any.
+ * @details Synchronous method that will check if any mapping would become dangling after the format change, in which case it will ask the user if it wants to proceed (modal popup).
+ * @param parent Parent widget to which popups will be attached to. If nullptr is specified, no popup will be shown and dangling mappings will be automatically removed (if needed).
+ * @parem autoRemoveMappings If set to true (or if parent is nullptr), dangling mappings will automatically be removed without asking the user.
+ * @param entityID Entity on which the format has to be changed.
+ * @param streamIndex Input stream index on which the format has to be changed.
+ * @param streamFormat Input stream format to change to.
+ * @param context Context object for the result handler. Handler will not be called if context is destroyed before completion. Must *not* be nullptr.
+ * @param handler Result handler called when the operation completed (with or without error).
+*/
+void smartChangeInputStreamFormat(QWidget* const parent, bool const autoRemoveMappings, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, QObject* context, std::function<void(hive::modelsLibrary::CommandsExecutor::ExecutorResult const result)> const& handler) noexcept;
 
 } // namespace helper
 } // namespace avdecc

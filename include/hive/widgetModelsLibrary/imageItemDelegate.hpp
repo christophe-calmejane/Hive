@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -22,6 +22,7 @@
 #include "qtUserRoles.hpp"
 
 #include <la/avdecc/utils.hpp>
+#include <QtMate/material/color.hpp>
 
 #include <QStyledItemDelegate>
 
@@ -31,12 +32,22 @@ namespace widgetModelsLibrary
 {
 class ImageItemDelegate : public QStyledItemDelegate
 {
+	Q_OBJECT
 public:
-	using QStyledItemDelegate::QStyledItemDelegate;
-	static constexpr auto ImageRole = la::avdecc::utils::to_integral(QtUserRoles::ImageRole);
+	static constexpr auto LightImageRole = la::avdecc::utils::to_integral(QtUserRoles::LightImageRole);
+	static constexpr auto DarkImageRole = la::avdecc::utils::to_integral(QtUserRoles::DarkImageRole);
+
+	ImageItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+
+	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 
 protected:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+
+private:
+	// Private members
+	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
+	bool _isDark{ false };
 };
 
 } // namespace widgetModelsLibrary

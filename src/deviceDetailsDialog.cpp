@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -124,12 +124,26 @@ public:
 		connect(&_deviceDetailsInputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsOutputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
+		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataChanged, this,
+			[this](const QModelIndex& /*topLeft*/, const QModelIndex& /*bottomRight*/, const QVector<int>& /*roles*/)
+			{
+				if (tableViewReceive)
+					tableViewReceive->viewport()->update();
+			});
+		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataChanged, this,
+			[this](const QModelIndex& /*topLeft*/, const QModelIndex& /*bottomRight*/, const QVector<int>& /*roles*/)
+			{
+				if (tableViewTransmit)
+					tableViewTransmit->viewport()->update();
+			});
+
 		connect(pushButtonApplyChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::applyChanges);
 		connect(pushButtonRevertChanges, &QPushButton::clicked, this, &DeviceDetailsDialogImpl::revertChanges);
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
 
+		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &DeviceDetailsDialogImpl::entityOnline);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &DeviceDetailsDialogImpl::entityOffline);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this, &DeviceDetailsDialogImpl::onEndAecpCommand);
 		connect(&manager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &DeviceDetailsDialogImpl::gptpChanged);
@@ -313,6 +327,9 @@ public:
 					{
 						// create a streamformatinfo to then derive the samplingrate for comparison purposes
 						auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormatData.streamFormat);
+						if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamFormatInfo->getType())
+							continue;
+
 						auto* audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
 						if (streamFormatInfo && audioUnitDynModel)
 						{
@@ -406,32 +423,30 @@ public:
 			}
 
 			// apply the new stream info (latency)
-			if (_userSelectedLatency)
+			auto const controlledEntity = manager.getControlledEntity(_entityID);
+			if (controlledEntity)
 			{
-				auto const controlledEntity = manager.getControlledEntity(_entityID);
-				if (controlledEntity)
+				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
+				for (auto const& streamOutput : configurationNode.streamOutputs)
 				{
-					auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-					for (auto const& streamOutput : configurationNode.streamOutputs)
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+					auto const streamType = streamFormatInfo->getType();
+					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
 					{
-						auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
-						auto const streamType = streamFormatInfo->getType();
-						if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
-						{
-							// skip clock stream
-							continue;
-						}
-						auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
-						if (streamLatency != *_userSelectedLatency)
-						{
-							auto streamInfo = la::avdecc::entity::model::StreamInfo{};
-							streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
-							streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
+						// skip clock stream
+						continue;
+					}
+					auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
+					auto const latencyValuesValid = (streamLatency != std::nullopt && _userSelectedLatency != std::nullopt);
+					if (latencyValuesValid && *streamLatency != *_userSelectedLatency)
+					{
+						auto streamInfo = la::avdecc::entity::model::StreamInfo{};
+						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
+						streamInfo.msrpAccumulatedLatency = *_userSelectedLatency;
 
-							// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
-							// TODO: needs update of library:
-							manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
-						}
+						// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
+						// TODO: needs update of library:
+						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
 					}
 				}
 			}
@@ -496,8 +511,10 @@ public:
 	}
 
 	/**
-	* Add every transmit and receive node into the table.
-	*/
+	 * Method to process every incoming audiounit node.
+	 * This implementation uses the audiounit node to derive the channel connections for Receive and Transmit tab from it
+	 * and adds them to the corresponding models.
+	 */
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		if (!controlledEntity)
@@ -534,37 +551,41 @@ public:
 				}
 			}
 		}
-
-		auto configurationNode = controlledEntity->getCurrentConfigurationNode();
-		for (auto const& streamInput : configurationNode.streamInputs)
-		{
-			_deviceDetailsInputStreamFormatTableModel.addNode(streamInput.first, streamInput.second.descriptorType, streamInput.second.dynamicModel->streamFormat);
-		}
-		for (auto i = 0; i < _deviceDetailsInputStreamFormatTableModel.rowCount(); i++)
-		{
-			auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-			tableViewInputStreamFormat->openPersistentEditor(modIdx);
-		}
-		for (auto const& streamOutput : configurationNode.streamOutputs)
-		{
-			_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutput.first, streamOutput.second.descriptorType, streamOutput.second.dynamicModel->streamFormat);
-		}
-		for (auto i = 0; i < _deviceDetailsOutputStreamFormatTableModel.rowCount(); i++)
-		{
-			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(i, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-			tableViewOutputStreamFormat->openPersistentEditor(modIdx);
-		}
 	}
 
 	/**
-	* Ignored.
-	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& /*node*/) noexcept override {}
+	 * Method to process every incoming streaminput node.
+	 * This implementation adds the format of the streaminput to the model used for StreamFormat tab and opens the corresponding persistent editor in the new row.
+	 */
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+	{
+		if (node.isRedundant)
+			return;
+
+		// add the streaminput node to the model
+		_deviceDetailsInputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
+
+		// open the persistent editor for the just added streaminput
+		auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+		tableViewInputStreamFormat->openPersistentEditor(modIdx);
+	}
 
 	/**
-	* Ignored.
-	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamOutputNode const& /*node*/) noexcept override {}
+	 * Method to process every incoming streamoutput node.
+	 * This implementation adds the format of the streamoutput to the model used for StreamFormat tab and opens the corresponding persistent editor in the new row.
+	 */
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	{
+		if (node.isRedundant)
+			return;
+
+		// add the streamoutput node to the model
+		_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
+
+		// open the persistent editor for the just added streamoutput
+		auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+		tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+	}
 
 	/**
 	* Ignored.
@@ -612,9 +633,40 @@ public:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::ClockDomainNode const& /*node*/) noexcept override {}
 
 	/**
-	* Ignored.
+	 * Method to process every incoming redundantstream node.
+	 * This implementation takes the primary stream and adds the format of it to the model (StreamInput or -Output) used for StreamFormat tab and opens the corresponding persistent editor in the new row.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamNode const& /*node*/) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	{
+		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			auto const& streamInputNode = static_cast<const la::avdecc::controller::model::StreamInputNode*>(node.primaryStream);
+
+			if (streamInputNode)
+			{
+				// add the streaminput node to the model
+				_deviceDetailsInputStreamFormatTableModel.addNode(streamInputNode->descriptorIndex, streamInputNode->descriptorType, streamInputNode->dynamicModel->streamFormat);
+
+				// open the persistent editor for the just added streaminput
+				auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+				tableViewInputStreamFormat->openPersistentEditor(modIdx);
+			}
+		}
+		else if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			auto const& streamOutputNode = static_cast<const la::avdecc::controller::model::StreamOutputNode*>(node.primaryStream);
+
+			if (streamOutputNode)
+			{
+				// add the streamoutput node to the model
+				_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutputNode->descriptorIndex, streamOutputNode->descriptorType, streamOutputNode->dynamicModel->streamFormat);
+
+				// open the persistent editor for the just added streamoutput
+				auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+				tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+			}
+		}
+	}
 
 	/**
 	* Ignored.
@@ -684,12 +736,33 @@ public:
 	/**
 	* If the displayed entity goes offline, this dialog is closed automatically.
 	*/
+	void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const /*enumerationTime*/)
+	{
+		if (_entityID == entityID)
+		{
+			// when this dialog exists, the entity it refers to cannot come online unless something is bugged (dialog shall only exist for online entities)
+		}
+		else
+		{
+			_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
+		}
+	}
+
+	/**
+	* If the displayed entity goes offline, this dialog is closed automatically.
+	*/
 	void entityOffline(la::avdecc::UniqueIdentifier const entityID)
 	{
 		if (_entityID == entityID)
 		{
 			// close this dialog
 			_dialog->close();
+		}
+		else
+		{
+			_deviceDetailsChannelTableModelReceive.channelConnectionsUpdate(entityID);
+			_deviceDetailsChannelTableModelTransmit.channelConnectionsUpdate(entityID);
 		}
 	}
 
@@ -699,7 +772,7 @@ public:
 	* @param cmdType		The executed command type.
 	* @param commandStatus  The status of the command.
 	*/
-	void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
+	void onEndAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType cmdType, la::avdecc::entity::model::DescriptorIndex /*descriptorIndex*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const /*commandStatus*/)
 	{
 		// TODO propably show message when a command failed.
 		if (entityID == _entityID)
@@ -821,6 +894,7 @@ public:
 
 	/**
 	* Invoked whenever the entity name gets changed in the view.
+	* @param entityName The new entity name.
 	*/
 	void lineEditDeviceNameChanged(QString const& /*entityName*/)
 	{
@@ -841,12 +915,15 @@ public:
 	}
 
 	/**
-	* Invoked whenever the entity group name gets changed in the view.
-	* @param entityGroupName The new group name.
+	* Invoked whenever the comboboxes current value for predefined presentation time values is changed.
+	* @param text	The changed value is ignored, since the newly selected value is accessed
+	*				programmatically through the comboboxes' current QVariant value interpreted as integer.
 	*/
 	void comboBoxPredefinedPTChanged(QString const& /*text*/)
 	{
-		if (radioButton_PredefinedPT->isChecked() && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
+		auto const noUserSelectedLatencyYet = (_userSelectedLatency == std::nullopt);
+		auto const userSelectedLatencyChanged = (_userSelectedLatency != std::nullopt && *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt());
+		if (radioButton_PredefinedPT->isChecked() && (noUserSelectedLatencyYet || userSelectedLatencyChanged))
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
@@ -855,12 +932,15 @@ public:
 	}
 
 	/**
-	* Invoked whenever the entity group name gets changed in the view.
-	* @param entityGroupName The new group name.
+	* Invoked whenever the radio button for switching from custom presentation time value to one of the predefined ones is changed.
+	* @param state	The new radio button active state. Since only switching from custom to predefined is supported, only true is an expected value here.
 	*/
 	void radioButtonPredefinedPTClicked(bool state)
 	{
-		if (state && (_userSelectedLatency != std::nullopt || *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt()))
+		assert(state);
+		auto const noUserSelectedLatencyYet = (_userSelectedLatency == std::nullopt);
+		auto const userSelectedLatencyChanged = (_userSelectedLatency != std::nullopt && *_userSelectedLatency != comboBox_PredefinedPT->currentData().toUInt());
+		if (state && (noUserSelectedLatencyYet || userSelectedLatencyChanged))
 		{
 			_userSelectedLatency = comboBox_PredefinedPT->currentData().toUInt();
 			_hasChangesByUser = true;
@@ -870,7 +950,6 @@ public:
 
 	/**
 	* Invoked whenever one of tables on the receive and transmit tabs is edited by the user.
-	* @param entityGroupName The new group name.
 	*/
 	void tableDataChanged()
 	{

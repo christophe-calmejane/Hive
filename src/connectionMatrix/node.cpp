@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -395,9 +395,14 @@ la::avdecc::entity::model::AvbInterfaceIndex const& StreamNode::avbInterfaceInde
 	return _avbInterfaceIndex;
 }
 
-la::avdecc::entity::model::StreamFormat const& StreamNode::streamFormat() const noexcept
+la::avdecc::entity::model::StreamFormat StreamNode::streamFormat() const noexcept
 {
 	return _streamFormat;
+}
+
+la::avdecc::entity::model::StreamFormats const& StreamNode::streamFormats() const noexcept
+{
+	return _streamFormats;
 }
 
 la::avdecc::UniqueIdentifier const& StreamNode::grandMasterID() const noexcept
@@ -425,6 +430,11 @@ Node::TriState StreamNode::lockedState() const noexcept
 	return _lockedState;
 }
 
+bool StreamNode::isLatencyError() const noexcept
+{
+	return _isLatencyError;
+}
+
 bool StreamNode::isStreaming() const noexcept
 {
 	return _isStreaming;
@@ -445,6 +455,11 @@ StreamNode::StreamNode(Type const type, Node& parent, la::avdecc::entity::model:
 void StreamNode::setStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept
 {
 	_streamFormat = streamFormat;
+}
+
+void StreamNode::setStreamFormats(la::avdecc::entity::model::StreamFormats const& streamFormats) noexcept
+{
+	_streamFormats = streamFormats;
 }
 
 void StreamNode::setGrandMasterID(la::avdecc::UniqueIdentifier const grandMasterID) noexcept
@@ -485,6 +500,13 @@ bool StreamNode::setMediaUnlockedCounter(la::avdecc::entity::model::DescriptorCo
 {
 	auto const changed = _mediaUnlockedCounter != value;
 	_mediaUnlockedCounter = value;
+	return changed;
+}
+
+bool StreamNode::setLatencyError(bool const isLatencyError) noexcept
+{
+	auto const changed = _isLatencyError != isLatencyError;
+	_isLatencyError = isLatencyError;
 	return changed;
 }
 

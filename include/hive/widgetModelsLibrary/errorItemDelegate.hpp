@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -37,7 +37,7 @@ class ErrorItemDelegate : public QStyledItemDelegate
 public:
 	static constexpr auto ErrorRole = la::avdecc::utils::to_integral(QtUserRoles::ErrorRole);
 
-	explicit ErrorItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+	ErrorItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 

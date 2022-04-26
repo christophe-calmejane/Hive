@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -42,6 +42,8 @@ private:
 	// QMainWindow overrides
 	virtual void showEvent(QShowEvent* event) override;
 	virtual void closeEvent(QCloseEvent* event) override;
+	virtual void dragEnterEvent(QDragEnterEvent* event) override;
+	virtual void dropEvent(QDropEvent* event) override;
 
 	// Private variables
 	MainWindowImpl* _pImpl{ nullptr };

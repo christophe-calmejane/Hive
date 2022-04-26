@@ -8,8 +8,18 @@
         <file>unlocked.png</file>
         <file>locked_by_other.png</file>
         <file>lock_not_supported.png</file>
-        <file>milan.png</file>
-        <file>milan_redundant.png</file>
+        <file>Milan_Compatible.png</file>
+        <file>Milan_Compatible_inv.png</file>
+        <file>Milan_Certified.png</file>
+        <file>Milan_Certified_inv.png</file>
+        <file>Milan_Compatible_Warning.png</file>
+        <file>Milan_Compatible_Warning_inv.png</file>
+        <file>Milan_Redundant_Compatible.png</file>
+        <file>Milan_Redundant_Compatible_inv.png</file>
+        <file>Milan_Redundant_Certified.png</file>
+        <file>Milan_Redundant_Certified_inv.png</file>
+        <file>Milan_Redundant_Compatible_Warning.png</file>
+        <file>Milan_Redundant_Compatible_Warning_inv.png</file>
         <file>ieee.png</file>
         <file>not_compliant.png</file>
         <file>misbehaving.png</file>

@@ -15,6 +15,10 @@
 # Notarization password, defaults to "@keychain:AC_PASSWORD" which will use the password stored in the keychain
 #notarization_password=@keychain:AC_PASSWORD
 
+################ News feed
+# News feed URL
+newsfeed_url=https://www.kikisoft.com/Hive/news.php
+
 ################ Automatic check for update
 # Define to true if Sparkle is to be used, false otherwise
 use_sparkle=true

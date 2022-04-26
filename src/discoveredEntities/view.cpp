@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -69,6 +69,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 
 	// Disable vertical header row resizing
 	verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	verticalHeader()->setDefaultSectionSize(34);
 
 	// Enable sorting
 	setSortingEnabled(true);
@@ -104,10 +105,10 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
 	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults::ui::AdvancedView::ColumnWidth_Name);
 
-
 	// Connect all signals
 
-	// Connect the error item delegate with theme color changes
+	// Connect the item delegates with theme color changes
+	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_imageItemDelegate, &hive::widgetModelsLibrary::ImageItemDelegate::setThemeColorName);
 	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
 	// Listen for entity going offline
@@ -118,8 +119,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 			if (eid == _selectedControlledEntity)
 			{
 				// Force deselecting the view, before the entity is removed from the list, otherwise another entity will automatically be selected (not desirable)
-				auto const invalidIndex = QModelIndex{};
-				setCurrentIndex(invalidIndex);
+				clearSelection();
 			}
 		});
 
@@ -128,15 +128,22 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 		[this]()
 		{
 			// Clear selected entity
-			_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
-			emit selectedControlledEntityChanged(_selectedControlledEntity);
+			clearSelection();
 		});
 
 	// Listen for selection change
-	connect(selectionModel(), &QItemSelectionModel::currentChanged, this,
-		[this](QModelIndex const& index)
+	connect(selectionModel(), &QItemSelectionModel::selectionChanged, this,
+		[this](QItemSelection const& selected, QItemSelection const& deselected)
 		{
-			auto const entityID = _proxyModel.controlledEntityID(index);
+			auto index = QModelIndex{};
+			auto const& selectedIndexes = selected.indexes();
+			if (!selectedIndexes.empty())
+			{
+				index = *selectedIndexes.begin();
+			}
+
+			auto const entityID = controlledEntityIDAtIndex(index);
+			auto previousEntityID = _selectedControlledEntity;
 
 			// Selection index is invalid (ie. no selection), or the currently selected entity doesn't exist
 			if (!index.isValid() || !entityID.isValid())
@@ -150,7 +157,10 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 				_selectedControlledEntity = entityID;
 			}
 
-			emit selectedControlledEntityChanged(_selectedControlledEntity);
+			if (previousEntityID != _selectedControlledEntity)
+			{
+				emit selectedControlledEntityChanged(_selectedControlledEntity);
+			}
 		});
 
 	// Automatic saving of dynamic header state when changed
@@ -160,7 +170,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	connect(this, &QTableView::doubleClicked, this,
 		[this](QModelIndex const& index)
 		{
-			auto const entityID = _proxyModel.controlledEntityID(index);
+			auto const entityID = controlledEntityIDAtIndex(index);
 
 			if (entityID.isValid())
 			{
@@ -171,14 +181,10 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	connect(this, &QTableView::customContextMenuRequested, this,
 		[this](QPoint const& pos)
 		{
-			// CAUTION, this view uses a proxy, we must remap the index
 			auto const index = indexAt(pos);
-			auto const sourceIndex = _proxyModel.mapToSource(index);
-
-			auto const entityID = _proxyModel.controlledEntityID(index);
+			auto const entityID = controlledEntityIDAtIndex(index);
 			emit contextMenuRequested(entityID, pos);
 		});
-
 
 	// Start the settings signaler service (will trigger all known signals)
 	_settingsSignaler.start();
@@ -201,9 +207,22 @@ void View::saveDynamicHeaderState() const noexcept
 	settings->setValue(settings::ControllerDynamicHeaderViewState, _dynamicHeaderView.saveState());
 }
 
-SortFilterProxy const& View::model() const noexcept
+void View::clearSelection() noexcept
 {
-	return _proxyModel;
+	// Clear selected index
+	auto const invalidIndex = QModelIndex{};
+	setCurrentIndex(invalidIndex);
+	// And selected entity
+	_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
+	// Signal the change
+	emit selectedControlledEntityChanged(_selectedControlledEntity);
+}
+
+la::avdecc::UniqueIdentifier View::controlledEntityIDAtIndex(QModelIndex const& index) const noexcept
+{
+	auto const* m = static_cast<QSortFilterProxyModel const*>(model());
+	auto const sourceIndex = m->mapToSource(index);
+	return _model.getControlledEntityID(sourceIndex);
 }
 
 void View::showEvent(QShowEvent* event)

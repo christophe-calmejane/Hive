@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -59,7 +59,11 @@ enum class Compatibility
 	NotCompliant,
 	IEEE,
 	Milan,
+	MilanCertified,
+	MilanWarning,
 	MilanRedundant,
+	MilanCertifiedRedundant,
+	MilanWarningRedundant,
 	Misbehaving,
 };
 
@@ -84,12 +88,21 @@ Compatibility computeCompatibility(std::optional<la::avdecc::entity::model::Mila
 	}
 	else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 	{
-		if (milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
+		auto const isRedundant = milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy);
+		auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= 0x01000000;
+		auto const isWarning = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning);
+
+		if (isWarning)
 		{
-			return Compatibility::MilanRedundant;
+			return isRedundant ? Compatibility::MilanWarningRedundant : Compatibility::MilanWarning;
 		}
 
-		return Compatibility::Milan;
+		if (isCertifiedV1)
+		{
+			return isRedundant ? Compatibility::MilanCertifiedRedundant : Compatibility::MilanCertified;
+		}
+
+		return isRedundant ? Compatibility::MilanRedundant : Compatibility::Milan;
 	}
 	else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
 	{
@@ -261,6 +274,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ControllerModelPrivate::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControllerModelPrivate::handleStreamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControllerModelPrivate::handleStatisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::diagnosticsChanged, this, &ControllerModelPrivate::handleDiagnosticsChanged);
 
 		// Connect avdecc::mediaClock::MCDomainManager signals
 		auto& mediaClockConnectionManager = avdecc::mediaClock::MCDomainManager::getInstance();
@@ -363,7 +377,7 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityLogo)
 		{
-			if (role == hive::widgetModelsLibrary::ImageItemDelegate::ImageRole)
+			if (role == hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole || role == hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole)
 			{
 				if (data.aemSupported)
 				{
@@ -376,11 +390,23 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
 				{
 					try
 					{
-						return _compatibilityImages.at(data.compatibility);
+						return _compatibilityImagesLight.at(data.compatibility);
+					}
+					catch (std::out_of_range const&)
+					{
+						AVDECC_ASSERT(false, "Image missing");
+						return {};
+					}
+				}
+				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
+				{
+					try
+					{
+						return _compatibilityImagesDark.at(data.compatibility);
 					}
 					catch (std::out_of_range const&)
 					{
@@ -396,6 +422,12 @@ public:
 						case Compatibility::Milan:
 						case Compatibility::MilanRedundant:
 							return "MILAN compatible";
+						case Compatibility::MilanCertified:
+						case Compatibility::MilanCertifiedRedundant:
+							return "MILAN certified";
+						case Compatibility::MilanWarning:
+						case Compatibility::MilanWarningRedundant:
+							return "MILAN with warnings";
 						case Compatibility::IEEE:
 							return "IEEE 1722.1 compatible";
 						default:
@@ -409,7 +441,8 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
 				{
 					try
 					{
@@ -431,7 +464,8 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::ImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
+				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
 				{
 					try
 					{
@@ -662,10 +696,12 @@ private:
 				// Update the cache
 				rebuildEntityRowMap();
 
-				// Initialize EntityWithError (only need to initialize Statistics which might change during enumeration and not trigger an event, contrary to Counters)
-				_entitiesWithErrorCounter[entityID].statisticsError = !manager.getStatisticsCounters(entityID).empty();
-
 				emit q->endInsertRows();
+
+				// Trigger Error Counters, Statistics and Diagnostics
+				// TODO: Error Counters
+				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
+				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
 			}
 		}
 		catch (...)
@@ -690,6 +726,9 @@ private:
 			// Remove the entity from the model
 			auto const it = std::next(std::begin(_entities), *row);
 			_entities.erase(it);
+
+			// Wipe Errors
+			_entitiesWithErrorCounter.erase(entityID);
 
 			// Update the cache
 			rebuildEntityRowMap();
@@ -792,7 +831,7 @@ private:
 			data.acquireState = computeAcquireState(acquireState);
 			data.acquireStateTooltip = helper::acquireStateToString(acquireState, owningEntity);
 
-			dataChanged(*row, ControllerModel::Column::AcquireState, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+			dataChanged(*row, ControllerModel::Column::AcquireState, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 		}
 	}
 
@@ -805,7 +844,7 @@ private:
 			data.lockState = computeLockState(lockState);
 			data.lockStateTooltip = helper::lockStateToString(lockState, lockingEntity);
 
-			dataChanged(*row, ControllerModel::Column::LockState, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+			dataChanged(*row, ControllerModel::Column::LockState, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 		}
 	}
 
@@ -876,6 +915,45 @@ private:
 		}
 	}
 
+	void handleDiagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics)
+	{
+		if (auto const row = entityRow(entityID))
+		{
+			auto const wasRedundancyWarning = _entitiesWithErrorCounter[entityID].redundancyWarning;
+			auto const wasStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
+
+			auto nowRedundancyWarning = false;
+			auto nowStreamInputLatencyError = false;
+
+			// Redundancy Warning
+			{
+				_entitiesWithErrorCounter[entityID].redundancyWarning = diagnostics.redundancyWarning;
+				nowRedundancyWarning = diagnostics.redundancyWarning;
+			}
+
+			// Stream Input Latency Error
+			{
+				// Clear previous streamsWithLatencyError values
+				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
+
+				// Rebuild it entirely
+				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
+				{
+					if (isError)
+					{
+						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
+						nowStreamInputLatencyError = true;
+					}
+				}
+			}
+
+			if ((wasRedundancyWarning != nowRedundancyWarning) || (wasStreamInputLatencyError != nowStreamInputLatencyError))
+			{
+				dataChanged(*row, ControllerModel::Column::EntityID);
+			}
+		}
+	}
+
 	// avdecc::mediaClock::MCDomainManager
 
 	void handleMediaClockConnectionsUpdated(std::vector<la::avdecc::UniqueIdentifier> const& changedEntities)
@@ -917,7 +995,7 @@ private:
 		{
 			if (auto const row = entityRow(entityID))
 			{
-				dataChanged(*row, ControllerModel::Column::EntityLogo, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+				dataChanged(*row, ControllerModel::Column::EntityLogo, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 			}
 		}
 	}
@@ -937,7 +1015,7 @@ private:
 				auto const topLeft = q->createIndex(0, column, nullptr);
 				auto const bottomRight = q->createIndex(rowCount(), column, nullptr);
 
-				emit q->dataChanged(topLeft, bottomRight, { hive::widgetModelsLibrary::ImageItemDelegate::ImageRole });
+				emit q->dataChanged(topLeft, bottomRight, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
 			}
 		}
 		else if (name == settings::General_ThemeColorIndex.name)
@@ -992,22 +1070,39 @@ private:
 	struct EntityWithErrorCounter
 	{
 		bool statisticsError{ false };
+		bool redundancyWarning{ false };
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
 		constexpr bool hasError() const noexcept
 		{
-			return statisticsError || !streamsWithErrorCounter.empty();
+			return statisticsError || redundancyWarning || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
 		}
 	};
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
 	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
 	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _identifingEntities;
 
-	std::unordered_map<Compatibility, QImage> _compatibilityImages{
+	std::unordered_map<Compatibility, QImage> _compatibilityImagesLight{
 		{ Compatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
 		{ Compatibility::IEEE, QImage{ ":/ieee.png" } },
-		{ Compatibility::Milan, QImage{ ":/milan.png" } },
+		{ Compatibility::Milan, QImage{ ":/Milan_Compatible.png" } },
+		{ Compatibility::MilanCertified, QImage{ ":/Milan_Certified.png" } },
+		{ Compatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning.png" } },
+		{ Compatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible.png" } },
+		{ Compatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified.png" } },
+		{ Compatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning.png" } },
 		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
-		{ Compatibility::MilanRedundant, QImage{ ":/milan_redundant.png" } },
+	};
+	std::unordered_map<Compatibility, QImage> _compatibilityImagesDark{
+		{ Compatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
+		{ Compatibility::IEEE, QImage{ ":/ieee.png" } },
+		{ Compatibility::Milan, QImage{ ":/Milan_Compatible_inv.png" } },
+		{ Compatibility::MilanCertified, QImage{ ":/Milan_Certified_inv.png" } },
+		{ Compatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning_inv.png" } },
+		{ Compatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible_inv.png" } },
+		{ Compatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified_inv.png" } },
+		{ Compatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning_inv.png" } },
+		{ Compatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
 	};
 	std::unordered_map<ExclusiveAccessState, QImage> _excusiveAccessStateImages{
 		{ ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,11 +19,10 @@
 
 #include "deviceDetailsStreamFormatTableModel.hpp"
 #include "ui_deviceDetailsDialog.h"
+#include "streamFormatComboBox.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 #include "avdecc/helper.hpp"
-
-#include "nodeTreeDynamicWidgets/streamFormatComboBox.hpp"
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
@@ -570,15 +569,19 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 		}
 	}
 
-	auto* formatComboBox = new StreamFormatComboBox(delegateEntityID, parent);
+	auto* formatComboBox = new StreamFormatComboBox(parent);
 	if (staticModel)
+	{
 		formatComboBox->setStreamFormats(staticModel->formats);
+	}
 	if (dynamicModel)
+	{
 		formatComboBox->setCurrentStreamFormat(dynamicModel->streamFormat);
+	}
 
 	// Send changes
-	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
-		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const& streamFormat)
+	formatComboBox->setDataChangedHandler(
+		[this, formatComboBox]([[maybe_unused]] la::avdecc::entity::model::StreamFormat const& previousStreamFormat, [[maybe_unused]] la::avdecc::entity::model::StreamFormat const& newStreamFormat)
 		{
 			auto* p = const_cast<StreamFormatItemDelegate*>(this);
 			emit p->commitData(formatComboBox);

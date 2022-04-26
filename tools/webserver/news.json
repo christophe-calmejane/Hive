@@ -1,0 +1,9 @@
+[
+	{
+		"title": "Test News",
+		"content": "This is a test news that will only display from Hive 1.2.8-beta3 to Hive 1.2.8 release",
+		"date": 1642807893,
+		"start_version": 1002008.00003,
+		"end_version": 1002008.99999
+	}
+]

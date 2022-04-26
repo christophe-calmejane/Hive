@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -44,7 +44,7 @@ AvbInterfaceCountersTreeWidgetItem::AvbInterfaceCountersTreeWidgetItem(la::avdec
 	};
 
 	// Create fields
-	for (auto const nameKV : s_counterNames)
+	for (auto const& nameKV : s_counterNames)
 	{
 		auto* widget = new QTreeWidgetItem(this);
 		widget->setText(0, nameKV.second);

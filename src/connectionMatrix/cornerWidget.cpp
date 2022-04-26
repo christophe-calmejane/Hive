@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,9 +19,13 @@
 
 #include "connectionMatrix/cornerWidget.hpp"
 #include "connectionMatrix/legendDialog.hpp"
+
+#include <hive/modelsLibrary/controllerManager.hpp>
+
 #include <QShortcut>
 #include <QPainter>
 #include <QApplication>
+#include <QMessageBox>
 
 namespace connectionMatrix
 {
@@ -34,7 +38,7 @@ QString headerTitle(Qt::Orientation const orientation, bool const isTransposed)
 CornerWidget::CornerWidget(QWidget* parent)
 	: QWidget{ parent }
 {
-	_searchLineEdit.setPlaceholderText("Entity Filter (RegEx)");
+	_searchLineEdit.setPlaceholderText("Entity Name Filter (RegEx)");
 
 	_horizontalExpandButton.setToolTip("Expand");
 	_horizontalCollapseButton.setToolTip("Collapse");
@@ -51,18 +55,19 @@ CornerWidget::CornerWidget(QWidget* parent)
 	_verticalLayout.addWidget(&_verticalExpandButton);
 
 	// Layout widgets
-	_layout.addWidget(&_buttonContainer, 0, 0);
+	_layout.addWidget(&_centerContainer, 0, 0);
 	_layout.addLayout(&_horizontalLayout, 1, 0);
 	_layout.addLayout(&_verticalLayout, 0, 1);
 	_layout.setSpacing(2);
 
-	_buttonContainer.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-	_buttonContainerLayout.setContentsMargins(2, 6, 2, 6);
-	_buttonContainerLayout.addWidget(&_title);
-	_buttonContainerLayout.addStretch();
-	_buttonContainerLayout.addWidget(&_button);
-	_buttonContainerLayout.addWidget(&_searchLineEdit);
-	_buttonContainerLayout.addStretch();
+	_centerContainer.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+	_centerContainerLayout.setContentsMargins(2, 6, 2, 6);
+	_centerContainerLayout.addWidget(&_title);
+	_centerContainerLayout.addStretch();
+	_centerContainerLayout.addWidget(&_legendButton);
+	_centerContainerLayout.addWidget(&_searchLineEdit);
+	_centerContainerLayout.addWidget(&_removeAllConnectionsButton);
+	_centerContainerLayout.addStretch();
 
 	_layout.setRowStretch(0, 1);
 	_layout.setRowStretch(1, 0);
@@ -72,13 +77,49 @@ CornerWidget::CornerWidget(QWidget* parent)
 
 	_horizontalPlaceholder.setFixedHeight(20);
 	_verticalPlaceholder.setFixedWidth(20);
+	_title.setAlignment(Qt::AlignHCenter);
+	_removeAllConnectionsButton.setToolTip(QCoreApplication::translate("CornerWidget", "Remove all active connections", nullptr));
 
-	// Connect button
-	connect(&_button, &QPushButton::clicked, this,
+	// Connect buttons
+	connect(&_legendButton, &qtMate::widgets::FlatIconButton::clicked, this,
 		[this]()
 		{
 			auto dialog = LegendDialog{ _colorName, _isTransposed };
 			dialog.exec();
+		});
+	connect(&_removeAllConnectionsButton, &qtMate::widgets::FlatIconButton::clicked, this,
+		[this]()
+		{
+			if (QMessageBox::Yes == QMessageBox::question(this, {}, "Are you sure you want to remove all established connections?"))
+			{
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				manager.foreachEntity(
+					[&manager](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& entity)
+					{
+						try
+						{
+							auto const& configNode = entity.getCurrentConfigurationNode();
+							for (auto const& [streamIndex, streamNode] : configNode.streamInputs)
+							{
+								if (streamNode.dynamicModel != nullptr)
+								{
+									auto const& connectionInfo = streamNode.dynamicModel->connectionInfo;
+									if (connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
+									{
+										// Ignore result handler
+										manager.disconnectStream(connectionInfo.talkerStream.entityID, connectionInfo.talkerStream.streamIndex, entityID, streamIndex,
+											[](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+											{
+											});
+									}
+								}
+							}
+						}
+						catch (...)
+						{
+						}
+					});
+			}
 		});
 
 	connect(&_searchLineEdit, &QLineEdit::textChanged, this, &CornerWidget::filterChanged);
@@ -89,7 +130,7 @@ CornerWidget::CornerWidget(QWidget* parent)
 	connect(&_verticalExpandButton, &QPushButton::clicked, this, &CornerWidget::horizontalExpandClicked);
 	connect(&_verticalCollapseButton, &QPushButton::clicked, this, &CornerWidget::horizontalCollapseClicked);
 
-	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
+	auto* searchShortcut = new QShortcut{ QKeySequence::FindNext, this };
 	connect(searchShortcut, &QShortcut::activated, this,
 		[this]()
 		{
@@ -129,6 +170,11 @@ bool CornerWidget::isTransposed() const
 QString CornerWidget::filterText() const
 {
 	return _searchLineEdit.text();
+}
+
+QLineEdit* CornerWidget::filterLineEdit() noexcept
+{
+	return &_searchLineEdit;
 }
 
 void CornerWidget::paintEvent(QPaintEvent*)
@@ -183,7 +229,7 @@ void CornerWidget::onSettingChanged(settings::SettingsManager::Setting const& na
 	if (name == settings::ConnectionMatrix_ChannelMode.name)
 	{
 		auto const channelMode = value.toBool();
-		_title.setText(channelMode ? "<b>Channel Based Connections</b>" : "<b>Stream Based Connections</b>");
+		_title.setText(channelMode ? "<b>Channel Connections</b>" : "<b>Stream Connections</b>");
 	}
 }
 

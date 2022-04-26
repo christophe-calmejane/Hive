@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -44,5 +44,5 @@ private:
 	la::avdecc::UniqueIdentifier const _entityID{};
 	la::avdecc::entity::model::AudioUnitIndex const _audioUnitIndex{ 0u };
 
-	AecpCommandComboBox* _samplingRate{ nullptr };
+	AecpCommandComboBox<la::avdecc::entity::model::SamplingRate>* _samplingRate{ nullptr };
 };

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "commandsExecutor.hpp"
 #include <la/avdecc/controller/avdeccController.hpp>
 
 #include <memory>
@@ -94,11 +95,15 @@ public:
 		DisconnectTalkerStream,
 	};
 
-	/* AECP handlers to override the global AECP result process. WARNING: Handler are always called from a non-gui thread. */
+	/* AECP handlers to override the global AECP begin process. WARNING: Handlers are always called from the calling thread, before the method returns. */
+	using BeginCommandHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID)>;
+
+	/* AECP handlers to override the global AECP result process. WARNING: Handlers are always called from a non-gui thread. */
 	using AcquireEntityHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const owningEntity)>;
 	using ReleaseEntityHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using LockEntityHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status, la::avdecc::UniqueIdentifier const lockingEntity)>;
 	using UnlockEntityHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
+	using SetConfigurationHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using SetStreamInputFormatHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using SetStreamOutputFormatHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	//using SetStreamInputInfoHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
@@ -174,15 +179,22 @@ public:
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept = 0;
 
 	/** Identify entity */
-	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, std::chrono::milliseconds const duration, IdentifyEntityHandler const& handler = {}) noexcept = 0;
+	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, std::chrono::milliseconds const duration, IdentifyEntityHandler const& resultHandler = {}) noexcept = 0;
 
 	/** Counter error flags */
 	virtual StreamInputErrorCounters getStreamInputErrorCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 	virtual void clearStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::StreamInputCounterValidFlag const flag) noexcept = 0;
 	virtual void clearAllStreamInputCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+
+	/** Statistics */
 	virtual StatisticsErrorCounters getStatisticsCounters(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 	virtual void clearStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, StatisticsErrorCounterFlag const flag) noexcept = 0;
 	virtual void clearAllStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+
+	/** Diagnostics */
+	virtual la::avdecc::controller::ControlledEntity::Diagnostics getDiagnostics(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	virtual bool isRedundancyWarning(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	virtual bool getStreamInputLatencyError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
 
 	/* Discovery Protocol (ADP) */
 	/** Enables entity advertising with available duration included between 2-62 seconds on the specified interfaceIndex if set, otherwise on all interfaces. */
@@ -196,55 +208,61 @@ public:
 	/** Sets automatic discovery delay. 0 (default) for no automatic discovery. */
 	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept = 0;
 
-	/* Enumeration and Control Protocol (AECP) */
-	virtual void acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent, AcquireEntityHandler const& handler = {}) noexcept = 0;
-	virtual void releaseEntity(la::avdecc::UniqueIdentifier const targetEntityID, ReleaseEntityHandler const& handler = {}) noexcept = 0;
-	virtual void lockEntity(la::avdecc::UniqueIdentifier const targetEntityID, LockEntityHandler const& handler = {}) noexcept = 0;
-	virtual void unlockEntity(la::avdecc::UniqueIdentifier const targetEntityID, UnlockEntityHandler const& handler = {}) noexcept = 0;
-	virtual void setConfiguration(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex) noexcept = 0;
-	virtual void setStreamInputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, SetStreamInputFormatHandler const& handler = {}) noexcept = 0;
-	virtual void setStreamOutputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, SetStreamOutputFormatHandler const& handler = {}) noexcept = 0;
-	//virtual void setStreamInputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& streamInfo, SetStreamInputInfoHandler const& handler = {}) noexcept = 0;
-	virtual void setStreamOutputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& streamInfo, SetStreamOutputInfoHandler const& handler = {}) noexcept = 0;
-	virtual void setEntityName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name, SetEntityNameHandler const& handler = {}) noexcept = 0;
-	virtual void setEntityGroupName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name, SetEntityGroupNameHandler const& handler = {}) noexcept = 0;
-	virtual void setConfigurationName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& name, SetConfigurationNameHandler const& handler = {}) noexcept = 0;
-	virtual void setAudioUnitName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& name, SetAudioUnitNameHandler const& handler = {}) noexcept = 0;
-	virtual void setStreamInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, SetStreamInputNameHandler const& handler = {}) noexcept = 0;
-	virtual void setStreamOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, SetStreamOutputNameHandler const& handler = {}) noexcept = 0;
-	virtual void setAvbInterfaceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& name, SetAvbInterfaceNameHandler const& handler = {}) noexcept = 0;
-	virtual void setClockSourceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& name, SetClockSourceNameHandler const& handler = {}) noexcept = 0;
-	virtual void setMemoryObjectName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& name, SetMemoryObjectNameHandler const& handler = {}) noexcept = 0;
-	virtual void setAudioClusterName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& name, SetAudioClusterNameHandler const& handler = {}) noexcept = 0;
-	virtual void setControlName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& name, SetControlNameHandler const& handler = {}) noexcept = 0;
-	virtual void setClockDomainName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& name, SetClockDomainNameHandler const& handler = {}) noexcept = 0;
-	virtual void setAssociationID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::UniqueIdentifier const associationID, SetAssociationIDHandler const& handler = {}) noexcept = 0;
-	virtual void setAudioUnitSamplingRate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate, SetAudioUnitSamplingRateHandler const& handler = {}) noexcept = 0;
-	virtual void setClockSource(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, SetClockSourceHandler const& handler = {}) noexcept = 0;
-	virtual void setControlValues(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues, SetControlValuesHandler const& handler = {}) noexcept = 0;
-	virtual void startStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StartStreamInputHandler const& handler = {}) noexcept = 0;
-	virtual void stopStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StopStreamInputHandler const& handler = {}) noexcept = 0;
-	virtual void startStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StartStreamOutputHandler const& handler = {}) noexcept = 0;
-	virtual void stopStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, StopStreamOutputHandler const& handler = {}) noexcept = 0;
-	virtual void addStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, AddStreamPortInputAudioMappingsHandler const& handler = {}) noexcept = 0;
-	virtual void addStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, AddStreamPortOutputAudioMappingsHandler const& handler = {}) noexcept = 0;
-	virtual void removeStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, RemoveStreamPortInputAudioMappingsHandler const& handler = {}) noexcept = 0;
-	virtual void removeStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, RemoveStreamPortOutputAudioMappingsHandler const& handler = {}) noexcept = 0;
-	virtual void startStoreAndRebootMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, StartStoreAndRebootMemoryObjectOperationHandler const& handler = {}) noexcept = 0;
-	virtual void startUploadMemoryObjectOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, StartUploadMemoryObjectOperationHandler const& handler = {}) noexcept = 0;
-	virtual void abortOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, AbortOperationHandler const& handler = {}) noexcept = 0;
+	/* Enumeration and Control Protocol (AECP) AEM */
+	/* For all AECP-AEM commands, if a handler is provided it will be called from the network thread. Otherwise the signal endAecpCommand will be emitted. */
+	virtual void acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent, BeginCommandHandler const& beginHandler = {}, AcquireEntityHandler const& resultHandler = {}) noexcept = 0;
+	virtual void releaseEntity(la::avdecc::UniqueIdentifier const targetEntityID, BeginCommandHandler const& beginHandler = {}, ReleaseEntityHandler const& resultHandler = {}) noexcept = 0;
+	virtual void lockEntity(la::avdecc::UniqueIdentifier const targetEntityID, BeginCommandHandler const& beginHandler = {}, LockEntityHandler const& resultHandler = {}) noexcept = 0;
+	virtual void unlockEntity(la::avdecc::UniqueIdentifier const targetEntityID, BeginCommandHandler const& beginHandler = {}, UnlockEntityHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setConfiguration(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, BeginCommandHandler const& beginHandler = {}, SetConfigurationHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setStreamInputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, BeginCommandHandler const& beginHandler = {}, SetStreamInputFormatHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setStreamOutputFormat(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat, BeginCommandHandler const& beginHandler = {}, SetStreamOutputFormatHandler const& resultHandler = {}) noexcept = 0;
+	//virtual void setStreamInputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& streamInfo, BeginCommandHandler const& beginHandler = {}, SetStreamInputInfoHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setStreamOutputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& streamInfo, BeginCommandHandler const& beginHandler = {}, SetStreamOutputInfoHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setEntityName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name, BeginCommandHandler const& beginHandler = {}, SetEntityNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setEntityGroupName(la::avdecc::UniqueIdentifier const targetEntityID, QString const& name, BeginCommandHandler const& beginHandler = {}, SetEntityGroupNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setConfigurationName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetConfigurationNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setAudioUnitName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetAudioUnitNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setStreamInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetStreamInputNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setStreamOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetStreamOutputNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setAvbInterfaceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetAvbInterfaceNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setClockSourceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetClockSourceNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setMemoryObjectName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetMemoryObjectNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setAudioClusterName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetAudioClusterNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setControlName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetControlNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setClockDomainName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetClockDomainNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setAssociationID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::UniqueIdentifier const associationID, BeginCommandHandler const& beginHandler = {}, SetAssociationIDHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setAudioUnitSamplingRate(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate, BeginCommandHandler const& beginHandler = {}, SetAudioUnitSamplingRateHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setClockSource(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, BeginCommandHandler const& beginHandler = {}, SetClockSourceHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setControlValues(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues, BeginCommandHandler const& beginHandler = {}, SetControlValuesHandler const& resultHandler = {}) noexcept = 0;
+	virtual void startStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, BeginCommandHandler const& beginHandler = {}, StartStreamInputHandler const& resultHandler = {}) noexcept = 0;
+	virtual void stopStreamInput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, BeginCommandHandler const& beginHandler = {}, StopStreamInputHandler const& resultHandler = {}) noexcept = 0;
+	virtual void startStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, BeginCommandHandler const& beginHandler = {}, StartStreamOutputHandler const& resultHandler = {}) noexcept = 0;
+	virtual void stopStreamOutput(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, BeginCommandHandler const& beginHandler = {}, StopStreamOutputHandler const& resultHandler = {}) noexcept = 0;
+	virtual void addStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, BeginCommandHandler const& beginHandler = {}, AddStreamPortInputAudioMappingsHandler const& resultHandler = {}) noexcept = 0;
+	virtual void addStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, BeginCommandHandler const& beginHandler = {}, AddStreamPortOutputAudioMappingsHandler const& resultHandler = {}) noexcept = 0;
+	virtual void removeStreamPortInputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, BeginCommandHandler const& beginHandler = {}, RemoveStreamPortInputAudioMappingsHandler const& resultHandler = {}) noexcept = 0;
+	virtual void removeStreamPortOutputAudioMappings(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, BeginCommandHandler const& beginHandler = {}, RemoveStreamPortOutputAudioMappingsHandler const& resultHandler = {}) noexcept = 0;
+	virtual void startStoreAndRebootMemoryObjectOperation(la::avdecc::UniqueIdentifier targetEntityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, BeginCommandHandler const& beginHandler = {}, StartStoreAndRebootMemoryObjectOperationHandler const& resultHandler = {}) noexcept = 0;
+	virtual void startUploadMemoryObjectOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::uint64_t const dataLength, BeginCommandHandler const& beginHandler = {}, StartUploadMemoryObjectOperationHandler const& resultHandler = {}) noexcept = 0;
+	virtual void abortOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, BeginCommandHandler const& beginHandler = {}, AbortOperationHandler const& resultHandler = {}) noexcept = 0;
 
 	/* Enumeration and Control Protocol (AECP) AA */
+	/* For all AECP-AA commands, the provided handler will be called from the network thread. */
 	virtual void readDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, std::uint64_t const length, la::avdecc::controller::Controller::ReadDeviceMemoryProgressHandler const& progressHandler, la::avdecc::controller::Controller::ReadDeviceMemoryCompletionHandler const& completionHandler) const noexcept = 0;
 	virtual void writeDeviceMemory(la::avdecc::UniqueIdentifier const targetEntityID, std::uint64_t const address, la::avdecc::controller::Controller::DeviceMemoryBuffer memoryBuffer, la::avdecc::controller::Controller::WriteDeviceMemoryProgressHandler const& progressHandler, la::avdecc::controller::Controller::WriteDeviceMemoryCompletionHandler const& completionHandler) const noexcept = 0;
 
 	/* Connection Management Protocol (ACMP) */
-	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, ConnectStreamHandler const& handler = {}) noexcept = 0;
-	virtual void disconnectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectStreamHandler const& handler = {}) noexcept = 0;
-	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectTalkerStreamHandler const& handler = {}) noexcept = 0;
+	/* For all ACMP commands, if a handler is provided it will be called from the network thread. Otherwise the signal endAcmpCommand will be emitted. */
+	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, ConnectStreamHandler const& resultHandler = {}) noexcept = 0;
+	virtual void disconnectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectStreamHandler const& resultHandler = {}) noexcept = 0;
+	virtual void disconnectTalkerStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, DisconnectTalkerStreamHandler const& resultHandler = {}) noexcept = 0;
 
-	/** Requests an ExclusiveAccessToken for the specified entityID. If the call succeeded (AemCommandStatus::Success), a valid token will be returned. */
+	/** Requests an ExclusiveAccessToken for the specified entityID. If the call succeeded (AemCommandStatus::Success), a valid token will be returned in the handler (from the network thread). */
 	virtual void requestExclusiveAccess(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType const type, RequestExclusiveAccessHandler const& handler) noexcept = 0;
+
+	/** Creates a CommandsExecutor for the specified entityID, optionally requesting exclusive access to the entity. The executor will be passed to the handler (in the calling thread) and will start as soon as the handler returns. */
+	virtual void createCommandsExecutor(la::avdecc::UniqueIdentifier const entityID, bool const requestExclusiveAccess, std::function<void(hive::modelsLibrary::CommandsExecutor&)> const& handler) noexcept = 0;
 
 	using ControlledEntityCallback = std::function<void(la::avdecc::UniqueIdentifier const&, la::avdecc::controller::ControlledEntity const&)>;
 	virtual void foreachEntity(ControlledEntityCallback const& callback) noexcept = 0;
@@ -308,8 +326,8 @@ public:
 	Q_SIGNAL void streamOutputConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections);
 
 	/* Entity commands signals */
-	Q_SIGNAL void beginAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType);
-	Q_SIGNAL void endAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status);
+	Q_SIGNAL void beginAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex);
+	Q_SIGNAL void endAecpCommand(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::ControllerEntity::AemCommandStatus const status);
 	Q_SIGNAL void beginAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, hive::modelsLibrary::ControllerManager::AcmpCommandType commandType);
 	Q_SIGNAL void endAcmpCommand(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, hive::modelsLibrary::ControllerManager::AcmpCommandType commandType, la::avdecc::entity::ControllerEntity::ControlStatus const status);
 
@@ -323,6 +341,11 @@ public:
 	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
 	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters);
+
+	/* Diagnostics signals */
+	Q_SIGNAL void diagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics);
+	Q_SIGNAL void redundancyWarningChanged(la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning);
+	Q_SIGNAL void streamInputLatencyErrorChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError);
 };
 
 } // namespace modelsLibrary

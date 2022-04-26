@@ -4,11 +4,43 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.8] - 2022-04-26
+### Added
+- [Automatically _fixing_ invalid mapping when changing stream input format](https://github.com/christophe-calmejane/Hive/issues/44)
+- [New matrix color code (grey) for stream format incompatibility (ie. no format exist in listener's list that would fit for the talker's current format)](https://github.com/christophe-calmejane/Hive/issues/29)
+- [Button to clear errors for all entities](https://github.com/christophe-calmejane/Hive/issues/77)
+- [Button to remove all active connections](https://github.com/christophe-calmejane/Hive/issues/107)
+- Search filter for discovered entities (currently only by name)
+- [Support for UTF8 Control values](https://github.com/christophe-calmejane/Hive/issues/113)
+- [Support for Array Control values](https://github.com/christophe-calmejane/Hive/issues/114)
+- Possibility to push a news feed to Hive for important notices
+- Warning popup for _Media Clock Management Dialog_ domain SampleRate changes that conflict with entity current StreamFormat settings
+- Distinction between _Milan Compatible_ and _Milan Certified_ devices using new icons
+- Steam Input Diagnostic: Detection of MSRP latency greater than Talker's presentation time
+- Milan Redundancy Warning Diagnostic: Detection of both cables connected to the same network
+- Added _Milan Warning_ Protocol Compatibility value, for Milan devices that have non-critical specification implementation errors
+
+### Changed
+- [Control descriptors now use a SpinBox instead of a ComboBox for improved performance and usability](https://github.com/christophe-calmejane/Hive/issues/116)
+- All editable fields (text, combobox, spinbox) now restore the previous value in case the entity rejects the new one
+- Using color inverted icons for Protocol Compatibility when highlighted with a dark color
+- Using AVDECC Library v3.2.3
+
+### Fixed
+- First entity might be automatically inspected (but not selected) when Hive goes to foreground
+- Currently highlighted entity in connection matrix incorrect when an entity comes online or offline
+- Adapting listener's format to talker's format from the matrix (contextual menu)
+- [No values displayed to signed Linear Control Values](https://github.com/christophe-calmejane/Hive/issues/115)
+- _Device Details Dialog_ tab 'Stream Format' showing redundant streams and incorrectly handling format changes when applying
+- _Device Details Dialog_ 'Receive'/'Transmit' tables to correctly update channel connections when entity comes online or offline
+- Combobox fields always properly restore previous value in case of command failure
+- [Localized configuration name not correct for some multi-configurations devices](https://github.com/christophe-calmejane/Hive/issues/123)
+
 ## [1.2.7] - 2021-12-24
 ### Added
 - [New 'Matrix' layout with only the connection matrix displayed by default](https://github.com/christophe-calmejane/Hive/issues/109)
 - Command line option to specify the application settings file to use
-- Currently selected entity is highlighted is connection matrix
+- Currently selected entity is highlighted in connection matrix
 - _Device Details Dialog_ tab 'Stream Format' for simplified user access to stream format settings
 
 ### Changed

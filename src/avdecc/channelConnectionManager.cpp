@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -1988,7 +1988,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setStreamOutputFormat(talkerEntityId, talkerStreamIndex, *compatibleStreamFormats.first, responseHandler);
+							manager.setStreamOutputFormat(talkerEntityId, talkerStreamIndex, *compatibleStreamFormats.first, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2008,7 +2008,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.setStreamInputFormat(listenerEntityId, newStreamConnection.second, *compatibleStreamFormats.second, responseHandler);
+							manager.setStreamInputFormat(listenerEntityId, newStreamConnection.second, *compatibleStreamFormats.second, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2251,7 +2251,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.removeStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, responseHandler);
+							manager.removeStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2277,7 +2277,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.addStreamPortOutputAudioMappings(talkerEntityId, mapping.first, mapping.second, responseHandler);
+							manager.addStreamPortOutputAudioMappings(talkerEntityId, mapping.first, mapping.second, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2301,7 +2301,7 @@ private:
 								}
 								parentCommandSet->invokeCommandCompleted(commandIndex, error != commandChain::CommandExecutionError::NoError);
 							};
-							manager.addStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, responseHandler);
+							manager.addStreamPortInputAudioMappings(listenerEntityId, mapping.first, mapping.second, nullptr, responseHandler);
 							return true;
 						});
 				}
@@ -2591,7 +2591,7 @@ private:
 					if (deviceConnection->targetAudioUnitIndex == *listenerChannelIdentification.audioUnitIndex && deviceConnection->targetStreamPortIndex == *talkerChannelIdentification.streamPortIndex && targetClusterKV.first == talkerChannelIdentification.clusterIndex - *talkerChannelIdentification.baseCluster && targetClusterKV.second == talkerChannelIdentification.clusterChannel)
 					{
 						std::vector<StreamIdentificationPair> result;
-						for (auto const [talkerStreamIndex, listenerStreamIndex] : deviceConnection->streamPairs)
+						for (auto const& [talkerStreamIndex, listenerStreamIndex] : deviceConnection->streamPairs)
 						{
 							la::avdecc::entity::model::StreamIdentification streamTalker{ talkerEntityId, talkerStreamIndex };
 							la::avdecc::entity::model::StreamIdentification streamListener{ listenerEntityId, listenerStreamIndex };

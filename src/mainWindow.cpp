@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -41,6 +41,7 @@
 #include "avdecc/controllerModel.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
+#include "newsFeed/newsFeed.hpp"
 #include "internals/config.hpp"
 #include "profiles/profiles.hpp"
 #include "settingsManager/settings.hpp"
@@ -126,8 +127,8 @@ public:
 	void loadSettings();
 	void connectSignals();
 	void showChangeLog(QString const title, QString const versionString);
+	void showNewsFeed(QString const& news);
 	void updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename);
-	static QString generateDumpSourceString() noexcept;
 
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
@@ -138,7 +139,7 @@ public:
 	ActiveNetworkInterfacesModel _activeNetworkInterfacesModel{ _parent };
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
 	qtMate::widgets::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
-	qtMate::widgets::FlatIconButton _discoverButton{ "Material Icons", "cast", _parent };
+	qtMate::widgets::FlatIconButton _discoverButton{ "Hive", "radar", _parent };
 	qtMate::widgets::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
 	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
@@ -160,11 +161,11 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 	createToolbars();
 
 	// Setup the ControllerView widget
-	controllerTableView->setupView(defaults);
+	discoveredEntitiesView->setupView(defaults);
 
 	// Create ListViewSelectionToMatrixModelController
 	// Initialization to be moved to NSDM when layout classes are introduced
-	_listViewSelectionToMatrixModelController = std::make_unique<ListViewSelectionToMatrixModelController>(controllerTableView, static_cast<connectionMatrix::Model*>(routingTableView->model()), this);
+	_listViewSelectionToMatrixModelController = std::make_unique<ListViewSelectionToMatrixModelController>(discoveredEntitiesView->entitiesTableView(), static_cast<connectionMatrix::Model*>(routingTableView->model()), this);
 
 	controllerToolBar->setVisible(defaults.mainWindow_ControllerToolbar_Visible);
 	utilitiesToolBar->setVisible(defaults.mainWindow_UtilitiesToolbar_Visible);
@@ -346,7 +347,7 @@ void MainWindowImpl::createToolbars()
 	// Utilities Toolbar
 	{
 		_refreshControllerButton.setToolTip("Reload Controller");
-		_discoverButton.setToolTip("Force Entities Discovery");
+		_discoverButton.setToolTip("Discover Entities");
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
@@ -417,7 +418,7 @@ void MainWindowImpl::loadSettings()
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	LOG_HIVE_DEBUG("Settings location: " + settings->getFilePath());
+	LOG_HIVE_INFO("Settings location: " + settings->getFilePath());
 
 	auto const networkInterfaceId = settings->getValue(settings::InterfaceID).toString();
 	auto const networkInterfaceIndex = _interfaceComboBox.findData(networkInterfaceId);
@@ -435,6 +436,10 @@ void MainWindowImpl::loadSettings()
 	// Check if currently saved ProtocolInterface is supported
 	auto protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
 	auto supportedTypes = la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes();
+	// Remove Virtual Protocol Interface in Release
+#ifndef DEBUG
+	supportedTypes.reset(la::avdecc::protocol::ProtocolInterface::Type::Virtual);
+#endif
 	if (!supportedTypes.test(protocolType))
 	{
 		auto const wasConfigured = protocolType != la::avdecc::protocol::ProtocolInterface::Type::None;
@@ -443,10 +448,6 @@ void MainWindowImpl::loadSettings()
 		{
 			LOG_HIVE_WARN(QString("Previously configured Network Protocol is no longer supported: %1").arg(QString::fromStdString(la::avdecc::protocol::ProtocolInterface::typeToString(protocolType))));
 		}
-		// Remove Virtual Protocol Interface in Release
-#ifndef DEBUG
-		supportedTypes.reset(la::avdecc::protocol::ProtocolInterface::Type::Virtual);
-#endif
 		// If at least one type remains, use it
 		if (!supportedTypes.empty())
 		{
@@ -472,7 +473,7 @@ void MainWindowImpl::loadSettings()
 
 	if (!_mustResetViewSettings)
 	{
-		controllerTableView->restoreState();
+		discoveredEntitiesView->entitiesTableView()->restoreState();
 		loggerView->header()->restoreState(settings->getValue(settings::LoggerDynamicHeaderViewState).toByteArray());
 		entityInspector->restoreState(settings->getValue(settings::EntityInspectorState).toByteArray());
 		splitter->restoreState(settings->getValue(settings::SplitterState).toByteArray());
@@ -490,29 +491,6 @@ void MainWindowImpl::loadSettings()
 
 	// Start the SettingsSignaler
 	_settingsSignaler.start();
-}
-
-static inline bool isValidEntityModelID(la::avdecc::UniqueIdentifier const entityModelID) noexcept
-{
-	if (entityModelID)
-	{
-		auto const [vendorID, deviceID, modelID] = la::avdecc::entity::model::splitEntityModelID(entityModelID);
-		return vendorID != 0x00000000 && vendorID != 0x00FFFFFF;
-	}
-	return false;
-}
-
-static inline bool isEntityModelComplete(la::avdecc::UniqueIdentifier const entityID) noexcept
-{
-	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto controlledEntity = manager.getControlledEntity(entityID);
-
-	if (controlledEntity)
-	{
-		return controlledEntity->isEntityModelValidForCaching();
-	}
-
-	return true;
 }
 
 void MainWindowImpl::connectSignals()
@@ -543,7 +521,7 @@ void MainWindowImpl::connectSignals()
 		});
 
 	// Connect discoveredEntities::view signals
-	connect(controllerTableView, &discoveredEntities::View::doubleClicked, this,
+	connect(discoveredEntitiesView->entitiesTableView(), &discoveredEntities::View::doubleClicked, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
@@ -558,265 +536,27 @@ void MainWindowImpl::connectSignals()
 			}
 		});
 
-	connect(controllerTableView, &discoveredEntities::View::contextMenuRequested, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, QPoint const& pos)
+	connect(discoveredEntitiesView->entitiesTableView(), &discoveredEntities::View::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
+
+	connect(discoveredEntitiesView, &DiscoveredEntitiesView::filterChanged, routingTableView,
+		[this](QString const& filter)
 		{
-			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto controlledEntity = manager.getControlledEntity(entityID);
-
-			if (controlledEntity)
+			if (discoveredEntitiesView->isFilterLinked())
 			{
-				QMenu menu;
-
-				// Add header
-				{
-					auto* action = menu.addAction("Entity: " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
-					auto font = action->font();
-					font.setBold(true);
-					action->setFont(font);
-					action->setEnabled(false);
-					menu.addSeparator();
-				}
-
-				auto const& entity = controlledEntity->getEntity();
-				auto const entityModelID = entity.getEntityModelID();
-				auto const isAemSupported = entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported);
-				auto const isIdentifyControlValid = !!controlledEntity->getIdentifyControlIndex();
-
-				auto* acquireAction{ static_cast<QAction*>(nullptr) };
-				auto* releaseAction{ static_cast<QAction*>(nullptr) };
-				auto* lockAction{ static_cast<QAction*>(nullptr) };
-				auto* unlockAction{ static_cast<QAction*>(nullptr) };
-				auto* deviceView{ static_cast<QAction*>(nullptr) };
-				auto* inspect{ static_cast<QAction*>(nullptr) };
-				auto* getLogo{ static_cast<QAction*>(nullptr) };
-				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
-				auto* identify{ static_cast<QAction*>(nullptr) };
-				auto* dumpFullEntity{ static_cast<QAction*>(nullptr) };
-				auto* dumpEntityModel{ static_cast<QAction*>(nullptr) };
-
-				if (isAemSupported)
-				{
-					// Do not propose Acquire if the device is Milan (not supported)
-					if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
-					{
-						QString acquireText;
-						auto const isAcquired = controlledEntity->isAcquired();
-						auto const isAcquiredByOther = controlledEntity->isAcquiredByOther();
-
-						{
-							if (isAcquiredByOther)
-							{
-								acquireText = "Try to acquire";
-							}
-							else
-							{
-								acquireText = "Acquire";
-							}
-							acquireAction = menu.addAction(acquireText);
-							acquireAction->setEnabled(!isAcquired);
-						}
-						{
-							releaseAction = menu.addAction("Release");
-							releaseAction->setEnabled(isAcquired);
-						}
-					}
-					// Lock
-					{
-						QString lockText;
-						auto const isLocked = controlledEntity->isLocked();
-						auto const isLockedByOther = controlledEntity->isLockedByOther();
-
-						{
-							if (isLockedByOther)
-							{
-								lockText = "Try to lock";
-							}
-							else
-							{
-								lockText = "Lock";
-							}
-							lockAction = menu.addAction(lockText);
-							lockAction->setEnabled(!isLocked);
-						}
-						{
-							unlockAction = menu.addAction("Unlock");
-							unlockAction->setEnabled(isLocked);
-						}
-					}
-
-					menu.addSeparator();
-
-					// Device Details, Inspect, Logo, ...
-					{
-						deviceView = menu.addAction("Device Details...");
-					}
-					{
-						inspect = menu.addAction("Inspect Entity Model...");
-					}
-					{
-						getLogo = menu.addAction("Retrieve Entity Logo");
-						getLogo->setEnabled(!hive::widgetModelsLibrary::EntityLogoCache::getInstance().isImageInCache(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity));
-					}
-					{
-						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
-					}
-					{
-						identify = menu.addAction("Identify Device (10 sec)");
-						identify->setEnabled(isIdentifyControlValid);
-					}
-				}
-
-				menu.addSeparator();
-
-				// Dump Entity
-				{
-					dumpFullEntity = menu.addAction("Export Full Entity...");
-					dumpEntityModel = menu.addAction("Export Entity Model...");
-					dumpEntityModel->setEnabled(isAemSupported && entityModelID);
-				}
-
-				menu.addSeparator();
-
-				// Cancel
-				menu.addAction("Cancel");
-
-				// Release the controlled entity before starting a long operation (menu.exec)
-				controlledEntity.reset();
-
-				if (auto* action = menu.exec(controllerTableView->viewport()->mapToGlobal(pos)))
-				{
-					if (action == acquireAction)
-					{
-						manager.acquireEntity(entityID, false);
-					}
-					else if (action == releaseAction)
-					{
-						manager.releaseEntity(entityID);
-					}
-					else if (action == lockAction)
-					{
-						manager.lockEntity(entityID);
-					}
-					else if (action == unlockAction)
-					{
-						manager.unlockEntity(entityID);
-					}
-					else if (action == deviceView)
-					{
-						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
-						dialog->setAttribute(Qt::WA_DeleteOnClose);
-						dialog->setControlledEntityID(entityID);
-						dialog->show();
-					}
-					else if (action == inspect)
-					{
-						auto* inspector = new EntityInspector;
-						inspector->setAttribute(Qt::WA_DeleteOnClose);
-						inspector->setControlledEntityID(entityID);
-						inspector->restoreGeometry(entityInspector->saveGeometry());
-						inspector->show();
-					}
-					else if (action == getLogo)
-					{
-						hive::widgetModelsLibrary::EntityLogoCache::getInstance().getImage(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity, true);
-					}
-					else if (action == clearErrorFlags)
-					{
-						manager.clearAllStreamInputCounterValidFlags(entityID);
-						manager.clearAllStatisticsCounterValidFlags(entityID);
-					}
-					else if (action == identify)
-					{
-						manager.identifyEntity(entityID, std::chrono::seconds{ 10 });
-					}
-					else if (action == dumpFullEntity || action == dumpEntityModel)
-					{
-						auto baseFileName = QString{};
-						auto binaryFilterName = QString{};
-						if (action == dumpFullEntity)
-						{
-							binaryFilterName = "AVDECC Virtual Entity Files (*.ave)";
-							baseFileName = QString("%1/Entity_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID));
-						}
-						else
-						{
-							// Do some validation
-							if (!isValidEntityModelID(entityModelID))
-							{
-								QMessageBox::warning(_parent, "", "EntityModelID is not valid (invalid Vendor OUI-24), cannot same the Model of this Entity.");
-								return;
-							}
-							if (!isEntityModelComplete(entityID))
-							{
-								QMessageBox::warning(_parent, "", "'Full AEM Enumeration' option must be Enabled in order to export Model of a multi-configuration Entity.");
-								return;
-							}
-							binaryFilterName = "AVDECC Entity Model Files (*.aem)";
-							baseFileName = QString("%1/EntityModel_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityModelID));
-						}
-						auto const dumpFile = [this, &entityID, &manager, isFullEntity = (action == dumpFullEntity)](auto const& baseFileName, auto const& binaryFilterName, auto const isBinary)
-						{
-							auto const filename = QFileDialog::getSaveFileName(_parent, "Save As...", baseFileName, binaryFilterName);
-							if (!filename.isEmpty())
-							{
-								auto flags = la::avdecc::entity::model::jsonSerializer::Flags{};
-								if (isFullEntity)
-								{
-									flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
-								}
-								else
-								{
-									flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel };
-								}
-								if (isBinary)
-								{
-									flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
-								}
-								auto [error, message] = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
-								if (!error)
-								{
-									QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
-								}
-								else
-								{
-									if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex && isFullEntity)
-									{
-										auto const choice = QMessageBox::question(_parent, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
-										if (choice == QMessageBox::StandardButton::Yes)
-										{
-											flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags, generateDumpSourceString());
-											error = std::get<0>(result);
-											message = std::get<1>(result);
-											if (!error)
-											{
-												QMessageBox::information(_parent, "", "Export completed but with warnings:\n" + filename);
-											}
-											// Fallthrough to warning message
-										}
-									}
-									if (!!error)
-									{
-										QMessageBox::warning(_parent, "", QString("Export of EntityID %1 failed:\n%2").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()));
-									}
-								}
-							}
-						};
-						if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier))
-						{
-							dumpFile(baseFileName, "JSON Files (*.json)", false);
-						}
-						else
-						{
-							dumpFile(baseFileName, binaryFilterName, true);
-						}
-					}
-				}
+				routingTableView->talkerFilterLineEdit()->setText(filter);
+				routingTableView->listenerFilterLineEdit()->setText(filter);
 			}
 		});
-
-	connect(controllerTableView, &discoveredEntities::View::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
+	connect(discoveredEntitiesView, &DiscoveredEntitiesView::filterLinkStateChanged, routingTableView,
+		[this](bool const isLinked, QString const& filter)
+		{
+			auto* const talkerFilter = routingTableView->talkerFilterLineEdit();
+			auto* const listenerFilter = routingTableView->listenerFilterLineEdit();
+			talkerFilter->setEnabled(!isLinked);
+			listenerFilter->setEnabled(!isLinked);
+			talkerFilter->setText(isLinked ? filter : "");
+			listenerFilter->setText(isLinked ? filter : "");
+		});
 
 	// Connect EntityInspector signals
 	connect(entityInspector, &EntityInspector::stateChanged, this,
@@ -824,6 +564,7 @@ void MainWindowImpl::connectSignals()
 		{
 			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 			settings->setValue(settings::EntityInspectorState, entityInspector->saveState());
+			discoveredEntitiesView->setInspectorGeometry(entityInspector->saveGeometry());
 		});
 
 	connect(loggerView->header(), &qtMate::widgets::DynamicHeaderView::sectionChanged, this,
@@ -848,7 +589,7 @@ void MainWindowImpl::connectSignals()
 			LOG_HIVE_ERROR("Error reading from the active Network Interface");
 		});
 	connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this,
-		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::model::DescriptorIndex /*descriptorIndex*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
 			{
@@ -870,7 +611,7 @@ void MainWindowImpl::connectSignals()
 		[this]()
 		{
 			auto filterName = QString{};
-			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
 			if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier))
 			{
 				filterName = "JSON Files (*.json)";
@@ -884,7 +625,7 @@ void MainWindowImpl::connectSignals()
 			if (!filename.isEmpty())
 			{
 				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-				auto [error, message] = manager.serializeAllControlledEntitiesAsJson(filename, flags, generateDumpSourceString());
+				auto [error, message] = manager.serializeAllControlledEntitiesAsJson(filename, flags, avdecc::helper::generateDumpSourceString(hive::internals::applicationShortName, hive::internals::versionString));
 				if (!error)
 				{
 					QMessageBox::information(_parent, "", "Export successfully completed:\n" + filename);
@@ -1113,6 +854,50 @@ void MainWindowImpl::showChangeLog(QString const title, QString const versionStr
 	}
 }
 
+void MainWindowImpl::showNewsFeed(QString const& news)
+{
+	// Create dialog popup
+	QDialog dialog{ _parent };
+	QVBoxLayout layout{ &dialog };
+	QTextBrowser view;
+	layout.addWidget(&view);
+	dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "News");
+	dialog.resize(800, 600);
+	QPushButton closeButton{ "Close" };
+	connect(&closeButton, &QPushButton::clicked, &dialog,
+		[&dialog]()
+		{
+			dialog.accept();
+		});
+	layout.addWidget(&closeButton);
+
+	view.setContextMenuPolicy(Qt::NoContextMenu);
+	view.setOpenExternalLinks(true);
+
+	auto buffer = news.toUtf8();
+	auto* mmiot = mkd_string(buffer.data(), buffer.size(), 0);
+	if (mmiot == nullptr)
+		return;
+	std::unique_ptr<MMIOT, std::function<void(MMIOT*)>> scopedMmiot{ mmiot, [](MMIOT* ptr)
+		{
+			if (ptr != nullptr)
+				mkd_cleanup(ptr);
+		} };
+
+	if (mkd_compile(mmiot, 0) == 0)
+		return;
+
+	char* docPointer{ nullptr };
+	auto const docLength = mkd_document(mmiot, &docPointer);
+	if (docLength == 0)
+		return;
+
+	view.setHtml(QString::fromUtf8(docPointer, docLength));
+
+	// Run dialog
+	dialog.exec();
+}
+
 void MainWindow::showEvent(QShowEvent* event)
 {
 	QMainWindow::showEvent(event);
@@ -1161,15 +946,36 @@ void MainWindow::showEvent(QShowEvent* event)
 					settings->setValue(settings::LastLaunchedVersion.name, hive::internals::cmakeVersionString);
 
 					// Do not show the ChangeLog during first ever launch, or if the last launched version is the same than current one
-					if (lastVersion.isEmpty() || lastVersion == hive::internals::cmakeVersionString)
-						return;
-
-					// Postpone the dialog creation
-					QTimer::singleShot(0,
-						[this, versionString = std::move(lastVersion)]()
+					if (!lastVersion.isEmpty() && lastVersion != hive::internals::cmakeVersionString)
+					{
+						// Postpone the dialog creation
+						QTimer::singleShot(0,
+							[this, versionString = std::move(lastVersion)]()
+							{
+								_pImpl->showChangeLog("What's New", versionString);
+							});
+					}
+				}
+				// Check if we need to show the News Feed
+				{
+					auto& newsFeed = NewsFeed::getInstance();
+					connect(&newsFeed, &NewsFeed::newsAvailable, this,
+						[this](QString const& news, std::uint64_t const serverTimestamp)
 						{
-							_pImpl->showChangeLog("What's New", versionString);
+							auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+							if (serverTimestamp > settings->getValue(settings::LastCheckTime.name).value<std::uint32_t>())
+							{
+								settings->setValue(settings::LastCheckTime.name, QVariant::fromValue(serverTimestamp));
+							}
+
+							if (!news.isEmpty())
+							{
+								_pImpl->showNewsFeed(news);
+							}
 						});
+
+					auto const lastCheckTime = settings->getValue(settings::LastCheckTime.name).value<std::uint32_t>();
+					newsFeed.checkForNews(lastCheckTime);
 				}
 			});
 	}
@@ -1296,7 +1102,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 		// AVDECC Virtual Entity
 		if (ext == "ave")
 		{
-			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
 			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
 			auto [error, message] = loadEntity(f, flags);
 			if (!!error)
@@ -1323,7 +1129,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 		// AVDECC Network State
 		else if (ext == "ans")
 		{
-			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
 			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
 			auto [error, message] = loadNetworkState(f, flags);
 			if (!!error)
@@ -1336,7 +1142,7 @@ void MainWindow::dropEvent(QDropEvent* event)
 		// Any kind of file, we have to autodetect
 		else if (ext == "json")
 		{
-			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
 			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
 			// Start with AVE file type
 			auto [error, message] = loadEntity(f, flags);
@@ -1364,13 +1170,6 @@ void MainWindowImpl::updateStyleSheet(qtMate::material::color::Name const colorN
 
 		qApp->setStyleSheet(styleSheet);
 	}
-}
-
-QString MainWindowImpl::generateDumpSourceString() noexcept
-{
-	static auto s_DumpSource = QString{ "%1 v%2 using L-Acoustics AVDECC Controller v%3" }.arg(hive::internals::applicationShortName).arg(hive::internals::versionString).arg(la::avdecc::controller::getVersion().c_str());
-
-	return s_DumpSource;
 }
 
 void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept

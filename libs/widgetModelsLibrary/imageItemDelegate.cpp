@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -26,11 +26,24 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
+ImageItemDelegate::ImageItemDelegate(qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
+	: QStyledItemDelegate(parent)
+{
+	setThemeColorName(themeColorName);
+}
+
+void ImageItemDelegate::setThemeColorName(qtMate::material::color::Name const themeColorName)
+{
+	_themeColorName = themeColorName;
+	_isDark = qtMate::material::color::luminance(_themeColorName) == qtMate::material::color::Luminance::Dark;
+}
+
 void ImageItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	QStyledItemDelegate::paint(painter, option, index);
 
-	auto const userData{ index.data(ImageRole) };
+	auto const role = ((option.state & QStyle::StateFlag::State_Selected) && _isDark) ? DarkImageRole : LightImageRole;
+	auto const userData = index.data(role);
 	if (!userData.canConvert<QImage>())
 	{
 		return;

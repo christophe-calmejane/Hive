@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -49,6 +49,17 @@ class NodeItem : public QObject, public QTreeWidgetItem
 	using QObject::parent;
 
 public:
+	enum class ErrorBit
+	{
+		// Entity Level
+		EntityStatistics = 1u << 0,
+		EntityRedundancyWarning = 1u << 1,
+		// StreamInput Level
+		StreamInputCounter = 1u << 2,
+		StreamInputLatency = 1u << 3,
+	};
+	using ErrorBits = la::avdecc::utils::EnumBitfield<ErrorBit>;
+
 	bool isVirtual() const noexcept
 	{
 		return _isVirtual;
@@ -64,11 +75,20 @@ public:
 		return _descriptorIndex;
 	}
 
-	void setHasError(bool const hasError)
+	void setErrorBit(ErrorBit const errorBit, bool const isError)
 	{
-		_hasError = hasError;
-		setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::ErrorRole), _hasError);
-		setForeground(0, _hasError ? Qt::red : Qt::black);
+		if (isError)
+		{
+			_errorBits.set(errorBit);
+		}
+		else
+		{
+			_errorBits.reset(errorBit);
+		}
+
+		auto const inError = hasError();
+		setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::ErrorRole), inError);
+		setForeground(0, inError ? Qt::red : Qt::black);
 
 		// Also update the parent node
 		if (auto* parent = static_cast<NodeItem*>(QTreeWidgetItem::parent()))
@@ -80,9 +100,23 @@ public:
 		}
 	}
 
-	bool hasError() const
+	bool hasError() const noexcept
 	{
-		return _hasError;
+		return !_errorBits.empty();
+	}
+
+	void setErrorBits(ErrorBits const errorBits) noexcept
+	{
+		_errorBits = errorBits;
+
+		auto const inError = hasError();
+		setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::ErrorRole), inError);
+		setForeground(0, inError ? Qt::red : Qt::black);
+	}
+
+	ErrorBits getErrorBits() const noexcept
+	{
+		return _errorBits;
 	}
 
 protected:
@@ -100,7 +134,7 @@ private:
 	bool const _isVirtual{ false };
 	la::avdecc::entity::model::DescriptorType const _descriptorType{ la::avdecc::entity::model::DescriptorType::Invalid };
 	la::avdecc::entity::model::DescriptorIndex const _descriptorIndex{ 0u };
-	bool _hasError{ false };
+	ErrorBits _errorBits{};
 };
 
 // EntityModelNode
@@ -145,18 +179,17 @@ public:
 protected:
 	virtual void updateHasError() override
 	{
-		auto hasError = false;
+		auto errorBits = ErrorBits{};
 		for (auto i = 0; i < childCount(); ++i)
 		{
 			auto const* item = static_cast<NodeItem const*>(child(i));
-			if (item && item->hasError())
+			if (item)
 			{
-				hasError = true;
-				break;
+				errorBits |= item->getErrorBits();
 			}
 		}
 
-		setHasError(hasError);
+		setErrorBits(errorBits);
 	}
 };
 
@@ -221,6 +254,8 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ControlledEntityTreeWidgetPrivate::entityOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::streamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::statisticsErrorCounterChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::redundancyWarningChanged, this, &ControlledEntityTreeWidgetPrivate::redundancyWarningChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputLatencyErrorChanged, this, &ControlledEntityTreeWidgetPrivate::handleStreamInputLatencyErrorChanged);
 
 		// Configure settings observers
 		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
@@ -271,7 +306,7 @@ public:
 
 		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::StreamInput, descriptorIndex }))
 		{
-			item->setHasError(!errorCounters.empty());
+			item->setErrorBit(NodeItem::ErrorBit::StreamInputCounter, !errorCounters.empty());
 		}
 	}
 
@@ -284,7 +319,33 @@ public:
 
 		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::Entity, la::avdecc::entity::model::DescriptorIndex{ 0u } }))
 		{
-			item->setHasError(!errorCounters.empty());
+			item->setErrorBit(NodeItem::ErrorBit::EntityStatistics, !errorCounters.empty());
+		}
+	}
+
+	Q_SLOT void redundancyWarningChanged(la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning)
+	{
+		if (entityID != _controlledEntityID)
+		{
+			return;
+		}
+
+		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::Entity, la::avdecc::entity::model::DescriptorIndex{ 0u } }))
+		{
+			item->setErrorBit(NodeItem::ErrorBit::EntityRedundancyWarning, isRedundancyWarning);
+		}
+	}
+
+	Q_SLOT void handleStreamInputLatencyErrorChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError)
+	{
+		if (entityID != _controlledEntityID)
+		{
+			return;
+		}
+
+		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex }))
+		{
+			item->setErrorBit(NodeItem::ErrorBit::StreamInputLatency, isLatencyError);
 		}
 	}
 
@@ -578,8 +639,17 @@ private:
 		auto* item = addItem<la::avdecc::controller::model::Node const*>(la::avdecc::entity::model::ConfigurationIndex{ 0u }, nullptr, &node, genName(node.dynamicModel->entityName.data()));
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-		auto const errorCounters = manager.getStatisticsCounters(_controlledEntityID);
-		item->setHasError(!errorCounters.empty());
+
+		// Init ErrorBits
+		{
+			// Statistics
+			auto const errorCounters = manager.getStatisticsCounters(_controlledEntityID); // Why not directly use value from ControlledEntity??
+			item->setErrorBit(NodeItem::ErrorBit::EntityStatistics, !errorCounters.empty());
+
+			// Redundancy Warning
+			auto const redundancyWarning = manager.getDiagnostics(_controlledEntityID).redundancyWarning; // Why not directly use value from ControlledEntity??
+			item->setErrorBit(NodeItem::ErrorBit::EntityRedundancyWarning, redundancyWarning);
+		}
 
 		connect(&manager, &hive::modelsLibrary::ControllerManager::entityNameChanged, item,
 			[genName, item](la::avdecc::UniqueIdentifier const /*entityID*/, QString const& entityName)
@@ -674,8 +744,16 @@ private:
 		auto* item = addItem(configurationIndex, parent, &node, name);
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-		auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex);
-		item->setHasError(!errorCounters.empty());
+		// Init ErrorBits
+		{
+			// StreamInput Counters
+			auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex); // Why not directly use value from ControlledEntity??
+			item->setErrorBit(NodeItem::ErrorBit::StreamInputCounter, !errorCounters.empty());
+
+			// StreamInput Latency
+			auto const errorLatency = manager.getStreamInputLatencyError(_controlledEntityID, node.descriptorIndex); // Why not directly use value from ControlledEntity??
+			item->setErrorBit(NodeItem::ErrorBit::StreamInputLatency, errorLatency);
+		}
 
 		connect(&manager, &hive::modelsLibrary::ControllerManager::streamNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)

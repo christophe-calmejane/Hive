@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -25,6 +25,7 @@
 #include <hive/modelsLibrary/helper.hpp>
 
 #include <QMenu>
+#include <QMessageBox>
 
 static inline void setNoValue(QTreeWidgetItem* const widget)
 {
@@ -49,23 +50,28 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 	la::avdecc::entity::model::StreamNodeDynamicModel const* const dynamicModel = inputDynamicModel ? static_cast<decltype(dynamicModel)>(inputDynamicModel) : static_cast<decltype(dynamicModel)>(outputDynamicModel);
 
-	auto* formatComboBox = new StreamFormatComboBox{ _entityID };
+	auto* formatComboBox = new StreamFormatComboBox{};
 	formatComboBox->setStreamFormats(staticModel->formats);
-	formatComboBox->setCurrentStreamFormat(dynamicModel->streamFormat);
-
 	parent->setItemWidget(currentFormatItem, 1, formatComboBox);
 
 	// Send changes
-	connect(formatComboBox, &StreamFormatComboBox::currentFormatChanged, this,
-		[this, formatComboBox](la::avdecc::entity::model::StreamFormat const& streamFormat)
+	formatComboBox->setDataChangedHandler(
+		[this, parent, formatComboBox](auto const& previousStreamFormat, auto const& newStreamFormat)
 		{
 			if (_streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamInputFormat(_entityID, _streamIndex, streamFormat);
+				avdecc::helper::smartChangeInputStreamFormat(parent, false, _entityID, _streamIndex, newStreamFormat, formatComboBox,
+					[this, parent, formatComboBox, previousStreamFormat](hive::modelsLibrary::CommandsExecutor::ExecutorResult const result)
+					{
+						if (result.getResult() != hive::modelsLibrary::CommandsExecutor::ExecutorResult::Result::Success)
+						{
+							formatComboBox->setCurrentStreamFormat(previousStreamFormat);
+						}
+					});
 			}
 			else if (_streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{
-				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, streamFormat);
+				hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputFormat(_entityID, _streamIndex, newStreamFormat, formatComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat), formatComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat, previousStreamFormat));
 			}
 		});
 
@@ -74,8 +80,13 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		[this, formatComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 		{
 			if (entityID == _entityID && descriptorType == _streamType && streamIndex == _streamIndex)
+			{
 				formatComboBox->setCurrentStreamFormat(streamFormat);
+			}
 		});
+
+	// Update now
+	formatComboBox->setCurrentStreamFormat(dynamicModel->streamFormat);
 
 	//
 

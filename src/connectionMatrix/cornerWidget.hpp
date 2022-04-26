@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,6 +21,7 @@
 
 #include "settingsManager/settings.hpp"
 
+#include <QtMate/widgets/autoSizeLabel.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
 
 #include <QWidget>
@@ -43,6 +44,7 @@ public:
 	bool isTransposed() const;
 
 	QString filterText() const;
+	QLineEdit* filterLineEdit() noexcept;
 
 signals:
 	void filterChanged(QString const& filter);
@@ -61,11 +63,12 @@ private:
 
 private:
 	QGridLayout _layout{ this };
-	QWidget _buttonContainer{ this };
-	QLabel _title{ &_buttonContainer };
-	QVBoxLayout _buttonContainerLayout{ &_buttonContainer };
-	QPushButton _button{ "Show Legend", &_buttonContainer };
-	QLineEdit _searchLineEdit{ &_buttonContainer };
+	QWidget _centerContainer{ this };
+	qtMate::widgets::AutoSizeLabel _title{ &_centerContainer };
+	QVBoxLayout _centerContainerLayout{ &_centerContainer };
+	QPushButton _legendButton{ "Show Legend", &_centerContainer };
+	QLineEdit _searchLineEdit{ &_centerContainer };
+	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Hive", "remove_connections", &_centerContainer };
 
 	QHBoxLayout _horizontalLayout;
 	qtMate::widgets::FlatIconButton _horizontalExpandButton{ "Material Icons", "expand_more" };

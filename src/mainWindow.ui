@@ -157,7 +157,7 @@
    <attribute name="dockWidgetArea">
     <number>4</number>
    </attribute>
-   <widget class="discoveredEntities::View" name="controllerTableView"/>
+   <widget class="DiscoveredEntitiesView" name="discoveredEntitiesView"/>
   </widget>
   <action name="actionQuit">
    <property name="text">
@@ -234,9 +234,9 @@
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>discoveredEntities::View</class>
+   <class>DiscoveredEntitiesView</class>
    <extends>QTableView</extends>
-   <header>discoveredEntities/view.hpp</header>
+   <header>discoveredEntitiesView.hpp</header>
   </customwidget>
   <customwidget>
    <class>EntityInspector</class>

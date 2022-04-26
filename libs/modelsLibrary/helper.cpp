@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -37,7 +37,18 @@ QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
 {
-	return objectName(controlledEntity, node);
+	return objectName(controlledEntity, node.descriptorIndex, node);
+}
+
+QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept
+{
+	auto const& localizedName = controlledEntity.getLocalizedString(configurationIndex, stringReference);
+
+	if (localizedName.empty())
+	{
+		return "(No Localization)";
+	}
+	return localizedName.data();
 }
 
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept
