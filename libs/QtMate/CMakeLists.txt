@@ -18,13 +18,6 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/QtMate/material/color.hpp
 	${CU_ROOT_DIR}/include/QtMate/material/colorPalette.hpp
 	${CU_ROOT_DIR}/include/QtMate/material/helper.hpp
-	${CU_ROOT_DIR}/include/QtMate/graph/connection.hpp
-	${CU_ROOT_DIR}/include/QtMate/graph/inputSocket.hpp
-	${CU_ROOT_DIR}/include/QtMate/graph/node.hpp
-	${CU_ROOT_DIR}/include/QtMate/graph/outputSocket.hpp
-	${CU_ROOT_DIR}/include/QtMate/graph/socket.hpp
-	${CU_ROOT_DIR}/include/QtMate/graph/type.hpp
-	${CU_ROOT_DIR}/include/QtMate/graph/view.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/autoSizeLabel.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/comboBox.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/dynamicHeaderView.hpp
@@ -42,12 +35,6 @@ set(SOURCE_FILES_COMMON
 	material/color.cpp
 	material/colorPalette.cpp
 	material/helper.cpp
-	graph/connection.cpp
-	graph/inputSocket.cpp
-	graph/node.cpp
-	graph/outputSocket.cpp
-	graph/socket.cpp
-	graph/view.cpp
 	widgets/autoSizeLabel.cpp
 	widgets/comboBox.cpp
 	widgets/dynamicHeaderView.cpp
