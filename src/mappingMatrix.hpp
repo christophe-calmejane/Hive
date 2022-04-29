@@ -19,10 +19,12 @@
 
 #pragma once
 
-#include <QtMate/graph/view.hpp>
-#include <QtMate/graph/node.hpp>
-#include <QtMate/graph/inputSocket.hpp>
-#include <QtMate/graph/outputSocket.hpp>
+#include <QtMate/flow/flowscene.hpp>
+#include <QtMate/flow/flowscenedelegate.hpp>
+#include <QtMate/flow/flowview.hpp>
+#include <QtMate/flow/flownode.hpp>
+#include <QtMate/flow/flowinput.hpp>
+#include <QtMate/flow/flowoutput.hpp>
 
 #include <QPushButton>
 #include <QDialog>
@@ -72,15 +74,48 @@ using Connections = std::vector<Connection>;
 
 */
 
-class MappingMatrix : public qtMate::graph::GraphicsView
+class MappingMatrix : public QWidget
 {
 public:
-	MappingMatrix(Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
-		: qtMate::graph::GraphicsView(parent)
-		, _connections{ connections }
-	{
-		setScene(&_scene);
+	enum SocketType {
+		Input,
+		Output,
+	};
+	
+	class Delegate : public qtMate::flow::FlowSceneDelegate {
+	public:
+		using FlowSceneDelegate::FlowSceneDelegate;
+		
+		virtual bool canConnect(qtMate::flow::FlowOutput* output, qtMate::flow::FlowInput* input) const override {
+			return true;
+		}
+		
+		virtual QColor socketTypeColor(qtMate::flow::FlowSocketType type) const {
+			return 0x2196F3;
+		}
+	};
 
+
+	MappingMatrix(Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
+		: QWidget{parent}
+	{
+		auto* delegate = new Delegate{this};
+		auto* scene = new qtMate::flow::FlowScene{delegate, this};
+		auto* view = new qtMate::flow::FlowView{scene, this};
+		
+		auto* layout = new QHBoxLayout{this};
+		layout->setContentsMargins(0, 0, 0, 0);
+		layout->addWidget(view);
+		
+		// Get notified by the scene when connections are created/destroyed
+		connect(scene, &qtMate::flow::FlowScene::connectionCreated, this, [&](auto const& descriptor) {
+			_connections.insert(descriptor);
+		});
+		connect(scene, &qtMate::flow::FlowScene::connectionDestroyed, this, [&](auto const& descriptor) {
+			_connections.remove(descriptor);
+		});
+		
+		// Needed to configure each node position in the scene
 		auto const paddingX{ 150.f };
 		auto const paddingY{ 5.f };
 
@@ -90,90 +125,81 @@ public:
 		auto inputNodeX{ 0.f };
 		auto inputNodeY{ 0.f };
 
-		for (auto const& item : outputs)
+		// CAUTION: as the spec tells that outputs and inputs nodes are identified by their index in their own list,
+		// which is not compatible with qtMate::flow API which requires a unique identifier for each node,
+		// we must generate this unique identifier ourselves and also keep the offset to the first input node
+		// in order to be able to translate connections back and forth.
+		auto id = 0;
+		_offset = outputs.size();
+		
+		// Create output nodes
+		for (auto const& output : outputs)
 		{
-			auto* node = new qtMate::graph::NodeItem{ static_cast<int>(_outputs.size()), QString::fromStdString(item.name) };
-			for (auto const& socket : item.sockets)
+			auto descriptor = qtMate::flow::FlowNodeDescriptor{};
+			descriptor.name = QString::fromStdString(output.name);
+			for (auto const& socket : output.sockets)
 			{
-				node->addOutput(QString::fromStdString(socket));
+				descriptor.outputs.push_back({QString::fromStdString(socket), SocketType::Output});
 			}
-
-			_outputs.emplace_back(node);
-			_scene.addItem(node);
-
+			
+			auto* node = scene->createNode(id++, descriptor);
+			node->setFlag(QGraphicsItem::ItemIsMovable, false);
 			node->setPos(outputNodeX, outputNodeY);
 			outputNodeY += node->boundingRect().height() + paddingY;
 
 			inputNodeX = std::max(inputNodeX, static_cast<float>(node->boundingRect().width()) + paddingX);
 		}
 
-		for (auto const& item : inputs)
+		// Create input nodes
+		for (auto const& input : inputs)
 		{
-			auto* node = new qtMate::graph::NodeItem{ static_cast<int>(_inputs.size()), QString::fromStdString(item.name) };
-			for (auto const& socket : item.sockets)
+			auto descriptor = qtMate::flow::FlowNodeDescriptor{};
+			descriptor.name = QString::fromStdString(input.name);
+			for (auto const& socket : input.sockets)
 			{
-				node->addInput(QString::fromStdString(socket));
+				descriptor.inputs.push_back({QString::fromStdString(socket), SocketType::Input});
 			}
-
-			_inputs.emplace_back(node);
-			_scene.addItem(node);
-
+			
+			auto* node = scene->createNode(id++, descriptor);
+			node->setFlag(QGraphicsItem::ItemIsMovable, false);
 			node->setPos(inputNodeX, inputNodeY);
 			inputNodeY += node->boundingRect().height() + paddingY;
 		}
 
+		// Create connections
+		for (auto const& connection : connections)
+		{
+			scene->createConnection(convert(connection));
+		}
+	}
+
+	Connections connections() const
+	{
+		auto result = Connections{};
 		for (auto const& connection : _connections)
 		{
-			auto* item = new qtMate::graph::ConnectionItem;
-
-			auto const& outputSlot{ connection.first };
-			auto const& inputSlot{ connection.second };
-
-			try
-			{
-				item->connectOutput(_outputs.at(outputSlot.first)->outputAt(static_cast<int>(outputSlot.second)));
-				item->connectInput(_inputs.at(inputSlot.first)->inputAt(static_cast<int>(inputSlot.second)));
-
-				_scene.addItem(item);
-			}
-			catch (...)
-			{
-				// FIXME
-				delete item;
-			}
+			result.emplace_back(convert(connection));
 		}
-
-		connect(this, &qtMate::graph::GraphicsView::connectionCreated, this,
-			[this](qtMate::graph::ConnectionItem* connection)
-			{
-				_connections.emplace_back(std::make_pair(connection->output()->nodeId(), connection->output()->index()), std::make_pair(connection->input()->nodeId(), connection->input()->index()));
-			});
-
-		connect(this, &qtMate::graph::GraphicsView::connectionDeleted, this,
-			[this](qtMate::graph::ConnectionItem* connection)
-			{
-				_connections.erase(std::remove_if(_connections.begin(), _connections.end(),
-														 [connection](Connection const& item)
-														 {
-															 return (static_cast<int>(item.first.first) == connection->output()->nodeId() && static_cast<int>(item.first.second) == connection->output()->index()) && (static_cast<int>(item.second.first) == connection->input()->nodeId() && static_cast<int>(item.second.second) == connection->input()->index());
-														 }),
-					_connections.end());
-			});
-
-		auto const scenePadding{ 80 };
-		_scene.setSceneRect(_scene.sceneRect().adjusted(-scenePadding, -scenePadding, scenePadding, scenePadding));
+		return result;
 	}
-
-	Connections const& connections() const
+	
+	Connection convert(qtMate::flow::FlowConnectionDescriptor const& descriptor) const
 	{
-		return _connections;
+		auto const source = SlotID{descriptor.first.first, descriptor.first.second};
+		auto const sink = SlotID{descriptor.second.first - _offset, descriptor.second.second};
+		return Connection{source, sink};
 	}
-
+	
+	qtMate::flow::FlowConnectionDescriptor convert(Connection const& connection) const
+	{
+		auto const source = qtMate::flow::FlowSocketSlot{connection.first.first, connection.first.second};
+		auto const sink = qtMate::flow::FlowSocketSlot{connection.second.first + _offset, connection.second.second};
+		return qtMate::flow::FlowConnectionDescriptor{source, sink};
+	}
+	
 private:
-	QGraphicsScene _scene{ this };
-	std::vector<qtMate::graph::NodeItem*> _outputs;
-	std::vector<qtMate::graph::NodeItem*> _inputs;
-	Connections _connections;
+	int _offset{}; // we need an offset to identify output nodes
+	qtMate::flow::FlowConnectionDescriptors _connections{};
 };
 
 class MappingMatrixDialog : public QDialog
@@ -199,7 +225,7 @@ public:
 		connect(&_cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 	}
 
-	Connections const& connections() const
+	Connections connections() const
 	{
 		return _mappingMatrix.connections();
 	}
