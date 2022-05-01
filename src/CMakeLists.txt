@@ -187,6 +187,7 @@ set(SOURCE_FILES_COMMON
 	settingsDialog.cpp
 	controlledEntityTreeWidget.cpp
 	entityInspector.cpp
+	mappingMatrix.cpp
 	activeNetworkInterfacesModel.cpp
 	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
