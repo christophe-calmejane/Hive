@@ -59,6 +59,11 @@ set(HEADER_FILES_COMMON
 	avdecc/loggerModel.hpp
 	avdecc/commandChain.hpp
 	avdecc/stringValidator.hpp
+	connectionEditor/connectionEditor.hpp
+	connectionEditor/connectionWorkspace.hpp
+	connectionEditor/nodeListModel.hpp
+	connectionEditor/nodeListView.hpp
+	connectionEditor/nodeOrganizer.hpp
 	connectionMatrix/cornerWidget.hpp
 	connectionMatrix/headerView.hpp
 	connectionMatrix/itemDelegate.hpp
@@ -136,6 +141,11 @@ set(SOURCE_FILES_COMMON
 	avdecc/mappingsHelper.cpp
 	avdecc/loggerModel.cpp
 	avdecc/commandChain.cpp
+	connectionEditor/connectionEditor.cpp
+	connectionEditor/connectionWorkspace.cpp
+	connectionEditor/nodeListModel.cpp
+	connectionEditor/nodeListView.cpp
+	connectionEditor/nodeOrganizer.cpp
 	connectionMatrix/cornerWidget.cpp
 	connectionMatrix/legendDialog.cpp
 	connectionMatrix/headerView.cpp
