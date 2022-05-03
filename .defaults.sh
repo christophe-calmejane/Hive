@@ -1,20 +1,21 @@
 # Default values for gen_cmake and gen_install
 
-default_qt_version="5.15.2"
-default_win_basePath="C:/Qt"
-default_win_arch="msvc2019"
-default_mac_basePath="/Applications/Qt"
-default_mac_arch="clang_64"
-default_linux_basePath="/usr/lib"
-default_linux_arch="$(g++ -dumpmachine)"
+# Qt defaults
+default_qt_version="6.2.4"
+default_qt_win_basePath="C:/Qt"
+default_qt_win_arch="msvc2019"
+default_qt_mac_basePath="/Applications/Qt"
+default_qt_mac_arch="clang_64"
+default_qt_linux_basePath="/usr/lib"
+default_qt_linux_arch="$(g++ -dumpmachine)"
 
 # gen_cmake defaults
 function extend_gc_fnc_defaults()
 {
-  default_VisualGenerator="Visual Studio 17 2022"
-  default_VisualToolset="v143"
-  default_VisualToolchain="x64"
-  default_VisualArch="x86"
+	default_VisualGenerator="Visual Studio 17 2022"
+	default_VisualToolset="v143"
+	default_VisualToolchain="x64"
+	default_VisualArch="x64"
   default_keyDigits=2
   default_betaTagName="-beta"
 }
@@ -25,7 +26,7 @@ function extend_gi_fnc_defaults()
   default_VisualGenerator="Visual Studio 17 2022"
   default_VisualToolset="v143"
   default_VisualToolchain="x64"
-  default_VisualArch="x86"
+  default_VisualArch="x64"
   default_keyDigits=2
   default_betaTagName="-beta"
 }
@@ -62,11 +63,11 @@ function get_default_qt_path()
 	local gdqp_result="" # Use a unique name for the result as we pass it by reference
 
 	if isWindows; then
-		build_qt_config_folder gdqp_result "${default_win_basePath}/${default_qt_version}" "${default_win_arch}" "${QtMajorVersion}"
+		build_qt_config_folder gdqp_result "${default_qt_win_basePath}/${default_qt_version}" "${default_qt_win_arch}" "${QtMajorVersion}"
 	elif isMac; then
-		build_qt_config_folder gdqp_result "${default_mac_basePath}/${default_qt_version}" "${default_mac_arch}" "${QtMajorVersion}"
+		build_qt_config_folder gdqp_result "${default_qt_mac_basePath}/${default_qt_version}" "${default_qt_mac_arch}" "${QtMajorVersion}"
 	elif isLinux; then
-		build_qt_config_folder gdqp_result "${default_linux_basePath}" "${default_linux_arch}" "${QtMajorVersion}"
+		build_qt_config_folder gdqp_result "${default_qt_linux_basePath}" "${default_qt_linux_arch}" "${QtMajorVersion}"
 	fi
 
 	_retval="${gdqp_result}"
