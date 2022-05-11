@@ -36,49 +36,56 @@
 
 namespace mappingMatrix
 {
-
 class MappingMatrix : public QWidget
 {
 public:
-	enum SocketType {
+	enum SocketType
+	{
 		Input,
 		Output,
 	};
-	
-	class Delegate : public qtMate::flow::FlowSceneDelegate {
+
+	class Delegate : public qtMate::flow::FlowSceneDelegate
+	{
 	public:
 		using FlowSceneDelegate::FlowSceneDelegate;
-		
-		virtual bool canConnect(qtMate::flow::FlowOutput* output, qtMate::flow::FlowInput* input) const override {
+
+		virtual bool canConnect(qtMate::flow::FlowOutput* output, qtMate::flow::FlowInput* input) const override
+		{
 			return true;
 		}
-		
-		virtual QColor socketTypeColor(qtMate::flow::FlowSocketType type) const {
+
+		virtual QColor socketTypeColor(qtMate::flow::FlowSocketType type) const
+		{
 			return 0x2196F3;
 		}
 	};
 
 
 	MappingMatrix(Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
-		: QWidget{parent}
+		: QWidget{ parent }
 	{
-		auto* delegate = new Delegate{this};
-		auto* scene = new qtMate::flow::FlowScene{delegate, this};
-		auto* view = new qtMate::flow::FlowView{scene, this};
-		
-		auto* layout = new QHBoxLayout{this};
+		auto* delegate = new Delegate{ this };
+		auto* scene = new qtMate::flow::FlowScene{ delegate, this };
+		auto* view = new qtMate::flow::FlowView{ scene, this };
+
+		auto* layout = new QHBoxLayout{ this };
 		layout->setContentsMargins(0, 0, 0, 0);
 		layout->addWidget(view);
-		
+
 		// Get notified by the scene when connections are created/destroyed
-		connect(scene, &qtMate::flow::FlowScene::connectionCreated, this, [&](auto const& descriptor) {
-			_connections.insert(descriptor);
-		});
-		
-		connect(scene, &qtMate::flow::FlowScene::connectionDestroyed, this, [&](auto const& descriptor) {
-			_connections.remove(descriptor);
-		});
-		
+		connect(scene, &qtMate::flow::FlowScene::connectionCreated, this,
+			[&](auto const& descriptor)
+			{
+				_connections.insert(descriptor);
+			});
+
+		connect(scene, &qtMate::flow::FlowScene::connectionDestroyed, this,
+			[&](auto const& descriptor)
+			{
+				_connections.remove(descriptor);
+			});
+
 		// Needed to configure each node position in the scene
 		auto const paddingX{ 150.f };
 		auto const paddingY{ 5.f };
@@ -95,7 +102,7 @@ public:
 		// in order to be able to translate connections back and forth.
 		auto id = 0;
 		_offset = static_cast<decltype(_offset)>(outputs.size());
-		
+
 		// Create output nodes
 		for (auto const& output : outputs)
 		{
@@ -103,9 +110,9 @@ public:
 			descriptor.name = QString::fromStdString(output.name);
 			for (auto const& socket : output.sockets)
 			{
-				descriptor.outputs.push_back({QString::fromStdString(socket), SocketType::Output});
+				descriptor.outputs.push_back({ QString::fromStdString(socket), SocketType::Output });
 			}
-			
+
 			auto* node = scene->createNode(id++, descriptor);
 			node->setFlag(QGraphicsItem::ItemIsMovable, false);
 			node->setPos(outputNodeX, outputNodeY);
@@ -121,9 +128,9 @@ public:
 			descriptor.name = QString::fromStdString(input.name);
 			for (auto const& socket : input.sockets)
 			{
-				descriptor.inputs.push_back({QString::fromStdString(socket), SocketType::Input});
+				descriptor.inputs.push_back({ QString::fromStdString(socket), SocketType::Input });
 			}
-			
+
 			auto* node = scene->createNode(id++, descriptor);
 			node->setFlag(QGraphicsItem::ItemIsMovable, false);
 			node->setPos(inputNodeX, inputNodeY);
@@ -146,23 +153,23 @@ public:
 		}
 		return result;
 	}
-	
+
 	// Convert connection from flow to mapping
 	Connection convert(qtMate::flow::FlowConnectionDescriptor const& descriptor) const
 	{
-		auto const source = SlotID{descriptor.first.first, descriptor.first.second};
-		auto const sink = SlotID{descriptor.second.first - _offset, descriptor.second.second};
-		return Connection{source, sink};
+		auto const source = SlotID{ static_cast<SlotID::first_type>(descriptor.first.first), static_cast<SlotID::second_type>(descriptor.first.second) };
+		auto const sink = SlotID{ static_cast<SlotID::first_type>(descriptor.second.first - _offset), static_cast<SlotID::first_type>(descriptor.second.second) };
+		return Connection{ source, sink };
 	}
-	
+
 	// Convert connection from mapping to flow
 	qtMate::flow::FlowConnectionDescriptor convert(Connection const& connection) const
 	{
-		auto const source = qtMate::flow::FlowSocketSlot{connection.first.first, connection.first.second};
-		auto const sink = qtMate::flow::FlowSocketSlot{connection.second.first + _offset, connection.second.second};
-		return qtMate::flow::FlowConnectionDescriptor{source, sink};
+		auto const source = qtMate::flow::FlowSocketSlot{ static_cast<qtMate::flow::FlowSocketSlot::first_type>(connection.first.first), static_cast<qtMate::flow::FlowSocketSlot::second_type>(connection.first.second) };
+		auto const sink = qtMate::flow::FlowSocketSlot{ static_cast<qtMate::flow::FlowSocketSlot::first_type>(connection.second.first + _offset), static_cast<qtMate::flow::FlowSocketSlot::second_type>(connection.second.second) };
+		return qtMate::flow::FlowConnectionDescriptor{ source, sink };
 	}
-	
+
 private:
 	int _offset{}; // we need an offset to identify output nodes
 	qtMate::flow::FlowConnectionDescriptors _connections{};
@@ -174,12 +181,12 @@ MappingMatrixDialog::MappingMatrixDialog(QString const& title, Outputs const& ou
 #else
 	: QDialog(parent, Qt::Tool | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
 #endif
-	,_matrix{new MappingMatrix{ outputs, inputs, connections, this}}
+	, _matrix{ new MappingMatrix{ outputs, inputs, connections, this } }
 {
 	setWindowTitle(title);
 
-	auto* apply = new QPushButton{"Apply", this};
-	auto* cancel = new QPushButton{"Cancel", this};
+	auto* apply = new QPushButton{ "Apply", this };
+	auto* cancel = new QPushButton{ "Cancel", this };
 
 	auto* layout = new QGridLayout{ this };
 	layout->addWidget(_matrix, 0, 0, 1, 2);

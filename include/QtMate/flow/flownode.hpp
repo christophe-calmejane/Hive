@@ -3,9 +3,10 @@
 #include <QGraphicsItem>
 #include <QtMate/flow/flowdefs.hpp>
 
-namespace qtMate::flow {
-
-class FlowNode : public QGraphicsItem {
+namespace qtMate::flow
+{
+class FlowNode : public QGraphicsItem
+{
 public:
 	FlowNode(FlowSceneDelegate* delegate, FlowNodeUid const& uid, FlowNodeDescriptor const& descriptor, QGraphicsItem* parent = nullptr);
 	virtual ~FlowNode() override;
@@ -18,7 +19,10 @@ public:
 	FlowInput* input(FlowSocketIndex index) const;
 	FlowOutput* output(FlowSocketIndex index) const;
 
-	enum { Type = UserType + 1 };
+	enum
+	{
+		Type = UserType + 1
+	};
 	virtual int type() const override;
 
 	virtual QRectF boundingRect() const override;

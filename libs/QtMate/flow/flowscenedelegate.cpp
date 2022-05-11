@@ -3,13 +3,15 @@
 #include "QtMate/flow/flowinput.hpp"
 #include "QtMate/flow/flowoutput.hpp"
 
-namespace qtMate::flow {
-
-QColor FlowSceneDelegate::socketTypeColor(FlowSocketType type) const {
+namespace qtMate::flow
+{
+QColor FlowSceneDelegate::socketTypeColor(FlowSocketType type) const
+{
 	return Qt::darkGray;
 }
 
-bool FlowSceneDelegate::canConnect(FlowOutput* output, FlowInput* input) const {
+bool FlowSceneDelegate::canConnect(FlowOutput* output, FlowInput* input) const
+{
 	return output->descriptor().type == input->descriptor().type;
 }
 

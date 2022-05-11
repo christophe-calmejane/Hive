@@ -2,7 +2,8 @@
 
 #include <QtMate/flow/flowview.hpp>
 
-class ConnectionWorkspace : public qtMate::flow::FlowView {
+class ConnectionWorkspace : public qtMate::flow::FlowView
+{
 public:
 	ConnectionWorkspace(qtMate::flow::FlowScene* scene, QWidget* parent = nullptr);
 	virtual ~ConnectionWorkspace() override;

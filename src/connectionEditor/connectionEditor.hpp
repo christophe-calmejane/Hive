@@ -3,7 +3,8 @@
 #include <QWidget>
 #include <QtMate/flow/flowdefs.hpp>
 
-class ConnectionEditor : public QWidget {
+class ConnectionEditor : public QWidget
+{
 	Q_OBJECT
 public:
 	ConnectionEditor(qtMate::flow::FlowNodeDescriptorMap const& nodes, qtMate::flow::FlowConnectionDescriptors const& connections, QWidget* parent = nullptr);

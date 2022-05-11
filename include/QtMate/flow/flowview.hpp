@@ -5,9 +5,10 @@
 #include <QVariantAnimation>
 #include <QtMate/flow/flowdefs.hpp>
 
-namespace qtMate::flow {
-
-class FlowView : public QGraphicsView {
+namespace qtMate::flow
+{
+class FlowView : public QGraphicsView
+{
 	using QGraphicsView::setScene;
 
 public:
@@ -36,11 +37,12 @@ private:
 	FlowScene* _scene{};
 
 	QElapsedTimer _elapsedTimer{};
-	int _animationTimerId{-1};
+	int _animationTimerId{ -1 };
 
 	QVariantAnimation* _centerOnAnimation{};
 
-	enum class ConnectionMode {
+	enum class ConnectionMode
+	{
 		Undefined,
 		ConnectToInput,
 		ConnectToOutput,
@@ -49,7 +51,7 @@ private:
 	};
 
 	// current connection mode
-	ConnectionMode _mode{ConnectionMode::Undefined};
+	ConnectionMode _mode{ ConnectionMode::Undefined };
 
 	// this connection is used to temporarily mark a socket as connected
 	// when creating a new connection

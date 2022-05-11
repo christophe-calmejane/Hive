@@ -3,9 +3,10 @@
 #include <QGraphicsItem>
 #include <QtMate/flow/flowdefs.hpp>
 
-namespace qtMate::flow {
-
-class FlowSocket : public QGraphicsItem {
+namespace qtMate::flow
+{
+class FlowSocket : public QGraphicsItem
+{
 public:
 	FlowSocket(FlowNode* node, FlowSocketIndex index, FlowSocketDescriptor const& descriptor);
 	virtual ~FlowSocket() override;
@@ -30,7 +31,7 @@ protected:
 	FlowSocketIndex _index{};
 	FlowSocketDescriptor _descriptor{};
 
-	QColor _color{Qt::darkGray};
+	QColor _color{ Qt::darkGray };
 };
 
 } // namespace qtMate::flow

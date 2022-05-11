@@ -2,9 +2,10 @@
 
 #include <QGraphicsPathItem>
 
-namespace qtMate::flow {
-
-class FlowLink : public QGraphicsPathItem {
+namespace qtMate::flow
+{
+class FlowLink : public QGraphicsPathItem
+{
 public:
 	FlowLink(QGraphicsItem* parent = nullptr);
 	virtual ~FlowLink() override;

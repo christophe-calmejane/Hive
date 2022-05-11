@@ -2,15 +2,19 @@
 
 #include <QtMate/flow/flowsocket.hpp>
 
-namespace qtMate::flow {
-
-class FlowInput : public FlowSocket {
+namespace qtMate::flow
+{
+class FlowInput : public FlowSocket
+{
 public:
 	using FlowSocket::FlowSocket;
 
 	virtual ~FlowInput() override;
 
-	enum { Type = UserType + 2 };
+	enum
+	{
+		Type = UserType + 2
+	};
 	virtual int type() const override;
 	virtual QRectF boundingRect() const override;
 

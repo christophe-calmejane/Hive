@@ -6,8 +6,8 @@
 #include <QHash>
 #include <QSet>
 
-namespace qtMate::flow {
-
+namespace qtMate::flow
+{
 using FlowNodeUid = quint64;
 using FlowSocketIndex = quint32;
 using FlowSocketType = quint32;
@@ -21,16 +21,18 @@ using FlowConnectionDescriptors = QSet<FlowConnectionDescriptor>;
 inline auto constexpr InvalidFlowNodeUid = static_cast<FlowNodeUid>(-1);
 inline auto constexpr InvalidFlowSocketIndex = static_cast<FlowSocketIndex>(-1);
 inline auto constexpr InvalidFlowSocketSlot = FlowSocketSlot{ InvalidFlowNodeUid, InvalidFlowSocketIndex };
-inline auto constexpr InvalidFlowConnectionDescriptor = FlowConnectionDescriptor{InvalidFlowSocketSlot, InvalidFlowSocketSlot};
+inline auto constexpr InvalidFlowConnectionDescriptor = FlowConnectionDescriptor{ InvalidFlowSocketSlot, InvalidFlowSocketSlot };
 
-struct FlowSocketDescriptor {
+struct FlowSocketDescriptor
+{
 	QString name{};
 	FlowSocketType type{};
 };
 
 using FlowSocketDescriptors = QVector<FlowSocketDescriptor>;
 
-struct FlowNodeDescriptor {
+struct FlowNodeDescriptor
+{
 	QString name{};
 	FlowSocketDescriptors inputs{};
 	FlowSocketDescriptors outputs{};

@@ -3,9 +3,10 @@
 #include <QGraphicsScene>
 #include <QtMate/flow/flowdefs.hpp>
 
-namespace qtMate::flow {
-
-class FlowScene : public QGraphicsScene {
+namespace qtMate::flow
+{
+class FlowScene : public QGraphicsScene
+{
 	Q_OBJECT
 public:
 	FlowScene(FlowSceneDelegate* delegate, QObject* parent = nullptr);

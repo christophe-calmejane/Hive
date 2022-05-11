@@ -37,7 +37,7 @@ struct Node
 using Nodes = std::vector<Node>;
 using Outputs = Nodes;
 using Inputs = Nodes;
-using SlotID = std::pair<size_t, size_t>; // Pair of "Node Index", "Socket Index"
+using SlotID = std::pair<quint32, quint32>; // Pair of "Node Index", "Socket Index"
 using Connection = std::pair<SlotID, SlotID>; // Pair of "Output SlotID", "Input SlotID"
 using Connections = std::vector<Connection>;
 
@@ -80,7 +80,7 @@ public:
 	// Return the list of active connections,
 	// Note: it is ment to be retrived after the dialog has been closed
 	Connections connections() const;
-	
+
 private:
 	MappingMatrix* _matrix{};
 };

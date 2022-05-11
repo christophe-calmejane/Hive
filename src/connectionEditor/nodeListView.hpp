@@ -2,7 +2,8 @@
 
 #include <QListView>
 
-class NodeListView : public QListView {
+class NodeListView : public QListView
+{
 	Q_OBJECT
 public:
 	NodeListView(QWidget* parent = nullptr);

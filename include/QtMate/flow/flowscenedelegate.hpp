@@ -3,9 +3,10 @@
 #include <QObject>
 #include <QtMate/flow/flowdefs.hpp>
 
-namespace qtMate::flow {
-
-class FlowSceneDelegate : public QObject {
+namespace qtMate::flow
+{
+class FlowSceneDelegate : public QObject
+{
 public:
 	using QObject::QObject;
 

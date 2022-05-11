@@ -3,7 +3,8 @@
 #include <QStandardItemModel>
 #include <QtMate/flow/flowdefs.hpp>
 
-class NodeListModel : public QStandardItemModel {
+class NodeListModel : public QStandardItemModel
+{
 public:
 	using QStandardItemModel::QStandardItemModel;
 

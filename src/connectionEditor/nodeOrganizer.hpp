@@ -3,9 +3,10 @@
 #include <QObject>
 #include <QVariantAnimation>
 
-#include<QtMate/flow/flowdefs.hpp>
+#include <QtMate/flow/flowdefs.hpp>
 
-class NodeOrganizer : public QObject {
+class NodeOrganizer : public QObject
+{
 public:
 	NodeOrganizer(qtMate::flow::FlowScene* scene, QObject* parent = nullptr);
 	virtual ~NodeOrganizer() override;
@@ -18,10 +19,12 @@ private:
 private:
 	qtMate::flow::FlowScene* _scene{};
 
-	struct NodeData {
+	struct NodeData
+	{
 		qtMate::flow::FlowNode* node{};
 		int activeInputCount{};
-		int activeOutputCount{};;
+		int activeOutputCount{};
+		;
 	};
 
 	QHash<qtMate::flow::FlowNodeUid, NodeData> _nodeData{};

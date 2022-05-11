@@ -3,9 +3,10 @@
 #include <QtMate/flow/flowlink.hpp>
 #include <QtMate/flow/flowdefs.hpp>
 
-namespace qtMate::flow {
-
-class FlowConnection : public FlowLink {
+namespace qtMate::flow
+{
+class FlowConnection : public FlowLink
+{
 public:
 	FlowConnection(QGraphicsItem* parent = nullptr);
 	virtual ~FlowConnection() override;

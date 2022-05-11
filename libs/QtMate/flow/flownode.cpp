@@ -5,22 +5,26 @@
 #include "QtMate/flow/flowscenedelegate.hpp"
 #include "QtMate/flow/flowstyle.hpp"
 
-namespace qtMate::flow {
-
-namespace {
-
-class FlowNodeHeader : public QGraphicsItem {
+namespace qtMate::flow
+{
+namespace
+{
+class FlowNodeHeader : public QGraphicsItem
+{
 public:
 	FlowNodeHeader(QString const& name, QGraphicsItem* parent = nullptr)
-		: QGraphicsItem{parent}
-		, _name{name} {
+		: QGraphicsItem{ parent }
+		, _name{ name }
+	{
 	}
 
-	virtual QRectF boundingRect() const override {
+	virtual QRectF boundingRect() const override
+	{
 		return QRectF{ 0.f, 0.f, NODE_WIDTH, NODE_LINE_HEIGHT };
 	}
 
-	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget) override {
+	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget) override
+	{
 		auto const r = boundingRect();
 
 		painter->setPen(NODE_TEXT_COLOR);
@@ -35,10 +39,11 @@ private:
 } // namespace
 
 FlowNode::FlowNode(FlowSceneDelegate* delegate, FlowNodeUid const& uid, FlowNodeDescriptor const& descriptor, QGraphicsItem* parent)
-	: QGraphicsItem{parent}
-	, _delegate{delegate}
-	, _uid{uid}
-	, _name{descriptor.name} {
+	: QGraphicsItem{ parent }
+	, _delegate{ delegate }
+	, _uid{ uid }
+	, _name{ descriptor.name }
+{
 	Q_ASSERT(_delegate && "FlowSceneDelegate is required");
 
 	setFlag(QGraphicsItem::ItemIsMovable, true);
@@ -49,19 +54,21 @@ FlowNode::FlowNode(FlowSceneDelegate* delegate, FlowNodeUid const& uid, FlowNode
 	setAcceptHoverEvents(true);
 	setZValue(0.f);
 
-	new FlowNodeHeader{_name, this};
+	new FlowNodeHeader{ _name, this };
 
 
-	for (auto const& descriptor: descriptor.inputs) {
+	for (auto const& descriptor : descriptor.inputs)
+	{
 		auto const index = static_cast<FlowSocketIndex>(_inputs.size());
-		auto* input = _inputs.emplace_back(new FlowInput{this, index, descriptor});
+		auto* input = _inputs.emplace_back(new FlowInput{ this, index, descriptor });
 		input->moveBy(0, NODE_SEPARATOR_THICKNESS + (index + 1) * NODE_LINE_HEIGHT);
 		input->setColor(_delegate->socketTypeColor(input->descriptor().type));
 	}
 
-	for (auto const& descriptor: descriptor.outputs) {
+	for (auto const& descriptor : descriptor.outputs)
+	{
 		auto const index = static_cast<FlowSocketIndex>(_outputs.size());
-		auto* output = _outputs.emplace_back(new FlowOutput{this, index, descriptor});
+		auto* output = _outputs.emplace_back(new FlowOutput{ this, index, descriptor });
 		output->moveBy(0, NODE_SEPARATOR_THICKNESS + (index + 1) * NODE_LINE_HEIGHT);
 		output->setColor(_delegate->socketTypeColor(output->descriptor().type));
 	}
@@ -69,46 +76,57 @@ FlowNode::FlowNode(FlowSceneDelegate* delegate, FlowNodeUid const& uid, FlowNode
 
 FlowNode::~FlowNode() = default;
 
-FlowNodeUid const& FlowNode::uid() const {
+FlowNodeUid const& FlowNode::uid() const
+{
 	return _uid;
 }
 
-QString const& FlowNode::name() const {
+QString const& FlowNode::name() const
+{
 	return _name;
 }
 
-FlowInputs const& FlowNode::inputs() const {
+FlowInputs const& FlowNode::inputs() const
+{
 	return _inputs;
 }
 
-FlowOutputs const& FlowNode::outputs() const {
+FlowOutputs const& FlowNode::outputs() const
+{
 	return _outputs;
 }
 
-FlowInput* FlowNode::input(FlowSocketIndex index) const {
-	if (index < 0 || index >= _inputs.size()) {
+FlowInput* FlowNode::input(FlowSocketIndex index) const
+{
+	if (index < 0 || index >= _inputs.size())
+	{
 		return nullptr;
 	}
 	return _inputs[index];
 }
 
-FlowOutput* FlowNode::output(FlowSocketIndex index) const {
-	if (index < 0 || index >= _outputs.size()) {
+FlowOutput* FlowNode::output(FlowSocketIndex index) const
+{
+	if (index < 0 || index >= _outputs.size())
+	{
 		return nullptr;
 	}
 	return _outputs[index];
 }
 
-int FlowNode::type() const {
+int FlowNode::type() const
+{
 	return Type;
 }
 
-QRectF FlowNode::boundingRect() const {
+QRectF FlowNode::boundingRect() const
+{
 	auto const n = 1 + std::max(_inputs.size(), _outputs.size());
-	return QRectF{0.f, 0.f, NODE_WIDTH, n * NODE_LINE_HEIGHT};
+	return QRectF{ 0.f, 0.f, NODE_WIDTH, n * NODE_LINE_HEIGHT };
 }
 
-void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget) {
+void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
+{
 	auto const r = boundingRect();
 
 	// background
@@ -122,16 +140,20 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 
 	painter->setPen(Qt::NoPen);
 
-	if (isSelected()) {
+	if (isSelected())
+	{
 		painter->setBrush(NODE_SELECTED_HEADER_COLOR);
-	} else {
+	}
+	else
+	{
 		painter->setBrush(NODE_HEADER_COLOR);
 	}
 
 	drawRoundedRect(painter, headerBoundingRect, TopLeft | TopRight, NODE_BORDER_RADIUS);
 
 	// inputs
-	if(!_inputs.empty()) {
+	if (!_inputs.empty())
+	{
 		auto inputsBoundingRect = r;
 		inputsBoundingRect.moveTop(NODE_LINE_HEIGHT + NODE_SEPARATOR_THICKNESS);
 		inputsBoundingRect.setWidth(r.width() * inputRatio(this));
@@ -142,7 +164,8 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 	}
 
 	// outputs
-	if (!_outputs.empty()) {
+	if (!_outputs.empty())
+	{
 		auto ouputsBoundingRect = r;
 		ouputsBoundingRect.moveTop(NODE_LINE_HEIGHT + NODE_SEPARATOR_THICKNESS);
 		ouputsBoundingRect.moveLeft(r.width() * inputRatio(this) + NODE_SEPARATOR_THICKNESS);
@@ -154,31 +177,41 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 	}
 }
 
-QVariant FlowNode::itemChange(GraphicsItemChange change, QVariant const& value) {
-	if (change == GraphicsItemChange::ItemPositionHasChanged) {
+QVariant FlowNode::itemChange(GraphicsItemChange change, QVariant const& value)
+{
+	if (change == GraphicsItemChange::ItemPositionHasChanged)
+	{
 		handleItemPositionHasChanged();
-	} else if (change == GraphicsItemChange::ItemSelectedHasChanged) {
+	}
+	else if (change == GraphicsItemChange::ItemSelectedHasChanged)
+	{
 		handleItemSelectionHasChanged();
 	}
 
 	return QGraphicsItem::itemChange(change, value);
 }
 
-void FlowNode::handleItemPositionHasChanged() {
-	for (auto* input : _inputs) {
-		if (auto* connection = input->connection()) {
+void FlowNode::handleItemPositionHasChanged()
+{
+	for (auto* input : _inputs)
+	{
+		if (auto* connection = input->connection())
+		{
 			connection->updatePath();
 		}
 	}
 
-	for (auto* output : _outputs) {
-		for (auto* connection : output->connections()) {
+	for (auto* output : _outputs)
+	{
+		for (auto* connection : output->connections())
+		{
 			connection->updatePath();
 		}
 	}
 }
 
-void FlowNode::handleItemSelectionHasChanged() {
+void FlowNode::handleItemSelectionHasChanged()
+{
 	setZValue(isSelected() ? 1.f : 0.f);
 }
 
