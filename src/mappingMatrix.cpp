@@ -94,7 +94,7 @@ public:
 		// we must generate this unique identifier ourselves and also keep the offset to the first input node
 		// in order to be able to translate connections back and forth.
 		auto id = 0;
-		_offset = outputs.size();
+		_offset = static_cast<decltype(_offset)>(outputs.size());
 		
 		// Create output nodes
 		for (auto const& output : outputs)
