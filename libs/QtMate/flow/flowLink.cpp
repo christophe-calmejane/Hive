@@ -1,5 +1,5 @@
-#include "QtMate/flow/flowlink.hpp"
-#include "QtMate/flow/flowstyle.hpp"
+#include "QtMate/flow/flowLink.hpp"
+#include "QtMate/flow/flowStyle.hpp"
 
 #include <QPainter>
 

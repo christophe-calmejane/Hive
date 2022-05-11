@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QObject>
-#include <QtMate/flow/flowdefs.hpp>
+#include <QtMate/flow/flowDefs.hpp>
 
 namespace qtMate::flow
 {

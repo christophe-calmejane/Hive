@@ -1,7 +1,7 @@
-#include "QtMate/flow/flowscenedelegate.hpp"
-#include "QtMate/flow/flowsocket.hpp"
-#include "QtMate/flow/flowinput.hpp"
-#include "QtMate/flow/flowoutput.hpp"
+#include "QtMate/flow/flowSceneDelegate.hpp"
+#include "QtMate/flow/flowSocket.hpp"
+#include "QtMate/flow/flowInput.hpp"
+#include "QtMate/flow/flowOutput.hpp"
 
 namespace qtMate::flow
 {

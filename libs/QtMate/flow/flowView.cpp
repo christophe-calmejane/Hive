@@ -1,10 +1,10 @@
-#include "QtMate/flow/flowview.hpp"
-#include "QtMate/flow/flowscene.hpp"
-#include "QtMate/flow/flownode.hpp"
-#include "QtMate/flow/flowinput.hpp"
-#include "QtMate/flow/flowoutput.hpp"
-#include "QtMate/flow/flowconnection.hpp"
-#include "QtMate/flow/flowstyle.hpp"
+#include "QtMate/flow/flowView.hpp"
+#include "QtMate/flow/flowScene.hpp"
+#include "QtMate/flow/flowNode.hpp"
+#include "QtMate/flow/flowInput.hpp"
+#include "QtMate/flow/flowOutput.hpp"
+#include "QtMate/flow/flowConnection.hpp"
+#include "QtMate/flow/flowStyle.hpp"
 
 #include <QMouseEvent>
 #include <QScrollBar>

@@ -1,6 +1,6 @@
-#include "QtMate/flow/flowoutput.hpp"
-#include "QtMate/flow/flowconnection.hpp"
-#include "QtMate/flow/flowstyle.hpp"
+#include "QtMate/flow/flowOutput.hpp"
+#include "QtMate/flow/flowConnection.hpp"
+#include "QtMate/flow/flowStyle.hpp"
 
 #include <QPainter>
 

@@ -1,19 +1,19 @@
 #pragma once
 
-#include <QtMate/flow/flowsocket.hpp>
+#include <QtMate/flow/flowSocket.hpp>
 
 namespace qtMate::flow
 {
-class FlowOutput : public FlowSocket
+class FlowInput : public FlowSocket
 {
 public:
 	using FlowSocket::FlowSocket;
 
-	virtual ~FlowOutput() override;
+	virtual ~FlowInput() override;
 
 	enum
 	{
-		Type = UserType + 3
+		Type = UserType + 2
 	};
 	virtual int type() const override;
 	virtual QRectF boundingRect() const override;
@@ -21,14 +21,13 @@ public:
 	virtual bool isConnected() const override;
 	virtual QRectF hotSpotBoundingRect() const override;
 
-	void addConnection(FlowConnection* connection);
-	void removeConnection(FlowConnection* connection);
-	FlowConnections const& connections() const;
+	FlowConnection* connection() const;
+	void setConnection(FlowConnection* connection);
 
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget = nullptr) override;
 
 private:
-	FlowConnections _connections{};
+	FlowConnection* _connection{};
 };
 
 } // namespace qtMate::flow

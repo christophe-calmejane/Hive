@@ -1,5 +1,5 @@
-#include "QtMate/flow/flowstyle.hpp"
-#include "QtMate/flow/flownode.hpp"
+#include "QtMate/flow/flowStyle.hpp"
+#include "QtMate/flow/flowNode.hpp"
 
 #include <QPainter>
 #include <QPainterPath>

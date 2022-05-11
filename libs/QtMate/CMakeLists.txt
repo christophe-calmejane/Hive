@@ -18,17 +18,17 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/QtMate/material/color.hpp
 	${CU_ROOT_DIR}/include/QtMate/material/colorPalette.hpp
 	${CU_ROOT_DIR}/include/QtMate/material/helper.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowconnection.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowdefs.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowinput.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowlink.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flownode.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowoutput.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowscene.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowscenedelegate.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowsocket.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowstyle.hpp
-	${CU_ROOT_DIR}/include/QtMate/flow/flowview.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowConnection.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowDefs.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowInput.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowLink.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowNode.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowOutput.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowScene.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowSceneDelegate.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowSocket.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowStyle.hpp
+	${CU_ROOT_DIR}/include/QtMate/flow/flowView.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/autoSizeLabel.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/comboBox.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/dynamicHeaderView.hpp
@@ -46,16 +46,16 @@ set(SOURCE_FILES_COMMON
 	material/color.cpp
 	material/colorPalette.cpp
 	material/helper.cpp
-	flow/flowconnection.cpp
-	flow/flowinput.cpp
-	flow/flowlink.cpp
-	flow/flownode.cpp
-	flow/flowoutput.cpp
-	flow/flowscene.cpp
-	flow/flowscenedelegate.cpp
-	flow/flowsocket.cpp
-	flow/flowstyle.cpp
-	flow/flowview.cpp
+	flow/flowConnection.cpp
+	flow/flowInput.cpp
+	flow/flowLink.cpp
+	flow/flowNode.cpp
+	flow/flowOutput.cpp
+	flow/flowScene.cpp
+	flow/flowSceneDelegate.cpp
+	flow/flowSocket.cpp
+	flow/flowStyle.cpp
+	flow/flowView.cpp
 	widgets/autoSizeLabel.cpp
 	widgets/comboBox.cpp
 	widgets/dynamicHeaderView.cpp

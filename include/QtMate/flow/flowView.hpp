@@ -3,7 +3,7 @@
 #include <QGraphicsView>
 #include <QElapsedTimer>
 #include <QVariantAnimation>
-#include <QtMate/flow/flowdefs.hpp>
+#include <QtMate/flow/flowDefs.hpp>
 
 namespace qtMate::flow
 {

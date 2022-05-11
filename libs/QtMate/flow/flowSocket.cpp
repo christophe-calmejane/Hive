@@ -1,5 +1,5 @@
-#include "QtMate/flow/flowsocket.hpp"
-#include "QtMate/flow/flownode.hpp"
+#include "QtMate/flow/flowSocket.hpp"
+#include "QtMate/flow/flowNode.hpp"
 
 namespace qtMate::flow
 {
