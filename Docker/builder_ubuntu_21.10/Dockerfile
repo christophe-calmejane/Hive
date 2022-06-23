@@ -5,6 +5,9 @@ FROM ubuntu:21.10
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y install \
        wget \
+       vim \
+       sudo \
+       git \
        build-essential \
        ninja-build \
        g++ \
