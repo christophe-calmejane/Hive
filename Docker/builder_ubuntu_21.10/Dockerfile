@@ -13,6 +13,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y install \
        g++ \
        flex \
        python \
+       ncurses-dev \
        libpcap-dev \
        qtbase5-dev
 RUN rm -rf /var/lib/apt/lists/*
