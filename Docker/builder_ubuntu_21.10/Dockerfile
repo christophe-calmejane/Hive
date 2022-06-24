@@ -11,22 +11,23 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y install \
        build-essential \
        ninja-build \
        g++ \
-       cmake \
+       flex \
+       python \
        libpcap-dev \
        qtbase5-dev
 RUN rm -rf /var/lib/apt/lists/*
 
 # Install more recent CMake
-# ARG CMAKE_VERSION=3.22.0
-# 
-# RUN mkdir ~/cmake-install \
-#        && cd ~/cmake-install \
-#        && wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION.tar.gz \
-#        && tar -xzvf cmake-$CMAKE_VERSION.tar.gz \
-#        && cd cmake-$CMAKE_VERSION/ \
-#        && ./bootstrap -- -DCMAKE_USE_OPENSSL=OFF \
-#        && make -j$(nproc) \
-#        && make install
+ARG CMAKE_VERSION=3.22.5
+
+RUN mkdir ~/cmake-install \
+       && cd ~/cmake-install \
+       && wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION.tar.gz \
+       && tar -xzvf cmake-$CMAKE_VERSION.tar.gz \
+       && cd cmake-$CMAKE_VERSION/ \
+       && ./bootstrap -- -DCMAKE_USE_OPENSSL=OFF \
+       && make -j$(nproc) \
+       && make install
 
 # Create a user
 ENV USERNAME=builder

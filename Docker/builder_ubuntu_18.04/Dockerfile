@@ -17,7 +17,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y install \
 RUN rm -rf /var/lib/apt/lists/*
 
 # Install more recent CMake
-ARG CMAKE_VERSION=3.22.0
+ARG CMAKE_VERSION=3.22.5
 
 RUN mkdir ~/cmake-install \
        && cd ~/cmake-install \
