@@ -14,7 +14,7 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 
 - CMake 3.22
 - Qt 5.15.2
-- Visual Studio 2019 16.3 (using platform toolset v142), Xcode 10, g++ 8.2.1
+- Visual Studio 2019 16.3 (using platform toolset v142), Xcode 12, g++ 11.2.0
 
 ## Compilation
 
