@@ -48,6 +48,7 @@ private:
 	Q_SLOT void on_alwaysShowArrowTipConnectionMatrixCheckBox_toggled(bool checked);
 	Q_SLOT void on_alwaysShowArrowEndConnectionMatrixCheckBox_toggled(bool checked);
 	Q_SLOT void on_showMediaLockedDotCheckBox_toggled(bool checked);
+	Q_SLOT void on_allowCRFAudioConnectionCheckBox_toggled(bool checked);
 
 	// Controller
 	Q_SLOT void on_discoveryDelayLineEdit_returnPressed();

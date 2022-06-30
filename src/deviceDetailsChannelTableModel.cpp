@@ -905,7 +905,7 @@ void ConnectionStateItemDelegate::paint(QPainter* painter, QStyleOptionViewItem 
 
 		QRect iconDrawRect(option.rect.left() + (option.rect.width() - circleDiameter) / 2.0f, option.rect.top() + margin + innerRow * (fontPixelHeight + margin), circleDiameter, circleDiameter);
 
-		connectionMatrix::paintHelper::drawCapabilities(painter, iconDrawRect, status.type, status.state, status.flags, true);
+		connectionMatrix::paintHelper::drawCapabilities(painter, iconDrawRect, status.type, status.state, status.flags, true, true);
 
 		innerRow++;
 	}

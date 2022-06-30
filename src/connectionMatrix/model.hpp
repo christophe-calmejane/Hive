@@ -126,8 +126,9 @@ public:
 			WrongDomain = 1u << 1, /**< The AVB domains do not match (connection is possible, but stream reservation will fail) */
 			WrongFormatPossible = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener), but a listener format can match */
 			WrongFormatImpossible = 1u << 3, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener), but no listener format will match */
-			MediaLocked = 1u << 4, /**< The Stream is Connected and Media Locked (Milan only) */
-			LatencyError = 1u << 5, /**< The Listener MSRP latency is greater than the Talker's */
+			WrongFormatType = 1u << 4, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener), and will never match because of type incompatibility (eg. CRF and Audio) (Milan devices only) */
+			MediaLocked = 1u << 5, /**< The Stream is Connected and Media Locked (Milan only) */
+			LatencyError = 1u << 6, /**< The Listener MSRP latency is greater than the Talker's */
 		};
 		using Flags = la::avdecc::utils::EnumBitfield<Flag>;
 

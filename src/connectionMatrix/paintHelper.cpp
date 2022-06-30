@@ -222,7 +222,7 @@ QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orien
 	return path;
 }
 
-void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot)
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot, bool const drawCRFAudioConnections)
 {
 	painter->setRenderHint(QPainter::Antialiasing);
 
@@ -272,6 +272,13 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			}
 		}
 	};
+
+	// Do not draw incompatible format types if not connected
+	if (!drawCRFAudioConnections && flags.test(Model::IntersectionData::Flag::WrongFormatType) && state == Model::IntersectionData::State::NotConnected)
+	{
+		drawInvalidIntersection();
+		return;
+	}
 
 	switch (type)
 	{

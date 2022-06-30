@@ -75,7 +75,7 @@ private:
 	{
 		Q_UNUSED(event);
 		QPainter painter{ this };
-		paintHelper::drawCapabilities(&painter, rect(), _type, _state, _flags, true);
+		paintHelper::drawCapabilities(&painter, rect(), _type, _state, _flags, true, true);
 	}
 
 private:

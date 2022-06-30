@@ -195,6 +195,11 @@ QString flagsToString(Model::IntersectionData::Flags const& flags)
 		stringList << "WrongFormatImpossible";
 	}
 
+	if (flags.test(Model::IntersectionData::Flag::WrongFormatType))
+	{
+		stringList << "WrongFormatType";
+	}
+
 	if (flags.test(Model::IntersectionData::Flag::MediaLocked))
 	{
 		stringList << "Media Locked";
@@ -1071,6 +1076,7 @@ public:
 					{
 						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormatPossible);
 						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormatImpossible);
+						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormatType);
 					}
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
 					{
@@ -1176,6 +1182,7 @@ public:
 					auto allCompatibleDomain = true;
 					auto allCompatibleFormat = true;
 					auto impossibleFormat = false;
+					auto differentMediaClockFormat = false;
 					auto allLocked = true;
 					auto allNoLatencyError = true;
 
@@ -1208,6 +1215,7 @@ public:
 
 						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
+						differentMediaClockFormat |= la::avdecc::controller::Controller::isMediaClockStreamFormat(talkerStreamFormat) != la::avdecc::controller::Controller::isMediaClockStreamFormat(listenerStreamFormat);
 						allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 						impossibleFormat |= !hasMatchingFormat(listenerStreamNode->streamFormats(), talkerStreamFormat);
 
@@ -1230,6 +1238,10 @@ public:
 						if (impossibleFormat)
 						{
 							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+							if (differentMediaClockFormat)
+							{
+								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatType);
+							}
 						}
 						else
 						{
@@ -1305,6 +1317,7 @@ public:
 					auto allConnectionsHaveMatchingDomain = true;
 					auto isCompatibleFormat = true;
 					auto isImpossibleFormat = false;
+					auto differentMediaClockFormat = false;
 					auto countConnections = size_t{ 0u };
 					auto possibleSmartConnectableStreams = decltype(intersectionData.smartConnectableStreams){};
 					auto areLocked = false;
@@ -1359,6 +1372,7 @@ public:
 							// Get Format Compatibility
 							isCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
 							isImpossibleFormat |= !hasMatchingFormat(listenerStreamFormats, talkerStreamFormat);
+							differentMediaClockFormat |= la::avdecc::controller::Controller::isMediaClockStreamFormat(talkerStreamFormat) != la::avdecc::controller::Controller::isMediaClockStreamFormat(listenerStreamFormat);
 
 							// Get Domain Compatibility
 							auto const sameDomain = isSameDomain(*redundantStreamNode, *nonRedundantStreamNode);
@@ -1402,6 +1416,10 @@ public:
 						if (isImpossibleFormat)
 						{
 							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+							if (differentMediaClockFormat)
+							{
+								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatType);
+							}
 						}
 						else
 						{
@@ -1727,6 +1745,7 @@ public:
 		{
 			flags.reset(Model::IntersectionData::Flag::WrongFormatPossible);
 			flags.reset(Model::IntersectionData::Flag::WrongFormatImpossible);
+			flags.reset(Model::IntersectionData::Flag::WrongFormatType);
 		}
 		else
 		{
@@ -1737,6 +1756,10 @@ public:
 			else
 			{
 				flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+				if (la::avdecc::controller::Controller::isMediaClockStreamFormat(talkerStreamFormat) != la::avdecc::controller::Controller::isMediaClockStreamFormat(listenerStreamFormat))
+				{
+					flags.set(Model::IntersectionData::Flag::WrongFormatType);
+				}
 			}
 		}
 	}

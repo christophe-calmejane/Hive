@@ -41,6 +41,15 @@ void ItemDelegate::setDrawMediaLockedDot(bool const drawMediaLockedDot) noexcept
 	_drawMediaLockedDot = drawMediaLockedDot;
 }
 
+void ItemDelegate::setDrawCRFAudioConnections(bool const drawCRFAudioConnections) noexcept
+{
+	_drawCRFAudioConnections = drawCRFAudioConnections;
+}
+
+bool ItemDelegate::getDrawCRFAudioConnections() const noexcept
+{
+	return _drawCRFAudioConnections;
+}
 
 void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
@@ -70,7 +79,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 
 	auto const& intersectionData = static_cast<Model const*>(index.model())->intersectionData(index);
 
-	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags, _drawMediaLockedDot);
+	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags, _drawMediaLockedDot, _drawCRFAudioConnections);
 }
 
 } // namespace connectionMatrix

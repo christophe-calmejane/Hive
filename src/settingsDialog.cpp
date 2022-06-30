@@ -118,6 +118,12 @@ private:
 			auto const lock = QSignalBlocker{ showMediaLockedDotCheckBox };
 			showMediaLockedDotCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_ShowMediaLockedDot.name).toBool());
 		}
+
+		// Allow CRF Audio Connection
+		{
+			auto const lock = QSignalBlocker{ allowCRFAudioConnectionCheckBox };
+			allowCRFAudioConnectionCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_AllowCRFAudioConnection.name).toBool());
+		}
 	}
 
 	void loadControllerSettings()
@@ -281,6 +287,12 @@ void SettingsDialog::on_showMediaLockedDotCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::ConnectionMatrix_ShowMediaLockedDot.name, checked);
+}
+
+void SettingsDialog::on_allowCRFAudioConnectionCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::ConnectionMatrix_AllowCRFAudioConnection.name, checked);
 }
 
 void SettingsDialog::on_discoveryDelayLineEdit_returnPressed()
