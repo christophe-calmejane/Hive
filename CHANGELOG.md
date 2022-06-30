@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Option to hide (meaningless) connections between CRF and Audio streams
+- Matrix shortcuts
+  - CTRL+L: Expand Listeners
+  - CTRL+SHIFT+L: Collapse Listeners
+  - CTRL+T: Expand Talkers
+  - CTRL+SHIFT+T: Collapse Talkers
 
 ## [1.2.8] - 2022-04-26
 ### Added

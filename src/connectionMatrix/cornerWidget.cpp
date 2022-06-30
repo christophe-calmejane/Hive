@@ -130,12 +130,65 @@ CornerWidget::CornerWidget(QWidget* parent)
 	connect(&_verticalExpandButton, &QPushButton::clicked, this, &CornerWidget::horizontalExpandClicked);
 	connect(&_verticalCollapseButton, &QPushButton::clicked, this, &CornerWidget::horizontalCollapseClicked);
 
+	// Shortcuts
 	auto* searchShortcut = new QShortcut{ QKeySequence::FindNext, this };
 	connect(searchShortcut, &QShortcut::activated, this,
 		[this]()
 		{
 			_searchLineEdit.setFocus(Qt::MouseFocusReason);
 			_searchLineEdit.selectAll();
+		});
+	auto* expandListeners = new QShortcut{ QKeySequence{ "Ctrl+L" }, this };
+	connect(expandListeners, &QShortcut::activated, this,
+		[this]()
+		{
+			if (_isTransposed)
+			{
+				_horizontalExpandButton.click();
+			}
+			else
+			{
+				_verticalExpandButton.click();
+			}
+		});
+	auto* collapseListeners = new QShortcut{ QKeySequence{ "Ctrl+Shift+L" }, this };
+	connect(collapseListeners, &QShortcut::activated, this,
+		[this]()
+		{
+			if (_isTransposed)
+			{
+				_horizontalCollapseButton.click();
+			}
+			else
+			{
+				_verticalCollapseButton.click();
+			}
+		});
+	auto* expandTalkers = new QShortcut{ QKeySequence{ "Ctrl+T" }, this };
+	connect(expandTalkers, &QShortcut::activated, this,
+		[this]()
+		{
+			if (_isTransposed)
+			{
+				_verticalExpandButton.click();
+			}
+			else
+			{
+				_horizontalExpandButton.click();
+			}
+		});
+	auto* collapseTalkers = new QShortcut{ QKeySequence{ "Ctrl+Shift+T" }, this };
+	connect(collapseTalkers, &QShortcut::activated, this,
+		[this]()
+		{
+			if (_isTransposed)
+			{
+				_verticalCollapseButton.click();
+			}
+			else
+			{
+				_horizontalCollapseButton.click();
+			}
 		});
 
 	// Configure settings observers
