@@ -124,6 +124,12 @@ private:
 			auto const lock = QSignalBlocker{ allowCRFAudioConnectionCheckBox };
 			allowCRFAudioConnectionCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_AllowCRFAudioConnection.name).toBool());
 		}
+
+		// Collapsed by Default
+		{
+			auto const lock = QSignalBlocker{ collapsedByDefaultCheckBox };
+			collapsedByDefaultCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_CollapsedByDefault.name).toBool());
+		}
 	}
 
 	void loadControllerSettings()
@@ -293,6 +299,12 @@ void SettingsDialog::on_allowCRFAudioConnectionCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::ConnectionMatrix_AllowCRFAudioConnection.name, checked);
+}
+
+void SettingsDialog::on_collapsedByDefaultCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::ConnectionMatrix_CollapsedByDefault.name, checked);
 }
 
 void SettingsDialog::on_discoveryDelayLineEdit_returnPressed()

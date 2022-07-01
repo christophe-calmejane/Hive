@@ -169,6 +169,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowEnd);
 	settings.registerSetting(settings::ConnectionMatrix_ShowMediaLockedDot);
 	settings.registerSetting(settings::ConnectionMatrix_AllowCRFAudioConnection);
+	settings.registerSetting(settings::ConnectionMatrix_CollapsedByDefault);
 
 	// Network
 	settings.registerSetting(settings::Network_ProtocolType);

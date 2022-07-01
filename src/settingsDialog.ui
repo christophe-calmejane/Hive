@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>383</width>
-    <height>724</height>
+    <height>746</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -210,6 +210,16 @@
       </item>
       <item row="4" column="1">
        <widget class="QCheckBox" name="allowCRFAudioConnectionCheckBox"/>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="collapsedByDefaultLabel">
+        <property name="text">
+         <string>Collapsed by Default</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QCheckBox" name="collapsedByDefaultCheckBox"/>
       </item>
      </layout>
     </widget>

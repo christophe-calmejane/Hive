@@ -83,6 +83,12 @@ void HeaderView::setTransposed(bool const isTransposed)
 	update();
 }
 
+void HeaderView::setCollapsedByDefault(bool const collapsedByDefault)
+{
+	_collapsedByDefault = collapsedByDefault;
+	update();
+}
+
 void HeaderView::setColor(qtMate::material::color::Name const name)
 {
 	_colorName = name;
@@ -217,13 +223,23 @@ void HeaderView::handleSectionInserted(QModelIndex const& /*parent*/, int first,
 
 			switch (node->type())
 			{
+				case Node::Type::Entity:
+					expanded = !_collapsedByDefault;
+					break;
 				case Node::Type::RedundantOutput:
 				case Node::Type::RedundantInput:
+					visible = !_collapsedByDefault;
 					expanded = false;
 					break;
 				case Node::Type::RedundantOutputStream:
 				case Node::Type::RedundantInputStream:
 					visible = false;
+					break;
+				case Node::Type::OutputStream:
+				case Node::Type::InputStream:
+				case Node::Type::OutputChannel:
+				case Node::Type::InputChannel:
+					visible = !_collapsedByDefault;
 					break;
 				default:
 					break;

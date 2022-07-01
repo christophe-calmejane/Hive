@@ -90,6 +90,7 @@ View::View(QWidget* parent)
 	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings->registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
 	settings->registerSettingObserver(settings::ConnectionMatrix_AllowCRFAudioConnection.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_CollapsedByDefault.name, this);
 	settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 
 	// react on connection completed signals to show error messages.
@@ -107,6 +108,7 @@ View::~View()
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_AllowCRFAudioConnection.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_CollapsedByDefault.name, this);
 	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
@@ -602,6 +604,15 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 		_itemDelegate->setDrawCRFAudioConnections(drawConnections);
 
 		forceFilter();
+	}
+	else if (name == settings::ConnectionMatrix_CollapsedByDefault.name)
+	{
+		auto const collapsedByDefault = value.toBool();
+		_verticalHeaderView->setCollapsedByDefault(collapsedByDefault);
+		_horizontalHeaderView->setCollapsedByDefault(collapsedByDefault);
+
+		// Manually force a model refresh of the headers
+		_model->forceRefreshHeaders();
 	}
 	else if (name == settings::General_ThemeColorIndex.name)
 	{
