@@ -189,6 +189,11 @@ int Node::childrenCount() const noexcept
 	return static_cast<int>(_children.size());
 }
 
+std::vector<std::unique_ptr<Node>> const& Node::children() const noexcept
+{
+	return _children;
+}
+
 Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent) noexcept
 	: _type{ type }
 	, _entityID{ entityID }

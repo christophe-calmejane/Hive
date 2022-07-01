@@ -66,6 +66,51 @@ static inline QColor getLatencyErrorBrushColor() noexcept
 	return color::value(color::Name::Red, color::Shade::Shade800);
 }
 
+static inline QColor getEntitySummaryBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
+{
+	static auto const White = color::value(color::Name::Gray, color::Shade::Shade100);
+	static auto const Green = color::value(color::Name::Green, color::Shade::Shade500);
+	static auto const PaleGreen = color::value(color::Name::Green, color::Shade::Shade200);
+	static auto const Red = color::value(color::Name::Red, color::Shade::Shade800);
+	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
+	static auto const Grey = color::value(color::Name::Gray, color::Shade::Shade600);
+
+	auto brushColor = QColor{ White };
+
+	auto const connected = state != Model::IntersectionData::State::NotConnected;
+	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
+	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
+	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
+
+	if (wrongFormatImpossible)
+	{
+		brushColor = connected ? Yellow : Grey;
+	}
+	else if (wrongDomain)
+	{
+		brushColor = Red;
+	}
+	else if (wrongFormatPossible)
+	{
+		brushColor = Yellow;
+	}
+	else
+	{
+		if (state == Model::IntersectionData::State::PartiallyConnected)
+		{
+			brushColor = PaleGreen;
+		}
+		else
+		{
+			brushColor = connected ? Green : White;
+		}
+	}
+
+	brushColor.setAlphaF(connected ? 1.0 : 0.25);
+
+	return brushColor;
+}
+
 static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const wrongFormatHasPriorityOverInterfaceDown)
 {
 	static auto const White = color::value(color::Name::Gray, color::Shade::Shade300);
@@ -236,6 +281,24 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	{
 		painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
 	};
+	auto const drawEntitySummaryIntersection = [painter, &rect, state, flags, drawMediaLockedDot](auto const brush, auto const penColor, auto const penWidth)
+	{
+		painter->setBrush(brush);
+		painter->setPen(QPen{ penColor, penWidth });
+		drawSquare(painter, rect);
+
+		if (flags.test(Model::IntersectionData::Flag::LatencyError))
+		{
+			drawCenterDot(painter, rect, getLatencyErrorBrushColor(), 3);
+		}
+		else if (drawMediaLockedDot)
+		{
+			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+			{
+				drawCenterDot(painter, rect, getMediaLockedBrushColor());
+			}
+		}
+	};
 	auto const drawSingleStreamIntersection = [painter, &rect, state, flags, drawMediaLockedDot](auto const brush, auto const penColor, auto const penWidth)
 	{
 		painter->setBrush(brush);
@@ -321,14 +384,19 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			break;
 		}
 		case Model::IntersectionData::Type::Entity_Entity:
+		{
+			auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
+			penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade600);
+			drawEntitySummaryIntersection(brush, penColor, penWidth * 1.5f);
+			break;
+		}
 		case Model::IntersectionData::Type::Entity_Redundant:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
 		case Model::IntersectionData::Type::Entity_SingleStream:
 		case Model::IntersectionData::Type::Entity_SingleChannel:
 		{
-			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
-			painter->setPen(QPen{ penColor, penWidth });
-			drawSquare(painter, rect);
+			auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
+			drawEntitySummaryIntersection(brush, penColor, penWidth);
 			break;
 		}
 		case Model::IntersectionData::Type::Redundant_RedundantStream:

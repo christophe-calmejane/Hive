@@ -125,6 +125,9 @@ public:
 	// Returns the number of children
 	int childrenCount() const noexcept;
 
+	// Returns the read-only list of children
+	std::vector<std::unique_ptr<Node>> const& children() const noexcept;
+
 	// Visitor policy that visit all node types
 	struct CompleteHierarchyPolicy
 	{

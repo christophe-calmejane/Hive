@@ -123,13 +123,22 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 	};
 
 	Sections shapeSections = {
-		{ "Entity connection summary (Not working yet)", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
+		{ "Entity-Entity connection summary", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
+		{ "Entity-Stream/Channel connection summary", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
 		{ "Connection status for a Simple stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
 		{ "Redundant Stream Pair connection summary", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
 		{ "Connection status for the individual stream of a Redundant Stream Pair", Model::IntersectionData::Type::RedundantStream_RedundantStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
 	};
 
-	Sections colorCodeSections = {
+	Sections summaryColorCodeSections = {
+		{ "Not a single Stream/Channel is connected", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
+		{ "At least one Stream/Channel is connected but not all of them", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::PartiallyConnected, Model::IntersectionData::Flags{}, false },
+		{ "All Streams/Channels are connected", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{}, false },
+		{ "At least one Stream/Channel is connected but have incompatible AVB domain", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain }, false },
+		{ "At least one Stream/Channel is connected but have incompatible stream format", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormatPossible }, false },
+	};
+
+	Sections connectionColorCodeSections = {
 		{ "Connectable without detectable error", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false },
 		{ "Connectable but incompatible AVB domain", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain }, false },
 		{ "Connectable but Listener stream format must be changed to match Talker's current one", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormatPossible }, false },
@@ -196,8 +205,11 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 	// Add a section for the Shapes
 	addSection("Intersection Shapes", shapeSections);
 
-	// Add a section for the Colors
-	addSection("Intersection Color codes", colorCodeSections);
+	// Add a section for the Summary Colors
+	addSection("Summary Intersection Color Codes", summaryColorCodeSections);
+
+	// Add a section for the Connection Colors
+	addSection("Connection Intersection Color Codes", connectionColorCodeSections);
 
 	// Add a Close Button
 	connect(&_closeButton, &QPushButton::clicked, this, &QDialog::accept);

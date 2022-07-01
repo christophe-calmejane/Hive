@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - CTRL+SHIFT+L: Collapse Listeners
   - CTRL+T: Expand Talkers
   - CTRL+SHIFT+T: Collapse Talkers
+- Connection matrix displays Entity Connection Summary (squares) using color code (see Legend screen for more details)
 
 ## [1.2.8] - 2022-04-26
 ### Added
