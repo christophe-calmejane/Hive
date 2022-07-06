@@ -2125,7 +2125,14 @@ public:
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamOutputs)
 			{
 				auto* redundantOutput = RedundantNode::createOutputNode(*entity, redundantIndex);
-				redundantOutput->setName(hive::modelsLibrary::helper::redundantOutputName(redundantIndex));
+				if (!redundantNode.virtualName.empty())
+				{
+					redundantOutput->setName(QString{ "[R] %1" }.arg(QString::fromStdString(redundantNode.virtualName.str())));
+				}
+				else
+				{
+					redundantOutput->setName(hive::modelsLibrary::helper::redundantOutputName(redundantIndex));
+				}
 
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
@@ -2270,7 +2277,14 @@ public:
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamInputs)
 			{
 				auto* redundantInput = RedundantNode::createInputNode(*entity, redundantIndex);
-				redundantInput->setName(hive::modelsLibrary::helper::redundantInputName(redundantIndex));
+				if (!redundantNode.virtualName.empty())
+				{
+					redundantInput->setName(QString{ "[R] %1" }.arg(QString::fromStdString(redundantNode.virtualName.str())));
+				}
+				else
+				{
+					redundantInput->setName(hive::modelsLibrary::helper::redundantInputName(redundantIndex));
+				}
 
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
