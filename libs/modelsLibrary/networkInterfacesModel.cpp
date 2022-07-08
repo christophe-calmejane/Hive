@@ -61,6 +61,14 @@ public:
 		return _interfaces.size();
 	}
 
+	void insertOfflineInterface() noexcept
+	{
+		auto const count = _model->rowCount();
+		emit _model->beginInsertRows({}, count, count);
+		_interfaces.push_back(NetworkInterface{ OfflineInterfaceName, OfflineInterfaceName, true, true, la::networkInterface::Interface::Type::Loopback });
+		emit _model->endInsertRows();
+	}
+
 private:
 	inline bool isIndexValid(std::size_t const index) const noexcept
 	{
@@ -172,9 +180,15 @@ private:
 	std::vector<NetworkInterface> _interfaces{};
 };
 
-NetworkInterfacesModel::NetworkInterfacesModel(Model* const model, QObject* parent)
+std::string const NetworkInterfacesModel::OfflineInterfaceName = "Offline";
+
+NetworkInterfacesModel::NetworkInterfacesModel(Model* const model, bool const addOfflineInterface, QObject* parent)
 	: _pImpl{ std::make_unique<pImpl>(model, parent) }
 {
+	if (addOfflineInterface)
+	{
+		_pImpl->insertOfflineInterface();
+	}
 	la::networkInterface::NetworkInterfaceHelper::getInstance().registerObserver(_pImpl.get());
 }
 

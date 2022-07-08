@@ -29,6 +29,11 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
+NetworkInterfacesListModel::NetworkInterfacesListModel(bool const addOfflineInterface) noexcept
+	: _model{ hive::modelsLibrary::NetworkInterfacesModel{ this, addOfflineInterface } }
+{
+}
+
 bool NetworkInterfacesListModel::isEnabled(QString const& id) const noexcept
 {
 	auto const optInterface = _model.networkInterface(id.toStdString());
@@ -64,6 +69,9 @@ QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::networkInterface::Interf
 
 		switch (type)
 		{
+			case la::networkInterface::Interface::Type::Loopback:
+				what = "flight";
+				break;
 			case la::networkInterface::Interface::Type::Ethernet:
 				what = "settings_ethernet";
 				break;

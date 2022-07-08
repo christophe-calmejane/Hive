@@ -47,8 +47,10 @@ public:
 	};
 
 	using Model = NetworkInterfacesAbstractListModel;
+	static std::string const OfflineInterfaceName;
 
-	NetworkInterfacesModel(Model* const model, QObject* parent = nullptr);
+	NetworkInterfacesModel() noexcept = default;
+	NetworkInterfacesModel(Model* const model, bool const addOfflineInterface, QObject* parent = nullptr);
 	virtual ~NetworkInterfacesModel();
 
 	std::optional<std::reference_wrapper<NetworkInterface const>> networkInterface(std::size_t const index) const noexcept;

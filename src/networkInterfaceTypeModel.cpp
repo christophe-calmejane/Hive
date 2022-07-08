@@ -30,6 +30,7 @@ public:
 	NetworkInterfaceTypeModelPrivate(NetworkInterfaceTypeModel* q)
 		: q_ptr{ q }
 	{
+		_typeInfo.insert({ la::networkInterface::Interface::Type::Loopback, { "Loopback", true } });
 		_typeInfo.insert({ la::networkInterface::Interface::Type::Ethernet, { "Ethernet", false } });
 		_typeInfo.insert({ la::networkInterface::Interface::Type::WiFi, { "WiFi", false } });
 	}

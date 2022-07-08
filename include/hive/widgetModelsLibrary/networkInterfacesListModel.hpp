@@ -30,6 +30,8 @@ namespace widgetModelsLibrary
 class NetworkInterfacesListModel : public hive::modelsLibrary::NetworkInterfacesAbstractListModel
 {
 public:
+	NetworkInterfacesListModel(bool const addOfflineInterface) noexcept;
+
 	bool isEnabled(QString const& id) const noexcept;
 	la::networkInterface::Interface::Type getInterfaceType(QModelIndex const& index) const noexcept;
 
@@ -47,7 +49,7 @@ private:
 	virtual Qt::ItemFlags flags(QModelIndex const& index) const override;
 
 	// Private members
-	hive::modelsLibrary::NetworkInterfacesModel _model{ this };
+	hive::modelsLibrary::NetworkInterfacesModel _model{};
 };
 } // namespace widgetModelsLibrary
 } // namespace hive

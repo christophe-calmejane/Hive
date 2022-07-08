@@ -233,7 +233,7 @@ void MainWindowImpl::currentControllerChanged()
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	auto const protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
+	auto protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	// Check for No ProtocolInterface
@@ -241,6 +241,12 @@ void MainWindowImpl::currentControllerChanged()
 	{
 		QMessageBox::warning(_parent, "", "No Network Protocol selected.\nPlease choose one from the Settings.");
 		return;
+	}
+
+	// Check for special Offline Interface
+	if (interfaceID.toStdString() == hive::modelsLibrary::NetworkInterfacesModel::OfflineInterfaceName)
+	{
+		protocolType = la::avdecc::protocol::ProtocolInterface::Type::Virtual;
 	}
 
 	// Check for WinPcap driver

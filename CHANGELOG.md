@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Option to collapse all connection matrix headers for new entities
 - [Redundant stream name now based on underlying stream names, when possible](https://github.com/christophe-calmejane/Hive/issues/126)
 - [Popup message after critical error on the network interface](https://github.com/christophe-calmejane/Hive/issues/124)
+- [Possibility to be in offline mode](https://github.com/christophe-calmejane/Hive/issues/127)
 
 ## [1.2.8] - 2022-04-26
 ### Added

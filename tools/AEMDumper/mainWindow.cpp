@@ -104,7 +104,7 @@ public:
 	// Private members
 	::MainWindow* _parent{ nullptr };
 	qtMate::widgets::ComboBox _interfaceComboBox{ _parent };
-	hive::widgetModelsLibrary::NetworkInterfacesListModel _networkInterfacesModel{};
+	hive::widgetModelsLibrary::NetworkInterfacesListModel _networkInterfacesModel{ false };
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	hive::widgetModelsLibrary::DiscoveredEntitiesTableModel _controllerModel{ ControllerModelEntityDataFlags };
