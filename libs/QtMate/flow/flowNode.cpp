@@ -173,7 +173,7 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 		ouputsBoundingRect.setHeight(r.height() - NODE_LINE_HEIGHT - NODE_SEPARATOR_THICKNESS);
 		painter->setPen(Qt::NoPen);
 		painter->setBrush(NODE_OUTPUT_BACKGROUND_COLOR);
-		drawRoundedRect(painter, ouputsBoundingRect, _inputs.empty() ? (BottomLeft | BottomRight) : BottomLeft, NODE_BORDER_RADIUS);
+		drawRoundedRect(painter, ouputsBoundingRect, _inputs.empty() ? (BottomLeft | BottomRight) : BottomRight, NODE_BORDER_RADIUS);
 	}
 }
 
