@@ -71,7 +71,6 @@ ConnectionEditor::ConnectionEditor(qtMate::flow::FlowNodeDescriptorMap const& no
 	auto* delegate = new ConnectionEditorDelegate{ this };
 
 	auto* scene = new qtMate::flow::FlowScene{ delegate, this };
-	scene->setSceneRect(-2000, -2000, 4000, 4000);
 
 	auto* organizer = new NodeOrganizer{ scene, this };
 
