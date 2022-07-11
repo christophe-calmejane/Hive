@@ -182,6 +182,11 @@ private:
 
 std::string const NetworkInterfacesModel::OfflineInterfaceName = "Offline";
 
+NetworkInterfacesModel::NetworkInterfacesModel() noexcept
+	: _pImpl{ nullptr }
+{
+}
+
 NetworkInterfacesModel::NetworkInterfacesModel(Model* const model, bool const addOfflineInterface, QObject* parent)
 	: _pImpl{ std::make_unique<pImpl>(model, parent) }
 {

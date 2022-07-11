@@ -49,7 +49,7 @@ public:
 	using Model = NetworkInterfacesAbstractListModel;
 	static std::string const OfflineInterfaceName;
 
-	NetworkInterfacesModel() noexcept = default;
+	NetworkInterfacesModel() noexcept;
 	NetworkInterfacesModel(Model* const model, bool const addOfflineInterface, QObject* parent = nullptr);
 	virtual ~NetworkInterfacesModel();
 

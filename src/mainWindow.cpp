@@ -68,6 +68,7 @@
 #endif // USE_SPARKLE
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/modelsLibrary/networkInterfacesModel.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
