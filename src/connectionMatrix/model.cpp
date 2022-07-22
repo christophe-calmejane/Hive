@@ -1169,7 +1169,8 @@ public:
 					{
 						// Get connected state
 						auto const isConnected = nodeIntersectionData.state == Model::IntersectionData::State::Connected;
-						atLeastOneConnectedNode |= isConnected /* | isPartiallyConnected*/;
+						auto const isPartiallyConnected = nodeIntersectionData.state == Model::IntersectionData::State::PartiallyConnected;
+						atLeastOneConnectedNode |= isConnected || isPartiallyConnected;
 						// All streams are considered connected if all 'valid' streams are (thus exclusing connections that make no sense like wrong format type)
 						allConnectedNode &= isConnected || (nodeIntersectionData.type == Model::IntersectionData::Type::None) || nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType);
 
@@ -1376,7 +1377,7 @@ public:
 						// Get connected state
 						auto const isConnected = nodeIntersectionData.state == Model::IntersectionData::State::Connected;
 						auto const isPartiallyConnected = nodeIntersectionData.state == Model::IntersectionData::State::PartiallyConnected;
-						atLeastOneConnected |= isConnected | isPartiallyConnected;
+						atLeastOneConnected |= isConnected || isPartiallyConnected;
 						// All streams are considered connected if all 'valid' streams are (thus exclusing connections that make no sense like wrong format type)
 						allConnected &= isConnected || (nodeIntersectionData.type == Model::IntersectionData::Type::None) || nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType);
 
