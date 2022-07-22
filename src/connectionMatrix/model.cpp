@@ -1177,6 +1177,12 @@ public:
 						// Summary on connected nodes only
 						if (isConnected)
 						{
+							// InterfaceDown if at least one connected node is InterfaceDown
+							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown))
+							{
+								intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+							}
+
 							// WrongDomain if at least one connected node is WrongDomain
 							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain))
 							{
@@ -1384,6 +1390,12 @@ public:
 						// Most summaries are on connected streams (single or full connected redundant streams)
 						if (isConnected)
 						{
+							// InterfaceDown if at least one connected stream is InterfaceDown
+							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown))
+							{
+								intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+							}
+
 							// WrongDomain if at least one connected stream is WrongDomain
 							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain))
 							{

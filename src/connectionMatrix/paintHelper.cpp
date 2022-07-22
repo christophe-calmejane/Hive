@@ -73,16 +73,33 @@ static inline QColor getEntitySummaryBrushColor(Model::IntersectionData::State c
 	static auto const PaleGreen = color::value(color::Name::Green, color::Shade::Shade200);
 	static auto const Red = color::value(color::Name::Red, color::Shade::Shade800);
 	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
+	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
 	static auto const Grey = color::value(color::Name::Gray, color::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
 
 	auto const connected = state != Model::IntersectionData::State::NotConnected;
+	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
 	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
 	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
 
-	if (wrongFormatImpossible)
+	if (interfaceDown)
+	{
+		if (wrongFormatPossible)
+		{
+			brushColor = Yellow;
+		}
+		else if (wrongFormatImpossible)
+		{
+			brushColor = connected ? Yellow : Grey;
+		}
+		else
+		{
+			brushColor = Blue;
+		}
+	}
+	else if (wrongFormatImpossible)
 	{
 		brushColor = connected ? Yellow : Grey;
 	}
