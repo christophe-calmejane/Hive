@@ -1018,11 +1018,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "ave" || ext == "ans"
-#ifdef DEBUG
-				|| ext == "json"
-#endif // DEBUG
-		)
+		if (ext == "ave" || ext == "ans" || ext == "json")
 		{
 			event->acceptProposedAction();
 			return;
@@ -1146,7 +1142,6 @@ void MainWindow::dropEvent(QDropEvent* event)
 			}
 		}
 
-#ifdef DEBUG
 		// Any kind of file, we have to autodetect
 		else if (ext == "json")
 		{
@@ -1160,7 +1155,6 @@ void MainWindow::dropEvent(QDropEvent* event)
 				loadNetworkState(f, flags);
 			}
 		}
-#endif // DEBUG
 	}
 }
 
