@@ -1211,10 +1211,26 @@ public:
 					{
 						auto const* const talker = talkerNode.get();
 
-						// Only process Redundant and Stream Nodes (not channels)
-						if (!talker->isRedundantNode() && !talker->isStreamNode())
+						// Based on the mode, filter relevant nodes
+						switch (_mode)
 						{
-							continue;
+							case Model::Mode::Stream:
+								// Only process Redundant and Stream Nodes
+								if (!talker->isRedundantNode() && !talker->isStreamNode())
+								{
+									continue;
+								}
+								break;
+							case Model::Mode::Channel:
+								// Only process Channel Nodes
+								if (!talker->isChannelNode())
+								{
+									continue;
+								}
+								break;
+							default:
+								AVDECC_ASSERT(false, "Unhandled Mode");
+								break;
 						}
 
 						// Get the IntersectionData source node we'll get the data from
@@ -1229,10 +1245,26 @@ public:
 					{
 						auto const* const listener = listenerNode.get();
 
-						// Only process Redundant and Stream Nodes (not channels)
-						if (!listener->isRedundantNode() && !listener->isStreamNode())
+						// Based on the mode, filter relevant nodes
+						switch (_mode)
 						{
-							continue;
+							case Model::Mode::Stream:
+								// Only process Redundant and Stream Nodes
+								if (!listener->isRedundantNode() && !listener->isStreamNode())
+								{
+									continue;
+								}
+								break;
+							case Model::Mode::Channel:
+								// Only process Channel Nodes
+								if (!listener->isChannelNode())
+								{
+									continue;
+								}
+								break;
+							default:
+								AVDECC_ASSERT(false, "Unhandled Mode");
+								break;
 						}
 
 						// Get the IntersectionData source node we'll get the data from
@@ -1265,7 +1297,17 @@ public:
 
 					break;
 				}
+
 				case Model::IntersectionData::Type::Entity_Redundant:
+				{
+					// Currently don't handle Channel mode
+					if (_mode == Model::Mode::Channel)
+					{
+						break;
+					}
+
+					[[fallthrough]];
+				}
 				case Model::IntersectionData::Type::Entity_RedundantStream:
 				case Model::IntersectionData::Type::Entity_SingleStream:
 				{
@@ -1444,6 +1486,11 @@ public:
 
 					break;
 				}
+
+				case Model::IntersectionData::Type::Entity_RedundantChannel:
+				case Model::IntersectionData::Type::Entity_SingleChannel:
+					// TODO
+					break;
 
 				case Model::IntersectionData::Type::Redundant_Redundant:
 				{
