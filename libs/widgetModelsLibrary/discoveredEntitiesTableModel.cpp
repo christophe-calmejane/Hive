@@ -128,6 +128,10 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "Entity Model ID";
 					case EntityDataFlag::GrandmasterID:
 						return "Grandmaster ID";
+					case EntityDataFlag::MediaClockReferenceID:
+						return "Media Clock Reference ID";
+					case EntityDataFlag::MediaClockReferenceStatus:
+						return "Media Clock Reference Status";
 					default:
 						break;
 				}
@@ -187,6 +191,34 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 									}
 								}
 								return "N/A";
+							}
+							case EntityDataFlag::MediaClockReferenceID:
+							{
+								auto const& mediaClockReferences = entity.mediaClockReferences;
+
+								if (!mediaClockReferences.empty())
+								{
+									// Search the first valid mcr
+									for (auto const& [cdIndex, mcr] : mediaClockReferences)
+									{
+										return mcr.referenceIDString;
+									}
+								}
+								return "N/A";
+							}
+							case EntityDataFlag::MediaClockReferenceStatus:
+							{
+								auto const& mediaClockReferences = entity.mediaClockReferences;
+
+								if (!mediaClockReferences.empty())
+								{
+									// Search the first valid mcr
+									for (auto const& [cdIndex, mcr] : mediaClockReferences)
+									{
+										return mcr.referenceStatus;
+									}
+								}
+								return "";
 							}
 							default:
 								break;
@@ -308,6 +340,27 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "Not set by the entity";
 							}
+							case EntityDataFlag::MediaClockReferenceID:
+							case EntityDataFlag::MediaClockReferenceStatus:
+							{
+								auto const& mediaClockReferences = entity.mediaClockReferences;
+
+								if (!mediaClockReferences.empty())
+								{
+									auto list = QStringList{};
+
+									for (auto const& [cdIndex, mcr] : mediaClockReferences)
+									{
+										list << QString{ "Reference for domain %1: %2" }.arg(cdIndex).arg(mcr.referenceStatus);
+									}
+
+									if (!list.isEmpty())
+									{
+										return list.join('\n');
+									}
+								}
+								return "Undefined";
+							}
 							default:
 								break;
 						}
@@ -337,6 +390,11 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<in
 			return std::make_pair(EntityDataFlag::Group, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::Compatibility:
 			return std::make_pair(EntityDataFlag::Compatibility, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::MediaClockReferenceID:
+			return std::make_pair(EntityDataFlag::MediaClockReferenceID, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::MediaClockReferenceStatus:
+			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, QVector<int>{ Qt::DisplayRole });
+			break;
 		default:
 			break;
 	}

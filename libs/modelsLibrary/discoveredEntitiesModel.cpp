@@ -53,12 +53,14 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStopped, this, &pImpl::handleIdentificationStopped);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &pImpl::handleEntityNameChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityGroupNameChanged, this, &pImpl::handleEntityGroupNameChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::clockSourceNameChanged, this, &pImpl::handleClockSourceNameChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::acquireStateChanged, this, &pImpl::handleAcquireStateChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::lockStateChanged, this, &pImpl::handleLockStateChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &pImpl::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputErrorCounterChanged, this, &pImpl::handleStreamInputErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &pImpl::handleStatisticsErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::diagnosticsChanged, this, &pImpl::handleDiagnosticsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::mediaClockChainChanged, this, &pImpl::handleMediaClockChainChanged);
 	}
 
 	std::optional<std::reference_wrapper<Entity const>> entity(std::size_t const index) const noexcept
@@ -134,6 +136,163 @@ private:
 		return ProtocolCompatibility::NotCompliant;
 	}
 
+	MediaClockReference computeMediaClockReference(la::avdecc::controller::model::MediaClockChain const& mcChain) noexcept
+	{
+		auto mcr = MediaClockReference{ {}, "N/A", "N/A", false };
+		auto const getClockName = [](auto const* const entity, auto const clockSourceIndex)
+		{
+			try
+			{
+				auto const currentConfigIndex = entity->getCurrentConfigurationIndex();
+				auto const& sourceNode = entity->getClockSourceNode(currentConfigIndex, clockSourceIndex);
+				return helper::objectName(entity, currentConfigIndex, sourceNode);
+			}
+			catch (...)
+			{
+			}
+			return QString{};
+		};
+
+		// Always save the chain
+		mcr.mcChain = mcChain;
+
+		if (!mcChain.empty())
+		{
+			auto const chainSize = mcChain.size();
+
+			// We only need to check the last node
+			auto const& mccNode = mcChain.back();
+
+			// Set the referenceID
+			mcr.referenceIDString = hive::modelsLibrary::helper::uniqueIdentifierToString(mccNode.entityID);
+
+			switch (mccNode.status)
+			{
+				case la::avdecc::controller::model::MediaClockChainNode::Status::Active:
+				{
+					// Get the reference ID
+					switch (mccNode.type)
+					{
+						case la::avdecc::controller::model::MediaClockChainNode::Type::Undefined:
+							AVDECC_ASSERT(false, "Should not be possible to have an end of chain Active and Undefined");
+							mcr.referenceStatus = "Error Undefined, please report";
+							break;
+						case la::avdecc::controller::model::MediaClockChainNode::Type::Internal:
+						{
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+							if (chainSize == 1)
+							{
+								mcr.referenceStatus = "Self";
+								// Get the clock name
+								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
+								{
+									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
+									if (!clockName.isEmpty())
+									{
+										mcr.referenceStatus += ": " + clockName;
+									}
+								}
+							}
+							else
+							{
+								// Get the reference name
+								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
+								{
+									mcr.referenceStatus = hive::modelsLibrary::helper::entityName(*clockRefEntity);
+									// Get the clock name
+									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
+									if (!clockName.isEmpty())
+									{
+										mcr.referenceStatus += ": " + clockName;
+									}
+								}
+								else
+								{
+									mcr.referenceStatus = hive::modelsLibrary::helper::uniqueIdentifierToString(mccNode.entityID);
+								}
+							}
+							break;
+						}
+						case la::avdecc::controller::model::MediaClockChainNode::Type::External:
+						{
+							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+							if (chainSize == 1)
+							{
+								mcr.referenceStatus = "External";
+								// Get the clock name
+								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
+								{
+									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
+									if (!clockName.isEmpty())
+									{
+										mcr.referenceStatus += ": " + clockName;
+									}
+								}
+							}
+							else
+							{
+								// Get the reference name
+								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
+								{
+									mcr.referenceStatus = "External on " + hive::modelsLibrary::helper::entityName(*clockRefEntity);
+									// Get the clock name
+									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
+									if (!clockName.isEmpty())
+									{
+										mcr.referenceStatus += ": " + clockName;
+									}
+								}
+								else
+								{
+									mcr.referenceStatus = "External on " + hive::modelsLibrary::helper::uniqueIdentifierToString(mccNode.entityID);
+								}
+							}
+							break;
+						}
+						case la::avdecc::controller::model::MediaClockChainNode::Type::StreamInput:
+							AVDECC_ASSERT(false, "Should not be possible to have an end of chain Active and StreamInput");
+							mcr.referenceStatus = "Error StreamInput, please report";
+							break;
+						default:
+							break;
+					}
+					break;
+				}
+				case la::avdecc::controller::model::MediaClockChainNode::Status::Recursive:
+					mcr.referenceIDString = "Recursive";
+					mcr.referenceStatus = "Recursive";
+					mcr.isError = true;
+					break;
+				case la::avdecc::controller::model::MediaClockChainNode::Status::StreamNotConnected:
+					mcr.referenceStatus = "Stream N/C";
+					mcr.isError = true;
+					break;
+				case la::avdecc::controller::model::MediaClockChainNode::Status::EntityOffline:
+					mcr.referenceStatus = "Talker Offline";
+					mcr.isError = true;
+					break;
+				case la::avdecc::controller::model::MediaClockChainNode::Status::UnsupportedClockSource:
+					mcr.referenceStatus = "Unsupported CS";
+					mcr.isError = true;
+					break;
+				case la::avdecc::controller::model::MediaClockChainNode::Status::AemError:
+					mcr.referenceStatus = "AEM Error";
+					mcr.isError = true;
+					break;
+				case la::avdecc::controller::model::MediaClockChainNode::Status::InternalError:
+					mcr.referenceStatus = "Internal Error";
+					mcr.isError = true;
+					break;
+				default:
+					mcr.referenceStatus = "Error Unhandled, please report";
+					mcr.isError = true;
+					break;
+			}
+		}
+
+		return mcr;
+	}
+
 	inline bool isIndexValid(std::size_t const index) const noexcept
 	{
 		return index < _entities.size();
@@ -186,6 +345,7 @@ private:
 				auto const& e = entity.getEntity();
 				auto firmwareUploadMemoryIndex = decltype(Entity::firmwareUploadMemoryIndex){ std::nullopt };
 				auto firmwareVersion = decltype(Entity::firmwareVersion){ std::nullopt };
+				auto mediaClockReferences = decltype(Entity::mediaClockReferences){};
 
 				// Build gptp info map
 				auto gptpInfo = decltype(Entity::gptpInfo){};
@@ -220,6 +380,12 @@ private:
 								break;
 							}
 						}
+					}
+
+					// Build MediaClockReferences map
+					for (auto const& [cdIndex, cdNode] : entity.getCurrentConfigurationNode().clockDomains)
+					{
+						mediaClockReferences.insert(std::make_pair(cdIndex, computeMediaClockReference(cdNode.mediaClockChain)));
 					}
 				}
 
@@ -427,6 +593,25 @@ private:
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::Name });
 		}
+
+		// Check all entities for a change in a Media Clock Reference
+		auto const length = _entities.size();
+		for (auto idx = 0u; idx < length; ++idx)
+		{
+			auto& data = _entities[idx];
+
+			for (auto const& [cdIndex, mcr] : data.mediaClockReferences)
+			{
+				if (!mcr.mcChain.empty() && mcr.mcChain.back().entityID == entityID)
+				{
+					// Recompute the status
+					data.mediaClockReferences[cdIndex] = computeMediaClockReference(mcr.mcChain);
+
+					// And notify
+					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceStatus });
+				}
+			}
+		}
 	}
 
 	void handleEntityGroupNameChanged(la::avdecc::UniqueIdentifier const& entityID, QString const& entityGroupName)
@@ -439,6 +624,28 @@ private:
 			data.groupName = entityGroupName;
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::GroupName });
+		}
+	}
+
+	void handleClockSourceNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const /*configurationIndex*/, la::avdecc::entity::model::ClockSourceIndex const /*clockSourceIndex*/, QString const& /*clockSourceName*/)
+	{
+		// Check all entities for a change in a Media Clock Reference
+		auto const length = _entities.size();
+		for (auto idx = 0u; idx < length; ++idx)
+		{
+			auto& data = _entities[idx];
+
+			for (auto const& [cdIndex, mcr] : data.mediaClockReferences)
+			{
+				if (!mcr.mcChain.empty() && mcr.mcChain.back().entityID == entityID)
+				{
+					// Recompute the status
+					data.mediaClockReferences[cdIndex] = computeMediaClockReference(mcr.mcChain);
+
+					// And notify
+					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceStatus });
+				}
+			}
 		}
 	}
 
@@ -567,6 +774,19 @@ private:
 			{
 				la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, errorCounterFlags);
 			}
+		}
+	}
+
+	void handleMediaClockChainChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::MediaClockChain const& mcChain)
+	{
+		if (auto const index = indexOf(entityID))
+		{
+			auto const idx = *index;
+			auto& data = _entities[idx];
+
+			data.mediaClockReferences[clockDomainIndex] = computeMediaClockReference(mcChain);
+
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceID, Model::ChangedInfoFlag::MediaClockReferenceStatus });
 		}
 	}
 

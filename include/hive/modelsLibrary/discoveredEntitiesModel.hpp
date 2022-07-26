@@ -59,6 +59,15 @@ public:
 		std::optional<la::avdecc::UniqueIdentifier> grandmasterID;
 		std::optional<std::uint8_t> domainNumber;
 	};
+
+	struct MediaClockReference
+	{
+		la::avdecc::controller::model::MediaClockChain mcChain{};
+		QString referenceIDString{};
+		QString referenceStatus{};
+		bool isError{ false };
+	};
+
 	struct Entity
 	{
 		// Static information
@@ -115,6 +124,8 @@ public:
 		LockingController = 1u << 8,
 		GptpInfo = 1u << 9,
 		AssociationID = 1u << 10,
+		MediaClockReferenceID = 1u << 11,
+		MediaClockReferenceStatus = 1u << 12,
 	};
 	using ChangedInfoFlags = la::avdecc::utils::EnumBitfield<ChangedInfoFlag>;
 

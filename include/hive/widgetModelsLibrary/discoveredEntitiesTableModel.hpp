@@ -31,6 +31,7 @@ namespace widgetModelsLibrary
 class DiscoveredEntitiesTableModel : public hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel
 {
 public:
+	/** Available data columns for the DiscoveredEntities table */
 	enum class EntityDataFlag : std::uint32_t
 	{
 		EntityLogo = 1u << 0,
@@ -46,9 +47,10 @@ public:
 		// AssociationID = 1u << 10,
 		EntityModelID = 1u << 11,
 		FirmwareVersion = 1u << 12,
-		// MediaClockMasterID = 1u << 13,
-		// MediaClockMasterName = 1u << 14,
+		MediaClockReferenceID = 1u << 13,
+		MediaClockReferenceStatus = 1u << 14,
 	};
+	/** List of columns to be displayed */
 	using EntityDataFlags = la::avdecc::utils::EnumBitfield<EntityDataFlag>;
 
 	DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags);
