@@ -42,7 +42,7 @@ public:
 		AcquireState = 1u << 5,
 		LockState = 1u << 6,
 		GrandmasterID = 1u << 7,
-		// gPTP Domain = 1u << 8,
+		GPTPDomain = 1u << 8,
 		// InterfaceIndex = 1u << 9,
 		// AssociationID = 1u << 10,
 		EntityModelID = 1u << 11,

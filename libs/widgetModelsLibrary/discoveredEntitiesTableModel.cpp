@@ -142,6 +142,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "Lock State";
 					case EntityDataFlag::GrandmasterID:
 						return "Grandmaster ID";
+					case EntityDataFlag::GPTPDomain:
+						return "gPTP Domain";
 					case EntityDataFlag::EntityModelID:
 						return "Entity Model ID";
 					case EntityDataFlag::FirmwareVersion:
@@ -201,6 +203,23 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 										if (info.grandmasterID)
 										{
 											return hive::modelsLibrary::helper::uniqueIdentifierToString(*info.grandmasterID);
+										}
+									}
+								}
+								return "N/A";
+							}
+							case EntityDataFlag::GPTPDomain:
+							{
+								auto const& gptpInfo = entity.gptpInfo;
+
+								if (!gptpInfo.empty())
+								{
+									// Search the first valid gPTP info
+									for (auto const& [avbIndex, info] : gptpInfo)
+									{
+										if (info.domainNumber)
+										{
+											return QString::number(*info.domainNumber);
 										}
 									}
 								}
@@ -381,6 +400,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 							case EntityDataFlag::LockState:
 								return entity.lockInfo.tooltip;
 							case EntityDataFlag::GrandmasterID:
+							case EntityDataFlag::GPTPDomain:
 							{
 								auto const& gptpInfo = entity.gptpInfo;
 
@@ -474,8 +494,10 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<in
 			return std::make_pair(EntityDataFlag::LockState, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::LockingController:
 			return std::make_pair(EntityDataFlag::LockState, QVector<int>{ Qt::DisplayRole });
-		case ChangedInfoFlag::GptpInfo:
+		case ChangedInfoFlag::GrandmasterID:
 			return std::make_pair(EntityDataFlag::GrandmasterID, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::GPTPDomain:
+			return std::make_pair(EntityDataFlag::GPTPDomain, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::AssociationID:
 			// TODO (not displayed yet)
 			break;
