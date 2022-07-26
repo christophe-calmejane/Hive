@@ -340,6 +340,9 @@ void MainWindowImpl::connectSignals()
 				}
 			}
 		});
+
+	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, _parent };
+	connect(refreshController, &QShortcut::activated, this, &MainWindowImpl::currentControllerChanged);
 }
 
 void MainWindow::showEvent(QShowEvent* event)
