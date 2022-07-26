@@ -54,6 +54,21 @@ public:
 		Misbehaving,
 	};
 
+	enum class ExclusiveAccessState
+	{
+		NoAccess = 0, /**< Device is not exclusively accessed */
+		NotSupported = 1, /**< Device does not support exclusive access */
+		AccessOther = 2, /**< Device is exclusively accessed by another controller */
+		AccessSelf = 3, /**< Device is exclusively accessed by us */
+	};
+
+	struct ExclusiveAccessInfo
+	{
+		ExclusiveAccessState state{ ExclusiveAccessState::NoAccess };
+		la::avdecc::UniqueIdentifier exclusiveID{};
+		QString tooltip{};
+	};
+	
 	struct GptpInfo
 	{
 		std::optional<la::avdecc::UniqueIdentifier> grandmasterID;
@@ -84,12 +99,11 @@ public:
 		bool isSubscribedToUnsol{ false };
 		ProtocolCompatibility protocolCompatibility{ ProtocolCompatibility::NotCompliant };
 		la::avdecc::entity::EntityCapabilities entityCapabilities{};
-		la::avdecc::controller::model::AcquireState acquireState{ la::avdecc::controller::model::AcquireState::Undefined };
-		la::avdecc::UniqueIdentifier owningController{};
-		la::avdecc::controller::model::LockState lockState{ la::avdecc::controller::model::LockState::Undefined };
-		la::avdecc::UniqueIdentifier lockingController{};
+		ExclusiveAccessInfo acquireInfo{};
+		ExclusiveAccessInfo lockInfo{};
 		std::map<la::avdecc::entity::model::AvbInterfaceIndex, GptpInfo> gptpInfo{};
 		std::optional<la::avdecc::UniqueIdentifier> associationID{};
+		std::map<la::avdecc::entity::model::ClockDomainIndex, MediaClockReference> mediaClockReferences{};
 	};
 
 	using Model = DiscoveredEntitiesAbstractTableModel;

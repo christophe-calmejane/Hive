@@ -52,6 +52,20 @@ static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompat
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
 };
 
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState, QImage> s_excusiveAccessStateImagesLight{
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NotSupported, QImage{ ":/lock_not_supported.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
+};
+
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState, QImage> s_excusiveAccessStateImagesDark{
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NotSupported, QImage{ ":/lock_not_supported.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
+};
+
 DiscoveredEntitiesTableModel::DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags)
 	: _entityDataFlags{ entityDataFlags }
 	, _count{ static_cast<decltype(_count)>(_entityDataFlags.count()) }
@@ -122,12 +136,16 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "Name";
 					case EntityDataFlag::Group:
 						return "Group";
-					case EntityDataFlag::FirmwareVersion:
-						return "Firmware Version";
-					case EntityDataFlag::EntityModelID:
-						return "Entity Model ID";
+					case EntityDataFlag::AcquireState:
+						return "Acquire State";
+					case EntityDataFlag::LockState:
+						return "Lock State";
 					case EntityDataFlag::GrandmasterID:
 						return "Grandmaster ID";
+					case EntityDataFlag::EntityModelID:
+						return "Entity Model ID";
+					case EntityDataFlag::FirmwareVersion:
+						return "Firmware Version";
 					case EntityDataFlag::MediaClockReferenceID:
 						return "Media Clock Reference ID";
 					case EntityDataFlag::MediaClockReferenceStatus:
@@ -171,10 +189,6 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								return entity.name;
 							case EntityDataFlag::Group:
 								return entity.groupName;
-							case EntityDataFlag::FirmwareVersion:
-								return entity.firmwareVersion ? *entity.firmwareVersion : "N/A";
-							case EntityDataFlag::EntityModelID:
-								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityModelID);
 							case EntityDataFlag::GrandmasterID:
 							{
 								auto const& gptpInfo = entity.gptpInfo;
@@ -192,6 +206,10 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "N/A";
 							}
+							case EntityDataFlag::EntityModelID:
+								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityModelID);
+							case EntityDataFlag::FirmwareVersion:
+								return entity.firmwareVersion ? *entity.firmwareVersion : "N/A";
 							case EntityDataFlag::MediaClockReferenceID:
 							{
 								auto const& mediaClockReferences = entity.mediaClockReferences;
@@ -250,6 +268,30 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 									return {};
 								}
 							}
+							case EntityDataFlag::AcquireState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesLight.at(entity.acquireInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
+							case EntityDataFlag::LockState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesLight.at(entity.lockInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
 							default:
 								break;
 						}
@@ -273,6 +315,30 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								try
 								{
 									return s_compatibilityImagesDark.at(entity.protocolCompatibility);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
+							case EntityDataFlag::AcquireState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesDark.at(entity.acquireInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
+							case EntityDataFlag::LockState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesDark.at(entity.lockInfo.state);
 								}
 								catch (std::out_of_range const&)
 								{
@@ -310,6 +376,10 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 										return "Not fully IEEE 1722.1 compliant";
 								}
 							}
+							case EntityDataFlag::AcquireState:
+								return entity.acquireInfo.tooltip;
+							case EntityDataFlag::LockState:
+								return entity.lockInfo.tooltip;
 							case EntityDataFlag::GrandmasterID:
 							{
 								auto const& gptpInfo = entity.gptpInfo;
@@ -388,8 +458,27 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<in
 			return std::make_pair(EntityDataFlag::Name, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::GroupName:
 			return std::make_pair(EntityDataFlag::Group, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::SubscribedToUnsol:
+			// TODO (not displayed yet)
+			break;
 		case ChangedInfoFlag::Compatibility:
 			return std::make_pair(EntityDataFlag::Compatibility, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::EntityCapabilities:
+			// TODO (not displayed yet)
+			break;
+		case ChangedInfoFlag::AcquireState:
+			return std::make_pair(EntityDataFlag::AcquireState, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::OwningController:
+			return std::make_pair(EntityDataFlag::AcquireState, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::LockedState:
+			return std::make_pair(EntityDataFlag::LockState, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::LockingController:
+			return std::make_pair(EntityDataFlag::LockState, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::GptpInfo:
+			return std::make_pair(EntityDataFlag::GrandmasterID, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::AssociationID:
+			// TODO (not displayed yet)
+			break;
 		case ChangedInfoFlag::MediaClockReferenceID:
 			return std::make_pair(EntityDataFlag::MediaClockReferenceID, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::MediaClockReferenceStatus:

@@ -104,7 +104,22 @@ private:
 	using EntityRowMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::size_t, la::avdecc::UniqueIdentifier::hash>;
 	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
 
-	ProtocolCompatibility computeProtocolCompatibility(std::optional<la::avdecc::entity::model::MilanInfo> const& milanInfo, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags)
+	static inline ExclusiveAccessState getExclusiveState(la::avdecc::controller::model::LockState state) noexcept
+	{
+		switch (state)
+		{
+			case la::avdecc::controller::model::LockState::NotSupported:
+				return ExclusiveAccessState::NotSupported;
+			case la::avdecc::controller::model::LockState::Locked:
+				return ExclusiveAccessState::AccessSelf;
+			case la::avdecc::controller::model::LockState::LockedByOther:
+				return ExclusiveAccessState::AccessOther;
+			default:
+				return ExclusiveAccessState::NoAccess;
+		}
+	}
+
+	ProtocolCompatibility computeProtocolCompatibility(std::optional<la::avdecc::entity::model::MilanInfo> const& milanInfo, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags) noexcept
 	{
 		if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
 		{
@@ -134,6 +149,138 @@ private:
 		}
 
 		return ProtocolCompatibility::NotCompliant;
+	}
+
+	static inline ExclusiveAccessInfo computeExclusiveInfo(bool const isAemSupported, la::avdecc::controller::model::AcquireState state, la::avdecc::UniqueIdentifier const owner) noexcept
+	{
+		auto eai = ExclusiveAccessInfo{};
+
+		if (!isAemSupported)
+		{
+			eai.state = ExclusiveAccessState::NotSupported;
+			eai.tooltip = "AEM Not Supported";
+		}
+		else
+		{
+			eai.exclusiveID = owner;
+			switch (state)
+			{
+				case la::avdecc::controller::model::AcquireState::Undefined:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Undefined";
+					break;
+				case la::avdecc::controller::model::AcquireState::NotSupported:
+					eai.state = ExclusiveAccessState::NotSupported;
+					eai.tooltip = "Not Supported";
+					break;
+				case la::avdecc::controller::model::AcquireState::NotAcquired:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Not Acquired";
+					break;
+				case la::avdecc::controller::model::AcquireState::AcquireInProgress:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Acquire In Progress";
+					break;
+				case la::avdecc::controller::model::AcquireState::Acquired:
+					eai.state = ExclusiveAccessState::AccessSelf;
+					eai.tooltip = "Acquired";
+					break;
+				case la::avdecc::controller::model::AcquireState::AcquiredByOther:
+				{
+					eai.state = ExclusiveAccessState::AccessOther;
+					auto text = QString{ "Acquired by " };
+					auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+					auto const& controllerEntity = controllerManager.getControlledEntity(owner);
+					if (controllerEntity)
+					{
+						text += hive::modelsLibrary::helper::smartEntityName(*controllerEntity);
+					}
+					else
+					{
+						text += hive::modelsLibrary::helper::uniqueIdentifierToString(owner);
+					}
+					eai.tooltip = text;
+					break;
+				}
+				case la::avdecc::controller::model::AcquireState::ReleaseInProgress:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Release In Progress";
+					break;
+				default:
+					AVDECC_ASSERT(false, "Not handled!");
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Not Supported";
+					break;
+			}
+		}
+
+		return eai;
+	}
+
+	static inline ExclusiveAccessInfo computeExclusiveInfo(bool const isAemSupported, la::avdecc::controller::model::LockState state, la::avdecc::UniqueIdentifier const owner) noexcept
+	{
+		auto eai = ExclusiveAccessInfo{};
+
+		if (!isAemSupported)
+		{
+			eai.state = ExclusiveAccessState::NotSupported;
+			eai.tooltip = "AEM Not Supported";
+		}
+		else
+		{
+			eai.exclusiveID = owner;
+			switch (state)
+			{
+				case la::avdecc::controller::model::LockState::Undefined:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Undefined";
+					break;
+				case la::avdecc::controller::model::LockState::NotSupported:
+					eai.state = ExclusiveAccessState::NotSupported;
+					eai.tooltip = "Not Supported";
+					break;
+				case la::avdecc::controller::model::LockState::NotLocked:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Not Locked";
+					break;
+				case la::avdecc::controller::model::LockState::LockInProgress:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Lock In Progress";
+					break;
+				case la::avdecc::controller::model::LockState::Locked:
+					eai.state = ExclusiveAccessState::AccessSelf;
+					eai.tooltip = "Locked";
+					break;
+				case la::avdecc::controller::model::LockState::LockedByOther:
+				{
+					eai.state = ExclusiveAccessState::AccessOther;
+					auto text = QString{ "Locked by " };
+					auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+					auto const& controllerEntity = controllerManager.getControlledEntity(owner);
+					if (controllerEntity)
+					{
+						text += hive::modelsLibrary::helper::smartEntityName(*controllerEntity);
+					}
+					else
+					{
+						text += hive::modelsLibrary::helper::uniqueIdentifierToString(owner);
+					}
+					eai.tooltip = text;
+					break;
+				}
+				case la::avdecc::controller::model::LockState::UnlockInProgress:
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Unlock In Progress";
+					break;
+				default:
+					AVDECC_ASSERT(false, "Not handled!");
+					eai.state = ExclusiveAccessState::NoAccess;
+					eai.tooltip = "Not Supported";
+					break;
+			}
+		}
+
+		return eai;
 	}
 
 	MediaClockReference computeMediaClockReference(la::avdecc::controller::model::MediaClockChain const& mcChain) noexcept
@@ -360,6 +507,7 @@ private:
 				// Get some AEM specific information
 				if (isAemSupported)
 				{
+					// Get firmware version
 					auto const& entityNode = entity.getEntityNode();
 					if (entityNode.dynamicModel)
 					{
@@ -390,7 +538,7 @@ private:
 				}
 
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), entity.getAcquireState(), entity.getOwningControllerID(), entity.getLockState(), entity.getLockingControllerID(), gptpInfo, e.getAssociationID() };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences) };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -656,8 +804,7 @@ private:
 			auto const idx = *index;
 			auto& data = _entities[idx];
 
-			data.acquireState = acquireState;
-			data.owningController = owningEntity;
+			data.acquireInfo = computeExclusiveInfo(data.isAemSupported, acquireState, owningEntity);
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::AcquireState, Model::ChangedInfoFlag::OwningController });
 		}
@@ -670,8 +817,7 @@ private:
 			auto const idx = *index;
 			auto& data = _entities[idx];
 
-			data.lockState = lockState;
-			data.lockingController = lockingEntity;
+			data.lockInfo = computeExclusiveInfo(data.isAemSupported, lockState, lockingEntity);
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::LockedState, Model::ChangedInfoFlag::LockingController });
 		}
