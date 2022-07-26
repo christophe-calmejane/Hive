@@ -597,7 +597,7 @@ private:
 			info.grandmasterID = interfaceInfo.gptpGrandmasterID;
 			info.domainNumber = interfaceInfo.gptpDomainNumber;
 
-			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::GrandmasterID, Model::ChangedInfoFlag::GPTPDomain });
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::GrandmasterID, Model::ChangedInfoFlag::GPTPDomain, Model::ChangedInfoFlag::InterfaceIndex });
 		}
 	}
 
@@ -610,7 +610,7 @@ private:
 
 			if (data.gptpInfo.erase(avbInterfaceIndex) == 1)
 			{
-				la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::GrandmasterID, Model::ChangedInfoFlag::GPTPDomain });
+				la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::GrandmasterID, Model::ChangedInfoFlag::GPTPDomain, Model::ChangedInfoFlag::InterfaceIndex });
 			}
 		}
 	}

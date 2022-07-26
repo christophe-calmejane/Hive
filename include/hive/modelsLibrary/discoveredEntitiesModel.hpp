@@ -138,9 +138,10 @@ public:
 		LockingController = 1u << 8,
 		GrandmasterID = 1u << 9,
 		GPTPDomain = 1u << 10,
-		AssociationID = 1u << 11,
-		MediaClockReferenceID = 1u << 12,
-		MediaClockReferenceStatus = 1u << 13,
+		InterfaceIndex = 1u << 11,
+		AssociationID = 1u << 12,
+		MediaClockReferenceID = 1u << 13,
+		MediaClockReferenceStatus = 1u << 14,
 	};
 	using ChangedInfoFlags = la::avdecc::utils::EnumBitfield<ChangedInfoFlag>;
 

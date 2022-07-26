@@ -144,6 +144,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "Grandmaster ID";
 					case EntityDataFlag::GPTPDomain:
 						return "gPTP Domain";
+					case EntityDataFlag::InterfaceIndex:
+						return "Interface Idx";
 					case EntityDataFlag::EntityModelID:
 						return "Entity Model ID";
 					case EntityDataFlag::FirmwareVersion:
@@ -221,6 +223,20 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 										{
 											return QString::number(*info.domainNumber);
 										}
+									}
+								}
+								return "N/A";
+							}
+							case EntityDataFlag::InterfaceIndex:
+							{
+								auto const& gptpInfo = entity.gptpInfo;
+
+								if (!gptpInfo.empty())
+								{
+									// Search the first valid gPTP info
+									for (auto const& [avbIndex, info] : gptpInfo)
+									{
+										return avbIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex ? "Not Set" : QString::number(avbIndex);
 									}
 								}
 								return "N/A";
@@ -401,6 +417,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								return entity.lockInfo.tooltip;
 							case EntityDataFlag::GrandmasterID:
 							case EntityDataFlag::GPTPDomain:
+							case EntityDataFlag::InterfaceIndex:
 							{
 								auto const& gptpInfo = entity.gptpInfo;
 
@@ -498,6 +515,8 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<in
 			return std::make_pair(EntityDataFlag::GrandmasterID, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::GPTPDomain:
 			return std::make_pair(EntityDataFlag::GPTPDomain, QVector<int>{ Qt::DisplayRole });
+		case ChangedInfoFlag::InterfaceIndex:
+			return std::make_pair(EntityDataFlag::InterfaceIndex, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::AssociationID:
 			// TODO (not displayed yet)
 			break;
@@ -507,6 +526,7 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<in
 			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, QVector<int>{ Qt::DisplayRole });
 			break;
 		default:
+			AVDECC_ASSERT(false, "Unhandled");
 			break;
 	}
 	return {};
