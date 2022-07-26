@@ -68,7 +68,7 @@ public:
 		la::avdecc::UniqueIdentifier exclusiveID{};
 		QString tooltip{};
 	};
-	
+
 	struct GptpInfo
 	{
 		std::optional<la::avdecc::UniqueIdentifier> grandmasterID{};
