@@ -71,8 +71,8 @@ public:
 	
 	struct GptpInfo
 	{
-		std::optional<la::avdecc::UniqueIdentifier> grandmasterID;
-		std::optional<std::uint8_t> domainNumber;
+		std::optional<la::avdecc::UniqueIdentifier> grandmasterID{};
+		std::optional<std::uint8_t> domainNumber{};
 	};
 
 	struct MediaClockReference
