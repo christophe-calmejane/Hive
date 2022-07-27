@@ -146,6 +146,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "gPTP Domain";
 					case EntityDataFlag::InterfaceIndex:
 						return "Interface Idx";
+					case EntityDataFlag::AssociationID:
+						return "Association ID";
 					case EntityDataFlag::EntityModelID:
 						return "Entity Model ID";
 					case EntityDataFlag::FirmwareVersion:
@@ -236,11 +238,13 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 									// Search the first valid gPTP info
 									for (auto const& [avbIndex, info] : gptpInfo)
 									{
-										return avbIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex ? "Not Set" : QString::number(avbIndex);
+										return avbIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex ? "N/A" : QString::number(avbIndex);
 									}
 								}
 								return "N/A";
 							}
+							case EntityDataFlag::AssociationID:
+								return entity.associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*entity.associationID) : "N/A";
 							case EntityDataFlag::EntityModelID:
 								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityModelID);
 							case EntityDataFlag::FirmwareVersion:
@@ -518,13 +522,11 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<in
 		case ChangedInfoFlag::InterfaceIndex:
 			return std::make_pair(EntityDataFlag::InterfaceIndex, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::AssociationID:
-			// TODO (not displayed yet)
-			break;
+			return std::make_pair(EntityDataFlag::AssociationID, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::MediaClockReferenceID:
 			return std::make_pair(EntityDataFlag::MediaClockReferenceID, QVector<int>{ Qt::DisplayRole });
 		case ChangedInfoFlag::MediaClockReferenceStatus:
 			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, QVector<int>{ Qt::DisplayRole });
-			break;
 		default:
 			AVDECC_ASSERT(false, "Unhandled");
 			break;

@@ -44,7 +44,7 @@ public:
 		GrandmasterID = 1u << 7,
 		GPTPDomain = 1u << 8,
 		InterfaceIndex = 1u << 9,
-		// AssociationID = 1u << 10,
+		AssociationID = 1u << 10,
 		EntityModelID = 1u << 11,
 		FirmwareVersion = 1u << 12,
 		MediaClockReferenceID = 1u << 13,
