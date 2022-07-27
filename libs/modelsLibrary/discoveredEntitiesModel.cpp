@@ -325,75 +325,25 @@ private:
 							mcr.referenceStatus = "Error Undefined, please report";
 							break;
 						case la::avdecc::controller::model::MediaClockChainNode::Type::Internal:
-						{
-							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-							if (chainSize == 1)
-							{
-								mcr.referenceStatus = "Self";
-								// Get the clock name
-								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
-								{
-									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
-									if (!clockName.isEmpty())
-									{
-										mcr.referenceStatus += ": " + clockName;
-									}
-								}
-							}
-							else
-							{
-								// Get the reference name
-								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
-								{
-									mcr.referenceStatus = hive::modelsLibrary::helper::entityName(*clockRefEntity);
-									// Get the clock name
-									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
-									if (!clockName.isEmpty())
-									{
-										mcr.referenceStatus += ": " + clockName;
-									}
-								}
-								else
-								{
-									mcr.referenceStatus = hive::modelsLibrary::helper::uniqueIdentifierToString(mccNode.entityID);
-								}
-							}
-							break;
-						}
 						case la::avdecc::controller::model::MediaClockChainNode::Type::External:
 						{
 							auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-							if (chainSize == 1)
+							auto mcRefName = QString{};
+							auto clockName = QString{};
+
+							if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
 							{
-								mcr.referenceStatus = "External";
-								// Get the clock name
-								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
+								if (chainSize > 1)
 								{
-									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
-									if (!clockName.isEmpty())
-									{
-										mcr.referenceStatus += ": " + clockName;
-									}
+									mcRefName = hive::modelsLibrary::helper::entityName(*clockRefEntity) + " ";
+								}
+								clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
+								if (clockName.isEmpty())
+								{
+									clockName = mccNode.type == la::avdecc::controller::model::MediaClockChainNode::Type::Internal ? "Internal" : "External";
 								}
 							}
-							else
-							{
-								// Get the reference name
-								if (auto const clockRefEntity = manager.getControlledEntity(mccNode.entityID))
-								{
-									mcr.referenceStatus = "External on " + hive::modelsLibrary::helper::entityName(*clockRefEntity);
-									// Get the clock name
-									auto const clockName = getClockName(clockRefEntity.get(), mccNode.clockSourceIndex);
-									if (!clockName.isEmpty())
-									{
-										mcr.referenceStatus += ": " + clockName;
-									}
-								}
-								else
-								{
-									mcr.referenceStatus = "External on " + hive::modelsLibrary::helper::uniqueIdentifierToString(mccNode.entityID);
-								}
-							}
+							mcr.referenceStatus = QString("%1[%2] %3").arg(mcRefName).arg(mccNode.type == la::avdecc::controller::model::MediaClockChainNode::Type::Internal ? "I" : "E").arg(clockName);
 							break;
 						}
 						case la::avdecc::controller::model::MediaClockChainNode::Type::StreamInput:
