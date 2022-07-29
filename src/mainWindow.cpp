@@ -534,7 +534,7 @@ void MainWindowImpl::connectSignals()
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
-			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && controlledEntity->hasAnyConfiguration())
 			{
 				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
 				dialog->setAttribute(Qt::WA_DeleteOnClose);

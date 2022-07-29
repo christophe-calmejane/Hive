@@ -2664,7 +2664,7 @@ public:
 			{
 				auto const entityCapabilities = controlledEntity->getEntity().getEntityCapabilities();
 
-				if (!entityCapabilities.test(la::avdecc::entity::EntityCapability::AemSupported))
+				if (!entityCapabilities.test(la::avdecc::entity::EntityCapability::AemSupported) || !controlledEntity->hasAnyConfiguration())
 				{
 					return;
 				}

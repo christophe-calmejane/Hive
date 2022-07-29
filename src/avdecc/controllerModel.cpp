@@ -379,7 +379,7 @@ public:
 		{
 			if (role == hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole || role == hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole)
 			{
-				if (data.aemSupported)
+				if (data.aemSupported && data.hasAnyConfiguration)
 				{
 					auto& logoCache = hive::widgetModelsLibrary::EntityLogoCache::getInstance();
 					return logoCache.getImage(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity, _automaticEntityLogoDownload);
@@ -566,6 +566,7 @@ private:
 			, lockStateTooltip{ helper::lockStateToString(controlledEntity.getLockState(), controlledEntity.getLockingControllerID()) }
 			, compatibility{ computeCompatibility(controlledEntity.getMilanInfo(), controlledEntity.getCompatibilityFlags()) }
 			, aemSupported{ entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) }
+			, hasAnyConfiguration{ controlledEntity.hasAnyConfiguration() }
 			, gptpInfoMap{ buildGptpInfoMap(entity.getInterfacesInformation()) }
 			, gptpTooltip{ computeGptpTooltip(gptpInfoMap) }
 			, associationID{ entity.getAssociationID() }
@@ -588,6 +589,7 @@ private:
 		Compatibility compatibility{};
 
 		bool aemSupported{ false };
+		bool hasAnyConfiguration{ false };
 
 		GptpInfoPerAvbInterfaceIndex gptpInfoMap{};
 		QString gptpTooltip{};

@@ -288,7 +288,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						{
 							case EntityDataFlag::EntityLogo:
 							{
-								if (entity.isAemSupported)
+								if (entity.isAemSupported && entity.hasAnyConfigurationTree)
 								{
 									auto& logoCache = EntityLogoCache::getInstance();
 									return logoCache.getImage(entity.entityID, EntityLogoCache::Type::Entity, true);
@@ -342,7 +342,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						{
 							case EntityDataFlag::EntityLogo:
 							{
-								if (entity.isAemSupported)
+								if (entity.isAemSupported && entity.hasAnyConfigurationTree)
 								{
 									auto& logoCache = EntityLogoCache::getInstance();
 									return logoCache.getImage(entity.entityID, EntityLogoCache::Type::Entity, true);

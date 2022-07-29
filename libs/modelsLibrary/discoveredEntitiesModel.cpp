@@ -452,7 +452,8 @@ private:
 				}
 
 				// Check if AEM is supported
-				auto isAemSupported = e.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported);
+				auto const isAemSupported = e.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported);
+				auto const hasAnyConfiguration = entity.hasAnyConfiguration();
 
 				// Get some AEM specific information
 				if (isAemSupported)
@@ -466,29 +467,35 @@ private:
 						// Get firmware version
 						firmwareVersion = dynamicModel.firmwareVersion.data();
 
-						auto const configurationIndex = dynamicModel.currentConfiguration;
-						auto const& configurationNode = entity.getConfigurationNode(configurationIndex);
-
-						// Get Firmware Image MemoryIndex, if supported
-						for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
+						if (hasAnyConfiguration)
 						{
-							if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+							auto const configurationIndex = dynamicModel.currentConfiguration;
+							auto const& configurationNode = entity.getConfigurationNode(configurationIndex);
+
+							// Get Firmware Image MemoryIndex, if supported
+							for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
 							{
-								firmwareUploadMemoryIndex = memoryObjectIndex;
-								break;
+								if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+								{
+									firmwareUploadMemoryIndex = memoryObjectIndex;
+									break;
+								}
 							}
 						}
 					}
 
 					// Build MediaClockReferences map
-					for (auto const& [cdIndex, cdNode] : entity.getCurrentConfigurationNode().clockDomains)
+					if (hasAnyConfiguration)
 					{
-						mediaClockReferences.insert(std::make_pair(cdIndex, computeMediaClockReference(cdNode.mediaClockChain)));
+						for (auto const& [cdIndex, cdNode] : entity.getCurrentConfigurationNode().clockDomains)
+						{
+							mediaClockReferences.insert(std::make_pair(cdIndex, computeMediaClockReference(cdNode.mediaClockChain)));
+						}
 					}
 				}
 
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences) };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences) };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -754,7 +761,7 @@ private:
 			auto const idx = *index;
 			auto& data = _entities[idx];
 
-			data.acquireInfo = computeExclusiveInfo(data.isAemSupported, acquireState, owningEntity);
+			data.acquireInfo = computeExclusiveInfo(data.isAemSupported && data.hasAnyConfigurationTree, acquireState, owningEntity);
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::AcquireState, Model::ChangedInfoFlag::OwningController });
 		}
@@ -767,7 +774,7 @@ private:
 			auto const idx = *index;
 			auto& data = _entities[idx];
 
-			data.lockInfo = computeExclusiveInfo(data.isAemSupported, lockState, lockingEntity);
+			data.lockInfo = computeExclusiveInfo(data.isAemSupported && data.hasAnyConfigurationTree, lockState, lockingEntity);
 
 			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::LockedState, Model::ChangedInfoFlag::LockingController });
 		}

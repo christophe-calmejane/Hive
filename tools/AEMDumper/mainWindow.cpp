@@ -246,7 +246,7 @@ void MainWindowImpl::connectSignals()
 				// Dump Entity
 				auto* const dumpFullEntity = menu.addAction("Export Full Entity...");
 				auto* const dumpEntityModel = menu.addAction("Export Entity Model...");
-				dumpEntityModel->setEnabled(entity.isAemSupported && entityModelID);
+				dumpEntityModel->setEnabled(entity.isAemSupported && entityModelID && entity.hasAnyConfigurationTree);
 
 				menu.addSeparator();
 

@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Popup message after critical error on the network interface](https://github.com/christophe-calmejane/Hive/issues/124)
 - [Possibility to be in offline mode](https://github.com/christophe-calmejane/Hive/issues/127)
 
+### Fixed
+- Crash when loading an entity with no CONFIGURATION descriptor
+
 ## [1.2.8] - 2022-04-26
 ### Added
 - [Automatically _fixing_ invalid mapping when changing stream input format](https://github.com/christophe-calmejane/Hive/issues/44)
