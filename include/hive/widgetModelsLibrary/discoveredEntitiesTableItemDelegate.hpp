@@ -41,7 +41,7 @@ protected:
 private:
 	// Private members
 	ErrorItemDelegate _errorItemDelegate{ false };
-	ImageItemDelegate _imageItemDelegate{};
+	ImageItemDelegate _imageItemDelegate{ false };
 };
 
 } // namespace widgetModelsLibrary

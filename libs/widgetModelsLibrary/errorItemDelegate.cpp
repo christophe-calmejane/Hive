@@ -18,6 +18,7 @@
 */
 
 #include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
 
 #include <QPainter>
 

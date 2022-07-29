@@ -19,8 +19,6 @@
 
 #pragma once
 
-#include "qtUserRoles.hpp"
-
 #include <la/avdecc/utils.hpp>
 #include <QtMate/material/color.hpp>
 
@@ -30,7 +28,7 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-// This delegate paints an error rectangle on each item who's index returns true for the "ErrorRole"
+// This delegate paints an error rectangle on each item who's index returns true for the "QtUserRoles::ErrorRole"
 class ErrorItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
