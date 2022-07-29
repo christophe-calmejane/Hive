@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
+
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 
 #include <optional>
@@ -34,6 +36,7 @@ public:
 	/** Available data columns for the DiscoveredEntities table */
 	enum class EntityDataFlag : std::uint32_t
 	{
+		All = 0u,
 		EntityLogo = 1u << 0,
 		Compatibility = 1u << 1,
 		EntityID = 1u << 2,
@@ -69,7 +72,7 @@ private:
 	virtual QVariant data(QModelIndex const& index, int role) const override;
 
 	// Private methods
-	std::optional<std::pair<EntityDataFlag, QVector<int>>> dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept;
+	std::optional<std::pair<EntityDataFlag, RolesList>> dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept;
 
 	// Private members
 	hive::modelsLibrary::DiscoveredEntitiesModel _model{ this };

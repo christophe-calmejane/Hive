@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,23 +19,30 @@
 
 #pragma once
 
-#include <Qt>
-#include <QVector>
+#include "errorItemDelegate.hpp"
+#include "imageItemDelegate.hpp"
+
+#include <QStyledItemDelegate>
 
 namespace hive
 {
 namespace widgetModelsLibrary
 {
-enum class QtUserRoles : int
+// This delegate handles all QtUserRoles used by DiscoveredEntitiesTableModel and can be used as global ItemDelegate
+class DiscoveredEntitiesTableItemDelegate : public QStyledItemDelegate
 {
-	LightImageRole = Qt::UserRole + 1001, /**< Role used for Image representation as Light mode */
-	DarkImageRole, /**< Role used for Image representation as Dark mode */
-	ErrorRole, /**< Role used for Error representation */
-	SelectedEntityRole, /**< Role used for Entity Selection representation */
-	IdentificationRole, /**< Role used for Entity Identification representation */
-	SubscribedUnsolRole, /**< Role used for Unsolicited Notifications Subscription representation */
+	Q_OBJECT
+public:
+	using QStyledItemDelegate::QStyledItemDelegate;
+
+protected:
+	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
+
+private:
+	// Private members
+	ErrorItemDelegate _errorItemDelegate{};
+	ImageItemDelegate _imageItemDelegate{};
 };
-using RolesList = QVector<int>;
 
 } // namespace widgetModelsLibrary
 } // namespace hive

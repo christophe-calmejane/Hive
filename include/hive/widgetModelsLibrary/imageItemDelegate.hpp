@@ -30,13 +30,11 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
+// This delegate paints an image on each item who's index returns a valid QImage for the "ImageRole"
 class ImageItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	static constexpr auto LightImageRole = la::avdecc::utils::to_integral(QtUserRoles::LightImageRole);
-	static constexpr auto DarkImageRole = la::avdecc::utils::to_integral(QtUserRoles::DarkImageRole);
-
 	ImageItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);

@@ -40,9 +40,7 @@ void ImageItemDelegate::setThemeColorName(qtMate::material::color::Name const th
 
 void ImageItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	QStyledItemDelegate::paint(painter, option, index);
-
-	auto const role = ((option.state & QStyle::StateFlag::State_Selected) && _isDark) ? DarkImageRole : LightImageRole;
+	auto const role = ((option.state & QStyle::StateFlag::State_Selected) && _isDark) ? la::avdecc::utils::to_integral(QtUserRoles::DarkImageRole) : la::avdecc::utils::to_integral(QtUserRoles::LightImageRole);
 	auto const userData = index.data(role);
 	if (!userData.canConvert<QImage>())
 	{

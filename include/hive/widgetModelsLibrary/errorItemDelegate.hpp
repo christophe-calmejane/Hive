@@ -30,13 +30,11 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-// This custom delegate allows to indicate a cell is on error
+// This delegate paints an error rectangle on each item who's index returns true for the "ErrorRole"
 class ErrorItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	static constexpr auto ErrorRole = la::avdecc::utils::to_integral(QtUserRoles::ErrorRole);
-
 	ErrorItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);

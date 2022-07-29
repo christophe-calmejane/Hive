@@ -38,9 +38,7 @@ void ErrorItemDelegate::setThemeColorName(qtMate::material::color::Name const th
 
 void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	QStyledItemDelegate::paint(painter, option, index);
-
-	if (index.data(ErrorRole).toBool())
+	if (index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool())
 	{
 		if (option.state & QStyle::StateFlag::State_Selected)
 		{

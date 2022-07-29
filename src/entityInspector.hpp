@@ -38,7 +38,7 @@ public:
 	enum class RoleInfo
 	{
 		NodeType = Qt::UserRole,
-		ErrorRole = hive::widgetModelsLibrary::ErrorItemDelegate::ErrorRole,
+		ErrorRole = la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole),
 		IsActiveConfiguration,
 	};
 

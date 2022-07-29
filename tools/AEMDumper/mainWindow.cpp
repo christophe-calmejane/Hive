@@ -37,9 +37,6 @@
 #endif
 
 #include "config.hpp"
-//#include "entityLogoCache.hpp"
-//#include "errorItemDelegate.hpp"
-//#include "imageItemDelegate.hpp"
 
 #include <QtMate/widgets/dynamicHeaderView.hpp>
 #include <QtMate/widgets/comboBox.hpp>
@@ -47,7 +44,7 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
 #include <hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp>
-#include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp>
 
 #include <mutex>
 #include <memory>
@@ -112,6 +109,7 @@ public:
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	hive::widgetModelsLibrary::DiscoveredEntitiesTableModel _controllerModel{ ControllerModelEntityDataFlags };
+	hive::widgetModelsLibrary::DiscoveredEntitiesTableItemDelegate _controllerModelItemDelegate{ _parent };
 	bool _shown{ false };
 	la::avdecc::entity::model::EntityTree _entityModel{};
 };
@@ -204,10 +202,8 @@ void MainWindowImpl::createControllerView()
 	// Disable row resizing
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
-	// The table view does not take ownership on the item delegate
-	auto* imageItemDelegate = new hive::widgetModelsLibrary::ImageItemDelegate{ qtMate::material::color::Name::DeepPurple, _parent }; // AEMDumper is not currently using Themes, so this color is just to properly init Dark Color for ImageItemDelegate
-	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_EntityLogo, imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_Compatibility, imageItemDelegate);
+	// Set delegate for the entire table
+	controllerTableView->setItemDelegate(&_controllerModelItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityID);

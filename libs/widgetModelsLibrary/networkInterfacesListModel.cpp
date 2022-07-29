@@ -127,7 +127,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 			}
 			break;
 		}
-		case ErrorItemDelegate::ErrorRole: // Make use of this role if ErrorItemDelegate is defined as ItemDelegate
+		case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
 		{
 			if (auto const optInterface = _model.networkInterface(static_cast<std::size_t>(index.row())))
 			{
