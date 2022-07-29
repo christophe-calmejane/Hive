@@ -40,7 +40,7 @@ protected:
 
 private:
 	// Private members
-	ErrorItemDelegate _errorItemDelegate{};
+	ErrorItemDelegate _errorItemDelegate{ false };
 	ImageItemDelegate _imageItemDelegate{};
 };
 

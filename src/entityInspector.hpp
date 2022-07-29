@@ -65,6 +65,6 @@ private:
 	QSplitter _splitter{ Qt::Vertical, this };
 	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
 	NodeTreeWidget _nodeTreeWiget{ this };
-	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ true, qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	SettingsSignaler _settingsSignaler{};
 };

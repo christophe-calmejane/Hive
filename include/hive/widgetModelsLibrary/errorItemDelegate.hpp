@@ -35,7 +35,7 @@ class ErrorItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	ErrorItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+	ErrorItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 
@@ -44,6 +44,7 @@ protected:
 
 private:
 	// Private members
+	bool _paintBaseDelegate{ true };
 	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
 };
 

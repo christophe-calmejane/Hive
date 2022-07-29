@@ -25,8 +25,9 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-ErrorItemDelegate::ErrorItemDelegate(qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
+ErrorItemDelegate::ErrorItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
 	: QStyledItemDelegate(parent)
+	, _paintBaseDelegate{ paintBaseDelegate }
 	, _themeColorName{ themeColorName }
 {
 }
@@ -38,6 +39,12 @@ void ErrorItemDelegate::setThemeColorName(qtMate::material::color::Name const th
 
 void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
+	// Only paint parent if requested
+	if (_paintBaseDelegate)
+	{
+		QStyledItemDelegate::paint(painter, option, index);
+	}
+
 	if (index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool())
 	{
 		if (option.state & QStyle::StateFlag::State_Selected)
