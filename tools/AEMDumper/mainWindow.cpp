@@ -75,6 +75,9 @@ public:
 	MainWindowImpl(::MainWindow* parent)
 		: _parent(parent)
 	{
+		// Setup entity model
+		setupEntityModel();
+
 		// Setup common UI
 		setupUi(parent);
 
@@ -95,6 +98,7 @@ public:
 	Q_SLOT void currentControllerChanged();
 
 	// Private methods
+	void setupEntityModel();
 	void setupView();
 	void registerMetaTypes();
 	void createToolbars();
@@ -109,7 +113,14 @@ public:
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	hive::widgetModelsLibrary::DiscoveredEntitiesTableModel _controllerModel{ ControllerModelEntityDataFlags };
 	bool _shown{ false };
+	la::avdecc::entity::model::EntityTree _entityModel{};
 };
+
+void MainWindowImpl::setupEntityModel()
+{
+	_entityModel.dynamicModel.entityName = aemDumper::internals::applicationShortName.toStdString();
+	_entityModel.dynamicModel.firmwareVersion = aemDumper::internals::versionString.toStdString();
+}
 
 void MainWindowImpl::setupView()
 {
@@ -153,7 +164,8 @@ void MainWindowImpl::currentControllerChanged()
 #else // !DEBUG
 		auto const progID = std::uint16_t{ PROG_ID };
 #endif // DEBUG
-		manager.createController(la::avdecc::protocol::ProtocolInterface::Type::PCap, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		manager.createController(la::avdecc::protocol::ProtocolInterface::Type::PCap, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en", &_entityModel);
+		manager.enableEntityAdvertising(10);
 	}
 	catch (la::avdecc::controller::Controller::Exception const&)
 	{

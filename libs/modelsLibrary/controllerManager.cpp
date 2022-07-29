@@ -870,7 +870,7 @@ private:
 	}
 
 	// ControllerManager overrides
-	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
+	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale, la::avdecc::entity::model::EntityTree const* const entityModel) override
 	{
 		// If we have a previous controller, remove it
 		if (_controller)
@@ -879,7 +879,7 @@ private:
 		}
 
 		// Create a new controller and store it
-		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString());
+		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel);
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
 #else // !HAVE_ATOMIC_SMART_POINTERS
@@ -892,7 +892,6 @@ private:
 		{
 			emit controllerOnline();
 			ctrl->registerObserver(this);
-			//ctrl->enableEntityAdvertising(10);
 
 			ctrl->setAutomaticDiscoveryDelay(_discoveryDelay);
 
