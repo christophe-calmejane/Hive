@@ -2323,12 +2323,9 @@ public:
 				// Latency Error
 				{
 					auto const& diags = controlledEntity.getDiagnostics();
-					if (auto const streamIt = diags.streamInputOverLatency.find(streamIndex); streamIt != diags.streamInputOverLatency.end())
+					if (diags.streamInputOverLatency.count(streamIndex) > 0)
 					{
-						if (streamIt->second)
-						{
-							node.setLatencyError(true);
-						}
+						node.setLatencyError(true);
 					}
 				}
 			};

@@ -87,13 +87,24 @@ void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hi
 		{
 			auto const& [entityDataFlag, roles] = *dataInfoOpt;
 
-			// Is this EntityData active for this model
-			if (_entityDataFlags.test(entityDataFlag))
+			// Is this EntityData active for this model (or the 'All' bit is set)
+			if (entityDataFlag == DiscoveredEntitiesTableModel::EntityDataFlag::All || _entityDataFlags.test(entityDataFlag))
 			{
 				try
 				{
-					auto const modelIndex = createIndex(static_cast<int>(index), static_cast<int>(_entityDataFlags.getBitSetPosition(entityDataFlag)));
-					emit dataChanged(modelIndex, modelIndex, roles);
+					// 'All' flag means all colomns needs to be refreshed
+					if (entityDataFlag == DiscoveredEntitiesTableModel::EntityDataFlag::All)
+					{
+						auto const startIndex = createIndex(static_cast<int>(index), 0);
+						auto const endIndex = createIndex(static_cast<int>(index), columnCount());
+						emit dataChanged(startIndex, endIndex, roles);
+					}
+					// Otherwise selectively refresh a single column
+					else
+					{
+						auto const modelIndex = createIndex(static_cast<int>(index), static_cast<int>(_entityDataFlags.getBitSetPosition(entityDataFlag)));
+						emit dataChanged(modelIndex, modelIndex, roles);
+					}
 				}
 				catch (...)
 				{
@@ -282,7 +293,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						}
 						break;
 					}
-					case ImageItemDelegate::LightImageRole:
+					case la::avdecc::utils::to_integral(QtUserRoles::LightImageRole):
 					{
 						switch (entityDataFlag)
 						{
@@ -336,7 +347,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						}
 						break;
 					}
-					case ImageItemDelegate::DarkImageRole:
+					case la::avdecc::utils::to_integral(QtUserRoles::DarkImageRole):
 					{
 						switch (entityDataFlag)
 						{
@@ -477,6 +488,14 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						}
 						break;
 					}
+					case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
+						return entity.hasStatisticsError || entity.hasRedundancyWarning || !entity.streamsWithErrorCounter.empty() || !entity.streamsWithLatencyError.empty();
+					case la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole):
+						return entity.isIdentifying;
+					case la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole):
+						return entity.isSubscribedToUnsol;
+					case la::avdecc::utils::to_integral(QtUserRoles::IsVirtualRole):
+						return entity.isVirtual;
 					default:
 						break;
 				}
@@ -491,42 +510,51 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 }
 
 // Private methods
-std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<int>>> DiscoveredEntitiesTableModel::dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept
+std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>> DiscoveredEntitiesTableModel::dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept
 {
 	switch (flag)
 	{
 		case ChangedInfoFlag::Name:
-			return std::make_pair(EntityDataFlag::Name, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::Name, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::GroupName:
-			return std::make_pair(EntityDataFlag::Group, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::Group, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::SubscribedToUnsol:
-			// TODO (not displayed yet)
-			break;
+			return std::make_pair(EntityDataFlag::All, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole) });
 		case ChangedInfoFlag::Compatibility:
-			return std::make_pair(EntityDataFlag::Compatibility, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::Compatibility, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::EntityCapabilities:
 			// TODO (not displayed yet)
 			break;
 		case ChangedInfoFlag::AcquireState:
-			return std::make_pair(EntityDataFlag::AcquireState, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::AcquireState, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::OwningController:
-			return std::make_pair(EntityDataFlag::AcquireState, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::AcquireState, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::LockedState:
-			return std::make_pair(EntityDataFlag::LockState, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::LockState, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::LockingController:
-			return std::make_pair(EntityDataFlag::LockState, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::LockState, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::GrandmasterID:
-			return std::make_pair(EntityDataFlag::GrandmasterID, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::GrandmasterID, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::GPTPDomain:
-			return std::make_pair(EntityDataFlag::GPTPDomain, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::GPTPDomain, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::InterfaceIndex:
-			return std::make_pair(EntityDataFlag::InterfaceIndex, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::InterfaceIndex, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::AssociationID:
-			return std::make_pair(EntityDataFlag::AssociationID, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::AssociationID, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::MediaClockReferenceID:
-			return std::make_pair(EntityDataFlag::MediaClockReferenceID, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::MediaClockReferenceID, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::MediaClockReferenceStatus:
-			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::Identification:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole) });
+		case ChangedInfoFlag::StatisticsError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::RedundancyWarning:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::StreamInputCountersError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::StreamInputLatencyError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		default:
 			AVDECC_ASSERT(false, "Unhandled");
 			break;

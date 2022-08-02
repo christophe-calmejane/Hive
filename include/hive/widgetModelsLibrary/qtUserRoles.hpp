@@ -20,18 +20,23 @@
 #pragma once
 
 #include <Qt>
+#include <QVector>
 
 namespace hive
 {
 namespace widgetModelsLibrary
 {
-enum class QtUserRoles
+enum class QtUserRoles : int
 {
 	LightImageRole = Qt::UserRole + 1001, /**< Role used for Image representation as Light mode */
 	DarkImageRole, /**< Role used for Image representation as Dark mode */
 	ErrorRole, /**< Role used for Error representation */
 	SelectedEntityRole, /**< Role used for Entity Selection representation */
+	IdentificationRole, /**< Role used for Entity Identification representation */
+	SubscribedUnsolRole, /**< Role used for Unsolicited Notifications Subscription representation */
+	IsVirtualRole, /**< Role used for Virtual Entity representation */
 };
+using RolesList = QVector<int>;
 
 } // namespace widgetModelsLibrary
 } // namespace hive

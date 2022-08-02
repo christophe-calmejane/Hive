@@ -349,7 +349,7 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityID)
 		{
-			if (role == hive::widgetModelsLibrary::ErrorItemDelegate::ErrorRole || role == Qt::ForegroundRole)
+			if (role == la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole) || role == Qt::ForegroundRole)
 			{
 				auto const it = _entitiesWithErrorCounter.find(entityID);
 				if (it != std::end(_entitiesWithErrorCounter))
@@ -357,7 +357,7 @@ public:
 					auto const& entityWithErrorCounter{ it->second };
 					if (entityWithErrorCounter.hasError())
 					{
-						if (role == hive::widgetModelsLibrary::ErrorItemDelegate::ErrorRole)
+						if (role == la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole))
 						{
 							return true;
 						}
@@ -377,7 +377,7 @@ public:
 		}
 		else if (column == ControllerModel::Column::EntityLogo)
 		{
-			if (role == hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole || role == hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole)
+			if (role == la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole) || role == la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::DarkImageRole))
 			{
 				if (data.aemSupported && data.hasAnyConfiguration)
 				{
@@ -390,7 +390,7 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
+				case la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole):
 				{
 					try
 					{
@@ -402,7 +402,7 @@ public:
 						return {};
 					}
 				}
-				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
+				case la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::DarkImageRole):
 				{
 					try
 					{
@@ -441,8 +441,8 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
-				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
+				case la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole):
+				case la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::DarkImageRole):
 				{
 					try
 					{
@@ -464,8 +464,8 @@ public:
 		{
 			switch (role)
 			{
-				case hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole:
-				case hive::widgetModelsLibrary::ImageItemDelegate::DarkImageRole:
+				case la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole):
+				case la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::DarkImageRole):
 				{
 					try
 					{
@@ -700,10 +700,10 @@ private:
 
 				emit q->endInsertRows();
 
-				// Trigger Error Counters, Statistics and Diagnostics
-				// TODO: Error Counters
+				// Trigger Error Counters, Statistics and Diagnostics (because it's not using DisplayRole, it won't be initially checked)
 				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
 				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
+				// Identification status cannot be properly detected, will be fixed when using DiscoveredEntitiesModel
 			}
 		}
 		catch (...)
@@ -833,7 +833,7 @@ private:
 			data.acquireState = computeAcquireState(acquireState);
 			data.acquireStateTooltip = helper::acquireStateToString(acquireState, owningEntity);
 
-			dataChanged(*row, ControllerModel::Column::AcquireState, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
+			dataChanged(*row, ControllerModel::Column::AcquireState, { la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole) });
 		}
 	}
 
@@ -846,7 +846,7 @@ private:
 			data.lockState = computeLockState(lockState);
 			data.lockStateTooltip = helper::lockStateToString(lockState, lockingEntity);
 
-			dataChanged(*row, ControllerModel::Column::LockState, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
+			dataChanged(*row, ControllerModel::Column::LockState, { la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole) });
 		}
 	}
 
@@ -935,18 +935,8 @@ private:
 
 			// Stream Input Latency Error
 			{
-				// Clear previous streamsWithLatencyError values
-				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
-
-				// Rebuild it entirely
-				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
-				{
-					if (isError)
-					{
-						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
-						nowStreamInputLatencyError = true;
-					}
-				}
+				_entitiesWithErrorCounter[entityID].streamsWithLatencyError = diagnostics.streamInputOverLatency;
+				nowStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
 			}
 
 			if ((wasRedundancyWarning != nowRedundancyWarning) || (wasStreamInputLatencyError != nowStreamInputLatencyError))
@@ -997,7 +987,7 @@ private:
 		{
 			if (auto const row = entityRow(entityID))
 			{
-				dataChanged(*row, ControllerModel::Column::EntityLogo, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
+				dataChanged(*row, ControllerModel::Column::EntityLogo, { la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole) });
 			}
 		}
 	}
@@ -1017,7 +1007,7 @@ private:
 				auto const topLeft = q->createIndex(0, column, nullptr);
 				auto const bottomRight = q->createIndex(rowCount(), column, nullptr);
 
-				emit q->dataChanged(topLeft, bottomRight, { hive::widgetModelsLibrary::ImageItemDelegate::LightImageRole });
+				emit q->dataChanged(topLeft, bottomRight, { la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::LightImageRole) });
 			}
 		}
 		else if (name == settings::General_ThemeColorIndex.name)

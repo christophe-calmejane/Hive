@@ -89,20 +89,7 @@ public:
 	}
 
 private:
-	struct EntityWithErrorCounter
-	{
-		bool statisticsError{ false };
-		bool redundancyWarning{ false };
-		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{};
-		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{};
-		constexpr bool hasError() const noexcept
-		{
-			return statisticsError || redundancyWarning || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
-		}
-	};
-
 	using EntityRowMap = std::unordered_map<la::avdecc::UniqueIdentifier, std::size_t, la::avdecc::UniqueIdentifier::hash>;
-	using EntitiesWithErrorCounter = std::unordered_map<la::avdecc::UniqueIdentifier, EntityWithErrorCounter, la::avdecc::UniqueIdentifier::hash>;
 
 	static inline ExclusiveAccessState getExclusiveState(la::avdecc::controller::model::LockState state) noexcept
 	{
@@ -424,8 +411,6 @@ private:
 		emit _model->beginResetModel();
 		_entities.clear();
 		_entityRowMap.clear();
-		_entitiesWithErrorCounter.clear();
-		_identifingEntities.clear();
 		emit _model->endResetModel();
 	}
 
@@ -494,8 +479,13 @@ private:
 					}
 				}
 
+				// Get diagnostics and errors
+				auto const statisticsCounters = manager.getStatisticsCounters(entityID);
+				auto const diagnostics = manager.getDiagnostics(entityID);
+
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences) };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences), entity.isIdentifying(), !statisticsCounters.empty(), diagnostics.redundancyWarning, {},
+					diagnostics.streamInputOverLatency };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -507,11 +497,6 @@ private:
 				rebuildEntityRowMap();
 
 				emit _model->endInsertRows();
-
-				// Trigger Error Counters, Statistics and Diagnostics
-				// TODO: Error Counters
-				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
-				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
 			}
 		}
 		catch (...)
@@ -531,9 +516,6 @@ private:
 			// Remove the entity from the model
 			auto const it = std::next(std::begin(_entities), idx);
 			_entities.erase(it);
-
-			// Wipe Errors
-			_entitiesWithErrorCounter.erase(entityID);
 
 			// Update the cache
 			rebuildEntityRowMap();
@@ -673,8 +655,22 @@ private:
 	{
 		if (auto const index = indexOf(entityID))
 		{
-			_identifingEntities.insert(entityID);
-			la::avdecc::utils::invokeProtectedMethod(&Model::identificationStarted, _model, *index);
+			auto const idx = *index;
+			auto& data = _entities[idx];
+
+			try
+			{
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				if (auto controlledEntity = manager.getControlledEntity(entityID))
+				{
+					data.isIdentifying = true;
+					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::Identification });
+				}
+			}
+			catch (...)
+			{
+				// Ignore
+			}
 		}
 	}
 
@@ -682,8 +678,22 @@ private:
 	{
 		if (auto const index = indexOf(entityID))
 		{
-			_identifingEntities.erase(entityID);
-			la::avdecc::utils::invokeProtectedMethod(&Model::identificationStopped, _model, *index);
+			auto const idx = *index;
+			auto& data = _entities[idx];
+
+			try
+			{
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				if (auto controlledEntity = manager.getControlledEntity(entityID))
+				{
+					data.isIdentifying = false;
+					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::Identification });
+				}
+			}
+			catch (...)
+			{
+				// Ignore
+			}
 		}
 	}
 
@@ -801,17 +811,18 @@ private:
 		if (auto const index = indexOf(entityID))
 		{
 			auto const idx = *index;
+			auto& data = _entities[idx];
 
 			if (!errorCounters.empty())
 			{
-				_entitiesWithErrorCounter[entityID].streamsWithErrorCounter.insert(descriptorIndex);
+				data.streamsWithErrorCounter.insert(descriptorIndex);
 			}
 			else
 			{
-				_entitiesWithErrorCounter[entityID].streamsWithErrorCounter.erase(descriptorIndex);
+				data.streamsWithErrorCounter.erase(descriptorIndex);
 			}
 
-			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::StreamInputCounters });
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::StreamInputCountersError });
 		}
 	}
 
@@ -820,10 +831,11 @@ private:
 		if (auto const index = indexOf(entityID))
 		{
 			auto const idx = *index;
+			auto& data = _entities[idx];
 
-			_entitiesWithErrorCounter[entityID].statisticsError = !errorCounters.empty();
+			data.hasStatisticsError = !errorCounters.empty();
 
-			la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, Model::ChangedErrorCounterFlags{ Model::ChangedErrorCounterFlag::Statistics });
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::StatisticsError });
 		}
 	}
 
@@ -832,50 +844,41 @@ private:
 		if (auto const index = indexOf(entityID))
 		{
 			auto const idx = *index;
+			auto& data = _entities[idx];
 
-			auto const wasRedundancyWarning = _entitiesWithErrorCounter[entityID].redundancyWarning;
-			auto const wasStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
+			auto const wasRedundancyWarning = data.hasRedundancyWarning;
+			auto const wasStreamInputLatencyError = !data.streamsWithLatencyError.empty();
 
 			auto nowRedundancyWarning = false;
 			auto nowStreamInputLatencyError = false;
 
 			// Redundancy Warning
 			{
-				_entitiesWithErrorCounter[entityID].redundancyWarning = diagnostics.redundancyWarning;
+				data.hasRedundancyWarning = diagnostics.redundancyWarning;
 				nowRedundancyWarning = diagnostics.redundancyWarning;
 			}
 
 			// Stream Input Latency Error
 			{
-				// Clear previous streamsWithLatencyError values
-				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
-
-				// Rebuild it entirely
-				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
-				{
-					if (isError)
-					{
-						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
-						nowStreamInputLatencyError = true;
-					}
-				}
+				data.streamsWithLatencyError = diagnostics.streamInputOverLatency;
+				nowStreamInputLatencyError = !diagnostics.streamInputOverLatency.empty();
 			}
 
 			// Check what changed
-			auto errorCounterFlags = Model::ChangedErrorCounterFlags{};
+			auto changedFlags = Model::ChangedInfoFlags{};
 			if (wasRedundancyWarning != nowRedundancyWarning)
 			{
-				errorCounterFlags.set(Model::ChangedErrorCounterFlag::RedundancyWarning);
+				changedFlags.set(Model::ChangedInfoFlag::RedundancyWarning);
 			}
 			if (wasStreamInputLatencyError != nowStreamInputLatencyError)
 			{
-				errorCounterFlags.set(Model::ChangedErrorCounterFlag::StreamInputLatency);
+				changedFlags.set(Model::ChangedInfoFlag::StreamInputLatencyError);
 			}
 
 			// Notify if something changed
-			if (!errorCounterFlags.empty())
+			if (!changedFlags.empty())
 			{
-				la::avdecc::utils::invokeProtectedMethod(&Model::entityErrorCountersChanged, _model, idx, errorCounterFlags);
+				la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, changedFlags);
 			}
 		}
 	}
@@ -897,8 +900,6 @@ private:
 	Model* _model{ nullptr };
 	std::vector<Entity> _entities{};
 	EntityRowMap _entityRowMap{};
-	EntitiesWithErrorCounter _entitiesWithErrorCounter{};
-	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _identifingEntities;
 };
 
 DiscoveredEntitiesModel::DiscoveredEntitiesModel(Model* const model, QObject* parent)

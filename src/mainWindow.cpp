@@ -346,7 +346,7 @@ void MainWindowImpl::createToolbars()
 		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
 
 		// The combobox takes ownership of the item delegate
-		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
+		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ true, qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
 		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
 		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, interfaceComboBoxItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
