@@ -55,53 +55,67 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 	}
 
 	// Base painter
-	switch (index.column())
 	{
-		case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityID):
+		switch (index.column())
 		{
-			// Check for Identification
-			auto const identifying = index.data(la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole)).toBool();
-			if (identifying)
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityID):
 			{
-				basePainterOption.font.setBold(true);
-			}
+				// Check for Identification
+				auto const identifying = index.data(la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole)).toBool();
+				if (identifying)
+				{
+					basePainterOption.font.setBold(true);
+				}
 
-			// Check for Error
-			auto const isError = index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool();
-			if (isError)
-			{
-				// Right now, always use default value, as we draw on white background
-				auto const errorColorValue = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::DefaultShade);
-				basePainterOption.palette.setColor(QPalette::ColorRole::Text, errorColorValue);
+				// Check for Error
+				auto const isError = index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool();
+				if (isError)
+				{
+					// Right now, always use default value, as we draw on white background
+					auto const errorColorValue = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::DefaultShade);
+					basePainterOption.palette.setColor(QPalette::ColorRole::Text, errorColorValue);
+				}
+				break;
 			}
-			break;
+			default:
+				break;
 		}
-		default:
-			break;
+
+		// Check for Virtual Entity
+		auto const isVirtual = index.data(la::avdecc::utils::to_integral(QtUserRoles::IsVirtualRole)).toBool();
+		if (isVirtual)
+		{
+			basePainterOption.font.setItalic(true);
+		}
+
+		QStyledItemDelegate::paint(painter, basePainterOption, index);
 	}
-	QStyledItemDelegate::paint(painter, basePainterOption, index);
 
 	// Image painter
-	switch (index.column())
 	{
-		case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo):
-		case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility):
-		case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::AcquireState):
-		case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::LockState):
-			static_cast<QStyledItemDelegate const&>(_imageItemDelegate).paint(painter, option, index);
-			break;
-		default:
-			break;
+		switch (index.column())
+		{
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::AcquireState):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::LockState):
+				static_cast<QStyledItemDelegate const&>(_imageItemDelegate).paint(painter, option, index);
+				break;
+			default:
+				break;
+		}
 	}
 
 	// Error painter
-	switch (index.column())
 	{
-		case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityID):
-			static_cast<QStyledItemDelegate const&>(_errorItemDelegate).paint(painter, option, index);
-			break;
-		default:
-			break;
+		switch (index.column())
+		{
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityID):
+				static_cast<QStyledItemDelegate const&>(_errorItemDelegate).paint(painter, option, index);
+				break;
+			default:
+				break;
+		}
 	}
 }
 

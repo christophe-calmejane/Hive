@@ -494,6 +494,8 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						return entity.isIdentifying;
 					case la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole):
 						return entity.isSubscribedToUnsol;
+					case la::avdecc::utils::to_integral(QtUserRoles::IsVirtualRole):
+						return entity.isVirtual;
 					default:
 						break;
 				}
