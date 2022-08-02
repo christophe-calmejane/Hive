@@ -67,14 +67,8 @@ public:
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses] = StatisticsCounterInfo{ counter, 0u };
 				}
 
-				// Get diagnostics
+				// Get and copy diagnostics
 				_entityCache._diagnostics = entity->getDiagnostics();
-
-				// Process each streams and update the LatencyError state
-				for (auto const& [streamIndex, isError] : _entityCache._diagnostics.streamInputOverLatency)
-				{
-					_entityCache._streamInputLatencyErrors[streamIndex] = isError;
-				}
 			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
@@ -311,31 +305,7 @@ public:
 
 		bool getStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 		{
-			if (auto const streamIt = _streamInputLatencyErrors.find(streamIndex); streamIt != _streamInputLatencyErrors.end())
-			{
-				return streamIt->second;
-			}
-
-			return false;
-		}
-
-		bool setStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError) noexcept
-		{
-			// Get or create value
-			auto& latencyError = _streamInputLatencyErrors[streamIndex];
-
-			auto shouldNotify = false;
-
-			// Any change
-			if (isLatencyError != latencyError)
-			{
-				shouldNotify = true;
-			}
-
-			// Always update value
-			latencyError = isLatencyError;
-
-			return shouldNotify;
+			return _diagnostics.streamInputOverLatency.count(streamIndex) > 0;
 		}
 
 	private:
@@ -354,7 +324,6 @@ public:
 		std::unordered_map<la::avdecc::entity::model::StreamIndex, std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, ErrorCounterInfo>> _streamInputCounters{};
 		std::unordered_map<StatisticsErrorCounterFlag, StatisticsCounterInfo> _statisticsCounters{};
 		la::avdecc::controller::ControlledEntity::Diagnostics _diagnostics{};
-		std::unordered_map<la::avdecc::entity::model::StreamIndex, bool> _streamInputLatencyErrors{};
 	};
 
 	ControllerManagerImpl() noexcept
@@ -845,12 +814,25 @@ private:
 					// Check for Redundancy Warning change
 					auto const redundancyWarnChanged = entityCache->getDiagnostics().redundancyWarning != diags.redundancyWarning;
 
-					// Process each streams and update the LatencyError state
-					for (auto const& [streamIndex, isError] : diags.streamInputOverLatency)
+					// Check for LatencyError state change
 					{
-						if (entityCache->setStreamInputLatencyError(streamIndex, isError))
+						auto const oldStreamErrors = entityCache->getDiagnostics().streamInputOverLatency;
+
+						// Check for no longer in error (present in old but not in new)
+						for (auto const streamIndex : oldStreamErrors)
 						{
-							emit streamInputLatencyErrorChanged(entityID, streamIndex, isError);
+							if (diags.streamInputOverLatency.count(streamIndex) == 0)
+							{
+								emit streamInputLatencyErrorChanged(entityID, streamIndex, false);
+							}
+						}
+						// Check for newly in error (not present in old but present in new)
+						for (auto const streamIndex : diags.streamInputOverLatency)
+						{
+							if (oldStreamErrors.count(streamIndex) == 0)
+							{
+								emit streamInputLatencyErrorChanged(entityID, streamIndex, true);
+							}
 						}
 					}
 

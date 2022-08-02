@@ -68,7 +68,7 @@ void StreamInputDiagnosticsTreeWidgetItem::updateDiagnostics(la::avdecc::control
 		auto text = "No";
 		if (_isConnected)
 		{
-			if (_diagnostics.streamInputOverLatency[_streamIndex])
+			if (_diagnostics.streamInputOverLatency.count(_streamIndex) > 0)
 			{
 				color = QColor{ Qt::red };
 				text = "Yes";

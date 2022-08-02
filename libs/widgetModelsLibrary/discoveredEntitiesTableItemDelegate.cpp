@@ -18,6 +18,7 @@
 */
 
 #include "hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp"
 #include "hive/widgetModelsLibrary/qtUserRoles.hpp"
 
 #include <QPainter>

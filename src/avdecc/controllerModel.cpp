@@ -700,10 +700,10 @@ private:
 
 				emit q->endInsertRows();
 
-				// Trigger Error Counters, Statistics and Diagnostics
-				// TODO: Error Counters
+				// Trigger Error Counters, Statistics and Diagnostics (because it's not using DisplayRole, it won't be initially checked)
 				handleStatisticsErrorCounterChanged(entityID, manager.getStatisticsCounters(entityID));
 				handleDiagnosticsChanged(entityID, manager.getDiagnostics(entityID));
+				// Identification status cannot be properly detected, will be fixed when using DiscoveredEntitiesModel
 			}
 		}
 		catch (...)
@@ -935,18 +935,8 @@ private:
 
 			// Stream Input Latency Error
 			{
-				// Clear previous streamsWithLatencyError values
-				_entitiesWithErrorCounter[entityID].streamsWithLatencyError.clear();
-
-				// Rebuild it entirely
-				for (auto const& [streamIndex, isError] : diagnostics.streamInputOverLatency)
-				{
-					if (isError)
-					{
-						_entitiesWithErrorCounter[entityID].streamsWithLatencyError.insert(streamIndex);
-						nowStreamInputLatencyError = true;
-					}
-				}
+				_entitiesWithErrorCounter[entityID].streamsWithLatencyError = diagnostics.streamInputOverLatency;
+				nowStreamInputLatencyError = !_entitiesWithErrorCounter[entityID].streamsWithLatencyError.empty();
 			}
 
 			if ((wasRedundancyWarning != nowRedundancyWarning) || (wasStreamInputLatencyError != nowStreamInputLatencyError))

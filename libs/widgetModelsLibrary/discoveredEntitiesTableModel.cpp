@@ -97,7 +97,6 @@ void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hi
 					{
 						auto const startIndex = createIndex(static_cast<int>(index), 0);
 						auto const endIndex = createIndex(static_cast<int>(index), columnCount());
-#pragma message("WARNING: is columnCount valid here? Is it the max of column or the current max ? What if some are hidden? Is the index the same ?")
 						emit dataChanged(startIndex, endIndex, roles);
 					}
 					// Otherwise selectively refresh a single column
@@ -489,10 +488,10 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						}
 						break;
 					}
-					//case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
-					//	return entity.hasStatisticsError || !entity.streamsWithErrorCounter.empty();
-					//case la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole):
-					//	return entity.isIdentifying;
+					case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
+						return entity.hasStatisticsError || entity.hasRedundancyWarning || !entity.streamsWithErrorCounter.empty() || !entity.streamsWithLatencyError.empty();
+					case la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole):
+						return entity.isIdentifying;
 					case la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole):
 						return entity.isSubscribedToUnsol;
 					default:
@@ -544,6 +543,16 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>
 			return std::make_pair(EntityDataFlag::MediaClockReferenceID, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::MediaClockReferenceStatus:
 			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::Identification:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole) });
+		case ChangedInfoFlag::StatisticsError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::RedundancyWarning:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::StreamInputCountersError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::StreamInputLatencyError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		default:
 			AVDECC_ASSERT(false, "Unhandled");
 			break;
