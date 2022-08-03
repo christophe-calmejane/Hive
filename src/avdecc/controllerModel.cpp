@@ -28,6 +28,7 @@
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 #include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 #include <la/avdecc/utils.hpp>

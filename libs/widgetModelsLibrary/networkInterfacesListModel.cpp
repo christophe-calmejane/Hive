@@ -19,6 +19,7 @@
 
 #include "hive/widgetModelsLibrary/networkInterfacesListModel.hpp"
 #include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
 
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/helper.hpp>

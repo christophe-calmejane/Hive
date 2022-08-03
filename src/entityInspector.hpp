@@ -26,6 +26,7 @@
 
 #include <QtMate/material/colorPalette.hpp>
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 
 #include <QSplitter>
 #include <QLayout>
