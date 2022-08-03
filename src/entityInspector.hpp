@@ -26,6 +26,7 @@
 
 #include <QtMate/material/colorPalette.hpp>
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 
 #include <QSplitter>
 #include <QLayout>
@@ -38,7 +39,7 @@ public:
 	enum class RoleInfo
 	{
 		NodeType = Qt::UserRole,
-		ErrorRole = hive::widgetModelsLibrary::ErrorItemDelegate::ErrorRole,
+		ErrorRole = la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole),
 		IsActiveConfiguration,
 	};
 
@@ -65,6 +66,6 @@ private:
 	QSplitter _splitter{ Qt::Vertical, this };
 	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
 	NodeTreeWidget _nodeTreeWiget{ this };
-	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ true, qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	SettingsSignaler _settingsSignaler{};
 };

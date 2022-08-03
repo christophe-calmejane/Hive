@@ -67,14 +67,8 @@ public:
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses] = StatisticsCounterInfo{ counter, 0u };
 				}
 
-				// Get diagnostics
+				// Get and copy diagnostics
 				_entityCache._diagnostics = entity->getDiagnostics();
-
-				// Process each streams and update the LatencyError state
-				for (auto const& [streamIndex, isError] : _entityCache._diagnostics.streamInputOverLatency)
-				{
-					_entityCache._streamInputLatencyErrors[streamIndex] = isError;
-				}
 			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
@@ -311,31 +305,7 @@ public:
 
 		bool getStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 		{
-			if (auto const streamIt = _streamInputLatencyErrors.find(streamIndex); streamIt != _streamInputLatencyErrors.end())
-			{
-				return streamIt->second;
-			}
-
-			return false;
-		}
-
-		bool setStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError) noexcept
-		{
-			// Get or create value
-			auto& latencyError = _streamInputLatencyErrors[streamIndex];
-
-			auto shouldNotify = false;
-
-			// Any change
-			if (isLatencyError != latencyError)
-			{
-				shouldNotify = true;
-			}
-
-			// Always update value
-			latencyError = isLatencyError;
-
-			return shouldNotify;
+			return _diagnostics.streamInputOverLatency.count(streamIndex) > 0;
 		}
 
 	private:
@@ -354,7 +324,6 @@ public:
 		std::unordered_map<la::avdecc::entity::model::StreamIndex, std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, ErrorCounterInfo>> _streamInputCounters{};
 		std::unordered_map<StatisticsErrorCounterFlag, StatisticsCounterInfo> _statisticsCounters{};
 		la::avdecc::controller::ControlledEntity::Diagnostics _diagnostics{};
-		std::unordered_map<la::avdecc::entity::model::StreamIndex, bool> _streamInputLatencyErrors{};
 	};
 
 	ControllerManagerImpl() noexcept
@@ -765,6 +734,10 @@ private:
 	{
 		emit operationCompleted(entity->getEntity().getEntityID(), descriptorType, descriptorIndex, operationID, failed);
 	}
+	virtual void onMediaClockChainChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::MediaClockChain const& mcChain) noexcept override
+	{
+		emit mediaClockChainChanged(entity->getEntity().getEntityID(), clockDomainIndex, mcChain);
+	}
 	// Statistics
 	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
@@ -841,12 +814,25 @@ private:
 					// Check for Redundancy Warning change
 					auto const redundancyWarnChanged = entityCache->getDiagnostics().redundancyWarning != diags.redundancyWarning;
 
-					// Process each streams and update the LatencyError state
-					for (auto const& [streamIndex, isError] : diags.streamInputOverLatency)
+					// Check for LatencyError state change
 					{
-						if (entityCache->setStreamInputLatencyError(streamIndex, isError))
+						auto const oldStreamErrors = entityCache->getDiagnostics().streamInputOverLatency;
+
+						// Check for no longer in error (present in old but not in new)
+						for (auto const streamIndex : oldStreamErrors)
 						{
-							emit streamInputLatencyErrorChanged(entityID, streamIndex, isError);
+							if (diags.streamInputOverLatency.count(streamIndex) == 0)
+							{
+								emit streamInputLatencyErrorChanged(entityID, streamIndex, false);
+							}
+						}
+						// Check for newly in error (not present in old but present in new)
+						for (auto const streamIndex : diags.streamInputOverLatency)
+						{
+							if (oldStreamErrors.count(streamIndex) == 0)
+							{
+								emit streamInputLatencyErrorChanged(entityID, streamIndex, true);
+							}
 						}
 					}
 
@@ -866,7 +852,7 @@ private:
 	}
 
 	// ControllerManager overrides
-	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) override
+	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale, la::avdecc::entity::model::EntityTree const* const entityModel) override
 	{
 		// If we have a previous controller, remove it
 		if (_controller)
@@ -875,7 +861,7 @@ private:
 		}
 
 		// Create a new controller and store it
-		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString());
+		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel);
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
 #else // !HAVE_ATOMIC_SMART_POINTERS
@@ -888,7 +874,6 @@ private:
 		{
 			emit controllerOnline();
 			ctrl->registerObserver(this);
-			//ctrl->enableEntityAdvertising(10);
 
 			ctrl->setAutomaticDiscoveryDelay(_discoveryDelay);
 

@@ -19,6 +19,7 @@
 
 #include "hive/widgetModelsLibrary/networkInterfacesListModel.hpp"
 #include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
 
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/helper.hpp>
@@ -127,7 +128,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 			}
 			break;
 		}
-		case ErrorItemDelegate::ErrorRole: // Make use of this role if ErrorItemDelegate is defined as ItemDelegate
+		case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
 		{
 			if (auto const optInterface = _model.networkInterface(static_cast<std::size_t>(index.row())))
 			{

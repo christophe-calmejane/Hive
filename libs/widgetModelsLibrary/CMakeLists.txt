@@ -44,6 +44,7 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/qtUserRoles.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/errorItemDelegate.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/imageItemDelegate.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/networkInterfacesListModel.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp
 )
@@ -57,6 +58,7 @@ set(SOURCE_FILES_COMMON
 	entityLogoCache.cpp
 	errorItemDelegate.cpp
 	imageItemDelegate.cpp
+	discoveredEntitiesTableItemDelegate.cpp
 	networkInterfacesListModel.cpp
 	discoveredEntitiesTableModel.cpp
 )

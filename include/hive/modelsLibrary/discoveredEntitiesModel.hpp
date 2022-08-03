@@ -30,6 +30,7 @@
 #include <string>
 #include <memory>
 #include <map>
+#include <set>
 
 namespace hive
 {
@@ -54,33 +55,63 @@ public:
 		Misbehaving,
 	};
 
+	enum class ExclusiveAccessState
+	{
+		NoAccess = 0, /**< Device is not exclusively accessed */
+		NotSupported = 1, /**< Device does not support exclusive access */
+		AccessOther = 2, /**< Device is exclusively accessed by another controller */
+		AccessSelf = 3, /**< Device is exclusively accessed by us */
+	};
+
+	struct ExclusiveAccessInfo
+	{
+		ExclusiveAccessState state{ ExclusiveAccessState::NoAccess };
+		la::avdecc::UniqueIdentifier exclusiveID{};
+		QString tooltip{};
+	};
+
 	struct GptpInfo
 	{
-		std::optional<la::avdecc::UniqueIdentifier> grandmasterID;
-		std::optional<std::uint8_t> domainNumber;
+		std::optional<la::avdecc::UniqueIdentifier> grandmasterID{};
+		std::optional<std::uint8_t> domainNumber{};
 	};
+
+	struct MediaClockReference
+	{
+		la::avdecc::controller::model::MediaClockChain mcChain{};
+		QString referenceIDString{};
+		QString referenceStatus{};
+		bool isError{ false };
+	};
+
 	struct Entity
 	{
 		// Static information
 		la::avdecc::UniqueIdentifier entityID{};
 		bool isAemSupported{ false };
+		bool hasAnyConfigurationTree{ false };
+		bool isVirtual{ false };
 		la::avdecc::UniqueIdentifier entityModelID{};
 		std::optional<QString> firmwareVersion{};
 		std::optional<la::avdecc::entity::model::MemoryObjectIndex> firmwareUploadMemoryIndex{ std::nullopt };
 		std::optional<la::avdecc::entity::model::MilanInfo> milanInfo{};
 
 		// Dynamic information
-		QString name{};
-		QString groupName{};
-		bool isSubscribedToUnsol{ false };
-		ProtocolCompatibility protocolCompatibility{ ProtocolCompatibility::NotCompliant };
-		la::avdecc::entity::EntityCapabilities entityCapabilities{};
-		la::avdecc::controller::model::AcquireState acquireState{ la::avdecc::controller::model::AcquireState::Undefined };
-		la::avdecc::UniqueIdentifier owningController{};
-		la::avdecc::controller::model::LockState lockState{ la::avdecc::controller::model::LockState::Undefined };
-		la::avdecc::UniqueIdentifier lockingController{};
-		std::map<la::avdecc::entity::model::AvbInterfaceIndex, GptpInfo> gptpInfo{};
-		std::optional<la::avdecc::UniqueIdentifier> associationID{};
+		QString name{}; /** Change triggers ChangedInfoFlag::Name */
+		QString groupName{}; /** Change triggers ChangedInfoFlag::GroupName */
+		bool isSubscribedToUnsol{ false }; /** Change triggers ChangedInfoFlag::SubscribedToUnsol */
+		ProtocolCompatibility protocolCompatibility{ ProtocolCompatibility::NotCompliant }; /** Change triggers ChangedInfoFlag::Compatibility */
+		la::avdecc::entity::EntityCapabilities entityCapabilities{}; /** Change triggers ChangedInfoFlag::EntityCapabilities */
+		ExclusiveAccessInfo acquireInfo{}; /** Change triggers ChangedInfoFlag::AcquireState and/or ChangedInfoFlag::OwningController */
+		ExclusiveAccessInfo lockInfo{}; /** Change triggers ChangedInfoFlag::LockState and/or ChangedInfoFlag::LockingController */
+		std::map<la::avdecc::entity::model::AvbInterfaceIndex, GptpInfo> gptpInfo{}; /** Change triggers ChangedInfoFlag::GrandmasterID and/or ChangeInfoFlag::GPTPDomain */
+		std::optional<la::avdecc::UniqueIdentifier> associationID{}; /** Change triggers ChangedInfoFlag::AssociationID */
+		std::map<la::avdecc::entity::model::ClockDomainIndex, MediaClockReference> mediaClockReferences{}; /** Change triggers ChangedInfoFlag::MediaClockReferenceID and/or ChangedInfoFlag::MediaClockReferenceStatus */
+		bool isIdentifying{ false }; /** Change triggers ChangedInfoFlag::Identification */
+		bool hasStatisticsError{ false }; /** Change triggers ChangedInfoFlag::StatisticsError */
+		bool hasRedundancyWarning{ false }; /** Change triggers ChangedInfoFlag::RedundancyWarning */
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{}; /** Change triggers ChangedInfoFlag::StreamInputCountersError */
+		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{}; /** Change triggers ChangedInfoFlag::StreamInputLatencyError */
 	};
 
 	using Model = DiscoveredEntitiesAbstractTableModel;
@@ -113,26 +144,22 @@ public:
 		OwningController = 1u << 6,
 		LockedState = 1u << 7,
 		LockingController = 1u << 8,
-		GptpInfo = 1u << 9,
-		AssociationID = 1u << 10,
+		GrandmasterID = 1u << 9,
+		GPTPDomain = 1u << 10,
+		InterfaceIndex = 1u << 11,
+		AssociationID = 1u << 12,
+		MediaClockReferenceID = 1u << 13,
+		MediaClockReferenceStatus = 1u << 14,
+		Identification = 1u << 15,
+		StatisticsError = 1u << 16,
+		RedundancyWarning = 1u << 17,
+		StreamInputCountersError = 1u << 18,
+		StreamInputLatencyError = 1u << 19,
 	};
 	using ChangedInfoFlags = la::avdecc::utils::EnumBitfield<ChangedInfoFlag>;
 
-	/** Flag for error counter that changed */
-	enum class ChangedErrorCounterFlag : std::uint32_t
-	{
-		Statistics = 1u << 0,
-		RedundancyWarning = 1u << 1,
-		StreamInputCounters = 1u << 2,
-		StreamInputLatency = 1u << 3,
-	};
-	using ChangedErrorCounterFlags = la::avdecc::utils::EnumBitfield<ChangedErrorCounterFlag>;
-
 	// Notifications for DiscoveredEntitiesModel changes
 	virtual void entityInfoChanged(std::size_t const /*index*/, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& /*entity*/, ChangedInfoFlags const /*changedInfoFlags*/) noexcept {}
-	virtual void identificationStarted(std::size_t const /*index*/) noexcept {}
-	virtual void identificationStopped(std::size_t const /*index*/) noexcept {}
-	virtual void entityErrorCountersChanged(std::size_t const /*index*/, ChangedErrorCounterFlags const /*changedErrorCounterFlags*/) noexcept {}
 
 private:
 	friend class DiscoveredEntitiesModel;

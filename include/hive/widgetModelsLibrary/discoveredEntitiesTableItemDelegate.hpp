@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2021, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <la/avdecc/utils.hpp>
-#include <QtMate/material/color.hpp>
+#include "errorItemDelegate.hpp"
+#include "imageItemDelegate.hpp"
 
 #include <QStyledItemDelegate>
 
@@ -28,22 +28,20 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-// This delegate paints an error rectangle on each item who's index returns true for the "QtUserRoles::ErrorRole"
-class ErrorItemDelegate : public QStyledItemDelegate
+// This delegate handles all QtUserRoles used by DiscoveredEntitiesTableModel and can be used as global ItemDelegate
+class DiscoveredEntitiesTableItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	ErrorItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
-
-	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
+	using QStyledItemDelegate::QStyledItemDelegate;
 
 protected:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 
 private:
 	// Private members
-	bool _paintBaseDelegate{ true };
-	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
+	ErrorItemDelegate _errorItemDelegate{ false };
+	ImageItemDelegate _imageItemDelegate{ false };
 };
 
 } // namespace widgetModelsLibrary

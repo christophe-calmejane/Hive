@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
+
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 
 #include <optional>
@@ -31,24 +33,27 @@ namespace widgetModelsLibrary
 class DiscoveredEntitiesTableModel : public hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel
 {
 public:
+	/** Available data columns for the DiscoveredEntities table */
 	enum class EntityDataFlag : std::uint32_t
 	{
+		All = 0u,
 		EntityLogo = 1u << 0,
 		Compatibility = 1u << 1,
 		EntityID = 1u << 2,
 		Name = 1u << 3,
 		Group = 1u << 4,
-		// AcquireState = 1u << 5,
-		// LockState = 1u << 6,
+		AcquireState = 1u << 5,
+		LockState = 1u << 6,
 		GrandmasterID = 1u << 7,
-		// gPTP Domain = 1u << 8,
-		// InterfaceIndex = 1u << 9,
-		// AssociationID = 1u << 10,
+		GPTPDomain = 1u << 8,
+		InterfaceIndex = 1u << 9,
+		AssociationID = 1u << 10,
 		EntityModelID = 1u << 11,
 		FirmwareVersion = 1u << 12,
-		// MediaClockMasterID = 1u << 13,
-		// MediaClockMasterName = 1u << 14,
+		MediaClockReferenceID = 1u << 13,
+		MediaClockReferenceStatus = 1u << 14,
 	};
+	/** List of columns to be displayed */
 	using EntityDataFlags = la::avdecc::utils::EnumBitfield<EntityDataFlag>;
 
 	DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags);
@@ -67,7 +72,7 @@ private:
 	virtual QVariant data(QModelIndex const& index, int role) const override;
 
 	// Private methods
-	std::optional<std::pair<EntityDataFlag, QVector<int>>> dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept;
+	std::optional<std::pair<EntityDataFlag, RolesList>> dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept;
 
 	// Private members
 	hive::modelsLibrary::DiscoveredEntitiesModel _model{ this };

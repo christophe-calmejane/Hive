@@ -96,6 +96,9 @@ public:
 		: _parent(parent)
 		, _mustResetViewSettings{ mustResetViewSettings }
 	{
+		// Setup entity model
+		setupEntityModel();
+
 		// Setup common UI
 		setupUi(parent);
 
@@ -121,6 +124,7 @@ public:
 	void setupStandardProfile();
 	void setupDeveloperProfile();
 	void setupProfile();
+	void setupEntityModel();
 	void registerMetaTypes();
 	void createViewMenu();
 	void createToolbars();
@@ -146,6 +150,7 @@ public:
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
 	bool _shown{ false };
+	la::avdecc::entity::model::EntityTree _entityModel{};
 	SettingsSignaler _settingsSignaler{};
 	bool _mustResetViewSettings{ false };
 	bool _usingBetaAppcast{ false };
@@ -277,7 +282,7 @@ void MainWindowImpl::currentControllerChanged()
 #else // !DEBUG
 		auto const progID = std::uint16_t{ PROG_ID };
 #endif // DEBUG
-		manager.createController(protocolType, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		manager.createController(protocolType, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en", &_entityModel);
 		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
@@ -294,6 +299,12 @@ void MainWindowImpl::currentControllerChanged()
 }
 
 // Private methods
+void MainWindowImpl::setupEntityModel()
+{
+	_entityModel.dynamicModel.entityName = hive::internals::applicationShortName.toStdString();
+	_entityModel.dynamicModel.firmwareVersion = hive::internals::versionString.toStdString();
+}
+
 void MainWindowImpl::registerMetaTypes()
 {
 	//
@@ -335,7 +346,7 @@ void MainWindowImpl::createToolbars()
 		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
 
 		// The combobox takes ownership of the item delegate
-		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
+		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ true, qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
 		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
 		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, interfaceComboBoxItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
@@ -534,7 +545,7 @@ void MainWindowImpl::connectSignals()
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
-			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && controlledEntity->hasAnyConfiguration())
 			{
 				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
 				dialog->setAttribute(Qt::WA_DeleteOnClose);
