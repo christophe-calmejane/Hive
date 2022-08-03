@@ -75,6 +75,7 @@
 
 #include <mutex>
 #include <memory>
+#include <optional>
 
 extern "C"
 {
@@ -149,6 +150,7 @@ public:
 	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
+	std::optional<std::uint32_t> _advertisingDuration{ 10u };
 	bool _shown{ false };
 	la::avdecc::entity::model::EntityTree _entityModel{};
 	SettingsSignaler _settingsSignaler{};
@@ -284,6 +286,10 @@ void MainWindowImpl::currentControllerChanged()
 #endif // DEBUG
 		manager.createController(protocolType, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en", &_entityModel);
 		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
+		if (_advertisingDuration)
+		{
+			manager.enableEntityAdvertising(*_advertisingDuration);
+		}
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
@@ -502,6 +508,7 @@ void MainWindowImpl::loadSettings()
 	settings->registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 	settings->registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
+	settings->registerSettingObserver(settings::Controller_AdvertisingEnabled.name, this);
 	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 	settings->registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
@@ -1013,6 +1020,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings->unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_AdvertisingEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
 	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
 	settings->unregisterSettingObserver(settings::General_AutomaticCheckForUpdates.name, _pImpl);
@@ -1216,6 +1224,23 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 		if (_shown)
 		{
 			currentControllerChanged();
+		}
+	}
+	else if (name == settings::Controller_AdvertisingEnabled.name)
+	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		auto const enabled = value.toBool();
+		_advertisingDuration = enabled ? std::optional<std::uint32_t>{ 10u } : std::nullopt;
+		if (_shown)
+		{
+			if (enabled)
+			{
+				manager.enableEntityAdvertising(*_advertisingDuration);
+			}
+			else
+			{
+				manager.disableEntityAdvertising();
+			}
 		}
 	}
 	else if (name == settings::General_ThemeColorIndex.name)

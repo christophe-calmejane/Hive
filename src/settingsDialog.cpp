@@ -170,6 +170,12 @@ private:
 			auto const lock = QSignalBlocker{ fullAEMEnumerationCheckBox };
 			fullAEMEnumerationCheckBox->setChecked(settings->getValue(settings::Controller_FullStaticModelEnabled.name).toBool());
 		}
+
+		// Enable Advertising
+		{
+			auto const lock = QSignalBlocker{ enableAdvertisingCheckBox };
+			enableAdvertisingCheckBox->setChecked(settings->getValue(settings::Controller_AdvertisingEnabled.name).toBool());
+		}
 	}
 
 	void loadNetworkSettings()
@@ -323,6 +329,12 @@ void SettingsDialog::on_fullAEMEnumerationCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::Controller_FullStaticModelEnabled.name, checked);
+}
+
+void SettingsDialog::on_enableAdvertisingCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::Controller_AdvertisingEnabled.name, checked);
 }
 
 void SettingsDialog::on_protocolComboBox_currentIndexChanged(int /*index*/)

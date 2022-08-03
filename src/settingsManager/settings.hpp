@@ -59,6 +59,7 @@ static SettingsManager::SettingDefault Network_InterfaceTypeWiFi = { "avdecc/net
 static SettingsManager::SettingDefault Controller_DiscoveryDelay = { "avdecc/controller/discoveryDelay", 0 };
 static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "avdecc/controller/fullStaticModel", false };
+static SettingsManager::SettingDefault Controller_AdvertisingEnabled = { "avdecc/controller/enableAdvertising", true };
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
 static SettingsManager::Setting InterfaceID = { "interfaceID" };

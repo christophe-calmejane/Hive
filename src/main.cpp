@@ -180,6 +180,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::Controller_DiscoveryDelay);
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
 	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
+	settings.registerSetting(settings::Controller_AdvertisingEnabled);
 
 	// Check settings version
 	auto mustResetViewSettings = false;
