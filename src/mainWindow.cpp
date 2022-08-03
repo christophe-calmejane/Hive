@@ -82,7 +82,11 @@ extern "C"
 #include <mkdio.h>
 }
 
-#define PROG_ID 0x0003
+#ifdef DEBUG
+#	define DEFAULT_SUB_ID 0x0004
+#else // !DEBUG
+#	define DEFAULT_SUB_ID 0x0003
+#endif // DEBUG
 #define VENDOR_ID 0x001B92
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
@@ -150,6 +154,7 @@ public:
 	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
+	std::uint16_t _controllerSubID{ DEFAULT_SUB_ID };
 	std::optional<std::uint32_t> _advertisingDuration{ 10u };
 	bool _shown{ false };
 	la::avdecc::entity::model::EntityTree _entityModel{};
@@ -279,12 +284,7 @@ void MainWindowImpl::currentControllerChanged()
 	try
 	{
 		// Create a new Controller
-#ifdef DEBUG
-		auto const progID = std::uint16_t{ PROG_ID + 1 }; // Use next PROG_ID in debug (so we can launch 2 Hive instances at the same time, one in Release and one in Debug)
-#else // !DEBUG
-		auto const progID = std::uint16_t{ PROG_ID };
-#endif // DEBUG
-		manager.createController(protocolType, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en", &_entityModel);
+		manager.createController(protocolType, interfaceID, _controllerSubID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en", &_entityModel);
 		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
 		if (_advertisingDuration)
 		{
@@ -509,6 +509,7 @@ void MainWindowImpl::loadSettings()
 	settings->registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_AdvertisingEnabled.name, this);
+	settings->registerSettingObserver(settings::Controller_ControllerSubID.name, this);
 	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 	settings->registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
@@ -1021,6 +1022,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings->unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_AdvertisingEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_ControllerSubID.name, _pImpl);
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
 	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
 	settings->unregisterSettingObserver(settings::General_AutomaticCheckForUpdates.name, _pImpl);
@@ -1241,6 +1243,15 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 			{
 				manager.disableEntityAdvertising();
 			}
+		}
+	}
+	else if (name == settings::Controller_ControllerSubID.name)
+	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		_controllerSubID = static_cast<decltype(_controllerSubID)>(value.toInt());
+		if (_shown)
+		{
+			currentControllerChanged();
 		}
 	}
 	else if (name == settings::General_ThemeColorIndex.name)

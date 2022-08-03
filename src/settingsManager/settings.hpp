@@ -60,6 +60,11 @@ static SettingsManager::SettingDefault Controller_DiscoveryDelay = { "avdecc/con
 static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "avdecc/controller/fullStaticModel", false };
 static SettingsManager::SettingDefault Controller_AdvertisingEnabled = { "avdecc/controller/enableAdvertising", true };
+#ifdef DEBUG
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID_Debug", 4 };
+#else // !DEBUG
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID", 3 };
+#endif // DEBUG
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
 static SettingsManager::Setting InterfaceID = { "interfaceID" };

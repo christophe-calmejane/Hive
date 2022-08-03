@@ -181,6 +181,7 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
 	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
 	settings.registerSetting(settings::Controller_AdvertisingEnabled);
+	settings.registerSetting(settings::Controller_ControllerSubID);
 
 	// Check settings version
 	auto mustResetViewSettings = false;

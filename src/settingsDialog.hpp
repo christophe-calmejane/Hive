@@ -56,6 +56,7 @@ private:
 	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
 	Q_SLOT void on_fullAEMEnumerationCheckBox_toggled(bool checked);
 	Q_SLOT void on_enableAdvertisingCheckBox_toggled(bool checked);
+	Q_SLOT void on_controllerIDLineEdit_returnPressed();
 
 	// Network
 	Q_SLOT void on_protocolComboBox_currentIndexChanged(int index);

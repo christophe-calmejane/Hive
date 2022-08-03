@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Popup message after critical error on the network interface](https://github.com/christophe-calmejane/Hive/issues/124)
 - [Possibility to be in offline mode](https://github.com/christophe-calmejane/Hive/issues/127)
 - Option for Hive to advertise itself on the network so other Controllers (or entities) can detect it
+- Option for selecting a sub part of Hive's controller EID
 
 ### Fixed
 - Crash when loading an entity with no CONFIGURATION descriptor

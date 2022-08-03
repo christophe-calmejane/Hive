@@ -176,6 +176,12 @@ private:
 			auto const lock = QSignalBlocker{ enableAdvertisingCheckBox };
 			enableAdvertisingCheckBox->setChecked(settings->getValue(settings::Controller_AdvertisingEnabled.name).toBool());
 		}
+
+		// Controller Sub ID
+		{
+			auto const lock = QSignalBlocker{ controllerIDLineEdit };
+			controllerIDLineEdit->setText(settings->getValue(settings::Controller_ControllerSubID.name).toString());
+		}
 	}
 
 	void loadNetworkSettings()
@@ -335,6 +341,12 @@ void SettingsDialog::on_enableAdvertisingCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::Controller_AdvertisingEnabled.name, checked);
+}
+
+void SettingsDialog::on_controllerIDLineEdit_returnPressed()
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::Controller_ControllerSubID.name, _pImpl->controllerIDLineEdit->text());
 }
 
 void SettingsDialog::on_protocolComboBox_currentIndexChanged(int /*index*/)
