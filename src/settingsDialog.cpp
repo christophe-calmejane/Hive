@@ -216,12 +216,11 @@ private:
 
 		for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
 		{
-#ifndef DEBUG
+			// Ignore Virtual, we have the special Offline mode that will automatically use the Virtual Type
 			if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
 			{
 				continue;
 			}
-#endif // !DEBUG
 			protocolComboBox->addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
 		}
 		if (protocolComboBox->count() == 0)
