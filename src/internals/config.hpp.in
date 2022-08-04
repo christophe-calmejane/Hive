@@ -21,6 +21,7 @@
 
 #include <QString>
 #include <string>
+#include <cstdint>
 
 namespace hive
 {
@@ -36,6 +37,7 @@ QString const companyURL{ "@CU_COMPANY_URL@" };
 QString const projectContact{ "@CU_PROJECT_CONTACT@" };
 QString const versionString{ "@CU_PROJECT_FRIENDLY_VERSION@" }; // Friendly version (3 digits for release, 3 digits and beta postfix for beta)
 QString const marketingVersion{ "@CU_PROJECT_MARKETING_VERSION@" }; // Marketing version
+std::uint32_t const marketingDigits{ @CU_PROJECT_MARKETING_VERSION_DIGITS@ }; // Marketing digits
 QString const cmakeVersionString{ "@CU_PROJECT_CMAKEVERSION_STRING@" }; // CMake version (3 digits for a release, 4 digits for a beta)
 QString const legalCopyright{ "@CU_PROJECT_LEGALCOPYRIGHT@" };
 QString const readableCopyright{ "@CU_PROJECT_READABLE_COPYRIGHT@" };

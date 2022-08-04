@@ -1,7 +1,7 @@
 # Hive Sources CMake File
 
 # Declare project
-cu_setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
+cu_setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}" MARKETING_VERSION_DIGITS ${MARKETING_VERSION_DIGITS} MARKETING_VERSION_POSTFIX ${MARKETING_VERSION_POSTFIX})
 
 # Configure files based on CMakeLists.txt version number
 configure_file(

@@ -45,7 +45,20 @@ public:
 		}
 		else
 		{
-			_settings = std::make_unique<QSettings>(QSettings::Format::IniFormat, QSettings::Scope::UserScope, hive::internals::companyName, hive::internals::applicationShortName);
+			auto appName = hive::internals::applicationShortName;
+			// Starting with Hive > 1.2, the settings file path is built using the marketing version number
+			// But any beta version (key digits > 2) also uses the marketing version number
+			{
+				auto const tokens = la::avdecc::utils::tokenizeString(hive::internals::cmakeVersionString.toStdString(), '.', false);
+				if (AVDECC_ASSERT_WITH_RET(tokens.size() == 4, "cmake version tokens should always be 4"))
+				{
+					if (hive::internals::marketingDigits > 2u || (hive::internals::marketingDigits == 2u && (tokens[0] > "1" || tokens[1] > "2")))
+					{
+						appName = hive::internals::applicationShortName + "-" + hive::internals::marketingVersion;
+					}
+				}
+			}
+			_settings = std::make_unique<QSettings>(QSettings::Format::IniFormat, QSettings::Scope::UserScope, hive::internals::companyName, appName);
 		}
 	}
 
