@@ -102,6 +102,7 @@ QString outputStreamName(la::avdecc::controller::ControlledEntity const& control
 QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 QString redundantOutputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 QString redundantInputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
+QString getComputerName() noexcept;
 
 } // namespace helper
 } // namespace modelsLibrary

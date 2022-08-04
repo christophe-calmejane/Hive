@@ -284,7 +284,7 @@ void MainWindowImpl::currentControllerChanged()
 	try
 	{
 		// Create a new Controller
-		manager.createController(protocolType, interfaceID, _controllerSubID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en", &_entityModel);
+		manager.createController(protocolType, interfaceID, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
 		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
 		if (_advertisingDuration)
 		{
@@ -308,6 +308,7 @@ void MainWindowImpl::currentControllerChanged()
 void MainWindowImpl::setupEntityModel()
 {
 	_entityModel.dynamicModel.entityName = hive::internals::applicationShortName.toStdString();
+	_entityModel.dynamicModel.groupName = hive::modelsLibrary::helper::getComputerName().toStdString();
 	_entityModel.dynamicModel.firmwareVersion = hive::internals::versionString.toStdString();
 }
 
