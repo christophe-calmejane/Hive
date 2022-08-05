@@ -21,6 +21,7 @@
 
 #include "settingsManager.hpp"
 #include "profiles/profiles.hpp"
+#include "internals/config.hpp"
 
 #include <la/avdecc/internals/protocolInterface.hpp>
 #include <la/avdecc/utils.hpp>
@@ -61,9 +62,9 @@ static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/co
 static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "avdecc/controller/fullStaticModel", false };
 static SettingsManager::SettingDefault Controller_AdvertisingEnabled = { "avdecc/controller/enableAdvertising", true };
 #ifdef DEBUG
-static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID_Debug", 4 };
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID_Debug", 4 + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
 #else // !DEBUG
-static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID", 3 };
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID", 3 + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
 #endif // DEBUG
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
