@@ -4,9 +4,6 @@
 ################# PROJECT SPECIFIC VARIABLES
 cmake_opt="-DBUILD_HIVE_TESTS=FALSE -DENABLE_HIVE_CPACK=TRUE -DENABLE_CODE_SIGNING=TRUE -DENABLE_HIVE_FEATURE_SPARKLE=FALSE"
 
-# Change the default key_digits value
-#default_keyDigits=0
-
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
 # Get absolute folder for this script
