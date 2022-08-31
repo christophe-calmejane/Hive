@@ -44,14 +44,14 @@ private:
 };
 
 
-Status getStatus() noexcept
+Status getStatus(std::string const& serviceName) noexcept
 {
 	auto status = Status::Unknown;
 	if (auto const managerHandle = OpenSCManager(nullptr, nullptr, GENERIC_READ))
 	{
 		auto const managerGuard = HandleGuard{ managerHandle };
 
-		if (auto const serviceHandle = OpenService(managerHandle, TEXT("npf"), GENERIC_READ))
+		if (auto const serviceHandle = OpenService(managerHandle, serviceName.c_str(), GENERIC_READ))
 		{
 			auto const serviceGuard = HandleGuard{ serviceHandle };
 

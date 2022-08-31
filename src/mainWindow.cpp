@@ -406,11 +406,17 @@ void MainWindowImpl::checkNpfStatus()
 	std::call_once(once,
 		[this]()
 		{
-			auto const npfStatus = npf::getStatus();
+			// First check 'npf" (ie. WinPCap)
+			auto npfStatus = npf::getStatus("npf");
+			if (npfStatus == npf::Status::NotInstalled)
+			{
+				// Now check for "npcap", as contrary to what NPCap documentation says (https://npcap.com/guide/npcap-devguide.html), the "npf" service is *NOT* installed in WinPCap compatibility mode
+				npfStatus = npf::getStatus("npcap");
+			}
 			switch (npfStatus)
 			{
 				case npf::Status::NotInstalled:
-					QMessageBox::warning(_parent, "", "The WinPcap library is required for Hive to communicate with AVB Entities on the network.\nIt looks like you uninstalled it, or didn't choose to install it when running Hive installation.\n\nYou need to rerun the installer and follow the instructions to install WinPcap.");
+					QMessageBox::warning(_parent, "", "A Packet Capture library is required for Hive to communicate with AVB Entities on the network.\nIt looks like you uninstalled it, or didn't choose to install it when running Hive installation.\n\nYou need to rerun the installer and follow the instructions to install WinPcap.\nAlternatively you can manually install NPCap or WireShark.");
 					break;
 				case npf::Status::NotStarted:
 				{

@@ -21,6 +21,8 @@
 
 #ifdef _WIN32
 
+#include <string>
+
 namespace npf
 {
 enum class Status
@@ -32,7 +34,7 @@ enum class Status
 	StartedAutomatically = 4,
 };
 
-Status getStatus() noexcept;
+Status getStatus(std::string const& serviceName) noexcept;
 void startService() noexcept;
 void setServiceAutoStart() noexcept;
 
