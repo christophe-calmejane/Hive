@@ -168,15 +168,15 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 				brushColor = Blue;
 			}
 		}
-		else if (wrongFormatImpossible)
+		else if (wrongFormatImpossible && !connected)
 		{
-			brushColor = connected ? Yellow : Grey;
+			brushColor = Grey;
 		}
 		else if (wrongDomain)
 		{
 			brushColor = Red;
 		}
-		else if (wrongFormatPossible)
+		else if (wrongFormatPossible || wrongFormatImpossible)
 		{
 			brushColor = Yellow;
 		}
