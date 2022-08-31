@@ -250,7 +250,7 @@ void MainWindowImpl::currentControllerChanged()
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	// Check for No ProtocolInterface
-	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::None)
+	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::None || protocolType == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
 	{
 		QMessageBox::warning(_parent, "", "No Network Protocol selected.\nPlease choose one from the Settings.");
 		return;
