@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Option for Hive to advertise itself on the network so other Controllers (or entities) can detect it
 - Option for selecting a sub part of Hive's controller EID
 
+### Changed
+- Connection matrix _Redundant Intersection_ now indicates _Media Locked_ status if both streams are connected/bound but one has _Interface Down_ status
+
 ### Fixed
 - Crash when loading an entity with no CONFIGURATION descriptor
 - [Using _npcap_ when both _npcap_ and _winpcap_ are available](https://github.com/christophe-calmejane/Hive/issues/65)

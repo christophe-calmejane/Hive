@@ -1518,6 +1518,7 @@ public:
 
 					auto atLeastOneInterfaceDown = false;
 					auto atLeastOneConnected = false;
+					auto atLeastOneValidConnection = false; // Connected and no Format/Domain error
 					auto allConnected = true;
 					auto allCompatibleDomain = true;
 					auto allCompatibleFormat = true;
@@ -1537,7 +1538,8 @@ public:
 
 						auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
 						auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
-						atLeastOneInterfaceDown |= talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+						auto const isInterfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+						atLeastOneInterfaceDown |= isInterfaceDown;
 
 						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
 						auto const isConnectedToTalker = hive::modelsLibrary::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
@@ -1548,18 +1550,22 @@ public:
 						auto const connected = isConnectedToTalker || isFastConnectingToTalker;
 						atLeastOneConnected |= connected;
 						allConnected &= connected;
-						allLocked &= (isMediaLocked || !connected);
+						allLocked &= (isMediaLocked || !connected || isInterfaceDown); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
 						allNoLatencyError &= !isLatencyError;
 
-						allCompatibleDomain &= isSameDomain(*talkerStreamNode, *listenerStreamNode);
+						auto const isCompatibleDomain = isSameDomain(*talkerStreamNode, *listenerStreamNode);
+						allCompatibleDomain &= isCompatibleDomain;
 
 						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
 						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
 						differentMediaClockFormat |= la::avdecc::controller::Controller::isMediaClockStreamFormat(talkerStreamFormat) != la::avdecc::controller::Controller::isMediaClockStreamFormat(listenerStreamFormat);
-						allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+						auto const isCompatibleFormat = la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+						allCompatibleFormat &= isCompatibleFormat;
 						impossibleFormat |= !hasMatchingFormat(listenerStreamNode->streamFormats(), talkerStreamFormat);
 
 						intersectionData.smartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ { talkerStreamNode->entityID(), talkerStreamNode->streamIndex() }, { listenerStreamNode->entityID(), listenerStreamNode->streamIndex() }, isConnectedToTalker, isFastConnectingToTalker });
+
+						atLeastOneValidConnection |= (connected && isCompatibleDomain && isCompatibleFormat);
 					}
 
 					// Update flags
@@ -1589,7 +1595,7 @@ public:
 						}
 					}
 
-					if (allLocked && atLeastOneConnected)
+					if (allLocked && atLeastOneValidConnection)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
 					}
