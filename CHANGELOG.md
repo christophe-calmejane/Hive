@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Crash when loading an entity with no CONFIGURATION descriptor
 - [Using _npcap_ when both _npcap_ and _winpcap_ are available](https://github.com/christophe-calmejane/Hive/issues/65)
 - No ProtocolInterface selected in rare occasion
+- AudioCluster localized named not always used in CBR matrix
 
 ## [1.2.8] - 2022-04-26
 ### Added

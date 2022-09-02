@@ -3346,7 +3346,9 @@ public:
 			{
 				if (auto* channelNode = talkerChannelNode(entityID, audioClusterIndex))
 				{
-					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
+					auto const& clusterNode = controlledEntity->getAudioClusterNode(configurationIndex, channelNode->clusterIndex());
+					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), clusterNode);
+					auto const channelName = priv::clusterChannelName(clusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
 					// Only notify the view in CBR mode, ClusterName is not displayed in SBR mode
@@ -3358,7 +3360,9 @@ public:
 			{
 				if (auto* channelNode = listenerChannelNode(entityID, audioClusterIndex))
 				{
-					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
+					auto const& clusterNode = controlledEntity->getAudioClusterNode(configurationIndex, channelNode->clusterIndex());
+					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), clusterNode);
+					auto const channelName = priv::clusterChannelName(clusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
 					listenerHeaderDataChanged(channelNode, false, {});
