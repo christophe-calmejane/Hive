@@ -117,7 +117,7 @@ public:
 			NotConnected, /**< Stream is not connected */
 			Connected, /**< Stream is connected */
 			FastConnecting, /**< Stream is fast connecting */
-			PartiallyConnected, /**< Some but not all of a redundant stream are connected */
+			PartiallyConnected, /**< Some but not all streams are connected (either for Redundant Nodes, or for Summaries) */
 		};
 
 		enum class Flag

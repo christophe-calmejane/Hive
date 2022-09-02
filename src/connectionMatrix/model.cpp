@@ -999,6 +999,48 @@ public:
 	// Updates intersection data for the given dirtyFlags
 	void computeIntersectionData(Model::IntersectionData& intersectionData, IntersectionDirtyFlags const dirtyFlags)
 	{
+		// Helper lambdas
+		auto const setSummaryIntersectionDataFlags = [](auto const& nodeIntersectionData, auto& intersectionDataFlags)
+		{
+			AVDECC_ASSERT(nodeIntersectionData.state == Model::IntersectionData::State::Connected, "Must only be called for connected intersection");
+
+			// InterfaceDown if at least one connected stream is InterfaceDown
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::InterfaceDown);
+			}
+
+			// WrongDomain if at least one connected stream is WrongDomain
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::WrongDomain);
+			}
+
+			// WrongFormatType if at least one connected stream is WrongFormatType
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::WrongFormatType);
+			}
+
+			// WrongFormatImpossible if at least one connected stream is WrongFormatImpossible
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatImpossible))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+			}
+
+			// WrongFormatPossible if at least one connected stream is WrongFormatPossible
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+			}
+
+			// LatencyError if at least one is LatencyError
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::LatencyError);
+			}
+		};
+
 		try
 		{
 			auto const talkerType = intersectionData.talker->type();
@@ -1165,7 +1207,7 @@ public:
 					auto allConnectedListener = true;
 					auto allLockedListener = true;
 
-					auto const processIntersection = [&intersectionData](auto const& nodeIntersectionData, auto& atLeastOneConnectedNode, auto& allConnectedNode, auto& allLockedNode)
+					auto const processIntersection = [&intersectionData, &setSummaryIntersectionDataFlags](auto const& nodeIntersectionData, auto& atLeastOneConnectedNode, auto& allConnectedNode, auto& allLockedNode)
 					{
 						// Get connected state
 						auto const isConnected = nodeIntersectionData.state == Model::IntersectionData::State::Connected;
@@ -1177,32 +1219,13 @@ public:
 						// Summary on connected nodes only
 						if (isConnected)
 						{
-							// InterfaceDown if at least one connected node is InterfaceDown
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
-							}
-
-							// WrongDomain if at least one connected node is WrongDomain
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
-							}
-
-							// WrongFormatPossible if at least one connected node is WrongFormatPossible
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
-							}
-
-							// MediaLocked if all connected nodes are MediaLocked
+							// Compute summary intersection data flags based on currently processing intersection data
+							setSummaryIntersectionDataFlags(nodeIntersectionData, intersectionData.flags);
+						}
+						// Get MediaLocked Summary for connected and partially connected nodes
+						if (isConnected || isPartiallyConnected)
+						{
 							allLockedNode &= nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked);
-
-							// LatencyError if at least one is LatencyError
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::LatencyError);
-							}
 						}
 					};
 
@@ -1345,6 +1368,7 @@ public:
 					}
 
 					auto atLeastOneConnected = false;
+					auto atLeastOneValidConnection = false; // Connected and no Format/Domain error
 					auto allConnected = true;
 					auto allLocked = true;
 
@@ -1383,42 +1407,24 @@ public:
 						// Get connected state
 						auto const isConnected = nodeIntersectionData.state == Model::IntersectionData::State::Connected;
 						auto const isPartiallyConnected = nodeIntersectionData.state == Model::IntersectionData::State::PartiallyConnected;
-						atLeastOneConnected |= isConnected || isPartiallyConnected;
+						atLeastOneConnected |= isConnected;
 						// All streams are considered connected if all 'valid' streams are (thus exclusing connections that make no sense like wrong format type)
 						allConnected &= isConnected || (nodeIntersectionData.type == Model::IntersectionData::Type::None) || nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType);
 
-						// Most summaries are on connected streams (single or full connected redundant streams)
-						if (isConnected)
+						// Compute summary for "leaf" node
+						if (node->childrenCount() == 0 && isConnected)
 						{
-							// InterfaceDown if at least one connected stream is InterfaceDown
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
-							}
-
-							// WrongDomain if at least one connected stream is WrongDomain
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
-							}
-
-							// WrongFormatPossible if at least one connected stream is WrongFormatPossible
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
-							}
+							// Compute summary intersection data flags based on currently processing intersection data
+							setSummaryIntersectionDataFlags(nodeIntersectionData, intersectionData.flags);
 
 							// MediaLocked if all connected streams are MediaLocked
 							allLocked &= nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked);
 
-							// LatencyError if at least one is LatencyError
-							if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError))
-							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::LatencyError);
-							}
+							// Valid Connection if no Domain/Format error
+							atLeastOneValidConnection |= !nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain) && !nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible) && !nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatImpossible) && !nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType);
 						}
-						// We also want to check partially connected redundant streams
-						else if (isPartiallyConnected)
+						// We also want to check (partially) connected redundant streams
+						else if (isConnected || isPartiallyConnected)
 						{
 							// We have to process each child stream to get the connected one
 							for (auto const& redundantStreamNode : node->children())
@@ -1450,31 +1456,26 @@ public:
 								// Get connected state
 								auto const isRedundantConnected = redundantNodeIntersectionData.state == Model::IntersectionData::State::Connected;
 
+								atLeastOneConnected |= isRedundantConnected;
+
 								if (isRedundantConnected)
 								{
-									// WrongDomain if at least one connected stream is WrongDomain
-									if (redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain))
-									{
-										intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
-									}
+									// Compute summary intersection data flags based on currently processing intersection data
+									setSummaryIntersectionDataFlags(redundantNodeIntersectionData, intersectionData.flags);
 
-									// We don't care about WrongFormat as the StreamFormat has to be the same on primary and secondary
+									auto const isMediaLocked = redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked);
+									auto const isInterfaceDown = redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown);
+									allLocked &= (isMediaLocked || isInterfaceDown); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
 
-									// MediaLocked if all connected streams are MediaLocked
-									allLocked &= redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked);
-
-									// LatencyError if at least one is LatencyError
-									if (redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError))
-									{
-										intersectionData.flags.set(Model::IntersectionData::Flag::LatencyError);
-									}
+									// Valid Connection if no Domain/Format error
+									atLeastOneValidConnection |= !redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain) && !redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible) && !redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatImpossible) && !redundantNodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType);
 								}
 							}
 						}
 					}
 
 					// Update flags
-					if (allLocked && atLeastOneConnected)
+					if (allLocked && atLeastOneValidConnection)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
 					}
