@@ -840,11 +840,21 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& /*node*/) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
 	{
-		//createIdItem(&node);
-		//auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
-		//createNameItem(controlledEntity, isActiveConfiguration, node.clockDomainDescriptor, hive::modelsLibrary::ControllerManager::CommandType::None, {}); // SetName not supported yet
+		Q_Q(NodeTreeWidget);
+
+		createIdItem(&node);
+
+		// Name node
+		{
+			auto* nameItem = new QTreeWidgetItem(q);
+			nameItem->setText(0, "Name");
+
+			auto* localizedNameItem = new QTreeWidgetItem(nameItem);
+			localizedNameItem->setText(0, "Virtual Name");
+			localizedNameItem->setText(1, QString::fromStdString(node.virtualName));
+		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
@@ -897,6 +907,24 @@ public:
 		auto* descriptorIndexItem = new QTreeWidgetItem(idItem);
 		descriptorIndexItem->setText(0, "Descriptor Index");
 		descriptorIndexItem->setText(1, QString::number(node->descriptorIndex));
+
+		return idItem;
+	}
+
+	QTreeWidgetItem* createIdItem(la::avdecc::controller::model::VirtualNode const* node)
+	{
+		Q_Q(NodeTreeWidget);
+
+		auto* idItem = new QTreeWidgetItem(q);
+		idItem->setText(0, "Id");
+
+		auto* descriptorTypeItem = new QTreeWidgetItem(idItem);
+		descriptorTypeItem->setText(0, "Descriptor Type");
+		descriptorTypeItem->setText(1, avdecc::helper::descriptorTypeToString(node->descriptorType));
+
+		auto* descriptorIndexItem = new QTreeWidgetItem(idItem);
+		descriptorIndexItem->setText(0, "Virtual Index");
+		descriptorIndexItem->setText(1, QString::number(node->virtualIndex));
 
 		return idItem;
 	}
