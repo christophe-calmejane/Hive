@@ -53,12 +53,21 @@ StreamInputCountersTreeWidgetItem::StreamInputCountersTreeWidgetItem(la::avdecc:
 	};
 
 	// Create fields
-	for (auto const& nameKV : s_counterNames)
+	using CounterType = decltype(s_counterNames)::key_type;
+	for (auto bitPos = 0u; bitPos < (sizeof(std::underlying_type_t<CounterType>) * 8); ++bitPos)
 	{
-		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, nameKV.first, this };
-		widget->setText(0, nameKV.second);
+		auto const flag = static_cast<CounterType>(1u << bitPos);
+		auto* widget = new StreamInputCounterTreeWidgetItem{ _streamIndex, flag, this };
+		if (auto const nameIt = s_counterNames.find(flag); nameIt != s_counterNames.end())
+		{
+			widget->setText(0, nameIt->second);
+		}
+		else
+		{
+			widget->setText(0, QString{ "Unknown 0x%1" }.arg(1u << bitPos, 8, 16, QChar{ '0' }));
+		}
 		widget->setHidden(true); // Hide until we get a counter value (so we don't display counters not supported by the entity)
-		_counterWidgets[nameKV.first] = widget;
+		_counterWidgets[flag] = widget;
 	}
 
 	// Update counters right now
