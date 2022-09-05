@@ -1,6 +1,9 @@
 # Base our image from ubuntu impish
 FROM ubuntu:21.10
 
+# Update apt sources (impish has been moved to old-releases)
+RUN sed -i -r 's/([a-z]{2}.)?archive.ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list && sed -i -r 's/security.ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
+
 # Install required packages
 RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y install \
