@@ -551,9 +551,27 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	auto const elidedText = painter->fontMetrics().elidedText(node->name(), Qt::ElideMiddle, textRect.width());
 
-	if (node->isStreamNode() && !static_cast<StreamNode*>(node)->isRunning())
+	if (node->isEntityNode())
 	{
-		painter->setPen(foregroundErrorColor);
+		if (!static_cast<EntityNode*>(node)->isRegisteredUnsol())
+		{
+			painter->setPen(foregroundErrorColor);
+		}
+		else
+		{
+			painter->setPen(foregroundColor);
+		}
+	}
+	else if (node->isStreamNode())
+	{
+		if (!static_cast<StreamNode*>(node)->isRunning())
+		{
+			painter->setPen(foregroundErrorColor);
+		}
+		else
+		{
+			painter->setPen(foregroundColor);
+		}
 	}
 	else
 	{

@@ -225,9 +225,9 @@ OfflineOutputStreamNode::OfflineOutputStreamNode() noexcept
 /* ************************************************************ */
 /* EntityNode                                                   */
 /* ************************************************************ */
-EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept
+EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept
 {
-	return new EntityNode{ entityID, isMilan };
+	return new EntityNode{ entityID, isMilan, isRegisteredUnsol };
 }
 
 void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const noexcept
@@ -246,10 +246,16 @@ void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbIn
 		});
 }
 
-EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept
+EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept
 	: Node{ Type::Entity, entityID, nullptr }
 	, _isMilan{ isMilan }
+	, _isRegisteredUnsol{ isRegisteredUnsol }
 {
+}
+
+void EntityNode::setRegisteredUnsol(bool const isRegisteredUnsol) noexcept
+{
+	_isRegisteredUnsol = isRegisteredUnsol;
 }
 
 void EntityNode::setStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept
@@ -275,6 +281,11 @@ void EntityNode::setOutputAudioMappings(la::avdecc::entity::model::StreamPortInd
 bool EntityNode::isMilan() const noexcept
 {
 	return _isMilan;
+}
+
+bool EntityNode::isRegisteredUnsol() const noexcept
+{
+	return _isRegisteredUnsol;
 }
 
 la::avdecc::entity::model::ClusterIndex EntityNode::getStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const

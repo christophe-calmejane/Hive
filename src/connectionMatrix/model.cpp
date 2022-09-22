@@ -470,6 +470,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, this, &ModelPrivate::handleUnsolicitedRegistrationChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ModelPrivate::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
@@ -2156,7 +2157,8 @@ public:
 			auto const configurationIndex = configurationNode.descriptorIndex;
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
-			auto* entity = EntityNode::create(entityID, isMilan);
+			auto const isRegisteredUnsol = controlledEntity.isSubscribedToUnsolicitedNotifications();
+			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol);
 			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamOutputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamOutputNode, auto const& avbInterfaceNode)
@@ -2292,7 +2294,8 @@ public:
 			auto const configurationIndex = configurationNode.descriptorIndex;
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
-			auto* entity = EntityNode::create(entityID, isMilan);
+			auto const isRegisteredUnsol = controlledEntity.isSubscribedToUnsolicitedNotifications();
+			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol);
 			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamInputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamInputNode, auto const& avbInterfaceNode)
@@ -2749,6 +2752,24 @@ public:
 		if (_mode == Model::Mode::Stream)
 		{
 			talkerIntersectionDataChanged(_offlineOutputStreamNode.get(), false, true, allIntersectionDirtyFlags());
+		}
+	}
+
+	void handleUnsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed)
+	{
+		if (auto* node = talkerNodeFromEntityID(entityID))
+		{
+			node->setRegisteredUnsol(isSubscribed);
+
+			// Always notify the view, EntityName is displayed in CBR and SBR modes
+			talkerHeaderDataChanged(node, true, false, {});
+		}
+		if (auto* node = listenerNodeFromEntityID(entityID))
+		{
+			node->setRegisteredUnsol(isSubscribed);
+
+			// Always notify the view, EntityName is displayed in CBR and SBR modes
+			listenerHeaderDataChanged(node, true, false, {});
 		}
 	}
 

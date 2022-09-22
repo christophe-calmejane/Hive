@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Option for Hive to advertise itself on the network so other Controllers (or entities) can detect it
 - Option for selecting a sub part of Hive's controller EID
 - [Display of _unknown_ diagnostics counters](https://github.com/christophe-calmejane/Hive/issues/131)
+- Connection matrix displays entities to which Hive is not registered for unsolicited notifications (red label)
 
 ### Changed
 - Connection matrix _Redundant Intersection_ now indicates _Media Locked_ status if both streams are connected/bound but one has _Interface Down_ status
