@@ -1029,7 +1029,7 @@ private:
 										else
 										{
 											auto streamIndex = relevantRedundantStreamIndexes.find(mapping.streamIndex);
-											if (streamIndex != relevantRedundantStreamIndexes.end())
+											if (streamIndex != relevantRedundantStreamIndexes.end() && connectionInformation->sourceVirtualIndex)
 											{
 												// if we land in here the primary is not connected, but a secundary is.
 												primaryTalkerStreamIndex = streamIndex->second;
