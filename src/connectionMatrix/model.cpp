@@ -4158,6 +4158,12 @@ Model::Mode Model::mode() const
 	return d->_mode;
 }
 
+QModelIndex Model::getIntersectionIndex(int const talkerSection, int const listenerSection) const noexcept
+{
+	Q_D(const Model);
+	return d->createIndex(talkerSection, listenerSection);
+}
+
 QModelIndex Model::indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept
 {
 	Q_D(const Model);

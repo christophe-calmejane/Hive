@@ -177,6 +177,9 @@ public:
 	// Returns the mode of the model
 	Mode mode() const;
 
+	// Returns intersection model index for talkerSection and listenerSection (automatically transposed if required)
+	QModelIndex getIntersectionIndex(int const talkerSection, int const listenerSection) const noexcept;
+
 	// Returns ModelIndex for given entityID
 	QModelIndex indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
 
