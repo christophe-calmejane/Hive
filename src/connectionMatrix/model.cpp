@@ -1518,8 +1518,8 @@ public:
 					// Build the list of smart connectable streams:
 					intersectionData.smartConnectableStreams.clear();
 
-					// Struct to save each redundant stream info so we can process once all retrieved
-					struct RedundantInfo
+					// Struct to save each interfaction info so we can process once all retrieved
+					struct IntersectionInfo
 					{
 						bool isConnected{ false };
 						bool isMediaLocked{ false };
@@ -1531,7 +1531,7 @@ public:
 						bool isDifferentMediaClockFormat{ false };
 						Model::IntersectionData::Flags flags{};
 					};
-					auto streamsInfo = std::vector<RedundantInfo>{};
+					auto intersectionsInfo = std::vector<IntersectionInfo>{};
 
 					for (auto i = 0; i < talker->childrenCount(); ++i)
 					{
@@ -1539,7 +1539,7 @@ public:
 						auto const* const talkerStreamNode = static_cast<StreamNode*>(talker->childAt(i));
 						auto const* const listenerStreamNode = static_cast<StreamNode*>(listener->childAt(i));
 
-						auto info = RedundantInfo{};
+						auto info = IntersectionInfo{};
 
 						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
 						auto const isConnectedToTalker = hive::modelsLibrary::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
@@ -1562,7 +1562,7 @@ public:
 
 						intersectionData.smartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ { talkerStreamNode->entityID(), talkerStreamNode->streamIndex() }, { listenerStreamNode->entityID(), listenerStreamNode->streamIndex() }, isConnectedToTalker, isFastConnectingToTalker });
 
-						streamsInfo.emplace_back(std::move(info));
+						intersectionsInfo.emplace_back(std::move(info));
 					}
 
 					// Set any non InterfaceDown error and compute some summaries
@@ -1574,7 +1574,7 @@ public:
 					auto allInterfaceDownAreConnected = true;
 					auto atLeastOneNonInterfaceDownConnected = false;
 					auto atLeastOneNonInterfaceDownConnectedInvalid = false; // Connected and has Format/Domain error
-					for (auto const& info : streamsInfo)
+					for (auto const& info : intersectionsInfo)
 					{
 						if (!info.isInterfaceDown)
 						{
