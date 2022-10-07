@@ -66,7 +66,7 @@ private:
 	QWidget _centerContainer{ this };
 	qtMate::widgets::AutoSizeLabel _title{ &_centerContainer };
 	QVBoxLayout _centerContainerLayout{ &_centerContainer };
-	QPushButton _legendButton{ "Show Legend", &_centerContainer };
+	QPushButton _legendButton{ "Color Code Help", &_centerContainer };
 	QLineEdit _searchLineEdit{ &_centerContainer };
 	qtMate::widgets::FlatIconButton _removeAllConnectionsButton{ "Hive", "remove_connections", &_centerContainer };
 
