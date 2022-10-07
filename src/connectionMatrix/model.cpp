@@ -1308,7 +1308,7 @@ public:
 					}
 
 					// Update flags
-					if (allLockedTalker && allLockedListener && atLeastOneConnectedTalker && atLeastOneConnectedListener)
+					if (allLockedTalker && allLockedListener && (atLeastOneConnectedTalker || atLeastOnePartiallyConnectedTalker) && (atLeastOneConnectedListener || atLeastOnePartiallyConnectedListener))
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
 					}

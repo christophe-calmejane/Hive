@@ -16,25 +16,25 @@
                         "AEM_IDENTIFY_CONTROL_INDEX_VALID",
                         "AEM_INTERFACE_INDEX_VALID"
                     ],
-                    "entity_id": "0x001B92FFFF0222BF",
-                    "entity_model_id": "0x001B9200030A0001",
+                    "entity_id": "0x001B92FFFE0222BF",
+                    "entity_model_id": "0x001B9200030A0000",
                     "identify_control_index": 0,
                     "listener_capabilities": [
                         "IMPLEMENTED",
                         "MEDIA_CLOCK_SINK",
                         "AUDIO_SINK"
                     ],
-                    "listener_stream_sinks": 4,
+                    "listener_stream_sinks": 3,
                     "talker_capabilities": [
                         "IMPLEMENTED",
                         "MEDIA_CLOCK_SOURCE",
                         "AUDIO_SOURCE"
                     ],
-                    "talker_stream_sources": 4
+                    "talker_stream_sources": 3
                 },
                 "interfaces": [
                     {
-                        "available_index": 70,
+                        "available_index": 1022,
                         "avb_interface_index": 0,
                         "gptp_domain_number": 0,
                         "gptp_grandmaster_id": "0x001B92FFFE01BA04",
@@ -242,21 +242,9 @@
                                                     },
                                                     {
                                                         "cluster_channel": 0,
-                                                        "cluster_offset": 0,
-                                                        "stream_channel": 0,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
                                                         "cluster_offset": 1,
                                                         "stream_channel": 1,
                                                         "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 1,
-                                                        "stream_channel": 1,
-                                                        "stream_index": 2
                                                     },
                                                     {
                                                         "cluster_channel": 0,
@@ -266,21 +254,9 @@
                                                     },
                                                     {
                                                         "cluster_channel": 0,
-                                                        "cluster_offset": 2,
-                                                        "stream_channel": 2,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
                                                         "cluster_offset": 3,
                                                         "stream_channel": 3,
                                                         "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 3,
-                                                        "stream_channel": 3,
-                                                        "stream_index": 2
                                                     },
                                                     {
                                                         "cluster_channel": 0,
@@ -290,21 +266,9 @@
                                                     },
                                                     {
                                                         "cluster_channel": 0,
-                                                        "cluster_offset": 4,
-                                                        "stream_channel": 4,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
                                                         "cluster_offset": 5,
                                                         "stream_channel": 5,
                                                         "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 5,
-                                                        "stream_channel": 5,
-                                                        "stream_index": 2
                                                     },
                                                     {
                                                         "cluster_channel": 0,
@@ -314,21 +278,9 @@
                                                     },
                                                     {
                                                         "cluster_channel": 0,
-                                                        "cluster_offset": 6,
-                                                        "stream_channel": 6,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
                                                         "cluster_offset": 7,
                                                         "stream_channel": 7,
                                                         "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 7,
-                                                        "stream_channel": 7,
-                                                        "stream_index": 2
                                                     }
                                                 ]
                                             },
@@ -506,96 +458,6 @@
                                                         "cluster_offset": 0,
                                                         "stream_channel": 0,
                                                         "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 0,
-                                                        "stream_channel": 0,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 1,
-                                                        "stream_channel": 1,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 1,
-                                                        "stream_channel": 1,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 2,
-                                                        "stream_channel": 2,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 2,
-                                                        "stream_channel": 2,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 3,
-                                                        "stream_channel": 3,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 3,
-                                                        "stream_channel": 3,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 4,
-                                                        "stream_channel": 4,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 4,
-                                                        "stream_channel": 4,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 5,
-                                                        "stream_channel": 5,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 5,
-                                                        "stream_channel": 5,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 6,
-                                                        "stream_channel": 6,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 6,
-                                                        "stream_channel": 6,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 7,
-                                                        "stream_channel": 7,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 7,
-                                                        "stream_channel": 7,
-                                                        "stream_index": 2
                                                     }
                                                 ]
                                             },
@@ -616,6 +478,7 @@
                                     "dynamic": {
                                         "as_path": [
                                             "0x001B92FFFE01BA04",
+                                            "0x001B92FFFE0222C1",
                                             "0x001B92FFFE0222BF"
                                         ],
                                         "avb_interface_info": {
@@ -631,7 +494,7 @@
                                                     "vlan_id": 2
                                                 }
                                             ],
-                                            "propagation_delay": 9
+                                            "propagation_delay": 0
                                         },
                                         "counters": {
                                             "GPTP_GM_CHANGED": 1,
@@ -645,7 +508,7 @@
                                     "static": {
                                         "clock_accuracy": 34,
                                         "clock_class": 248,
-                                        "clock_identity": "0x001B92FFFE0222BF",
+                                        "clock_identity": "0x001B92FFFE0222C1",
                                         "domain_number": 0,
                                         "flags": [
                                             "GPTP_GRANDMASTER_SUPPORTED",
@@ -653,66 +516,13 @@
                                             "SRP_SUPPORTED"
                                         ],
                                         "localized_description": {
-                                            "index": 0,
-                                            "offset": 4
+                                            "index": 5,
+                                            "offset": 3
                                         },
                                         "log_announce_interval": 0,
                                         "log_pdelay_interval": 0,
                                         "log_sync_interval": 253,
                                         "mac_address": "00:1B:92:02:22:BF",
-                                        "offset_scaled_log_variance": 17258,
-                                        "port_number": 1,
-                                        "priority1": 248,
-                                        "priority2": 248
-                                    }
-                                },
-                                {
-                                    "_index (informative)": 1,
-                                    "dynamic": {
-                                        "as_path": [
-                                            "0x001B92FFFE0222C0"
-                                        ],
-                                        "avb_interface_info": {
-                                            "flags": [
-                                                "GPTP_ENABLED",
-                                                "SRP_ENABLED"
-                                            ],
-                                            "msrp_mappings": [
-                                                {
-                                                    "priority": 3,
-                                                    "traffic_class": 6,
-                                                    "vlan_id": 2
-                                                }
-                                            ],
-                                            "propagation_delay": 0
-                                        },
-                                        "counters": {
-                                            "GPTP_GM_CHANGED": 0,
-                                            "LINK_DOWN": 0,
-                                            "LINK_UP": 0
-                                        },
-                                        "gptp_domain_number": 0,
-                                        "gptp_grandmaster_id": "0x001B92FFFE0222C0",
-                                        "object_name": ""
-                                    },
-                                    "static": {
-                                        "clock_accuracy": 34,
-                                        "clock_class": 248,
-                                        "clock_identity": "0x001B92FFFE0222C0",
-                                        "domain_number": 0,
-                                        "flags": [
-                                            "GPTP_GRANDMASTER_SUPPORTED",
-                                            "GPTP_SUPPORTED",
-                                            "SRP_SUPPORTED"
-                                        ],
-                                        "localized_description": {
-                                            "index": 1,
-                                            "offset": 4
-                                        },
-                                        "log_announce_interval": 0,
-                                        "log_pdelay_interval": 0,
-                                        "log_sync_interval": 253,
-                                        "mac_address": "00:1B:92:02:22:C0",
                                         "offset_scaled_log_variance": 17258,
                                         "port_number": 1,
                                         "priority1": 248,
@@ -724,10 +534,10 @@
                                 {
                                     "_index (informative)": 0,
                                     "dynamic": {
-                                        "clock_source_index": 2,
+                                        "clock_source_index": 0,
                                         "counters": {
                                             "LOCKED": 2,
-                                            "UNLOCKED": 2
+                                            "UNLOCKED": 1
                                         },
                                         "object_name": ""
                                     },
@@ -736,11 +546,10 @@
                                             0,
                                             1,
                                             2,
-                                            3,
-                                            4
+                                            3
                                         ],
                                         "localized_description": {
-                                            "index": 4,
+                                            "index": 0,
                                             "offset": 5
                                         }
                                     }
@@ -759,7 +568,7 @@
                                         "clock_source_location_type": "AUDIO_UNIT",
                                         "clock_source_type": "INTERNAL",
                                         "localized_description": {
-                                            "index": 5,
+                                            "index": 2,
                                             "offset": 4
                                         }
                                     }
@@ -778,8 +587,8 @@
                                         "clock_source_location_type": "STREAM_INPUT",
                                         "clock_source_type": "INPUT_STREAM",
                                         "localized_description": {
-                                            "index": 0,
-                                            "offset": 5
+                                            "index": 4,
+                                            "offset": 4
                                         }
                                     }
                                 },
@@ -797,8 +606,8 @@
                                         "clock_source_location_type": "STREAM_INPUT",
                                         "clock_source_type": "INPUT_STREAM",
                                         "localized_description": {
-                                            "index": 1,
-                                            "offset": 5
+                                            "index": 5,
+                                            "offset": 4
                                         }
                                     }
                                 },
@@ -816,27 +625,8 @@
                                         "clock_source_location_type": "STREAM_INPUT",
                                         "clock_source_type": "INPUT_STREAM",
                                         "localized_description": {
-                                            "index": 0,
-                                            "offset": 5
-                                        }
-                                    }
-                                },
-                                {
-                                    "_index (informative)": 4,
-                                    "dynamic": {
-                                        "clock_source_flags": [
-                                            "LOCAL_ID"
-                                        ],
-                                        "clock_source_identifier": "0x0000000000000000",
-                                        "object_name": ""
-                                    },
-                                    "static": {
-                                        "clock_source_location_index": 3,
-                                        "clock_source_location_type": "STREAM_INPUT",
-                                        "clock_source_type": "INPUT_STREAM",
-                                        "localized_description": {
-                                            "index": 1,
-                                            "offset": 5
+                                            "index": 6,
+                                            "offset": 4
                                         }
                                     }
                                 }
@@ -864,8 +654,8 @@
                                             "value_type": "CONTROL_LINEAR_UINT8"
                                         },
                                         "localized_description": {
-                                            "index": 2,
-                                            "offset": 4
+                                            "index": 6,
+                                            "offset": 3
                                         },
                                         "reset_time": 0,
                                         "signal_index": 0,
@@ -939,7 +729,7 @@
                                                     "AVB 6",
                                                     "AVB 7",
                                                     "AVB 8",
-                                                    "Audio Primary Input Stream"
+                                                    "Audio Input Stream 1"
                                                 ]
                                             }
                                         },
@@ -947,13 +737,13 @@
                                             "_index (informative)": 3,
                                             "static": {
                                                 "strings": [
-                                                    "Media Clock Primary Input Stream",
-                                                    "Audio Secondary Input Stream",
-                                                    "Media Clock Secondary Input Stream",
-                                                    "Audio Primary Output Stream",
-                                                    "Media Clock Primary Output Stream",
-                                                    "Audio Secondary Output Stream",
-                                                    "Media Clock Secondary Output Stream"
+                                                    "Audio Input Stream 2",
+                                                    "Media Clock Input Stream",
+                                                    "Audio Output Stream 1",
+                                                    "Audio Output Stream 2",
+                                                    "Media Clock Output Stream",
+                                                    "AVB Interface",
+                                                    "Identification"
                                                 ]
                                             }
                                         },
@@ -961,13 +751,13 @@
                                             "_index (informative)": 4,
                                             "static": {
                                                 "strings": [
-                                                    "Primary AVB Interface",
-                                                    "Secondary AVB Interface",
-                                                    "Identification",
                                                     "Manufacturer logo",
                                                     "Entity logo",
                                                     "Internal 1",
-                                                    "Internal 2"
+                                                    "Internal 2",
+                                                    "AVB Audio Input Stream 1",
+                                                    "AVB Audio Input Stream 2",
+                                                    "AVB Media Clock Input Stream"
                                                 ]
                                             }
                                         },
@@ -975,11 +765,11 @@
                                             "_index (informative)": 5,
                                             "static": {
                                                 "strings": [
-                                                    "AVB Audio Input Stream",
-                                                    "AVB Media Clock Input Stream",
-                                                    "AVB Audio Input Stream",
-                                                    "AVB Media Clock Input Stream",
                                                     "Clock Domain",
+                                                    "",
+                                                    "",
+                                                    "",
+                                                    "",
                                                     "",
                                                     ""
                                                 ]
@@ -1005,7 +795,7 @@
                                     },
                                     "static": {
                                         "localized_description": {
-                                            "index": 3,
+                                            "index": 0,
                                             "offset": 4
                                         },
                                         "maximum_length": 26700,
@@ -1023,7 +813,7 @@
                                     },
                                     "static": {
                                         "localized_description": {
-                                            "index": 4,
+                                            "index": 1,
                                             "offset": 4
                                         },
                                         "maximum_length": 10630,
@@ -1045,13 +835,13 @@
                                     "_index (informative)": 0,
                                     "dynamic": {
                                         "connected_talker": {
-                                            "entity_id": "0x001B92FFFF02233B",
-                                            "stream_index": 0
+                                            "entity_id": "0xFFFFFFFFFFFFFFFF",
+                                            "stream_index": 65535
                                         },
-                                        "connection_state": "CONNECTED",
+                                        "connection_state": "NOT_CONNECTED",
                                         "counters": {
                                             "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 58578,
+                                            "FRAMES_RX": 66057,
                                             "LATE_TIMESTAMP": 0,
                                             "MEDIA_LOCKED": 0,
                                             "MEDIA_RESET": 0,
@@ -1060,38 +850,29 @@
                                             "STREAM_INTERRUPTED": 0,
                                             "TIMESTAMP_NOT_VALID": 0,
                                             "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 0,
-                                            "UNSUPPORTED_FORMAT": 58578
+                                            "TIMESTAMP_VALID": 66057,
+                                            "UNSUPPORTED_FORMAT": 0
                                         },
                                         "object_name": "",
                                         "stream_dynamic_info": {
                                             "acmp_status": "SUCCESS",
                                             "are_pdus_encrypted": false,
                                             "does_support_encrypted": false,
-                                            "flags_ex": [
-                                                "REGISTERING"
-                                            ],
-                                            "has_saved_state": true,
+                                            "flags_ex": null,
+                                            "has_saved_state": false,
                                             "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
-                                                "FAST_CONNECT",
-                                                "SAVED_STATE",
-                                                "STREAM_VLAN_ID_VALID",
-                                                "CONNECTED",
-                                                "STREAM_DEST_MAC_VALID",
                                                 "MSRP_ACC_LAT_VALID",
-                                                "STREAM_ID_VALID",
                                                 "STREAM_FORMAT_VALID"
                                             ],
-                                            "msrp_accumulated_latency": 763772,
+                                            "msrp_accumulated_latency": 0,
                                             "msrp_failure_code": null,
-                                            "probing_status": 3,
-                                            "stream_dest_mac": "91:E0:F0:00:E4:FB",
-                                            "stream_id": "0x001B9202233B0000",
-                                            "stream_vlan_id": 2
+                                            "probing_status": 0,
+                                            "stream_id": null,
+                                            "stream_vlan_id": null
                                         },
-                                        "stream_format": "0x0205022002006000",
+                                        "stream_format": "0x020702200200C000",
                                         "stream_running": true
                                     },
                                     "static": {
@@ -1136,9 +917,6 @@
                                             "index": 6,
                                             "offset": 2
                                         },
-                                        "redundant_streams": [
-                                            2
-                                        ],
                                         "stream_flags": [
                                             "CLOCK_SYNC_SOURCE",
                                             "CLASS_A"
@@ -1149,22 +927,117 @@
                                     "_index (informative)": 1,
                                     "dynamic": {
                                         "connected_talker": {
+                                            "entity_id": "0x001B92FFFF02233B",
+                                            "stream_index": 2
+                                        },
+                                        "connection_state": "CONNECTED",
+                                        "counters": {
+                                            "EARLY_TIMESTAMP": 0,
+                                            "FRAMES_RX": 0,
+                                            "LATE_TIMESTAMP": 0,
+                                            "MEDIA_LOCKED": 0,
+                                            "MEDIA_RESET": 0,
+                                            "MEDIA_UNLOCKED": 0,
+                                            "SEQ_NUM_MISMATCH": 0,
+                                            "STREAM_INTERRUPTED": 0,
+                                            "TIMESTAMP_NOT_VALID": 0,
+                                            "TIMESTAMP_UNCERTAIN": 0,
+                                            "TIMESTAMP_VALID": 0,
+                                            "UNSUPPORTED_FORMAT": 0
+                                        },
+                                        "object_name": "",
+                                        "stream_dynamic_info": {
+                                            "acmp_status": "LISTENER_TALKER_TIMEOUT",
+                                            "are_pdus_encrypted": false,
+                                            "does_support_encrypted": false,
+                                            "flags_ex": null,
+                                            "has_saved_state": true,
+                                            "has_talker_failed": false,
+                                            "is_class_b": false,
+                                            "last_received_flags": [
+                                                "FAST_CONNECT",
+                                                "SAVED_STATE",
+                                                "CONNECTED",
+                                                "MSRP_ACC_LAT_VALID",
+                                                "STREAM_FORMAT_VALID"
+                                            ],
+                                            "msrp_accumulated_latency": 0,
+                                            "msrp_failure_code": null,
+                                            "probing_status": 2,
+                                            "stream_id": null,
+                                            "stream_vlan_id": null
+                                        },
+                                        "stream_format": "0x020702200200C000",
+                                        "stream_running": true
+                                    },
+                                    "static": {
+                                        "avb_interface_index": 0,
+                                        "backedup_talker_entity_id": "0x0000000000000000",
+                                        "backedup_talker_unique": 0,
+                                        "backup_talker_entity_id_0": "0x0000000000000000",
+                                        "backup_talker_entity_id_1": "0x0000000000000000",
+                                        "backup_talker_entity_id_2": "0x0000000000000000",
+                                        "backup_talker_unique_id_0": 0,
+                                        "backup_talker_unique_id_1": 0,
+                                        "backup_talker_unique_id_2": 0,
+                                        "buffer_length": 2166000,
+                                        "clock_domain_index": 0,
+                                        "formats": [
+                                            "0x00A0020140000100",
+                                            "0x00A0020240000200",
+                                            "0x00A0020440000400",
+                                            "0x00A0020640000600",
+                                            "0x00A0020840000800",
+                                            "0x00A0020860000800",
+                                            "0x00A0040140000100",
+                                            "0x00A0040240000200",
+                                            "0x00A0040440000400",
+                                            "0x00A0040640000600",
+                                            "0x00A0040840000800",
+                                            "0x00A0040860000800",
+                                            "0x0205022000406000",
+                                            "0x0205022000806000",
+                                            "0x0205022001006000",
+                                            "0x0205022001806000",
+                                            "0x0205022002006000",
+                                            "0x020702200040C000",
+                                            "0x020702200080C000",
+                                            "0x020702200100C000",
+                                            "0x020702200180C000",
+                                            "0x020702200200C000",
+                                            "0x0215022002006000",
+                                            "0x021702200200C000"
+                                        ],
+                                        "localized_description": {
+                                            "index": 0,
+                                            "offset": 3
+                                        },
+                                        "stream_flags": [
+                                            "CLOCK_SYNC_SOURCE",
+                                            "CLASS_A"
+                                        ]
+                                    }
+                                },
+                                {
+                                    "_index (informative)": 2,
+                                    "dynamic": {
+                                        "connected_talker": {
                                             "entity_id": "0xFFFFFFFFFFFFFFFF",
                                             "stream_index": 65535
                                         },
                                         "connection_state": "NOT_CONNECTED",
                                         "counters": {
                                             "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 33358,
+                                            "FRAMES_RX": 0,
                                             "LATE_TIMESTAMP": 0,
-                                            "MEDIA_LOCKED": 1,
+                                            "MEDIA_LOCKED": 0,
                                             "MEDIA_RESET": 0,
-                                            "MEDIA_UNLOCKED": 1,
+                                            "MEDIA_UNLOCKED": 0,
                                             "SEQ_NUM_MISMATCH": 0,
                                             "STREAM_INTERRUPTED": 0,
                                             "TIMESTAMP_NOT_VALID": 0,
                                             "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 33358,
+                                            "TIMESTAMP_VALID": 0,
                                             "UNSUPPORTED_FORMAT": 0
                                         },
                                         "object_name": "",
@@ -1205,39 +1078,28 @@
                                             "0x041060010000BB80"
                                         ],
                                         "localized_description": {
-                                            "index": 0,
+                                            "index": 1,
                                             "offset": 3
                                         },
-                                        "redundant_streams": [
-                                            3
-                                        ],
                                         "stream_flags": [
                                             "CLOCK_SYNC_SOURCE",
                                             "CLASS_A"
                                         ]
                                     }
-                                },
+                                }
+                            ],
+                            "stream_output_descriptors": [
                                 {
-                                    "_index (informative)": 2,
+                                    "_index (informative)": 0,
                                     "dynamic": {
-                                        "connected_talker": {
-                                            "entity_id": "0x001B92FFFF02233B",
-                                            "stream_index": 2
-                                        },
-                                        "connection_state": "CONNECTED",
                                         "counters": {
-                                            "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 0,
-                                            "LATE_TIMESTAMP": 0,
-                                            "MEDIA_LOCKED": 0,
+                                            "0x00000020": 8449,
+                                            "0x00000040": 0,
+                                            "FRAMES_TX": 8449,
                                             "MEDIA_RESET": 0,
-                                            "MEDIA_UNLOCKED": 0,
-                                            "SEQ_NUM_MISMATCH": 0,
-                                            "STREAM_INTERRUPTED": 0,
-                                            "TIMESTAMP_NOT_VALID": 0,
-                                            "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 0,
-                                            "UNSUPPORTED_FORMAT": 0
+                                            "STREAM_START": 5,
+                                            "STREAM_STOP": 5,
+                                            "TIMESTAMP_UNCERTAIN": 0
                                         },
                                         "object_name": "",
                                         "stream_dynamic_info": {
@@ -1245,27 +1107,25 @@
                                             "are_pdus_encrypted": false,
                                             "does_support_encrypted": false,
                                             "flags_ex": null,
-                                            "has_saved_state": true,
+                                            "has_saved_state": false,
                                             "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
-                                                "FAST_CONNECT",
-                                                "SAVED_STATE",
-                                                "CONNECTED",
                                                 "MSRP_ACC_LAT_VALID",
+                                                "STREAM_ID_VALID",
                                                 "STREAM_FORMAT_VALID"
                                             ],
-                                            "msrp_accumulated_latency": 0,
+                                            "msrp_accumulated_latency": 2000000,
                                             "msrp_failure_code": null,
-                                            "probing_status": 1,
-                                            "stream_id": null,
+                                            "probing_status": 0,
+                                            "stream_id": "0x001B920222BF0000",
                                             "stream_vlan_id": null
                                         },
-                                        "stream_format": "0x0205022002006000",
+                                        "stream_format": "0x0207022001C0C000",
                                         "stream_running": true
                                     },
                                     "static": {
-                                        "avb_interface_index": 1,
+                                        "avb_interface_index": 0,
                                         "backedup_talker_entity_id": "0x0000000000000000",
                                         "backedup_talker_unique": 0,
                                         "backup_talker_entity_id_0": "0x0000000000000000",
@@ -1274,21 +1134,21 @@
                                         "backup_talker_unique_id_0": 0,
                                         "backup_talker_unique_id_1": 0,
                                         "backup_talker_unique_id_2": 0,
-                                        "buffer_length": 2166000,
+                                        "buffer_length": 0,
                                         "clock_domain_index": 0,
                                         "formats": [
-                                            "0x00A0020140000100",
-                                            "0x00A0020240000200",
-                                            "0x00A0020440000400",
-                                            "0x00A0020640000600",
-                                            "0x00A0020840000800",
-                                            "0x00A0020860000800",
-                                            "0x00A0040140000100",
-                                            "0x00A0040240000200",
-                                            "0x00A0040440000400",
-                                            "0x00A0040640000600",
-                                            "0x00A0040840000800",
-                                            "0x00A0040860000800",
+                                            "0x00A0020150000100",
+                                            "0x00A0020250000200",
+                                            "0x00A0020450000400",
+                                            "0x00A0020650000600",
+                                            "0x00A0020850000800",
+                                            "0x00A0020870000800",
+                                            "0x00A0040150000100",
+                                            "0x00A0040250000200",
+                                            "0x00A0040450000400",
+                                            "0x00A0040650000600",
+                                            "0x00A0040850000800",
+                                            "0x00A0040870000800",
                                             "0x0205022000406000",
                                             "0x0205022000806000",
                                             "0x0205022001006000",
@@ -1303,94 +1163,16 @@
                                             "0x021702200200C000"
                                         ],
                                         "localized_description": {
-                                            "index": 1,
+                                            "index": 2,
                                             "offset": 3
                                         },
-                                        "redundant_streams": [
-                                            0
-                                        ],
                                         "stream_flags": [
-                                            "CLOCK_SYNC_SOURCE",
                                             "CLASS_A"
                                         ]
                                     }
                                 },
                                 {
-                                    "_index (informative)": 3,
-                                    "dynamic": {
-                                        "connected_talker": {
-                                            "entity_id": "0xFFFFFFFFFFFFFFFF",
-                                            "stream_index": 65535
-                                        },
-                                        "connection_state": "NOT_CONNECTED",
-                                        "counters": {
-                                            "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 0,
-                                            "LATE_TIMESTAMP": 0,
-                                            "MEDIA_LOCKED": 0,
-                                            "MEDIA_RESET": 0,
-                                            "MEDIA_UNLOCKED": 0,
-                                            "SEQ_NUM_MISMATCH": 0,
-                                            "STREAM_INTERRUPTED": 0,
-                                            "TIMESTAMP_NOT_VALID": 0,
-                                            "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 0,
-                                            "UNSUPPORTED_FORMAT": 0
-                                        },
-                                        "object_name": "",
-                                        "stream_dynamic_info": {
-                                            "acmp_status": "SUCCESS",
-                                            "are_pdus_encrypted": false,
-                                            "does_support_encrypted": false,
-                                            "flags_ex": null,
-                                            "has_saved_state": false,
-                                            "has_talker_failed": false,
-                                            "is_class_b": false,
-                                            "last_received_flags": [
-                                                "MSRP_ACC_LAT_VALID",
-                                                "STREAM_FORMAT_VALID"
-                                            ],
-                                            "msrp_accumulated_latency": 0,
-                                            "msrp_failure_code": null,
-                                            "probing_status": 0,
-                                            "stream_id": null,
-                                            "stream_vlan_id": null
-                                        },
-                                        "stream_format": "0x041060010000BB80",
-                                        "stream_running": true
-                                    },
-                                    "static": {
-                                        "avb_interface_index": 1,
-                                        "backedup_talker_entity_id": "0x0000000000000000",
-                                        "backedup_talker_unique": 0,
-                                        "backup_talker_entity_id_0": "0x0000000000000000",
-                                        "backup_talker_entity_id_1": "0x0000000000000000",
-                                        "backup_talker_entity_id_2": "0x0000000000000000",
-                                        "backup_talker_unique_id_0": 0,
-                                        "backup_talker_unique_id_1": 0,
-                                        "backup_talker_unique_id_2": 0,
-                                        "buffer_length": 2126000,
-                                        "clock_domain_index": 0,
-                                        "formats": [
-                                            "0x041060010000BB80"
-                                        ],
-                                        "localized_description": {
-                                            "index": 2,
-                                            "offset": 3
-                                        },
-                                        "redundant_streams": [
-                                            1
-                                        ],
-                                        "stream_flags": [
-                                            "CLOCK_SYNC_SOURCE",
-                                            "CLASS_A"
-                                        ]
-                                    }
-                                }
-                            ],
-                            "stream_output_descriptors": [
-                                {
-                                    "_index (informative)": 0,
+                                    "_index (informative)": 1,
                                     "dynamic": {
                                         "counters": {
                                             "FRAMES_TX": 0,
@@ -1416,7 +1198,7 @@
                                             "msrp_accumulated_latency": 2000000,
                                             "msrp_failure_code": null,
                                             "probing_status": 0,
-                                            "stream_id": "0x001B920222BF0000",
+                                            "stream_id": "0x001B920222BF0001",
                                             "stream_vlan_id": null
                                         },
                                         "stream_format": "0x020702200200C000",
@@ -1464,69 +1246,6 @@
                                             "index": 3,
                                             "offset": 3
                                         },
-                                        "redundant_streams": [
-                                            2
-                                        ],
-                                        "stream_flags": [
-                                            "CLASS_A"
-                                        ]
-                                    }
-                                },
-                                {
-                                    "_index (informative)": 1,
-                                    "dynamic": {
-                                        "counters": {
-                                            "FRAMES_TX": 0,
-                                            "MEDIA_RESET": 0,
-                                            "STREAM_START": 0,
-                                            "STREAM_STOP": 0,
-                                            "TIMESTAMP_UNCERTAIN": 0
-                                        },
-                                        "object_name": "",
-                                        "stream_dynamic_info": {
-                                            "acmp_status": "SUCCESS",
-                                            "are_pdus_encrypted": false,
-                                            "does_support_encrypted": false,
-                                            "flags_ex": null,
-                                            "has_saved_state": false,
-                                            "has_talker_failed": false,
-                                            "is_class_b": false,
-                                            "last_received_flags": [
-                                                "MSRP_ACC_LAT_VALID",
-                                                "STREAM_ID_VALID",
-                                                "STREAM_FORMAT_VALID"
-                                            ],
-                                            "msrp_accumulated_latency": 2000000,
-                                            "msrp_failure_code": null,
-                                            "probing_status": 0,
-                                            "stream_id": "0x001B920222BF0001",
-                                            "stream_vlan_id": null
-                                        },
-                                        "stream_format": "0x041060010000BB80",
-                                        "stream_running": true
-                                    },
-                                    "static": {
-                                        "avb_interface_index": 0,
-                                        "backedup_talker_entity_id": "0x0000000000000000",
-                                        "backedup_talker_unique": 0,
-                                        "backup_talker_entity_id_0": "0x0000000000000000",
-                                        "backup_talker_entity_id_1": "0x0000000000000000",
-                                        "backup_talker_entity_id_2": "0x0000000000000000",
-                                        "backup_talker_unique_id_0": 0,
-                                        "backup_talker_unique_id_1": 0,
-                                        "backup_talker_unique_id_2": 0,
-                                        "buffer_length": 0,
-                                        "clock_domain_index": 0,
-                                        "formats": [
-                                            "0x041060010000BB80"
-                                        ],
-                                        "localized_description": {
-                                            "index": 4,
-                                            "offset": 3
-                                        },
-                                        "redundant_streams": [
-                                            3
-                                        ],
                                         "stream_flags": [
                                             "CLASS_A"
                                         ]
@@ -1562,94 +1281,11 @@
                                             "stream_id": "0x001B920222BF0002",
                                             "stream_vlan_id": null
                                         },
-                                        "stream_format": "0x020702200200C000",
-                                        "stream_running": true
-                                    },
-                                    "static": {
-                                        "avb_interface_index": 1,
-                                        "backedup_talker_entity_id": "0x0000000000000000",
-                                        "backedup_talker_unique": 0,
-                                        "backup_talker_entity_id_0": "0x0000000000000000",
-                                        "backup_talker_entity_id_1": "0x0000000000000000",
-                                        "backup_talker_entity_id_2": "0x0000000000000000",
-                                        "backup_talker_unique_id_0": 0,
-                                        "backup_talker_unique_id_1": 0,
-                                        "backup_talker_unique_id_2": 0,
-                                        "buffer_length": 0,
-                                        "clock_domain_index": 0,
-                                        "formats": [
-                                            "0x00A0020150000100",
-                                            "0x00A0020250000200",
-                                            "0x00A0020450000400",
-                                            "0x00A0020650000600",
-                                            "0x00A0020850000800",
-                                            "0x00A0020870000800",
-                                            "0x00A0040150000100",
-                                            "0x00A0040250000200",
-                                            "0x00A0040450000400",
-                                            "0x00A0040650000600",
-                                            "0x00A0040850000800",
-                                            "0x00A0040870000800",
-                                            "0x0205022000406000",
-                                            "0x0205022000806000",
-                                            "0x0205022001006000",
-                                            "0x0205022001806000",
-                                            "0x0205022002006000",
-                                            "0x020702200040C000",
-                                            "0x020702200080C000",
-                                            "0x020702200100C000",
-                                            "0x020702200180C000",
-                                            "0x020702200200C000",
-                                            "0x0215022002006000",
-                                            "0x021702200200C000"
-                                        ],
-                                        "localized_description": {
-                                            "index": 5,
-                                            "offset": 3
-                                        },
-                                        "redundant_streams": [
-                                            0
-                                        ],
-                                        "stream_flags": [
-                                            "CLASS_A"
-                                        ]
-                                    }
-                                },
-                                {
-                                    "_index (informative)": 3,
-                                    "dynamic": {
-                                        "counters": {
-                                            "FRAMES_TX": 0,
-                                            "MEDIA_RESET": 0,
-                                            "STREAM_START": 0,
-                                            "STREAM_STOP": 0,
-                                            "TIMESTAMP_UNCERTAIN": 0
-                                        },
-                                        "object_name": "",
-                                        "stream_dynamic_info": {
-                                            "acmp_status": "SUCCESS",
-                                            "are_pdus_encrypted": false,
-                                            "does_support_encrypted": false,
-                                            "flags_ex": null,
-                                            "has_saved_state": false,
-                                            "has_talker_failed": false,
-                                            "is_class_b": false,
-                                            "last_received_flags": [
-                                                "MSRP_ACC_LAT_VALID",
-                                                "STREAM_ID_VALID",
-                                                "STREAM_FORMAT_VALID"
-                                            ],
-                                            "msrp_accumulated_latency": 2000000,
-                                            "msrp_failure_code": null,
-                                            "probing_status": 0,
-                                            "stream_id": "0x001B920222BF0003",
-                                            "stream_vlan_id": null
-                                        },
                                         "stream_format": "0x041060010000BB80",
                                         "stream_running": true
                                     },
                                     "static": {
-                                        "avb_interface_index": 1,
+                                        "avb_interface_index": 0,
                                         "backedup_talker_entity_id": "0x0000000000000000",
                                         "backedup_talker_unique": 0,
                                         "backup_talker_entity_id_0": "0x0000000000000000",
@@ -1664,12 +1300,9 @@
                                             "0x041060010000BB80"
                                         ],
                                         "localized_description": {
-                                            "index": 6,
+                                            "index": 4,
                                             "offset": 3
                                         },
-                                        "redundant_streams": [
-                                            1
-                                        ],
                                         "stream_flags": [
                                             "CLASS_A"
                                         ]
@@ -1681,7 +1314,7 @@
                     "dynamic": {
                         "counters": {},
                         "current_configuration": 0,
-                        "entity_name": "P1 - LA12X R",
+                        "entity_name": "P1 152",
                         "firmware_version": "2.12.0.48",
                         "group_name": "",
                         "serial_number": "1400001025"
@@ -1698,12 +1331,10 @@
                     }
                 }
             },
-            "entity_model_id": "0x001B9200030A0001",
+            "entity_model_id": "0x001B9200030A0000",
             "milan_information": {
                 "certification_version": "1.1.0.0",
-                "flags": [
-                    "REDUNDANCY"
-                ],
+                "flags": null,
                 "protocol_version": 1
             },
             "state": {
@@ -1715,12 +1346,12 @@
                 "subscribed_unsol": true
             },
             "statistics": {
-                "aecp_response_average_time": 15,
+                "aecp_response_average_time": 18,
                 "aecp_retry_counter": 0,
                 "aecp_timeout_counter": 0,
                 "aecp_unexpected_response_counter": 0,
-                "aem_aecp_unsolicited_counter": 476,
-                "enumeration_time": 1136
+                "aem_aecp_unsolicited_counter": 29,
+                "enumeration_time": 1167
             }
         },
         {
@@ -1755,7 +1386,7 @@
                 },
                 "interfaces": [
                     {
-                        "available_index": 1,
+                        "available_index": 1031,
                         "avb_interface_index": 0,
                         "gptp_domain_number": 0,
                         "gptp_grandmaster_id": "0x001B92FFFE01BA04",
@@ -2037,18 +1668,6 @@
                                                         "cluster_channel": 0,
                                                         "cluster_offset": 6,
                                                         "stream_channel": 6,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 7,
-                                                        "stream_channel": 7,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 7,
-                                                        "stream_channel": 7,
                                                         "stream_index": 2
                                                     }
                                                 ]
@@ -2352,7 +1971,7 @@
                                                     "vlan_id": 2
                                                 }
                                             ],
-                                            "propagation_delay": 16
+                                            "propagation_delay": 13
                                         },
                                         "counters": {
                                             "GPTP_GM_CHANGED": 1,
@@ -2445,10 +2064,10 @@
                                 {
                                     "_index (informative)": 0,
                                     "dynamic": {
-                                        "clock_source_index": 0,
+                                        "clock_source_index": 1,
                                         "counters": {
-                                            "LOCKED": 2,
-                                            "UNLOCKED": 1
+                                            "LOCKED": 5,
+                                            "UNLOCKED": 5
                                         },
                                         "object_name": ""
                                     },
@@ -2772,16 +2391,16 @@
                                         "connection_state": "NOT_CONNECTED",
                                         "counters": {
                                             "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 0,
+                                            "FRAMES_RX": 8040,
                                             "LATE_TIMESTAMP": 0,
-                                            "MEDIA_LOCKED": 0,
+                                            "MEDIA_LOCKED": 1,
                                             "MEDIA_RESET": 0,
-                                            "MEDIA_UNLOCKED": 0,
+                                            "MEDIA_UNLOCKED": 1,
                                             "SEQ_NUM_MISMATCH": 0,
                                             "STREAM_INTERRUPTED": 0,
                                             "TIMESTAMP_NOT_VALID": 0,
                                             "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 0,
+                                            "TIMESTAMP_VALID": 8040,
                                             "UNSUPPORTED_FORMAT": 0
                                         },
                                         "object_name": "",
@@ -2794,18 +2413,16 @@
                                             "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
-                                                "MSRP_FAILURE_VALID",
                                                 "MSRP_ACC_LAT_VALID",
                                                 "STREAM_FORMAT_VALID"
                                             ],
                                             "msrp_accumulated_latency": 0,
-                                            "msrp_failure_bridge_id": "0x8000001B9201BA04",
-                                            "msrp_failure_code": "EGRESS_PORT_NOT_AVB_CAPABLE",
+                                            "msrp_failure_code": null,
                                             "probing_status": 0,
                                             "stream_id": null,
                                             "stream_vlan_id": null
                                         },
-                                        "stream_format": "0x020702200200C000",
+                                        "stream_format": "0x0207022001C0C000",
                                         "stream_running": true
                                     },
                                     "static": {
@@ -2972,7 +2589,7 @@
                                             "stream_id": null,
                                             "stream_vlan_id": null
                                         },
-                                        "stream_format": "0x020702200200C000",
+                                        "stream_format": "0x0207022001C0C000",
                                         "stream_running": true
                                     },
                                     "static": {
@@ -3104,12 +2721,12 @@
                                     "_index (informative)": 0,
                                     "dynamic": {
                                         "counters": {
-                                            "0x00000020": 58248,
+                                            "0x00000020": 66620,
                                             "0x00000040": 0,
-                                            "FRAMES_TX": 58248,
+                                            "FRAMES_TX": 66620,
                                             "MEDIA_RESET": 0,
                                             "STREAM_START": 3,
-                                            "STREAM_STOP": 2,
+                                            "STREAM_STOP": 3,
                                             "TIMESTAMP_UNCERTAIN": 0
                                         },
                                         "object_name": "",
@@ -3117,15 +2734,11 @@
                                             "acmp_status": "SUCCESS",
                                             "are_pdus_encrypted": false,
                                             "does_support_encrypted": false,
-                                            "flags_ex": [
-                                                "REGISTERING"
-                                            ],
+                                            "flags_ex": null,
                                             "has_saved_state": false,
                                             "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
-                                                "STREAM_VLAN_ID_VALID",
-                                                "STREAM_DEST_MAC_VALID",
                                                 "MSRP_ACC_LAT_VALID",
                                                 "STREAM_ID_VALID",
                                                 "STREAM_FORMAT_VALID"
@@ -3133,9 +2746,8 @@
                                             "msrp_accumulated_latency": 2000000,
                                             "msrp_failure_code": null,
                                             "probing_status": 0,
-                                            "stream_dest_mac": "91:E0:F0:00:E4:FB",
                                             "stream_id": "0x001B9202233B0000",
-                                            "stream_vlan_id": 2
+                                            "stream_vlan_id": null
                                         },
                                         "stream_format": "0x020702200200C000",
                                         "stream_running": true
@@ -3194,12 +2806,10 @@
                                     "_index (informative)": 1,
                                     "dynamic": {
                                         "counters": {
-                                            "0x00000020": 33386,
-                                            "0x00000040": 0,
-                                            "FRAMES_TX": 33386,
+                                            "FRAMES_TX": 0,
                                             "MEDIA_RESET": 0,
-                                            "STREAM_START": 1,
-                                            "STREAM_STOP": 1,
+                                            "STREAM_START": 0,
+                                            "STREAM_STOP": 0,
                                             "TIMESTAMP_UNCERTAIN": 0
                                         },
                                         "object_name": "",
@@ -3439,8 +3049,8 @@
                 "aecp_retry_counter": 0,
                 "aecp_timeout_counter": 0,
                 "aecp_unexpected_response_counter": 0,
-                "aem_aecp_unsolicited_counter": 300,
-                "enumeration_time": 1105
+                "aem_aecp_unsolicited_counter": 101,
+                "enumeration_time": 870
             }
         }
     ]

@@ -34,7 +34,7 @@
                 },
                 "interfaces": [
                     {
-                        "available_index": 70,
+                        "available_index": 3,
                         "avb_interface_index": 0,
                         "gptp_domain_number": 0,
                         "gptp_grandmaster_id": "0x001B92FFFE01BA04",
@@ -631,7 +631,7 @@
                                                     "vlan_id": 2
                                                 }
                                             ],
-                                            "propagation_delay": 9
+                                            "propagation_delay": 15
                                         },
                                         "counters": {
                                             "GPTP_GM_CHANGED": 1,
@@ -726,8 +726,8 @@
                                     "dynamic": {
                                         "clock_source_index": 2,
                                         "counters": {
-                                            "LOCKED": 2,
-                                            "UNLOCKED": 2
+                                            "LOCKED": 1,
+                                            "UNLOCKED": 1
                                         },
                                         "object_name": ""
                                     },
@@ -1051,16 +1051,16 @@
                                         "connection_state": "CONNECTED",
                                         "counters": {
                                             "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 66258,
+                                            "FRAMES_RX": 100063,
                                             "LATE_TIMESTAMP": 0,
-                                            "MEDIA_LOCKED": 0,
+                                            "MEDIA_LOCKED": 3,
                                             "MEDIA_RESET": 0,
-                                            "MEDIA_UNLOCKED": 0,
+                                            "MEDIA_UNLOCKED": 2,
                                             "SEQ_NUM_MISMATCH": 0,
                                             "STREAM_INTERRUPTED": 0,
                                             "TIMESTAMP_NOT_VALID": 0,
                                             "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 66258,
+                                            "TIMESTAMP_VALID": 100063,
                                             "UNSUPPORTED_FORMAT": 0
                                         },
                                         "object_name": "",
@@ -1155,16 +1155,16 @@
                                         "connection_state": "NOT_CONNECTED",
                                         "counters": {
                                             "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 33358,
+                                            "FRAMES_RX": 0,
                                             "LATE_TIMESTAMP": 0,
-                                            "MEDIA_LOCKED": 1,
+                                            "MEDIA_LOCKED": 0,
                                             "MEDIA_RESET": 0,
-                                            "MEDIA_UNLOCKED": 1,
+                                            "MEDIA_UNLOCKED": 0,
                                             "SEQ_NUM_MISMATCH": 0,
                                             "STREAM_INTERRUPTED": 0,
                                             "TIMESTAMP_NOT_VALID": 0,
                                             "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 33358,
+                                            "TIMESTAMP_VALID": 0,
                                             "UNSUPPORTED_FORMAT": 0
                                         },
                                         "object_name": "",
@@ -1712,12 +1712,12 @@
                 "subscribed_unsol": true
             },
             "statistics": {
-                "aecp_response_average_time": 15,
+                "aecp_response_average_time": 17,
                 "aecp_retry_counter": 0,
                 "aecp_timeout_counter": 0,
                 "aecp_unexpected_response_counter": 0,
-                "aem_aecp_unsolicited_counter": 537,
-                "enumeration_time": 1136
+                "aem_aecp_unsolicited_counter": 14,
+                "enumeration_time": 770
             }
         },
         {
@@ -1752,7 +1752,7 @@
                 },
                 "interfaces": [
                     {
-                        "available_index": 1,
+                        "available_index": 370,
                         "avb_interface_index": 0,
                         "gptp_domain_number": 0,
                         "gptp_grandmaster_id": "0x001B92FFFE01BA04",
@@ -2034,18 +2034,6 @@
                                                         "cluster_channel": 0,
                                                         "cluster_offset": 6,
                                                         "stream_channel": 6,
-                                                        "stream_index": 2
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 7,
-                                                        "stream_channel": 7,
-                                                        "stream_index": 0
-                                                    },
-                                                    {
-                                                        "cluster_channel": 0,
-                                                        "cluster_offset": 7,
-                                                        "stream_channel": 7,
                                                         "stream_index": 2
                                                     }
                                                 ]
@@ -2349,7 +2337,7 @@
                                                     "vlan_id": 2
                                                 }
                                             ],
-                                            "propagation_delay": 16
+                                            "propagation_delay": 13
                                         },
                                         "counters": {
                                             "GPTP_GM_CHANGED": 1,
@@ -2769,16 +2757,16 @@
                                         "connection_state": "NOT_CONNECTED",
                                         "counters": {
                                             "EARLY_TIMESTAMP": 0,
-                                            "FRAMES_RX": 0,
+                                            "FRAMES_RX": 2093603,
                                             "LATE_TIMESTAMP": 0,
-                                            "MEDIA_LOCKED": 0,
+                                            "MEDIA_LOCKED": 50,
                                             "MEDIA_RESET": 0,
-                                            "MEDIA_UNLOCKED": 0,
+                                            "MEDIA_UNLOCKED": 50,
                                             "SEQ_NUM_MISMATCH": 0,
                                             "STREAM_INTERRUPTED": 0,
                                             "TIMESTAMP_NOT_VALID": 0,
                                             "TIMESTAMP_UNCERTAIN": 0,
-                                            "TIMESTAMP_VALID": 0,
+                                            "TIMESTAMP_VALID": 2093603,
                                             "UNSUPPORTED_FORMAT": 0
                                         },
                                         "object_name": "",
@@ -2791,18 +2779,16 @@
                                             "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
-                                                "MSRP_FAILURE_VALID",
                                                 "MSRP_ACC_LAT_VALID",
                                                 "STREAM_FORMAT_VALID"
                                             ],
                                             "msrp_accumulated_latency": 0,
-                                            "msrp_failure_bridge_id": "0x8000001B9201BA04",
-                                            "msrp_failure_code": "EGRESS_PORT_NOT_AVB_CAPABLE",
+                                            "msrp_failure_code": null,
                                             "probing_status": 0,
                                             "stream_id": null,
                                             "stream_vlan_id": null
                                         },
-                                        "stream_format": "0x020702200200C000",
+                                        "stream_format": "0x0207022001C0C000",
                                         "stream_running": true
                                     },
                                     "static": {
@@ -2969,7 +2955,7 @@
                                             "stream_id": null,
                                             "stream_vlan_id": null
                                         },
-                                        "stream_format": "0x020702200200C000",
+                                        "stream_format": "0x0207022001C0C000",
                                         "stream_running": true
                                     },
                                     "static": {
@@ -3101,9 +3087,9 @@
                                     "_index (informative)": 0,
                                     "dynamic": {
                                         "counters": {
-                                            "0x00000020": 66497,
+                                            "0x00000020": 99788,
                                             "0x00000040": 0,
-                                            "FRAMES_TX": 66497,
+                                            "FRAMES_TX": 99788,
                                             "MEDIA_RESET": 0,
                                             "STREAM_START": 5,
                                             "STREAM_STOP": 4,
@@ -3191,12 +3177,10 @@
                                     "_index (informative)": 1,
                                     "dynamic": {
                                         "counters": {
-                                            "0x00000020": 33386,
-                                            "0x00000040": 0,
-                                            "FRAMES_TX": 33386,
+                                            "FRAMES_TX": 0,
                                             "MEDIA_RESET": 0,
-                                            "STREAM_START": 1,
-                                            "STREAM_STOP": 1,
+                                            "STREAM_START": 0,
+                                            "STREAM_STOP": 0,
                                             "TIMESTAMP_UNCERTAIN": 0
                                         },
                                         "object_name": "",
@@ -3432,12 +3416,12 @@
                 "subscribed_unsol": true
             },
             "statistics": {
-                "aecp_response_average_time": 13,
+                "aecp_response_average_time": 19,
                 "aecp_retry_counter": 0,
                 "aecp_timeout_counter": 0,
                 "aecp_unexpected_response_counter": 0,
-                "aem_aecp_unsolicited_counter": 349,
-                "enumeration_time": 1105
+                "aem_aecp_unsolicited_counter": 15,
+                "enumeration_time": 910
             }
         }
     ]
