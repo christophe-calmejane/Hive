@@ -260,9 +260,21 @@ TEST_F(ConnectionMatrix_F, RedundantSingleSummary_RedundantNormal_NoError_Connec
 	validateIntersectionData(6, 3, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
 }
 
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_RedundantNormal_NoError_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/25-Redundant_Normal-NoError_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	validateIntersectionData(6, 2, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	validateIntersectionData(6, 3, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
 TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_ConnectedNoError_ConnectedLinkDown)
 {
-	loadNetworkState("data/connectionMatrix/25-Normal_Redundant-ConnectedNoError_ConnectedLinkDown.json");
+	loadNetworkState("data/connectionMatrix/26-Normal_Redundant-ConnectedNoError_ConnectedLinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
@@ -274,7 +286,7 @@ TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_ConnectedNoErr
 
 TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_ConnectedNoError_LinkDown)
 {
-	loadNetworkState("data/connectionMatrix/26-Normal_Redundant-ConnectedNoError_LinkDown.json");
+	loadNetworkState("data/connectionMatrix/27-Normal_Redundant-ConnectedNoError_LinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
@@ -286,12 +298,24 @@ TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_ConnectedNoErr
 
 TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_NoError_ConnectedLinkDown)
 {
-	loadNetworkState("data/connectionMatrix/27-Normal_Redundant-NoError_ConnectedLinkDown.json");
+	loadNetworkState("data/connectionMatrix/28-Normal_Redundant-NoError_ConnectedLinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
 	}
-	validateIntersectionData(2, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::PartiallyConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(2, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(3, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible });
+	validateIntersectionData(4, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_NoError_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/29-Normal_Redundant-NoError_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	validateIntersectionData(2, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
 	validateIntersectionData(3, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible });
 	validateIntersectionData(4, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
 }
@@ -1285,9 +1309,34 @@ TEST_F(ConnectionMatrix_F, EntityStreamSummary_RedundantNormal_NoError_Connected
 	}
 }
 
+TEST_F(ConnectionMatrix_F, EntityStreamSummary_RedundantNormal_NoError_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/25-Redundant_Normal-NoError_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Talker - SingleStream0
+	{
+		validateIntersectionData(5, 1, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+	// Redundant0 - Listener
+	{
+		validateIntersectionData(6, 0, connectionMatrix::Model::IntersectionData::Type::Entity_Redundant, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+	// RedundantStream0 Primary - Listener
+	{
+		validateIntersectionData(7, 0, connectionMatrix::Model::IntersectionData::Type::Entity_RedundantStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+	// RedundantStream0 Secondary - Listener
+	{
+		validateIntersectionData(8, 0, connectionMatrix::Model::IntersectionData::Type::Entity_RedundantStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+}
+
 TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalRedundant_ConnectedNoError_ConnectedLinkDown)
 {
-	loadNetworkState("data/connectionMatrix/25-Normal_Redundant-ConnectedNoError_ConnectedLinkDown.json");
+	loadNetworkState("data/connectionMatrix/26-Normal_Redundant-ConnectedNoError_ConnectedLinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
@@ -1312,7 +1361,7 @@ TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalRedundant_ConnectedNoError_
 
 TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalRedundant_ConnectedNoError_LinkDown)
 {
-	loadNetworkState("data/connectionMatrix/26-Normal_Redundant-ConnectedNoError_LinkDown.json");
+	loadNetworkState("data/connectionMatrix/27-Normal_Redundant-ConnectedNoError_LinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
@@ -1337,7 +1386,7 @@ TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalRedundant_ConnectedNoError_
 
 TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalRedundant_NoError_ConnectedLinkDown)
 {
-	loadNetworkState("data/connectionMatrix/27-Normal_Redundant-NoError_ConnectedLinkDown.json");
+	loadNetworkState("data/connectionMatrix/28-Normal_Redundant-NoError_ConnectedLinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
@@ -1356,7 +1405,32 @@ TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalRedundant_NoError_Connected
 	}
 	// SingleStream0 - Listener
 	{
-		validateIntersectionData(2, 4, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::PartiallyConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+		validateIntersectionData(2, 4, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	}
+}
+
+TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalRedundant_NoError_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/29-Normal_Redundant-NoError_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Talker - Redundant0
+	{
+		validateIntersectionData(1, 5, connectionMatrix::Model::IntersectionData::Type::Entity_Redundant, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+	// Talker - RedundantStream0 Primary
+	{
+		validateIntersectionData(1, 6, connectionMatrix::Model::IntersectionData::Type::Entity_RedundantStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+	// Talker - RedundantStream0 Secondary
+	{
+		validateIntersectionData(1, 7, connectionMatrix::Model::IntersectionData::Type::Entity_RedundantStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+	// SingleStream0 - Listener
+	{
+		validateIntersectionData(2, 4, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
 	}
 }
 
@@ -1604,9 +1678,19 @@ TEST_F(ConnectionMatrix_F, EntityEntitySummary_RedundantNormal_NoError_Connected
 	validateIntersectionData(5, 0, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
 }
 
+TEST_F(ConnectionMatrix_F, EntityEntitySummary_RedundantNormal_NoError_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/25-Redundant_Normal-NoError_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	validateIntersectionData(5, 0, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+}
+
 TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalRedundant_ConnectedNoError_ConnectedLinkDown)
 {
-	loadNetworkState("data/connectionMatrix/25-Normal_Redundant-ConnectedNoError_ConnectedLinkDown.json");
+	loadNetworkState("data/connectionMatrix/26-Normal_Redundant-ConnectedNoError_ConnectedLinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
@@ -1616,7 +1700,7 @@ TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalRedundant_ConnectedNoError_
 
 TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalRedundant_ConnectedNoError_LinkDown)
 {
-	loadNetworkState("data/connectionMatrix/26-Normal_Redundant-ConnectedNoError_LinkDown.json");
+	loadNetworkState("data/connectionMatrix/27-Normal_Redundant-ConnectedNoError_LinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
@@ -1626,10 +1710,20 @@ TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalRedundant_ConnectedNoError_
 
 TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalRedundant_NoError_ConnectedLinkDown)
 {
-	loadNetworkState("data/connectionMatrix/27-Normal_Redundant-NoError_ConnectedLinkDown.json");
+	loadNetworkState("data/connectionMatrix/28-Normal_Redundant-NoError_ConnectedLinkDown.json");
 	if (HasFatalFailure())
 	{
 		return;
 	}
-	validateIntersectionData(1, 4, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::PartiallyConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(1, 4, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+}
+
+TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalRedundant_NoError_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/29-Normal_Redundant-NoError_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	validateIntersectionData(1, 4, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
 }
