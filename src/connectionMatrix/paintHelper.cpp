@@ -86,7 +86,11 @@ static inline QColor getEntitySummaryBrushColor(Model::IntersectionData::State c
 
 	if (interfaceDown)
 	{
-		if (wrongFormatPossible)
+		if (wrongDomain)
+		{
+			brushColor = Red;
+		}
+		else if (wrongFormatPossible)
 		{
 			brushColor = Yellow;
 		}
@@ -99,15 +103,15 @@ static inline QColor getEntitySummaryBrushColor(Model::IntersectionData::State c
 			brushColor = Blue;
 		}
 	}
-	else if (wrongFormatImpossible)
+	else if (wrongFormatImpossible && !connected)
 	{
-		brushColor = connected ? Yellow : Grey;
+		brushColor = Grey;
 	}
 	else if (wrongDomain)
 	{
 		brushColor = Red;
 	}
-	else if (wrongFormatPossible)
+	else if (wrongFormatPossible || wrongFormatImpossible)
 	{
 		brushColor = Yellow;
 	}
@@ -137,6 +141,7 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
 	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
 	static auto const Grey = color::value(color::Name::Gray, color::Shade::Shade600);
+	//static auto const Cyan = color::value(color::Name::Cyan, color::Shade::Shade400);
 	//static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
@@ -147,38 +152,38 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
 	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
 
-	if (state == Model::IntersectionData::State::PartiallyConnected)
+	if (interfaceDown)
 	{
-		brushColor = Purple;
+		if (wrongFormatPossible && wrongFormatHasPriorityOverInterfaceDown)
+		{
+			brushColor = Yellow;
+		}
+		else if (wrongFormatImpossible && wrongFormatHasPriorityOverInterfaceDown)
+		{
+			brushColor = connected ? Yellow : Grey;
+		}
+		else
+		{
+			brushColor = Blue;
+		}
+	}
+	else if (wrongFormatImpossible && !connected)
+	{
+		brushColor = Grey;
+	}
+	else if (wrongDomain)
+	{
+		brushColor = Red;
+	}
+	else if (wrongFormatPossible || wrongFormatImpossible)
+	{
+		brushColor = Yellow;
 	}
 	else
 	{
-		if (interfaceDown)
+		if (state == Model::IntersectionData::State::PartiallyConnected)
 		{
-			if (wrongFormatPossible && wrongFormatHasPriorityOverInterfaceDown)
-			{
-				brushColor = Yellow;
-			}
-			else if (wrongFormatImpossible && wrongFormatHasPriorityOverInterfaceDown)
-			{
-				brushColor = connected ? Yellow : Grey;
-			}
-			else
-			{
-				brushColor = Blue;
-			}
-		}
-		else if (wrongFormatImpossible && !connected)
-		{
-			brushColor = Grey;
-		}
-		else if (wrongDomain)
-		{
-			brushColor = Red;
-		}
-		else if (wrongFormatPossible || wrongFormatImpossible)
-		{
-			brushColor = Yellow;
+			brushColor = Purple;
 		}
 		else
 		{
