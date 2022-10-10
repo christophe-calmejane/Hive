@@ -62,20 +62,18 @@ FlowConnections const& FlowOutput::connections() const
 	return _connections;
 }
 
+void FlowOutput::updateConnections()
+{
+	for (auto* connection : _connections)
+	{
+		connection->updatePath();
+	}
+}
+
 void FlowOutput::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
 {
 	auto const hotSpot = hotSpotBoundingRect().center();
-
-	painter->setPen(_color);
-	painter->setBrush(Qt::NoBrush);
-	painter->drawEllipse(hotSpot, NODE_SOCKET_RADIUS, NODE_SOCKET_RADIUS);
-
-	if (isConnected())
-	{
-		painter->setPen(Qt::NoPen);
-		painter->setBrush(_color);
-		painter->drawEllipse(hotSpot, NODE_SOCKET_RADIUS / 2, NODE_SOCKET_RADIUS / 2);
-	}
+	drawOutputHotSpot(painter, hotSpot, _color, isConnected());
 
 	auto const nameBoundingRect = boundingRect().adjusted(0.f, 0.f, -NODE_SOCKET_BOUNDING_SIZE, 0.f);
 

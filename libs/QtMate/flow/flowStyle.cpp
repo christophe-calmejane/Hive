@@ -96,4 +96,32 @@ float inputRatio(FlowNode* node)
 	return node->outputs().empty() ? 1.f : (node->inputs().empty() ? 0.f : NODE_INPUT_RATIO);
 }
 
+void drawOutputHotSpot(QPainter* painter, QPointF const& hotSpot, QColor const& color, bool connected)
+{
+	painter->setPen(color);
+	painter->setBrush(Qt::NoBrush);
+	painter->drawEllipse(hotSpot, NODE_SOCKET_RADIUS, NODE_SOCKET_RADIUS);
+
+	if (connected)
+	{
+		painter->setPen(Qt::NoPen);
+		painter->setBrush(color);
+		painter->drawEllipse(hotSpot, NODE_SOCKET_RADIUS / 2, NODE_SOCKET_RADIUS / 2);
+	}
+}
+
+void drawInputHotSpot(QPainter* painter, QPointF const& hotSpot, QColor const& color, bool connected)
+{
+	painter->setPen(color);
+	painter->setBrush(Qt::NoBrush);
+	painter->drawEllipse(hotSpot, NODE_SOCKET_RADIUS, NODE_SOCKET_RADIUS);
+
+	if (connected)
+	{
+		painter->setPen(Qt::NoPen);
+		painter->setBrush(color);
+		painter->drawEllipse(hotSpot, NODE_SOCKET_RADIUS / 2, NODE_SOCKET_RADIUS / 2);
+	}
+}
+
 } // namespace qtMate::flow

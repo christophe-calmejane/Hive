@@ -23,6 +23,8 @@ public:
 
 	FlowConnection* connection() const;
 	void setConnection(FlowConnection* connection);
+	
+	void updateConnection();
 
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget = nullptr) override;
 

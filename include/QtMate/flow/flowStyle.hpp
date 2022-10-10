@@ -21,7 +21,7 @@ inline auto const NODE_LINE_HEIGHT = 32.f;
 inline auto const NODE_SEPARATOR_THICKNESS = 2.f;
 inline auto const NODE_INPUT_RATIO = 4.f / 7.f;
 inline auto const NODE_OUTPUT_RATIO = 3.f / 7.f;
-inline auto const NODE_WIDTH = 250.f;
+inline auto const NODE_WIDTH = 380.f;
 
 //
 inline auto const NODE_PADDING = 4.f;
@@ -47,5 +47,8 @@ void drawElidedText(QPainter* painter, QRectF const& r, int flags, Qt::TextElide
 
 float outputRatio(FlowNode* node);
 float inputRatio(FlowNode* node);
+
+void drawOutputHotSpot(QPainter* painter, QPointF const& hotSpot, QColor const& color, bool connected);
+void drawInputHotSpot(QPainter* painter, QPointF const& hotSpot, QColor const& color, bool connected);
 
 } // namespace qtMate::flow

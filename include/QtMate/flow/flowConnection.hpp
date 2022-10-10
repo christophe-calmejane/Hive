@@ -19,7 +19,6 @@ public:
 	void setInput(FlowInput* input);
 	FlowInput* input() const;
 
-private:
 	void updatePath();
 
 private:
