@@ -174,14 +174,16 @@ void NodeOrganizer::doLayout()
 				return left->uid() < right->uid();
 			});
 	}
+	
+	// holds the list of staged nodes
+	QVector<qtMate::flow::FlowNode*> stagedNodes{};
 
 	// traverse the grid and move nodes
 	auto const horizontalPadding = 120.f;
 	auto const verticalPadding = 100.f;
 
 	// holds the scene size after layout has been performed
-	float sceneWidth = 0.f;
-	float sceneHeight = 0.f;
+	auto sceneRect = QRectF{};
 
 	auto x = 0.f;
 	for (auto i = 0; i < grid.size(); ++i)
@@ -192,26 +194,40 @@ void NodeOrganizer::doLayout()
 		auto y = 0.f;
 		for (auto* node : column)
 		{
-			auto const r = node->boundingRect();
-			if (r.width() > maxWidth)
+			auto const& nodeData = _nodeData[node->uid()];
+			if(nodeData.activeOutputCount == 0 && nodeData.activeInputCount == 0)
 			{
-				maxWidth = r.width();
+				stagedNodes.emplace_back(node);
+				continue;
 			}
+			
+			auto const r = node->boundingRect();
+			maxWidth = qMax(maxWidth, r.width());
 			
 			animateTo(node, x, y);
 
 			y += r.height() + verticalPadding;
-			
-			sceneHeight = std::max(sceneHeight, y);
+			sceneRect.setHeight(qMax(sceneRect.height(), y));
 		}
 
 		x += maxWidth + horizontalPadding;
+
+		sceneRect.setWidth(qMax(sceneRect.width(), x));
+	}
+	
+	// Layout staged nodes above all the others
+	for(auto* node : stagedNodes)
+	{
+		auto const r = node->boundingRect();
 		
-		sceneWidth = std::max(sceneWidth, x);
+		auto y = sceneRect.y() - verticalPadding - r.height();
+		animateTo(node, 0, y);
+
+		sceneRect.setY(y);
 	}
 	
 	// update the scene rect according to the new scene layout
-	auto sceneRect = QRectF{-horizontalPadding, -verticalPadding, sceneWidth + horizontalPadding, sceneHeight + verticalPadding};
+	sceneRect.adjust(-horizontalPadding, -verticalPadding, 0, 0);
 	_scene->setSceneRect(sceneRect);
 }
 
