@@ -15,6 +15,7 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 - CMake 3.22
 - Qt 5.15.2
 - Visual Studio 2019 16.3 (using platform toolset v142), Xcode 12, g++ 11.2.0
+- [Optional, for cross-compilation] Docker / Docker Compose
 
 ## Compilation
 
@@ -28,6 +29,22 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 - Compile everything
   - [macOS/Windows] Open the generated solution and compile from the IDE
   - [Linux] Run `cmake --build . --config Release`
+
+## Cross-compilation using Docker
+
+- Requires `docker` and `docker-compose` to be installed
+- Go to the `Docker` folder
+- Build the docker builder image: _docker-compose build_
+- Generate the build solution: _docker-compose run --rm gen_cmake -debug -c Ninja -- -DBUILD_HIVE_TESTS=FALSE_
+ - You may change parameters to your convenience
+- Build the solution: _docker-compose run --rm build --target install_
+- If you want to run the application, you must authorize X connections to your display: _xhost local:root_
+- You can then run the application from the docker container: _APP=Hive-d docker-compose run -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --rm run_
+- Windows users need to have a running X Server:
+  - Install [VcXsrv](http://vcxsrv.sourceforge.net)
+  - Start it with _access control disabled_
+  - Find the IP address of your WSL network interface using _ipconfig_
+  - Set a DISPPLAY environment variable with value _WSL\_Interface\_IP_:0
 
 ## Installer generation
 
