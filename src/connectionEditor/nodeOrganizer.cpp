@@ -56,6 +56,7 @@ void traverse(qtMate::flow::FlowNode* node, int depth, TraverseFunc func)
 NodeOrganizer::NodeOrganizer(qtMate::flow::FlowScene* scene, QObject* parent)
 	: QObject{ parent }
 	, _scene{ scene }
+	, _sceneRectAnimation{new QPropertyAnimation{_scene, "sceneRect"}}
 {
 	connect(_scene, &qtMate::flow::FlowScene::nodeCreated, this,
 		[this](qtMate::flow::FlowNodeUid const& uid)
@@ -228,7 +229,13 @@ void NodeOrganizer::doLayout()
 	
 	// update the scene rect according to the new scene layout
 	sceneRect.adjust(-horizontalPadding, -verticalPadding, 0, 0);
-	_scene->setSceneRect(sceneRect);
+
+	_sceneRectAnimation->stop();
+	_sceneRectAnimation->setDuration(1800);
+	_sceneRectAnimation->setEasingCurve(QEasingCurve::Type::OutQuart);
+	_sceneRectAnimation->setStartValue(_scene->sceneRect());
+	_sceneRectAnimation->setEndValue(sceneRect);
+	_sceneRectAnimation->start(QAbstractAnimation::DeletionPolicy::KeepWhenStopped);
 }
 
 void NodeOrganizer::animateTo(qtMate::flow::FlowNode* node, float x, float y)
@@ -260,6 +267,5 @@ void NodeOrganizer::animateTo(qtMate::flow::FlowNode* node, float x, float y)
 			}
 		});
 
-	animation->stop();
 	animation->start(QAbstractAnimation::DeletionPolicy::KeepWhenStopped);
 }

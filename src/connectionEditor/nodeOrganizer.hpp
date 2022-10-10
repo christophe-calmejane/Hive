@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QVariantAnimation>
+#include <QPropertyAnimation>
 
 #include <QtMate/flow/flowdefs.hpp>
 
@@ -18,6 +19,7 @@ private:
 
 private:
 	qtMate::flow::FlowScene* _scene{};
+	QPropertyAnimation* _sceneRectAnimation{};
 
 	struct NodeData
 	{
