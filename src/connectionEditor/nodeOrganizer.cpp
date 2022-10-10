@@ -179,6 +179,10 @@ void NodeOrganizer::doLayout()
 	auto const horizontalPadding = 120.f;
 	auto const verticalPadding = 100.f;
 
+	// holds the scene size after layout has been performed
+	float sceneWidth = 0.f;
+	float sceneHeight = 0.f;
+
 	auto x = 0.f;
 	for (auto i = 0; i < grid.size(); ++i)
 	{
@@ -193,14 +197,22 @@ void NodeOrganizer::doLayout()
 			{
 				maxWidth = r.width();
 			}
-
+			
 			animateTo(node, x, y);
 
 			y += r.height() + verticalPadding;
+			
+			sceneHeight = std::max(sceneHeight, y);
 		}
 
 		x += maxWidth + horizontalPadding;
+		
+		sceneWidth = std::max(sceneWidth, x);
 	}
+	
+	// update the scene rect according to the new scene layout
+	auto sceneRect = QRectF{-horizontalPadding, -verticalPadding, sceneWidth + horizontalPadding, sceneHeight + verticalPadding};
+	_scene->setSceneRect(sceneRect);
 }
 
 void NodeOrganizer::animateTo(qtMate::flow::FlowNode* node, float x, float y)

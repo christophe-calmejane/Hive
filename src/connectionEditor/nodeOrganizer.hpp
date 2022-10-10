@@ -24,7 +24,6 @@ private:
 		qtMate::flow::FlowNode* node{};
 		int activeInputCount{};
 		int activeOutputCount{};
-		;
 	};
 
 	QHash<qtMate::flow::FlowNodeUid, NodeData> _nodeData{};
