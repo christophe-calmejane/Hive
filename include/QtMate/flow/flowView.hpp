@@ -21,12 +21,14 @@ protected:
 	virtual void mousePressEvent(QMouseEvent* event) override;
 	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mouseReleaseEvent(QMouseEvent* event) override;
+	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void timerEvent(QTimerEvent* event) override;
 
 private:
 	bool handleMousePressEvent(QMouseEvent* event);
 	bool handleMouseMoveEvent(QMouseEvent* event);
 	bool handleMouseReleaseEvent(QMouseEvent* event);
+	bool handleWheelEvent(QWheelEvent* event);
 	bool handleTimerEvent(QTimerEvent* event);
 
 	FlowSocket* socketAt(QPointF const& scenePos) const;

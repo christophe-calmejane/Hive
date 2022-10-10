@@ -75,6 +75,14 @@ void FlowView::mouseReleaseEvent(QMouseEvent* event)
 	}
 }
 
+void FlowView::wheelEvent(QWheelEvent* event)
+{
+	if (!handleWheelEvent(event))
+	{
+		QGraphicsView::wheelEvent(event);
+	}
+}
+
 void FlowView::timerEvent(QTimerEvent* event)
 {
 	if (!handleTimerEvent(event))
@@ -372,6 +380,22 @@ bool FlowView::handleMouseReleaseEvent(QMouseEvent* event)
 	setCursor(Qt::CursorShape::ArrowCursor);
 
 	return true;
+}
+
+bool FlowView::handleWheelEvent(QWheelEvent* event)
+{
+	if(event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier))
+	{
+		auto const anchor = transformationAnchor();
+		setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+		auto const angle = event->angleDelta().y();
+		auto const factor = qPow(1.0015, angle);
+		scale(factor, factor);
+		setTransformationAnchor(anchor);
+		return true;
+	}
+	
+	return false;
 }
 
 bool FlowView::handleTimerEvent(QTimerEvent* event)
