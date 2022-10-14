@@ -1005,7 +1005,7 @@ public:
 	}
 
 	/** A label (readonly) item */
-	template<typename ValueType>
+	template<typename ValueType, typename = std::enable_if_t<std::is_move_assignable_v<ValueType>>>
 	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType itemValue)
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
