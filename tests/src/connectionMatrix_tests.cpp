@@ -440,6 +440,114 @@ TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_ConnectedNoErr
 	validateIntersectionData(4, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
 }
 
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_RedundantNormal_WrongDomain_WrongDomain)
+{
+	loadNetworkState("data/connectionMatrix/34-Redundant_Normal-WrongDomain_WrongDomain.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Redundant Streams
+	validateIntersectionData(7, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(7, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	// Summary
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 2, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 3, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_NormalRedundant_WrongDomain_WrongDomain)
+{
+	loadNetworkState("data/connectionMatrix/35-Normal_Redundant-WrongDomain_WrongDomain.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Redundant Streams
+	validateIntersectionData(2, 6, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(2, 7, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(3, 6, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible });
+	validateIntersectionData(3, 7, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible });
+	// Summary
+	validateIntersectionData(2, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(3, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible });
+	validateIntersectionData(4, 5, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_RedundantNormal_ConnectedWrongDomain_WrongDomain)
+{
+	loadNetworkState("data/connectionMatrix/36-Redundant_Normal-ConnectedWrongDomain_WrongDomain.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Redundant Streams
+	validateIntersectionData(7, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(7, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	// Summary
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 2, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 3, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_RedundantNormal_ConnectedWrongDomain_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/37-Redundant_Normal-ConnectedWrongDomain_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Redundant Streams
+	validateIntersectionData(7, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::InterfaceDown, connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(7, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::InterfaceDown, connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	// Summary
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 2, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 3, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_RedundantNormal_WrongDomain_LinkDown)
+{
+	loadNetworkState("data/connectionMatrix/38-Redundant_Normal-WrongDomain_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Redundant Streams
+	validateIntersectionData(7, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::InterfaceDown, connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(7, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::InterfaceDown, connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	// Summary
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 2, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 3, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
+TEST_F(ConnectionMatrix_F, RedundantSingleSummary_RedundantNormal_WrongDomain_ConnectedLinkDown)
+{
+	loadNetworkState("data/connectionMatrix/39-Redundant_Normal-WrongDomain_ConnectedLinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Redundant Streams
+	validateIntersectionData(7, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 1, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::InterfaceDown, connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(7, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(8, 2, connectionMatrix::Model::IntersectionData::Type::RedundantStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::InterfaceDown, connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	// Summary
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 2, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain });
+	validateIntersectionData(6, 3, connectionMatrix::Model::IntersectionData::Type::Redundant_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongDomain, connectionMatrix::Model::IntersectionData::Flag::WrongFormatImpossible, connectionMatrix::Model::IntersectionData::Flag::WrongFormatType });
+}
+
 
 /* *********************************
    Entity Stream Summary
