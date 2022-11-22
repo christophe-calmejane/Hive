@@ -123,11 +123,13 @@ if isMac; then
 	fi
 
 	# Tar the installer as Sparkle do not support PKG
-	appcastInstallerName="${fullInstallerName}.tar"
-	pushd "${deliverablesFolder}" &> /dev/null
-	tar cf "${appcastInstallerName}" "${fullInstallerName}" &> /dev/null
-	rm -f "${fullInstallerName}" &> /dev/null
-	popd &> /dev/null
+	if [ $do_appcast -eq 1 ]; then
+		appcastInstallerName="${fullInstallerName}.tar"
+		pushd "${deliverablesFolder}" &> /dev/null
+		tar cf "${appcastInstallerName}" "${fullInstallerName}" &> /dev/null
+		rm -f "${fullInstallerName}" &> /dev/null
+		popd &> /dev/null
+	fi
 fi
 
 # Generate appcast
