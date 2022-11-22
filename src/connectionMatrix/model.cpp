@@ -1889,25 +1889,43 @@ public:
 					auto atLeastOneNonInterfaceDownConnected = false;
 					auto atLeastOneNonInterfaceDownInvalid = false; // Has Format/Domain error
 					auto atLeastOneNonInterfaceDownConnectedInvalid = false; // Connected and has Format/Domain error
+					auto cumulativeErrorFlags = Model::IntersectionData::Flags{};
+					auto atLeastOneSameDomain = false;
 					for (auto const& info : intersectionsInfo)
 					{
 						if (!info.isInterfaceDown)
 						{
+							auto flags = Model::IntersectionData::Flags{};
 							if (info.isDomainError)
 							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+								flags.set(Model::IntersectionData::Flag::WrongDomain);
 							}
 							if (info.isFormatImpossible)
 							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+								flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
 								if (info.isDifferentMediaClockFormat)
 								{
-									intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatType);
+									flags.set(Model::IntersectionData::Flag::WrongFormatType);
 								}
 							}
 							else if (info.isFormatError)
 							{
-								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+								flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+							}
+							// Accumulate error flags
+							cumulativeErrorFlags |= flags;
+							// Always set error flags when connected
+							if (info.isConnected)
+							{
+								intersectionData.flags |= flags;
+							}
+							// Specific case: We don't want to see errors for Intersections of a Non-redundant device that cannot reach the other network of a Redundant device (eg. WrongDomain)
+							// But we do want to see errors if all interfaces have WrongDomain
+							if (!info.isDomainError)
+							{
+								// Always set other non-domain errors
+								intersectionData.flags |= flags;
+								atLeastOneSameDomain = true;
 							}
 							atLeastOneNonInterfaceDownConnected |= info.isConnected;
 							atLeastOneNonInterfaceDownInvalid |= info.isDomainError || info.isFormatError;
@@ -1925,7 +1943,11 @@ public:
 						allLocked &= (info.isMediaLocked || !info.isConnected || info.isInterfaceDown); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
 						allNoLatencyError &= !info.isLatencyError;
 					}
-
+					// No interface without non-domain error
+					if (!atLeastOneSameDomain)
+					{
+						intersectionData.flags |= cumulativeErrorFlags;
+					}
 					// Handle InterfaceDown errors separately as we don't want to see InterfaceDown and/or associated WrongDomain in some cases
 					if (atLeastOneInterfaceDown)
 					{
