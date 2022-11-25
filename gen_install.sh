@@ -113,8 +113,8 @@ appcastInstallerName="${fullInstallerName}"
 if isMac; then
 	# Call notarization
 	if [ $do_notarize -eq 1 ]; then
-		if [ ! "x${params["notarization_username"]}" == "x" ]; then
-			"${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh" "${deliverablesFolder}${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
+		if [ ! "x${params["notarization_profile"]}" == "x" ]; then
+			"${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh" "${deliverablesFolder}${fullInstallerName}" "${params["notarization_profile"]}"
 			if [ $? -ne 0 ]; then
 				echo "Failed to notarize installer"
 				exit 1

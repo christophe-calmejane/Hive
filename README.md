@@ -52,16 +52,15 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 
 ### MacOS notarization
 
-If you want to generate a proper installer that can be distributed (outside the AppStore), you need to notarize the installer. The `gen_install.sh` script can do this for you if you define `notarization_username` and `notarization_password`.
-Note that `notarization_password` can be omitted if you save the password in your keychain.
+If you want to generate a proper installer that can be distributed (outside the AppStore), you need to notarize the installer. The `gen_install.sh` script can do this for you if you define `notarization_profile` in the config file.
 
-You can only use an application-password, **not your Apple ID account password**. To generate an application-password, do the following:
+You need to create a notarization profile that will be saved in your keychain (just once). For that you'll need your Apple team identifier, Apple account ID, and to generate an application-password (you cannot use your Apple ID account password for security reasons). To generate an application-password, do the following:
 - Sign in to your [Apple ID account page](https://appleid.apple.com/account/home) (https://appleid.apple.com/account/home)
 - In the Security section, click Generate Password below App-Specific Passwords
 - Follow the steps on your screen
 
-To save the password in your keychain, do the following. It is strongly suggested to specify the Login Keychain with `--keychain` (use `security list-keychains` to get your Login Keychain filepath):
-- `xcrun altool --store-password-in-keychain-item "AC_PASSWORD" -u AccountEmailAdrs -p AppSpecificPwd --keychain LoginKeychainPath`
+To save a profile in your keychain, do the following:
+- `xcrun notarytool store-credentials YourProfileName --apple-id YourAccountEmailAdrs --password YourAppSpecificPwd --team-id YourTeamID`
 
 ## MacOS runtime specificities
 
