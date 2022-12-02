@@ -44,7 +44,7 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
   - Install [VcXsrv](http://vcxsrv.sourceforge.net)
   - Start it with _access control disabled_
   - Find the IP address of your WSL network interface using _ipconfig_
-  - Set a DISPPLAY environment variable with value _WSL\_Interface\_IP_:0
+  - Set a DISPLAY environment variable with value _WSL\_Interface\_IP_:0
 
 ## Installer generation
 
