@@ -118,6 +118,9 @@ public:
 
 void MainWindowImpl::setupEntityModel()
 {
+	auto& configTree = _entityModel.configurationTrees[la::avdecc::entity::model::ConfigurationIndex{ 0u }] = la::avdecc::entity::model::ConfigurationTree{};
+	configTree.dynamicModel.isActiveConfiguration = true;
+
 	_entityModel.dynamicModel.entityName = aemDumper::internals::applicationShortName.toStdString();
 	_entityModel.dynamicModel.firmwareVersion = aemDumper::internals::versionString.toStdString();
 }

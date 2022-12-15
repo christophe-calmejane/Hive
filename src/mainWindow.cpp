@@ -307,6 +307,9 @@ void MainWindowImpl::currentControllerChanged()
 // Private methods
 void MainWindowImpl::setupEntityModel()
 {
+	auto& configTree = _entityModel.configurationTrees[la::avdecc::entity::model::ConfigurationIndex{ 0u }] = la::avdecc::entity::model::ConfigurationTree{};
+	configTree.dynamicModel.isActiveConfiguration = true;
+
 	_entityModel.dynamicModel.entityName = hive::internals::applicationShortName.toStdString();
 	_entityModel.dynamicModel.groupName = hive::modelsLibrary::helper::getComputerName().toStdString();
 	_entityModel.dynamicModel.firmwareVersion = hive::internals::versionString.toStdString();
