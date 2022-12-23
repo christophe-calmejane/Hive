@@ -266,17 +266,32 @@ private:
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
 
-		// Milan Info
-		if (entity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		// Milan Info - Display the information if available, even if the device is not Milan Compatible
 		{
-			auto* milanInfoItem = new QTreeWidgetItem(q);
-			milanInfoItem->setText(0, "Milan Info");
+			auto const milanInfoOpt = entity.getMilanInfo();
+			if (milanInfoOpt)
+			{
+				auto* milanInfoItem = new QTreeWidgetItem(q);
+				milanInfoItem->setText(0, "Milan Info");
 
-			auto const milanInfo = *entity.getMilanInfo();
+				auto const milanInfo = *milanInfoOpt;
+				auto const compat = entity.getCompatibilityFlags();
 
-			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
-			addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
-			addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
+				auto compatStr = QString{ "Not Milan Compatible" };
+				if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning))
+				{
+					compatStr = "Milan Compatible (with warnings)";
+				}
+				else if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+				{
+					compatStr = "Milan Compatible";
+				}
+
+				addTextItem(milanInfoItem, "Compatibility", compatStr);
+				addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
+				addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
+				addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
+			}
 		}
 
 		// Discovery information
