@@ -55,7 +55,7 @@ private:
 class EntityStatisticsTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent = nullptr);
+	EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::uint64_t const aemAecpUnsolicitedLossCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent = nullptr);
 	virtual ~EntityStatisticsTreeWidgetItem() override
 	{
 		takeChildren();
@@ -68,6 +68,7 @@ private:
 	void updateAecpUnexpectedResponseCounter(std::uint64_t const value) noexcept;
 	void updateAecpResponseAverageTime(std::chrono::milliseconds const& value) noexcept;
 	void updateAemAecpUnsolicitedCounter(std::uint64_t const value) noexcept;
+	void updateAemAecpUnsolicitedLossCounter(std::uint64_t const value) noexcept;
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 
@@ -77,6 +78,7 @@ private:
 	EntityStatisticTreeWidgetItem _aecpUnexpectedResponseCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses, this };
 	QTreeWidgetItem _aecpResponseAverageTimeItem{ this };
 	QTreeWidgetItem _aemAecpUnsolicitedCounterItem{ this };
+	EntityStatisticTreeWidgetItem _aemAecpUnsolicitedLossCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses, this };
 	QTreeWidgetItem _enumerationTimeItem{ this };
 	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _counters{};
 	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _errorCounters{};
