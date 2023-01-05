@@ -1,6 +1,6 @@
 # Hive
 
-Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 ## What is Hive
 
