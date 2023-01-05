@@ -130,6 +130,12 @@ private:
 			auto const lock = QSignalBlocker{ collapsedByDefaultCheckBox };
 			collapsedByDefaultCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_CollapsedByDefault.name).toBool());
 		}
+
+		// Show Entity Summary
+		{
+			auto const lock = QSignalBlocker{ showEntitySummaryCheckBox };
+			showEntitySummaryCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_ShowEntitySummary.name).toBool());
+		}
 	}
 
 	void loadControllerSettings()
@@ -316,6 +322,12 @@ void SettingsDialog::on_collapsedByDefaultCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::ConnectionMatrix_CollapsedByDefault.name, checked);
+}
+
+void SettingsDialog::on_showEntitySummaryCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::ConnectionMatrix_ShowEntitySummary.name, checked);
 }
 
 void SettingsDialog::on_discoveryDelayLineEdit_returnPressed()

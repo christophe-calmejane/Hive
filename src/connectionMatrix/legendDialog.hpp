@@ -44,6 +44,7 @@ private:
 	QVBoxLayout _layout{ this };
 	QPushButton _closeButton{ "Close", this };
 	bool _drawMediaLockedDot{ false };
+	bool _showEntitySummary{ false };
 };
 
 } // namespace connectionMatrix

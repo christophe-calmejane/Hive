@@ -289,7 +289,7 @@ QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orien
 	return path;
 }
 
-void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot, bool const drawCRFAudioConnections)
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot, bool const drawCRFAudioConnections, bool const drawEntitySummary)
 {
 	painter->setRenderHint(QPainter::Antialiasing);
 
@@ -407,9 +407,18 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		}
 		case Model::IntersectionData::Type::Entity_Entity:
 		{
-			auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
-			penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade600);
-			drawEntitySummaryIntersection(brush, penColor, penWidth * 1.5f);
+			if (drawEntitySummary)
+			{
+				auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
+				penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade600);
+				drawEntitySummaryIntersection(brush, penColor, penWidth * 1.5f);
+			}
+			else
+			{
+				painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
+				painter->setPen(QPen{ color::value(color::Name::Gray, color::Shade::Shade500), penWidth * 1.5f });
+				drawSquare(painter, rect);
+			}
 			break;
 		}
 		case Model::IntersectionData::Type::Entity_Redundant:
@@ -417,8 +426,17 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 		case Model::IntersectionData::Type::Entity_SingleStream:
 		case Model::IntersectionData::Type::Entity_SingleChannel:
 		{
-			auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
-			drawEntitySummaryIntersection(brush, penColor, penWidth);
+			if (drawEntitySummary)
+			{
+				auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
+				drawEntitySummaryIntersection(brush, penColor, penWidth);
+			}
+			else
+			{
+				painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
+				painter->setPen(QPen{ color::value(color::Name::Gray, color::Shade::Shade500), penWidth });
+				drawSquare(painter, rect);
+			}
 			break;
 		}
 		case Model::IntersectionData::Type::Redundant_RedundantStream:

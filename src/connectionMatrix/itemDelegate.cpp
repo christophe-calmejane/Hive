@@ -51,6 +51,11 @@ bool ItemDelegate::getDrawCRFAudioConnections() const noexcept
 	return _drawCRFAudioConnections;
 }
 
+void ItemDelegate::setDrawEntitySummary(bool const drawSummary) noexcept
+{
+	_drawEntitySummary = drawSummary;
+}
+
 void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	// Sometimes when the model is transposed with hidden rows/columns, hidden items are asked to be drawn
@@ -79,7 +84,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 
 	auto const& intersectionData = static_cast<Model const*>(index.model())->intersectionData(index);
 
-	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags, _drawMediaLockedDot, _drawCRFAudioConnections);
+	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags, _drawMediaLockedDot, _drawCRFAudioConnections, _drawEntitySummary);
 }
 
 } // namespace connectionMatrix

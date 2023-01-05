@@ -30,12 +30,14 @@ public:
 	void setDrawMediaLockedDot(bool const drawMediaLockedDot) noexcept;
 	void setDrawCRFAudioConnections(bool const drawCRFAudioConnections) noexcept;
 	bool getDrawCRFAudioConnections() const noexcept;
+	void setDrawEntitySummary(bool const drawSummary) noexcept;
 
 private:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 
 	bool _drawMediaLockedDot{ false };
 	bool _drawCRFAudioConnections{ false };
+	bool _drawEntitySummary{ false };
 };
 
 } // namespace connectionMatrix

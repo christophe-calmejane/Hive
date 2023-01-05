@@ -50,6 +50,7 @@ static SettingsManager::SettingDefault ConnectionMatrix_AlwaysShowArrowEnd = { "
 static SettingsManager::SettingDefault ConnectionMatrix_ShowMediaLockedDot = { "avdecc/connectionMatrix/showMediaLockedDot", true };
 static SettingsManager::SettingDefault ConnectionMatrix_AllowCRFAudioConnection = { "avdecc/connectionMatrix/allowCRFAudioConnection", false };
 static SettingsManager::SettingDefault ConnectionMatrix_CollapsedByDefault = { "avdecc/connectionMatrix/collapsedByDefault", true };
+static SettingsManager::SettingDefault ConnectionMatrix_ShowEntitySummary = { "avdecc/connectionMatrix/showEntitySummary", true };
 
 // Network settings
 static SettingsManager::SettingDefault Network_ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };

@@ -50,6 +50,7 @@ private:
 	Q_SLOT void on_showMediaLockedDotCheckBox_toggled(bool checked);
 	Q_SLOT void on_allowCRFAudioConnectionCheckBox_toggled(bool checked);
 	Q_SLOT void on_collapsedByDefaultCheckBox_toggled(bool checked);
+	Q_SLOT void on_showEntitySummaryCheckBox_toggled(bool checked);
 
 	// Controller
 	Q_SLOT void on_discoveryDelayLineEdit_returnPressed();

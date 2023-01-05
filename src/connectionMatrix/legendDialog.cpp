@@ -75,7 +75,7 @@ private:
 	{
 		Q_UNUSED(event);
 		QPainter painter{ this };
-		paintHelper::drawCapabilities(&painter, rect(), _type, _state, _flags, true, true);
+		paintHelper::drawCapabilities(&painter, rect(), _type, _state, _flags, true, true, true);
 	}
 
 private:
@@ -90,6 +90,7 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 	// Configure settings observers
 	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_ShowEntitySummary.name, this);
 
 	// Configure UI
 	setWindowTitle(hive::internals::applicationShortName + " - " + "Connection Matrix Legend");
@@ -126,9 +127,17 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 		_layout.addWidget(sectionGroupBox);
 	};
 
-	Sections shapeSections = {
+	Sections shapeSectionsSummary = {
 		{ "Entity-Entity connection summary", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
 		{ "Entity-Stream/Channel connection summary", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
+		{ "Connection status for a Simple stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
+		{ "Redundant Stream Pair connection summary", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
+		{ "Connection status for the individual stream of a Redundant Stream Pair", Model::IntersectionData::Type::RedundantStream_RedundantStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
+	};
+
+	Sections shapeSectionsNoSummary = {
+		{ "Entity-Entity intersection", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
+		{ "Entity-Stream/Channel intersection", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
 		{ "Connection status for a Simple stream", Model::IntersectionData::Type::SingleStream_SingleStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
 		{ "Redundant Stream Pair connection summary", Model::IntersectionData::Type::Redundant_Redundant, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
 		{ "Connection status for the individual stream of a Redundant Stream Pair", Model::IntersectionData::Type::RedundantStream_RedundantStream, Model::IntersectionData::State::NotConnected, Model::IntersectionData::Flags{}, false, "" },
@@ -139,7 +148,7 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 		{ "At least one Stream/Channel is connected", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{}, false, "" },
 		{ "At least one Stream/Channel is connected but not in same AVB domain", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongDomain }, false, "Check links between switches, check AVB is enabled on switches" },
 		{ "At least one Stream/Channel is connected but has different intput and output stream format", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::WrongFormatPossible }, false, "Change the stream format on the listener (or the talker)" },
-		{ "At least one Stream/Channel is connected but at least one Network Interface is down", Model::IntersectionData::Type::Entity_Entity, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown }, false, "" },
+		{ "At least one Stream/Channel is connected but at least one Network Interface is down", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::Connected, Model::IntersectionData::Flags{ Model::IntersectionData::Flag::InterfaceDown }, false, "" },
 		{ "At least one Stream/Channel is connected but at least one Redundant Stream Pair is partially connected", Model::IntersectionData::Type::Entity_SingleStream, Model::IntersectionData::State::PartiallyConnected, Model::IntersectionData::Flags{}, false, "" },
 	};
 
@@ -208,10 +217,20 @@ LegendDialog::LegendDialog(qtMate::material::color::Name const& colorName, bool 
 	}
 
 	// Add a section for the Shapes
-	addSection("Intersection Shapes", shapeSections);
+	if (_showEntitySummary)
+	{
+		addSection("Intersection Shapes", shapeSectionsSummary);
+	}
+	else
+	{
+		addSection("Intersection Shapes", shapeSectionsNoSummary);
+	}
 
 	// Add a section for the Summary Colors
-	addSection("Summary Intersection Color Codes", summaryColorCodeSections);
+	if (_showEntitySummary)
+	{
+		addSection("Summary Intersection Color Codes", summaryColorCodeSections);
+	}
 
 	// Add a section for the Connection Colors
 	addSection("Connection Intersection Color Codes", connectionColorCodeSections);
@@ -226,6 +245,7 @@ LegendDialog::~LegendDialog()
 	// Remove settings observers
 	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_ShowEntitySummary.name, this);
 }
 
 void LegendDialog::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
@@ -234,6 +254,11 @@ void LegendDialog::onSettingChanged(settings::SettingsManager::Setting const& na
 	{
 		auto const drawDot = value.toBool();
 		_drawMediaLockedDot = drawDot;
+	}
+	else if (name == settings::ConnectionMatrix_ShowEntitySummary.name)
+	{
+		auto const showSummary = value.toBool();
+		_showEntitySummary = showSummary;
 	}
 }
 
