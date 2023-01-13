@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,8 +19,6 @@
 
 #pragma once
 
-#include "qtUserRoles.hpp"
-
 #include <la/avdecc/utils.hpp>
 #include <QtMate/material/color.hpp>
 
@@ -30,14 +28,12 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
+// This delegate paints an image on each item who's index returns a valid QImage for "QtUserRoles::LightImageRole" and "QtUserRoles::DarkImageRole"
 class ImageItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	static constexpr auto LightImageRole = la::avdecc::utils::to_integral(QtUserRoles::LightImageRole);
-	static constexpr auto DarkImageRole = la::avdecc::utils::to_integral(QtUserRoles::DarkImageRole);
-
-	ImageItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+	ImageItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 
@@ -46,6 +42,7 @@ protected:
 
 private:
 	// Private members
+	bool _paintBaseDelegate{ true };
 	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
 	bool _isDark{ false };
 };

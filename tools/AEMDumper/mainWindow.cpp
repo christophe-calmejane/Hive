@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -37,9 +37,6 @@
 #endif
 
 #include "config.hpp"
-//#include "entityLogoCache.hpp"
-//#include "errorItemDelegate.hpp"
-//#include "imageItemDelegate.hpp"
 
 #include <QtMate/widgets/dynamicHeaderView.hpp>
 #include <QtMate/widgets/comboBox.hpp>
@@ -47,7 +44,7 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
 #include <hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp>
-#include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp>
 
 #include <mutex>
 #include <memory>
@@ -72,9 +69,13 @@ class MainWindowImpl final : public QObject, public Ui::MainWindow
 	static constexpr auto ControllerModelEntityColumn_FirmwareVersion = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion);
 
 public:
-	MainWindowImpl(::MainWindow* parent)
+	MainWindowImpl(::MainWindow* parent, QStringList ansFilesToLoad)
 		: _parent(parent)
+		, _ansFilesToLoad{ ansFilesToLoad }
 	{
+		// Setup entity model
+		setupEntityModel();
+
 		// Setup common UI
 		setupUi(parent);
 
@@ -95,6 +96,7 @@ public:
 	Q_SLOT void currentControllerChanged();
 
 	// Private methods
+	void setupEntityModel();
 	void setupView();
 	void registerMetaTypes();
 	void createToolbars();
@@ -103,13 +105,25 @@ public:
 
 	// Private members
 	::MainWindow* _parent{ nullptr };
+	QStringList _ansFilesToLoad{};
 	qtMate::widgets::ComboBox _interfaceComboBox{ _parent };
-	hive::widgetModelsLibrary::NetworkInterfacesListModel _networkInterfacesModel{};
+	hive::widgetModelsLibrary::NetworkInterfacesListModel _networkInterfacesModel{ false };
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	hive::widgetModelsLibrary::DiscoveredEntitiesTableModel _controllerModel{ ControllerModelEntityDataFlags };
+	hive::widgetModelsLibrary::DiscoveredEntitiesTableItemDelegate _controllerModelItemDelegate{ _parent };
 	bool _shown{ false };
+	la::avdecc::entity::model::EntityTree _entityModel{};
 };
+
+void MainWindowImpl::setupEntityModel()
+{
+	auto& configTree = _entityModel.configurationTrees[la::avdecc::entity::model::ConfigurationIndex{ 0u }] = la::avdecc::entity::model::ConfigurationTree{};
+	configTree.dynamicModel.isActiveConfiguration = true;
+
+	_entityModel.dynamicModel.groupName = aemDumper::internals::applicationShortName.toStdString();
+	_entityModel.dynamicModel.firmwareVersion = aemDumper::internals::versionString.toStdString();
+}
 
 void MainWindowImpl::setupView()
 {
@@ -153,7 +167,20 @@ void MainWindowImpl::currentControllerChanged()
 #else // !DEBUG
 		auto const progID = std::uint16_t{ PROG_ID };
 #endif // DEBUG
-		manager.createController(la::avdecc::protocol::ProtocolInterface::Type::PCap, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		manager.createController(la::avdecc::protocol::ProtocolInterface::Type::PCap, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en", &_entityModel);
+		manager.enableEntityAdvertising(10);
+
+		// Try to load ANS files
+		auto const flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat };
+		for (auto const& file : _ansFilesToLoad)
+		{
+			auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(file, flags);
+			if (!!error)
+			{
+				QMessageBox::warning(_parent, "Failed to load Network State", QString("Error loading JSON file '%1':\n%2").arg(file).arg(message.c_str()));
+			}
+		}
+		_ansFilesToLoad.clear();
 	}
 	catch (la::avdecc::controller::Controller::Exception const&)
 	{
@@ -192,10 +219,8 @@ void MainWindowImpl::createControllerView()
 	// Disable row resizing
 	controllerTableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 
-	// The table view does not take ownership on the item delegate
-	auto* imageItemDelegate = new hive::widgetModelsLibrary::ImageItemDelegate{ qtMate::material::color::Name::DeepPurple, _parent }; // AEMDumper is not currently using Themes, so this color is just to properly init Dark Color for ImageItemDelegate
-	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_EntityLogo, imageItemDelegate);
-	controllerTableView->setItemDelegateForColumn(ControllerModelEntityColumn_Compatibility, imageItemDelegate);
+	// Set delegate for the entire table
+	controllerTableView->setItemDelegate(&_controllerModelItemDelegate);
 
 	_controllerDynamicHeaderView.setHighlightSections(false);
 	_controllerDynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityID);
@@ -246,7 +271,7 @@ void MainWindowImpl::connectSignals()
 				// Dump Entity
 				auto* const dumpFullEntity = menu.addAction("Export Full Entity...");
 				auto* const dumpEntityModel = menu.addAction("Export Entity Model...");
-				dumpEntityModel->setEnabled(entity.isAemSupported && entityModelID);
+				dumpEntityModel->setEnabled(entity.isAemSupported && entityModelID && entity.hasAnyConfigurationTree);
 
 				menu.addSeparator();
 
@@ -340,6 +365,9 @@ void MainWindowImpl::connectSignals()
 				}
 			}
 		});
+
+	auto* refreshController = new QShortcut{ QKeySequence{ "Ctrl+R" }, _parent };
+	connect(refreshController, &QShortcut::activated, this, &MainWindowImpl::currentControllerChanged);
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -535,9 +563,9 @@ void MainWindow::dropEvent([[maybe_unused]] QDropEvent* event)
 }
 
 
-MainWindow::MainWindow(QWidget* parent)
+MainWindow::MainWindow(QStringList ansFilesToLoad, QWidget* parent)
 	: QMainWindow(parent)
-	, _pImpl(new MainWindowImpl(this))
+	, _pImpl(new MainWindowImpl(this, ansFilesToLoad))
 {
 	// Set title
 	setWindowTitle(QCoreApplication::applicationName() + " - Version " + QCoreApplication::applicationVersion());

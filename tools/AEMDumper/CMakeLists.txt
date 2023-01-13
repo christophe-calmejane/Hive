@@ -1,7 +1,7 @@
 # Hive Sources CMake File
 
 # Declare project
-cu_setup_project(AEMDumper "1.0.0.1" "AEM Dumper")
+cu_setup_project(AEMDumper ${AEMDUMPER_VERSION} "AEM Dumper" MARKETING_VERSION_DIGITS ${MARKETING_VERSION_DIGITS} MARKETING_VERSION_POSTFIX ${MARKETING_VERSION_POSTFIX})
 
 # Find dependencies
 find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network REQUIRED)

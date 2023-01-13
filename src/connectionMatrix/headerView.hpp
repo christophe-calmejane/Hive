@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -45,6 +45,7 @@ public:
 	void setAlwaysShowArrowTip(bool const show);
 	void setAlwaysShowArrowEnd(bool const show);
 	void setTransposed(bool const isTransposed);
+	void setCollapsedByDefault(bool const collapsedByDefault);
 	void setColor(qtMate::material::color::Name const name);
 
 	// Retrieves the current sectionState for each section
@@ -89,6 +90,7 @@ private:
 	bool _alwaysShowArrowTip{ false };
 	bool _alwaysShowArrowEnd{ false };
 	bool _isTransposed{ false };
+	bool _collapsedByDefault{ true };
 	qtMate::material::color::Name _colorName{ qtMate::material::color::DefaultColor };
 };
 

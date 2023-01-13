@@ -8,6 +8,28 @@ default_mac_arch="clang_64"
 default_linux_basePath="/usr/lib"
 default_linux_arch="$(g++ -dumpmachine)"
 
+# gen_cmake defaults
+function extend_gc_fnc_defaults()
+{
+  default_VisualGenerator="Visual Studio 17 2022"
+  default_VisualToolset="v143"
+  default_VisualToolchain="x64"
+  default_VisualArch="x86"
+  default_keyDigits=2
+  default_betaTagName="-beta"
+}
+
+# gen_install defaults
+function extend_gi_fnc_defaults()
+{
+  default_VisualGenerator="Visual Studio 17 2022"
+  default_VisualToolset="v143"
+  default_VisualToolchain="x64"
+  default_VisualArch="x86"
+  default_keyDigits=2
+  default_betaTagName="-beta"
+}
+
 # Some helper functions
 function build_qt_config_folder()
 {

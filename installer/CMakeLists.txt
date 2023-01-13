@@ -1,5 +1,8 @@
 # Hive Installer CMake file
 
+# We must redefine the variables to take marketing digits/postfix into account (didn't do it before because cu_setup_project_version_variables is a macro and it would have defined the variables for all targets)
+cu_setup_project_version_variables(${HIVE_VERSION} MARKETING_VERSION_DIGITS ${MARKETING_VERSION_DIGITS} MARKETING_VERSION_POSTFIX ${MARKETING_VERSION_POSTFIX})
+
 # Set Install Key (used to detect if a previous version should be uninstalled first)
 set(CU_INSTALL_KEY "${PROJECT_NAME}")
 if(CU_PROJECT_MARKETING_VERSION)

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -193,6 +193,11 @@ QString flagsToString(Model::IntersectionData::Flags const& flags)
 	if (flags.test(Model::IntersectionData::Flag::WrongFormatImpossible))
 	{
 		stringList << "WrongFormatImpossible";
+	}
+
+	if (flags.test(Model::IntersectionData::Flag::WrongFormatType))
+	{
+		stringList << "WrongFormatType";
 	}
 
 	if (flags.test(Model::IntersectionData::Flag::MediaLocked))
@@ -465,6 +470,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controllerOffline, this, &ModelPrivate::handleControllerOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &ModelPrivate::handleEntityOnline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &ModelPrivate::handleEntityOffline);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, this, &ModelPrivate::handleUnsolicitedRegistrationChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::gptpChanged, this, &ModelPrivate::handleGptpChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &ModelPrivate::handleEntityNameChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::avbInterfaceLinkStatusChanged, this, &ModelPrivate::handleAvbInterfaceLinkStatusChanged);
@@ -994,6 +1000,51 @@ public:
 	// Updates intersection data for the given dirtyFlags
 	void computeIntersectionData(Model::IntersectionData& intersectionData, IntersectionDirtyFlags const dirtyFlags)
 	{
+		// Helper lambdas
+		auto const setSummaryIntersectionDataFlags = [](auto const dontSetInterfaceDownAndDomain, auto const& nodeIntersectionData, auto& intersectionDataFlags)
+		{
+			AVDECC_ASSERT(nodeIntersectionData.state == Model::IntersectionData::State::Connected || nodeIntersectionData.state == Model::IntersectionData::State::PartiallyConnected, "Must only be called for (partially) connected intersection");
+
+			if (!dontSetInterfaceDownAndDomain)
+			{
+				// InterfaceDown if at least one connected stream is InterfaceDown
+				if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown))
+				{
+					intersectionDataFlags.set(Model::IntersectionData::Flag::InterfaceDown);
+				}
+
+				// WrongDomain if at least one connected stream is WrongDomain
+				if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain))
+				{
+					intersectionDataFlags.set(Model::IntersectionData::Flag::WrongDomain);
+				}
+			}
+
+			// WrongFormatType if at least one connected stream is WrongFormatType
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::WrongFormatType);
+			}
+
+			// WrongFormatImpossible if at least one connected stream is WrongFormatImpossible
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatImpossible))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+			}
+
+			// WrongFormatPossible if at least one connected stream is WrongFormatPossible
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+			}
+
+			// LatencyError if at least one is LatencyError
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::LatencyError);
+			}
+		};
+
 		try
 		{
 			auto const talkerType = intersectionData.talker->type();
@@ -1071,6 +1122,7 @@ public:
 					{
 						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormatPossible);
 						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormatImpossible);
+						intersectionData.flags.reset(Model::IntersectionData::Flag::WrongFormatType);
 					}
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateGptp))
 					{
@@ -1148,96 +1200,259 @@ public:
 				}
 
 				case Model::IntersectionData::Type::Entity_Entity:
-				case Model::IntersectionData::Type::Entity_Redundant:
-				case Model::IntersectionData::Type::Entity_RedundantStream:
-				case Model::IntersectionData::Type::Entity_SingleStream:
 				{
 					// This is a summary intersection, always update all flags
 					intersectionData.flags.clear();
 
-					// TODO: Compute Entity Summary
-					break;
-				}
+					auto atLeastOneConnectedTalker = false;
+					auto atLeastOnePartiallyConnectedTalker = false;
+					auto allLockedTalker = true;
+					auto atLeastOneConnectedListener = false;
+					auto atLeastOnePartiallyConnectedListener = false;
+					auto allLockedListener = true;
 
-				case Model::IntersectionData::Type::Redundant_Redundant:
-				{
-					// This is a summary intersection, always update all flags
-					intersectionData.flags.clear();
-
-					auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
-					auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
-
-					// Build the list of smart connectable streams:
-					intersectionData.smartConnectableStreams.clear();
-
-					auto atLeastOneInterfaceDown = false;
-					auto atLeastOneConnected = false;
-					auto allConnected = true;
-					auto allCompatibleDomain = true;
-					auto allCompatibleFormat = true;
-					auto impossibleFormat = false;
-					auto allLocked = true;
-					auto allNoLatencyError = true;
-
-					AVDECC_ASSERT(talker->childrenCount() == listener->childrenCount(), "Talker and listener should have the same child count");
-					AVDECC_ASSERT(listener->childrenCount() == 2, "Milan redundancy is limited to 2 streams per redundant pair");
-
-					for (auto i = 0; i < talker->childrenCount(); ++i)
+					auto const processIntersection = [&intersectionData, &setSummaryIntersectionDataFlags](auto const& nodeIntersectionData, auto& atLeastOneConnectedNode, auto& atLeastOnePartiallyConnectedNode, auto& allLockedNode)
 					{
-						// Avdecc library guarantees that the order of the redundant pair is always Primary, then Secondary
-						auto const* const talkerStreamNode = static_cast<StreamNode*>(talker->childAt(i));
-						auto const* const listenerStreamNode = static_cast<StreamNode*>(listener->childAt(i));
+						// Get connected state
+						auto const isConnected = nodeIntersectionData.state == Model::IntersectionData::State::Connected;
+						auto const isPartiallyConnected = nodeIntersectionData.state == Model::IntersectionData::State::PartiallyConnected;
+						atLeastOneConnectedNode |= isConnected;
+						atLeastOnePartiallyConnectedNode |= isPartiallyConnected;
 
-						auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
-						auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
-						atLeastOneInterfaceDown |= talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+						// Summary on connected nodes only
+						if (isConnected || isPartiallyConnected)
+						{
+							// Compute summary intersection data flags based on currently processing intersection data
+							setSummaryIntersectionDataFlags(false, nodeIntersectionData, intersectionData.flags);
+						}
+						// Get MediaLocked Summary for connected and partially connected nodes
+						if (isConnected || isPartiallyConnected)
+						{
+							allLockedNode &= nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked);
+						}
+					};
 
-						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
-						auto const isConnectedToTalker = hive::modelsLibrary::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
-						auto const isFastConnectingToTalker = hive::modelsLibrary::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
-						auto const isMediaLocked = isConnectedToTalker && listenerStreamNode->lockedState() == Node::TriState::True;
-						auto const isLatencyError = isConnectedToTalker && listenerStreamNode->isLatencyError();
+					auto const entityTalkerSection = priv::indexOf(_talkerNodeSectionMap, intersectionData.talker);
+					auto const entityListenerSection = priv::indexOf(_listenerNodeSectionMap, intersectionData.listener);
+					if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(entityTalkerSection), "Invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(entityListenerSection), "Invalid listener section"))
+					{
+						break;
+					}
 
-						auto const connected = isConnectedToTalker || isFastConnectingToTalker;
-						atLeastOneConnected |= connected;
-						allConnected &= connected;
-						allLocked &= isMediaLocked;
-						allNoLatencyError &= !isLatencyError;
+					// Process all talker children (against the listener Entity)
+					for (auto const& talkerNode : intersectionData.talker->children())
+					{
+						auto const* const talker = talkerNode.get();
 
-						allCompatibleDomain &= isSameDomain(*talkerStreamNode, *listenerStreamNode);
+						// Based on the mode, filter relevant nodes
+						switch (_mode)
+						{
+							case Model::Mode::Stream:
+								// Only process Redundant and Stream Nodes
+								if (!talker->isRedundantNode() && !talker->isStreamNode())
+								{
+									continue;
+								}
+								break;
+							case Model::Mode::Channel:
+								// Only process Channel Nodes
+								if (!talker->isChannelNode())
+								{
+									continue;
+								}
+								break;
+							default:
+								AVDECC_ASSERT(false, "Unhandled Mode");
+								break;
+						}
 
-						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
-						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
-						allCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
-						impossibleFormat |= !hasMatchingFormat(listenerStreamNode->streamFormats(), talkerStreamFormat);
+						// Get the IntersectionData source node we'll get the data from
+						auto const talkerSection = priv::indexOf(_talkerNodeSectionMap, talker);
+						auto const& nodeIntersectionData = _intersectionData[talkerSection][entityListenerSection];
 
-						intersectionData.smartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ { talkerStreamNode->entityID(), talkerStreamNode->streamIndex() }, { listenerStreamNode->entityID(), listenerStreamNode->streamIndex() }, isConnectedToTalker, isFastConnectingToTalker });
+						processIntersection(nodeIntersectionData, atLeastOneConnectedTalker, atLeastOnePartiallyConnectedTalker, allLockedTalker);
+					}
+
+					// Process all listener children (against the talker Entity)
+					for (auto const& listenerNode : intersectionData.listener->children())
+					{
+						auto const* const listener = listenerNode.get();
+
+						// Based on the mode, filter relevant nodes
+						switch (_mode)
+						{
+							case Model::Mode::Stream:
+								// Only process Redundant and Stream Nodes
+								if (!listener->isRedundantNode() && !listener->isStreamNode())
+								{
+									continue;
+								}
+								break;
+							case Model::Mode::Channel:
+								// Only process Channel Nodes
+								if (!listener->isChannelNode())
+								{
+									continue;
+								}
+								break;
+							default:
+								AVDECC_ASSERT(false, "Unhandled Mode");
+								break;
+						}
+
+						// Get the IntersectionData source node we'll get the data from
+						auto const listenerSection = priv::indexOf(_listenerNodeSectionMap, listener);
+						auto const& nodeIntersectionData = _intersectionData[entityTalkerSection][listenerSection];
+
+						processIntersection(nodeIntersectionData, atLeastOneConnectedListener, atLeastOnePartiallyConnectedListener, allLockedListener);
 					}
 
 					// Update flags
-					if (atLeastOneInterfaceDown)
+					if (allLockedTalker && allLockedListener && (atLeastOneConnectedTalker || atLeastOnePartiallyConnectedTalker) && (atLeastOneConnectedListener || atLeastOnePartiallyConnectedListener))
 					{
-						intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
 					}
 
-					if (!allCompatibleDomain)
+					// Update State
+					//// Note: A listener stream can only accept a single connection so if we have at least one TalkerStream connected (to this listener then), all 'possible' streams are connected
+					//if (atLeastOneConnectedTalker && allConnectedListener)
+					if (atLeastOneConnectedTalker || atLeastOneConnectedListener)
 					{
-						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+						intersectionData.state = Model::IntersectionData::State::Connected;
+					}
+					else if (atLeastOnePartiallyConnectedTalker || atLeastOnePartiallyConnectedListener)
+					{
+						intersectionData.state = Model::IntersectionData::State::PartiallyConnected;
+					}
+					else
+					{
+						intersectionData.state = Model::IntersectionData::State::NotConnected;
 					}
 
-					if (!allCompatibleFormat)
+					break;
+				}
+
+				case Model::IntersectionData::Type::Entity_Redundant:
+				{
+					// Currently don't handle Channel mode
+					if (_mode == Model::Mode::Channel)
 					{
-						if (impossibleFormat)
+						break;
+					}
+
+					// This is a summary intersection, always update all flags
+					intersectionData.flags.clear();
+
+					auto const* nodeToTraverse = static_cast<Node const*>(nullptr);
+					auto const* singleNode = static_cast<Node const*>(nullptr);
+					auto singleNodeSection = -1;
+
+					// Determine the Entity and other nodes
+					if (talkerType == Node::Type::Entity)
+					{
+						nodeToTraverse = intersectionData.listener;
+						singleNode = intersectionData.talker;
+						singleNodeSection = priv::indexOf(_talkerNodeSectionMap, singleNode);
+					}
+					else if (listenerType == Node::Type::Entity)
+					{
+						nodeToTraverse = intersectionData.talker;
+						singleNode = intersectionData.listener;
+						singleNodeSection = priv::indexOf(_listenerNodeSectionMap, singleNode);
+					}
+					else
+					{
+						AVDECC_ASSERT(false, "Unhandled");
+						break;
+					}
+
+					// Set any non InterfaceDown error and compute some summaries
+					auto allLocked = true;
+					auto allNoLatencyError = true;
+					auto allConnected = true;
+					auto atLeastOneConnected = false;
+					auto atLeastOneConnectedInterfaceDown = false;
+					auto allInterfaceDownAreConnected = true;
+					auto atLeastOneNonInterfaceDownConnected = false;
+					auto atLeastOneNonInterfaceDownConnectedInvalid = false; // Connected and has Format/Domain error
+					for (auto const& childNode : nodeToTraverse->children())
+					{
+						auto const* const node = childNode.get();
+
+						// Only process Redundant and Stream Nodes (not channels)
+						AVDECC_ASSERT(!node->isRedundantNode(), "Should not have RedundantNode here");
+						if (!node->isStreamNode())
 						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+							continue;
+						}
+
+						// Get the indexes for the Intersection Data
+						auto talkerSection = -1;
+						auto listenerSection = -1;
+						if (talkerType == Node::Type::Entity)
+						{
+							talkerSection = singleNodeSection;
+							listenerSection = priv::indexOf(_listenerNodeSectionMap, node);
+						}
+						else if (listenerType == Node::Type::Entity)
+						{
+							talkerSection = priv::indexOf(_talkerNodeSectionMap, node);
+							listenerSection = singleNodeSection;
+						}
+
+						if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "Invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "Invalid listener section"))
+						{
+							break;
+						}
+
+						// Get the IntersectionData source node we'll get the data from
+						auto const& nodeIntersectionData = _intersectionData[talkerSection][listenerSection];
+
+						AVDECC_ASSERT(nodeIntersectionData.state != Model::IntersectionData::State::PartiallyConnected, "Should not be partially connected");
+						auto const isConnected = nodeIntersectionData.state == Model::IntersectionData::State::Connected;
+						auto const isInterfaceDown = nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown);
+
+						if (isConnected)
+						{
+							// Compute summary intersection data flags based on currently processing intersection data
+							setSummaryIntersectionDataFlags(isInterfaceDown, nodeIntersectionData, intersectionData.flags);
+						}
+
+						if (!isInterfaceDown)
+						{
+							atLeastOneNonInterfaceDownConnected |= isConnected;
+							atLeastOneNonInterfaceDownConnectedInvalid |= isConnected && (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongDomain) || nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatPossible) || nodeIntersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatImpossible));
 						}
 						else
 						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+							atLeastOneConnectedInterfaceDown |= isConnected;
+							allInterfaceDownAreConnected &= isConnected;
+						}
+
+						allConnected &= isConnected;
+						atLeastOneConnected |= isConnected;
+						allLocked &= (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked) || !isConnected || nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown)); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
+						allNoLatencyError &= !nodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError);
+					}
+
+					// Handle InterfaceDown errors separately as we don't want to see InterfaceDown and/or associated WrongDomain in some cases
+					if (atLeastOneConnectedInterfaceDown && atLeastOneConnected)
+					{
+						// We want to see InterfaceDown flag (but not WrongDomain) in case
+						//  - All InterfaceDown are connected
+						//  - At least another stream is connected
+						//  - All other connected streams don't have errors
+						if (allInterfaceDownAreConnected && atLeastOneNonInterfaceDownConnected && !atLeastOneNonInterfaceDownConnectedInvalid)
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+						}
+						else
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
 						}
 					}
 
-					if (allLocked)
+					if (allLocked && atLeastOneNonInterfaceDownConnected)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
 					}
@@ -1261,6 +1476,272 @@ public:
 						intersectionData.state = Model::IntersectionData::State::NotConnected;
 					}
 
+					break;
+				}
+				case Model::IntersectionData::Type::Entity_RedundantStream:
+				case Model::IntersectionData::Type::Entity_SingleStream:
+				{
+					// This is a summary intersection, always update all flags
+					intersectionData.flags.clear();
+
+					auto const* nodeToTraverse = static_cast<Node const*>(nullptr);
+					auto const* singleNode = static_cast<Node const*>(nullptr);
+					auto singleNodeSection = -1;
+
+					// Determine the Entity and other nodes
+					if (talkerType == Node::Type::Entity)
+					{
+						nodeToTraverse = intersectionData.talker;
+						singleNode = intersectionData.listener;
+						singleNodeSection = priv::indexOf(_listenerNodeSectionMap, singleNode);
+					}
+					else if (listenerType == Node::Type::Entity)
+					{
+						nodeToTraverse = intersectionData.listener;
+						singleNode = intersectionData.talker;
+						singleNodeSection = priv::indexOf(_talkerNodeSectionMap, singleNode);
+					}
+					else
+					{
+						AVDECC_ASSERT(false, "Unhandled");
+						break;
+					}
+
+					auto atLeastOneConnected = false;
+					auto atLeastOnePartiallyConnected = false;
+					auto allLocked = true;
+
+					for (auto const& childNode : nodeToTraverse->children())
+					{
+						auto const* const node = childNode.get();
+
+						// Only process Redundant and Stream Nodes (not channels)
+						if (!node->isRedundantNode() && !node->isStreamNode())
+						{
+							continue;
+						}
+
+						// Get the indexes for the Intersection Data
+						auto talkerSection = -1;
+						auto listenerSection = -1;
+						if (talkerType == Node::Type::Entity)
+						{
+							talkerSection = priv::indexOf(_talkerNodeSectionMap, node);
+							listenerSection = singleNodeSection;
+						}
+						else if (listenerType == Node::Type::Entity)
+						{
+							talkerSection = singleNodeSection;
+							listenerSection = priv::indexOf(_listenerNodeSectionMap, node);
+						}
+
+						if (!AVDECC_ASSERT_WITH_RET(isValidTalkerSection(talkerSection), "Invalid talker section") || !AVDECC_ASSERT_WITH_RET(isValidListenerSection(listenerSection), "Invalid listener section"))
+						{
+							break;
+						}
+
+						// Get the IntersectionData source node we'll get the data from
+						auto const& nodeIntersectionData = _intersectionData[talkerSection][listenerSection];
+
+						// Get connected state
+						auto const isConnected = nodeIntersectionData.state == Model::IntersectionData::State::Connected;
+						auto const isPartiallyConnected = nodeIntersectionData.state == Model::IntersectionData::State::PartiallyConnected;
+						atLeastOneConnected |= isConnected;
+						atLeastOnePartiallyConnected |= isPartiallyConnected;
+
+						if (isConnected || isPartiallyConnected)
+						{
+							// Compute summary intersection data flags based on currently processing intersection data
+							setSummaryIntersectionDataFlags(false, nodeIntersectionData, intersectionData.flags);
+
+							// MediaLocked if all connected streams are MediaLocked
+							allLocked &= nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked);
+						}
+					}
+
+					// Update flags
+					if (allLocked && (atLeastOneConnected || atLeastOnePartiallyConnected))
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
+					}
+
+					// Update State
+					auto const isListenerNodeStream = talkerType == Node::Type::Entity && singleNode->isStreamNode();
+					if (atLeastOneConnected)
+					{
+						intersectionData.state = Model::IntersectionData::State::Connected;
+					}
+					else if (atLeastOnePartiallyConnected)
+					{
+						intersectionData.state = Model::IntersectionData::State::PartiallyConnected;
+					}
+					else
+					{
+						intersectionData.state = Model::IntersectionData::State::NotConnected;
+					}
+					break;
+				}
+
+				case Model::IntersectionData::Type::Entity_RedundantChannel:
+				case Model::IntersectionData::Type::Entity_SingleChannel:
+					// TODO
+					break;
+
+				case Model::IntersectionData::Type::Redundant_Redundant:
+				{
+					// This is a summary intersection, always update all flags
+					intersectionData.flags.clear();
+
+					auto* talker = static_cast<RedundantNode*>(intersectionData.talker);
+					auto* listener = static_cast<RedundantNode*>(intersectionData.listener);
+
+					AVDECC_ASSERT(talker->childrenCount() == listener->childrenCount(), "Talker and listener should have the same child count");
+					AVDECC_ASSERT(listener->childrenCount() == 2, "Milan redundancy is limited to 2 streams per redundant pair");
+
+					// Build the list of smart connectable streams:
+					intersectionData.smartConnectableStreams.clear();
+
+					// Struct to save each interfaction info so we can process once all retrieved
+					struct IntersectionInfo
+					{
+						bool isConnected{ false };
+						bool isMediaLocked{ false };
+						bool isLatencyError{ false };
+						bool isInterfaceDown{ false };
+						bool isDomainError{ false };
+						bool isFormatError{ false };
+						bool isFormatImpossible{ false };
+						bool isDifferentMediaClockFormat{ false };
+					};
+					auto intersectionsInfo = std::vector<IntersectionInfo>{};
+
+					for (auto i = 0; i < talker->childrenCount(); ++i)
+					{
+						// Avdecc library guarantees that the order of the redundant pair is always Primary, then Secondary
+						auto const* const talkerStreamNode = static_cast<StreamNode*>(talker->childAt(i));
+						auto const* const listenerStreamNode = static_cast<StreamNode*>(listener->childAt(i));
+
+						auto info = IntersectionInfo{};
+
+						auto const talkerStream = la::avdecc::entity::model::StreamIdentification{ talkerEntityID, talkerStreamNode->streamIndex() };
+						auto const isConnectedToTalker = hive::modelsLibrary::helper::isConnectedToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
+						auto const isFastConnectingToTalker = hive::modelsLibrary::helper::isFastConnectingToTalker(talkerStream, listenerStreamNode->streamInputConnectionInformation());
+						info.isConnected = isConnectedToTalker || isFastConnectingToTalker;
+						info.isMediaLocked = isConnectedToTalker && listenerStreamNode->lockedState() == Node::TriState::True;
+						info.isLatencyError = isConnectedToTalker && listenerStreamNode->isLatencyError();
+
+						auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
+						auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
+						info.isInterfaceDown = talkerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down || listenerInterfaceLinkStatus == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+
+						info.isDomainError = !isSameDomain(*talkerStreamNode, *listenerStreamNode);
+
+						auto const talkerStreamFormat = talkerStreamNode->streamFormat();
+						auto const listenerStreamFormat = listenerStreamNode->streamFormat();
+						info.isFormatError = !la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+						info.isFormatImpossible = !hasMatchingFormat(listenerStreamNode->streamFormats(), talkerStreamFormat);
+						info.isDifferentMediaClockFormat = la::avdecc::controller::Controller::isMediaClockStreamFormat(talkerStreamFormat) != la::avdecc::controller::Controller::isMediaClockStreamFormat(listenerStreamFormat);
+
+						intersectionData.smartConnectableStreams.push_back(Model::IntersectionData::SmartConnectableStream{ { talkerStreamNode->entityID(), talkerStreamNode->streamIndex() }, { listenerStreamNode->entityID(), listenerStreamNode->streamIndex() }, isConnectedToTalker, isFastConnectingToTalker });
+
+						intersectionsInfo.emplace_back(std::move(info));
+					}
+
+					// Set any non InterfaceDown error and compute some summaries
+					auto allLocked = true;
+					auto allNoLatencyError = true;
+					auto allConnected = true;
+					auto atLeastOneConnected = false;
+					auto atLeastOneInterfaceDown = false;
+					auto allInterfaceDownAreConnected = true;
+					auto atLeastOneNonInterfaceDownConnected = false;
+					auto atLeastOneNonInterfaceDownConnectedInvalid = false; // Connected and has Format/Domain error
+					for (auto const& info : intersectionsInfo)
+					{
+						if (!info.isInterfaceDown)
+						{
+							if (info.isDomainError)
+							{
+								intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+							}
+							if (info.isFormatImpossible)
+							{
+								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+								if (info.isDifferentMediaClockFormat)
+								{
+									intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatType);
+								}
+							}
+							else if (info.isFormatError)
+							{
+								intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+							}
+							atLeastOneNonInterfaceDownConnected |= info.isConnected;
+							atLeastOneNonInterfaceDownConnectedInvalid |= info.isConnected && (info.isDomainError || info.isFormatError);
+						}
+						else
+						{
+							atLeastOneInterfaceDown = true;
+							allInterfaceDownAreConnected &= info.isConnected;
+						}
+
+						allConnected &= info.isConnected;
+						atLeastOneConnected |= info.isConnected;
+						allLocked &= (info.isMediaLocked || !info.isConnected || info.isInterfaceDown); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
+						allNoLatencyError &= !info.isLatencyError;
+					}
+
+					// Handle InterfaceDown errors separately as we don't want to see InterfaceDown and/or associated WrongDomain in some cases
+					if (atLeastOneInterfaceDown)
+					{
+						// We want to see InterfaceDown flag (but not WrongDomain) in case
+						//  - All InterfaceDown are connected
+						//  - At least another stream is connected
+						//  - All other connected streams don't have errors
+						if (allInterfaceDownAreConnected && atLeastOneNonInterfaceDownConnected && !atLeastOneNonInterfaceDownConnectedInvalid)
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+						}
+
+						// We want to see WrongDomain flag (but not InterfaceDown) in case
+						//  - All InterfaceDown are connected
+						else if (allInterfaceDownAreConnected)
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+						}
+
+						// We want to see both InterfaceDown and WrongDomain in case
+						//  - No stream is connected (not even InterfaceDown)
+						else if (!atLeastOneConnected)
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+						}
+					}
+
+					if (allLocked && atLeastOneNonInterfaceDownConnected)
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
+					}
+
+					if (!allNoLatencyError)
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::LatencyError);
+					}
+
+					// Update State
+					if (allConnected)
+					{
+						intersectionData.state = Model::IntersectionData::State::Connected;
+					}
+					else if (atLeastOneConnected)
+					{
+						intersectionData.state = Model::IntersectionData::State::PartiallyConnected;
+					}
+					else
+					{
+						intersectionData.state = Model::IntersectionData::State::NotConnected;
+					}
 					break;
 				}
 
@@ -1294,21 +1775,21 @@ public:
 					//  - If a stream is already connected, always add it to the list
 					intersectionData.smartConnectableStreams.clear();
 
-					// Also check for Connection state and Domain/Format compatibility in the loop
-					//  - Summary is said to be Connected if at least one stream is connected
-					//  - Summary is never said to be InterfaceDown (makes no sense since one has to be Up otherwise we wouldn't get messages from the device, and we only have one redundant device here)
-					//  - Summary is said to be WrongDomain if both streams have different domains or if a connection is established while on a different domain
-					//  - Summary is said to be WrongFormat if format do not match (any of the streams, Milan redundancy impose that both Streams of the pair have the same format)
-					auto areConnected = false;
-					auto fastConnecting = false;
-					auto atLeastOneMatchingDomain = false;
-					auto allConnectionsHaveMatchingDomain = true;
-					auto isCompatibleFormat = true;
-					auto isImpossibleFormat = false;
-					auto countConnections = size_t{ 0u };
+					// Struct to save each interfaction info so we can process once all retrieved
+					struct IntersectionInfo
+					{
+						bool isConnected{ false };
+						bool isMediaLocked{ false };
+						bool isLatencyError{ false };
+						bool isInterfaceDown{ false };
+						bool isDomainError{ false };
+						bool isFormatError{ false };
+						bool isFormatImpossible{ false };
+						bool isDifferentMediaClockFormat{ false };
+					};
+					auto intersectionsInfo = std::vector<IntersectionInfo>{};
 					auto possibleSmartConnectableStreams = decltype(intersectionData.smartConnectableStreams){};
-					auto areLocked = false;
-					auto allNoLatencyError = true;
+					auto countConnections = size_t{ 0u };
 
 					for (auto i = 0; i < redundantNode->childrenCount(); ++i)
 					{
@@ -1323,6 +1804,8 @@ public:
 							auto listenerStreamFormats = la::avdecc::entity::model::StreamFormats{};
 							auto isListenerLocked = false;
 							auto isListenerLatencyError = false;
+							auto isTalkerInterfaceDown = false;
+							auto isListenerInterfaceDown = false;
 
 							// Get information based on which node is redundant
 							if (talkerType == Node::Type::RedundantOutput)
@@ -1335,6 +1818,8 @@ public:
 								listenerStreamFormats = nonRedundantStreamNode->streamFormats();
 								isListenerLocked = nonRedundantStreamNode->lockedState() == Node::TriState::True;
 								isListenerLatencyError = nonRedundantStreamNode->isLatencyError();
+								isTalkerInterfaceDown = redundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+								isListenerInterfaceDown = nonRedundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 							}
 							else if (listenerType == Node::Type::RedundantInput)
 							{
@@ -1346,30 +1831,30 @@ public:
 								listenerStreamFormats = redundantStreamNode->streamFormats();
 								isListenerLocked = redundantStreamNode->lockedState() == Node::TriState::True;
 								isListenerLatencyError = redundantStreamNode->isLatencyError();
+								isTalkerInterfaceDown = nonRedundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
+								isListenerInterfaceDown = redundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 							}
 
-							// Get Connection State
+							auto info = IntersectionInfo{};
+
 							connectableStream.isConnected = hive::modelsLibrary::helper::isConnectedToTalker(connectableStream.talkerStream, *listenerStreamInputConnectionInfo);
 							connectableStream.isFastConnecting = hive::modelsLibrary::helper::isFastConnectingToTalker(connectableStream.talkerStream, *listenerStreamInputConnectionInfo);
-							areConnected |= connectableStream.isConnected;
-							fastConnecting |= connectableStream.isFastConnecting;
-							areLocked |= connectableStream.isConnected && isListenerLocked;
-							allNoLatencyError &= !(connectableStream.isConnected && isListenerLatencyError);
 
-							// Get Format Compatibility
-							isCompatibleFormat &= la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
-							isImpossibleFormat |= !hasMatchingFormat(listenerStreamFormats, talkerStreamFormat);
+							info.isConnected = connectableStream.isConnected || connectableStream.isFastConnecting;
+							info.isMediaLocked = connectableStream.isConnected && isListenerLocked;
+							info.isLatencyError = connectableStream.isConnected && isListenerLatencyError;
+							info.isInterfaceDown = isTalkerInterfaceDown || isListenerInterfaceDown;
+							info.isDomainError = !isSameDomain(*redundantStreamNode, *nonRedundantStreamNode);
+							info.isFormatError = !la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
+							info.isFormatImpossible = !hasMatchingFormat(listenerStreamFormats, talkerStreamFormat);
+							info.isDifferentMediaClockFormat = la::avdecc::controller::Controller::isMediaClockStreamFormat(talkerStreamFormat) != la::avdecc::controller::Controller::isMediaClockStreamFormat(listenerStreamFormat);
 
-							// Get Domain Compatibility
-							auto const sameDomain = isSameDomain(*redundantStreamNode, *nonRedundantStreamNode);
-							atLeastOneMatchingDomain |= sameDomain;
-							if (sameDomain || connectableStream.isConnected || connectableStream.isFastConnecting)
+							if (!info.isDomainError || connectableStream.isConnected || connectableStream.isFastConnecting)
 							{
 								if (connectableStream.isConnected || connectableStream.isFastConnecting)
 								{
 									// Always add a Connected Stream to the smartConnectable list
 									intersectionData.smartConnectableStreams.push_back(connectableStream);
-									allConnectionsHaveMatchingDomain &= sameDomain;
 									++countConnections;
 								}
 								else
@@ -1378,6 +1863,8 @@ public:
 									possibleSmartConnectableStreams.push_back(connectableStream);
 								}
 							}
+
+							intersectionsInfo.emplace_back(std::move(info));
 						}
 					}
 
@@ -1391,25 +1878,99 @@ public:
 						}
 					}
 
-					// Update flags
-					if (!atLeastOneMatchingDomain || !allConnectionsHaveMatchingDomain)
+					// Set any non InterfaceDown error and compute some summaries
+					auto allLocked = true;
+					auto allNoLatencyError = true;
+					auto allConnected = true;
+					auto atLeastOneConnected = false;
+					auto atLeastOneInterfaceDown = false;
+					auto allInterfaceDownAreConnected = true;
+					auto allInterfaceDownAreDisconnected = true;
+					auto atLeastOneNonInterfaceDownConnected = false;
+					auto atLeastOneNonInterfaceDownInvalid = false; // Has Format/Domain error
+					auto atLeastOneNonInterfaceDownConnectedInvalid = false; // Connected and has Format/Domain error
+					auto cumulativeErrorFlags = Model::IntersectionData::Flags{};
+					auto atLeastOneSameDomain = false;
+					for (auto const& info : intersectionsInfo)
 					{
-						intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
-					}
-
-					if (!isCompatibleFormat)
-					{
-						if (isImpossibleFormat)
+						if (!info.isInterfaceDown)
 						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+							auto flags = Model::IntersectionData::Flags{};
+							if (info.isDomainError)
+							{
+								flags.set(Model::IntersectionData::Flag::WrongDomain);
+							}
+							if (info.isFormatImpossible)
+							{
+								flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+								if (info.isDifferentMediaClockFormat)
+								{
+									flags.set(Model::IntersectionData::Flag::WrongFormatType);
+								}
+							}
+							else if (info.isFormatError)
+							{
+								flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+							}
+							// Accumulate error flags
+							cumulativeErrorFlags |= flags;
+							// Always set error flags when connected
+							if (info.isConnected)
+							{
+								intersectionData.flags |= flags;
+							}
+							// Specific case: We don't want to see errors for Intersections of a Non-redundant device that cannot reach the other network of a Redundant device (eg. WrongDomain)
+							// But we do want to see errors if all interfaces have WrongDomain
+							if (!info.isDomainError)
+							{
+								// Always set other non-domain errors
+								intersectionData.flags |= flags;
+								atLeastOneSameDomain = true;
+							}
+							atLeastOneNonInterfaceDownConnected |= info.isConnected;
+							atLeastOneNonInterfaceDownInvalid |= info.isDomainError || info.isFormatError;
+							atLeastOneNonInterfaceDownConnectedInvalid |= info.isConnected && (info.isDomainError || info.isFormatError);
 						}
 						else
 						{
-							intersectionData.flags.set(Model::IntersectionData::Flag::WrongFormatPossible);
+							atLeastOneInterfaceDown = true;
+							allInterfaceDownAreConnected &= info.isConnected;
+							allInterfaceDownAreDisconnected &= !info.isConnected;
 						}
+
+						allConnected &= info.isConnected;
+						atLeastOneConnected |= info.isConnected;
+						allLocked &= (info.isMediaLocked || !info.isConnected || info.isInterfaceDown); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
+						allNoLatencyError &= !info.isLatencyError;
+					}
+					// No interface without non-domain error
+					if (!atLeastOneSameDomain)
+					{
+						intersectionData.flags |= cumulativeErrorFlags;
+					}
+					// Handle InterfaceDown errors separately as we don't want to see InterfaceDown and/or associated WrongDomain in some cases
+					if (atLeastOneInterfaceDown)
+					{
+						// We want to see InterfaceDown flag (but not WrongDomain) in case
+						//  - All InterfaceDown are connected
+						//  - At least another stream is connected
+						//  - All other connected streams don't have errors
+						if (allInterfaceDownAreConnected && atLeastOneNonInterfaceDownConnected && !atLeastOneNonInterfaceDownConnectedInvalid)
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::InterfaceDown);
+						}
+
+						// We want to see WrongDomain flag (but not InterfaceDown) in case
+						//  - All InterfaceDown are connected
+						else if (allInterfaceDownAreConnected)
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::WrongDomain);
+						}
+
+						// Don't add any flag for the other cases, let the Non InterfaceDown takes precedence
 					}
 
-					if (areLocked)
+					if (allLocked && atLeastOneNonInterfaceDownConnected)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::MediaLocked);
 					}
@@ -1420,28 +1981,14 @@ public:
 					}
 
 					// Update State
-					if (areConnected)
+					if (atLeastOneConnected)
 					{
-						if (countConnections == intersectionData.smartConnectableStreams.size())
-						{
-							intersectionData.state = Model::IntersectionData::State::Connected;
-						}
-						else
-						{
-							intersectionData.state = Model::IntersectionData::State::PartiallyConnected;
-						}
-					}
-					else if (fastConnecting)
-					{
-						// FastConnecting state should only be possible when the non-redundant device is a Listener, as it can be a non-Milan device
-						// If the redundant device is a Listener, then it has to be a Milan device, in which case FastConnecting state no longer exists
-						intersectionData.state = Model::IntersectionData::State::FastConnecting;
+						intersectionData.state = Model::IntersectionData::State::Connected;
 					}
 					else
 					{
 						intersectionData.state = Model::IntersectionData::State::NotConnected;
 					}
-
 					break;
 				}
 
@@ -1727,6 +2274,7 @@ public:
 		{
 			flags.reset(Model::IntersectionData::Flag::WrongFormatPossible);
 			flags.reset(Model::IntersectionData::Flag::WrongFormatImpossible);
+			flags.reset(Model::IntersectionData::Flag::WrongFormatType);
 		}
 		else
 		{
@@ -1737,6 +2285,10 @@ public:
 			else
 			{
 				flags.set(Model::IntersectionData::Flag::WrongFormatImpossible);
+				if (la::avdecc::controller::Controller::isMediaClockStreamFormat(talkerStreamFormat) != la::avdecc::controller::Controller::isMediaClockStreamFormat(listenerStreamFormat))
+				{
+					flags.set(Model::IntersectionData::Flag::WrongFormatType);
+				}
 			}
 		}
 	}
@@ -1786,7 +2338,8 @@ public:
 			auto const configurationIndex = configurationNode.descriptorIndex;
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
-			auto* entity = EntityNode::create(entityID, isMilan);
+			auto const isRegisteredUnsol = controlledEntity.isSubscribedToUnsolicitedNotifications();
+			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol);
 			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamOutputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamOutputNode, auto const& avbInterfaceNode)
@@ -1822,7 +2375,14 @@ public:
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamOutputs)
 			{
 				auto* redundantOutput = RedundantNode::createOutputNode(*entity, redundantIndex);
-				redundantOutput->setName(hive::modelsLibrary::helper::redundantOutputName(redundantIndex));
+				if (!redundantNode.virtualName.empty())
+				{
+					redundantOutput->setName(QString{ "[R] %1" }.arg(QString::fromStdString(redundantNode.virtualName.str())));
+				}
+				else
+				{
+					redundantOutput->setName(hive::modelsLibrary::helper::redundantOutputName(redundantIndex));
+				}
 
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
@@ -1915,7 +2475,8 @@ public:
 			auto const configurationIndex = configurationNode.descriptorIndex;
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
-			auto* entity = EntityNode::create(entityID, isMilan);
+			auto const isRegisteredUnsol = controlledEntity.isSubscribedToUnsolicitedNotifications();
+			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol);
 			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamInputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamInputNode, auto const& avbInterfaceNode)
@@ -1953,12 +2514,9 @@ public:
 				// Latency Error
 				{
 					auto const& diags = controlledEntity.getDiagnostics();
-					if (auto const streamIt = diags.streamInputOverLatency.find(streamIndex); streamIt != diags.streamInputOverLatency.end())
+					if (diags.streamInputOverLatency.count(streamIndex) > 0)
 					{
-						if (streamIt->second)
-						{
-							node.setLatencyError(true);
-						}
+						node.setLatencyError(true);
 					}
 				}
 			};
@@ -1967,7 +2525,14 @@ public:
 			for (auto const& [redundantIndex, redundantNode] : configurationNode.redundantStreamInputs)
 			{
 				auto* redundantInput = RedundantNode::createInputNode(*entity, redundantIndex);
-				redundantInput->setName(hive::modelsLibrary::helper::redundantInputName(redundantIndex));
+				if (!redundantNode.virtualName.empty())
+				{
+					redundantInput->setName(QString{ "[R] %1" }.arg(QString::fromStdString(redundantNode.virtualName.str())));
+				}
+				else
+				{
+					redundantInput->setName(hive::modelsLibrary::helper::redundantInputName(redundantIndex));
+				}
 
 				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
 				{
@@ -2287,7 +2852,7 @@ public:
 			{
 				auto const entityCapabilities = controlledEntity->getEntity().getEntityCapabilities();
 
-				if (!entityCapabilities.test(la::avdecc::entity::EntityCapability::AemSupported))
+				if (!entityCapabilities.test(la::avdecc::entity::EntityCapability::AemSupported) || !controlledEntity->hasAnyConfiguration())
 				{
 					return;
 				}
@@ -2368,6 +2933,24 @@ public:
 		if (_mode == Model::Mode::Stream)
 		{
 			talkerIntersectionDataChanged(_offlineOutputStreamNode.get(), false, true, allIntersectionDirtyFlags());
+		}
+	}
+
+	void handleUnsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed)
+	{
+		if (auto* node = talkerNodeFromEntityID(entityID))
+		{
+			node->setRegisteredUnsol(isSubscribed);
+
+			// Always notify the view, EntityName is displayed in CBR and SBR modes
+			talkerHeaderDataChanged(node, true, false, {});
+		}
+		if (auto* node = listenerNodeFromEntityID(entityID))
+		{
+			node->setRegisteredUnsol(isSubscribed);
+
+			// Always notify the view, EntityName is displayed in CBR and SBR modes
+			listenerHeaderDataChanged(node, true, false, {});
 		}
 	}
 
@@ -2965,7 +3548,9 @@ public:
 			{
 				if (auto* channelNode = talkerChannelNode(entityID, audioClusterIndex))
 				{
-					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
+					auto const& clusterNode = controlledEntity->getAudioClusterNode(configurationIndex, channelNode->clusterIndex());
+					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), clusterNode);
+					auto const channelName = priv::clusterChannelName(clusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
 					// Only notify the view in CBR mode, ClusterName is not displayed in SBR mode
@@ -2977,7 +3562,9 @@ public:
 			{
 				if (auto* channelNode = listenerChannelNode(entityID, audioClusterIndex))
 				{
-					auto const channelName = priv::clusterChannelName(audioClusterName, channelNode->channelIndex());
+					auto const& clusterNode = controlledEntity->getAudioClusterNode(configurationIndex, channelNode->clusterIndex());
+					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), clusterNode);
+					auto const channelName = priv::clusterChannelName(clusterName, channelNode->channelIndex());
 					channelNode->setName(channelName);
 
 					listenerHeaderDataChanged(channelNode, false, {});
@@ -3750,6 +4337,12 @@ Model::Mode Model::mode() const
 {
 	Q_D(const Model);
 	return d->_mode;
+}
+
+QModelIndex Model::getIntersectionIndex(int const talkerSection, int const listenerSection) const noexcept
+{
+	Q_D(const Model);
+	return d->createIndex(talkerSection, listenerSection);
 }
 
 QModelIndex Model::indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept

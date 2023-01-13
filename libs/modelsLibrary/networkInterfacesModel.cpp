@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -59,6 +59,14 @@ public:
 	std::size_t networkInterfacesCount() const noexcept
 	{
 		return _interfaces.size();
+	}
+
+	void insertOfflineInterface() noexcept
+	{
+		auto const count = _model->rowCount();
+		emit _model->beginInsertRows({}, count, count);
+		_interfaces.push_back(NetworkInterface{ OfflineInterfaceName, OfflineInterfaceName, true, true, la::networkInterface::Interface::Type::Loopback });
+		emit _model->endInsertRows();
 	}
 
 private:
@@ -172,9 +180,20 @@ private:
 	std::vector<NetworkInterface> _interfaces{};
 };
 
-NetworkInterfacesModel::NetworkInterfacesModel(Model* const model, QObject* parent)
+std::string const NetworkInterfacesModel::OfflineInterfaceName = "Offline";
+
+NetworkInterfacesModel::NetworkInterfacesModel() noexcept
+	: _pImpl{ nullptr }
+{
+}
+
+NetworkInterfacesModel::NetworkInterfacesModel(Model* const model, bool const addOfflineInterface, QObject* parent)
 	: _pImpl{ std::make_unique<pImpl>(model, parent) }
 {
+	if (addOfflineInterface)
+	{
+		_pImpl->insertOfflineInterface();
+	}
 	la::networkInterface::NetworkInterfaceHelper::getInstance().registerObserver(_pImpl.get());
 }
 

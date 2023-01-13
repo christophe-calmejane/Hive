@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -168,7 +168,7 @@ private:
 		{
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
-			if (controlledEntity && controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			if (controlledEntity && controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && controlledEntity->hasAnyConfiguration())
 			{
 				auto const& entityNode = controlledEntity->getEntityNode();
 				if (entityNode.dynamicModel)

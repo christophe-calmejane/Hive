@@ -9,11 +9,8 @@
 #signtool_options=/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com /td sha256
 
 ################ macOS Notarization
-# Notarization username, defaults to "" which will not notarize
-#notarization_username=
-
-# Notarization password, defaults to "@keychain:AC_PASSWORD" which will use the password stored in the keychain
-#notarization_password=@keychain:AC_PASSWORD
+# Notarization profile to use, defaults to "" which will not notarize
+#notarization_profile=
 
 ################ News feed
 # News feed URL

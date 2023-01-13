@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,7 +21,7 @@
 
 #include <QMenu>
 
-EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent)
+EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::uint64_t const aemAecpUnsolicitedLossCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
 {
@@ -31,6 +31,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 	_aecpUnexpectedResponseCounterItem.setText(0, "AECP Unexpected Responses");
 	_aecpResponseAverageTimeItem.setText(0, "AECP Average Response Time");
 	_aemAecpUnsolicitedCounterItem.setText(0, "AEM Unsolicited Responses");
+	_aemAecpUnsolicitedLossCounterItem.setText(0, "AEM Unsolicited Loss");
 	_enumerationTimeItem.setText(0, "Enumeration Time");
 
 	// Update statistics right now
@@ -41,6 +42,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 	updateAecpUnexpectedResponseCounter(aecpUnexpectedResponseCounter);
 	updateAecpResponseAverageTime(aecpResponseAverageTime);
 	updateAemAecpUnsolicitedCounter(aemAecpUnsolicitedCounter);
+	updateAemAecpUnsolicitedLossCounter(aemAecpUnsolicitedLossCounter);
 	_enumerationTimeItem.setText(1, QString::number(enumerationTime.count()) + " msec");
 
 	// Listen for signals
@@ -84,6 +86,14 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAemAecpUnsolicitedCounter(value);
 			}
 		});
+	connect(&manager, &hive::modelsLibrary::ControllerManager::aemAecpUnsolicitedLossCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value)
+		{
+			if (entityID == _entityID)
+			{
+				updateAemAecpUnsolicitedLossCounter(value);
+			}
+		});
 	connect(&manager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters)
 		{
@@ -93,6 +103,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 				updateAecpRetryCounter(_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpRetries]);
 				updateAecpTimeoutCounter(_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts]);
 				updateAecpUnexpectedResponseCounter(_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses]);
+				updateAemAecpUnsolicitedLossCounter(_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses]);
 			}
 		});
 }
@@ -142,4 +153,10 @@ void EntityStatisticsTreeWidgetItem::updateAecpResponseAverageTime(std::chrono::
 void EntityStatisticsTreeWidgetItem::updateAemAecpUnsolicitedCounter(std::uint64_t const value) noexcept
 {
 	_aemAecpUnsolicitedCounterItem.setText(1, QString::number(value));
+}
+
+void EntityStatisticsTreeWidgetItem::updateAemAecpUnsolicitedLossCounter(std::uint64_t const value) noexcept
+{
+	_counters[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses] = value;
+	setWidgetTextAndColor(_aemAecpUnsolicitedLossCounterItem, value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses);
 }

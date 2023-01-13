@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -66,6 +66,72 @@ static inline QColor getLatencyErrorBrushColor() noexcept
 	return color::value(color::Name::Red, color::Shade::Shade800);
 }
 
+static inline QColor getEntitySummaryBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags)
+{
+	static auto const White = color::value(color::Name::Gray, color::Shade::Shade100);
+	static auto const Green = color::value(color::Name::Green, color::Shade::Shade500);
+	static auto const PaleGreen = color::value(color::Name::Green, color::Shade::Shade200);
+	static auto const Red = color::value(color::Name::Red, color::Shade::Shade800);
+	static auto const Yellow = color::value(color::Name::Amber, color::Shade::Shade400);
+	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
+	static auto const Grey = color::value(color::Name::Gray, color::Shade::Shade600);
+
+	auto brushColor = QColor{ White };
+
+	auto const connected = state != Model::IntersectionData::State::NotConnected;
+	auto const interfaceDown = flags.test(Model::IntersectionData::Flag::InterfaceDown);
+	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
+	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
+	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
+
+	if (interfaceDown)
+	{
+		if (wrongDomain)
+		{
+			brushColor = Red;
+		}
+		else if (wrongFormatPossible)
+		{
+			brushColor = Yellow;
+		}
+		else if (wrongFormatImpossible)
+		{
+			brushColor = connected ? Yellow : Grey;
+		}
+		else
+		{
+			brushColor = Blue;
+		}
+	}
+	else if (wrongFormatImpossible && !connected)
+	{
+		brushColor = Grey;
+	}
+	else if (wrongDomain)
+	{
+		brushColor = Red;
+	}
+	else if (wrongFormatPossible || wrongFormatImpossible)
+	{
+		brushColor = Yellow;
+	}
+	else
+	{
+		if (state == Model::IntersectionData::State::PartiallyConnected)
+		{
+			brushColor = PaleGreen;
+		}
+		else
+		{
+			brushColor = connected ? Green : White;
+		}
+	}
+
+	brushColor.setAlphaF(connected ? 1.0 : 0.25);
+
+	return brushColor;
+}
+
 static inline QColor getConnectionBrushColor(Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const wrongFormatHasPriorityOverInterfaceDown)
 {
 	static auto const White = color::value(color::Name::Gray, color::Shade::Shade300);
@@ -75,6 +141,7 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	static auto const Blue = color::value(color::Name::Blue, color::Shade::Shade500);
 	static auto const Purple = color::value(color::Name::Purple, color::Shade::Shade400);
 	static auto const Grey = color::value(color::Name::Gray, color::Shade::Shade600);
+	//static auto const Cyan = color::value(color::Name::Cyan, color::Shade::Shade400);
 	//static auto const Orange = color::value(color::Name::Orange, color::Shade::Shade600);
 
 	auto brushColor = QColor{ White };
@@ -85,38 +152,38 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
 	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
 
-	if (state == Model::IntersectionData::State::PartiallyConnected)
+	if (interfaceDown)
 	{
-		brushColor = Purple;
-	}
-	else
-	{
-		if (interfaceDown)
+		if (wrongFormatPossible && wrongFormatHasPriorityOverInterfaceDown)
 		{
-			if (wrongFormatPossible && wrongFormatHasPriorityOverInterfaceDown)
-			{
-				brushColor = Yellow;
-			}
-			else if (wrongFormatImpossible && wrongFormatHasPriorityOverInterfaceDown)
-			{
-				brushColor = connected ? Yellow : Grey;
-			}
-			else
-			{
-				brushColor = Blue;
-			}
+			brushColor = Yellow;
 		}
-		else if (wrongFormatImpossible)
+		else if (wrongFormatImpossible && wrongFormatHasPriorityOverInterfaceDown)
 		{
 			brushColor = connected ? Yellow : Grey;
 		}
-		else if (wrongDomain)
+		else
 		{
-			brushColor = Red;
+			brushColor = Blue;
 		}
-		else if (wrongFormatPossible)
+	}
+	else if (wrongFormatImpossible && !connected)
+	{
+		brushColor = Grey;
+	}
+	else if (wrongDomain)
+	{
+		brushColor = Red;
+	}
+	else if (wrongFormatPossible || wrongFormatImpossible)
+	{
+		brushColor = Yellow;
+	}
+	else
+	{
+		if (state == Model::IntersectionData::State::PartiallyConnected)
 		{
-			brushColor = Yellow;
+			brushColor = Purple;
 		}
 		else
 		{
@@ -222,7 +289,7 @@ QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orien
 	return path;
 }
 
-void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot)
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot, bool const drawCRFAudioConnections, bool const drawEntitySummary)
 {
 	painter->setRenderHint(QPainter::Antialiasing);
 
@@ -235,6 +302,24 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 	auto const drawInvalidIntersection = [painter, &rect]()
 	{
 		painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+	};
+	auto const drawEntitySummaryIntersection = [painter, &rect, state, flags, drawMediaLockedDot](auto const brush, auto const penColor, auto const penWidth)
+	{
+		painter->setBrush(brush);
+		painter->setPen(QPen{ penColor, penWidth });
+		drawSquare(painter, rect);
+
+		if (flags.test(Model::IntersectionData::Flag::LatencyError))
+		{
+			drawCenterDot(painter, rect, getLatencyErrorBrushColor(), 3);
+		}
+		else if (drawMediaLockedDot)
+		{
+			if (flags.test(Model::IntersectionData::Flag::MediaLocked))
+			{
+				drawCenterDot(painter, rect, getMediaLockedBrushColor());
+			}
+		}
 	};
 	auto const drawSingleStreamIntersection = [painter, &rect, state, flags, drawMediaLockedDot](auto const brush, auto const penColor, auto const penWidth)
 	{
@@ -272,6 +357,13 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			}
 		}
 	};
+
+	// Do not draw incompatible format types if not connected
+	if (!drawCRFAudioConnections && flags.test(Model::IntersectionData::Flag::WrongFormatType) && state == Model::IntersectionData::State::NotConnected)
+	{
+		drawInvalidIntersection();
+		return;
+	}
 
 	switch (type)
 	{
@@ -314,14 +406,37 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 			break;
 		}
 		case Model::IntersectionData::Type::Entity_Entity:
+		{
+			if (drawEntitySummary)
+			{
+				auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
+				penColor = color::value(color::Name::Gray, connected ? color::Shade::Shade900 : color::Shade::Shade600);
+				drawEntitySummaryIntersection(brush, penColor, penWidth * 1.5f);
+			}
+			else
+			{
+				painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
+				painter->setPen(QPen{ color::value(color::Name::Gray, color::Shade::Shade500), penWidth * 1.5f });
+				drawSquare(painter, rect);
+			}
+			break;
+		}
 		case Model::IntersectionData::Type::Entity_Redundant:
 		case Model::IntersectionData::Type::Entity_RedundantStream:
 		case Model::IntersectionData::Type::Entity_SingleStream:
 		case Model::IntersectionData::Type::Entity_SingleChannel:
 		{
-			painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
-			painter->setPen(QPen{ penColor, penWidth });
-			drawSquare(painter, rect);
+			if (drawEntitySummary)
+			{
+				auto const brush = QBrush{ getEntitySummaryBrushColor(state, flags) };
+				drawEntitySummaryIntersection(brush, penColor, penWidth);
+			}
+			else
+			{
+				painter->setBrush(QColor{ color::value(color::Name::Gray, color::Shade::Shade100) });
+				painter->setPen(QPen{ color::value(color::Name::Gray, color::Shade::Shade500), penWidth });
+				drawSquare(painter, rect);
+			}
 			break;
 		}
 		case Model::IntersectionData::Type::Redundant_RedundantStream:

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -117,7 +117,7 @@ public:
 			NotConnected, /**< Stream is not connected */
 			Connected, /**< Stream is connected */
 			FastConnecting, /**< Stream is fast connecting */
-			PartiallyConnected, /**< Some but not all of a redundant stream are connected */
+			PartiallyConnected, /**< Some but not all streams are connected (either for Redundant Nodes, or for Summaries) */
 		};
 
 		enum class Flag
@@ -126,8 +126,9 @@ public:
 			WrongDomain = 1u << 1, /**< The AVB domains do not match (connection is possible, but stream reservation will fail) */
 			WrongFormatPossible = 1u << 2, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener), but a listener format can match */
 			WrongFormatImpossible = 1u << 3, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener), but no listener format will match */
-			MediaLocked = 1u << 4, /**< The Stream is Connected and Media Locked (Milan only) */
-			LatencyError = 1u << 5, /**< The Listener MSRP latency is greater than the Talker's */
+			WrongFormatType = 1u << 4, /**< The Stream format do not match (connection is possible, but the audio won't be decoded by the listener), and will never match because of type incompatibility (eg. CRF and Audio) (Milan devices only) */
+			MediaLocked = 1u << 5, /**< The Stream is Connected and Media Locked (Milan only) */
+			LatencyError = 1u << 6, /**< The Listener MSRP latency is greater than the Talker's */
 		};
 		using Flags = la::avdecc::utils::EnumBitfield<Flag>;
 
@@ -175,6 +176,9 @@ public:
 
 	// Returns the mode of the model
 	Mode mode() const;
+
+	// Returns intersection model index for talkerSection and listenerSection (automatically transposed if required)
+	QModelIndex getIntersectionIndex(int const talkerSection, int const listenerSection) const noexcept;
 
 	// Returns ModelIndex for given entityID
 	QModelIndex indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept;

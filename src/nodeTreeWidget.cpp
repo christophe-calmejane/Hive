@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -266,17 +266,32 @@ private:
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
 
-		// Milan Info
-		if (entity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		// Milan Info - Display the information if available, even if the device is not Milan Compatible
 		{
-			auto* milanInfoItem = new QTreeWidgetItem(q);
-			milanInfoItem->setText(0, "Milan Info");
+			auto const milanInfoOpt = entity.getMilanInfo();
+			if (milanInfoOpt)
+			{
+				auto* milanInfoItem = new QTreeWidgetItem(q);
+				milanInfoItem->setText(0, "Milan Info");
 
-			auto const milanInfo = *entity.getMilanInfo();
+				auto const milanInfo = *milanInfoOpt;
+				auto const compat = entity.getCompatibilityFlags();
 
-			addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
-			addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
-			addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
+				auto compatStr = QString{ "Not Milan Compatible" };
+				if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning))
+				{
+					compatStr = "Milan Compatible (with warnings)";
+				}
+				else if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+				{
+					compatStr = "Milan Compatible";
+				}
+
+				addTextItem(milanInfoItem, "Compatibility", compatStr);
+				addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
+				addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
+				addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
+			}
 		}
 
 		// Discovery information
@@ -355,7 +370,7 @@ private:
 
 		// Statistics
 		{
-			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getEnumerationTime(), q);
+			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getAemAecpUnsolicitedLossCounter(), entity.getEnumerationTime(), q);
 			statisticsItem->setText(0, "Statistics");
 		}
 
@@ -840,11 +855,21 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& /*node*/) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
 	{
-		//createIdItem(&node);
-		//auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
-		//createNameItem(controlledEntity, isActiveConfiguration, node.clockDomainDescriptor, hive::modelsLibrary::ControllerManager::CommandType::None, {}); // SetName not supported yet
+		Q_Q(NodeTreeWidget);
+
+		createIdItem(&node);
+
+		// Name node
+		{
+			auto* nameItem = new QTreeWidgetItem(q);
+			nameItem->setText(0, "Name");
+
+			auto* localizedNameItem = new QTreeWidgetItem(nameItem);
+			localizedNameItem->setText(0, "Virtual Name");
+			localizedNameItem->setText(1, QString::fromStdString(node.virtualName));
+		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
@@ -897,6 +922,24 @@ public:
 		auto* descriptorIndexItem = new QTreeWidgetItem(idItem);
 		descriptorIndexItem->setText(0, "Descriptor Index");
 		descriptorIndexItem->setText(1, QString::number(node->descriptorIndex));
+
+		return idItem;
+	}
+
+	QTreeWidgetItem* createIdItem(la::avdecc::controller::model::VirtualNode const* node)
+	{
+		Q_Q(NodeTreeWidget);
+
+		auto* idItem = new QTreeWidgetItem(q);
+		idItem->setText(0, "Id");
+
+		auto* descriptorTypeItem = new QTreeWidgetItem(idItem);
+		descriptorTypeItem->setText(0, "Descriptor Type");
+		descriptorTypeItem->setText(1, avdecc::helper::descriptorTypeToString(node->descriptorType));
+
+		auto* descriptorIndexItem = new QTreeWidgetItem(idItem);
+		descriptorIndexItem->setText(0, "Virtual Index");
+		descriptorIndexItem->setText(1, QString::number(node->virtualIndex));
 
 		return idItem;
 	}
@@ -977,7 +1020,7 @@ public:
 	}
 
 	/** A label (readonly) item */
-	template<typename ValueType>
+	template<typename ValueType, typename = std::enable_if_t<std::is_move_assignable_v<ValueType>>>
 	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType itemValue)
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);

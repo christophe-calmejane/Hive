@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -89,6 +89,9 @@ View::View(QWidget* parent)
 	settings->registerSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
 	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings->registerSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_AllowCRFAudioConnection.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_CollapsedByDefault.name, this);
+	settings->registerSettingObserver(settings::ConnectionMatrix_ShowEntitySummary.name, this);
 	settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 
 	// react on connection completed signals to show error messages.
@@ -105,6 +108,9 @@ View::~View()
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_Transpose.name, this);
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ShowMediaLockedDot.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_AllowCRFAudioConnection.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_CollapsedByDefault.name, this);
+	settings->unregisterSettingObserver(settings::ConnectionMatrix_ShowEntitySummary.name, this);
 	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, this);
 }
 
@@ -171,6 +177,12 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				break;
 		}
 	};
+
+	// Do not allow connection for incompatible format types (but allow disconnected)
+	if (!_itemDelegate->getDrawCRFAudioConnections() && intersectionData.flags.test(Model::IntersectionData::Flag::WrongFormatType) && intersectionData.state == Model::IntersectionData::State::NotConnected)
+	{
+		return;
+	}
 
 	switch (intersectionData.type)
 	{
@@ -585,6 +597,29 @@ void View::onSettingChanged(settings::SettingsManager::Setting const& name, QVar
 	{
 		auto const drawDot = value.toBool();
 		_itemDelegate->setDrawMediaLockedDot(drawDot);
+
+		forceFilter();
+	}
+	else if (name == settings::ConnectionMatrix_AllowCRFAudioConnection.name)
+	{
+		auto const drawConnections = value.toBool();
+		_itemDelegate->setDrawCRFAudioConnections(drawConnections);
+
+		forceFilter();
+	}
+	else if (name == settings::ConnectionMatrix_CollapsedByDefault.name)
+	{
+		auto const collapsedByDefault = value.toBool();
+		_verticalHeaderView->setCollapsedByDefault(collapsedByDefault);
+		_horizontalHeaderView->setCollapsedByDefault(collapsedByDefault);
+
+		// Manually force a model refresh of the headers
+		_model->forceRefreshHeaders();
+	}
+	else if (name == settings::ConnectionMatrix_ShowEntitySummary.name)
+	{
+		auto const drawSummary = value.toBool();
+		_itemDelegate->setDrawEntitySummary(drawSummary);
 
 		forceFilter();
 	}

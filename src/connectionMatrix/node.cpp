@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -189,6 +189,11 @@ int Node::childrenCount() const noexcept
 	return static_cast<int>(_children.size());
 }
 
+std::vector<std::unique_ptr<Node>> const& Node::children() const noexcept
+{
+	return _children;
+}
+
 Node::Node(Type const type, la::avdecc::UniqueIdentifier const& entityID, Node* parent) noexcept
 	: _type{ type }
 	, _entityID{ entityID }
@@ -220,9 +225,9 @@ OfflineOutputStreamNode::OfflineOutputStreamNode() noexcept
 /* ************************************************************ */
 /* EntityNode                                                   */
 /* ************************************************************ */
-EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept
+EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept
 {
-	return new EntityNode{ entityID, isMilan };
+	return new EntityNode{ entityID, isMilan, isRegisteredUnsol };
 }
 
 void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const noexcept
@@ -241,10 +246,16 @@ void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbIn
 		});
 }
 
-EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan) noexcept
+EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept
 	: Node{ Type::Entity, entityID, nullptr }
 	, _isMilan{ isMilan }
+	, _isRegisteredUnsol{ isRegisteredUnsol }
 {
+}
+
+void EntityNode::setRegisteredUnsol(bool const isRegisteredUnsol) noexcept
+{
+	_isRegisteredUnsol = isRegisteredUnsol;
 }
 
 void EntityNode::setStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept
@@ -270,6 +281,11 @@ void EntityNode::setOutputAudioMappings(la::avdecc::entity::model::StreamPortInd
 bool EntityNode::isMilan() const noexcept
 {
 	return _isMilan;
+}
+
+bool EntityNode::isRegisteredUnsol() const noexcept
+{
+	return _isRegisteredUnsol;
 }
 
 la::avdecc::entity::model::ClusterIndex EntityNode::getStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const

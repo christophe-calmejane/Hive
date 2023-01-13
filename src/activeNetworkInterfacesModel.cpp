@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -70,8 +70,8 @@ private:
 	ActiveNetworkInterfacesModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ActiveNetworkInterfacesModel);
 
-	hive::widgetModelsLibrary::NetworkInterfacesListModel _model{};
-	std::unordered_set<la::networkInterface::Interface::Type> _allowedInterfaceTypes{};
+	hive::widgetModelsLibrary::NetworkInterfacesListModel _model{ true };
+	std::unordered_set<la::networkInterface::Interface::Type> _allowedInterfaceTypes{ la::networkInterface::Interface::Type::Loopback };
 };
 
 ActiveNetworkInterfacesModel::ActiveNetworkInterfacesModel(QObject* parent)

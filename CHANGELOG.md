@@ -4,6 +4,36 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2023-01-13
+### Added
+- Option to hide (meaningless) connections between CRF and Audio streams
+- Matrix shortcuts
+  - CTRL+L: Expand Listeners
+  - CTRL+SHIFT+L: Collapse Listeners
+  - CTRL+T: Expand Talkers
+  - CTRL+SHIFT+T: Collapse Talkers
+- Option to display Entity Connection Summary (squares) using color code (see Legend screen for more details)
+- Option to collapse all connection matrix headers for new entities
+- [Redundant stream name now based on underlying stream names, when possible](https://github.com/christophe-calmejane/Hive/issues/126)
+- [Popup message after critical error on the network interface](https://github.com/christophe-calmejane/Hive/issues/124)
+- [Possibility to be in offline mode](https://github.com/christophe-calmejane/Hive/issues/127)
+- Option for Hive to advertise itself on the network so other Controllers (or entities) can detect it
+- Option for selecting a sub part of Hive's controller EID
+- [Display of _unknown_ diagnostics counters](https://github.com/christophe-calmejane/Hive/issues/131)
+- Connection matrix displays entities to which Hive is not registered for unsolicited notifications (red label)
+- Displaying _Milan Info_ if available, even if device has been deemed not _Milan Compatible_
+- New statistics counter: Loss of unsolicited notifications for Milan devices
+
+### Changed
+- Connection matrix _Redundant Intersection_ now indicates _Media Locked_ status if both streams are connected/bound but one has _Interface Down_ status
+
+### Fixed
+- Crash when loading an entity with no CONFIGURATION descriptor
+- [Using _npcap_ when both _npcap_ and _winpcap_ are available](https://github.com/christophe-calmejane/Hive/issues/65)
+- No ProtocolInterface selected in rare occasion
+- AudioCluster localized named not always used in CBR matrix
+- Unecessary error message when loading an ANS file containing an entity without an entity model
+
 ## [1.2.8] - 2022-04-26
 ### Added
 - [Automatically _fixing_ invalid mapping when changing stream input format](https://github.com/christophe-calmejane/Hive/issues/44)

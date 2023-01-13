@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,6 +19,7 @@
 
 #include "hive/widgetModelsLibrary/networkInterfacesListModel.hpp"
 #include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
 
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/helper.hpp>
@@ -29,6 +30,11 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
+NetworkInterfacesListModel::NetworkInterfacesListModel(bool const addOfflineInterface) noexcept
+	: _model{ hive::modelsLibrary::NetworkInterfacesModel{ this, addOfflineInterface } }
+{
+}
+
 bool NetworkInterfacesListModel::isEnabled(QString const& id) const noexcept
 {
 	auto const optInterface = _model.networkInterface(id.toStdString());
@@ -64,6 +70,9 @@ QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::networkInterface::Interf
 
 		switch (type)
 		{
+			case la::networkInterface::Interface::Type::Loopback:
+				what = "flight";
+				break;
 			case la::networkInterface::Interface::Type::Ethernet:
 				what = "settings_ethernet";
 				break;
@@ -119,7 +128,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 			}
 			break;
 		}
-		case ErrorItemDelegate::ErrorRole: // Make use of this role if ErrorItemDelegate is defined as ItemDelegate
+		case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
 		{
 			if (auto const optInterface = _model.networkInterface(static_cast<std::size_t>(index.row())))
 			{

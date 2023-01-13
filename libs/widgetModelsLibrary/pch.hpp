@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -24,6 +24,7 @@
 #include "hive/widgetModelsLibrary/entityLogoCache.hpp"
 #include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
 #include "hive/widgetModelsLibrary/imageItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp"
 #include "hive/widgetModelsLibrary/networkInterfacesListModel.hpp"
 #include "hive/widgetModelsLibrary/painterHelper.hpp"
 #include "hive/widgetModelsLibrary/qtUserRoles.hpp"

@@ -7,3 +7,6 @@
 [submodule "3rdparty/sparkleHelper"]
 	path = 3rdparty/sparkleHelper
 	url = https://github.com/christophe-calmejane/sparkleHelper.git
+[submodule "Docker/dockerHelper"]
+	path = Docker/dockerHelper
+	url = https://github.com/christophe-calmejane/dockerHelper.git

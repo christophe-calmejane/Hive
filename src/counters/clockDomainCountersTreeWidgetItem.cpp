@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -40,13 +40,23 @@ ClockDomainCountersTreeWidgetItem::ClockDomainCountersTreeWidgetItem(la::avdecc:
 	};
 
 	// Create fields
-	for (auto const& nameKV : s_counterNames)
+	using CounterType = decltype(s_counterNames)::key_type;
+	for (auto bitPos = 0u; bitPos < (sizeof(std::underlying_type_t<CounterType>) * 8); ++bitPos)
 	{
+		auto const flag = static_cast<CounterType>(1u << bitPos);
 		auto* widget = new QTreeWidgetItem(this);
-		widget->setText(0, nameKV.second);
+		if (auto const nameIt = s_counterNames.find(flag); nameIt != s_counterNames.end())
+		{
+			widget->setText(0, nameIt->second);
+		}
+		else
+		{
+			widget->setText(0, QString{ "Unknown 0x%1" }.arg(1u << bitPos, 8, 16, QChar{ '0' }));
+		}
 		widget->setHidden(true); // Hide until we get a counter value (so we don't display counters not supported by the entity)
-		_counters[nameKV.first] = widget;
+		_counters[flag] = widget;
 	}
+
 	// Update counters right now
 	updateCounters(counters);
 

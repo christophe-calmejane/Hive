@@ -1,7 +1,7 @@
 # Hive Sources CMake File
 
 # Declare project
-cu_setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}")
+cu_setup_project(Hive ${HIVE_VERSION} "${PROJECT_FULL_NAME}" MARKETING_VERSION_DIGITS ${MARKETING_VERSION_DIGITS} MARKETING_VERSION_POSTFIX ${MARKETING_VERSION_POSTFIX})
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -284,6 +284,10 @@ if(BUILD_HIVE_APPLICATION)
 			MACOSX_BUNDLE_ICON_FILE ${ICON_FILE}
 			MACOSX_BUNDLE_INFO_PLIST ${HIVE_RESOURCES_FOLDER}/macOS/Info.plist.in
 		)
+	endif()
+
+	if(ENABLE_HIVE_FEATURE_SPARKLE)
+		fixup_sparkleHelper_resources(${PROJECT_NAME}) # Temporary fix to resolve SparkleHelper resources
 	endif()
 
 	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)

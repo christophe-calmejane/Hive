@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -118,6 +118,24 @@ private:
 			auto const lock = QSignalBlocker{ showMediaLockedDotCheckBox };
 			showMediaLockedDotCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_ShowMediaLockedDot.name).toBool());
 		}
+
+		// Allow CRF Audio Connection
+		{
+			auto const lock = QSignalBlocker{ allowCRFAudioConnectionCheckBox };
+			allowCRFAudioConnectionCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_AllowCRFAudioConnection.name).toBool());
+		}
+
+		// Collapsed by Default
+		{
+			auto const lock = QSignalBlocker{ collapsedByDefaultCheckBox };
+			collapsedByDefaultCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_CollapsedByDefault.name).toBool());
+		}
+
+		// Show Entity Summary
+		{
+			auto const lock = QSignalBlocker{ showEntitySummaryCheckBox };
+			showEntitySummaryCheckBox->setChecked(settings->getValue(settings::ConnectionMatrix_ShowEntitySummary.name).toBool());
+		}
 	}
 
 	void loadControllerSettings()
@@ -158,6 +176,18 @@ private:
 			auto const lock = QSignalBlocker{ fullAEMEnumerationCheckBox };
 			fullAEMEnumerationCheckBox->setChecked(settings->getValue(settings::Controller_FullStaticModelEnabled.name).toBool());
 		}
+
+		// Enable Advertising
+		{
+			auto const lock = QSignalBlocker{ enableAdvertisingCheckBox };
+			enableAdvertisingCheckBox->setChecked(settings->getValue(settings::Controller_AdvertisingEnabled.name).toBool());
+		}
+
+		// Controller Sub ID
+		{
+			auto const lock = QSignalBlocker{ controllerIDLineEdit };
+			controllerIDLineEdit->setText(settings->getValue(settings::Controller_ControllerSubID.name).toString());
+		}
 	}
 
 	void loadNetworkSettings()
@@ -192,12 +222,11 @@ private:
 
 		for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
 		{
-#ifndef DEBUG
+			// Ignore Virtual, we have the special Offline mode that will automatically use the Virtual Type
 			if (type == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
 			{
 				continue;
 			}
-#endif // !DEBUG
 			protocolComboBox->addItem(protocolInterfaceName.at(type), QVariant::fromValue(type));
 		}
 		if (protocolComboBox->count() == 0)
@@ -283,6 +312,24 @@ void SettingsDialog::on_showMediaLockedDotCheckBox_toggled(bool checked)
 	settings->setValue(settings::ConnectionMatrix_ShowMediaLockedDot.name, checked);
 }
 
+void SettingsDialog::on_allowCRFAudioConnectionCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::ConnectionMatrix_AllowCRFAudioConnection.name, checked);
+}
+
+void SettingsDialog::on_collapsedByDefaultCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::ConnectionMatrix_CollapsedByDefault.name, checked);
+}
+
+void SettingsDialog::on_showEntitySummaryCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::ConnectionMatrix_ShowEntitySummary.name, checked);
+}
+
 void SettingsDialog::on_discoveryDelayLineEdit_returnPressed()
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
@@ -299,6 +346,18 @@ void SettingsDialog::on_fullAEMEnumerationCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::Controller_FullStaticModelEnabled.name, checked);
+}
+
+void SettingsDialog::on_enableAdvertisingCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::Controller_AdvertisingEnabled.name, checked);
+}
+
+void SettingsDialog::on_controllerIDLineEdit_returnPressed()
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::Controller_ControllerSubID.name, _pImpl->controllerIDLineEdit->text());
 }
 
 void SettingsDialog::on_protocolComboBox_currentIndexChanged(int /*index*/)

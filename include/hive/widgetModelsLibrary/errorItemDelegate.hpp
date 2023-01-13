@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -19,8 +19,6 @@
 
 #pragma once
 
-#include "qtUserRoles.hpp"
-
 #include <la/avdecc/utils.hpp>
 #include <QtMate/material/color.hpp>
 
@@ -30,14 +28,12 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-// This custom delegate allows to indicate a cell is on error
+// This delegate paints an error rectangle on each item who's index returns true for the "QtUserRoles::ErrorRole"
 class ErrorItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	static constexpr auto ErrorRole = la::avdecc::utils::to_integral(QtUserRoles::ErrorRole);
-
-	ErrorItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+	ErrorItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 
@@ -46,6 +42,7 @@ protected:
 
 private:
 	// Private members
+	bool _paintBaseDelegate{ true };
 	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
 };
 

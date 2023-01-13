@@ -1,7 +1,7 @@
 # Root CMake File for Hive
 
 # Minimum CMake version
-cmake_minimum_required(VERSION 3.18.4)
+cmake_minimum_required(VERSION 3.22)
 
 ############ Versioning
 
@@ -10,7 +10,8 @@ cmake_minimum_required(VERSION 3.18.4)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.8)
+set(HIVE_VERSION 1.2.9)
+set(AEMDUMPER_VERSION 1.1.0)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -173,7 +174,8 @@ endif()
 
 # Install paramaters
 if(APPLE)
-	set(MACOS_INSTALL_FOLDER "${PROJECT_NAME} ${CU_PROJECT_MARKETING_VERSION}")
+	cu_build_marketing_version(MARKETING_VERSION_STRING "${HIVE_VERSION}" ${MARKETING_VERSION_DIGITS} "${MARKETING_VERSION_POSTFIX}")
+	set(MACOS_INSTALL_FOLDER "${PROJECT_NAME} ${MARKETING_VERSION_STRING}")
 	list(APPEND SDR_PARAMETERS "BUNDLE_DIR" "${MACOS_INSTALL_FOLDER}" "RUNTIME_DIR" "${MACOS_INSTALL_FOLDER}")
 endif()
 list(APPEND SDR_PARAMETERS QT_MAJOR_VERSION ${QT_MAJOR_VERSION})

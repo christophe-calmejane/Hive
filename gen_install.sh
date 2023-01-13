@@ -4,9 +4,6 @@
 ################# PROJECT SPECIFIC VARIABLES
 cmake_opt="-DBUILD_HIVE_TESTS=FALSE -DENABLE_HIVE_CPACK=TRUE -DENABLE_CODE_SIGNING=TRUE -DENABLE_HIVE_FEATURE_SPARKLE=FALSE"
 
-# Change the default key_digits value
-#default_keyDigits=0
-
 ############################ DO NOT MODIFY AFTER THAT LINE #############
 
 # Get absolute folder for this script
@@ -116,8 +113,8 @@ appcastInstallerName="${fullInstallerName}"
 if isMac; then
 	# Call notarization
 	if [ $do_notarize -eq 1 ]; then
-		if [ ! "x${params["notarization_username"]}" == "x" ]; then
-			"${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh" "${deliverablesFolder}${fullInstallerName}" "${params["notarization_username"]}" "${params["notarization_password"]}" "com.KikiSoft.Hive.${installerExtension}"
+		if [ ! "x${params["notarization_profile"]}" == "x" ]; then
+			"${selfFolderPath}3rdparty/avdecc/scripts/bashUtils/notarize_binary.sh" "${deliverablesFolder}${fullInstallerName}" "${params["notarization_profile"]}"
 			if [ $? -ne 0 ]; then
 				echo "Failed to notarize installer"
 				exit 1
@@ -126,11 +123,13 @@ if isMac; then
 	fi
 
 	# Tar the installer as Sparkle do not support PKG
-	appcastInstallerName="${fullInstallerName}.tar"
-	pushd "${deliverablesFolder}" &> /dev/null
-	tar cf "${appcastInstallerName}" "${fullInstallerName}" &> /dev/null
-	rm -f "${fullInstallerName}" &> /dev/null
-	popd &> /dev/null
+	if [ $do_appcast -eq 1 ]; then
+		appcastInstallerName="${fullInstallerName}.tar"
+		pushd "${deliverablesFolder}" &> /dev/null
+		tar cf "${appcastInstallerName}" "${fullInstallerName}" &> /dev/null
+		rm -f "${fullInstallerName}" &> /dev/null
+		popd &> /dev/null
+	fi
 fi
 
 # Generate appcast

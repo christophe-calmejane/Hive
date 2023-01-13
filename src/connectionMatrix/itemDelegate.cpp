@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -41,6 +41,20 @@ void ItemDelegate::setDrawMediaLockedDot(bool const drawMediaLockedDot) noexcept
 	_drawMediaLockedDot = drawMediaLockedDot;
 }
 
+void ItemDelegate::setDrawCRFAudioConnections(bool const drawCRFAudioConnections) noexcept
+{
+	_drawCRFAudioConnections = drawCRFAudioConnections;
+}
+
+bool ItemDelegate::getDrawCRFAudioConnections() const noexcept
+{
+	return _drawCRFAudioConnections;
+}
+
+void ItemDelegate::setDrawEntitySummary(bool const drawSummary) noexcept
+{
+	_drawEntitySummary = drawSummary;
+}
 
 void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
@@ -70,7 +84,7 @@ void ItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, 
 
 	auto const& intersectionData = static_cast<Model const*>(index.model())->intersectionData(index);
 
-	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags, _drawMediaLockedDot);
+	paintHelper::drawCapabilities(painter, option.rect, intersectionData.type, intersectionData.state, intersectionData.flags, _drawMediaLockedDot, _drawCRFAudioConnections, _drawEntitySummary);
 }
 
 } // namespace connectionMatrix

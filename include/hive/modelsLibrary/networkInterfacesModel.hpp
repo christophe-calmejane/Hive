@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -47,8 +47,10 @@ public:
 	};
 
 	using Model = NetworkInterfacesAbstractListModel;
+	static std::string const OfflineInterfaceName;
 
-	NetworkInterfacesModel(Model* const model, QObject* parent = nullptr);
+	NetworkInterfacesModel() noexcept;
+	NetworkInterfacesModel(Model* const model, bool const addOfflineInterface, QObject* parent = nullptr);
 	virtual ~NetworkInterfacesModel();
 
 	std::optional<std::reference_wrapper<NetworkInterface const>> networkInterface(std::size_t const index) const noexcept;

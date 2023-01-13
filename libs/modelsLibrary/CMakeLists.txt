@@ -59,6 +59,14 @@ set(SOURCE_FILES_COMMON
 	discoveredEntitiesModel.cpp
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+	list(APPEND SOURCE_FILES_COMMON "helper_macOS.mm")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	list(APPEND SOURCE_FILES_COMMON "helper_win32.cpp")
+else()
+	list(APPEND SOURCE_FILES_COMMON helper_unix.cpp)
+endif()
+
 # Group source files
 source_group("Header Files\\Public" FILES ${HEADER_FILES_PUBLIC})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})

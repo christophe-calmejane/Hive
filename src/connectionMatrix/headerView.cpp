@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -80,6 +80,12 @@ void HeaderView::setAlwaysShowArrowEnd(bool const show)
 void HeaderView::setTransposed(bool const isTransposed)
 {
 	_isTransposed = isTransposed;
+	update();
+}
+
+void HeaderView::setCollapsedByDefault(bool const collapsedByDefault)
+{
+	_collapsedByDefault = collapsedByDefault;
 	update();
 }
 
@@ -217,13 +223,34 @@ void HeaderView::handleSectionInserted(QModelIndex const& /*parent*/, int first,
 
 			switch (node->type())
 			{
+				case Node::Type::Entity:
+					// Currently don't collapse in Channel mode (Because summary is not supported)
+					if (model->mode() == Model::Mode::Channel)
+					{
+						expanded = true;
+					}
+					else
+					{
+						expanded = !_collapsedByDefault;
+					}
+					break;
 				case Node::Type::RedundantOutput:
 				case Node::Type::RedundantInput:
+					visible = !_collapsedByDefault;
 					expanded = false;
 					break;
 				case Node::Type::RedundantOutputStream:
 				case Node::Type::RedundantInputStream:
 					visible = false;
+					break;
+				case Node::Type::OutputStream:
+				case Node::Type::InputStream:
+					visible = !_collapsedByDefault;
+					break;
+				case Node::Type::OutputChannel:
+				case Node::Type::InputChannel:
+					// Currently don't hide in Channel mode (Because summary is not supported)
+					visible = true;
 					break;
 				default:
 					break;
@@ -524,9 +551,27 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 
 	auto const elidedText = painter->fontMetrics().elidedText(node->name(), Qt::ElideMiddle, textRect.width());
 
-	if (node->isStreamNode() && !static_cast<StreamNode*>(node)->isRunning())
+	if (node->isEntityNode())
 	{
-		painter->setPen(foregroundErrorColor);
+		if (!static_cast<EntityNode*>(node)->isRegisteredUnsol())
+		{
+			painter->setPen(foregroundErrorColor);
+		}
+		else
+		{
+			painter->setPen(foregroundColor);
+		}
+	}
+	else if (node->isStreamNode())
+	{
+		if (!static_cast<StreamNode*>(node)->isRunning())
+		{
+			painter->setPen(foregroundErrorColor);
+		}
+		else
+		{
+			painter->setPen(foregroundColor);
+		}
 	}
 	else
 	{

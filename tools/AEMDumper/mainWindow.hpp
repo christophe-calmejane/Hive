@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QStringList>
 
 class DynamicHeaderView;
 
@@ -29,7 +30,7 @@ class MainWindow : public QMainWindow
 	Q_OBJECT
 public:
 	// Constructor
-	MainWindow(QWidget* parent = nullptr);
+	MainWindow(QStringList ansFilesToLoad = {}, QWidget* parent = nullptr);
 	virtual ~MainWindow() noexcept;
 
 	// Deleted compiler auto-generated methods

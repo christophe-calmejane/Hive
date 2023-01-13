@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,6 +18,7 @@
 */
 
 #include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
 
 #include <QPainter>
 
@@ -25,8 +26,9 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-ErrorItemDelegate::ErrorItemDelegate(qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
+ErrorItemDelegate::ErrorItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
 	: QStyledItemDelegate(parent)
+	, _paintBaseDelegate{ paintBaseDelegate }
 	, _themeColorName{ themeColorName }
 {
 }
@@ -38,9 +40,13 @@ void ErrorItemDelegate::setThemeColorName(qtMate::material::color::Name const th
 
 void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	QStyledItemDelegate::paint(painter, option, index);
+	// Only paint parent if requested
+	if (_paintBaseDelegate)
+	{
+		QStyledItemDelegate::paint(painter, option, index);
+	}
 
-	if (index.data(ErrorRole).toBool())
+	if (index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool())
 	{
 		if (option.state & QStyle::StateFlag::State_Selected)
 		{

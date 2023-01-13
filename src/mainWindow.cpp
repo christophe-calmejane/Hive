@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -68,19 +68,25 @@
 #endif // USE_SPARKLE
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/modelsLibrary/networkInterfacesModel.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
 
 #include <mutex>
 #include <memory>
+#include <optional>
 
 extern "C"
 {
 #include <mkdio.h>
 }
 
-#define PROG_ID 0x0003
+#ifdef DEBUG
+#	define DEFAULT_SUB_ID 0x0004
+#else // !DEBUG
+#	define DEFAULT_SUB_ID 0x0003
+#endif // DEBUG
 #define VENDOR_ID 0x001B92
 #define DEVICE_ID 0x80
 #define MODEL_ID 0x00000001
@@ -95,6 +101,9 @@ public:
 		: _parent(parent)
 		, _mustResetViewSettings{ mustResetViewSettings }
 	{
+		// Setup entity model
+		setupEntityModel();
+
 		// Setup common UI
 		setupUi(parent);
 
@@ -120,6 +129,7 @@ public:
 	void setupStandardProfile();
 	void setupDeveloperProfile();
 	void setupProfile();
+	void setupEntityModel();
 	void registerMetaTypes();
 	void createViewMenu();
 	void createToolbars();
@@ -144,7 +154,10 @@ public:
 	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
+	std::uint16_t _controllerSubID{ DEFAULT_SUB_ID };
+	std::optional<std::uint32_t> _advertisingDuration{ 10u };
 	bool _shown{ false };
+	la::avdecc::entity::model::EntityTree _entityModel{};
 	SettingsSignaler _settingsSignaler{};
 	bool _mustResetViewSettings{ false };
 	bool _usingBetaAppcast{ false };
@@ -233,14 +246,20 @@ void MainWindowImpl::currentControllerChanged()
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-	auto const protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
+	auto protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
 	auto const interfaceID = _interfaceComboBox.currentData().toString();
 
 	// Check for No ProtocolInterface
-	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::None)
+	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::None || protocolType == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
 	{
 		QMessageBox::warning(_parent, "", "No Network Protocol selected.\nPlease choose one from the Settings.");
 		return;
+	}
+
+	// Check for special Offline Interface
+	if (interfaceID.toStdString() == hive::modelsLibrary::NetworkInterfacesModel::OfflineInterfaceName)
+	{
+		protocolType = la::avdecc::protocol::ProtocolInterface::Type::Virtual;
 	}
 
 	// Check for WinPcap driver
@@ -265,13 +284,12 @@ void MainWindowImpl::currentControllerChanged()
 	try
 	{
 		// Create a new Controller
-#ifdef DEBUG
-		auto const progID = std::uint16_t{ PROG_ID + 1 }; // Use next PROG_ID in debug (so we can launch 2 Hive instances at the same time, one in Release and one in Debug)
-#else // !DEBUG
-		auto const progID = std::uint16_t{ PROG_ID };
-#endif // DEBUG
-		manager.createController(protocolType, interfaceID, progID, la::avdecc::entity::model::makeEntityModelID(VENDOR_ID, DEVICE_ID, MODEL_ID), "en");
+		manager.createController(protocolType, interfaceID, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
 		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
+		if (_advertisingDuration)
+		{
+			manager.enableEntityAdvertising(*_advertisingDuration);
+		}
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
@@ -287,6 +305,16 @@ void MainWindowImpl::currentControllerChanged()
 }
 
 // Private methods
+void MainWindowImpl::setupEntityModel()
+{
+	auto& configTree = _entityModel.configurationTrees[la::avdecc::entity::model::ConfigurationIndex{ 0u }] = la::avdecc::entity::model::ConfigurationTree{};
+	configTree.dynamicModel.isActiveConfiguration = true;
+
+	_entityModel.dynamicModel.entityName = hive::modelsLibrary::helper::getComputerName().toStdString();
+	_entityModel.dynamicModel.groupName = hive::internals::applicationShortName.toStdString();
+	_entityModel.dynamicModel.firmwareVersion = hive::internals::versionString.toStdString();
+}
+
 void MainWindowImpl::registerMetaTypes()
 {
 	//
@@ -328,7 +356,7 @@ void MainWindowImpl::createToolbars()
 		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
 
 		// The combobox takes ownership of the item delegate
-		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
+		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ true, qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
 		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
 		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, interfaceComboBoxItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
 
@@ -381,11 +409,17 @@ void MainWindowImpl::checkNpfStatus()
 	std::call_once(once,
 		[this]()
 		{
-			auto const npfStatus = npf::getStatus();
+			// First check 'npf" (ie. WinPCap)
+			auto npfStatus = npf::getStatus("npf");
+			if (npfStatus == npf::Status::NotInstalled)
+			{
+				// Now check for "npcap", as contrary to what NPCap documentation says (https://npcap.com/guide/npcap-devguide.html), the "npf" service is *NOT* installed in WinPCap compatibility mode
+				npfStatus = npf::getStatus("npcap");
+			}
 			switch (npfStatus)
 			{
 				case npf::Status::NotInstalled:
-					QMessageBox::warning(_parent, "", "The WinPcap library is required for Hive to communicate with AVB Entities on the network.\nIt looks like you uninstalled it, or didn't choose to install it when running Hive installation.\n\nYou need to rerun the installer and follow the instructions to install WinPcap.");
+					QMessageBox::warning(_parent, "", "A Packet Capture library is required for Hive to communicate with AVB Entities on the network.\nIt looks like you uninstalled it, or didn't choose to install it when running Hive installation.\n\nYou need to rerun the installer and follow the instructions to install WinPcap.\nAlternatively you can manually install NPCap or WireShark.");
 					break;
 				case npf::Status::NotStarted:
 				{
@@ -484,6 +518,8 @@ void MainWindowImpl::loadSettings()
 	settings->registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 	settings->registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
+	settings->registerSettingObserver(settings::Controller_AdvertisingEnabled.name, this);
+	settings->registerSettingObserver(settings::Controller_ControllerSubID.name, this);
 	settings->registerSettingObserver(settings::ConnectionMatrix_ChannelMode.name, this);
 	settings->registerSettingObserver(settings::General_ThemeColorIndex.name, this);
 	settings->registerSettingObserver(settings::General_AutomaticCheckForUpdates.name, this);
@@ -527,7 +563,7 @@ void MainWindowImpl::connectSignals()
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
-			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
+			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && controlledEntity->hasAnyConfiguration())
 			{
 				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
 				dialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -587,6 +623,7 @@ void MainWindowImpl::connectSignals()
 		[this]()
 		{
 			LOG_HIVE_ERROR("Error reading from the active Network Interface");
+			QMessageBox::warning(_parent, "", "Error reading from the active Network Interface.<br>Check connection and click the <i>Reload Controller</i> button.");
 		});
 	connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this,
 		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::model::DescriptorIndex /*descriptorIndex*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
@@ -994,6 +1031,8 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings->unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_AdvertisingEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_ControllerSubID.name, _pImpl);
 	settings->unregisterSettingObserver(settings::ConnectionMatrix_ChannelMode.name, _pImpl);
 	settings->unregisterSettingObserver(settings::General_ThemeColorIndex.name, _pImpl);
 	settings->unregisterSettingObserver(settings::General_AutomaticCheckForUpdates.name, _pImpl);
@@ -1010,11 +1049,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 	{
 		auto const f = QFileInfo{ u.fileName() };
 		auto const ext = f.suffix();
-		if (ext == "ave" || ext == "ans"
-#ifdef DEBUG
-				|| ext == "json"
-#endif // DEBUG
-		)
+		if (ext == "ave" || ext == "ans" || ext == "json")
 		{
 			event->acceptProposedAction();
 			return;
@@ -1138,7 +1173,6 @@ void MainWindow::dropEvent(QDropEvent* event)
 			}
 		}
 
-#ifdef DEBUG
 		// Any kind of file, we have to autodetect
 		else if (ext == "json")
 		{
@@ -1152,7 +1186,6 @@ void MainWindow::dropEvent(QDropEvent* event)
 				loadNetworkState(f, flags);
 			}
 		}
-#endif // DEBUG
 	}
 }
 
@@ -1200,6 +1233,32 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 			auto const enabled = value.toBool();
 			manager.setEnableFullAemEnumeration(enabled);
 		}
+		if (_shown)
+		{
+			currentControllerChanged();
+		}
+	}
+	else if (name == settings::Controller_AdvertisingEnabled.name)
+	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		auto const enabled = value.toBool();
+		_advertisingDuration = enabled ? std::optional<std::uint32_t>{ 10u } : std::nullopt;
+		if (_shown)
+		{
+			if (enabled)
+			{
+				manager.enableEntityAdvertising(*_advertisingDuration);
+			}
+			else
+			{
+				manager.disableEntityAdvertising();
+			}
+		}
+	}
+	else if (name == settings::Controller_ControllerSubID.name)
+	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		_controllerSubID = static_cast<decltype(_controllerSubID)>(value.toInt());
 		if (_shown)
 		{
 			currentControllerChanged();

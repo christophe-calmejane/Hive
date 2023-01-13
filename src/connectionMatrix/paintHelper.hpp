@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -30,7 +30,7 @@ namespace connectionMatrix
 namespace paintHelper
 {
 QPainterPath buildHeaderArrowPath(QRect const& rect, Qt::Orientation const orientation, bool const isTransposed, bool const alwaysShowArrowTip, bool const alwaysShowArrowEnd, int const arrowOffset, int const arrowSize, int const width);
-void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot);
+void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionData::Type const type, Model::IntersectionData::State const state, Model::IntersectionData::Flags const& flags, bool const drawMediaLockedDot, bool const drawCRFAudioConnections, bool const drawEntitySummary);
 
 } // namespace paintHelper
 } // namespace connectionMatrix

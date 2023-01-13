@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -168,6 +168,9 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowTip);
 	settings.registerSetting(settings::ConnectionMatrix_AlwaysShowArrowEnd);
 	settings.registerSetting(settings::ConnectionMatrix_ShowMediaLockedDot);
+	settings.registerSetting(settings::ConnectionMatrix_AllowCRFAudioConnection);
+	settings.registerSetting(settings::ConnectionMatrix_CollapsedByDefault);
+	settings.registerSetting(settings::ConnectionMatrix_ShowEntitySummary);
 
 	// Network
 	settings.registerSetting(settings::Network_ProtocolType);
@@ -178,6 +181,8 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::Controller_DiscoveryDelay);
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
 	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
+	settings.registerSetting(settings::Controller_AdvertisingEnabled);
+	settings.registerSetting(settings::Controller_ControllerSubID);
 
 	// Check settings version
 	auto mustResetViewSettings = false;

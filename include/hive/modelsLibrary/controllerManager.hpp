@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -47,6 +47,7 @@ public:
 		AecpRetries = 1u << 0,
 		AecpTimeouts = 1u << 1,
 		AecpUnexpectedResponses = 1u << 2,
+		AemAecpUnsolicitedLosses = 1u << 3,
 	};
 
 	using StreamInputErrorCounters = std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, la::avdecc::entity::model::DescriptorCounter>;
@@ -149,7 +150,7 @@ public:
 			* @note Might throw la::avdecc::controller::Controller::Exception.
 			*       All observers should be removed from the previous controller before setting a new one.
 			*/
-	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale) = 0;
+	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale, la::avdecc::entity::model::EntityTree const* const entityModel) = 0;
 
 	/** Destroys the currently stored instance of the controller. */
 	virtual void destroyController() noexcept = 0;
@@ -320,6 +321,7 @@ public:
 	Q_SIGNAL void streamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex);
 	Q_SIGNAL void operationProgress(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, float const percentComplete); // A negative percentComplete value means the progress is unknown but still continuing
 	Q_SIGNAL void operationCompleted(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, bool const failed);
+	Q_SIGNAL void mediaClockChainChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::MediaClockChain const& mcChain);
 
 	/* Connection changed signals */
 	Q_SIGNAL void streamInputConnectionChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info);
@@ -340,6 +342,7 @@ public:
 	Q_SIGNAL void aecpUnexpectedResponseCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
 	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	Q_SIGNAL void aemAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters);
 
 	/* Diagnostics signals */

@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -52,6 +52,20 @@ static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompat
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
 };
 
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState, QImage> s_excusiveAccessStateImagesLight{
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NotSupported, QImage{ ":/lock_not_supported.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
+};
+
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState, QImage> s_excusiveAccessStateImagesDark{
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NotSupported, QImage{ ":/lock_not_supported.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
+};
+
 DiscoveredEntitiesTableModel::DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags)
 	: _entityDataFlags{ entityDataFlags }
 	, _count{ static_cast<decltype(_count)>(_entityDataFlags.count()) }
@@ -73,13 +87,24 @@ void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hi
 		{
 			auto const& [entityDataFlag, roles] = *dataInfoOpt;
 
-			// Is this EntityData active for this model
-			if (_entityDataFlags.test(entityDataFlag))
+			// Is this EntityData active for this model (or the 'All' bit is set)
+			if (entityDataFlag == DiscoveredEntitiesTableModel::EntityDataFlag::All || _entityDataFlags.test(entityDataFlag))
 			{
 				try
 				{
-					auto const modelIndex = createIndex(static_cast<int>(index), static_cast<int>(_entityDataFlags.getPosition(entityDataFlag)));
-					emit dataChanged(modelIndex, modelIndex, roles);
+					// 'All' flag means all colomns needs to be refreshed
+					if (entityDataFlag == DiscoveredEntitiesTableModel::EntityDataFlag::All)
+					{
+						auto const startIndex = createIndex(static_cast<int>(index), 0);
+						auto const endIndex = createIndex(static_cast<int>(index), columnCount());
+						emit dataChanged(startIndex, endIndex, roles);
+					}
+					// Otherwise selectively refresh a single column
+					else
+					{
+						auto const modelIndex = createIndex(static_cast<int>(index), static_cast<int>(_entityDataFlags.getBitSetPosition(entityDataFlag)));
+						emit dataChanged(modelIndex, modelIndex, roles);
+					}
 				}
 				catch (...)
 				{
@@ -122,12 +147,26 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						return "Name";
 					case EntityDataFlag::Group:
 						return "Group";
-					case EntityDataFlag::FirmwareVersion:
-						return "Firmware Version";
-					case EntityDataFlag::EntityModelID:
-						return "Entity Model ID";
+					case EntityDataFlag::AcquireState:
+						return "Acquire State";
+					case EntityDataFlag::LockState:
+						return "Lock State";
 					case EntityDataFlag::GrandmasterID:
 						return "Grandmaster ID";
+					case EntityDataFlag::GPTPDomain:
+						return "gPTP Domain";
+					case EntityDataFlag::InterfaceIndex:
+						return "Interface Idx";
+					case EntityDataFlag::AssociationID:
+						return "Association ID";
+					case EntityDataFlag::EntityModelID:
+						return "Entity Model ID";
+					case EntityDataFlag::FirmwareVersion:
+						return "Firmware Version";
+					case EntityDataFlag::MediaClockReferenceID:
+						return "Media Clock Reference ID";
+					case EntityDataFlag::MediaClockReferenceStatus:
+						return "Media Clock Reference Status";
 					default:
 						break;
 				}
@@ -167,10 +206,6 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								return entity.name;
 							case EntityDataFlag::Group:
 								return entity.groupName;
-							case EntityDataFlag::FirmwareVersion:
-								return entity.firmwareVersion ? *entity.firmwareVersion : "N/A";
-							case EntityDataFlag::EntityModelID:
-								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityModelID);
 							case EntityDataFlag::GrandmasterID:
 							{
 								auto const& gptpInfo = entity.gptpInfo;
@@ -188,18 +223,83 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "N/A";
 							}
+							case EntityDataFlag::GPTPDomain:
+							{
+								auto const& gptpInfo = entity.gptpInfo;
+
+								if (!gptpInfo.empty())
+								{
+									// Search the first valid gPTP info
+									for (auto const& [avbIndex, info] : gptpInfo)
+									{
+										if (info.domainNumber)
+										{
+											return QString::number(*info.domainNumber);
+										}
+									}
+								}
+								return "N/A";
+							}
+							case EntityDataFlag::InterfaceIndex:
+							{
+								auto const& gptpInfo = entity.gptpInfo;
+
+								if (!gptpInfo.empty())
+								{
+									// Search the first valid gPTP info
+									for (auto const& [avbIndex, info] : gptpInfo)
+									{
+										return avbIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex ? "N/A" : QString::number(avbIndex);
+									}
+								}
+								return "N/A";
+							}
+							case EntityDataFlag::AssociationID:
+								return entity.associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*entity.associationID) : "N/A";
+							case EntityDataFlag::EntityModelID:
+								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityModelID);
+							case EntityDataFlag::FirmwareVersion:
+								return entity.firmwareVersion ? *entity.firmwareVersion : "N/A";
+							case EntityDataFlag::MediaClockReferenceID:
+							{
+								auto const& mediaClockReferences = entity.mediaClockReferences;
+
+								if (!mediaClockReferences.empty())
+								{
+									// Search the first valid mcr
+									for (auto const& [cdIndex, mcr] : mediaClockReferences)
+									{
+										return mcr.referenceIDString;
+									}
+								}
+								return "N/A";
+							}
+							case EntityDataFlag::MediaClockReferenceStatus:
+							{
+								auto const& mediaClockReferences = entity.mediaClockReferences;
+
+								if (!mediaClockReferences.empty())
+								{
+									// Search the first valid mcr
+									for (auto const& [cdIndex, mcr] : mediaClockReferences)
+									{
+										return mcr.referenceStatus;
+									}
+								}
+								return "";
+							}
 							default:
 								break;
 						}
 						break;
 					}
-					case ImageItemDelegate::LightImageRole:
+					case la::avdecc::utils::to_integral(QtUserRoles::LightImageRole):
 					{
 						switch (entityDataFlag)
 						{
 							case EntityDataFlag::EntityLogo:
 							{
-								if (entity.isAemSupported)
+								if (entity.isAemSupported && entity.hasAnyConfigurationTree)
 								{
 									auto& logoCache = EntityLogoCache::getInstance();
 									return logoCache.getImage(entity.entityID, EntityLogoCache::Type::Entity, true);
@@ -218,18 +318,42 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 									return {};
 								}
 							}
+							case EntityDataFlag::AcquireState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesLight.at(entity.acquireInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
+							case EntityDataFlag::LockState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesLight.at(entity.lockInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
 							default:
 								break;
 						}
 						break;
 					}
-					case ImageItemDelegate::DarkImageRole:
+					case la::avdecc::utils::to_integral(QtUserRoles::DarkImageRole):
 					{
 						switch (entityDataFlag)
 						{
 							case EntityDataFlag::EntityLogo:
 							{
-								if (entity.isAemSupported)
+								if (entity.isAemSupported && entity.hasAnyConfigurationTree)
 								{
 									auto& logoCache = EntityLogoCache::getInstance();
 									return logoCache.getImage(entity.entityID, EntityLogoCache::Type::Entity, true);
@@ -241,6 +365,30 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								try
 								{
 									return s_compatibilityImagesDark.at(entity.protocolCompatibility);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
+							case EntityDataFlag::AcquireState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesDark.at(entity.acquireInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
+							case EntityDataFlag::LockState:
+							{
+								try
+								{
+									return s_excusiveAccessStateImagesDark.at(entity.lockInfo.state);
 								}
 								catch (std::out_of_range const&)
 								{
@@ -278,7 +426,13 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 										return "Not fully IEEE 1722.1 compliant";
 								}
 							}
+							case EntityDataFlag::AcquireState:
+								return entity.acquireInfo.tooltip;
+							case EntityDataFlag::LockState:
+								return entity.lockInfo.tooltip;
 							case EntityDataFlag::GrandmasterID:
+							case EntityDataFlag::GPTPDomain:
+							case EntityDataFlag::InterfaceIndex:
 							{
 								auto const& gptpInfo = entity.gptpInfo;
 
@@ -308,11 +462,40 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "Not set by the entity";
 							}
+							case EntityDataFlag::MediaClockReferenceID:
+							case EntityDataFlag::MediaClockReferenceStatus:
+							{
+								auto const& mediaClockReferences = entity.mediaClockReferences;
+
+								if (!mediaClockReferences.empty())
+								{
+									auto list = QStringList{};
+
+									for (auto const& [cdIndex, mcr] : mediaClockReferences)
+									{
+										list << QString{ "Reference for domain %1: %2" }.arg(cdIndex).arg(mcr.referenceStatus);
+									}
+
+									if (!list.isEmpty())
+									{
+										return list.join('\n');
+									}
+								}
+								return "Undefined";
+							}
 							default:
 								break;
 						}
 						break;
 					}
+					case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
+						return entity.hasStatisticsError || entity.hasRedundancyWarning || !entity.streamsWithErrorCounter.empty() || !entity.streamsWithLatencyError.empty();
+					case la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole):
+						return entity.isIdentifying;
+					case la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole):
+						return entity.isSubscribedToUnsol;
+					case la::avdecc::utils::to_integral(QtUserRoles::IsVirtualRole):
+						return entity.isVirtual;
 					default:
 						break;
 				}
@@ -327,17 +510,53 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 }
 
 // Private methods
-std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, QVector<int>>> DiscoveredEntitiesTableModel::dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept
+std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>> DiscoveredEntitiesTableModel::dataChangedInfoForFlag(ChangedInfoFlag const flag) const noexcept
 {
 	switch (flag)
 	{
 		case ChangedInfoFlag::Name:
-			return std::make_pair(EntityDataFlag::Name, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::Name, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::GroupName:
-			return std::make_pair(EntityDataFlag::Group, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::Group, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::SubscribedToUnsol:
+			return std::make_pair(EntityDataFlag::All, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole) });
 		case ChangedInfoFlag::Compatibility:
-			return std::make_pair(EntityDataFlag::Compatibility, QVector<int>{ Qt::DisplayRole });
+			return std::make_pair(EntityDataFlag::Compatibility, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::EntityCapabilities:
+			// TODO (not displayed yet)
+			break;
+		case ChangedInfoFlag::AcquireState:
+			return std::make_pair(EntityDataFlag::AcquireState, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::OwningController:
+			return std::make_pair(EntityDataFlag::AcquireState, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::LockedState:
+			return std::make_pair(EntityDataFlag::LockState, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::LockingController:
+			return std::make_pair(EntityDataFlag::LockState, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::GrandmasterID:
+			return std::make_pair(EntityDataFlag::GrandmasterID, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::GPTPDomain:
+			return std::make_pair(EntityDataFlag::GPTPDomain, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::InterfaceIndex:
+			return std::make_pair(EntityDataFlag::InterfaceIndex, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::AssociationID:
+			return std::make_pair(EntityDataFlag::AssociationID, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::MediaClockReferenceID:
+			return std::make_pair(EntityDataFlag::MediaClockReferenceID, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::MediaClockReferenceStatus:
+			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::Identification:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole) });
+		case ChangedInfoFlag::StatisticsError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::RedundancyWarning:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::StreamInputCountersError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::StreamInputLatencyError:
+			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		default:
+			AVDECC_ASSERT(false, "Unhandled");
 			break;
 	}
 	return {};

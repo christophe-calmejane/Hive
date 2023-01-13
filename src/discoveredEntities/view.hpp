@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -66,8 +66,8 @@ private:
 	QSortFilterProxyModel _proxyModel{};
 	qtMate::widgets::DynamicHeaderView _dynamicHeaderView{ Qt::Horizontal, this };
 	qtMate::widgets::HeaderViewSortSectionFilter _headerSectionSortFilter{ &_dynamicHeaderView };
-	hive::widgetModelsLibrary::ImageItemDelegate _imageItemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
-	hive::widgetModelsLibrary::ErrorItemDelegate _errorItemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	hive::widgetModelsLibrary::ImageItemDelegate _imageItemDelegate{ true, qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	hive::widgetModelsLibrary::ErrorItemDelegate _errorItemDelegate{ true, qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	SettingsSignaler _settingsSignaler{};
 	la::avdecc::UniqueIdentifier _selectedControlledEntity{};
 };

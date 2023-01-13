@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -28,11 +28,16 @@ class ItemDelegate final : public QStyledItemDelegate
 public:
 	ItemDelegate(bool const drawMediaLockedDot, QObject* parent = nullptr);
 	void setDrawMediaLockedDot(bool const drawMediaLockedDot) noexcept;
+	void setDrawCRFAudioConnections(bool const drawCRFAudioConnections) noexcept;
+	bool getDrawCRFAudioConnections() const noexcept;
+	void setDrawEntitySummary(bool const drawSummary) noexcept;
 
 private:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 
 	bool _drawMediaLockedDot{ false };
+	bool _drawCRFAudioConnections{ false };
+	bool _drawEntitySummary{ false };
 };
 
 } // namespace connectionMatrix

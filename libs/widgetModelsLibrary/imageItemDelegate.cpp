@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -18,6 +18,7 @@
 */
 
 #include "hive/widgetModelsLibrary/imageItemDelegate.hpp"
+#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
 #include "hive/widgetModelsLibrary/painterHelper.hpp"
 
 #include <QPainter>
@@ -26,8 +27,9 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-ImageItemDelegate::ImageItemDelegate(qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
+ImageItemDelegate::ImageItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
 	: QStyledItemDelegate(parent)
+	, _paintBaseDelegate{ paintBaseDelegate }
 {
 	setThemeColorName(themeColorName);
 }
@@ -40,9 +42,13 @@ void ImageItemDelegate::setThemeColorName(qtMate::material::color::Name const th
 
 void ImageItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	QStyledItemDelegate::paint(painter, option, index);
+	// Only paint parent if requested
+	if (_paintBaseDelegate)
+	{
+		QStyledItemDelegate::paint(painter, option, index);
+	}
 
-	auto const role = ((option.state & QStyle::StateFlag::State_Selected) && _isDark) ? DarkImageRole : LightImageRole;
+	auto const role = ((option.state & QStyle::StateFlag::State_Selected) && _isDark) ? la::avdecc::utils::to_integral(QtUserRoles::DarkImageRole) : la::avdecc::utils::to_integral(QtUserRoles::LightImageRole);
 	auto const userData = index.data(role);
 	if (!userData.canConvert<QImage>())
 	{

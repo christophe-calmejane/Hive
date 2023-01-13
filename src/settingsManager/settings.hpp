@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2022, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,6 +21,7 @@
 
 #include "settingsManager.hpp"
 #include "profiles/profiles.hpp"
+#include "internals/config.hpp"
 
 #include <la/avdecc/internals/protocolInterface.hpp>
 #include <la/avdecc/utils.hpp>
@@ -47,6 +48,9 @@ static SettingsManager::SettingDefault ConnectionMatrix_ChannelMode = { "avdecc/
 static SettingsManager::SettingDefault ConnectionMatrix_AlwaysShowArrowTip = { "avdecc/connectionMatrix/alwaysShowArrowTip", false };
 static SettingsManager::SettingDefault ConnectionMatrix_AlwaysShowArrowEnd = { "avdecc/connectionMatrix/alwaysShowArrowEnd", false };
 static SettingsManager::SettingDefault ConnectionMatrix_ShowMediaLockedDot = { "avdecc/connectionMatrix/showMediaLockedDot", true };
+static SettingsManager::SettingDefault ConnectionMatrix_AllowCRFAudioConnection = { "avdecc/connectionMatrix/allowCRFAudioConnection", false };
+static SettingsManager::SettingDefault ConnectionMatrix_CollapsedByDefault = { "avdecc/connectionMatrix/collapsedByDefault", true };
+static SettingsManager::SettingDefault ConnectionMatrix_ShowEntitySummary = { "avdecc/connectionMatrix/showEntitySummary", true };
 
 // Network settings
 static SettingsManager::SettingDefault Network_ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
@@ -57,6 +61,12 @@ static SettingsManager::SettingDefault Network_InterfaceTypeWiFi = { "avdecc/net
 static SettingsManager::SettingDefault Controller_DiscoveryDelay = { "avdecc/controller/discoveryDelay", 0 };
 static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
 static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "avdecc/controller/fullStaticModel", false };
+static SettingsManager::SettingDefault Controller_AdvertisingEnabled = { "avdecc/controller/enableAdvertising", true };
+#ifdef DEBUG
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID_Debug", 4 + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
+#else // !DEBUG
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID", 3 + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
+#endif // DEBUG
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
 static SettingsManager::Setting InterfaceID = { "interfaceID" };

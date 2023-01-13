@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>377</width>
-    <height>649</height>
+    <width>383</width>
+    <height>768</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -201,13 +201,43 @@
       <item row="3" column="1">
        <widget class="QCheckBox" name="showMediaLockedDotCheckBox"/>
       </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="allowCRFAudioConnectionLabel">
+        <property name="text">
+         <string>Allow CRF-Audio Connection</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QCheckBox" name="allowCRFAudioConnectionCheckBox"/>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="collapsedByDefaultLabel">
+        <property name="text">
+         <string>Collapsed by Default</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QCheckBox" name="collapsedByDefaultCheckBox"/>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="showEntitySummaryLabel">
+        <property name="text">
+         <string>Show Entity Summary</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QCheckBox" name="showEntitySummaryCheckBox"/>
+      </item>
      </layout>
     </widget>
    </item>
    <item>
     <widget class="QGroupBox" name="groupBox_2">
      <property name="title">
-      <string>AVDECC Controller</string>
+      <string>ATDECC Controller</string>
      </property>
      <layout class="QFormLayout" name="formLayout_2">
       <property name="fieldGrowthPolicy">
@@ -232,34 +262,37 @@
       <item row="3" column="0">
        <widget class="QLabel" name="enableAdvertisingLabel">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="text">
-         <string>Enable Advertising (Coming Soon)</string>
+         <string>Enable Advertising</string>
         </property>
        </widget>
       </item>
       <item row="3" column="1">
        <widget class="QCheckBox" name="enableAdvertisingCheckBox">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
        </widget>
       </item>
       <item row="4" column="0">
        <widget class="QLabel" name="controllerIDLabel">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="text">
-         <string>Controller ID (Coming Soon)</string>
+         <string>Controller Sub ID (if possible)</string>
         </property>
        </widget>
       </item>
       <item row="4" column="1">
-       <widget class="QLineEdit" name="controllerIDLineEdit">
+       <widget class="qtMate::widgets::TextEntry" name="controllerIDLineEdit">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
+        </property>
+        <property name="maxLength">
+         <number>5</number>
         </property>
        </widget>
       </item>
