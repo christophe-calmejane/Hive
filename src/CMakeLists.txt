@@ -51,7 +51,6 @@ set(HEADER_FILES_GENERATED
 
 set(HEADER_FILES_COMMON
 	avdecc/mcDomainManager.hpp
-	avdecc/controllerModel.hpp
 	avdecc/channelConnectionManager.hpp
 	avdecc/helper.hpp
 	avdecc/mappingsHelper.hpp
@@ -135,7 +134,6 @@ set(HEADER_FILES_COMMON
 
 set(SOURCE_FILES_COMMON
 	avdecc/mcDomainManager.cpp
-	avdecc/controllerModel.cpp
 	avdecc/channelConnectionManager.cpp
 	avdecc/helper.cpp
 	avdecc/mappingsHelper.cpp

@@ -30,7 +30,7 @@ View::View(QWidget* parent)
 	: qtMate::widgets::TableView{ parent }
 {
 	// Setup model with proxy
-	_proxyModel.setSourceModel(&_model);
+	_proxyModel.setSourceModel(&_controllerModel);
 	setModel(&_proxyModel);
 }
 
@@ -43,26 +43,25 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	setSelectionMode(QAbstractItemView::SingleSelection);
 	setFocusPolicy(Qt::ClickFocus);
 
-	// Set column delegates
-	setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), &_imageItemDelegate);
-	setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), &_imageItemDelegate);
-	setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), &_imageItemDelegate);
-	setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), &_imageItemDelegate);
-	setItemDelegateForColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), &_errorItemDelegate);
+	// Set delegate for the entire table
+	setItemDelegate(&_controllerModelItemDelegate);
 
 	// Set dynamic header view
 	_dynamicHeaderView.setSectionsClickable(true);
 	_dynamicHeaderView.setHighlightSections(false);
-	_dynamicHeaderView.setMandatorySection(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
+	_dynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityID);
 
 	// Configure sortable sections
-	_headerSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility));
-	_headerSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID));
-	_headerSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name));
-	_headerSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group));
-	_headerSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID));
-	_headerSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID));
-	_headerSectionSortFilter.enable(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName));
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_Compatibility);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityID);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_Name);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_Group);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_GrandmasterID);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_AssociationID);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityModelID);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_FirmwareVersion);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_MediaClockID);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_MediaClockStatus);
 
 	// Set Horizontal header view to our dynamic one
 	setHorizontalHeader(&_dynamicHeaderView);
@@ -78,41 +77,45 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	setContextMenuPolicy(Qt::CustomContextMenu);
 
 	// Initialize UI defaults
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), !defaults.controllerTableView_EntityLogo_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), !defaults.controllerTableView_Compatibility_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), !defaults.controllerTableView_Name_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), !defaults.controllerTableView_Group_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), !defaults.controllerTableView_AcquireState_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), !defaults.controllerTableView_LockState_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID), !defaults.controllerTableView_GrandmasterID_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), !defaults.controllerTableView_GptpDomain_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), !defaults.controllerTableView_InterfaceIndex_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationID), !defaults.controllerTableView_AssociationID_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID), !defaults.controllerTableView_MediaClockMasterID_Visible);
-	setColumnHidden(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), !defaults.controllerTableView_MediaClockMasterName_Visible);
+	setColumnHidden(ControllerModelEntityColumn_EntityLogo, !defaults.controllerTableView_EntityLogo_Visible);
+	setColumnHidden(ControllerModelEntityColumn_Compatibility, !defaults.controllerTableView_Compatibility_Visible);
+	setColumnHidden(ControllerModelEntityColumn_Name, !defaults.controllerTableView_Name_Visible);
+	setColumnHidden(ControllerModelEntityColumn_Group, !defaults.controllerTableView_Group_Visible);
+	setColumnHidden(ControllerModelEntityColumn_AcquireState, !defaults.controllerTableView_AcquireState_Visible);
+	setColumnHidden(ControllerModelEntityColumn_LockState, !defaults.controllerTableView_LockState_Visible);
+	setColumnHidden(ControllerModelEntityColumn_GrandmasterID, !defaults.controllerTableView_GrandmasterID_Visible);
+	setColumnHidden(ControllerModelEntityColumn_GPTPDomain, !defaults.controllerTableView_GptpDomain_Visible);
+	setColumnHidden(ControllerModelEntityColumn_InterfaceIndex, !defaults.controllerTableView_InterfaceIndex_Visible);
+	setColumnHidden(ControllerModelEntityColumn_AssociationID, !defaults.controllerTableView_AssociationID_Visible);
+	setColumnHidden(ControllerModelEntityColumn_EntityModelID, !defaults.controllerTableView_EntityModelID_Visible);
+	setColumnHidden(ControllerModelEntityColumn_FirmwareVersion, !defaults.controllerTableView_FirmwareVersion_Visible);
+	setColumnHidden(ControllerModelEntityColumn_MediaClockID, !defaults.controllerTableView_MediaClockMasterID_Visible);
+	setColumnHidden(ControllerModelEntityColumn_MediaClockStatus, !defaults.controllerTableView_MediaClockMasterName_Visible);
 
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityLogo), defaults::ui::AdvancedView::ColumnWidth_Logo);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Compatibility), defaults::ui::AdvancedView::ColumnWidth_Compatibility);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name), defaults::ui::AdvancedView::ColumnWidth_Name);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Group), defaults::ui::AdvancedView::ColumnWidth_Group);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AcquireState), defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::LockState), defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GrandmasterID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::GptpDomain), defaults::ui::AdvancedView::ColumnWidth_GPTPDomain);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::InterfaceIndex), defaults::ui::AdvancedView::ColumnWidth_InterfaceIndex);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::AssociationID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterID), defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	setColumnWidth(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::MediaClockMasterName), defaults::ui::AdvancedView::ColumnWidth_Name);
+	setColumnWidth(ControllerModelEntityColumn_EntityLogo, defaults::ui::AdvancedView::ColumnWidth_Logo);
+	setColumnWidth(ControllerModelEntityColumn_Compatibility, defaults::ui::AdvancedView::ColumnWidth_Compatibility);
+	setColumnWidth(ControllerModelEntityColumn_EntityID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
+	setColumnWidth(ControllerModelEntityColumn_Name, defaults::ui::AdvancedView::ColumnWidth_Name);
+	setColumnWidth(ControllerModelEntityColumn_Group, defaults::ui::AdvancedView::ColumnWidth_Group);
+	setColumnWidth(ControllerModelEntityColumn_AcquireState, defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
+	setColumnWidth(ControllerModelEntityColumn_LockState, defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
+	setColumnWidth(ControllerModelEntityColumn_GrandmasterID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
+	setColumnWidth(ControllerModelEntityColumn_GPTPDomain, defaults::ui::AdvancedView::ColumnWidth_GPTPDomain);
+	setColumnWidth(ControllerModelEntityColumn_InterfaceIndex, defaults::ui::AdvancedView::ColumnWidth_InterfaceIndex);
+	setColumnWidth(ControllerModelEntityColumn_AssociationID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
+	setColumnWidth(ControllerModelEntityColumn_EntityModelID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
+	setColumnWidth(ControllerModelEntityColumn_FirmwareVersion, defaults::ui::AdvancedView::ColumnWidth_Firmware);
+	setColumnWidth(ControllerModelEntityColumn_MediaClockID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
+	setColumnWidth(ControllerModelEntityColumn_MediaClockStatus, defaults::ui::AdvancedView::ColumnWidth_Name);
 
 	// Connect all signals
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
 	// Connect the item delegates with theme color changes
-	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_imageItemDelegate, &hive::widgetModelsLibrary::ImageItemDelegate::setThemeColorName);
-	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_errorItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
+	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_controllerModelItemDelegate, &hive::widgetModelsLibrary::DiscoveredEntitiesTableItemDelegate::setThemeColorName);
 
 	// Listen for entity going offline
-	connect(&_model, &avdecc::ControllerModel::entityOffline, this,
+	connect(&manager, &hive::modelsLibrary::ControllerManager::entityOffline, this,
 		[this](la::avdecc::UniqueIdentifier const eid)
 		{
 			// The currently selected entity is going offline
@@ -124,7 +127,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 		});
 
 	// Listen for model reset
-	connect(&_model, &QAbstractItemModel::modelAboutToBeReset, this,
+	connect(&_controllerModel, &QAbstractItemModel::modelAboutToBeReset, this,
 		[this]()
 		{
 			// Clear selected entity
@@ -142,11 +145,11 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 				index = *selectedIndexes.begin();
 			}
 
-			auto const entityID = controlledEntityIDAtIndex(index);
+			auto const entityOpt = getEntityAtIndex(index);
 			auto previousEntityID = _selectedControlledEntity;
 
 			// Selection index is invalid (ie. no selection), or the currently selected entity doesn't exist
-			if (!index.isValid() || !entityID.isValid())
+			if (!index.isValid() || !entityOpt)
 			{
 				// Set currently selected ControlledEntity to nothing
 				_selectedControlledEntity = la::avdecc::UniqueIdentifier{};
@@ -154,6 +157,8 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 			else
 			{
 				// Set currently selected ControlledEntity to the new entityID
+				auto const& entity = (*entityOpt).get();
+				auto const entityID = entity.entityID;
 				_selectedControlledEntity = entityID;
 			}
 
@@ -170,11 +175,11 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	connect(this, &QTableView::doubleClicked, this,
 		[this](QModelIndex const& index)
 		{
-			auto const entityID = controlledEntityIDAtIndex(index);
+			auto const entityOpt = getEntityAtIndex(index);
 
-			if (entityID.isValid())
+			if (entityOpt)
 			{
-				emit doubleClicked(entityID);
+				emit doubleClicked(entityOpt->get().entityID);
 			}
 		});
 
@@ -182,8 +187,11 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 		[this](QPoint const& pos)
 		{
 			auto const index = indexAt(pos);
-			auto const entityID = controlledEntityIDAtIndex(index);
-			emit contextMenuRequested(entityID, pos);
+			auto const entityOpt = getEntityAtIndex(index);
+			if (entityOpt)
+			{
+				emit contextMenuRequested(entityOpt->get(), pos);
+			}
 		});
 
 	// Start the settings signaler service (will trigger all known signals)
@@ -218,11 +226,11 @@ void View::clearSelection() noexcept
 	emit selectedControlledEntityChanged(_selectedControlledEntity);
 }
 
-la::avdecc::UniqueIdentifier View::controlledEntityIDAtIndex(QModelIndex const& index) const noexcept
+std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesModel::Entity const>> View::getEntityAtIndex(QModelIndex const& index) const noexcept
 {
 	auto const* m = static_cast<QSortFilterProxyModel const*>(model());
 	auto const sourceIndex = m->mapToSource(index);
-	return _model.getControlledEntityID(sourceIndex);
+	return _controllerModel.entity(sourceIndex.row());
 }
 
 void View::showEvent(QShowEvent* event)
@@ -236,7 +244,7 @@ void View::showEvent(QShowEvent* event)
 			// Set default sort section, if current is unsortable
 			if (!_headerSectionSortFilter.isEnabled(_dynamicHeaderView.sortIndicatorSection()))
 			{
-				_dynamicHeaderView.setSortIndicator(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::EntityID), Qt::SortOrder::DescendingOrder);
+				_dynamicHeaderView.setSortIndicator(ControllerModelEntityColumn_EntityID, Qt::SortOrder::DescendingOrder);
 				saveDynamicHeaderState();
 			}
 		});

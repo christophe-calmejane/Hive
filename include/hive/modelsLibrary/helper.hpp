@@ -21,6 +21,7 @@
 
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 #include <QString>
 
 #include <sstream>
@@ -97,6 +98,7 @@ bool constexpr isFastConnectingToTalker(la::avdecc::entity::model::StreamIdentif
 
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
+QString smartEntityName(hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity) noexcept;
 QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;

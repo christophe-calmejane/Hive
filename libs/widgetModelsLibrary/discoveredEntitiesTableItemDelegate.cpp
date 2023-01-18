@@ -27,6 +27,20 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
+DiscoveredEntitiesTableItemDelegate::DiscoveredEntitiesTableItemDelegate(qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
+	: QStyledItemDelegate(parent)
+{
+	setThemeColorName(themeColorName);
+}
+
+void DiscoveredEntitiesTableItemDelegate::setThemeColorName(qtMate::material::color::Name const themeColorName)
+{
+	_themeColorName = themeColorName;
+	_isDark = qtMate::material::color::luminance(_themeColorName) == qtMate::material::color::Luminance::Dark;
+	_errorItemDelegate.setThemeColorName(themeColorName);
+	_imageItemDelegate.setThemeColorName(themeColorName);
+}
+
 void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	// Override default options according to the model current state

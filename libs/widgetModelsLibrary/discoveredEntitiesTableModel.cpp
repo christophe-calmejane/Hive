@@ -133,43 +133,85 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 		{
 			auto const entityDataFlag = _entityDataFlags.at(section);
 
-			if (role == Qt::DisplayRole)
+			switch (role)
 			{
-				switch (entityDataFlag)
-				{
-					case EntityDataFlag::EntityLogo:
-						return "Logo";
-					case EntityDataFlag::Compatibility:
-						return "Compat";
-					case EntityDataFlag::EntityID:
-						return "Entity ID";
-					case EntityDataFlag::Name:
-						return "Name";
-					case EntityDataFlag::Group:
-						return "Group";
-					case EntityDataFlag::AcquireState:
-						return "Acquire State";
-					case EntityDataFlag::LockState:
-						return "Lock State";
-					case EntityDataFlag::GrandmasterID:
-						return "Grandmaster ID";
-					case EntityDataFlag::GPTPDomain:
-						return "gPTP Domain";
-					case EntityDataFlag::InterfaceIndex:
-						return "Interface Idx";
-					case EntityDataFlag::AssociationID:
-						return "Association ID";
-					case EntityDataFlag::EntityModelID:
-						return "Entity Model ID";
-					case EntityDataFlag::FirmwareVersion:
-						return "Firmware Version";
-					case EntityDataFlag::MediaClockReferenceID:
-						return "Media Clock Reference ID";
-					case EntityDataFlag::MediaClockReferenceStatus:
-						return "Media Clock Reference Status";
-					default:
-						break;
-				}
+				case Qt::DisplayRole:
+					switch (entityDataFlag)
+					{
+						case EntityDataFlag::EntityLogo:
+							return "Logo";
+						case EntityDataFlag::Compatibility:
+							return "Compat";
+						case EntityDataFlag::EntityID:
+							return "Entity ID";
+						case EntityDataFlag::Name:
+							return "Name";
+						case EntityDataFlag::Group:
+							return "Group";
+						case EntityDataFlag::AcquireState:
+							return "Acquire State";
+						case EntityDataFlag::LockState:
+							return "Lock State";
+						case EntityDataFlag::GrandmasterID:
+							return "Grandmaster ID";
+						case EntityDataFlag::GPTPDomain:
+							return "gPTP Domain";
+						case EntityDataFlag::InterfaceIndex:
+							return "Interface Idx";
+						case EntityDataFlag::AssociationID:
+							return "Association ID";
+						case EntityDataFlag::EntityModelID:
+							return "Entity Model ID";
+						case EntityDataFlag::FirmwareVersion:
+							return "Firmware Version";
+						case EntityDataFlag::MediaClockReferenceID:
+							return "MCR ID";
+						case EntityDataFlag::MediaClockReferenceStatus:
+							return "MCR Status";
+						default:
+							break;
+					}
+					break;
+
+				case Qt::ToolTipRole:
+					switch (entityDataFlag)
+					{
+						case EntityDataFlag::EntityLogo:
+							return "Logo";
+						case EntityDataFlag::Compatibility:
+							return "Compat";
+						case EntityDataFlag::EntityID:
+							return "Entity ID";
+						case EntityDataFlag::Name:
+							return "Name";
+						case EntityDataFlag::Group:
+							return "Group";
+						case EntityDataFlag::AcquireState:
+							return "Acquire State";
+						case EntityDataFlag::LockState:
+							return "Lock State";
+						case EntityDataFlag::GrandmasterID:
+							return "Grandmaster ID";
+						case EntityDataFlag::GPTPDomain:
+							return "gPTP Domain";
+						case EntityDataFlag::InterfaceIndex:
+							return "Interface Idx";
+						case EntityDataFlag::AssociationID:
+							return "Association ID";
+						case EntityDataFlag::EntityModelID:
+							return "Entity Model ID";
+						case EntityDataFlag::FirmwareVersion:
+							return "Firmware Version";
+						case EntityDataFlag::MediaClockReferenceID:
+							return "Media Clock Reference ID";
+						case EntityDataFlag::MediaClockReferenceStatus:
+							return "Media Clock Reference Status";
+						default:
+							break;
+					}
+					break;
+				default:
+					break;
 			}
 		}
 		catch (...)
