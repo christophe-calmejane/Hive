@@ -1,7 +1,7 @@
 # Default values for gen_cmake and gen_install
 
 # Qt defaults
-default_qt_version="6.2.4"
+default_qt_version="6.4.2"
 default_qt_win_basePath="C:/Qt"
 default_qt_win_arch="msvc2019"
 default_qt_mac_basePath="/Applications/Qt"

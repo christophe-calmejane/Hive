@@ -494,7 +494,7 @@ void MultiFirmwareUpdateDialog::startFirmwareUpdate()
 	close();
 
 	// Start firmware upload dialog
-	auto dialog = FirmwareUploadDialog{ { firmwareFileData.constData(), static_cast<size_t>(firmwareFileData.count()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
+	auto dialog = FirmwareUploadDialog{ { firmwareFileData.constData(), static_cast<size_t>(firmwareFileData.size()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
 	dialog.exec();
 }
 

@@ -1025,13 +1025,7 @@ public:
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, std::move(itemName));
-		item->setData(1, Qt::DisplayRole, std::move(itemValue));
-	}
-	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue)
-	{
-		auto* item = new QTreeWidgetItem(treeWidgetItem);
-		item->setText(0, std::move(itemName));
-		item->setText(1, std::move(itemValue));
+		item->setData(1, Qt::DisplayRole, QVariant::fromValue<ValueType>(itemValue));
 	}
 	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, std::string const& itemValue)
 	{
@@ -1463,7 +1457,7 @@ public:
 						}
 
 						// Start firmware upload dialog
-						FirmwareUploadDialog dialog{ { data.constData(), static_cast<size_t>(data.count()) }, QFileInfo(fileName).fileName(), { { _controlledEntityID, descriptorIndex, baseAddress } }, q_ptr };
+						FirmwareUploadDialog dialog{ { data.constData(), static_cast<size_t>(data.size()) }, QFileInfo(fileName).fileName(), { { _controlledEntityID, descriptorIndex, baseAddress } }, q_ptr };
 						dialog.exec();
 					}
 				});
