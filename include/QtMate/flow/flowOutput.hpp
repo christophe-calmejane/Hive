@@ -19,25 +19,37 @@
 
 #pragma once
 
-#ifdef _WIN32
+#include <QtMate/flow/flowSocket.hpp>
 
-#	include <string>
+namespace qtMate::flow
+{
+class FlowOutput : public FlowSocket
+{
+public:
+	using FlowSocket::FlowSocket;
 
-namespace npf
-{
-enum class Status
-{
-	Unknown = 0,
-	NotInstalled = 1,
-	NotStarted = 2,
-	StartedManually = 3,
-	StartedAutomatically = 4,
+	virtual ~FlowOutput() override;
+
+	enum
+	{
+		Type = UserType + 3
+	};
+	virtual int type() const override;
+	virtual QRectF boundingRect() const override;
+
+	virtual bool isConnected() const override;
+	virtual QRectF hotSpotBoundingRect() const override;
+
+	void addConnection(FlowConnection* connection);
+	void removeConnection(FlowConnection* connection);
+	FlowConnections const& connections() const;
+
+	void updateConnections();
+
+	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget = nullptr) override;
+
+private:
+	FlowConnections _connections{};
 };
 
-Status getStatus(std::string const& serviceName) noexcept;
-void startService() noexcept;
-void setServiceAutoStart() noexcept;
-
-} // namespace npf
-
-#endif // _WIN32
+} // namespace qtMate::flow

@@ -19,16 +19,10 @@
 
 #pragma once
 
-#include <QtMate/graph/view.hpp>
-#include <QtMate/graph/node.hpp>
-#include <QtMate/graph/inputSocket.hpp>
-#include <QtMate/graph/outputSocket.hpp>
-
+#include <QWidget>
 #include <QPushButton>
 #include <QDialog>
-#include <QGridLayout>
 
-#include <utility>
 #include <vector>
 #include <string>
 
@@ -43,7 +37,7 @@ struct Node
 using Nodes = std::vector<Node>;
 using Outputs = Nodes;
 using Inputs = Nodes;
-using SlotID = std::pair<size_t, size_t>; // Pair of "Node Index", "Socket Index"
+using SlotID = std::pair<quint32, quint32>; // Pair of "Node Index", "Socket Index"
 using Connection = std::pair<SlotID, SlotID>; // Pair of "Output SlotID", "Input SlotID"
 using Connections = std::vector<Connection>;
 
@@ -69,145 +63,26 @@ using Connections = std::vector<Connection>;
 	- <0,0> -> <0,0>
 	- <0,0> -> <0,1>
 	- <1,1> -> <1,0>
+ 
+ 
+ CAUTION: Input and Output nodes can share the same ID as it is the index of the node in the provided list
 
 */
 
-class MappingMatrix : public qtMate::graph::GraphicsView
-{
-public:
-	MappingMatrix(Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
-		: qtMate::graph::GraphicsView(parent)
-		, _connections{ connections }
-	{
-		setScene(&_scene);
-
-		auto const paddingX{ 150.f };
-		auto const paddingY{ 5.f };
-
-		auto outputNodeX{ 0.f };
-		auto outputNodeY{ 0.f };
-
-		auto inputNodeX{ 0.f };
-		auto inputNodeY{ 0.f };
-
-		for (auto const& item : outputs)
-		{
-			auto* node = new qtMate::graph::NodeItem{ static_cast<int>(_outputs.size()), QString::fromStdString(item.name) };
-			for (auto const& socket : item.sockets)
-			{
-				node->addOutput(QString::fromStdString(socket));
-			}
-
-			_outputs.emplace_back(node);
-			_scene.addItem(node);
-
-			node->setPos(outputNodeX, outputNodeY);
-			outputNodeY += node->boundingRect().height() + paddingY;
-
-			inputNodeX = std::max(inputNodeX, static_cast<float>(node->boundingRect().width()) + paddingX);
-		}
-
-		for (auto const& item : inputs)
-		{
-			auto* node = new qtMate::graph::NodeItem{ static_cast<int>(_inputs.size()), QString::fromStdString(item.name) };
-			for (auto const& socket : item.sockets)
-			{
-				node->addInput(QString::fromStdString(socket));
-			}
-
-			_inputs.emplace_back(node);
-			_scene.addItem(node);
-
-			node->setPos(inputNodeX, inputNodeY);
-			inputNodeY += node->boundingRect().height() + paddingY;
-		}
-
-		for (auto const& connection : _connections)
-		{
-			auto* item = new qtMate::graph::ConnectionItem;
-
-			auto const& outputSlot{ connection.first };
-			auto const& inputSlot{ connection.second };
-
-			try
-			{
-				item->connectOutput(_outputs.at(outputSlot.first)->outputAt(static_cast<int>(outputSlot.second)));
-				item->connectInput(_inputs.at(inputSlot.first)->inputAt(static_cast<int>(inputSlot.second)));
-
-				_scene.addItem(item);
-			}
-			catch (...)
-			{
-				// FIXME
-				delete item;
-			}
-		}
-
-		connect(this, &qtMate::graph::GraphicsView::connectionCreated, this,
-			[this](qtMate::graph::ConnectionItem* connection)
-			{
-				_connections.emplace_back(std::make_pair(connection->output()->nodeId(), connection->output()->index()), std::make_pair(connection->input()->nodeId(), connection->input()->index()));
-			});
-
-		connect(this, &qtMate::graph::GraphicsView::connectionDeleted, this,
-			[this](qtMate::graph::ConnectionItem* connection)
-			{
-				_connections.erase(std::remove_if(_connections.begin(), _connections.end(),
-														 [connection](Connection const& item)
-														 {
-															 return (static_cast<int>(item.first.first) == connection->output()->nodeId() && static_cast<int>(item.first.second) == connection->output()->index()) && (static_cast<int>(item.second.first) == connection->input()->nodeId() && static_cast<int>(item.second.second) == connection->input()->index());
-														 }),
-					_connections.end());
-			});
-
-		auto const scenePadding{ 80 };
-		_scene.setSceneRect(_scene.sceneRect().adjusted(-scenePadding, -scenePadding, scenePadding, scenePadding));
-	}
-
-	Connections const& connections() const
-	{
-		return _connections;
-	}
-
-private:
-	QGraphicsScene _scene{ this };
-	std::vector<qtMate::graph::NodeItem*> _outputs;
-	std::vector<qtMate::graph::NodeItem*> _inputs;
-	Connections _connections;
-};
+class MappingMatrix;
 
 class MappingMatrixDialog : public QDialog
 {
 public:
-	MappingMatrixDialog(QString const& title, Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr)
-#ifdef Q_OS_WIN32
-		: QDialog(parent, Qt::Dialog | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint) // Because Qt::Tool is ugly on windows and '?' needs to be hidden (currently not supported)
-#else
-		: QDialog(parent, Qt::Tool | Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
-#endif
-		, _mappingMatrix{ outputs, inputs, connections, this }
-	{
-		setWindowTitle(title);
+	// Construct the MappingMatrix editor dialog
+	MappingMatrixDialog(QString const& title, Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent = nullptr);
 
-		auto* layout = new QGridLayout{ this };
-
-		layout->addWidget(&_mappingMatrix, 0, 0, 1, 2);
-		layout->addWidget(&_applyButton, 1, 0);
-		layout->addWidget(&_cancelButton, 1, 1);
-
-		connect(&_applyButton, &QPushButton::clicked, this, &QDialog::accept);
-		connect(&_cancelButton, &QPushButton::clicked, this, &QDialog::reject);
-	}
-
-	Connections const& connections() const
-	{
-		return _mappingMatrix.connections();
-	}
+	// Return the list of active connections,
+	// Note: it is ment to be retrived after the dialog has been closed
+	Connections connections() const;
 
 private:
-	MappingMatrix _mappingMatrix;
-	QPushButton _applyButton{ "Apply", this };
-	QPushButton _cancelButton{ "Cancel", this };
+	MappingMatrix* _matrix{};
 };
 
 } // namespace mappingMatrix

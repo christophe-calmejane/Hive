@@ -20,40 +20,37 @@
 #pragma once
 
 #include <QGraphicsItem>
+#include <QtMate/flow/flowDefs.hpp>
 
-namespace qtMate
+namespace qtMate::flow
 {
-namespace graph
-{
-class SocketItem : public QGraphicsItem
+class FlowSocket : public QGraphicsItem
 {
 public:
-	SocketItem(int nodeId, int index, QString const& text, QGraphicsItem* parent = nullptr);
+	FlowSocket(FlowNode* node, FlowSocketIndex index, FlowSocketDescriptor const& descriptor);
+	virtual ~FlowSocket() override;
 
-	// Associated node
-	int nodeId() const;
-	// Socket index in this node
-	int index() const;
+	FlowNode* node() const;
+	FlowSocketIndex index() const;
+	FlowSocketDescriptor const& descriptor() const;
+	FlowSocketSlot slot() const;
 
-	QString const& text() const;
-	QSizeF size() const;
+	QColor const& color() const;
+	void setColor(QColor const& color);
+
+	bool hit(QPointF const& scenePos) const;
+
+	QPointF hotSpotSceneCenter() const;
 
 	virtual bool isConnected() const = 0;
-	virtual QRectF boundingRect() const override;
-
-	bool isOver(QPointF const& pos) const;
+	virtual QRectF hotSpotBoundingRect() const = 0;
 
 protected:
-	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget) override;
-	virtual void updateGeometry() = 0;
+	FlowNode* _node{};
+	FlowSocketIndex _index{};
+	FlowSocketDescriptor _descriptor{};
 
-private:
-	int _nodeId{ -1 };
-	int _index{ -1 };
-
-	QString _text{};
-	QSize _size{};
+	QColor _color{ Qt::darkGray };
 };
 
-} // namespace graph
-} // namespace qtMate
+} // namespace qtMate::flow

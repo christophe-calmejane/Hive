@@ -19,25 +19,34 @@
 
 #pragma once
 
-#ifdef _WIN32
+#include <QObject>
+#include <QVariantAnimation>
+#include <QPropertyAnimation>
 
-#	include <string>
+#include <QtMate/flow/flowdefs.hpp>
 
-namespace npf
+class NodeOrganizer : public QObject
 {
-enum class Status
-{
-	Unknown = 0,
-	NotInstalled = 1,
-	NotStarted = 2,
-	StartedManually = 3,
-	StartedAutomatically = 4,
+public:
+	NodeOrganizer(qtMate::flow::FlowScene* scene, QObject* parent = nullptr);
+	virtual ~NodeOrganizer() override;
+
+private:
+	void updateNodeData(qtMate::flow::FlowNodeUid const& uid);
+	void doLayout();
+	void animateTo(qtMate::flow::FlowNode* node, float x, float y);
+
+private:
+	qtMate::flow::FlowScene* _scene{};
+	QPropertyAnimation* _sceneRectAnimation{};
+
+	struct NodeData
+	{
+		qtMate::flow::FlowNode* node{};
+		int activeInputCount{};
+		int activeOutputCount{};
+	};
+
+	QHash<qtMate::flow::FlowNodeUid, NodeData> _nodeData{};
+	QHash<qtMate::flow::FlowNodeUid, QVariantAnimation*> _animations{};
 };
-
-Status getStatus(std::string const& serviceName) noexcept;
-void startService() noexcept;
-void setServiceAutoStart() noexcept;
-
-} // namespace npf
-
-#endif // _WIN32

@@ -17,36 +17,21 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "QtMate/flow/flowSceneDelegate.hpp"
+#include "QtMate/flow/flowSocket.hpp"
+#include "QtMate/flow/flowInput.hpp"
+#include "QtMate/flow/flowOutput.hpp"
 
-#include "socket.hpp"
-
-namespace qtMate
+namespace qtMate::flow
 {
-namespace graph
+QColor FlowSceneDelegate::socketTypeColor(FlowSocketType type) const
 {
-class ConnectionItem;
-class InputSocketItem final : public SocketItem
+	return Qt::darkGray;
+}
+
+bool FlowSceneDelegate::canConnect(FlowOutput* output, FlowInput* input) const
 {
-public:
-	using SocketItem::SocketItem;
+	return output->descriptor().type == input->descriptor().type;
+}
 
-	virtual ~InputSocketItem();
-
-	virtual int type() const override;
-
-	virtual void updateGeometry() override;
-
-	virtual bool isConnected() const override;
-
-	//
-
-	void setConnection(ConnectionItem* connection);
-	ConnectionItem* connection() const;
-
-private:
-	ConnectionItem* _connection{ nullptr };
-};
-
-} // namespace graph
-} // namespace qtMate
+} // namespace qtMate::flow

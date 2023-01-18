@@ -21,49 +21,23 @@
 
 #include <QGraphicsPathItem>
 
-#include <unordered_set>
-
-namespace qtMate
+namespace qtMate::flow
 {
-namespace graph
-{
-class InputSocketItem;
-class OutputSocketItem;
-
-class ConnectionItem : public QGraphicsPathItem
+class FlowLink : public QGraphicsPathItem
 {
 public:
-	ConnectionItem();
-	~ConnectionItem();
+	FlowLink(QGraphicsItem* parent = nullptr);
+	virtual ~FlowLink() override;
 
-	void setStart(QPointF const& p);
-	void setStop(QPointF const& p);
-
-	virtual int type() const override;
-
-	void connectInput(InputSocketItem* input);
-	InputSocketItem* input() const;
-	void disconnectInput();
-
-	void connectOutput(OutputSocketItem* output);
-	OutputSocketItem* output() const;
-	void disconnectOutput();
-
-	void disconnect();
+	void setStart(QPointF const& start);
+	void setStop(QPointF const& stop);
 
 private:
-	virtual void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
-	void updatePath();
+	void updatePainterPath();
 
 private:
 	QPointF _start{};
 	QPointF _stop{};
-
-	InputSocketItem* _input{ nullptr };
-	OutputSocketItem* _output{ nullptr };
 };
 
-using ConnectionItems = std::unordered_set<ConnectionItem*>;
-
-} // namespace graph
-} // namespace qtMate
+} // namespace qtMate::flow

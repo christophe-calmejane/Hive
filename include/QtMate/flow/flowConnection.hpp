@@ -19,25 +19,32 @@
 
 #pragma once
 
-#ifdef _WIN32
+#include <QtMate/flow/flowLink.hpp>
+#include <QtMate/flow/flowDefs.hpp>
 
-#	include <string>
+namespace qtMate::flow
+{
+class FlowConnection : public FlowLink
+{
+public:
+	FlowConnection(QGraphicsItem* parent = nullptr);
+	virtual ~FlowConnection() override;
 
-namespace npf
-{
-enum class Status
-{
-	Unknown = 0,
-	NotInstalled = 1,
-	NotStarted = 2,
-	StartedManually = 3,
-	StartedAutomatically = 4,
+	FlowConnectionDescriptor descriptor() const;
+
+	void setOutput(FlowOutput* output);
+	FlowOutput* output() const;
+
+	void setInput(FlowInput* input);
+	FlowInput* input() const;
+
+	void updatePath();
+
+private:
+	friend class FlowNode;
+
+	FlowOutput* _output{};
+	FlowInput* _input{};
 };
 
-Status getStatus(std::string const& serviceName) noexcept;
-void startService() noexcept;
-void setServiceAutoStart() noexcept;
-
-} // namespace npf
-
-#endif // _WIN32
+} // namespace qtMate::flow

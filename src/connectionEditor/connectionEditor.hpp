@@ -19,24 +19,18 @@
 
 #pragma once
 
-#include <QGraphicsItem>
+#include <QWidget>
+#include <QtMate/flow/flowdefs.hpp>
 
-namespace qtMate
+class ConnectionEditor : public QWidget
 {
-namespace graph
-{
-enum ItemType
-{
-	Node = QGraphicsItem::UserType + 1,
-	Input,
-	Output,
-	Connection,
+	Q_OBJECT
+public:
+	ConnectionEditor(qtMate::flow::FlowNodeDescriptorMap const& nodes, qtMate::flow::FlowConnectionDescriptors const& connections, QWidget* parent = nullptr);
+	virtual ~ConnectionEditor() override;
+
+	qtMate::flow::FlowConnectionDescriptors const& connections() const;
+
+private:
+	qtMate::flow::FlowConnectionDescriptors _connections{};
 };
-
-const QColor TextColor{ "#FFFFFF" };
-const QColor NodeItemColor{ "#3C3C3C" };
-const QColor InputSocketColor{ "#2196F3" };
-const QColor OutputSocketColor{ "#4CAF50" };
-
-} // namespace graph
-} // namespace qtMate

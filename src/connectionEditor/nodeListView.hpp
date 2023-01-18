@@ -19,36 +19,18 @@
 
 #pragma once
 
-#include "socket.hpp"
-#include "connection.hpp"
+#include <QListView>
 
-namespace qtMate
+class NodeListView : public QListView
 {
-namespace graph
-{
-class OutputSocketItem final : public SocketItem
-{
+	Q_OBJECT
 public:
-	using SocketItem::SocketItem;
+	NodeListView(QWidget* parent = nullptr);
+	virtual ~NodeListView() override;
 
-	virtual ~OutputSocketItem();
+signals:
+	void dropped(QModelIndex const& index);
 
-	virtual int type() const override;
-
-	virtual void updateGeometry() override;
-
-	virtual bool isConnected() const override;
-
-	void addConnection(ConnectionItem* connection);
-	void removeConnection(ConnectionItem* connection);
-
-	void clearConnections();
-
-	ConnectionItems const& connections() const;
-
-private:
-	ConnectionItems _connections{};
+protected:
+	virtual void startDrag(Qt::DropActions supportedActions) override;
 };
-
-} // namespace graph
-} // namespace qtMate

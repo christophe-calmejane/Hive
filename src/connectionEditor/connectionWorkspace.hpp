@@ -17,50 +17,22 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "QtMate/graph/inputSocket.hpp"
-#include "QtMate/graph/connection.hpp"
-#include "QtMate/graph/type.hpp"
+#pragma once
 
-namespace qtMate
-{
-namespace graph
-{
-InputSocketItem::~InputSocketItem()
-{
-	if (_connection)
-	{
-		_connection->disconnect();
-	}
-}
+#include <QtMate/flow/flowview.hpp>
 
-int InputSocketItem::type() const
+class ConnectionWorkspace : public qtMate::flow::FlowView
 {
-	return ItemType::Input;
-}
+public:
+	ConnectionWorkspace(qtMate::flow::FlowScene* scene, QWidget* parent = nullptr);
+	virtual ~ConnectionWorkspace() override;
 
-void InputSocketItem::updateGeometry()
-{
-	if (_connection)
-	{
-		_connection->setStop(mapToScene(0, 0));
-	}
-}
+protected:
+	virtual void dragEnterEvent(QDragEnterEvent* event) override;
+	virtual void dragLeaveEvent(QDragLeaveEvent* event) override;
+	virtual void dragMoveEvent(QDragMoveEvent* event) override;
+	virtual void dropEvent(QDropEvent* event) override;
 
-bool InputSocketItem::isConnected() const
-{
-	return _connection != nullptr;
-}
-
-void InputSocketItem::setConnection(ConnectionItem* connection)
-{
-	_connection = connection;
-	updateGeometry();
-}
-
-ConnectionItem* InputSocketItem::connection() const
-{
-	return _connection;
-}
-
-} // namespace graph
-} // namespace qtMate
+private:
+	bool _dragEnterAccepted{};
+};
