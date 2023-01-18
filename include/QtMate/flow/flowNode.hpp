@@ -1,3 +1,22 @@
+/*
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #pragma once
 
 #include <QGraphicsItem>
@@ -6,7 +25,6 @@
 
 namespace qtMate::flow
 {
-
 class FlowNodeHeader;
 
 class FlowNode : public QGraphicsItem
@@ -22,7 +40,7 @@ public:
 
 	FlowInput* input(FlowSocketIndex index) const;
 	FlowOutput* output(FlowSocketIndex index) const;
-	
+
 	bool hasConnectedInput() const;
 	bool hasConnectedOutput() const;
 
@@ -54,7 +72,7 @@ private:
 	FlowInputs _inputs{};
 	FlowOutputs _outputs{};
 	bool _collapsed{};
-	float _collapseRatio{1.f};
+	float _collapseRatio{ 1.f };
 	QVariantAnimation _collapseAnimation{};
 };
 

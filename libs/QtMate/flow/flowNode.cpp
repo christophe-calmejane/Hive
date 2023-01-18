@@ -1,3 +1,22 @@
+/*
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "QtMate/flow/flowNode.hpp"
 #include "QtMate/flow/flowInput.hpp"
 #include "QtMate/flow/flowOutput.hpp"
@@ -9,30 +28,29 @@
 
 namespace qtMate::flow
 {
-
 class FlowNodeHeader : public QGraphicsItem
 {
 public:
 	FlowNodeHeader(QString const& name, QGraphicsItem* parent = nullptr)
-	: QGraphicsItem{ parent }
-	, _name{ name }
+		: QGraphicsItem{ parent }
+		, _name{ name }
 	{
 	}
-	
+
 	virtual QRectF boundingRect() const override
 	{
 		return QRectF{ 0.f, 0.f, NODE_WIDTH, NODE_LINE_HEIGHT };
 	}
-	
+
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget) override
 	{
 		auto const r = boundingRect();
-		
+
 		painter->setPen(NODE_TEXT_COLOR);
 		painter->setBrush(Qt::NoBrush);
 		drawElidedText(painter, r, Qt::AlignCenter, Qt::ElideMiddle, _name);
 	}
-	
+
 private:
 	QString _name{};
 };
@@ -69,20 +87,21 @@ FlowNode::FlowNode(FlowSceneDelegate* delegate, FlowNodeUid const& uid, FlowNode
 		auto* output = _outputs.emplace_back(new FlowOutput{ this, index, descriptor });
 		output->setColor(_delegate->socketTypeColor(output->descriptor().type));
 	}
-	
+
 	// collapse animation configuration
 	_collapseAnimation.setDuration(350);
 	_collapseAnimation.setStartValue(1.f);
 	_collapseAnimation.setEndValue(0.f);
 	_collapseAnimation.setEasingCurve(QEasingCurve::Type::OutQuart);
-	
-	QObject::connect(&_collapseAnimation, &QVariantAnimation::valueChanged, [this](QVariant const& value)
+
+	QObject::connect(&_collapseAnimation, &QVariantAnimation::valueChanged,
+		[this](QVariant const& value)
 		{
 			_collapseRatio = value.toFloat();
 			updateSockets();
 			prepareGeometryChange();
 		});
-	
+
 	updateSockets();
 }
 
@@ -128,27 +147,27 @@ FlowOutput* FlowNode::output(FlowSocketIndex index) const
 
 bool FlowNode::hasConnectedInput() const
 {
-	for(auto* input : _inputs)
+	for (auto* input : _inputs)
 	{
-		if(input->isConnected())
+		if (input->isConnected())
 		{
 			return true;
 		}
 	}
-	
+
 	return false;
 }
 
 bool FlowNode::hasConnectedOutput() const
 {
-	for(auto* output : _outputs)
+	for (auto* output : _outputs)
 	{
-		if(output->isConnected())
+		if (output->isConnected())
 		{
 			return true;
 		}
 	}
-	
+
 	return false;
 }
 
@@ -186,23 +205,23 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 
 	auto headerHotSpotColor = _delegate->socketTypeColor(0); // FIXME
 	headerHotSpotColor.setAlphaF(1.f - _collapseRatio);
-	
+
 	// inputs
 	if (!_inputs.empty())
 	{
 		auto const inputHotSpotCenter = QRectF{ 0.f, 0.f, NODE_SOCKET_BOUNDING_SIZE, headerBoundingRect.height() }.center();
 		drawOutputHotSpot(painter, inputHotSpotCenter, headerHotSpotColor, hasConnectedInput());
-		
+
 		auto inputsBoundingRect = r;
 		inputsBoundingRect.moveTop(NODE_LINE_HEIGHT + NODE_SEPARATOR_THICKNESS);
 		inputsBoundingRect.setWidth(r.width() * inputRatio(this));
 		inputsBoundingRect.setHeight(r.height() - NODE_LINE_HEIGHT - NODE_SEPARATOR_THICKNESS);
 		painter->setPen(Qt::NoPen);
-		
-		auto color = QColor{NODE_INPUT_BACKGROUND_COLOR};
+
+		auto color = QColor{ NODE_INPUT_BACKGROUND_COLOR };
 		color.setAlphaF(_collapseRatio);
 		painter->setBrush(color);
-		
+
 		drawRoundedRect(painter, inputsBoundingRect, _outputs.empty() ? (BottomLeft | BottomRight) : BottomLeft, NODE_BORDER_RADIUS);
 	}
 
@@ -211,15 +230,15 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 	{
 		auto const outputHotSpotCenter = QRectF{ headerBoundingRect.right() - NODE_SOCKET_BOUNDING_SIZE, 0.f, NODE_SOCKET_BOUNDING_SIZE, headerBoundingRect.height() }.center();
 		drawOutputHotSpot(painter, outputHotSpotCenter, headerHotSpotColor, hasConnectedOutput());
-		
+
 		auto ouputsBoundingRect = r;
 		ouputsBoundingRect.moveTop(NODE_LINE_HEIGHT + NODE_SEPARATOR_THICKNESS);
 		ouputsBoundingRect.moveLeft(r.width() * inputRatio(this) + NODE_SEPARATOR_THICKNESS);
 		ouputsBoundingRect.setWidth(r.width() * outputRatio(this) - NODE_SEPARATOR_THICKNESS);
 		ouputsBoundingRect.setHeight(r.height() - NODE_LINE_HEIGHT - NODE_SEPARATOR_THICKNESS);
 		painter->setPen(Qt::NoPen);
-		
-		auto color = QColor{NODE_OUTPUT_BACKGROUND_COLOR};
+
+		auto color = QColor{ NODE_OUTPUT_BACKGROUND_COLOR };
 		color.setAlphaF(_collapseRatio);
 		painter->setBrush(color);
 
@@ -241,11 +260,13 @@ QVariant FlowNode::itemChange(GraphicsItemChange change, QVariant const& value)
 	return QGraphicsItem::itemChange(change, value);
 }
 
-void FlowNode::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event) {
-	if(_header->contains(event->pos())) {
+void FlowNode::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
+{
+	if (_header->contains(event->pos()))
+	{
 		toggleCollapsed();
 	}
-		 
+
 	QGraphicsItem::mouseDoubleClickEvent(event);
 }
 
@@ -257,11 +278,11 @@ void FlowNode::toggleCollapsed()
 void FlowNode::setCollapsed(bool collapsed)
 {
 	_collapsed = collapsed;
-	
+
 	_collapseAnimation.stop();
 	_collapseAnimation.setStartValue(_collapseRatio);
-	
-	if(_collapsed)
+
+	if (_collapsed)
 	{
 		_collapseAnimation.setEndValue(0.f);
 	}
@@ -269,7 +290,7 @@ void FlowNode::setCollapsed(bool collapsed)
 	{
 		_collapseAnimation.setEndValue(1.f);
 	}
-	
+
 	_collapseAnimation.start(QAbstractAnimation::DeletionPolicy::KeepWhenStopped);
 }
 
@@ -304,9 +325,9 @@ void FlowNode::updateSockets()
 	{
 		auto const index = output->index();
 		output->setPos(0, _collapseRatio * (NODE_SEPARATOR_THICKNESS + (index + 1) * NODE_LINE_HEIGHT));
-		output	->setOpacity(_collapseRatio);
+		output->setOpacity(_collapseRatio);
 	}
-	
+
 	handleItemPositionHasChanged();
 }
 

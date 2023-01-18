@@ -1,3 +1,21 @@
+/*
+* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "nodeorganizer.hpp"
 
 #include <QtMate/flow/flowscene.hpp>
@@ -56,7 +74,7 @@ void traverse(qtMate::flow::FlowNode* node, int depth, TraverseFunc func)
 NodeOrganizer::NodeOrganizer(qtMate::flow::FlowScene* scene, QObject* parent)
 	: QObject{ parent }
 	, _scene{ scene }
-	, _sceneRectAnimation{new QPropertyAnimation{_scene, "sceneRect"}}
+	, _sceneRectAnimation{ new QPropertyAnimation{ _scene, "sceneRect" } }
 {
 	connect(_scene, &qtMate::flow::FlowScene::nodeCreated, this,
 		[this](qtMate::flow::FlowNodeUid const& uid)
@@ -175,7 +193,7 @@ void NodeOrganizer::doLayout()
 				return left->uid() < right->uid();
 			});
 	}
-	
+
 	// holds the list of staged nodes
 	QVector<qtMate::flow::FlowNode*> stagedNodes{};
 
@@ -196,15 +214,15 @@ void NodeOrganizer::doLayout()
 		for (auto* node : column)
 		{
 			auto const& nodeData = _nodeData[node->uid()];
-			if(nodeData.activeOutputCount == 0 && nodeData.activeInputCount == 0)
+			if (nodeData.activeOutputCount == 0 && nodeData.activeInputCount == 0)
 			{
 				stagedNodes.emplace_back(node);
 				continue;
 			}
-			
+
 			auto const r = node->boundingRect();
 			maxWidth = qMax(maxWidth, r.width());
-			
+
 			animateTo(node, x, y);
 
 			y += r.height() + verticalPadding;
@@ -215,18 +233,18 @@ void NodeOrganizer::doLayout()
 
 		sceneRect.setWidth(qMax(sceneRect.width(), x));
 	}
-	
+
 	// Layout staged nodes above all the others
-	for(auto* node : stagedNodes)
+	for (auto* node : stagedNodes)
 	{
 		auto const r = node->boundingRect();
-		
+
 		auto y = sceneRect.y() - verticalPadding - r.height();
 		animateTo(node, 0, y);
 
 		sceneRect.setY(y);
 	}
-	
+
 	// update the scene rect according to the new scene layout
 	sceneRect.adjust(-horizontalPadding, -verticalPadding, 0, 0);
 
