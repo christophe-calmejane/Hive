@@ -92,7 +92,23 @@ QString smartEntityName(la::avdecc::controller::ControlledEntity const& controll
 	name = entityName(controlledEntity);
 
 	if (name.isEmpty())
+	{
 		name = uniqueIdentifierToString(controlledEntity.getEntity().getEntityID());
+	}
+
+	return name;
+}
+
+QString smartEntityName(hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity) noexcept
+{
+	QString name;
+
+	name = entity.name;
+
+	if (name.isEmpty())
+	{
+		name = uniqueIdentifierToString(entity.entityID);
+	}
 
 	return name;
 }

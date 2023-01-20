@@ -33,13 +33,17 @@ class DiscoveredEntitiesTableItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	using QStyledItemDelegate::QStyledItemDelegate;
+	DiscoveredEntitiesTableItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+
+	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 
 protected:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 
 private:
 	// Private members
+	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
+	bool _isDark{ false };
 	ErrorItemDelegate _errorItemDelegate{ false };
 	ImageItemDelegate _imageItemDelegate{ false };
 };

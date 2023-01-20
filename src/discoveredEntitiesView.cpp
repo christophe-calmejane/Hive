@@ -78,7 +78,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 		{
 			auto const& text = _searchLineEdit.text();
 			auto const pattern = QRegularExpression{ text };
-			_searchFilterProxyModel.setFilterKeyColumn(la::avdecc::utils::to_integral(avdecc::ControllerModel::Column::Name));
+			_searchFilterProxyModel.setFilterKeyColumn(discoveredEntities::View::ControllerModelEntityColumn_Name);
 			_searchFilterProxyModel.setFilterRegularExpression(pattern);
 			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
 			emit filterChanged(text);
@@ -103,10 +103,10 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 		});
 
 	connect(&_entitiesView, &discoveredEntities::View::contextMenuRequested, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, QPoint const& pos)
+		[this](hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity, QPoint const& pos)
 		{
 			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto controlledEntity = manager.getControlledEntity(entityID);
+			auto controlledEntity = manager.getControlledEntity(entity.entityID);
 
 			if (controlledEntity)
 			{
@@ -114,7 +114,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 
 				// Add header
 				{
-					auto* action = menu.addAction("Entity: " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
+					auto* action = menu.addAction("Entity: " + hive::modelsLibrary::helper::smartEntityName(entity));
 					auto font = action->font();
 					font.setBold(true);
 					action->setFont(font);
@@ -122,10 +122,9 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 					menu.addSeparator();
 				}
 
-				auto const& entity = controlledEntity->getEntity();
-				auto const entityModelID = entity.getEntityModelID();
-				auto const isAemSupported = entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported);
-				auto const hasAnyConfiguration = controlledEntity->hasAnyConfiguration();
+				auto const entityModelID = entity.entityModelID;
+				auto const isAemSupported = entity.isAemSupported;
+				auto const hasAnyConfiguration = entity.hasAnyConfigurationTree;
 				auto const isIdentifyControlValid = !!controlledEntity->getIdentifyControlIndex();
 
 				auto* acquireAction{ static_cast<QAction*>(nullptr) };
@@ -201,7 +200,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 					}
 					{
 						getLogo = menu.addAction("Retrieve Entity Logo");
-						getLogo->setEnabled(!hive::widgetModelsLibrary::EntityLogoCache::getInstance().isImageInCache(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity));
+						getLogo->setEnabled(!hive::widgetModelsLibrary::EntityLogoCache::getInstance().isImageInCache(entity.entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity));
 					}
 					{
 						clearErrorFlags = menu.addAction("Acknowledge Counters Errors");
@@ -233,47 +232,47 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 				{
 					if (action == acquireAction)
 					{
-						manager.acquireEntity(entityID, false);
+						manager.acquireEntity(entity.entityID, false);
 					}
 					else if (action == releaseAction)
 					{
-						manager.releaseEntity(entityID);
+						manager.releaseEntity(entity.entityID);
 					}
 					else if (action == lockAction)
 					{
-						manager.lockEntity(entityID);
+						manager.lockEntity(entity.entityID);
 					}
 					else if (action == unlockAction)
 					{
-						manager.unlockEntity(entityID);
+						manager.unlockEntity(entity.entityID);
 					}
 					else if (action == deviceView)
 					{
 						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
 						dialog->setAttribute(Qt::WA_DeleteOnClose);
-						dialog->setControlledEntityID(entityID);
+						dialog->setControlledEntityID(entity.entityID);
 						dialog->show();
 					}
 					else if (action == inspect)
 					{
 						auto* inspector = new EntityInspector;
 						inspector->setAttribute(Qt::WA_DeleteOnClose);
-						inspector->setControlledEntityID(entityID);
+						inspector->setControlledEntityID(entity.entityID);
 						inspector->restoreGeometry(_inspectorGeometry);
 						inspector->show();
 					}
 					else if (action == getLogo)
 					{
-						hive::widgetModelsLibrary::EntityLogoCache::getInstance().getImage(entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity, true);
+						hive::widgetModelsLibrary::EntityLogoCache::getInstance().getImage(entity.entityID, hive::widgetModelsLibrary::EntityLogoCache::Type::Entity, true);
 					}
 					else if (action == clearErrorFlags)
 					{
-						manager.clearAllStreamInputCounterValidFlags(entityID);
-						manager.clearAllStatisticsCounterValidFlags(entityID);
+						manager.clearAllStreamInputCounterValidFlags(entity.entityID);
+						manager.clearAllStatisticsCounterValidFlags(entity.entityID);
 					}
 					else if (action == identify)
 					{
-						manager.identifyEntity(entityID, std::chrono::seconds{ 10 });
+						manager.identifyEntity(entity.entityID, std::chrono::seconds{ 10 });
 					}
 					else if (action == dumpFullEntity || action == dumpEntityModel)
 					{
@@ -282,7 +281,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 						if (action == dumpFullEntity)
 						{
 							binaryFilterName = "AVDECC Virtual Entity Files (*.ave)";
-							baseFileName = QString("%1/Entity_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID));
+							baseFileName = QString("%1/Entity_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityID));
 						}
 						else
 						{
@@ -292,7 +291,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 								QMessageBox::warning(this, "", "EntityModelID is not valid (invalid Vendor OUI-24), cannot same the Model of this Entity.");
 								return;
 							}
-							if (!avdecc::helper::isEntityModelComplete(entityID))
+							if (!avdecc::helper::isEntityModelComplete(entity.entityID))
 							{
 								QMessageBox::warning(this, "", "'Full AEM Enumeration' option must be Enabled in order to export Model of a multi-configuration Entity.");
 								return;
@@ -300,7 +299,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 							binaryFilterName = "AVDECC Entity Model Files (*.aem)";
 							baseFileName = QString("%1/EntityModel_%2").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityModelID));
 						}
-						auto const dumpFile = [this, &entityID, &manager, isFullEntity = (action == dumpFullEntity)](auto const& baseFileName, auto const& binaryFilterName, auto const isBinary)
+						auto const dumpFile = [this, entityID = entity.entityID, &manager, isFullEntity = (action == dumpFullEntity)](auto const& baseFileName, auto const& binaryFilterName, auto const isBinary)
 						{
 							auto const filename = QFileDialog::getSaveFileName(this, "Save As...", baseFileName, binaryFilterName);
 							if (!filename.isEmpty())
