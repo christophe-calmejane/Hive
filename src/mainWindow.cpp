@@ -54,7 +54,7 @@
 #include "defaults.hpp"
 #include "windowsNpfHelper.hpp"
 #include "visibilitySettings.hpp"
-#include "listViewSelectionToMatrixModelController.hpp"
+#include "listViewMatrixViewController.hpp"
 
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
@@ -161,7 +161,7 @@ public:
 	bool _mustResetViewSettings{ false };
 	bool _usingBetaAppcast{ false };
 	bool _usingBackupAppcast{ false };
-	std::unique_ptr<ListViewSelectionToMatrixModelController> _listViewSelectionToMatrixModelController{ nullptr }; // Remove smartpointer once in use in the upcoming layout classes
+	std::unique_ptr<ListViewMatrixViewController> _listViewMatrixViewController{ nullptr }; // Remove smartpointer once in use in the upcoming layout classes
 };
 
 void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
@@ -175,9 +175,9 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 	// Setup the ControllerView widget
 	discoveredEntitiesView->setupView(defaults);
 
-	// Create ListViewSelectionToMatrixModelController
+	// Create ListViewMatrixViewController
 	// Initialization to be moved to NSDM when layout classes are introduced
-	_listViewSelectionToMatrixModelController = std::make_unique<ListViewSelectionToMatrixModelController>(discoveredEntitiesView->entitiesTableView(), static_cast<connectionMatrix::Model*>(routingTableView->model()), this);
+	_listViewMatrixViewController = std::make_unique<ListViewMatrixViewController>(discoveredEntitiesView->entitiesTableView(), routingTableView, this);
 
 	controllerToolBar->setVisible(defaults.mainWindow_ControllerToolbar_Visible);
 	utilitiesToolBar->setVisible(defaults.mainWindow_UtilitiesToolbar_Visible);

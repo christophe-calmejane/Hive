@@ -209,6 +209,16 @@ la::avdecc::UniqueIdentifier View::selectedControlledEntity() const noexcept
 	return _selectedControlledEntity;
 }
 
+void View::selectControlledEntity(la::avdecc::UniqueIdentifier const entityID) noexcept
+{
+	auto const index = indexOf(entityID);
+
+	if (index.isValid())
+	{
+		setCurrentIndex(index);
+	}
+}
+
 void View::saveDynamicHeaderState() const noexcept
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
@@ -228,9 +238,25 @@ void View::clearSelection() noexcept
 
 std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesModel::Entity const>> View::getEntityAtIndex(QModelIndex const& index) const noexcept
 {
-	auto const* m = static_cast<QSortFilterProxyModel const*>(model());
+	auto const* const m = static_cast<QSortFilterProxyModel const*>(model());
 	auto const sourceIndex = m->mapToSource(index);
 	return _controllerModel.entity(sourceIndex.row());
+}
+
+QModelIndex View::indexOf(la::avdecc::UniqueIdentifier const entityID) const noexcept
+{
+	// When converting QModelIndex from Source to Proxy, we must convert using our Internal Proxy (_proxyModel) first as we are getting indexes from _controllerModel directly
+	// Then we have to use View's model() to also convert (if model is NOT our proxy), the instantiator might have installed another proxy
+	auto destIndex = _proxyModel.mapFromSource(_controllerModel.indexOf(entityID));
+
+	auto const* const m = static_cast<QSortFilterProxyModel const*>(model());
+	// Another proxy has been installed on top of our internal proxy
+	if (m != &_proxyModel)
+	{
+		destIndex = m->mapFromSource(destIndex);
+	}
+
+	return destIndex;
 }
 
 void View::showEvent(QShowEvent* event)

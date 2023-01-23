@@ -38,6 +38,7 @@ class View final : public qtMate::widgets::TableView
 	Q_OBJECT
 	static constexpr auto ControllerModelEntityDataFlags = hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlags{ hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Name, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Group, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::AcquireState, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::LockState,
 		hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GrandmasterID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GPTPDomain, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::InterfaceIndex, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::AssociationID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityModelID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MediaClockReferenceID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MediaClockReferenceStatus };
+
 public:
 	static constexpr auto ControllerModelEntityColumn_EntityLogo = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo);
 	static constexpr auto ControllerModelEntityColumn_Compatibility = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility);
@@ -61,6 +62,7 @@ public:
 	void setupView(hive::VisibilityDefaults const& defaults) noexcept;
 	void restoreState() noexcept;
 	la::avdecc::UniqueIdentifier selectedControlledEntity() const noexcept;
+	void selectControlledEntity(la::avdecc::UniqueIdentifier const entityID) noexcept;
 
 	// Public signals
 	Q_SIGNAL void selectedControlledEntityChanged(la::avdecc::UniqueIdentifier const entityID);
@@ -71,6 +73,7 @@ private:
 	void saveDynamicHeaderState() const noexcept;
 	void clearSelection() noexcept;
 	std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesModel::Entity const>> getEntityAtIndex(QModelIndex const& index) const noexcept;
+	QModelIndex indexOf(la::avdecc::UniqueIdentifier const entityID) const noexcept;
 
 	// qtMate::widgets::TableView overrides
 	virtual void showEvent(QShowEvent* event) override;
