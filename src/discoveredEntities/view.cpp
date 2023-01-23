@@ -135,21 +135,14 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 		});
 
 	// Listen for selection change
-	connect(selectionModel(), &QItemSelectionModel::selectionChanged, this,
-		[this](QItemSelection const& selected, QItemSelection const& deselected)
+	connect(selectionModel(), &QItemSelectionModel::currentChanged, this,
+		[this](QModelIndex const& current, QModelIndex const& previous)
 		{
-			auto index = QModelIndex{};
-			auto const& selectedIndexes = selected.indexes();
-			if (!selectedIndexes.empty())
-			{
-				index = *selectedIndexes.begin();
-			}
-
-			auto const entityOpt = getEntityAtIndex(index);
+			auto const entityOpt = getEntityAtIndex(current);
 			auto previousEntityID = _selectedControlledEntity;
 
 			// Selection index is invalid (ie. no selection), or the currently selected entity doesn't exist
-			if (!index.isValid() || !entityOpt)
+			if (!current.isValid() || !entityOpt)
 			{
 				// Set currently selected ControlledEntity to nothing
 				_selectedControlledEntity = la::avdecc::UniqueIdentifier{};

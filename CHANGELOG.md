@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Selection of an entity from the connection matrix (context menu)
 
+### Fixed
+- Current selection in list of entities lost when changing the filter
+
 ## [1.2.9] - 2023-01-13
 ### Added
 - Option to hide (meaningless) connections between CRF and Audio streams
