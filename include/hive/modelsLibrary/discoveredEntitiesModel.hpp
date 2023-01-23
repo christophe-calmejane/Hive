@@ -121,6 +121,7 @@ public:
 
 	std::optional<std::reference_wrapper<Entity const>> entity(std::size_t const index) const noexcept;
 	std::optional<std::reference_wrapper<Entity const>> entity(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
+	std::optional<std::size_t> indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
 	std::size_t entitiesCount() const noexcept;
 
 private:

@@ -83,6 +83,17 @@ public:
 		return {};
 	}
 
+	// Returns the entity index if found in the model
+	std::optional<std::size_t> indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept
+	{
+		// Check if the entity is still online
+		if (auto const it = _entityRowMap.find(entityID); it != std::end(_entityRowMap))
+		{
+			return it->second;
+		}
+		return {};
+	}
+
 	std::size_t entitiesCount() const noexcept
 	{
 		return _entities.size();
@@ -380,17 +391,6 @@ private:
 	inline bool isIndexValid(std::size_t const index) const noexcept
 	{
 		return index < _entities.size();
-	}
-
-	// Returns the entity index if found in the model
-	std::optional<std::size_t> indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept
-	{
-		// Check if the entity is still online
-		if (auto const it = _entityRowMap.find(entityID); it != std::end(_entityRowMap))
-		{
-			return it->second;
-		}
-		return {};
 	}
 
 	// Build the entityID to row map
@@ -917,6 +917,11 @@ std::optional<std::reference_wrapper<DiscoveredEntitiesModel::Entity const>> Dis
 std::optional<std::reference_wrapper<DiscoveredEntitiesModel::Entity const>> DiscoveredEntitiesModel::entity(la::avdecc::UniqueIdentifier const& entityID) const noexcept
 {
 	return _pImpl->entity(entityID);
+}
+
+std::optional<std::size_t> DiscoveredEntitiesModel::indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept
+{
+	return _pImpl->indexOf(entityID);
 }
 
 std::size_t DiscoveredEntitiesModel::entitiesCount() const noexcept

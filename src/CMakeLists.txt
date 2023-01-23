@@ -129,7 +129,7 @@ set(HEADER_FILES_COMMON
 	windowsNpfHelper.hpp
 	streamFormatComboBox.hpp
 	visibilitySettings.hpp
-	listViewSelectionToMatrixModelController.hpp
+	listViewMatrixViewController.hpp
 )
 
 set(SOURCE_FILES_COMMON
@@ -201,7 +201,7 @@ set(SOURCE_FILES_COMMON
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	windowsNpfHelper.cpp
-	listViewSelectionToMatrixModelController.cpp
+	listViewMatrixViewController.cpp
 )
 
 set(UI_FILES_COMMON

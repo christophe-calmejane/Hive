@@ -60,6 +60,7 @@ public:
 
 	// Data getter
 	std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesModel::Entity const>> entity(int const row) const noexcept;
+	QModelIndex indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
 
 private:
 	// hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel overrides

@@ -78,6 +78,16 @@ std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesMode
 	return _model.entity(static_cast<std::size_t>(row));
 }
 
+QModelIndex DiscoveredEntitiesTableModel::indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept
+{
+	auto const idxOpt = _model.indexOf(entityID);
+	if (idxOpt)
+	{
+		return createIndex(static_cast<int>(*idxOpt), 0);
+	}
+	return {};
+}
+
 // hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel overrides
 void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& /*entity*/, ChangedInfoFlags const changedInfoFlags) noexcept
 {

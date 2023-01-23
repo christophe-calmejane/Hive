@@ -18,6 +18,7 @@
 */
 
 #include "connectionMatrix/headerView.hpp"
+#include "connectionMatrix/view.hpp"
 #include "connectionMatrix/model.hpp"
 #include "connectionMatrix/node.hpp"
 #include "connectionMatrix/paintHelper.hpp"
@@ -877,6 +878,12 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 				auto mti = findMappingsSupportTypeIndexForDescriptor(*controlledEntity, isListenersHeader() ? la::avdecc::entity::model::DescriptorType::StreamInput : la::avdecc::entity::model::DescriptorType::StreamOutput);
 
+				auto* highlightAction = static_cast<QAction*>(nullptr);
+
+				if (static_cast<View*>(parent())->isEntitiesListAttached())
+				{
+					highlightAction = addAction(menu, "Select Entity in list", true);
+				}
 				auto* editMappingsAction = addAction(menu, "Edit Dynamic Mappings...", mti.supportsDynamicMappings);
 
 				menu.addSeparator();
@@ -886,7 +893,11 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 				if (auto* action = menu.exec(event->globalPos()))
 				{
-					if (action == editMappingsAction)
+					if (action == highlightAction)
+					{
+						emit static_cast<View*>(parent())->selectEntityRequested(entityID);
+					}
+					else if (action == editMappingsAction)
 					{
 						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, mti.streamIndex);
 					}

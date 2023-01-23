@@ -23,16 +23,20 @@
 #include <QModelIndex>
 
 #include "discoveredEntities/view.hpp"
-#include "connectionMatrix/model.hpp"
+#include "connectionMatrix/view.hpp"
 
-// Mini controller linking discoveredEntities::View selection to connectionMatrix::Model::SelectedEntityRole
-class ListViewSelectionToMatrixModelController final : public QObject
+// Mini controller linking discoveredEntities::View selection to connectionMatrix::View selection (and vice versa)
+class ListViewMatrixViewController final : public QObject
 {
 public:
 	// Constructor
-	ListViewSelectionToMatrixModelController(discoveredEntities::View* listView, connectionMatrix::Model* matrixModel, QObject* parent = nullptr);
+	ListViewMatrixViewController(discoveredEntities::View* listView, connectionMatrix::View* matrixView, QObject* parent = nullptr);
+
+	// Destructor
+	~ListViewMatrixViewController() noexcept;
 
 private:
 	// Private members
 	QModelIndex _selectedIndex{};
+	connectionMatrix::View* _matrixView{ nullptr };
 };

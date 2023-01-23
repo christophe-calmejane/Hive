@@ -17,11 +17,16 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "listViewSelectionToMatrixModelController.hpp"
+#include "listViewMatrixViewController.hpp"
+#include "connectionMatrix/model.hpp"
 
-ListViewSelectionToMatrixModelController::ListViewSelectionToMatrixModelController(discoveredEntities::View* listView, connectionMatrix::Model* matrixModel, QObject* parent)
+ListViewMatrixViewController::ListViewMatrixViewController(discoveredEntities::View* listView, connectionMatrix::View* matrixView, QObject* parent)
 	: QObject{ parent }
 {
+	auto* const matrixModel = static_cast<connectionMatrix::Model*>(matrixView->model());
+	_matrixView = matrixView;
+
+	// Connections from listView to matrixModel
 	connect(listView, &discoveredEntities::View::selectedControlledEntityChanged, matrixModel,
 		[this, matrixModel](la::avdecc::UniqueIdentifier const entityID)
 		{
@@ -52,4 +57,20 @@ ListViewSelectionToMatrixModelController::ListViewSelectionToMatrixModelControll
 			matrixModel->setHeaderData(_selectedIndex.row(), Qt::Vertical, true, connectionMatrix::Model::SelectedEntityRole);
 			matrixModel->setHeaderData(_selectedIndex.column(), Qt::Horizontal, true, connectionMatrix::Model::SelectedEntityRole);
 		});
+
+	// Connections from matrixView to listView
+	connect(matrixView, &connectionMatrix::View::selectEntityRequested, listView,
+		[this, listView](la::avdecc::UniqueIdentifier const entityID)
+		{
+			listView->selectControlledEntity(entityID);
+		});
+
+	// Notify the connectionMatrix View that we have a link to the discoveredEntities View
+	matrixView->entitiesListAttached(true);
+}
+
+ListViewMatrixViewController::~ListViewMatrixViewController() noexcept
+{
+	// Notify the connectionMatrix View that we removed the link with the discoveredEntities View
+	_matrixView->entitiesListAttached(false);
 }

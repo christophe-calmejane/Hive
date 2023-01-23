@@ -131,6 +131,26 @@ QLineEdit* View::listenerFilterLineEdit() noexcept
 	return _cornerWidget->filterLineEdit();
 }
 
+bool View::isEntitiesListAttached() const noexcept
+{
+	return _countEntitiesListAttached > 0u;
+}
+
+void View::entitiesListAttached(bool const isAttached)
+{
+	if (isAttached)
+	{
+		++_countEntitiesListAttached;
+	}
+	else
+	{
+		if (AVDECC_ASSERT_WITH_RET(_countEntitiesListAttached > 0u, "_countEntitiesListAttached should not be 0 already"))
+		{
+			--_countEntitiesListAttached;
+		}
+	}
+}
+
 void View::onIntersectionClicked(QModelIndex const& index)
 {
 	auto const& intersectionData = _model->intersectionData(index);
