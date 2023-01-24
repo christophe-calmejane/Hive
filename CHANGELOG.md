@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Current selection in list of entities lost when changing the filter
+- [Network Interfaces combobox displays errors and selected interface in bold](https://github.com/christophe-calmejane/Hive/issues/128)
 
 ## [1.2.9] - 2023-01-13
 ### Added

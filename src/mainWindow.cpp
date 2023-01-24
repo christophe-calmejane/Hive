@@ -69,8 +69,7 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/modelsLibrary/networkInterfacesModel.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
-#include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
-#include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/networkInterfacesListItemDelegate.hpp>
 
 #include <mutex>
 #include <memory>
@@ -147,6 +146,7 @@ public:
 	qtMate::widgets::ComboBox _interfaceComboBox{ _parent };
 	ActiveNetworkInterfacesModel _activeNetworkInterfacesModel{ _parent };
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
+	hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate _networkInterfaceModelItemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	qtMate::widgets::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
 	qtMate::widgets::FlatIconButton _discoverButton{ "Hive", "radar", _parent };
 	qtMate::widgets::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
@@ -354,10 +354,11 @@ void MainWindowImpl::createToolbars()
 		_interfaceComboBox.setMinimumWidth(100);
 		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
 
-		// The combobox takes ownership of the item delegate
-		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ true, qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
-		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
-		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, interfaceComboBoxItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
+		// Set delegate for the entire table
+		_interfaceComboBox.setItemDelegate(&_networkInterfaceModelItemDelegate);
+
+		// Connect the item delegates with theme color changes
+		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_networkInterfaceModelItemDelegate, &hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate::setThemeColorName);
 
 		auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
 		controllerEntityIDLabel->setMinimumWidth(50);

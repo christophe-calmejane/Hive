@@ -47,6 +47,7 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/networkInterfacesListModel.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/networkInterfacesListItemDelegate.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -61,6 +62,7 @@ set(SOURCE_FILES_COMMON
 	discoveredEntitiesTableItemDelegate.cpp
 	networkInterfacesListModel.cpp
 	discoveredEntitiesTableModel.cpp
+	networkInterfacesListItemDelegate.cpp
 )
 
 # Group source files

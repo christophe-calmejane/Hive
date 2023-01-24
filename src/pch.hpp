@@ -38,25 +38,34 @@
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
 #include <QtMate/material/helper.hpp>
+#include <QtMate/widgets/autoSizeLabel.hpp>
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/dynamicHeaderView.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
+#include <QtMate/widgets/headerViewSortSectionFilter.hpp>
+#include <QtMate/widgets/tableView.hpp>
 #include <QtMate/widgets/textEntry.hpp>
 #include <QtMate/widgets/tickableMenu.hpp>
 
 // Models Library
-#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/commandsExecutor.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
-#include <hive/modelsLibrary/networkInterfacesModel.hpp>
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/modelsLibrary.hpp>
+#include <hive/modelsLibrary/networkInterfacesModel.hpp>
 
 // Widget Models Library
+#include <hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/networkInterfacesListItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
 #include <hive/widgetModelsLibrary/painterHelper.hpp>
-
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
+#include <hive/widgetModelsLibrary/widgetModelsLibrary.hpp>
 
 // Other Headers
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
