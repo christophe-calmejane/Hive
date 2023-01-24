@@ -61,7 +61,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityModelID);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_FirmwareVersion);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_MediaClockID);
-	_headerSectionSortFilter.enable(ControllerModelEntityColumn_MediaClockStatus);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_MediaClockName);
 
 	// Set Horizontal header view to our dynamic one
 	setHorizontalHeader(&_dynamicHeaderView);
@@ -86,27 +86,31 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	setColumnHidden(ControllerModelEntityColumn_GrandmasterID, !defaults.controllerTableView_GrandmasterID_Visible);
 	setColumnHidden(ControllerModelEntityColumn_GPTPDomain, !defaults.controllerTableView_GptpDomain_Visible);
 	setColumnHidden(ControllerModelEntityColumn_InterfaceIndex, !defaults.controllerTableView_InterfaceIndex_Visible);
+	setColumnHidden(ControllerModelEntityColumn_MacAddress, !defaults.controllerTableView_MacAddress_Visible);
 	setColumnHidden(ControllerModelEntityColumn_AssociationID, !defaults.controllerTableView_AssociationID_Visible);
 	setColumnHidden(ControllerModelEntityColumn_EntityModelID, !defaults.controllerTableView_EntityModelID_Visible);
 	setColumnHidden(ControllerModelEntityColumn_FirmwareVersion, !defaults.controllerTableView_FirmwareVersion_Visible);
 	setColumnHidden(ControllerModelEntityColumn_MediaClockID, !defaults.controllerTableView_MediaClockMasterID_Visible);
-	setColumnHidden(ControllerModelEntityColumn_MediaClockStatus, !defaults.controllerTableView_MediaClockMasterName_Visible);
+	setColumnHidden(ControllerModelEntityColumn_MediaClockName, !defaults.controllerTableView_MediaClockMasterName_Visible);
+	setColumnHidden(ControllerModelEntityColumn_ClockDomainLockState, !defaults.controllerTableView_ClockDomainLockState_Visible);
 
 	setColumnWidth(ControllerModelEntityColumn_EntityLogo, defaults::ui::AdvancedView::ColumnWidth_Logo);
 	setColumnWidth(ControllerModelEntityColumn_Compatibility, defaults::ui::AdvancedView::ColumnWidth_Compatibility);
 	setColumnWidth(ControllerModelEntityColumn_EntityID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
 	setColumnWidth(ControllerModelEntityColumn_Name, defaults::ui::AdvancedView::ColumnWidth_Name);
 	setColumnWidth(ControllerModelEntityColumn_Group, defaults::ui::AdvancedView::ColumnWidth_Group);
-	setColumnWidth(ControllerModelEntityColumn_AcquireState, defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
-	setColumnWidth(ControllerModelEntityColumn_LockState, defaults::ui::AdvancedView::ColumnWidth_ExclusiveAccessState);
+	setColumnWidth(ControllerModelEntityColumn_AcquireState, defaults::ui::AdvancedView::ColumnWidth_SquareIcon);
+	setColumnWidth(ControllerModelEntityColumn_LockState, defaults::ui::AdvancedView::ColumnWidth_SquareIcon);
 	setColumnWidth(ControllerModelEntityColumn_GrandmasterID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
 	setColumnWidth(ControllerModelEntityColumn_GPTPDomain, defaults::ui::AdvancedView::ColumnWidth_GPTPDomain);
 	setColumnWidth(ControllerModelEntityColumn_InterfaceIndex, defaults::ui::AdvancedView::ColumnWidth_InterfaceIndex);
+	setColumnWidth(ControllerModelEntityColumn_MacAddress, defaults::ui::AdvancedView::ColumnWidth_MacAddress);
 	setColumnWidth(ControllerModelEntityColumn_AssociationID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
 	setColumnWidth(ControllerModelEntityColumn_EntityModelID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
 	setColumnWidth(ControllerModelEntityColumn_FirmwareVersion, defaults::ui::AdvancedView::ColumnWidth_Firmware);
 	setColumnWidth(ControllerModelEntityColumn_MediaClockID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
-	setColumnWidth(ControllerModelEntityColumn_MediaClockStatus, defaults::ui::AdvancedView::ColumnWidth_Name);
+	setColumnWidth(ControllerModelEntityColumn_MediaClockName, defaults::ui::AdvancedView::ColumnWidth_Name);
+	setColumnWidth(ControllerModelEntityColumn_ClockDomainLockState, defaults::ui::AdvancedView::ColumnWidth_SquareIcon);
 
 	// Connect all signals
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();

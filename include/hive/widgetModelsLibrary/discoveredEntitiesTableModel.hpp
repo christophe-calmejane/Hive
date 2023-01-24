@@ -47,11 +47,13 @@ public:
 		GrandmasterID = 1u << 7,
 		GPTPDomain = 1u << 8,
 		InterfaceIndex = 1u << 9,
-		AssociationID = 1u << 10,
-		EntityModelID = 1u << 11,
-		FirmwareVersion = 1u << 12,
-		MediaClockReferenceID = 1u << 13,
-		MediaClockReferenceStatus = 1u << 14,
+		MacAddress = 1u << 10,
+		AssociationID = 1u << 11,
+		EntityModelID = 1u << 12,
+		FirmwareVersion = 1u << 13,
+		MediaClockReferenceID = 1u << 14,
+		MediaClockReferenceName = 1u << 15,
+		ClockDomainLockState = 1u << 16,
 	};
 	/** List of columns to be displayed */
 	using EntityDataFlags = la::avdecc::utils::EnumBitfield<EntityDataFlag>;

@@ -203,12 +203,12 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 
 void MainWindowImpl::setupMatrixProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, false, false, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, false, false, false, true, true, true });
 }
 
 void MainWindowImpl::setupStandardProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, false, false, false, false, false, true, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, false, false, false, false, false, false, true, true, true, true });
 }
 
 void MainWindowImpl::setupDeveloperProfile()

@@ -40,11 +40,13 @@ struct VisibilityDefaults
 	bool controllerTableView_GrandmasterID_Visible{ true };
 	bool controllerTableView_GptpDomain_Visible{ true };
 	bool controllerTableView_InterfaceIndex_Visible{ true };
+	bool controllerTableView_MacAddress_Visible{ true };
 	bool controllerTableView_AssociationID_Visible{ true };
 	bool controllerTableView_EntityModelID_Visible{ true };
 	bool controllerTableView_FirmwareVersion_Visible{ true };
 	bool controllerTableView_MediaClockMasterID_Visible{ true };
 	bool controllerTableView_MediaClockMasterName_Visible{ true };
+	bool controllerTableView_ClockDomainLockState_Visible{ true };
 };
 
 } // namespace hive

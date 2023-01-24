@@ -63,6 +63,13 @@ public:
 		AccessSelf = 3, /**< Device is exclusively accessed by us */
 	};
 
+	enum class ClockDomainLockedState
+	{
+		Unknown = 0, /**< Unknown state */
+		Unlocked = 1, /**< Not Locked */
+		Locked = 2, /**< Locked */
+	};
+
 	struct ExclusiveAccessInfo
 	{
 		ExclusiveAccessState state{ ExclusiveAccessState::NoAccess };
@@ -84,6 +91,12 @@ public:
 		bool isError{ false };
 	};
 
+	struct ClockDomainInfo
+	{
+		ClockDomainLockedState state{ ClockDomainLockedState::Unknown };
+		QString tooltip{ "Not reported by the entity" };
+	};
+
 	struct Entity
 	{
 		// Static information
@@ -95,6 +108,7 @@ public:
 		std::optional<QString> firmwareVersion{};
 		std::optional<la::avdecc::entity::model::MemoryObjectIndex> firmwareUploadMemoryIndex{ std::nullopt };
 		std::optional<la::avdecc::entity::model::MilanInfo> milanInfo{};
+		std::map<la::avdecc::entity::model::AvbInterfaceIndex, la::networkInterface::MacAddress> macAddresses{};
 
 		// Dynamic information
 		QString name{}; /** Change triggers ChangedInfoFlag::Name */
@@ -106,10 +120,11 @@ public:
 		ExclusiveAccessInfo lockInfo{}; /** Change triggers ChangedInfoFlag::LockState and/or ChangedInfoFlag::LockingController */
 		std::map<la::avdecc::entity::model::AvbInterfaceIndex, GptpInfo> gptpInfo{}; /** Change triggers ChangedInfoFlag::GrandmasterID and/or ChangeInfoFlag::GPTPDomain */
 		std::optional<la::avdecc::UniqueIdentifier> associationID{}; /** Change triggers ChangedInfoFlag::AssociationID */
-		std::map<la::avdecc::entity::model::ClockDomainIndex, MediaClockReference> mediaClockReferences{}; /** Change triggers ChangedInfoFlag::MediaClockReferenceID and/or ChangedInfoFlag::MediaClockReferenceStatus */
+		std::map<la::avdecc::entity::model::ClockDomainIndex, MediaClockReference> mediaClockReferences{}; /** Change triggers ChangedInfoFlag::MediaClockReferenceID and/or ChangedInfoFlag::MediaClockReferenceName */
 		bool isIdentifying{ false }; /** Change triggers ChangedInfoFlag::Identification */
 		bool hasStatisticsError{ false }; /** Change triggers ChangedInfoFlag::StatisticsError */
 		bool hasRedundancyWarning{ false }; /** Change triggers ChangedInfoFlag::RedundancyWarning */
+		ClockDomainInfo clockDomainInfo{}; /** Change triggers ChangedInfoFlag::ClockDomainLockState */
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{}; /** Change triggers ChangedInfoFlag::StreamInputCountersError */
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{}; /** Change triggers ChangedInfoFlag::StreamInputLatencyError */
 	};
@@ -148,14 +163,16 @@ public:
 		GrandmasterID = 1u << 9,
 		GPTPDomain = 1u << 10,
 		InterfaceIndex = 1u << 11,
-		AssociationID = 1u << 12,
-		MediaClockReferenceID = 1u << 13,
-		MediaClockReferenceStatus = 1u << 14,
-		Identification = 1u << 15,
-		StatisticsError = 1u << 16,
-		RedundancyWarning = 1u << 17,
-		StreamInputCountersError = 1u << 18,
-		StreamInputLatencyError = 1u << 19,
+		MacAddress = 1u << 12,
+		AssociationID = 1u << 13,
+		MediaClockReferenceID = 1u << 14,
+		MediaClockReferenceName = 1u << 15,
+		ClockDomainLockState = 1u << 16,
+		Identification = 1u << 17,
+		StatisticsError = 1u << 18,
+		RedundancyWarning = 1u << 19,
+		StreamInputCountersError = 1u << 20,
+		StreamInputLatencyError = 1u << 21,
 	};
 	using ChangedInfoFlags = la::avdecc::utils::EnumBitfield<ChangedInfoFlag>;
 

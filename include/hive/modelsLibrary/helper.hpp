@@ -60,6 +60,7 @@ inline QString toHexQString(T const v, bool const zeroFilled = false, bool const
 QString toUpperCamelCase(std::string const& text) noexcept;
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
+QString macAddressToString(la::networkInterface::MacAddress const& macAddress);
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept;

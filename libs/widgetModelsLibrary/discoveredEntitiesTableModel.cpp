@@ -66,6 +66,18 @@ static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAcces
 	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
 };
 
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState, QImage> s_clockDomainLockStateImagesLight{
+	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Unknown, QImage{ ":/unknown_light.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Unlocked, QImage{ ":/unlocked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Locked, QImage{ ":/locked.png" } },
+};
+
+static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState, QImage> s_clockDomainLockStateImagesDark{
+	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Unknown, QImage{ ":/unknown_dark.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Unlocked, QImage{ ":/unlocked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Locked, QImage{ ":/locked.png" } },
+};
+
 DiscoveredEntitiesTableModel::DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags)
 	: _entityDataFlags{ entityDataFlags }
 	, _count{ static_cast<decltype(_count)>(_entityDataFlags.count()) }
@@ -168,6 +180,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 							return "gPTP Domain";
 						case EntityDataFlag::InterfaceIndex:
 							return "Interface Idx";
+						case EntityDataFlag::MacAddress:
+							return "Mac Address";
 						case EntityDataFlag::AssociationID:
 							return "Association ID";
 						case EntityDataFlag::EntityModelID:
@@ -176,8 +190,10 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 							return "Firmware Version";
 						case EntityDataFlag::MediaClockReferenceID:
 							return "MCR ID";
-						case EntityDataFlag::MediaClockReferenceStatus:
-							return "MCR Status";
+						case EntityDataFlag::MediaClockReferenceName:
+							return "MCR Name";
+						case EntityDataFlag::ClockDomainLockState:
+							return "Clock Locked";
 						default:
 							break;
 					}
@@ -206,6 +222,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 							return "gPTP Domain";
 						case EntityDataFlag::InterfaceIndex:
 							return "Interface Idx";
+						case EntityDataFlag::MacAddress:
+							return "Mac Address";
 						case EntityDataFlag::AssociationID:
 							return "Association ID";
 						case EntityDataFlag::EntityModelID:
@@ -214,8 +232,10 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 							return "Firmware Version";
 						case EntityDataFlag::MediaClockReferenceID:
 							return "Media Clock Reference ID";
-						case EntityDataFlag::MediaClockReferenceStatus:
-							return "Media Clock Reference Status";
+						case EntityDataFlag::MediaClockReferenceName:
+							return "Media Clock Reference Name";
+						case EntityDataFlag::ClockDomainLockState:
+							return "Clock Domain Lock State";
 						default:
 							break;
 					}
@@ -306,6 +326,20 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "N/A";
 							}
+							case EntityDataFlag::MacAddress:
+							{
+								auto const& macAddresses = entity.macAddresses;
+
+								if (!macAddresses.empty())
+								{
+									// Search the first valid mac address
+									for (auto const& [avbIndex, address] : macAddresses)
+									{
+										return hive::modelsLibrary::helper::macAddressToString(address);
+									}
+								}
+								return "N/A";
+							}
 							case EntityDataFlag::AssociationID:
 								return entity.associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*entity.associationID) : "N/A";
 							case EntityDataFlag::EntityModelID:
@@ -326,7 +360,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "N/A";
 							}
-							case EntityDataFlag::MediaClockReferenceStatus:
+							case EntityDataFlag::MediaClockReferenceName:
 							{
 								auto const& mediaClockReferences = entity.mediaClockReferences;
 
@@ -394,6 +428,18 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 									return {};
 								}
 							}
+							case EntityDataFlag::ClockDomainLockState:
+							{
+								try
+								{
+									return s_clockDomainLockStateImagesLight.at(entity.clockDomainInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
 							default:
 								break;
 						}
@@ -441,6 +487,18 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								try
 								{
 									return s_excusiveAccessStateImagesDark.at(entity.lockInfo.state);
+								}
+								catch (std::out_of_range const&)
+								{
+									AVDECC_ASSERT(false, "Image missing");
+									return {};
+								}
+							}
+							case EntityDataFlag::ClockDomainLockState:
+							{
+								try
+								{
+									return s_clockDomainLockStateImagesDark.at(entity.clockDomainInfo.state);
 								}
 								catch (std::out_of_range const&)
 								{
@@ -514,8 +572,35 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "Not set by the entity";
 							}
+							case EntityDataFlag::MacAddress:
+							{
+								auto const& macAddresses = entity.macAddresses;
+
+								if (!macAddresses.empty())
+								{
+									auto list = QStringList{};
+
+									for (auto const& [avbIndex, address] : macAddresses)
+									{
+										if (avbIndex == la::avdecc::entity::Entity::GlobalAvbInterfaceIndex)
+										{
+											list << QString{ "Global Mac Address: %1" }.arg(hive::modelsLibrary::helper::macAddressToString(address));
+										}
+										else
+										{
+											list << QString{ "Mac Address for index %1: %2" }.arg(avbIndex).arg(hive::modelsLibrary::helper::macAddressToString(address));
+										}
+									}
+
+									if (!list.isEmpty())
+									{
+										return list.join('\n');
+									}
+								}
+								return "Not set by the entity";
+							}
 							case EntityDataFlag::MediaClockReferenceID:
-							case EntityDataFlag::MediaClockReferenceStatus:
+							case EntityDataFlag::MediaClockReferenceName:
 							{
 								auto const& mediaClockReferences = entity.mediaClockReferences;
 
@@ -535,6 +620,8 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								}
 								return "Undefined";
 							}
+							case EntityDataFlag::ClockDomainLockState:
+								return entity.clockDomainInfo.tooltip;
 							default:
 								break;
 						}
@@ -591,12 +678,16 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>
 			return std::make_pair(EntityDataFlag::GPTPDomain, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::InterfaceIndex:
 			return std::make_pair(EntityDataFlag::InterfaceIndex, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::MacAddress:
+			return std::make_pair(EntityDataFlag::MacAddress, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::AssociationID:
 			return std::make_pair(EntityDataFlag::AssociationID, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::MediaClockReferenceID:
 			return std::make_pair(EntityDataFlag::MediaClockReferenceID, RolesList{ Qt::DisplayRole });
-		case ChangedInfoFlag::MediaClockReferenceStatus:
-			return std::make_pair(EntityDataFlag::MediaClockReferenceStatus, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::MediaClockReferenceName:
+			return std::make_pair(EntityDataFlag::MediaClockReferenceName, RolesList{ Qt::DisplayRole });
+		case ChangedInfoFlag::ClockDomainLockState:
+			return std::make_pair(EntityDataFlag::ClockDomainLockState, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::Identification:
 			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole) });
 		case ChangedInfoFlag::StatisticsError:

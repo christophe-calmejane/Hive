@@ -113,6 +113,7 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility):
 			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::AcquireState):
 			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::LockState):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::ClockDomainLockState):
 				static_cast<QStyledItemDelegate const&>(_imageItemDelegate).paint(painter, option, index);
 				break;
 			default:

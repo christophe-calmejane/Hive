@@ -29,10 +29,11 @@ struct AdvancedView
 	static constexpr int ColumnWidth_Logo = 60;
 	static constexpr int ColumnWidth_Compatibility = 50;
 	static constexpr int ColumnWidth_Name = 180;
-	static constexpr int ColumnWidth_ExclusiveAccessState = 80;
+	static constexpr int ColumnWidth_SquareIcon = 80;
 	static constexpr int ColumnWidth_Group = 80;
 	static constexpr int ColumnWidth_GPTPDomain = 80;
 	static constexpr int ColumnWidth_InterfaceIndex = 90;
+	static constexpr int ColumnWidth_MacAddress = 80;
 	static constexpr int ColumnWidth_Firmware = 160;
 };
 

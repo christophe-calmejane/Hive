@@ -35,6 +35,11 @@ QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 	return toHexQString(identifier.getValue(), true, true);
 }
 
+QString macAddressToString(la::networkInterface::MacAddress const& macAddress)
+{
+	return QString::fromStdString(la::networkInterface::NetworkInterfaceHelper::macAddressToString(macAddress));
+}
+
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
 {
 	return objectName(controlledEntity, node.descriptorIndex, node);

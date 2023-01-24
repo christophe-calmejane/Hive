@@ -61,6 +61,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &pImpl::handleStatisticsErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::diagnosticsChanged, this, &pImpl::handleDiagnosticsChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::mediaClockChainChanged, this, &pImpl::handleMediaClockChainChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::clockDomainCountersChanged, this, &pImpl::handleClockDomainCountersChanged);
 	}
 
 	std::optional<std::reference_wrapper<Entity const>> entity(std::size_t const index) const noexcept
@@ -428,12 +429,15 @@ private:
 				auto firmwareUploadMemoryIndex = decltype(Entity::firmwareUploadMemoryIndex){ std::nullopt };
 				auto firmwareVersion = decltype(Entity::firmwareVersion){ std::nullopt };
 				auto mediaClockReferences = decltype(Entity::mediaClockReferences){};
+				auto clockDomainInfo = decltype(Entity::clockDomainInfo){};
 
-				// Build gptp info map
+				// Build gptp info and macAddresses maps
 				auto gptpInfo = decltype(Entity::gptpInfo){};
+				auto macAddresses = decltype(Entity::macAddresses){};
 				for (auto const& [avbInterfaceIndex, interfaceInformation] : e.getInterfacesInformation())
 				{
 					gptpInfo.insert(std::make_pair(avbInterfaceIndex, GptpInfo{ interfaceInformation.gptpGrandmasterID, interfaceInformation.gptpDomainNumber }));
+					macAddresses.insert(std::make_pair(avbInterfaceIndex, interfaceInformation.macAddress));
 				}
 
 				// Check if AEM is supported
@@ -451,30 +455,36 @@ private:
 
 						// Get firmware version
 						firmwareVersion = dynamicModel.firmwareVersion.data();
-
-						if (hasAnyConfiguration)
-						{
-							auto const configurationIndex = dynamicModel.currentConfiguration;
-							auto const& configurationNode = entity.getConfigurationNode(configurationIndex);
-
-							// Get Firmware Image MemoryIndex, if supported
-							for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
-							{
-								if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
-								{
-									firmwareUploadMemoryIndex = memoryObjectIndex;
-									break;
-								}
-							}
-						}
 					}
 
-					// Build MediaClockReferences map
 					if (hasAnyConfiguration)
 					{
-						for (auto const& [cdIndex, cdNode] : entity.getCurrentConfigurationNode().clockDomains)
+						auto const& configurationNode = entity.getCurrentConfigurationNode();
+
+						// Get Firmware Image MemoryIndex, if supported
+						for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
+						{
+							if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+							{
+								firmwareUploadMemoryIndex = memoryObjectIndex;
+								break;
+							}
+						}
+
+						// Build MediaClockReferences map
+						for (auto const& [cdIndex, cdNode] : configurationNode.clockDomains)
 						{
 							mediaClockReferences.insert(std::make_pair(cdIndex, computeMediaClockReference(cdNode.mediaClockChain)));
+						}
+
+						// Get ClockDomain Locked status
+						if (!configurationNode.clockDomains.empty())
+						{
+							auto const& clockDomainNode = configurationNode.clockDomains.begin()->second;
+							if (clockDomainNode.dynamicModel != nullptr && clockDomainNode.dynamicModel->counters)
+							{
+								clockDomainInfo = computeClockDomainInfo(*(clockDomainNode.dynamicModel->counters));
+							}
 						}
 					}
 				}
@@ -484,8 +494,8 @@ private:
 				auto const diagnostics = manager.getDiagnostics(entityID);
 
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences), entity.isIdentifying(), !statisticsCounters.empty(),
-					diagnostics.redundancyWarning, {}, diagnostics.streamInputOverLatency };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), std::move(macAddresses), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences), entity.isIdentifying(),
+					!statisticsCounters.empty(), diagnostics.redundancyWarning, std::move(clockDomainInfo), {}, diagnostics.streamInputOverLatency };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -723,7 +733,7 @@ private:
 					data.mediaClockReferences[cdIndex] = computeMediaClockReference(mcr.mcChain);
 
 					// And notify
-					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceStatus });
+					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceName });
 				}
 			}
 		}
@@ -758,7 +768,7 @@ private:
 					data.mediaClockReferences[cdIndex] = computeMediaClockReference(mcr.mcChain);
 
 					// And notify
-					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceStatus });
+					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceName });
 				}
 			}
 		}
@@ -892,8 +902,43 @@ private:
 
 			data.mediaClockReferences[clockDomainIndex] = computeMediaClockReference(mcChain);
 
-			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceID, Model::ChangedInfoFlag::MediaClockReferenceStatus });
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::MediaClockReferenceID, Model::ChangedInfoFlag::MediaClockReferenceName });
 		}
+	}
+
+	void handleClockDomainCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters)
+	{
+		if (auto const index = indexOf(entityID))
+		{
+			auto const idx = *index;
+			auto& data = _entities[idx];
+
+			data.clockDomainInfo = computeClockDomainInfo(counters);
+
+			la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::ClockDomainLockState });
+		}
+	}
+
+	ClockDomainInfo computeClockDomainInfo(la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept
+	{
+		auto clockDomainInfo = ClockDomainInfo{ ClockDomainLockedState::Unknown };
+
+		auto const itLocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Locked);
+		auto const itUnlocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Unlocked);
+		if (itLocked != counters.end() && itUnlocked != counters.end())
+		{
+			if (itLocked->second > itUnlocked->second)
+			{
+				clockDomainInfo.state = ClockDomainLockedState::Locked;
+				clockDomainInfo.tooltip = QString("Clock Domain is locked on MCR");
+			}
+			else
+			{
+				clockDomainInfo.state = ClockDomainLockedState::Unlocked;
+				clockDomainInfo.tooltip = QString("Clock Domain is not locked");
+			}
+		}
+		return clockDomainInfo;
 	}
 
 	// Private Members
