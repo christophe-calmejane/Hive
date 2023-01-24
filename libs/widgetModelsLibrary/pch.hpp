@@ -19,17 +19,6 @@
 
 #pragma once
 
-// Public Headers
-#include "hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp"
-#include "hive/widgetModelsLibrary/entityLogoCache.hpp"
-#include "hive/widgetModelsLibrary/errorItemDelegate.hpp"
-#include "hive/widgetModelsLibrary/imageItemDelegate.hpp"
-#include "hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp"
-#include "hive/widgetModelsLibrary/networkInterfacesListModel.hpp"
-#include "hive/widgetModelsLibrary/painterHelper.hpp"
-#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
-#include "hive/widgetModelsLibrary/widgetModelsLibrary.hpp"
-
 // Other Headers
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/helper.hpp>
