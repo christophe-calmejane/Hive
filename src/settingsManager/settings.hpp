@@ -63,9 +63,9 @@ static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/co
 static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "avdecc/controller/fullStaticModel", false };
 static SettingsManager::SettingDefault Controller_AdvertisingEnabled = { "avdecc/controller/enableAdvertising", true };
 #ifdef DEBUG
-static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID_Debug", 4 + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID_Debug", (hive::internals::majorVersion * 100) + (hive::internals::minorVersion * 10) + 1 + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
 #else // !DEBUG
-static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID", 3 + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
+static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/controller/controllerSubID", (hive::internals::majorVersion * 100) + (hive::internals::minorVersion * 10) + (hive::internals::marketingDigits > 2u ? 0x8000 : 0) };
 #endif // DEBUG
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
