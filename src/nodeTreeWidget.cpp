@@ -1020,26 +1020,28 @@ public:
 	}
 
 	/** A label (readonly) item */
-	template<typename ValueType, typename = std::enable_if_t<std::is_move_assignable_v<ValueType>>>
-	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType itemValue)
+	template<typename ValueType, typename std::enable_if_t<!std::is_arithmetic_v<ValueType> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
+	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, std::move(itemName));
 		item->setData(1, Qt::DisplayRole, QVariant::fromValue<ValueType>(itemValue));
 	}
+	template<typename ValueType, typename std::enable_if_t<std::is_arithmetic_v<ValueType>, bool> = true>
+	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
+	{
+		addTextItem(treeWidgetItem, std::move(itemName), QVariant::fromValue(itemValue));
+	}
+	template<>
+	void addTextItem<QString>(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue)
+	{
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+		item->setText(1, std::move(itemValue));
+	}
 	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, std::string const& itemValue)
 	{
 		addTextItem(treeWidgetItem, std::move(itemName), QString::fromStdString(itemValue));
-	}
-	// Not sure why we need this overload but without it compilation fails on gcc
-	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, long const& itemValue)
-	{
-		addTextItem(treeWidgetItem, std::move(itemName), QVariant::fromValue(itemValue));
-	}
-	// Not sure why we need this overload but without it compilation fails on gcc
-	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, unsigned long const& itemValue)
-	{
-		addTextItem(treeWidgetItem, std::move(itemName), QVariant::fromValue(itemValue));
 	}
 
 	/** A flags item */
