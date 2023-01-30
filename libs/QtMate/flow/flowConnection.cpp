@@ -22,6 +22,8 @@
 #include "QtMate/flow/flowInput.hpp"
 #include "QtMate/flow/flowOutput.hpp"
 
+#include <QDebug>
+
 namespace qtMate::flow
 {
 FlowConnection::FlowConnection(QGraphicsItem* parent)

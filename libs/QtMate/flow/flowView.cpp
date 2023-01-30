@@ -28,6 +28,8 @@
 #include <QMouseEvent>
 #include <QScrollBar>
 
+#include <optional>
+
 namespace qtMate::flow
 {
 FlowView::FlowView(FlowScene* scene, QWidget* parent)
