@@ -386,6 +386,26 @@ private:
 		createIdItem(&node);
 		// Always want to display dynamic information for configurations
 		createNameItem(controlledEntity, true, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetConfigurationName, node.descriptorIndex, node.descriptorIndex, node.descriptorIndex);
+
+		Q_Q(NodeTreeWidget);
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::AudioUnit>(descriptorItem, node, node.audioUnits);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::StreamInput>(descriptorItem, node, node.streamInputs);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::StreamOutput>(descriptorItem, node, node.streamOutputs);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::JackInput>(descriptorItem, node, node.jackInputs);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::JackOutput>(descriptorItem, node, node.jackOutputs);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::AvbInterface>(descriptorItem, node, node.avbInterfaces);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::ClockSource>(descriptorItem, node, node.clockSources);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::MemoryObject>(descriptorItem, node, node.memoryObjects);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Locale>(descriptorItem, node, node.locales);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Control>(descriptorItem, node, node.controls);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::ClockDomain>(descriptorItem, node, node.clockDomains);
+		}
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
@@ -988,6 +1008,22 @@ public:
 		return accessItem;
 	}
 
+	template<la::avdecc::entity::model::DescriptorType DescriptorType, typename DescriptorCountType>
+	void addEnumeratedDescriptorType(QTreeWidgetItem* const descriptorItem, la::avdecc::controller::model::ConfigurationNode const& node, DescriptorCountType const& counts)
+	{
+		auto const* const model = node.staticModel;
+		auto descriptorCount = 0u;
+		try
+		{
+			descriptorCount = model->descriptorCounts.at(DescriptorType);
+		}
+		catch (std::out_of_range const&)
+		{
+		}
+		auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(DescriptorType)), QString{ "%1 / %2" }.arg(counts.size()).arg(descriptorCount));
+		item->setToolTip(1, "Enumerated / Defined in CONFIGURATION descriptor");
+	}
+
 	template<class NodeType>
 	QTreeWidgetItem* createNameItem(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const showDynamicInformation, NodeType const& node, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::any const& customData)
 	{
@@ -1021,22 +1057,24 @@ public:
 
 	/** A label (readonly) item */
 	template<typename ValueType, typename std::enable_if_t<!std::is_same_v<QString, std::decay_t<ValueType>> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
-	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
+	QTreeWidgetItem* addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, std::move(itemName));
 		item->setData(1, Qt::DisplayRole, QVariant::fromValue<ValueType>(itemValue));
+		return item;
 	}
 	template<typename ValueType, typename std::enable_if_t<std::is_same_v<QString, std::decay_t<ValueType>>, bool> = true>
-	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType&& itemValue)
+	QTreeWidgetItem* addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType&& itemValue)
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, std::move(itemName));
 		item->setText(1, std::forward<ValueType>(itemValue));
+		return item;
 	}
-	void addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, std::string const& itemValue)
+	QTreeWidgetItem* addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, std::string const& itemValue)
 	{
-		addTextItem(treeWidgetItem, std::move(itemName), QString::fromStdString(itemValue));
+		return addTextItem(treeWidgetItem, std::move(itemName), QString::fromStdString(itemValue));
 	}
 
 	/** A flags item */
