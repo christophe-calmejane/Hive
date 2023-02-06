@@ -193,7 +193,7 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						case EntityDataFlag::MediaClockReferenceName:
 							return "MCR Name";
 						case EntityDataFlag::ClockDomainLockState:
-							return "Clock Locked";
+							return "MCR Locked";
 						default:
 							break;
 					}
@@ -235,7 +235,7 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 						case EntityDataFlag::MediaClockReferenceName:
 							return "Media Clock Reference Name";
 						case EntityDataFlag::ClockDomainLockState:
-							return "Clock Domain Lock State";
+							return "Media Clock Reference Lock State";
 						default:
 							break;
 					}
