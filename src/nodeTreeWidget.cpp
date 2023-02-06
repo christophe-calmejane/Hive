@@ -1223,7 +1223,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::AvbInterfaceIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const avbInterfaceIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAvbInterfaceName(_controlledEntityID, configIndex, avbInterfaceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							hive::modelsLibrary::ControllerManager::getInstance().setAvbInterfaceName(_controlledEntityID, configIndex, avbInterfaceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName, oldText));
 						}
 						catch (...)
 						{
@@ -1235,7 +1235,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockSourceIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const clockSourceIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setClockSourceName(_controlledEntityID, configIndex, clockSourceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							hive::modelsLibrary::ControllerManager::getInstance().setClockSourceName(_controlledEntityID, configIndex, clockSourceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName, oldText));
 						}
 						catch (...)
 						{
@@ -1247,7 +1247,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::MemoryObjectIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const memoryObjectIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setMemoryObjectName(_controlledEntityID, configIndex, memoryObjectIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							hive::modelsLibrary::ControllerManager::getInstance().setMemoryObjectName(_controlledEntityID, configIndex, memoryObjectIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName, oldText));
 						}
 						catch (...)
 						{
@@ -1259,7 +1259,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClusterIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const audioClusterIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setAudioClusterName(_controlledEntityID, configIndex, audioClusterIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							hive::modelsLibrary::ControllerManager::getInstance().setAudioClusterName(_controlledEntityID, configIndex, audioClusterIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName, oldText));
 						}
 						catch (...)
 						{
@@ -1271,7 +1271,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ControlIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const controlIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setControlName(_controlledEntityID, configIndex, controlIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							hive::modelsLibrary::ControllerManager::getInstance().setControlName(_controlledEntityID, configIndex, controlIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName, oldText));
 						}
 						catch (...)
 						{
@@ -1283,7 +1283,7 @@ public:
 							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::ClockDomainIndex>>(customData);
 							auto const configIndex = std::get<0>(customTuple);
 							auto const clockDomainIndex = std::get<1>(customTuple);
-							hive::modelsLibrary::ControllerManager::getInstance().setClockDomainName(_controlledEntityID, configIndex, clockDomainIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							hive::modelsLibrary::ControllerManager::getInstance().setClockDomainName(_controlledEntityID, configIndex, clockDomainIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName, oldText));
 						}
 						catch (...)
 						{
@@ -1293,7 +1293,7 @@ public:
 						try
 						{
 							auto const associationID = static_cast<la::avdecc::UniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::UniqueIdentifier::value_type>(newText.toStdString().c_str()));
-							hive::modelsLibrary::ControllerManager::getInstance().setAssociationID(_controlledEntityID, associationID, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+							hive::modelsLibrary::ControllerManager::getInstance().setAssociationID(_controlledEntityID, associationID, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, oldText));
 						}
 						catch (std::invalid_argument const& e)
 						{
