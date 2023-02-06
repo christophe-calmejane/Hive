@@ -118,7 +118,7 @@ void DiscoveredEntitiesTableModel::entityInfoChanged(std::size_t const index, hi
 					if (entityDataFlag == DiscoveredEntitiesTableModel::EntityDataFlag::All)
 					{
 						auto const startIndex = createIndex(static_cast<int>(index), 0);
-						auto const endIndex = createIndex(static_cast<int>(index), columnCount());
+						auto const endIndex = createIndex(static_cast<int>(index), columnCount() - 1);
 						emit dataChanged(startIndex, endIndex, roles);
 					}
 					// Otherwise selectively refresh a single column
