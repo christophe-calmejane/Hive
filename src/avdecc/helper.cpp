@@ -250,6 +250,21 @@ inline void concatenateFlags(QString& flags, QString const& flag) noexcept
 	flags += flag;
 }
 
+QString flagsToString(la::avdecc::entity::JackFlags const flags) noexcept
+{
+	QString str;
+
+	if (flags.empty())
+		return "None";
+
+	if (flags.test(la::avdecc::entity::JackFlag::ClockSyncSource))
+		concatenateFlags(str, "ClockSyncSource");
+	if (flags.test(la::avdecc::entity::JackFlag::Captive))
+		concatenateFlags(str, "Captive");
+
+	return str;
+}
+
 QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcept
 {
 	QString str;
@@ -544,6 +559,94 @@ QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const ca
 	if (str.isEmpty())
 		str = "None";
 	return str;
+}
+
+QString jackTypeToString(la::avdecc::entity::model::JackType const type) noexcept
+{
+	switch (type)
+	{
+		case la::avdecc::entity::model::JackType::Speaker:
+			return "Speaker";
+		case la::avdecc::entity::model::JackType::Headphone:
+			return "Headphone";
+		case la::avdecc::entity::model::JackType::AnalogMicrophone:
+			return "Analog Microphone";
+		case la::avdecc::entity::model::JackType::Spdif:
+			return "S/PDIF";
+		case la::avdecc::entity::model::JackType::Adat:
+			return "ADAT";
+		case la::avdecc::entity::model::JackType::Tdif:
+			return "TDIF";
+		case la::avdecc::entity::model::JackType::Madi:
+			return "MADI";
+		case la::avdecc::entity::model::JackType::UnbalancedAnalog:
+			return "Generic Unbalanced Analog";
+		case la::avdecc::entity::model::JackType::BalancedAnalog:
+			return "Generic Balanced Analog";
+		case la::avdecc::entity::model::JackType::Digital:
+			return "Generic Digital";
+		case la::avdecc::entity::model::JackType::Midi:
+			return "MIDI";
+		case la::avdecc::entity::model::JackType::AesEbu:
+			return "AES/EBU";
+		case la::avdecc::entity::model::JackType::CompositeVideo:
+			return "Composite Video";
+		case la::avdecc::entity::model::JackType::SVhsVideo:
+			return "S-VHS Video";
+		case la::avdecc::entity::model::JackType::ComponentVideo:
+			return "Component Video";
+		case la::avdecc::entity::model::JackType::Dvi:
+			return "DVI";
+		case la::avdecc::entity::model::JackType::Hdmi:
+			return "HDMI";
+		case la::avdecc::entity::model::JackType::Udi:
+			return "UDI";
+		case la::avdecc::entity::model::JackType::DisplayPort:
+			return "DisplayPort";
+		case la::avdecc::entity::model::JackType::Antenna:
+			return "Antenna";
+		case la::avdecc::entity::model::JackType::AnalogTuner:
+			return "Analog Tuner";
+		case la::avdecc::entity::model::JackType::Ethernet:
+			return "Non-AVB Ethernet";
+		case la::avdecc::entity::model::JackType::Wifi:
+			return "Non-AVB Wi-Fi";
+		case la::avdecc::entity::model::JackType::Usb:
+			return "USB";
+		case la::avdecc::entity::model::JackType::Pci:
+			return "PCI";
+		case la::avdecc::entity::model::JackType::PciE:
+			return "PCI-Express";
+		case la::avdecc::entity::model::JackType::Scsi:
+			return "SCSI";
+		case la::avdecc::entity::model::JackType::Ata:
+			return "ATA";
+		case la::avdecc::entity::model::JackType::Imager:
+			return "Camera Imager";
+		case la::avdecc::entity::model::JackType::Ir:
+			return "Infra-Red";
+		case la::avdecc::entity::model::JackType::Thunderbolt:
+			return "Thunderbolt";
+		case la::avdecc::entity::model::JackType::Sata:
+			return "SATA";
+		case la::avdecc::entity::model::JackType::SmpteLtc:
+			return "SMPTE Linear Time Code";
+		case la::avdecc::entity::model::JackType::DigitalMicrophone:
+			return "Digital Microphone";
+		case la::avdecc::entity::model::JackType::AudioMediaClock:
+			return "Audio Media Clock";
+		case la::avdecc::entity::model::JackType::VideoMediaClock:
+			return "Video Media Clock";
+		case la::avdecc::entity::model::JackType::GnssClock:
+			return "Global Navigation Satellite System Clock";
+		case la::avdecc::entity::model::JackType::Pps:
+			return "Pulse Per Second";
+		case la::avdecc::entity::model::JackType::Expansion:
+			return "Expansion";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+	}
+	return "Unknown";
 }
 
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type) noexcept

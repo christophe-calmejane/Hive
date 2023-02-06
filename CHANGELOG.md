@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Selection of an entity from the connection matrix (context menu)
 - [Mac Address field in entities list](https://github.com/christophe-calmejane/Hive/issues/38)
 - [ClockDomain locked state in entities list](https://github.com/christophe-calmejane/Hive/issues/133)
+- Support for JACK Inputs and JACK Outputs
 
 ### Fixed
 - Current selection in list of entities lost when changing the filter

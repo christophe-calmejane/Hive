@@ -793,6 +793,29 @@ private:
 		}
 	}
 
+	template<typename NodeType>
+	void processJackNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, NodeType const& node) noexcept
+	{
+		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
+
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::jackNameChanged, item,
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::JackIndex const jackIndex, QString const& /*jackName*/)
+			{
+				updateName(item, node, entityID, configurationIndex, descriptorType, jackIndex);
+			});
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::JackInputNode const& node) noexcept override
+	{
+		processJackNode(controlledEntity, parent, node);
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::JackOutputNode const& node) noexcept override
+	{
+		processJackNode(controlledEntity, parent, node);
+	}
+
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
 		auto const name = genName(controlledEntity, parent->descriptorIndex, node);

@@ -58,6 +58,8 @@ void NodeVisitor::accept(NodeVisitor* const visitor, la::avdecc::controller::Con
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::StreamInputNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::StreamInputNode const*>();
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::StreamOutputNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::StreamOutputNode const*>();
 		// JackNode
+		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::JackInputNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::JackInputNode const*>();
+		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::JackOutputNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::JackOutputNode const*>();
 		// AvbInterfaceNode
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::AvbInterfaceNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::AvbInterfaceNode const*>();
 		// ClockSourceNode

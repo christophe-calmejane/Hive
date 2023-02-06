@@ -59,6 +59,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <stdexcept>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
 
@@ -508,6 +509,36 @@ private:
 			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
 			countersItem->setText(0, "Counters");
 		}
+	}
+
+	void processJackNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept
+	{
+		createIdItem(&node);
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
+
+		Q_Q(NodeTreeWidget);
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			auto const* const model = node.staticModel;
+
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->jackFlags.value()), avdecc::helper::flagsToString(model->jackFlags));
+			addTextItem(descriptorItem, "Jack Type", avdecc::helper::jackTypeToString(model->jackType));
+		}
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackInputNode const& node) noexcept override
+	{
+		processJackNode(controlledEntity, isActiveConfiguration, node);
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackOutputNode const& node) noexcept override
+	{
+		processJackNode(controlledEntity, isActiveConfiguration, node);
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
@@ -1155,11 +1186,31 @@ public:
 							auto const streamIndex = std::get<2>(customTuple);
 							if (streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 							{
-								hive::modelsLibrary::ControllerManager::getInstance().setStreamInputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+								hive::modelsLibrary::ControllerManager::getInstance().setStreamInputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, oldText));
 							}
 							else if (streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 							{
-								hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityName, oldText));
+								hive::modelsLibrary::ControllerManager::getInstance().setStreamOutputName(_controlledEntityID, configIndex, streamIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, oldText));
+							}
+						}
+						catch (...)
+						{
+						}
+						break;
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName:
+						try
+						{
+							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::DescriptorType, la::avdecc::entity::model::JackIndex>>(customData);
+							auto const configIndex = std::get<0>(customTuple);
+							auto const jackType = std::get<1>(customTuple);
+							auto const jackIndex = std::get<2>(customTuple);
+							if (jackType == la::avdecc::entity::model::DescriptorType::JackInput)
+							{
+								hive::modelsLibrary::ControllerManager::getInstance().setJackInputName(_controlledEntityID, configIndex, jackIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName, oldText));
+							}
+							else if (jackType == la::avdecc::entity::model::DescriptorType::JackOutput)
+							{
+								hive::modelsLibrary::ControllerManager::getInstance().setJackOutputName(_controlledEntityID, configIndex, jackIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName, oldText));
 							}
 						}
 						catch (...)
@@ -1310,6 +1361,20 @@ public:
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && descriptorType == streamType && streamIndex == strIndex)
 								textEntry->setCurrentData(streamName);
+						});
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::DescriptorType, la::avdecc::entity::model::JackIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const jackType = std::get<1>(customTuple);
+					auto const jackIndex = std::get<2>(customTuple);
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::jackNameChanged, textEntry,
+						[this, textEntry, configIndex, jackType, jkIndex = jackIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::JackIndex const jackIndex, QString const& jackName)
+						{
+							if (entityID == _controlledEntityID && configurationIndex == configIndex && descriptorType == jackType && jackIndex == jkIndex)
+								textEntry->setCurrentData(jackName);
 						});
 					break;
 				}

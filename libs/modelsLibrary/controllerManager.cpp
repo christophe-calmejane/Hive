@@ -565,6 +565,14 @@ private:
 	{
 		emit streamNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, QString::fromStdString(streamName));
 	}
+	virtual void onJackInputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
+	{
+		emit jackNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackInput, jackIndex, QString::fromStdString(jackName));
+	}
+	virtual void onJackOutputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
+	{
+		emit jackNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackOutput, jackIndex, QString::fromStdString(jackName));
+	}
 	virtual void onAvbInterfaceNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvdeccFixedString const& avbInterfaceName) noexcept override
 	{
 		emit avbInterfaceNameChanged(entity->getEntity().getEntityID(), configurationIndex, avbInterfaceIndex, QString::fromStdString(avbInterfaceName));
@@ -1588,6 +1596,62 @@ private:
 		}
 	}
 
+	virtual void setJackInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, QString const& name, BeginCommandHandler const& beginHandler, SetJackInputNameHandler const& resultHandler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex);
+			}
+			controller->setJackInputName(targetEntityID, configurationIndex, jackIndex, name.toStdString(),
+				[this, targetEntityID, jackIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex, status);
+					}
+				});
+		}
+	}
+
+	virtual void setJackOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, QString const& name, BeginCommandHandler const& beginHandler, SetJackOutputNameHandler const& resultHandler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex);
+			}
+			controller->setJackOutputName(targetEntityID, configurationIndex, jackIndex, name.toStdString(),
+				[this, targetEntityID, jackIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex, status);
+					}
+				});
+		}
+	}
+
 	virtual void setAvbInterfaceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& name, BeginCommandHandler const& beginHandler, SetAvbInterfaceNameHandler const& resultHandler) noexcept override
 	{
 		auto controller = getController();
@@ -2389,6 +2453,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Stream Name";
 		case AecpCommandType::SetStreamInfo:
 			return "Set Stream Info";
+		case AecpCommandType::SetJackName:
+			return "Set Jack Name";
 		case AecpCommandType::SetAvbInterfaceName:
 			return "Set AVB Interface Name";
 		case AecpCommandType::SetClockSourceName:
