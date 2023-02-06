@@ -25,7 +25,7 @@ namespace ui
 {
 struct AdvancedView
 {
-	static constexpr int ColumnWidth_UniqueIdentifier = 160;
+	static constexpr int ColumnWidth_UniqueIdentifier = 130;
 	static constexpr int ColumnWidth_Logo = 60;
 	static constexpr int ColumnWidth_Compatibility = 50;
 	static constexpr int ColumnWidth_Name = 180;
@@ -33,8 +33,8 @@ struct AdvancedView
 	static constexpr int ColumnWidth_Group = 80;
 	static constexpr int ColumnWidth_GPTPDomain = 80;
 	static constexpr int ColumnWidth_InterfaceIndex = 90;
-	static constexpr int ColumnWidth_MacAddress = 80;
-	static constexpr int ColumnWidth_Firmware = 160;
+	static constexpr int ColumnWidth_MacAddress = 110;
+	static constexpr int ColumnWidth_Firmware = 150;
 };
 
 } // namespace ui

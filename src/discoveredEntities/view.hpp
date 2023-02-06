@@ -51,7 +51,7 @@ public:
 	static constexpr auto ControllerModelEntityColumn_GrandmasterID = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GrandmasterID);
 	static constexpr auto ControllerModelEntityColumn_GPTPDomain = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GPTPDomain);
 	static constexpr auto ControllerModelEntityColumn_InterfaceIndex = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::InterfaceIndex);
-	static constexpr auto ControllerModelEntityColumn_MacAddress = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::InterfaceIndex);
+	static constexpr auto ControllerModelEntityColumn_MacAddress = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MacAddress);
 	static constexpr auto ControllerModelEntityColumn_AssociationID = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::AssociationID);
 	static constexpr auto ControllerModelEntityColumn_EntityModelID = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityModelID);
 	static constexpr auto ControllerModelEntityColumn_FirmwareVersion = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion);
