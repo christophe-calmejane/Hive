@@ -5,8 +5,10 @@
         <file>Logo.png</file>
         <file alias="CHANGELOG.md">../CHANGELOG.md</file>
         <file>locked.png</file>
+        <file>locked_inv.png</file>
         <file>unlocked.png</file>
         <file>locked_by_other.png</file>
+        <file>locked_by_other_inv.png</file>
         <file>lock_not_supported.png</file>
         <file>unknown_light.png</file>
         <file>unknown_dark.png</file>

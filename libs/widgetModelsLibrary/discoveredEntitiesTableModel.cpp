@@ -62,8 +62,8 @@ static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAcces
 static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState, QImage> s_excusiveAccessStateImagesDark{
 	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NotSupported, QImage{ ":/lock_not_supported.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessSelf, QImage{ ":/locked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessOther, QImage{ ":/locked_by_other_inv.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::AccessSelf, QImage{ ":/locked_inv.png" } },
 };
 
 static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState, QImage> s_clockDomainLockStateImagesLight{
@@ -75,7 +75,7 @@ static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ClockDomainLoc
 static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState, QImage> s_clockDomainLockStateImagesDark{
 	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Unknown, QImage{ ":/unknown_dark.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Unlocked, QImage{ ":/unlocked.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Locked, QImage{ ":/locked.png" } },
+	{ modelsLibrary::DiscoveredEntitiesModel::ClockDomainLockedState::Locked, QImage{ ":/locked_inv.png" } },
 };
 
 DiscoveredEntitiesTableModel::DiscoveredEntitiesTableModel(EntityDataFlags const entityDataFlags)
