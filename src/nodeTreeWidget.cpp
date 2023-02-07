@@ -528,6 +528,10 @@ private:
 
 			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.jackFlags.value()), avdecc::helper::flagsToString(model.jackFlags));
 			addTextItem(descriptorItem, "Jack Type", avdecc::helper::jackTypeToString(model.jackType));
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::Control)), QString{ "%1 / %2" }.arg(node.controls.size()).arg(model.numberOfControls));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
 		}
 	}
 
