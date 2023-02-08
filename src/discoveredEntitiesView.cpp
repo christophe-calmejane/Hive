@@ -324,21 +324,29 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 								}
 								else
 								{
-									if (error == la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex && isFullEntity)
+									switch (error)
 									{
-										auto const choice = QMessageBox::question(this, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
-										if (choice == QMessageBox::StandardButton::Yes)
-										{
-											flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-											auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags, avdecc::helper::generateDumpSourceString(hive::internals::applicationShortName, hive::internals::versionString));
-											error = std::get<0>(result);
-											message = std::get<1>(result);
-											if (!error)
+										case la::avdecc::jsonSerializer::SerializationError::InvalidDescriptorIndex:
+										case la::avdecc::jsonSerializer::SerializationError::NotSupported:
+											if (isFullEntity)
 											{
-												QMessageBox::information(this, "", "Export completed but with warnings:\n" + filename);
+												auto const choice = QMessageBox::question(this, "", QString("EntityID %1 model is not fully IEEE1722.1 compliant.\n%2\n\nDo you want to export anyway?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(message.c_str()), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+												if (choice == QMessageBox::StandardButton::Yes)
+												{
+													flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+													auto const result = manager.serializeControlledEntityAsJson(entityID, filename, flags, avdecc::helper::generateDumpSourceString(hive::internals::applicationShortName, hive::internals::versionString));
+													error = std::get<0>(result);
+													message = std::get<1>(result);
+													if (!error)
+													{
+														QMessageBox::information(this, "", "Export completed but with warnings:\n" + filename);
+													}
+													// Fallthrough to warning message
+												}
 											}
-											// Fallthrough to warning message
-										}
+											break;
+										default:
+											break;
 									}
 									if (!!error)
 									{

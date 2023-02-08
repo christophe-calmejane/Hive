@@ -669,7 +669,14 @@ void MainWindowImpl::connectSignals()
 				}
 				else
 				{
-					QMessageBox::warning(_parent, "", QString("Export failed:\n%1").arg(message.c_str()));
+					if (error == la::avdecc::jsonSerializer::SerializationError::Incomplete)
+					{
+						QMessageBox::warning(_parent, "", QString("Export partially completed (some entities are missing):\n%1").arg(message.c_str()));
+					}
+					else
+					{
+						QMessageBox::warning(_parent, "", QString("Export failed:\n%1").arg(message.c_str()));
+					}
 				}
 			}
 		});
@@ -1177,13 +1184,24 @@ void MainWindow::dropEvent(QDropEvent* event)
 		else if (ext == "json")
 		{
 			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
-			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
 			// Start with AVE file type
 			auto [error, message] = loadEntity(f, flags);
 			if (!!error)
 			{
-				// Then try ANS file type
-				loadNetworkState(f, flags);
+				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+				{
+					auto const choice = QMessageBox::question(this, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+					if (choice == QMessageBox::StandardButton::Yes)
+					{
+						flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+						loadEntity(f, flags);
+					}
+				}
+				else
+				{
+					// Then try ANS file type
+					loadNetworkState(f, flags);
+				}
 			}
 		}
 	}
