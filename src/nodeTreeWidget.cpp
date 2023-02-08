@@ -1047,7 +1047,7 @@ public:
 		{
 		}
 		auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(DescriptorType)), QString{ "%1 / %2" }.arg(counts.size()).arg(descriptorCount));
-		item->setToolTip(1, "Enumerated / Defined in CONFIGURATION descriptor");
+		item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
 	}
 
 	template<class NodeType>
