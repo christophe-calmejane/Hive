@@ -531,12 +531,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackInputNode const& node) noexcept override
-	{
-		processJackNode(controlledEntity, isActiveConfiguration, node);
-	}
-
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackOutputNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept override
 	{
 		processJackNode(controlledEntity, isActiveConfiguration, node);
 	}
