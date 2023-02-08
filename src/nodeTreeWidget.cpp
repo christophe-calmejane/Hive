@@ -425,6 +425,10 @@ private:
 			auto const& model = node.staticModel;
 
 			addTextItem(descriptorItem, "Clock Domain Index", model.clockDomainIndex);
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::Control)), QString{ "%1 / %2" }.arg(node.controls.size()).arg(model.numberOfControls));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
 		}
 
 		// Dynamic model
@@ -666,6 +670,10 @@ private:
 			addTextItem(descriptorItem, "Clock Domain Index", model.clockDomainIndex);
 			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.portFlags.value()), avdecc::helper::flagsToString(model.portFlags));
 			addTextItem(descriptorItem, "Supports Dynamic Mapping", model.hasDynamicAudioMap ? "Yes" : "No");
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::Control)), QString{ "%1 / %2" }.arg(node.controls.size()).arg(model.numberOfControls));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
 		}
 
 		// Dynamic model
