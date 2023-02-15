@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [ClockDomain locked state in entities list](https://github.com/christophe-calmejane/Hive/issues/133)
 - Support for JACK Inputs and JACK Outputs
 
+### Changed
+- Complete rework of the `entities list`
+
 ### Fixed
 - Current selection in list of entities lost when changing the filter
 - [Network Interfaces combobox displays errors and selected interface in bold](https://github.com/christophe-calmejane/Hive/issues/128)
