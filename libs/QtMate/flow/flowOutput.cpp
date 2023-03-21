@@ -42,7 +42,7 @@ int FlowOutput::type() const
 QRectF FlowOutput::boundingRect() const
 {
 	auto const availableWidth = parentItem()->boundingRect().width();
-	return QRectF{ availableWidth * inputRatio(_node), 0.f, availableWidth * outputRatio(_node), NODE_LINE_HEIGHT };
+	return QRectF{ 0.f, 0.f, availableWidth, NODE_LINE_HEIGHT };
 }
 
 bool FlowOutput::isConnected() const

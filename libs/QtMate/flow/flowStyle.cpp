@@ -105,16 +105,6 @@ void drawElidedText(QPainter* painter, QRectF const& r, int flags, Qt::TextElide
 	painter->drawText(r, flags, elidedText);
 }
 
-float outputRatio(FlowNode* node)
-{
-	return node->inputs().empty() ? 1.f : (node->outputs().empty() ? 0.f : NODE_OUTPUT_RATIO);
-}
-
-float inputRatio(FlowNode* node)
-{
-	return node->outputs().empty() ? 1.f : (node->inputs().empty() ? 0.f : NODE_INPUT_RATIO);
-}
-
 void drawOutputHotSpot(QPainter* painter, QPointF const& hotSpot, QColor const& color, bool connected)
 {
 	painter->setPen(color);

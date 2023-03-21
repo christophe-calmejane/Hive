@@ -39,7 +39,7 @@ public:
 
 	virtual QRectF boundingRect() const override
 	{
-		return QRectF{ 0.f, 0.f, NODE_WIDTH, NODE_LINE_HEIGHT };
+		return QRectF{ 0.f, 0.f, NODE_WIDTH, NODE_HEADER_HEIGHT };
 	}
 
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget) override
@@ -178,8 +178,8 @@ int FlowNode::type() const
 
 QRectF FlowNode::boundingRect() const
 {
-	auto const n = /* header */ 1 + _collapseRatio * std::max(_inputs.size(), _outputs.size());
-	return QRectF{ 0.f, 0.f, NODE_WIDTH, n * NODE_LINE_HEIGHT };
+	auto const n = std::max(_inputs.size(), _outputs.size());
+	return QRectF{ 0.f, 0.f, NODE_WIDTH, NODE_HEADER_HEIGHT + _collapseRatio * (NODE_HEADER_SEPARATOR_HEIGHT + NODE_SOCKET_AREA_INSET_TOP + n * NODE_LINE_HEIGHT + NODE_SOCKET_AREA_INSET_BOTTOM) };
 }
 
 void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
@@ -188,7 +188,7 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 
 	// header
 	auto headerBoundingRect = r;
-	headerBoundingRect.setHeight(NODE_LINE_HEIGHT);
+	headerBoundingRect.setHeight(NODE_HEADER_HEIGHT);
 
 	painter->setPen(Qt::NoPen);
 
@@ -211,18 +211,6 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 	{
 		auto const inputHotSpotCenter = QRectF{ 0.f, 0.f, NODE_SOCKET_BOUNDING_SIZE, headerBoundingRect.height() }.center();
 		drawOutputHotSpot(painter, inputHotSpotCenter, headerHotSpotColor, hasConnectedInput());
-
-		auto inputsBoundingRect = r;
-		inputsBoundingRect.moveTop(NODE_LINE_HEIGHT + NODE_SEPARATOR_THICKNESS);
-		inputsBoundingRect.setWidth(r.width() * inputRatio(this));
-		inputsBoundingRect.setHeight(r.height() - NODE_LINE_HEIGHT - NODE_SEPARATOR_THICKNESS);
-		painter->setPen(Qt::NoPen);
-
-		auto color = QColor{ NODE_INPUT_BACKGROUND_COLOR };
-		color.setAlphaF(_collapseRatio);
-		painter->setBrush(color);
-
-		drawRoundedRect(painter, inputsBoundingRect, _outputs.empty() ? (BottomLeft | BottomRight) : BottomLeft, NODE_BORDER_RADIUS);
 	}
 
 	// outputs
@@ -230,20 +218,18 @@ void FlowNode::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, 
 	{
 		auto const outputHotSpotCenter = QRectF{ headerBoundingRect.right() - NODE_SOCKET_BOUNDING_SIZE, 0.f, NODE_SOCKET_BOUNDING_SIZE, headerBoundingRect.height() }.center();
 		drawOutputHotSpot(painter, outputHotSpotCenter, headerHotSpotColor, hasConnectedOutput());
-
-		auto ouputsBoundingRect = r;
-		ouputsBoundingRect.moveTop(NODE_LINE_HEIGHT + NODE_SEPARATOR_THICKNESS);
-		ouputsBoundingRect.moveLeft(r.width() * inputRatio(this) + NODE_SEPARATOR_THICKNESS);
-		ouputsBoundingRect.setWidth(r.width() * outputRatio(this) - NODE_SEPARATOR_THICKNESS);
-		ouputsBoundingRect.setHeight(r.height() - NODE_LINE_HEIGHT - NODE_SEPARATOR_THICKNESS);
-		painter->setPen(Qt::NoPen);
-
-		auto color = QColor{ NODE_OUTPUT_BACKGROUND_COLOR };
-		color.setAlphaF(_collapseRatio);
-		painter->setBrush(color);
-
-		drawRoundedRect(painter, ouputsBoundingRect, _inputs.empty() ? (BottomLeft | BottomRight) : BottomRight, NODE_BORDER_RADIUS);
 	}
+
+	// Draw socket area
+	auto color = NODE_SOCKET_AREA_COLOR;
+	color.setAlphaF(_collapseRatio);
+	painter->setPen(Qt::NoPen);
+	painter->setBrush(color);
+	auto socketAreaBoundingRect = r;
+	auto const socketAreaTopPosition = NODE_HEADER_HEIGHT + NODE_HEADER_SEPARATOR_HEIGHT;
+	socketAreaBoundingRect.moveTop(socketAreaTopPosition);
+	socketAreaBoundingRect.setHeight(r.height() - socketAreaTopPosition);
+	drawRoundedRect(painter, socketAreaBoundingRect, BottomLeft | BottomRight, NODE_BORDER_RADIUS);
 }
 
 QVariant FlowNode::itemChange(GraphicsItemChange change, QVariant const& value)
@@ -314,17 +300,18 @@ void FlowNode::handleItemSelectionHasChanged()
 
 void FlowNode::updateSockets()
 {
+	auto const firstSocketTopPosition = NODE_HEADER_HEIGHT + NODE_HEADER_SEPARATOR_HEIGHT + NODE_SOCKET_AREA_INSET_TOP;
 	for (auto* input : _inputs)
 	{
 		auto const index = input->index();
-		input->setPos(0, _collapseRatio * (NODE_SEPARATOR_THICKNESS + (index + 1) * NODE_LINE_HEIGHT));
+		input->setPos(0, _collapseRatio * (firstSocketTopPosition + index * NODE_LINE_HEIGHT));
 		input->setOpacity(_collapseRatio);
 	}
 
 	for (auto* output : _outputs)
 	{
 		auto const index = output->index();
-		output->setPos(0, _collapseRatio * (NODE_SEPARATOR_THICKNESS + (index + 1) * NODE_LINE_HEIGHT));
+		output->setPos(0, _collapseRatio * (firstSocketTopPosition + index * NODE_LINE_HEIGHT));
 		output->setOpacity(_collapseRatio);
 	}
 
