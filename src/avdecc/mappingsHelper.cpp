@@ -47,7 +47,7 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildStreamMappings(la::avdecc::co
 	for (auto const* streamNode : streamNodes)
 	{
 		auto streamName = hive::modelsLibrary::helper::objectName(controlledEntity, *streamNode).toStdString();
-		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel->streamFormat);
+		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel.streamFormat);
 		NodeMapping nodeMapping{ streamNode->descriptorIndex };
 		mappingMatrix::Node node{ streamName };
 
@@ -69,7 +69,7 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 	mappingMatrix::Connections connections;
 
 	// Build list of current connections
-	for (auto const& mapping : streamPortNode.dynamicModel->dynamicAudioMap)
+	for (auto const& mapping : streamPortNode.dynamicModel.dynamicAudioMap)
 	{
 		// Find the existing mapping, as mappingMatrix::SlotID
 		mappingMatrix::SlotID streamSlotID{ -1, -1 };
@@ -91,7 +91,7 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 				else if (streamNode->isRedundant)
 				{
 					// The stream is a redundant one and not the primary stream, validate the redundant pair index
-					for (auto const redundantIndex : streamNode->staticModel->redundantStreams)
+					for (auto const redundantIndex : streamNode->staticModel.redundantStreams)
 					{
 						if (streamIndex == redundantIndex)
 						{
@@ -339,14 +339,14 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildClusterMappings(la::avdecc::c
 	// Build list of cluster mappings
 	for (auto const& clusterKV : streamPortNode.audioClusters)
 	{
-		auto const clusterIndex = static_cast<la::avdecc::entity::model::ClusterIndex>(clusterKV.first - streamPortNode.staticModel->baseCluster); // Mappings use relative index (see IEEE1722.1 Table 7.33)
-		AVDECC_ASSERT(clusterIndex < streamPortNode.staticModel->numberOfClusters, "ClusterIndex invalid");
+		auto const clusterIndex = static_cast<la::avdecc::entity::model::ClusterIndex>(clusterKV.first - streamPortNode.staticModel.baseCluster); // Mappings use relative index (see IEEE1722.1 Table 7.33)
+		AVDECC_ASSERT(clusterIndex < streamPortNode.staticModel.numberOfClusters, "ClusterIndex invalid");
 		auto const& clusterNode = clusterKV.second;
 		auto clusterName = hive::modelsLibrary::helper::objectName(controlledEntity, clusterNode).toStdString();
 		NodeMapping nodeMapping{ clusterIndex };
 		mappingMatrix::Node node{ clusterName };
 
-		for (auto i = 0u; i < clusterNode.staticModel->channelCount; ++i)
+		for (auto i = 0u; i < clusterNode.staticModel.channelCount; ++i)
 		{
 			nodeMapping.channels.push_back(i);
 			node.sockets.push_back("Channel " + std::to_string(i));
@@ -371,7 +371,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 			{
 				auto const* const entity = controlledEntity.get();
 				auto const& entityNode = entity->getEntityNode();
-				auto const& configurationNode = entity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+				auto const& configurationNode = entity->getConfigurationNode(entityNode.dynamicModel.currentConfiguration);
 				mappingMatrix::Nodes outputs;
 				mappingMatrix::Nodes inputs;
 				mappingMatrix::Connections connections;
@@ -380,19 +380,19 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 
 				auto const isValidClockDomain = [](auto const& streamPortNode, auto const& streamNode)
 				{
-					return streamPortNode.staticModel->clockDomainIndex == streamNode.staticModel->clockDomainIndex;
+					return streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex;
 				};
 
 				auto const isValidStreamFormat = [](auto const& streamNode)
 				{
-					auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamFormat);
+					auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel.streamFormat);
 
 					return sfi->getChannelsCount() > 0;
 				};
 
 				if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 				{
-					auto const& streamPortNode = entity->getStreamPortInputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+					auto const& streamPortNode = entity->getStreamPortInputNode(entityNode.dynamicModel.currentConfiguration, streamPortIndex);
 					std::vector<la::avdecc::controller::model::StreamInputNode const*> streamNodes;
 
 					if (streamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())
@@ -457,7 +457,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 				}
 				else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 				{
-					auto const& streamPortNode = entity->getStreamPortOutputNode(entityNode.dynamicModel->currentConfiguration, streamPortIndex);
+					auto const& streamPortNode = entity->getStreamPortOutputNode(entityNode.dynamicModel.currentConfiguration, streamPortIndex);
 					std::vector<la::avdecc::controller::model::StreamOutputNode const*> streamNodes;
 
 					if (streamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())

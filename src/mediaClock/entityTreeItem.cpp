@@ -65,12 +65,9 @@ std::optional<QPair<la::avdecc::entity::model::SamplingRate, QString>> EntityTre
 	{
 		try
 		{
-			auto* audioUnitDynamicModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
-			if (audioUnitDynamicModel)
-			{
-				auto samplingRate = audioUnitDynamicModel->currentSamplingRate;
-				return qMakePair(samplingRate, QString::number(samplingRate / 1000) + " kHz");
-			}
+			auto& audioUnitDynamicModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
+			auto samplingRate = audioUnitDynamicModel.currentSamplingRate;
+			return qMakePair(samplingRate, QString::number(samplingRate / 1000) + " kHz");
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{

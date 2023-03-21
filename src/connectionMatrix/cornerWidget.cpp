@@ -101,17 +101,14 @@ CornerWidget::CornerWidget(QWidget* parent)
 							auto const& configNode = entity.getCurrentConfigurationNode();
 							for (auto const& [streamIndex, streamNode] : configNode.streamInputs)
 							{
-								if (streamNode.dynamicModel != nullptr)
+								auto const& connectionInfo = streamNode.dynamicModel.connectionInfo;
+								if (connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
 								{
-									auto const& connectionInfo = streamNode.dynamicModel->connectionInfo;
-									if (connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
-									{
-										// Ignore result handler
-										manager.disconnectStream(connectionInfo.talkerStream.entityID, connectionInfo.talkerStream.streamIndex, entityID, streamIndex,
-											[](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
-											{
-											});
-									}
+									// Ignore result handler
+									manager.disconnectStream(connectionInfo.talkerStream.entityID, connectionInfo.talkerStream.streamIndex, entityID, streamIndex,
+										[](la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, la::avdecc::entity::ControllerEntity::ControlStatus const status)
+										{
+										});
 								}
 							}
 						}

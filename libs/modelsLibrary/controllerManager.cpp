@@ -76,9 +76,9 @@ public:
 			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
-				if (node.dynamicModel->counters)
+				if (node.dynamicModel.counters)
 				{
-					for (auto const [flag, counter] : *node.dynamicModel->counters)
+					for (auto const [flag, counter] : *node.dynamicModel.counters)
 					{
 						// Initialize internal counter value
 						_entityCache._streamInputCounters[node.descriptorIndex][flag] = ErrorCounterInfo{ counter, counter };
@@ -671,8 +671,8 @@ private:
 					try
 					{
 						auto const& entityNode = entity->getEntityNode();
-						auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
-						if (streamNode.dynamicModel->connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
+						auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
+						if (streamNode.dynamicModel.connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 						{
 							// Only consider MediaUnlocked as an error if the stream is connected, otherwise juste ignore this
 							break;

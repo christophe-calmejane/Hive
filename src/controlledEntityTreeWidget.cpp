@@ -508,7 +508,7 @@ public:
 			{
 				auto const& anyNode = item->data(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::NodeType)).value<AnyNode>().getNode();
 				auto const* configurationNode = std::any_cast<la::avdecc::controller::model::ConfigurationNode const*>(anyNode);
-				auto const isEnabled = !configurationNode->dynamicModel->isActiveConfiguration;
+				auto const isEnabled = !configurationNode->dynamicModel.isActiveConfiguration;
 
 				showSetDescriptorAsCurrentMenu(pos, item, "Set As Current Configuration", isEnabled,
 					[this, configurationIndex = nodeIdentifier.index]()
@@ -529,7 +529,7 @@ public:
 
 						auto const clockDomainIndex = clockDomainNode->descriptorIndex;
 						auto const clockSourceIndex = nodeIdentifier.index;
-						auto const isEnabled = clockDomainNode->dynamicModel->clockSourceIndex != clockSourceIndex;
+						auto const isEnabled = clockDomainNode->dynamicModel.clockSourceIndex != clockSourceIndex;
 
 						showSetDescriptorAsCurrentMenu(pos, item, "Set As Current Clock Source", isEnabled,
 							[this, clockDomainIndex, clockSourceIndex]()
@@ -629,14 +629,14 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
-		_currentConfigurationIndex = node.dynamicModel->currentConfiguration;
+		_currentConfigurationIndex = node.dynamicModel.currentConfiguration;
 
 		auto genName = [type = node.descriptorType](QString const& name)
 		{
 			return QString("%1: %2").arg(avdecc::helper::descriptorTypeToString(type), name);
 		};
 		// Use Index 0 as ConfigurationIndex for the Entity Descriptor
-		auto* item = addItem<la::avdecc::controller::model::Node const*>(la::avdecc::entity::model::ConfigurationIndex{ 0u }, nullptr, &node, genName(node.dynamicModel->entityName.data()));
+		auto* item = addItem<la::avdecc::controller::model::Node const*>(la::avdecc::entity::model::ConfigurationIndex{ 0u }, nullptr, &node, genName(node.dynamicModel.entityName.data()));
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
@@ -686,7 +686,7 @@ private:
 				}
 			});
 
-		if (node.dynamicModel->isActiveConfiguration)
+		if (node.dynamicModel.isActiveConfiguration)
 		{
 			priv::useBoldFont(item, true);
 
@@ -698,12 +698,12 @@ private:
 	template<class Node>
 	QString genName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, Node const& node)
 	{
-		auto objName = hive::modelsLibrary::helper::localizedString(*controlledEntity, node.staticModel->localizedDescription);
+		auto objName = hive::modelsLibrary::helper::localizedString(*controlledEntity, node.staticModel.localizedDescription);
 
 		// Only use name for current configuration
-		if (configurationIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration && !node.dynamicModel->objectName.empty())
+		if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !node.dynamicModel.objectName.empty())
 		{
-			objName = node.dynamicModel->objectName.data();
+			objName = node.dynamicModel.objectName.data();
 		}
 
 		return QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), objName);
@@ -717,7 +717,7 @@ private:
 			auto controlledEntity = manager.getControlledEntity(entityID);
 
 			// Filter configuration, we currently expand nodes only for current configuration
-			if (controlledEntity && configurationIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration)
+			if (controlledEntity && configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration)
 			{
 				auto name = genName(controlledEntity.get(), configurationIndex, node);
 				item->setData(0, Qt::DisplayRole, name);
@@ -806,7 +806,12 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::JackNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::JackInputNode const& node) noexcept override
+	{
+		processJackNode(controlledEntity, parent, node);
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::JackOutputNode const& node) noexcept override
 	{
 		processJackNode(controlledEntity, parent, node);
 	}
@@ -825,7 +830,7 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::LocaleNode const& node) noexcept override
 	{
-		auto const name = QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), node.staticModel->localeID.data());
+		auto const name = QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), node.staticModel.localeID.data());
 		addItem(parent->descriptorIndex, parent, &node, name);
 	}
 
@@ -835,7 +840,13 @@ private:
 		addItem(grandParent->descriptorIndex, parent, &node, name);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::AudioUnitNode const* const parent, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::AudioUnitNode const* const parent, la::avdecc::controller::model::StreamPortInputNode const& node) noexcept override
+	{
+		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
+		addItem(grandParent->descriptorIndex, parent, &node, name);
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::AudioUnitNode const* const parent, la::avdecc::controller::model::StreamPortOutputNode const& node) noexcept override
 	{
 		auto const name = QString("%1.%2").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex));
 		addItem(grandParent->descriptorIndex, parent, &node, name);
@@ -887,7 +898,7 @@ private:
 	{
 		auto const name = genName(controlledEntity, grandParent->descriptorIndex, node);
 		auto* item = addItem(grandParent->descriptorIndex, parent, &node, name);
-		auto const isCurrentConfiguration = grandParent->descriptorIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const isCurrentConfiguration = grandParent->descriptorIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceNameChanged, item,
 			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& /*clockSourceName*/)
@@ -906,7 +917,7 @@ private:
 
 		if (isCurrentConfiguration)
 		{
-			auto const isCurrentClockSource = (node.descriptorIndex == parent->dynamicModel->clockSourceIndex);
+			auto const isCurrentClockSource = (node.descriptorIndex == parent->dynamicModel.clockSourceIndex);
 			priv::useBoldFont(item, isCurrentClockSource);
 		}
 	}
@@ -923,9 +934,15 @@ private:
 			});
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamInputNode const& node) noexcept override
 	{
-		auto const name = QString("REDUNDANT_%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.virtualIndex), QString::fromStdString(node.virtualName));
+		auto const name = QString("REDUNDANT_INPUT.%1: %2").arg(QString::number(node.virtualIndex), QString::fromStdString(node.virtualName));
+		addItem(parent->descriptorIndex, parent, &node, name);
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamOutputNode const& node) noexcept override
+	{
+		auto const name = QString("REDUNDANT_OUTPUT.%1: %2").arg(QString::number(node.virtualIndex), QString::fromStdString(node.virtualName));
 		addItem(parent->descriptorIndex, parent, &node, name);
 	}
 

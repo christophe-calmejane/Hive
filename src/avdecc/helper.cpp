@@ -238,9 +238,9 @@ QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& 
 
 QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const& node) noexcept
 {
-	auto const* const descriptor = node.staticModel;
+	auto const& descriptor = node.staticModel;
 
-	return avdecc::helper::clockSourceTypeToString(descriptor->clockSourceType) + ", " + avdecc::helper::descriptorTypeToString(descriptor->clockSourceLocationType) + ":" + QString::number(descriptor->clockSourceLocationIndex);
+	return avdecc::helper::clockSourceTypeToString(descriptor.clockSourceType) + ", " + avdecc::helper::descriptorTypeToString(descriptor.clockSourceLocationType) + ":" + QString::number(descriptor.clockSourceLocationIndex);
 }
 
 inline void concatenateFlags(QString& flags, QString const& flag) noexcept

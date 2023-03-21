@@ -177,7 +177,7 @@ public:
 		auto controlledEntity = manager.getControlledEntity(entityID);
 		if (controlledEntity)
 		{
-			la::avdecc::controller::model::ConfigurationNode configurationNode;
+			auto configurationNode = la::avdecc::controller::model::ConfigurationNode{ controlledEntity->getCurrentConfigurationNode() };
 			try
 			{
 				configurationNode = controlledEntity->getCurrentConfigurationNode();
@@ -205,20 +205,14 @@ public:
 
 				auto const& entityNode = controlledEntity->getEntityNode();
 
-				auto const* const staticModel = entityNode.staticModel;
-				auto const* const dynamicModel = entityNode.dynamicModel;
+				auto const& staticModel = entityNode.staticModel;
+				auto const& dynamicModel = entityNode.dynamicModel;
 
 				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(entityID.getValue(), true, true));
-				if (staticModel)
-				{
-					labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel->vendorNameString));
-					labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel->modelNameString));
-				}
-				if (dynamicModel)
-				{
-					labelFirmwareVersionValue->setText(dynamicModel->firmwareVersion.data());
-					labelSerialNumberValue->setText(dynamicModel->serialNumber.data());
-				}
+				labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.vendorNameString));
+				labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.modelNameString));
+				labelFirmwareVersionValue->setText(dynamicModel.firmwareVersion.data());
+				labelSerialNumberValue->setText(dynamicModel.serialNumber.data());
 
 				_previousConfigurationIndex = configurationNode.descriptorIndex;
 			}
@@ -330,14 +324,14 @@ public:
 						if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamFormatInfo->getType())
 							continue;
 
-						auto* audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
-						if (streamFormatInfo && audioUnitDynModel)
+						auto& audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
+						if (streamFormatInfo)
 						{
 							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
 							auto const& streamFormatSampleRate = streamFormatInfo->getSamplingRate();
 
 							// get the 'media clock domain' sampling rate from the 'media clock master's entities audioUnit
-							auto const& mediaClockMasterSampleRate = audioUnitDynModel->currentSamplingRate;
+							auto const& mediaClockMasterSampleRate = audioUnitDynModel.currentSamplingRate;
 
 							// if the 'media clock master' audioUnit SR and the streamFormat SR do not match, we have found a conflict that the user needs to be warned about
 							hasSampleRateConflict = (mediaClockMasterSampleRate != streamFormatSampleRate);
@@ -429,14 +423,14 @@ public:
 				auto configurationNode = controlledEntity->getCurrentConfigurationNode();
 				for (auto const& streamOutput : configurationNode.streamOutputs)
 				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel.streamFormat);
 					auto const streamType = streamFormatInfo->getType();
 					if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
 					{
 						// skip clock stream
 						continue;
 					}
-					auto const streamLatency = streamOutput.second.dynamicModel->streamDynamicInfo ? (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
+					auto const streamLatency = streamOutput.second.dynamicModel.streamDynamicInfo ? (*streamOutput.second.dynamicModel.streamDynamicInfo).msrpAccumulatedLatency : decltype(_userSelectedLatency){ std::nullopt };
 					auto const latencyValuesValid = (streamLatency != std::nullopt && _userSelectedLatency != std::nullopt);
 					if (latencyValuesValid && *streamLatency != *_userSelectedLatency)
 					{
@@ -504,7 +498,7 @@ public:
 		comboBoxConfiguration->addItem(hive::modelsLibrary::helper::configurationName(controlledEntity, node), node.descriptorIndex);
 
 		// relevant Node:
-		if (node.dynamicModel->isActiveConfiguration && !_activeConfigurationIndex)
+		if (node.dynamicModel.isActiveConfiguration && !_activeConfigurationIndex)
 		{
 			_activeConfigurationIndex = node.descriptorIndex;
 		}
@@ -528,9 +522,9 @@ public:
 		{
 			for (auto const& inputAudioClusterKV : streamPortInputKV.second.audioClusters)
 			{
-				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
+				for (std::uint16_t channelIndex = 0u; channelIndex < inputAudioClusterKV.second.staticModel.channelCount; channelIndex++)
 				{
-					auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, inputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortInputKV.first, streamPortInputKV.second.staticModel->baseCluster };
+					auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, inputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortInputKV.first, streamPortInputKV.second.staticModel.baseCluster };
 					auto connectionInformation = channelConnectionManager.getChannelConnectionsReverse(_entityID, sourceChannelIdentification);
 
 					_deviceDetailsChannelTableModelReceive.addNode(connectionInformation);
@@ -542,9 +536,9 @@ public:
 		{
 			for (auto const& outputAudioClusterKV : streamPortOutputKV.second.audioClusters)
 			{
-				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel->channelCount; channelIndex++)
+				for (std::uint16_t channelIndex = 0u; channelIndex < outputAudioClusterKV.second.staticModel.channelCount; channelIndex++)
 				{
-					auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, outputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::OutputToInput, audioUnitIndex, streamPortOutputKV.first, streamPortOutputKV.second.staticModel->baseCluster };
+					auto sourceChannelIdentification = avdecc::ChannelIdentification{ *_previousConfigurationIndex, outputAudioClusterKV.first, channelIndex, avdecc::ChannelConnectionDirection::OutputToInput, audioUnitIndex, streamPortOutputKV.first, streamPortOutputKV.second.staticModel.baseCluster };
 					auto connectionInformation = channelConnectionManager.getChannelConnections(_entityID, sourceChannelIdentification);
 
 					_deviceDetailsChannelTableModelTransmit.addNode(connectionInformation);
@@ -563,7 +557,7 @@ public:
 			return;
 
 		// add the streaminput node to the model
-		_deviceDetailsInputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
+		_deviceDetailsInputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
 
 		// open the persistent editor for the just added streaminput
 		auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
@@ -580,7 +574,7 @@ public:
 			return;
 
 		// add the streamoutput node to the model
-		_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel->streamFormat);
+		_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
 
 		// open the persistent editor for the just added streamoutput
 		auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
@@ -610,7 +604,12 @@ public:
 	/**
 	* Ignored.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*parent*/, la::avdecc::controller::model::StreamPortNode const& /*node*/) noexcept override {}
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*parent*/, la::avdecc::controller::model::StreamPortInputNode const& /*node*/) noexcept override {}
+
+	/**
+	* Ignored.
+	*/
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::AudioUnitNode const* const /*parent*/, la::avdecc::controller::model::StreamPortOutputNode const& /*node*/) noexcept override {}
 
 	/**
 	* Ignored.
@@ -636,35 +635,33 @@ public:
 	 * Method to process every incoming redundantstream node.
 	 * This implementation takes the primary stream and adds the format of it to the model (StreamInput or -Output) used for StreamFormat tab and opens the corresponding persistent editor in the new row.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamInputNode const& node) noexcept override
 	{
-		if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		auto const& streamInputNode = static_cast<const la::avdecc::controller::model::StreamInputNode*>(node.primaryStream);
+
+		if (streamInputNode)
 		{
-			auto const& streamInputNode = static_cast<const la::avdecc::controller::model::StreamInputNode*>(node.primaryStream);
+			// add the streaminput node to the model
+			_deviceDetailsInputStreamFormatTableModel.addNode(streamInputNode->descriptorIndex, streamInputNode->descriptorType, streamInputNode->dynamicModel.streamFormat);
 
-			if (streamInputNode)
-			{
-				// add the streaminput node to the model
-				_deviceDetailsInputStreamFormatTableModel.addNode(streamInputNode->descriptorIndex, streamInputNode->descriptorType, streamInputNode->dynamicModel->streamFormat);
-
-				// open the persistent editor for the just added streaminput
-				auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-				tableViewInputStreamFormat->openPersistentEditor(modIdx);
-			}
+			// open the persistent editor for the just added streaminput
+			auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+			tableViewInputStreamFormat->openPersistentEditor(modIdx);
 		}
-		else if (node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamOutputNode const& node) noexcept override
+	{
+		auto const& streamOutputNode = static_cast<const la::avdecc::controller::model::StreamOutputNode*>(node.primaryStream);
+
+		if (streamOutputNode)
 		{
-			auto const& streamOutputNode = static_cast<const la::avdecc::controller::model::StreamOutputNode*>(node.primaryStream);
+			// add the streamoutput node to the model
+			_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutputNode->descriptorIndex, streamOutputNode->descriptorType, streamOutputNode->dynamicModel.streamFormat);
 
-			if (streamOutputNode)
-			{
-				// add the streamoutput node to the model
-				_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutputNode->descriptorIndex, streamOutputNode->descriptorType, streamOutputNode->dynamicModel->streamFormat);
-
-				// open the persistent editor for the just added streamoutput
-				auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-				tableViewOutputStreamFormat->openPersistentEditor(modIdx);
-			}
+			// open the persistent editor for the just added streamoutput
+			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+			tableViewOutputStreamFormat->openPersistentEditor(modIdx);
 		}
 	}
 
@@ -987,7 +984,7 @@ private:
 		auto controlledEntity = manager.getControlledEntity(_entityID);
 		if (controlledEntity)
 		{
-			la::avdecc::controller::model::ConfigurationNode configurationNode;
+			auto configurationNode = la::avdecc::controller::model::ConfigurationNode{ controlledEntity->getCurrentConfigurationNode() };
 			try
 			{
 				configurationNode = controlledEntity->getCurrentConfigurationNode();
@@ -1000,16 +997,16 @@ private:
 			auto latency = decltype(la::avdecc::entity::model::StreamDynamicInfo::msrpAccumulatedLatency){ std::nullopt };
 			for (auto const& streamOutput : configurationNode.streamOutputs)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel.streamFormat);
 				auto const streamType = streamFormatInfo->getType();
 				if (streamType == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
 				{
 					// skip clock stream
 					continue;
 				}
-				if (streamOutput.second.dynamicModel->streamDynamicInfo)
+				if (streamOutput.second.dynamicModel.streamDynamicInfo)
 				{
-					auto const streamLatency = (*streamOutput.second.dynamicModel->streamDynamicInfo).msrpAccumulatedLatency;
+					auto const streamLatency = (*streamOutput.second.dynamicModel.streamDynamicInfo).msrpAccumulatedLatency;
 					if (latency != streamLatency && latency != std::nullopt)
 					{
 						// unequal values
