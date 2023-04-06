@@ -627,6 +627,36 @@ private:
 		return item;
 	}
 
+	QString genDescriptorName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::LocalizedStringReference const& localizedDescription, QString const& name)
+	{
+		auto objName = hive::modelsLibrary::helper::localizedString(*controlledEntity, configurationIndex, localizedDescription);
+
+		// Only use name for current configuration (and all ConfigurationDescriptors)
+		if ((descriptorType == la::avdecc::entity::model::DescriptorType::Configuration || configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration) && !name.isEmpty())
+		{
+			objName = name;
+		}
+
+		return QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(descriptorType), QString::number(descriptorIndex), objName);
+	}
+	QString genDescriptorName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::LocalizedStringReference const& localizedDescription, la::avdecc::entity::model::AvdeccFixedString const& name)
+	{
+		auto qName = QString::fromStdString(name.data());
+		return genDescriptorName(controlledEntity, configurationIndex, descriptorType, descriptorIndex, localizedDescription, qName);
+	}
+	void updateName(NodeItem* item, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::LocalizedStringReference const& localizedDescription, QString const& name)
+	{
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		auto controlledEntity = manager.getControlledEntity(entityID);
+
+		// Filter configuration, we currently expand nodes only for current configuration
+		if (controlledEntity && configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration)
+		{
+			auto descName = genDescriptorName(controlledEntity.get(), configurationIndex, descriptorType, descriptorIndex, localizedDescription, name);
+			item->setData(0, Qt::DisplayRole, descName);
+		}
+	}
+
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		_currentConfigurationIndex = node.dynamicModel.currentConfiguration;
@@ -664,24 +694,20 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const* const parent, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
-		auto genName = [type = node.descriptorType, index = node.descriptorIndex](QString const& name)
-		{
-			return QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(type), QString::number(index), name);
-		};
-		auto* item = addItem(node.descriptorIndex, parent, &node, genName(hive::modelsLibrary::helper::configurationName(controlledEntity, node)));
+		auto descName = genDescriptorName(controlledEntity, node.descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
+		auto* item = addItem(node.descriptorIndex, parent, &node, descName);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::configurationNameChanged, item,
-			[this, genName, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& /*configurationName*/)
+			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& configurationName)
 			{
 				if (entityID == _controlledEntityID && configurationIndex == node.descriptorIndex)
 				{
 					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 					auto controlledEntity = manager.getControlledEntity(entityID);
-
 					if (controlledEntity)
 					{
-						auto name = genName(hive::modelsLibrary::helper::configurationName(controlledEntity.get(), node));
-						item->setData(0, Qt::DisplayRole, name);
+						auto descName = genDescriptorName(controlledEntity.get(), configurationIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, configurationName);
+						item->setData(0, Qt::DisplayRole, descName);
 					}
 				}
 			});
@@ -695,52 +721,25 @@ private:
 		}
 	}
 
-	template<class Node>
-	QString genName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, Node const& node)
-	{
-		auto objName = hive::modelsLibrary::helper::localizedString(*controlledEntity, node.staticModel.localizedDescription);
-
-		// Only use name for current configuration
-		if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !node.dynamicModel.objectName.empty())
-		{
-			objName = node.dynamicModel.objectName.data();
-		}
-
-		return QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), objName);
-	}
-	template<class Node>
-	void updateName(NodeItem* item, Node const& node, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex)
-	{
-		if (entityID == _controlledEntityID && descriptorType == node.descriptorType && descriptorIndex == node.descriptorIndex)
-		{
-			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto controlledEntity = manager.getControlledEntity(entityID);
-
-			// Filter configuration, we currently expand nodes only for current configuration
-			if (controlledEntity && configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration)
-			{
-				auto name = genName(controlledEntity.get(), configurationIndex, node);
-				item->setData(0, Qt::DisplayRole, name);
-			}
-		}
-	}
-
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
-		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::audioUnitNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& /*audioUnitName*/)
+			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& audioUnitName)
 			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::AudioUnit == node.descriptorType && audioUnitIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex, node.staticModel.localizedDescription, audioUnitName);
+				}
 			});
 	}
 
 	template<typename ParentNodeType>
 	void processStreamInputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, ParentNodeType const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept
 	{
-		auto const name = genName(controlledEntity, configurationIndex, node);
+		auto const name = genDescriptorName(controlledEntity, configurationIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(configurationIndex, parent, &node, name);
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
@@ -756,9 +755,12 @@ private:
 		}
 
 		connect(&manager, &hive::modelsLibrary::ControllerManager::streamNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
+			[this, item, node, confIndex = configurationIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& streamName)
 			{
-				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && descriptorType == node.descriptorType && streamIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, descriptorType, streamIndex, node.staticModel.localizedDescription, streamName);
+				}
 			});
 	}
 
@@ -774,13 +776,16 @@ private:
 	template<typename ParentNodeType>
 	void processStreamOutputNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, ParentNodeType const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept
 	{
-		auto const name = genName(controlledEntity, configurationIndex, node);
+		auto const name = genDescriptorName(controlledEntity, configurationIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(configurationIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& /*streamName*/)
+			[this, item, node, confIndex = configurationIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& streamName)
 			{
-				updateName(item, node, entityID, configurationIndex, descriptorType, streamIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && descriptorType == node.descriptorType && streamIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, descriptorType, streamIndex, node.staticModel.localizedDescription, streamName);
+				}
 			});
 	}
 
@@ -796,13 +801,16 @@ private:
 	template<typename NodeType>
 	void processJackNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, NodeType const& node) noexcept
 	{
-		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::jackNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::JackIndex const jackIndex, QString const& /*jackName*/)
+			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::JackIndex const jackIndex, QString const& jackName)
 			{
-				updateName(item, node, entityID, configurationIndex, descriptorType, jackIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && descriptorType == node.descriptorType && jackIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, descriptorType, jackIndex, node.staticModel.localizedDescription, jackName);
+				}
 			});
 	}
 
@@ -818,13 +826,16 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
-		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::avbInterfaceNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& /*avbInterfaceName*/)
+			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& avbInterfaceName)
 			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::AvbInterface == node.descriptorType && avbInterfaceIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, node.staticModel.localizedDescription, avbInterfaceName);
+				}
 			});
 	}
 
@@ -854,13 +865,16 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandGrandParent, la::avdecc::controller::model::AudioUnitNode const* const /*grandParent*/, la::avdecc::controller::model::StreamPortNode const* const parent, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
 	{
-		auto const name = genName(controlledEntity, grandGrandParent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, grandGrandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(grandGrandParent->descriptorIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::audioClusterNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& /*audioClusterName*/)
+			[this, item, node, confIndex = grandGrandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& audioClusterName)
 			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioCluster, audioClusterIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::AudioCluster == node.descriptorType && audioClusterIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioCluster, audioClusterIndex, node.staticModel.localizedDescription, audioClusterName);
+				}
 			});
 	}
 
@@ -872,38 +886,47 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::ControlNode const& node) noexcept override
 	{
-		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& /*controlName*/)
+			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
 			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Control, controlIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::Control == node.descriptorType && controlIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Control, controlIndex, node.staticModel.localizedDescription, controlName);
+				}
 			});
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
-		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockDomainNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& /*clockDomainName*/)
+			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& clockDomainName)
 			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::ClockDomain == node.descriptorType && clockDomainIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex, node.staticModel.localizedDescription, clockDomainName);
+				}
 			});
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::ClockDomainNode const* const parent, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
 	{
-		auto const name = genName(controlledEntity, grandParent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, grandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(grandParent->descriptorIndex, parent, &node, name);
 		auto const isCurrentConfiguration = grandParent->descriptorIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& /*clockSourceName*/)
+			[this, item, node, confIndex = grandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& clockSourceName)
 			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::ClockSource == node.descriptorType && clockSourceIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex, node.staticModel.localizedDescription, clockSourceName);
+				}
 			});
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceChanged, item,
@@ -924,13 +947,16 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
 	{
-		auto const name = genName(controlledEntity, parent->descriptorIndex, node);
+		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::memoryObjectNameChanged, item,
-			[this, item, node](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& /*memoryObjectName*/)
+			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& memoryObjectName)
 			{
-				updateName(item, node, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::MemoryObject, memoryObjectIndex);
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::MemoryObject == node.descriptorType && memoryObjectIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::MemoryObject, memoryObjectIndex, node.staticModel.localizedDescription, memoryObjectName);
+				}
 			});
 	}
 
