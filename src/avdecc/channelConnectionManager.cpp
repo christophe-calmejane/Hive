@@ -364,8 +364,8 @@ private:
 		{
 			try
 			{
-				auto redundantStreamOutputNode = controlledTalkerEntity->getRedundantStreamOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamVirtualIndex);
-				auto redundantStreamInputNode = controlledListenerEntity->getRedundantStreamInputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamVirtualIndex);
+				auto const& redundantStreamOutputNode = controlledTalkerEntity->getRedundantStreamOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamVirtualIndex);
+				auto const& redundantStreamInputNode = controlledListenerEntity->getRedundantStreamInputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamVirtualIndex);
 
 				auto redundantStreamOutputsIt = redundantStreamOutputNode.redundantStreams.begin();
 				auto redundantStreamInputsIt = redundantStreamInputNode.redundantStreams.begin();
@@ -397,7 +397,7 @@ private:
 		{
 			try
 			{
-				auto redundantStreamOutputNode = controlledTalkerEntity->getRedundantStreamOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamVirtualIndex);
+				auto const& redundantStreamOutputNode = controlledTalkerEntity->getRedundantStreamOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamVirtualIndex);
 				auto const& redundantOutputStreamsIt = redundantStreamOutputNode.redundantStreams.find(primaryTalkerStreamIndex);
 				if (redundantOutputStreamsIt != redundantStreamOutputNode.redundantStreams.end() && redundantOutputStreamsIt->second->staticModel.redundantStreams.size() > 0)
 				{
@@ -422,7 +422,7 @@ private:
 		{
 			try
 			{
-				auto redundantStreamInputNode = controlledListenerEntity->getRedundantStreamInputNode(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamVirtualIndex);
+				auto const& redundantStreamInputNode = controlledListenerEntity->getRedundantStreamInputNode(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamVirtualIndex);
 				auto const& redundantInputStreamsIt = redundantStreamInputNode.redundantStreams.find(primaryListenerStreamIndex);
 				if (redundantInputStreamsIt != redundantStreamInputNode.redundantStreams.end() && redundantInputStreamsIt->second->staticModel.redundantStreams.size() > 0)
 				{
