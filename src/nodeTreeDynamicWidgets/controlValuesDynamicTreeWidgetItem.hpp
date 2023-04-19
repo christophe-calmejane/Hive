@@ -101,7 +101,7 @@ public:
 					auto* widget = new WidgetType{};
 					parent->setItemWidget(item, 1, widget);
 
-					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
+					auto const range = static_cast<value_size>(staticVal.maximum - staticVal.minimum);
 					auto stepsCount = size_t{ 1 };
 					if (staticVal.step != value_size{ 0 })
 					{
@@ -237,7 +237,7 @@ template<class StaticValueType, class DynamicValueType>
 class ArrayControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
 	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
-	static constexpr auto UseSpinBox = std::conditional_t < std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type > ();
+	static constexpr auto UseSpinBox = std::conditional_t < std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type > (); // SpinBox only supports integral types up to 32 bits
 	using WidgetType = std::conditional_t<UseSpinBox, AecpCommandSpinBox<value_size>, AecpCommandComboBox<value_size>>;
 
 public:
