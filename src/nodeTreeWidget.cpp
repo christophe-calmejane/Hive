@@ -756,14 +756,6 @@ private:
 		auto const& dynamicModel = node.dynamicModel;
 		auto const valueType = staticModel.controlValueType.getType();
 
-		if (!staticModel.values)
-		{
-			auto* descriptorItem = new QTreeWidgetItem(q);
-			descriptorItem->setText(0, "Error");
-			descriptorItem->setText(1, "Invalid Descriptor");
-			return;
-		}
-
 		// Static model
 		{
 			auto* descriptorItem = new QTreeWidgetItem(q);
@@ -806,7 +798,7 @@ private:
 			{
 				auto* descriptorItem = new QTreeWidgetItem(q);
 				descriptorItem->setText(0, "Dynamic Info");
-				descriptorItem->setText(0, "Value Type Not Supported");
+				descriptorItem->setText(1, "Value Type Not Supported");
 			}
 		}
 	}
