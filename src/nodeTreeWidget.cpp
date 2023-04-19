@@ -1079,7 +1079,16 @@ public:
 	}
 
 	/** A label (readonly) item */
-	template<typename ValueType, typename std::enable_if_t<!std::is_same_v<QString, std::decay_t<ValueType>> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
+	template<typename ValueType, typename std::enable_if_t<std::is_arithmetic_v<ValueType> && !std::is_same_v<QString, std::decay_t<ValueType>> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
+	QTreeWidgetItem* addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
+	{
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+		item->setText(1, QString::number(itemValue));
+		//item->setData(1, Qt::DisplayRole, QVariant::fromValue<ValueType>(itemValue));
+		return item;
+	}
+	template<typename ValueType, typename std::enable_if_t<!std::is_arithmetic_v<ValueType> && !std::is_same_v<QString, std::decay_t<ValueType>> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
 	QTreeWidgetItem* addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
