@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Mac Address field in entities list](https://github.com/christophe-calmejane/Hive/issues/38)
 - [ClockDomain locked state in entities list](https://github.com/christophe-calmejane/Hive/issues/133)
 - Support for JACK Inputs and JACK Outputs
+- Support for CONTROLs at non-configuration level
 
 ### Changed
 - Complete rework of the `entities list`
