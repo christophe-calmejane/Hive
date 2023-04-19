@@ -1160,32 +1160,6 @@ private:
 	virtual std::vector<la::avdecc::entity::model::StreamIndex> findOutputClockStreamIndexInConfiguration(la::avdecc::controller::model::ConfigurationNode const& config) const noexcept
 	{
 		std::vector<la::avdecc::entity::model::StreamIndex> streamIndexes;
-		for (auto const& streamOutput : config.redundantStreamOutputs)
-		{
-			if (streamOutput.second.primaryStream)
-			{
-				for (auto const& streamFormat : streamOutput.second.primaryStream->staticModel.formats)
-				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
-					auto streamType = streamFormatInfo->getType();
-					if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
-					{
-						auto primaryIndex = streamOutput.second.primaryStream->descriptorIndex;
-						streamIndexes.push_back(primaryIndex);
-
-						for (auto const& redundantStream : streamOutput.second.redundantStreams)
-						{
-							// the primary is included in the redundantStreams
-							if (primaryIndex != redundantStream.first)
-							{
-								streamIndexes.push_back(redundantStream.first);
-							}
-						}
-						return streamIndexes;
-					}
-				}
-			}
-		}
 
 		for (auto const& streamOutput : config.streamOutputs)
 		{
@@ -1210,32 +1184,7 @@ private:
 	virtual std::vector<la::avdecc::entity::model::StreamIndex> findInputClockStreamIndexInConfiguration(la::avdecc::controller::model::ConfigurationNode const& config) const noexcept
 	{
 		std::vector<la::avdecc::entity::model::StreamIndex> streamIndexes;
-		for (auto const& streamInput : config.redundantStreamInputs)
-		{
-			if (streamInput.second.primaryStream)
-			{
-				for (auto const& streamFormat : streamInput.second.primaryStream->staticModel.formats)
-				{
-					auto const streamFormatInfo2 = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
-					auto streamType = streamFormatInfo2->getType();
-					if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
-					{
-						auto primaryIndex = streamInput.second.primaryStream->descriptorIndex;
-						streamIndexes.push_back(primaryIndex);
 
-						for (auto const& redundantStream : streamInput.second.redundantStreams)
-						{
-							// the primary is included in the redundantStreams
-							if (primaryIndex != redundantStream.first)
-							{
-								streamIndexes.push_back(redundantStream.first);
-							}
-						}
-						return streamIndexes;
-					}
-				}
-			}
-		}
 		for (auto const& streamInput : config.streamInputs)
 		{
 			auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel.streamFormat);

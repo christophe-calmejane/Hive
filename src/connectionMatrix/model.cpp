@@ -2384,14 +2384,14 @@ public:
 					redundantOutput->setName(hive::modelsLibrary::helper::redundantOutputName(redundantIndex));
 				}
 
-				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
+				for (auto const streamIndex : redundantNode.redundantStreams)
 				{
-					auto const avbInterfaceIndex{ streamNode->staticModel.avbInterfaceIndex };
+					auto const& streamNode = controlledEntity.getStreamOutputNode(configurationIndex, streamIndex);
+					auto const avbInterfaceIndex{ streamNode.staticModel.avbInterfaceIndex };
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* redundantOutputStream = StreamNode::createRedundantOutputNode(*redundantOutput, streamIndex, avbInterfaceIndex);
-					auto const* const streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(streamNode);
-					fillStreamOutputNode(*redundantOutputStream, configurationIndex, streamIndex, avbInterfaceIndex, *streamOutputNode, avbInterfaceNode);
+					fillStreamOutputNode(*redundantOutputStream, configurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 
@@ -2534,16 +2534,15 @@ public:
 					redundantInput->setName(hive::modelsLibrary::helper::redundantInputName(redundantIndex));
 				}
 
-				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
+				for (auto const streamIndex : redundantNode.redundantStreams)
 				{
-					auto const avbInterfaceIndex{ streamNode->staticModel.avbInterfaceIndex };
+					auto const& streamNode = controlledEntity.getStreamInputNode(configurationIndex, streamIndex);
+					auto const avbInterfaceIndex{ streamNode.staticModel.avbInterfaceIndex };
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* redundantInputStream = StreamNode::createRedundantInputNode(*redundantInput, streamIndex, avbInterfaceIndex);
 					redundantInputStream->setName(hive::modelsLibrary::helper::inputStreamName(controlledEntity, streamIndex));
-
-					auto const* const streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(streamNode);
-					fillStreamInputNode(*redundantInputStream, configurationIndex, streamIndex, avbInterfaceIndex, *streamInputNode, avbInterfaceNode);
+					fillStreamInputNode(*redundantInputStream, configurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 

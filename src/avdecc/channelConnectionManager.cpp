@@ -198,7 +198,7 @@ private:
 			{
 				for (auto const& redundantStreamOutput : configNode.redundantStreamOutputs)
 				{
-					if (redundantStreamOutput.second.primaryStream->descriptorIndex == streamIdentification.streamIndex)
+					if (redundantStreamOutput.second.primaryStreamIndex == streamIdentification.streamIndex)
 					{
 						return true;
 					}
@@ -228,7 +228,7 @@ private:
 			{
 				for (auto const& redundantStreamInput : configNode.redundantStreamInputs)
 				{
-					if (redundantStreamInput.second.primaryStream->descriptorIndex == streamIdentification.streamIndex)
+					if (redundantStreamInput.second.primaryStreamIndex == streamIdentification.streamIndex)
 					{
 						return true;
 					}
@@ -259,7 +259,7 @@ private:
 				{
 					for (auto const& [virtualIndex, redundantStreamNode] : configNode.redundantStreamInputs)
 					{
-						for (auto const& [streamIndex, streamNode] : redundantStreamNode.redundantStreams)
+						for (auto const streamIndex : redundantStreamNode.redundantStreams)
 						{
 							if (streamIndex == streamIdentification.streamIndex)
 							{
@@ -299,7 +299,7 @@ private:
 				{
 					for (auto const& [virtualIndex, redundantStreamNode] : configNode.redundantStreamOutputs)
 					{
-						for (auto const& [streamIndex, streamNode] : redundantStreamNode.redundantStreams)
+						for (auto const streamIndex : redundantStreamNode.redundantStreams)
 						{
 							if (streamIndex == streamIdentification.streamIndex)
 							{
@@ -326,7 +326,7 @@ private:
 		{
 			try
 			{
-				return controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, virtualIndex).primaryStream->descriptorIndex;
+				return controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, virtualIndex).primaryStreamIndex;
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
@@ -343,7 +343,7 @@ private:
 		{
 			try
 			{
-				return controlledEntity->getRedundantStreamInputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, virtualIndex).primaryStream->descriptorIndex;
+				return controlledEntity->getRedundantStreamInputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, virtualIndex).primaryStreamIndex;
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
@@ -372,7 +372,7 @@ private:
 
 				while (redundantStreamOutputsIt != redundantStreamOutputNode.redundantStreams.end() && redundantStreamInputsIt != redundantStreamInputNode.redundantStreams.end())
 				{
-					result.push_back(std::make_pair(redundantStreamOutputsIt->first, redundantStreamInputsIt->first));
+					result.push_back(std::make_pair(*redundantStreamOutputsIt, *redundantStreamInputsIt));
 
 
 					redundantStreamOutputsIt++;
@@ -399,9 +399,9 @@ private:
 			{
 				auto const& redundantStreamOutputNode = controlledTalkerEntity->getRedundantStreamOutputNode(controlledTalkerEntity->getCurrentConfigurationNode().descriptorIndex, talkerStreamVirtualIndex);
 				auto const& redundantOutputStreamsIt = redundantStreamOutputNode.redundantStreams.find(primaryTalkerStreamIndex);
-				if (redundantOutputStreamsIt != redundantStreamOutputNode.redundantStreams.end() && redundantOutputStreamsIt->second->staticModel.redundantStreams.size() > 0)
+				if (redundantOutputStreamsIt != redundantStreamOutputNode.redundantStreams.end())
 				{
-					result = std::make_pair(listenerStreamIndex, *redundantOutputStreamsIt->second->staticModel.redundantStreams.begin());
+					result = std::make_pair(listenerStreamIndex, *redundantOutputStreamsIt);
 				}
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -424,9 +424,9 @@ private:
 			{
 				auto const& redundantStreamInputNode = controlledListenerEntity->getRedundantStreamInputNode(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamVirtualIndex);
 				auto const& redundantInputStreamsIt = redundantStreamInputNode.redundantStreams.find(primaryListenerStreamIndex);
-				if (redundantInputStreamsIt != redundantStreamInputNode.redundantStreams.end() && redundantInputStreamsIt->second->staticModel.redundantStreams.size() > 0)
+				if (redundantInputStreamsIt != redundantStreamInputNode.redundantStreams.end())
 				{
-					result = std::make_pair(talkerStreamIndex, *redundantInputStreamsIt->second->staticModel.redundantStreams.begin());
+					result = std::make_pair(talkerStreamIndex, *redundantInputStreamsIt);
 				}
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -511,9 +511,9 @@ private:
 		auto redundantToPrimListenerStreamMap = std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamIndex>{}; // map of redundant stream to its associated primary stream
 		for (auto const& redundantStreamInput : targetConfigurationNode.redundantStreamInputs)
 		{
-			auto primaryStreamIndex = redundantStreamInput.second.primaryStream->descriptorIndex;
+			auto primaryStreamIndex = redundantStreamInput.second.primaryStreamIndex;
 			auto redundantStreams = std::vector<la::avdecc::entity::model::StreamIndex>{};
-			for (auto const& [redundantStreamIndex, redundantStream] : redundantStreamInput.second.redundantStreams)
+			for (auto const redundantStreamIndex : redundantStreamInput.second.redundantStreams)
 			{
 				if (redundantStreamIndex != primaryStreamIndex)
 				{
@@ -698,7 +698,7 @@ private:
 											{
 												// if we land in here the primary is not connected, but a secondary is.
 												primaryListenerStreamIndex = streamIndex->second;
-												primaryTalkerStreamIndex = controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
+												primaryTalkerStreamIndex = controlledEntity->getRedundantStreamOutputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStreamIndex;
 											}
 										}
 
@@ -940,9 +940,9 @@ private:
 			// if the primary is not connected but the secondary is, the channel connection is still returned
 			for (auto const& redundantStreamOutput : targetConfigurationNode.redundantStreamOutputs)
 			{
-				auto primaryStreamIndex = redundantStreamOutput.second.primaryStream->descriptorIndex;
+				auto primaryStreamIndex = redundantStreamOutput.second.primaryStreamIndex;
 				auto redundantStreams = std::vector<la::avdecc::entity::model::StreamIndex>{};
-				for (auto const& [redundantStreamIndex, redundantStream] : redundantStreamOutput.second.redundantStreams)
+				for (auto const redundantStreamIndex : redundantStreamOutput.second.redundantStreams)
 				{
 					if (redundantStreamIndex != primaryStreamIndex)
 					{
@@ -1001,7 +1001,7 @@ private:
 								{
 									// if we land in here the primary is not connected, but a secundary is.
 									primaryTalkerStreamIndex = streamIndex->second;
-									primaryListenerStreamIndex = controlledEntity->getRedundantStreamInputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStream->descriptorIndex;
+									primaryListenerStreamIndex = controlledEntity->getRedundantStreamInputNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, *connectionInformation->sourceVirtualIndex).primaryStreamIndex;
 								}
 							}
 
@@ -1073,14 +1073,15 @@ private:
 	{
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
+		auto streams = std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>{};
 
 		if (!controlledEntity)
 		{
-			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+			return streams;
 		}
 		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) || !controlledEntity->hasAnyConfiguration())
 		{
-			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+			return streams;
 		}
 
 		auto configurationNode = la::avdecc::controller::model::ConfigurationNode{ controlledEntity->getCurrentConfigurationNode() };
@@ -1090,17 +1091,23 @@ private:
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{
-			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+			return streams;
 		}
 
 		for (auto const& redundantStreamOutput : configurationNode.redundantStreamOutputs)
 		{
-			if (redundantStreamOutput.second.primaryStream->descriptorIndex == primaryStreamIndex)
+			if (redundantStreamOutput.second.primaryStreamIndex == primaryStreamIndex)
 			{
-				return redundantStreamOutput.second.redundantStreams;
+				for (auto const streamIndex : redundantStreamOutput.second.redundantStreams)
+				{
+					if (auto const streamIt = configurationNode.streamOutputs.find(streamIndex); streamIt != configurationNode.streamOutputs.end())
+					{
+						streams.insert({ streamIndex, &streamIt->second });
+					}
+				}
 			}
 		}
-		return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		return streams;
 	}
 
 	/**
@@ -1110,14 +1117,15 @@ private:
 	{
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityId);
+		auto streams = std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>{};
 
 		if (!controlledEntity)
 		{
-			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+			return streams;
 		}
 		if (!controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) || !controlledEntity->hasAnyConfiguration())
 		{
-			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+			return streams;
 		}
 
 		auto configurationNode = la::avdecc::controller::model::ConfigurationNode{ controlledEntity->getCurrentConfigurationNode() };
@@ -1127,17 +1135,23 @@ private:
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
 		{
-			return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+			return streams;
 		}
 
 		for (auto const& redundantStreamInput : configurationNode.redundantStreamInputs)
 		{
-			if (redundantStreamInput.second.primaryStream->descriptorIndex == primaryStreamIndex)
+			if (redundantStreamInput.second.primaryStreamIndex == primaryStreamIndex)
 			{
-				return redundantStreamInput.second.redundantStreams;
+				for (auto const streamIndex : redundantStreamInput.second.redundantStreams)
+				{
+					if (auto const streamIt = configurationNode.streamInputs.find(streamIndex); streamIt != configurationNode.streamInputs.end())
+					{
+						streams.insert({ streamIndex, &streamIt->second });
+					}
+				}
 			}
 		}
-		return std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*>();
+		return streams;
 	}
 
 
@@ -1240,7 +1254,7 @@ private:
 						std::set<la::avdecc::entity::model::StreamIndex> relevantStreamIndexes;
 						for (auto const& redundantStreamOutput : targetConfigurationNode.redundantStreamInputs)
 						{
-							relevantStreamIndexes.insert(redundantStreamOutput.second.primaryStream->descriptorIndex);
+							relevantStreamIndexes.insert(redundantStreamOutput.second.primaryStreamIndex);
 						}
 						for (auto const& streamOutput : targetConfigurationNode.streamInputs)
 						{
@@ -3427,7 +3441,7 @@ private:
 								auto const configIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 								auto const& redundantListenerStreamNode = controlledEntity->getRedundantStreamInputNode(configIndex, *virtualListenerIndex);
 								bool atLeastOneConnected = false;
-								for (auto const& [streamIndex, streamNode] : redundantListenerStreamNode.redundantStreams)
+								for (auto const streamIndex : redundantListenerStreamNode.redundantStreams)
 								{
 									if (controlledEntity->getStreamInputNode(configIndex, streamIndex).dynamicModel.connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
 									{
@@ -3512,7 +3526,7 @@ private:
 									auto const configIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 									auto const& redundantListenerStreamNode = controlledEntity->getRedundantStreamInputNode(configIndex, *virtualListenerIndex);
 									bool atLeastOneConnected = false;
-									for (auto const& [redundantListenerStreamIndex, streamNode] : redundantListenerStreamNode.redundantStreams)
+									for (auto const redundantListenerStreamIndex : redundantListenerStreamNode.redundantStreams)
 									{
 										if (controlledEntity->getStreamInputNode(configIndex, redundantListenerStreamIndex).dynamicModel.connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
 										{

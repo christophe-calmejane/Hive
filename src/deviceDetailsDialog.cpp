@@ -48,7 +48,7 @@
 * Holds the state of the changes until the apply button is pressed, then uses the hive::modelsLibrary::ControllerManager class to
 * write the changes to the device.
 */
-class DeviceDetailsDialogImpl final : private Ui::DeviceDetailsDialog, public QObject, public la::avdecc::controller::model::EntityModelVisitor
+class DeviceDetailsDialogImpl final : private Ui::DeviceDetailsDialog, public QObject, public la::avdecc::controller::model::DefaultedEntityModelVisitor
 {
 private:
 	::DeviceDetailsDialog* _dialog;
@@ -635,14 +635,12 @@ public:
 	 * Method to process every incoming redundantstream node.
 	 * This implementation takes the primary stream and adds the format of it to the model (StreamInput or -Output) used for StreamFormat tab and opens the corresponding persistent editor in the new row.
 	*/
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamInputNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::RedundantStreamNode const* const parent, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 	{
-		auto const& streamInputNode = static_cast<const la::avdecc::controller::model::StreamInputNode*>(node.primaryStream);
-
-		if (streamInputNode)
+		if (node.descriptorIndex == parent->primaryStreamIndex)
 		{
 			// add the streaminput node to the model
-			_deviceDetailsInputStreamFormatTableModel.addNode(streamInputNode->descriptorIndex, streamInputNode->descriptorType, streamInputNode->dynamicModel.streamFormat);
+			_deviceDetailsInputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
 
 			// open the persistent editor for the just added streaminput
 			auto modIdx = _deviceDetailsInputStreamFormatTableModel.index(_deviceDetailsInputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
@@ -650,14 +648,12 @@ public:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::RedundantStreamOutputNode const& node) noexcept override
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::RedundantStreamNode const* const parent, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
 	{
-		auto const& streamOutputNode = static_cast<const la::avdecc::controller::model::StreamOutputNode*>(node.primaryStream);
-
-		if (streamOutputNode)
+		if (node.descriptorIndex == parent->primaryStreamIndex)
 		{
 			// add the streamoutput node to the model
-			_deviceDetailsOutputStreamFormatTableModel.addNode(streamOutputNode->descriptorIndex, streamOutputNode->descriptorType, streamOutputNode->dynamicModel.streamFormat);
+			_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
 
 			// open the persistent editor for the just added streamoutput
 			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());

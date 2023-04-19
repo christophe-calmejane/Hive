@@ -358,6 +358,68 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildClusterMappings(la::avdecc::c
 	return std::make_pair(clusterMappings, clusterMatrixNodes);
 }
 
+template<class StreamNodeType, class RedundantStreamNodeType, class StreamPortNodeType>
+std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity::model::StreamIndex const streamIndex, std::map<la::avdecc::entity::model::StreamIndex, StreamNodeType> const& streamNodes, std::map<la::avdecc::controller::model::VirtualIndex, RedundantStreamNodeType> const& redundantStreamNodes, StreamPortNodeType const& streamPortNode)
+{
+	auto streamNodesToDisplay = std::vector<StreamNodeType const*>{};
+
+	auto const isValidClockDomain = [](auto const& streamPortNode, auto const& streamNode)
+	{
+		return streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex;
+	};
+
+	auto const isValidStreamFormat = [](auto const& streamNode)
+	{
+		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel.streamFormat);
+
+		return sfi->getChannelsCount() > 0;
+	};
+
+	auto const checkAddStream = [&isValidClockDomain, &isValidStreamFormat, &streamNodesToDisplay](auto const streamIndex, auto const& streamPortNode, auto const& streamNode, auto const& redundantStreamNodes)
+	{
+		if (isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
+		{
+			// Add single Stream
+			if (!streamNode.isRedundant)
+			{
+				streamNodesToDisplay.push_back(&streamNode);
+			}
+			else
+			{
+				// Add primary stream of a Redundant Set
+				for (auto const& redundantStreamKV : redundantStreamNodes)
+				{
+					auto const& redundantStreamNode = redundantStreamKV.second;
+					if (redundantStreamNode.primaryStreamIndex == streamIndex)
+					{
+						streamNodesToDisplay.push_back(&streamNode);
+					}
+				}
+			}
+		}
+	};
+
+	if (streamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())
+	{
+		auto const& streamNode = streamNodes.at(streamIndex);
+
+		if (isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
+		{
+			checkAddStream(streamIndex, streamPortNode, streamNode, redundantStreamNodes);
+		}
+	}
+	else
+	{
+		// Build list of StreamInput (single and primary)
+		for (auto const& [strIndex, strNode] : streamNodes)
+		{
+			checkAddStream(strIndex, streamPortNode, strNode, redundantStreamNodes);
+		}
+	}
+
+	return streamNodesToDisplay;
+}
+
 void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
 {
 	if (AVDECC_ASSERT_WITH_RET(streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput || streamIndex == la::avdecc::entity::model::getInvalidDescriptorIndex(), "StreamPortInput shall not specify a StreamIndex"))
@@ -378,69 +440,10 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 				NodeMappings streamMappings;
 				NodeMappings clusterMappings;
 
-				auto const isValidClockDomain = [](auto const& streamPortNode, auto const& streamNode)
-				{
-					return streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex;
-				};
-
-				auto const isValidStreamFormat = [](auto const& streamNode)
-				{
-					auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel.streamFormat);
-
-					return sfi->getChannelsCount() > 0;
-				};
-
 				if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 				{
 					auto const& streamPortNode = entity->getStreamPortInputNode(entityNode.dynamicModel.currentConfiguration, streamPortIndex);
-					std::vector<la::avdecc::controller::model::StreamInputNode const*> streamNodes;
-
-					if (streamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())
-					{
-						// Insert single StreamInput to list
-						auto const& streamNode = configurationNode.streamInputs.at(streamIndex);
-						if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
-						{
-							streamNodes.push_back(&streamNode);
-						}
-
-						// Insert single primary stream of a Redundant Set to list
-						for (auto const& redundantStreamKV : configurationNode.redundantStreamInputs)
-						{
-							auto const& redundantStreamNode = redundantStreamKV.second;
-							auto const* const primRedundantStreamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
-
-							// we use the redundantStreams to check if our current streamIndex is either prim or sec of it. For mappings edit, we only use prim though.
-							if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStreamFormat(*primRedundantStreamNode) && isValidClockDomain(streamPortNode, *primRedundantStreamNode))
-							{
-								streamNodes.push_back(primRedundantStreamNode);
-								break;
-							}
-						}
-					}
-					else
-					{
-						// Build list of StreamInput
-						for (auto const& streamKV : configurationNode.streamInputs)
-						{
-							auto const& streamNode = streamKV.second;
-							if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
-							{
-								streamNodes.push_back(&streamNode);
-							}
-						}
-
-						// Add primary stream of a Redundant Set
-						for (auto const& redundantStreamKV : configurationNode.redundantStreamInputs)
-						{
-							auto const& redundantStreamNode = redundantStreamKV.second;
-							auto const* const streamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
-							if (isValidStreamFormat(*streamNode) && isValidClockDomain(streamPortNode, *streamNode))
-							{
-								streamNodes.push_back(streamNode);
-							}
-						}
-					}
+					auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamInputs, configurationNode.redundantStreamInputs, streamPortNode);
 
 					// Build mappingMatrix vectors
 					auto clusterResult = buildClusterMappings(entity, streamPortNode);
@@ -458,52 +461,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 				else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 				{
 					auto const& streamPortNode = entity->getStreamPortOutputNode(entityNode.dynamicModel.currentConfiguration, streamPortIndex);
-					std::vector<la::avdecc::controller::model::StreamOutputNode const*> streamNodes;
-
-					if (streamIndex != la::avdecc::entity::model::getInvalidDescriptorIndex())
-					{
-						// Insert single StreamOutput to list
-						auto const& streamNode = configurationNode.streamOutputs.at(streamIndex);
-						if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
-							streamNodes.push_back(&streamNode);
-
-						// Insert single primary stream of a Redundant Set to list
-						for (auto const& redundantStreamKV : configurationNode.redundantStreamOutputs)
-						{
-							auto const& redundantStreamNode = redundantStreamKV.second;
-							auto const* const primRedundantStreamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
-
-							// we use the redundantStreams to check if our current streamIndex is either prim or sec of it. For mappings edit, we only use prim though.
-							if (redundantStreamNode.redundantStreams.count(streamIndex) && isValidStreamFormat(*primRedundantStreamNode) && isValidClockDomain(streamPortNode, *primRedundantStreamNode))
-							{
-								streamNodes.push_back(primRedundantStreamNode);
-								break;
-							}
-						}
-					}
-					else
-					{
-						// Build list of StreamOutput
-						for (auto const& streamKV : configurationNode.streamOutputs)
-						{
-							auto const& streamNode = streamKV.second;
-							if (!streamNode.isRedundant && isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
-							{
-								streamNodes.push_back(&streamNode);
-							}
-						}
-
-						// Add primary stream of a Redundant Set
-						for (auto const& redundantStreamKV : configurationNode.redundantStreamOutputs)
-						{
-							auto const& redundantStreamNode = redundantStreamKV.second;
-							auto const* const streamNode = static_cast<decltype(streamNodes)::value_type>(redundantStreamNode.primaryStream);
-							if (isValidStreamFormat(*streamNode) && isValidClockDomain(streamPortNode, *streamNode))
-							{
-								streamNodes.push_back(streamNode);
-							}
-						}
-					}
+					auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamOutputs, configurationNode.redundantStreamOutputs, streamPortNode);
 
 					// Build mappingMatrix vectors
 					auto clusterResult = buildClusterMappings(entity, streamPortNode);

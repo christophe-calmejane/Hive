@@ -657,6 +657,7 @@ private:
 		}
 	}
 
+	// la::avdecc::controller::model::EntityModelVisitor overrides
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		_currentConfigurationIndex = node.dynamicModel.currentConfiguration;

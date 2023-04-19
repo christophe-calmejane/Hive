@@ -41,7 +41,7 @@ public:
 
 	class EntityDataCache
 	{
-		class InitVisitor : public la::avdecc::controller::model::EntityModelVisitor
+		class InitVisitor : public la::avdecc::controller::model::DefaultedEntityModelVisitor
 		{
 		public:
 			InitVisitor(EntityDataCache& entityCache)
@@ -50,7 +50,7 @@ public:
 			}
 
 		protected:
-			// la::avdecc::controller::model::EntityModelVisitor overrides
+			// la::avdecc::controller::model::DefaultedEntityModelVisitor overrides
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityNode const& /*node*/) noexcept override
 			{
 				// Initialize internal counter value, always setting lastClearCount to 0 (Statistics counters always start at 0 in the Controller, contrary to endpoint Counters) so that we directly see any error during enumeration
@@ -90,7 +90,7 @@ public:
 			EntityDataCache& _entityCache;
 		};
 
-		class ClearCounterVisitor : public la::avdecc::controller::model::EntityModelVisitor
+		class ClearCounterVisitor : public la::avdecc::controller::model::DefaultedEntityModelVisitor
 		{
 		public:
 			ClearCounterVisitor(ControllerManager& manager, EntityDataCache& entityCache)
