@@ -54,7 +54,7 @@ private:
 	virtual void updateValues(la::avdecc::entity::model::ControlValues const& controlValues) noexcept = 0;
 };
 
-/** Linear Values */
+/** Linear Values - Clause 7.3.5.2.1 */
 template<class StaticValueType, class DynamicValueType>
 class LinearControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
@@ -203,7 +203,7 @@ private:
 			if (controlValues.size() != _widgets.size())
 			{
 				// This should probably be detected by the AVDECC library
-				LOG_HIVE_WARN("ControlValues update not valid: Static/Dynamic count mismatch");
+				LOG_HIVE_WARN("ControlValues update not valid: Dynamic count mismatch");
 				return;
 			}
 
@@ -232,7 +232,142 @@ private:
 	std::vector<QWidget*> _widgets{};
 };
 
-/** Array Values */
+/** Selector Values - Clause 7.3.5.2.2 */
+template<class StaticValueType, class DynamicValueType>
+class SelectorControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
+{
+	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
+	using WidgetType = AecpCommandComboBox<value_size>;
+
+public:
+	SelectorControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
+		: ControlValuesDynamicTreeWidgetItem{ entityID, controlIndex, staticModel, dynamicModel, parent }
+	{
+		_isReadOnly = staticModel.controlValueType.isReadOnly();
+
+		try
+		{
+			auto const staticValue = staticModel.values.getValues<StaticValueType>();
+			auto const dynamicValue = dynamicModel.values.getValues<DynamicValueType>();
+			if (dynamicValue.countValues() != 1)
+			{
+				LOG_HIVE_WARN("ControlValues not valid: Dynamic count is not equal to 1");
+				return;
+			}
+
+			auto* valueItem = new QTreeWidgetItem(this);
+			valueItem->setText(0, "Current Value");
+
+			if (_isReadOnly)
+			{
+				auto* label = new QLabel(QString::number(dynamicValue.currentValue));
+				parent->setItemWidget(valueItem, 1, label);
+				_widget = label;
+			}
+			else
+			{
+				auto* widget = new WidgetType{};
+				parent->setItemWidget(valueItem, 1, widget);
+
+
+				{
+					auto data = typename std::remove_pointer_t<decltype(widget)>::Data{};
+					for (auto const& option : staticValue.options)
+					{
+						data.insert(option);
+					}
+					widget->setAllData(data,
+						[](auto const& value)
+						{
+							return QString::number(value);
+						});
+				}
+
+				// Send changes
+				widget->setDataChangedHandler(
+					[this, widget](auto const& previousValue, auto const& newValue)
+					{
+						sendControlValues(widget, previousValue);
+					});
+
+				_widget = widget;
+			}
+
+
+			_isValid = true;
+
+			// Update now
+			updateValues(dynamicModel.values);
+		}
+		catch (...)
+		{
+		}
+	}
+
+private:
+	void sendControlValues(WidgetType* const changedWidget, value_size const previousValue) noexcept
+	{
+		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
+		{
+			auto values = DynamicValueType{};
+			{
+				auto const* widget = static_cast<WidgetType const*>(_widget);
+				values.currentValue = static_cast<decltype(DynamicValueType::currentValue)>(widget->getCurrentData());
+			}
+			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) },
+				[this, changedWidget](la::avdecc::UniqueIdentifier const /*entityID*/)
+				{
+					changedWidget->setEnabled(false);
+				},
+				[this, changedWidget, previousValue](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+				{
+					QMetaObject::invokeMethod(this,
+						[this, changedWidget, previousValue, status]()
+						{
+							if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+							{
+								changedWidget->setCurrentData(previousValue);
+
+								QMessageBox::warning(changedWidget, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(hive::modelsLibrary::ControllerManager::AecpCommandType::SetControl) + "<//>/ failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+							}
+							changedWidget->setEnabled(true);
+						});
+				});
+		}
+	}
+
+	virtual void updateValues(la::avdecc::entity::model::ControlValues const& controlValues) noexcept override
+	{
+		if (_isValid)
+		{
+			if (controlValues.size() != 1u)
+			{
+				// This should probably be detected by the AVDECC library
+				LOG_HIVE_WARN("ControlValues update not valid: Dynamic count is not equal to 1");
+				return;
+			}
+
+			auto const& dynamicValue = controlValues.getValues<DynamicValueType>();
+
+			if (_isReadOnly)
+			{
+				auto* label = static_cast<QLabel*>(_widget);
+				label->setText(QString::number(dynamicValue.currentValue));
+			}
+			else
+			{
+				auto* widget = static_cast<WidgetType*>(_widget);
+				widget->setCurrentData(dynamicValue.currentValue);
+			}
+		}
+	}
+
+	bool _isValid{ false };
+	bool _isReadOnly{ false };
+	QWidget* _widget{};
+};
+
+/** Array Values - Clause 7.3.5.2.3 */
 template<class StaticValueType, class DynamicValueType>
 class ArrayControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
@@ -370,7 +505,7 @@ private:
 			if (controlValues.size() != _widgets.size())
 			{
 				// This should probably be detected by the AVDECC library
-				LOG_HIVE_WARN("ControlValues update not valid: Static/Dynamic count mismatch");
+				LOG_HIVE_WARN("ControlValues update not valid: Dynamic count mismatch");
 				return;
 			}
 
@@ -399,7 +534,7 @@ private:
 	std::vector<QWidget*> _widgets{};
 };
 
-/** UTF-8 String Value */
+/** UTF-8 String Value - Clause 7.3.5.2.4 */
 class UTF8ControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
 	//using value_size = typename DynamicValueType::control_value_details_traits::size_type;
@@ -465,10 +600,11 @@ private:
 		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
 		{
 			auto values = DynamicValueType{};
-
-			auto const* widget = static_cast<WidgetType const*>(_widget);
-			auto data = widget->getCurrentData().toUtf8();
-			std::memcpy(values.currentValue.data(), data.constData(), std::min(static_cast<size_t>(data.size()), values.currentValue.size()));
+			{
+				auto const* widget = static_cast<WidgetType const*>(_widget);
+				auto data = widget->getCurrentData().toUtf8();
+				std::memcpy(values.currentValue.data(), data.constData(), std::min(static_cast<size_t>(data.size()), values.currentValue.size()));
+			}
 			hive::modelsLibrary::ControllerManager::getInstance().setControlValues(_entityID, _controlIndex, la::avdecc::entity::model::ControlValues{ std::move(values) },
 				[this, changedWidget](la::avdecc::UniqueIdentifier const /*entityID*/)
 				{
@@ -498,12 +634,12 @@ private:
 			if (controlValues.size() != 1u)
 			{
 				// This should probably be detected by the AVDECC library
-				LOG_HIVE_WARN("ControlValues update not valid: Static/Dynamic count mismatch");
+				LOG_HIVE_WARN("ControlValues update not valid: Dynamic count is not equal to 1");
 				return;
 			}
 
-			auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
-			auto const text = QString::fromUtf8(reinterpret_cast<char const*>(dynamicValues.currentValue.data()));
+			auto const& dynamicValue = controlValues.getValues<DynamicValueType>();
+			auto const text = QString::fromUtf8(reinterpret_cast<char const*>(dynamicValue.currentValue.data()));
 
 			if (_isReadOnly)
 			{

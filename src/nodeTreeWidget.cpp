@@ -1575,7 +1575,7 @@ private:
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
 };
 
-/** Linear Values */
+/** Linear Values - Clause 7.3.5.2.1 */
 template<class StaticValueType, class DynamicValueType>
 class VisitControlLinearValues final : public NodeTreeWidgetPrivate::VisitControlValues
 {
@@ -1609,7 +1609,26 @@ class VisitControlLinearValues final : public NodeTreeWidgetPrivate::VisitContro
 	}
 };
 
-/** Array Values */
+/** Selector Values - Clause 7.3.5.2.2 */
+template<typename SizeType, typename StaticValueType = la::avdecc::entity::model::SelectorValueStatic<SizeType>, typename DynamicValueType = la::avdecc::entity::model::SelectorValueDynamic<SizeType>>
+class VisitControlSelectorValues final : public NodeTreeWidgetPrivate::VisitControlValues
+{
+	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
+	{
+		auto valNumber = decltype(std::declval<decltype(staticModel.values)>().size()){ 0u };
+		auto const& selectorValue = staticModel.values.getValues<StaticValueType>();
+
+		self->addTextItem(item, "Default Value", selectorValue.defaultValue);
+		self->addTextItem(item, "Unit Type", ::avdecc::helper::controlValueUnitToString(selectorValue.unit.getUnit()));
+	}
+	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	{
+		auto* dynamicItem = new SelectorControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
+		dynamicItem->setText(0, "Dynamic Info");
+	}
+};
+
+/** Array Values - Clause 7.3.5.2.3 */
 template<typename SizeType, typename StaticValueType = la::avdecc::entity::model::ArrayValueStatic<SizeType>, typename DynamicValueType = la::avdecc::entity::model::ArrayValueDynamic<SizeType>>
 class VisitControlArrayValues final : public NodeTreeWidgetPrivate::VisitControlValues
 {
@@ -1634,7 +1653,7 @@ class VisitControlArrayValues final : public NodeTreeWidgetPrivate::VisitControl
 	}
 };
 
-/** UTF-8 String Value */
+/** UTF-8 String Value - Clause 7.3.5.2.4 */
 class VisitControlUtf8Values final : public NodeTreeWidgetPrivate::VisitControlValues
 {
 public:
@@ -1651,6 +1670,7 @@ public:
 
 void NodeTreeWidgetPrivate::createControlValuesDispatchTable(VisitControlValuesDispatchTable& dispatchTable)
 {
+	/** Linear Values - Clause 7.3.5.2.1 */
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int8_t>>>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>>>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int16_t>>>>();
@@ -1662,6 +1682,20 @@ void NodeTreeWidgetPrivate::createControlValuesDispatchTable(VisitControlValuesD
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<float>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<float>>>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<double>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<double>>>>();
 
+	/** Selector Value - Clause 7.3.5.2.2 */
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt8] = std::make_unique<VisitControlSelectorValues<std::int8_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt8] = std::make_unique<VisitControlSelectorValues<std::uint8_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt16] = std::make_unique<VisitControlSelectorValues<std::int16_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt16] = std::make_unique<VisitControlSelectorValues<std::uint16_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt32] = std::make_unique<VisitControlSelectorValues<std::int32_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt32] = std::make_unique<VisitControlSelectorValues<std::uint32_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt64] = std::make_unique<VisitControlSelectorValues<std::int64_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt64] = std::make_unique<VisitControlSelectorValues<std::uint64_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorFloat] = std::make_unique<VisitControlSelectorValues<float>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorDouble] = std::make_unique<VisitControlSelectorValues<double>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorString] = std::make_unique<VisitControlSelectorValues<la::avdecc::entity::model::LocalizedStringReference>>();
+
+	/** Array Values - Clause 7.3.5.2.3 */
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt8] = std::make_unique<VisitControlArrayValues<std::int8_t>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt8] = std::make_unique<VisitControlArrayValues<std::uint8_t>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt16] = std::make_unique<VisitControlArrayValues<std::int16_t>>();
@@ -1673,6 +1707,7 @@ void NodeTreeWidgetPrivate::createControlValuesDispatchTable(VisitControlValuesD
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayFloat] = std::make_unique<VisitControlArrayValues<float>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayDouble] = std::make_unique<VisitControlArrayValues<double>>();
 
+	/** UTF-8 String Value - Clause 7.3.5.2.4 */
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlUtf8] = std::make_unique<VisitControlUtf8Values>();
 }
 

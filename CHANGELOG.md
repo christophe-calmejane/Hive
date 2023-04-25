@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [ClockDomain locked state in entities list](https://github.com/christophe-calmejane/Hive/issues/133)
 - Support for JACK Inputs and JACK Outputs
 - Support for CONTROLs at non-configuration level
+- Support for CONTROL_SELECTOR type for CONTROL descriptors
 
 ### Changed
 - Complete rework of the `entities list`
