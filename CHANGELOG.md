@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Refresh issue for ClockSource, MemoryObject, AvbInterface, AudioCluster, Control, ClockDomain, AssociationID custom names
 - Possible crash for entities with more than 1 configuration, when using full device enumration
 - Always display CONTROL descriptor even if the ControlDataType is not supported by the library
+- CONTROL values updated by the device itself didn't update properly
 
 ## [1.2.9] - 2023-01-13
 ### Added
