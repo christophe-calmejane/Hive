@@ -190,7 +190,13 @@ private:
 				if ((type == Type::Entity && model.memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngEntity) || (type == Type::Manufacturer && model.memoryObjectType == la::avdecc::entity::model::MemoryObjectType::PngManufacturer))
 				{
 					auto const& dynamicModel{ obj.dynamicModel };
-					manager.readDeviceMemory(entityID, model.startAddress, dynamicModel.length, nullptr,
+					// Check to prevent crash for buggy devices
+					auto length = dynamicModel.length;
+					if (model.maximumLength != 0u && length > model.maximumLength)
+					{
+						length = model.maximumLength;
+					}
+					manager.readDeviceMemory(entityID, model.startAddress, length, nullptr,
 						[this, entityID, type](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AaCommandStatus const status, la::avdecc::controller::Controller::DeviceMemoryBuffer const& memoryBuffer)
 						{
 							auto image = QImage::fromData(memoryBuffer.data(), static_cast<int>(memoryBuffer.size()));
