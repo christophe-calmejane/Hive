@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Complete rework of the `entities list`
+- Updated AVDECC library to v4.0
 
 ### Fixed
 - Current selection in list of entities lost when changing the filter
