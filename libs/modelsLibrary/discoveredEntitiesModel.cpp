@@ -449,13 +449,10 @@ private:
 				{
 					// Get firmware version
 					auto const& entityNode = entity.getEntityNode();
-					if (entityNode.dynamicModel)
-					{
-						auto const& dynamicModel = *entityNode.dynamicModel;
+					auto const& dynamicModel = entityNode.dynamicModel;
 
-						// Get firmware version
-						firmwareVersion = dynamicModel.firmwareVersion.data();
-					}
+					// Get firmware version
+					firmwareVersion = dynamicModel.firmwareVersion.data();
 
 					if (hasAnyConfiguration)
 					{
@@ -464,7 +461,7 @@ private:
 						// Get Firmware Image MemoryIndex, if supported
 						for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
 						{
-							if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+							if (memoryObjectNode.staticModel.memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
 							{
 								firmwareUploadMemoryIndex = memoryObjectIndex;
 								break;
@@ -481,9 +478,9 @@ private:
 						if (!configurationNode.clockDomains.empty())
 						{
 							auto const& clockDomainNode = configurationNode.clockDomains.begin()->second;
-							if (clockDomainNode.dynamicModel != nullptr && clockDomainNode.dynamicModel->counters)
+							if (clockDomainNode.dynamicModel.counters)
 							{
-								clockDomainInfo = computeClockDomainInfo(*(clockDomainNode.dynamicModel->counters));
+								clockDomainInfo = computeClockDomainInfo(*(clockDomainNode.dynamicModel.counters));
 							}
 						}
 					}

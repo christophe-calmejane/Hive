@@ -222,85 +222,62 @@ private:
 				for (auto const& clockDomainKV : configNode.clockDomains)
 				{
 					auto const& clockDomain = clockDomainKV.second;
-					if (clockDomain.dynamicModel)
+					auto clockSourceIndex = clockDomain.dynamicModel.clockSourceIndex;
+					auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
+
+					switch (activeClockSourceNode.staticModel.clockSourceType)
 					{
-						auto clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
-						auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
+						case la::avdecc::entity::model::ClockSourceType::Internal:
+							if (!(searchForSecondaryMcMaster && entityID == currentEntityId))
+							{
+								return std::make_pair(currentEntityId, McDeterminationError::NoError);
+							}
+							break;
+						case la::avdecc::entity::model::ClockSourceType::External:
+							return std::make_pair(currentEntityId, McDeterminationError::ExternalClockSource);
+						case la::avdecc::entity::model::ClockSourceType::InputStream:
+							break;
+						default:
+							error = McDeterminationError::NotSupportedClockSourceType;
+							keepSearching = false;
+							return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
+					}
 
-						if (!activeClockSourceNode.staticModel)
+					// find the relevant clock stream index
+					std::optional<la::avdecc::entity::model::StreamIndex> clockStreamIndex = std::nullopt;
+					if (activeClockSourceNode.staticModel.clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput)
+					{
+						// In the case StreamInput as clockSourceLocationType we can get the relevant index directly from the static model
+						clockStreamIndex = activeClockSourceNode.staticModel.clockSourceLocationIndex;
+					}
+					else if (activeClockSourceNode.staticModel.clockSourceType == la::avdecc::entity::model::ClockSourceType::Internal)
+					{
+						// In the case we are searching for a secondary master, we have to get the index by checking all streams if they are a CRF stream.
+						auto indexes = findInputClockStreamIndexInConfiguration(configNode);
+						if (!indexes.empty())
 						{
+							clockStreamIndex = indexes.at(0);
+						}
+					}
+
+					if (clockStreamIndex)
+					{
+						auto& clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, *clockStreamIndex).dynamicModel;
+						auto connectedTalker = clockStreamDynModel.connectionInfo.talkerStream.entityID;
+						if (!connectedTalker)
+						{
+							error = searchedEntityIds.size() == 1 ? McDeterminationError::StreamNotConnected : McDeterminationError::ParentStreamNotConnected;
 							keepSearching = false;
 							return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
 						}
-
-						switch (activeClockSourceNode.staticModel->clockSourceType)
+						if (searchedEntityIds.count(connectedTalker))
 						{
-							case la::avdecc::entity::model::ClockSourceType::Internal:
-								if (!(searchForSecondaryMcMaster && entityID == currentEntityId))
-								{
-									return std::make_pair(currentEntityId, McDeterminationError::NoError);
-								}
-								break;
-							case la::avdecc::entity::model::ClockSourceType::External:
-								return std::make_pair(currentEntityId, McDeterminationError::ExternalClockSource);
-							case la::avdecc::entity::model::ClockSourceType::InputStream:
-								break;
-							default:
-								error = McDeterminationError::NotSupportedClockSourceType;
-								keepSearching = false;
-								return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
+							// recusion of entity clock stream connections detected
+							return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), McDeterminationError::Recursive);
 						}
-
-						// find the relevant clock stream index
-						std::optional<la::avdecc::entity::model::StreamIndex> clockStreamIndex = std::nullopt;
-						if (activeClockSourceNode.staticModel->clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput)
-						{
-							// In the case StreamInput as clockSourceLocationType we can get the relevant index directly from the static model
-							clockStreamIndex = activeClockSourceNode.staticModel->clockSourceLocationIndex;
-						}
-						else if (activeClockSourceNode.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::Internal)
-						{
-							// In the case we are searching for a secondary master, we have to get the index by checking all streams if they are a CRF stream.
-							auto indexes = findInputClockStreamIndexInConfiguration(configNode);
-							if (!indexes.empty())
-							{
-								clockStreamIndex = indexes.at(0);
-							}
-						}
-
-						if (clockStreamIndex)
-						{
-							auto* clockStreamDynModel = controlledEntity->getStreamInputNode(activeConfigIndex, *clockStreamIndex).dynamicModel;
-							if (clockStreamDynModel)
-							{
-								auto connectedTalker = clockStreamDynModel->connectionInfo.talkerStream.entityID;
-								if (!connectedTalker)
-								{
-									error = searchedEntityIds.size() == 1 ? McDeterminationError::StreamNotConnected : McDeterminationError::ParentStreamNotConnected;
-									keepSearching = false;
-									return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
-								}
-								if (searchedEntityIds.count(connectedTalker))
-								{
-									// recusion of entity clock stream connections detected
-									return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), McDeterminationError::Recursive);
-								}
-								// set the next entity to traverse
-								currentEntityId = connectedTalker;
-								searchedEntityIds.insert(currentEntityId);
-							}
-							else
-							{
-								error = searchedEntityIds.size() == 1 ? McDeterminationError::StreamNotConnected : McDeterminationError::ParentStreamNotConnected;
-								keepSearching = false;
-								return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
-							}
-						}
-						else
-						{
-							keepSearching = false;
-							return std::make_pair(la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), error);
-						}
+						// set the next entity to traverse
+						currentEntityId = connectedTalker;
+						searchedEntityIds.insert(currentEntityId);
 					}
 					else
 					{
@@ -675,7 +652,7 @@ private:
 						for (auto const& streamInput : configurationNode.streamInputs)
 						{
 							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
-							auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel->streamFormat);
+							auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel.streamFormat);
 							if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamFormatInfo->getType())
 								continue;
 
@@ -688,7 +665,7 @@ private:
 						for (auto const& streamOutput : configurationNode.streamOutputs)
 						{
 							// get the streamformat's corresponding sampling rate by first deriving the pull and base freq vals from streamformatinfo
-							auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
+							auto const& streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel.streamFormat);
 							if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamFormatInfo->getType())
 								continue;
 
@@ -759,11 +736,8 @@ private:
 		{
 			try
 			{
-				auto* audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
-				if (audioUnitDynModel)
-				{
-					return audioUnitDynModel->currentSamplingRate;
-				}
+				auto& audioUnitDynModel = controlledEntity->getAudioUnitNode(controlledEntity->getCurrentConfigurationNode().descriptorIndex, 0).dynamicModel;
+				return audioUnitDynModel.currentSamplingRate;
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
 			{
@@ -794,7 +768,7 @@ private:
 
 					for (auto const& clockSource : configNode.clockSources)
 					{
-						if (clockSource.second.staticModel && clockSource.second.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::InputStream && clockSource.second.staticModel->clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput && isStreamInputOfType(entityId, clockSource.second.staticModel->clockSourceLocationIndex, la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference))
+						if (clockSource.second.staticModel.clockSourceType == la::avdecc::entity::model::ClockSourceType::InputStream && clockSource.second.staticModel.clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput && isStreamInputOfType(entityId, clockSource.second.staticModel.clockSourceLocationIndex, la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference))
 						{
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
@@ -842,7 +816,7 @@ private:
 
 					for (const auto& clockSource : configNode.clockSources)
 					{
-						if (clockSource.second.staticModel && clockSource.second.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::External)
+						if (clockSource.second.staticModel.clockSourceType == la::avdecc::entity::model::ClockSourceType::External)
 						{
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
@@ -889,7 +863,7 @@ private:
 
 					for (auto const& clockSource : configNode.clockSources)
 					{
-						if (clockSource.second.staticModel && clockSource.second.staticModel->clockSourceType == la::avdecc::entity::model::ClockSourceType::Internal)
+						if (clockSource.second.staticModel.clockSourceType == la::avdecc::entity::model::ClockSourceType::Internal)
 						{
 							auto responseHandler = [parentCommandSet, commandIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 							{
@@ -1112,14 +1086,11 @@ private:
 			{
 				auto const& streamInput = controlledEntity->getStreamInputNode(config.descriptorIndex, streamIndex);
 
-				if (streamInput.dynamicModel)
+				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel.streamFormat);
+				auto const streamType = streamFormatInfo->getType();
+				if (expectedStreamType == streamType)
 				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.dynamicModel->streamFormat);
-					auto const streamType = streamFormatInfo->getType();
-					if (expectedStreamType == streamType)
-					{
-						return true;
-					}
+					return true;
 				}
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -1144,7 +1115,7 @@ private:
 		if (controlledListenerEntity)
 		{
 			auto const& inputNode = controlledListenerEntity->getStreamInputNode(controlledListenerEntity->getCurrentConfigurationNode().descriptorIndex, listenerStreamIndex); // this doesn't work for redundant streams.
-			auto const& connectionState = inputNode.dynamicModel->connectionInfo;
+			auto const& connectionState = inputNode.dynamicModel.connectionInfo;
 			if (connectionState.talkerStream.entityID == talkerEntityId && connectionState.talkerStream.streamIndex == talkerStreamIndex)
 			{
 				return true;
@@ -1172,12 +1143,9 @@ private:
 			for (auto const& clockDomainKV : config.clockDomains)
 			{
 				auto const& clockDomain = clockDomainKV.second;
-				if (clockDomain.dynamicModel)
-				{
-					auto const clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
-					auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(config.descriptorIndex, clockSourceIndex);
-					return activeClockSourceNode.staticModel->clockSourceLocationIndex;
-				}
+				auto const clockSourceIndex = clockDomain.dynamicModel.clockSourceIndex;
+				auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(config.descriptorIndex, clockSourceIndex);
+				return activeClockSourceNode.staticModel.clockSourceLocationIndex;
 			}
 		}
 		return std::nullopt;
@@ -1192,44 +1160,15 @@ private:
 	virtual std::vector<la::avdecc::entity::model::StreamIndex> findOutputClockStreamIndexInConfiguration(la::avdecc::controller::model::ConfigurationNode const& config) const noexcept
 	{
 		std::vector<la::avdecc::entity::model::StreamIndex> streamIndexes;
-		for (auto const& streamOutput : config.redundantStreamOutputs)
-		{
-			if (streamOutput.second.primaryStream && streamOutput.second.primaryStream->staticModel)
-			{
-				for (auto const& streamFormat : streamOutput.second.primaryStream->staticModel->formats)
-				{
-					auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
-					auto streamType = streamFormatInfo->getType();
-					if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
-					{
-						auto primaryIndex = streamOutput.second.primaryStream->descriptorIndex;
-						streamIndexes.push_back(primaryIndex);
-
-						for (auto const& redundantStream : streamOutput.second.redundantStreams)
-						{
-							// the primary is included in the redundantStreams
-							if (primaryIndex != redundantStream.first)
-							{
-								streamIndexes.push_back(redundantStream.first);
-							}
-						}
-						return streamIndexes;
-					}
-				}
-			}
-		}
 
 		for (auto const& streamOutput : config.streamOutputs)
 		{
-			if (streamOutput.second.dynamicModel)
+			auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel.streamFormat);
+			auto const streamType = streamFormatInfo->getType();
+			if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamOutput.second.dynamicModel->streamFormat);
-				auto const streamType = streamFormatInfo->getType();
-				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
-				{
-					streamIndexes.push_back(streamOutput.first);
-					return streamIndexes;
-				}
+				streamIndexes.push_back(streamOutput.first);
+				return streamIndexes;
 			}
 		}
 
@@ -1245,43 +1184,15 @@ private:
 	virtual std::vector<la::avdecc::entity::model::StreamIndex> findInputClockStreamIndexInConfiguration(la::avdecc::controller::model::ConfigurationNode const& config) const noexcept
 	{
 		std::vector<la::avdecc::entity::model::StreamIndex> streamIndexes;
-		for (auto const& streamInput : config.redundantStreamInputs)
-		{
-			if (streamInput.second.primaryStream && streamInput.second.primaryStream->staticModel)
-			{
-				for (auto const& streamFormat : streamInput.second.primaryStream->staticModel->formats)
-				{
-					auto const streamFormatInfo2 = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
-					auto streamType = streamFormatInfo2->getType();
-					if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
-					{
-						auto primaryIndex = streamInput.second.primaryStream->descriptorIndex;
-						streamIndexes.push_back(primaryIndex);
 
-						for (auto const& redundantStream : streamInput.second.redundantStreams)
-						{
-							// the primary is included in the redundantStreams
-							if (primaryIndex != redundantStream.first)
-							{
-								streamIndexes.push_back(redundantStream.first);
-							}
-						}
-						return streamIndexes;
-					}
-				}
-			}
-		}
 		for (auto const& streamInput : config.streamInputs)
 		{
-			if (streamInput.second.dynamicModel)
+			auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel.streamFormat);
+			auto const streamType = streamFormatInfo->getType();
+			if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
 			{
-				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamInput.second.dynamicModel->streamFormat);
-				auto const streamType = streamFormatInfo->getType();
-				if (la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference == streamType)
-				{
-					streamIndexes.push_back(streamInput.first);
-					return streamIndexes;
-				}
+				streamIndexes.push_back(streamInput.first);
+				return streamIndexes;
 			}
 		}
 
@@ -1351,13 +1262,10 @@ private:
 					auto const& configNode = controlledEntity->getCurrentConfigurationNode();
 					for (auto const& [streamIndex, streamInputNode] : configNode.streamInputs)
 					{
-						auto* streamInputDynamicModel = streamInputNode.dynamicModel;
-						if (streamInputDynamicModel)
+						auto& streamInputDynamicModel = streamInputNode.dynamicModel;
+						if (streamInputDynamicModel.connectionInfo.talkerStream.entityID == talkerEntityId)
 						{
-							if (streamInputDynamicModel->connectionInfo.talkerStream.entityID == talkerEntityId)
-							{
-								disconnectedStreams.push_back({ { potentialListenerEntityId, streamIndex }, streamInputDynamicModel->connectionInfo });
-							}
+							disconnectedStreams.push_back({ { potentialListenerEntityId, streamIndex }, streamInputDynamicModel.connectionInfo });
 						}
 					}
 				}
@@ -1390,14 +1298,11 @@ private:
 
 				for (auto const& [streamIndex, streamInputNode] : configNode.streamInputs)
 				{
-					auto* streamInputDynModel = streamInputNode.dynamicModel;
-					if (streamInputDynModel)
+					auto& streamInputDynModel = streamInputNode.dynamicModel;
+					auto connectionState = streamInputDynModel.connectionInfo;
+					if (connectionState.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 					{
-						auto connectionState = streamInputDynModel->connectionInfo;
-						if (connectionState.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
-						{
-							streamsToDisconnect.push_back({ { targetEntityId, streamIndex }, connectionState });
-						}
+						streamsToDisconnect.push_back({ { targetEntityId, streamIndex }, connectionState });
 					}
 				}
 			}
@@ -1810,31 +1715,24 @@ private:
 					for (auto const& clockDomainKV : configNode.clockDomains)
 					{
 						auto const& clockDomain = clockDomainKV.second;
-						if (clockDomain.dynamicModel)
-						{
-							auto const clockSourceIndex = clockDomain.dynamicModel->clockSourceIndex;
-							auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
+						auto const clockSourceIndex = clockDomain.dynamicModel.clockSourceIndex;
+						auto const& activeClockSourceNode = controlledEntity->getClockSourceNode(activeConfigIndex, clockSourceIndex);
 
-							if (!activeClockSourceNode.staticModel)
+						switch (activeClockSourceNode.staticModel.clockSourceType)
+						{
+							case la::avdecc::entity::model::ClockSourceType::Internal:
+								break;
+							case la::avdecc::entity::model::ClockSourceType::External:
+							case la::avdecc::entity::model::ClockSourceType::InputStream:
 							{
+								if (stream.streamIndex == activeClockSourceNode.staticModel.clockSourceLocationIndex)
+								{
+									affectsMcMaster = true;
+								}
 								break;
 							}
-							switch (activeClockSourceNode.staticModel->clockSourceType)
-							{
-								case la::avdecc::entity::model::ClockSourceType::Internal:
-									break;
-								case la::avdecc::entity::model::ClockSourceType::External:
-								case la::avdecc::entity::model::ClockSourceType::InputStream:
-								{
-									if (stream.streamIndex == activeClockSourceNode.staticModel->clockSourceLocationIndex)
-									{
-										affectsMcMaster = true;
-									}
-									break;
-								}
-								default: // Unsupported ClockSourceType, ignore it
-									break;
-							}
+							default: // Unsupported ClockSourceType, ignore it
+								break;
 						}
 					}
 				}

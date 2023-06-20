@@ -2345,15 +2345,15 @@ public:
 			auto const fillStreamOutputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamOutputNode, auto const& avbInterfaceNode)
 			{
 				node.setName(hive::modelsLibrary::helper::outputStreamName(controlledEntity, streamIndex));
-				node.setStreamFormat(streamOutputNode.dynamicModel->streamFormat);
-				node.setStreamFormats(streamOutputNode.staticModel->formats);
-				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
-				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
+				node.setStreamFormat(streamOutputNode.dynamicModel.streamFormat);
+				node.setStreamFormats(streamOutputNode.staticModel.formats);
+				node.setGrandMasterID(avbInterfaceNode.dynamicModel.gptpGrandmasterID);
+				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel.gptpDomainNumber);
 				node.setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 				node.setRunning(controlledEntity.isStreamOutputRunning(configurationIndex, streamIndex));
-				if (streamOutputNode.dynamicModel->counters)
+				if (streamOutputNode.dynamicModel.counters)
 				{
-					auto const& counters = *streamOutputNode.dynamicModel->counters;
+					auto const& counters = *streamOutputNode.dynamicModel.counters;
 					{
 						auto const it = counters.find(la::avdecc::entity::StreamOutputCounterValidFlag::StreamStart);
 						if (it != counters.end())
@@ -2384,14 +2384,14 @@ public:
 					redundantOutput->setName(hive::modelsLibrary::helper::redundantOutputName(redundantIndex));
 				}
 
-				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
+				for (auto const streamIndex : redundantNode.redundantStreams)
 				{
-					auto const avbInterfaceIndex{ streamNode->staticModel->avbInterfaceIndex };
+					auto const& streamNode = controlledEntity.getStreamOutputNode(configurationIndex, streamIndex);
+					auto const avbInterfaceIndex{ streamNode.staticModel.avbInterfaceIndex };
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* redundantOutputStream = StreamNode::createRedundantOutputNode(*redundantOutput, streamIndex, avbInterfaceIndex);
-					auto const* const streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const*>(streamNode);
-					fillStreamOutputNode(*redundantOutputStream, configurationIndex, streamIndex, avbInterfaceIndex, *streamOutputNode, avbInterfaceNode);
+					fillStreamOutputNode(*redundantOutputStream, configurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 
@@ -2400,7 +2400,7 @@ public:
 			{
 				if (!streamNode.isRedundant)
 				{
-					auto const avbInterfaceIndex{ streamNode.staticModel->avbInterfaceIndex };
+					auto const avbInterfaceIndex{ streamNode.staticModel.avbInterfaceIndex };
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* outputStream = StreamNode::createOutputNode(*entity, streamIndex, avbInterfaceIndex);
@@ -2416,19 +2416,19 @@ public:
 					for (auto const& [streamPortIndex, streamPortNode] : audioUnitNode.streamPortOutputs)
 					{
 						// Save ChannelOffset for this StreamPort
-						entity->setStreamPortOutputClusterOffset(streamPortIndex, streamPortNode.staticModel->baseCluster);
+						entity->setStreamPortOutputClusterOffset(streamPortIndex, streamPortNode.staticModel.baseCluster);
 
-						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						if (streamPortNode.staticModel.hasDynamicAudioMap)
 						{
 							// Save current mappings (we want all mappings, including redundant)
-							entity->setOutputAudioMappings(streamPortIndex, streamPortNode.dynamicModel->dynamicAudioMap);
+							entity->setOutputAudioMappings(streamPortIndex, streamPortNode.dynamicModel.dynamicAudioMap);
 						}
 						else
 						{
 							la::avdecc::entity::model::AudioMappings staticMappings;
 							for (auto const& mapKV : streamPortNode.audioMaps)
 							{
-								staticMappings.insert(staticMappings.end(), mapKV.second.staticModel->mappings.begin(), mapKV.second.staticModel->mappings.end());
+								staticMappings.insert(staticMappings.end(), mapKV.second.staticModel.mappings.begin(), mapKV.second.staticModel.mappings.end());
 							}
 							entity->setOutputAudioMappings(streamPortIndex, staticMappings);
 						}
@@ -2436,10 +2436,10 @@ public:
 						// Process all Clusters
 						for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
 						{
-							auto const* const staticModel = clusterNode.staticModel;
-							for (auto channel = (uint16_t)0u; channel < staticModel->channelCount; ++channel)
+							auto const& staticModel = clusterNode.staticModel;
+							for (auto channel = (uint16_t)0u; channel < staticModel.channelCount; ++channel)
 							{
-								auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
+								auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel.baseCluster };
 
 								auto* outputChannel = ChannelNode::createOutputNode(*entity, channelIdentification);
 								auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
@@ -2482,16 +2482,16 @@ public:
 			auto const fillStreamInputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamInputNode, auto const& avbInterfaceNode)
 			{
 				node.setName(hive::modelsLibrary::helper::inputStreamName(controlledEntity, streamIndex));
-				node.setStreamFormat(streamInputNode.dynamicModel->streamFormat);
-				node.setStreamFormats(streamInputNode.staticModel->formats);
-				node.setGrandMasterID(avbInterfaceNode.dynamicModel->gptpGrandmasterID);
-				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel->gptpDomainNumber);
+				node.setStreamFormat(streamInputNode.dynamicModel.streamFormat);
+				node.setStreamFormats(streamInputNode.staticModel.formats);
+				node.setGrandMasterID(avbInterfaceNode.dynamicModel.gptpGrandmasterID);
+				node.setGrandMasterDomain(avbInterfaceNode.dynamicModel.gptpDomainNumber);
 				node.setInterfaceLinkStatus(controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex));
 				node.setRunning(controlledEntity.isStreamInputRunning(configurationIndex, streamIndex));
-				node.setStreamInputConnectionInformation(streamInputNode.dynamicModel->connectionInfo);
-				if (streamInputNode.dynamicModel->counters)
+				node.setStreamInputConnectionInformation(streamInputNode.dynamicModel.connectionInfo);
+				if (streamInputNode.dynamicModel.counters)
 				{
-					auto const& counters = *streamInputNode.dynamicModel->counters;
+					auto const& counters = *streamInputNode.dynamicModel.counters;
 					{
 						auto const it = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked);
 						if (it != counters.end())
@@ -2507,9 +2507,9 @@ public:
 						}
 					}
 				}
-				if (streamInputNode.dynamicModel->streamDynamicInfo && (*streamInputNode.dynamicModel->streamDynamicInfo).probingStatus)
+				if (streamInputNode.dynamicModel.streamDynamicInfo && (*streamInputNode.dynamicModel.streamDynamicInfo).probingStatus)
 				{
-					node.setProbingStatus(*(*streamInputNode.dynamicModel->streamDynamicInfo).probingStatus);
+					node.setProbingStatus(*(*streamInputNode.dynamicModel.streamDynamicInfo).probingStatus);
 				}
 				// Latency Error
 				{
@@ -2534,16 +2534,15 @@ public:
 					redundantInput->setName(hive::modelsLibrary::helper::redundantInputName(redundantIndex));
 				}
 
-				for (auto const& [streamIndex, streamNode] : redundantNode.redundantStreams)
+				for (auto const streamIndex : redundantNode.redundantStreams)
 				{
-					auto const avbInterfaceIndex{ streamNode->staticModel->avbInterfaceIndex };
+					auto const& streamNode = controlledEntity.getStreamInputNode(configurationIndex, streamIndex);
+					auto const avbInterfaceIndex{ streamNode.staticModel.avbInterfaceIndex };
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* redundantInputStream = StreamNode::createRedundantInputNode(*redundantInput, streamIndex, avbInterfaceIndex);
 					redundantInputStream->setName(hive::modelsLibrary::helper::inputStreamName(controlledEntity, streamIndex));
-
-					auto const* const streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const*>(streamNode);
-					fillStreamInputNode(*redundantInputStream, configurationIndex, streamIndex, avbInterfaceIndex, *streamInputNode, avbInterfaceNode);
+					fillStreamInputNode(*redundantInputStream, configurationIndex, streamIndex, avbInterfaceIndex, streamNode, avbInterfaceNode);
 				}
 			}
 
@@ -2552,7 +2551,7 @@ public:
 			{
 				if (!streamNode.isRedundant)
 				{
-					auto const avbInterfaceIndex{ streamNode.staticModel->avbInterfaceIndex };
+					auto const avbInterfaceIndex{ streamNode.staticModel.avbInterfaceIndex };
 					auto const& avbInterfaceNode = controlledEntity.getAvbInterfaceNode(configurationIndex, avbInterfaceIndex);
 
 					auto* inputStream = StreamNode::createInputNode(*entity, streamIndex, avbInterfaceIndex);
@@ -2567,21 +2566,21 @@ public:
 				{
 					for (auto const& [streamPortIndex, streamPortNode] : audioUnitNode.streamPortInputs)
 					{
-						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						if (streamPortNode.staticModel.hasDynamicAudioMap)
 						{
 							// Save ChannelOffset for this StreamPort
-							entity->setStreamPortInputClusterOffset(streamPortIndex, streamPortNode.staticModel->baseCluster);
+							entity->setStreamPortInputClusterOffset(streamPortIndex, streamPortNode.staticModel.baseCluster);
 
 							// Save current mappings (we want all mappings, including redundant)
-							entity->setInputAudioMappings(streamPortIndex, streamPortNode.dynamicModel->dynamicAudioMap);
+							entity->setInputAudioMappings(streamPortIndex, streamPortNode.dynamicModel.dynamicAudioMap);
 
 							// Process all Clusters
 							for (auto const& [clusterIndex, clusterNode] : streamPortNode.audioClusters)
 							{
-								auto const* const staticModel = clusterNode.staticModel;
-								for (auto channel = (uint16_t)0u; channel < staticModel->channelCount; ++channel)
+								auto const& staticModel = clusterNode.staticModel;
+								for (auto channel = (uint16_t)0u; channel < staticModel.channelCount; ++channel)
 								{
-									auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel->baseCluster };
+									auto channelIdentification = avdecc::ChannelIdentification{ configurationNode.descriptorIndex, clusterIndex, channel, avdecc::ChannelConnectionDirection::InputToOutput, audioUnitIndex, streamPortIndex, streamPortNode.staticModel.baseCluster };
 
 									auto* inputChannel = ChannelNode::createInputNode(*entity, channelIdentification);
 									auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
@@ -2858,7 +2857,7 @@ public:
 				}
 
 				auto const& entityNode = controlledEntity->getEntityNode();
-				auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
+				auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel.currentConfiguration);
 
 				// Talker
 				if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
@@ -3537,7 +3536,7 @@ public:
 			auto const& entityNode = controlledEntity->getEntityNode();
 
 			// We're only interested in the current configuration
-			if (entityNode.dynamicModel->currentConfiguration != configurationIndex)
+			if (entityNode.dynamicModel.currentConfiguration != configurationIndex)
 			{
 				return;
 			}

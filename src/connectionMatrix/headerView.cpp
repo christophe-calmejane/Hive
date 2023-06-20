@@ -630,11 +630,11 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 		auto const isOutputStream = node->type() == Node::Type::OutputStream || node->type() == Node::Type::RedundantOutputStream;
 		if (isOutputStream)
 		{
-			return static_cast<la::avdecc::controller::model::StreamNode const*>(&controlledEntity.getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex));
+			return static_cast<la::avdecc::controller::model::StreamNode const*>(&controlledEntity.getStreamOutputNode(entityNode.dynamicModel.currentConfiguration, streamIndex));
 		}
 		else if (node->type() == Node::Type::InputStream || node->type() == Node::Type::RedundantInputStream)
 		{
-			return static_cast<la::avdecc::controller::model::StreamNode const*>(&controlledEntity.getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex));
+			return static_cast<la::avdecc::controller::model::StreamNode const*>(&controlledEntity.getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex));
 		}
 		else
 		{
@@ -661,7 +661,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 				{
 					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortInputs)
 					{
-						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						if (streamPortNode.staticModel.hasDynamicAudioMap)
 						{
 							mti.supportsDynamicMappings = true;
 							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
@@ -677,7 +677,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 				{
 					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortOutputs)
 					{
-						if (streamPortNode.staticModel->hasDynamicAudioMap)
+						if (streamPortNode.staticModel.hasDynamicAudioMap)
 						{
 							mti.supportsDynamicMappings = true;
 							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
@@ -701,7 +701,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 
 		auto const isValidStreamFormat = [](auto const& streamNode)
 		{
-			auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel->streamFormat);
+			auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode.dynamicModel.streamFormat);
 
 			return sfi->getChannelsCount() > 0;
 		};
@@ -715,12 +715,12 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 					// Search which StreamPort has the same ClockDomain than passed StreamNode
 					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortInputs)
 					{
-						if (streamPortNode.staticModel->clockDomainIndex == streamNode.staticModel->clockDomainIndex)
+						if (streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex)
 						{
-							if (streamPortNode.staticModel->hasDynamicAudioMap)
+							if (streamPortNode.staticModel.hasDynamicAudioMap)
 							{
 								auto const& streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const&>(streamNode);
-								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamInputNode.dynamicModel->streamFormat);
+								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamInputNode.dynamicModel.streamFormat);
 
 								mti.supportsDynamicMappings = isValidStreamFormat(streamInputNode);
 								mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
@@ -739,12 +739,12 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 					// Search which StreamPort has the same ClockDomain than passed StreamNode
 					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortOutputs)
 					{
-						if (streamPortNode.staticModel->clockDomainIndex == streamNode.staticModel->clockDomainIndex)
+						if (streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex)
 						{
-							if (streamPortNode.staticModel->hasDynamicAudioMap)
+							if (streamPortNode.staticModel.hasDynamicAudioMap)
 							{
 								auto const& streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const&>(streamNode);
-								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamOutputNode.dynamicModel->streamFormat);
+								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamOutputNode.dynamicModel.streamFormat);
 
 								mti.supportsDynamicMappings = isValidStreamFormat(streamOutputNode);
 								mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;

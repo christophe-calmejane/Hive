@@ -10,14 +10,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Mac Address field in entities list](https://github.com/christophe-calmejane/Hive/issues/38)
 - [ClockDomain locked state in entities list](https://github.com/christophe-calmejane/Hive/issues/133)
 - Support for JACK Inputs and JACK Outputs
+- Support for CONTROLs at non-configuration level
+- Support for CONTROL_SELECTOR type for CONTROL descriptors
 
 ### Changed
 - Complete rework of the `entities list`
+- Updated AVDECC library to v4.0
 
 ### Fixed
 - Current selection in list of entities lost when changing the filter
 - [Network Interfaces combobox displays errors and selected interface in bold](https://github.com/christophe-calmejane/Hive/issues/128)
 - Refresh issue for ClockSource, MemoryObject, AvbInterface, AudioCluster, Control, ClockDomain, AssociationID custom names
+- Possible crash for entities with more than 1 configuration, when using full device enumration
+- Always display CONTROL descriptor even if the ControlDataType is not supported by the library
+- CONTROL values updated by the device itself didn't update properly
+- Possible crash for entities returning an out-of-bounds MemoryObject length value
 
 ## [1.2.9] - 2023-01-13
 ### Added

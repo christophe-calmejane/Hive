@@ -75,7 +75,7 @@ QString entityName(la::avdecc::controller::ControlledEntity const& controlledEnt
 
 		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
-			return controlledEntity.getEntityNode().dynamicModel->entityName.data();
+			return controlledEntity.getEntityNode().dynamicModel.entityName.data();
 		}
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -126,7 +126,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 
 		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
-			return controlledEntity.getEntityNode().dynamicModel->groupName.data();
+			return controlledEntity.getEntityNode().dynamicModel.groupName.data();
 		}
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -146,7 +146,7 @@ QString outputStreamName(la::avdecc::controller::ControlledEntity const& control
 	try
 	{
 		auto const& entityNode = controlledEntity.getEntityNode();
-		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
 		return objectName(&controlledEntity, streamNode);
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -166,7 +166,7 @@ QString inputStreamName(la::avdecc::controller::ControlledEntity const& controll
 	try
 	{
 		auto const& entityNode = controlledEntity.getEntityNode();
-		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
 		return objectName(&controlledEntity, streamNode);
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)

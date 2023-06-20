@@ -240,8 +240,8 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const staticModel = node.staticModel;
-			auto const* const dynamicModel = node.dynamicModel;
+			auto const& staticModel = node.staticModel;
+			auto const& dynamicModel = node.dynamicModel;
 
 			// Currently, use the getEntity() information, but maybe in the future the controller will have the information in its static/dynamic model
 			{
@@ -259,10 +259,10 @@ private:
 				addTextItem(descriptorItem, "Identify Control Index", e.getIdentifyControlIndex() ? QString::number(*e.getIdentifyControlIndex()) : QString("Not Set"));
 			}
 
-			addTextItem(descriptorItem, "Vendor Name", hive::modelsLibrary::helper::localizedString(entity, staticModel->vendorNameString));
-			addTextItem(descriptorItem, "Model Name", hive::modelsLibrary::helper::localizedString(entity, staticModel->modelNameString));
-			addTextItem(descriptorItem, "Firmware Version", dynamicModel->firmwareVersion.data());
-			addTextItem(descriptorItem, "Serial Number", dynamicModel->serialNumber.data());
+			addTextItem(descriptorItem, "Vendor Name", hive::modelsLibrary::helper::localizedString(entity, staticModel.vendorNameString));
+			addTextItem(descriptorItem, "Model Name", hive::modelsLibrary::helper::localizedString(entity, staticModel.modelNameString));
+			addTextItem(descriptorItem, "Firmware Version", dynamicModel.firmwareVersion.data());
+			addTextItem(descriptorItem, "Serial Number", dynamicModel.serialNumber.data());
 
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
@@ -359,13 +359,13 @@ private:
 				});
 
 			// Update now
-			configurationComboBox->setCurrentData(node.dynamicModel->currentConfiguration);
+			configurationComboBox->setCurrentData(node.dynamicModel.currentConfiguration);
 		}
 
 		// Counters (if supported by the entity)
-		if (node.dynamicModel->counters && !node.dynamicModel->counters->empty())
+		if (node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
-			auto* countersItem = new EntityCountersTreeWidgetItem(_controlledEntityID, *node.dynamicModel->counters, q);
+			auto* countersItem = new EntityCountersTreeWidgetItem(_controlledEntityID, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 
@@ -412,7 +412,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -422,15 +422,19 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "Clock Domain Index", model->clockDomainIndex);
+			addTextItem(descriptorItem, "Clock Domain Index", model.clockDomainIndex);
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::Control)), QString{ "%1 / %2" }.arg(node.controls.size()).arg(model.numberOfControls));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
 		}
 
 		// Dynamic model
 		if (isActiveConfiguration)
 		{
-			auto* dynamicItem = new AudioUnitDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.staticModel, node.dynamicModel, q);
+			auto* dynamicItem = new AudioUnitDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 	}
@@ -438,7 +442,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -448,31 +452,31 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "AVB Interface Index", model->avbInterfaceIndex);
-			addTextItem(descriptorItem, "Clock Domain Index", model->clockDomainIndex);
+			addTextItem(descriptorItem, "AVB Interface Index", model.avbInterfaceIndex);
+			addTextItem(descriptorItem, "Clock Domain Index", model.clockDomainIndex);
 		}
 
 		// Dynamic model
 		if (isActiveConfiguration)
 		{
-			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, node.dynamicModel, nullptr, q);
+			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, &node.staticModel, &node.dynamicModel, nullptr, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 
 		// Counters (if supported by the entity)
 		AVDECC_ASSERT(node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput, "Not sure why we test for StreamInput in the following statement, remove it?");
-		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
+		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
-			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, *node.dynamicModel->counters, q);
+			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 
 		// Diagnostics
 		if (isActiveConfiguration)
 		{
-			auto* diagnosticsItem = new StreamInputDiagnosticsTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, controlledEntity->getDiagnostics(), q);
+			auto* diagnosticsItem = new StreamInputDiagnosticsTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, controlledEntity->getDiagnostics(), q);
 			diagnosticsItem->setText(0, "Diagnostics");
 		}
 	}
@@ -480,7 +484,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -490,23 +494,23 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "AVB Interface Index", model->avbInterfaceIndex);
-			addTextItem(descriptorItem, "Clock Domain Index", model->clockDomainIndex);
+			addTextItem(descriptorItem, "AVB Interface Index", model.avbInterfaceIndex);
+			addTextItem(descriptorItem, "Clock Domain Index", model.clockDomainIndex);
 		}
 
 		// Dynamic model
 		if (isActiveConfiguration)
 		{
-			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, nullptr, node.dynamicModel, q);
+			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, &node.staticModel, nullptr, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 
 		// Counters (if supported by the entity)
-		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
+		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
-			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
+			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
@@ -514,7 +518,7 @@ private:
 	void processJackNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -524,10 +528,14 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->jackFlags.value()), avdecc::helper::flagsToString(model->jackFlags));
-			addTextItem(descriptorItem, "Jack Type", avdecc::helper::jackTypeToString(model->jackType));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.jackFlags.value()), avdecc::helper::flagsToString(model.jackFlags));
+			addTextItem(descriptorItem, "Jack Type", avdecc::helper::jackTypeToString(model.jackType));
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::Control)), QString{ "%1 / %2" }.arg(node.controls.size()).arg(model.numberOfControls));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
 		}
 	}
 
@@ -539,7 +547,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -549,35 +557,35 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "MAC Address", la::networkInterface::NetworkInterfaceHelper::macAddressToString(model->macAddress, true));
-			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->interfaceFlags.value()), avdecc::helper::flagsToString(model->interfaceFlags));
-			addTextItem(descriptorItem, "Clock Identity", hive::modelsLibrary::helper::uniqueIdentifierToString(model->clockIdentity));
-			addTextItem(descriptorItem, "Priority 1", hive::modelsLibrary::helper::toHexQString(model->priority1, true, true));
-			addTextItem(descriptorItem, "Clock Class", hive::modelsLibrary::helper::toHexQString(model->clockClass, true, true));
-			addTextItem(descriptorItem, "Offset Scaled Log Variance", hive::modelsLibrary::helper::toHexQString(model->offsetScaledLogVariance, true, true));
-			addTextItem(descriptorItem, "Clock Accuracy", hive::modelsLibrary::helper::toHexQString(model->clockAccuracy, true, true));
-			addTextItem(descriptorItem, "Priority 2", hive::modelsLibrary::helper::toHexQString(model->priority2, true, true));
-			addTextItem(descriptorItem, "Domain Number", hive::modelsLibrary::helper::toHexQString(model->domainNumber, true, true));
-			addTextItem(descriptorItem, "Log Sync Interval", hive::modelsLibrary::helper::toHexQString(model->logSyncInterval, true, true));
-			addTextItem(descriptorItem, "Log Announce Interval", hive::modelsLibrary::helper::toHexQString(model->logAnnounceInterval, true, true));
-			addTextItem(descriptorItem, "Log Delay Interval", hive::modelsLibrary::helper::toHexQString(model->logPDelayInterval, true, true));
-			addTextItem(descriptorItem, "Port Number", hive::modelsLibrary::helper::toHexQString(model->portNumber, true, true));
+			addTextItem(descriptorItem, "MAC Address", la::networkInterface::NetworkInterfaceHelper::macAddressToString(model.macAddress, true));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.interfaceFlags.value()), avdecc::helper::flagsToString(model.interfaceFlags));
+			addTextItem(descriptorItem, "Clock Identity", hive::modelsLibrary::helper::uniqueIdentifierToString(model.clockIdentity));
+			addTextItem(descriptorItem, "Priority 1", hive::modelsLibrary::helper::toHexQString(model.priority1, true, true));
+			addTextItem(descriptorItem, "Clock Class", hive::modelsLibrary::helper::toHexQString(model.clockClass, true, true));
+			addTextItem(descriptorItem, "Offset Scaled Log Variance", hive::modelsLibrary::helper::toHexQString(model.offsetScaledLogVariance, true, true));
+			addTextItem(descriptorItem, "Clock Accuracy", hive::modelsLibrary::helper::toHexQString(model.clockAccuracy, true, true));
+			addTextItem(descriptorItem, "Priority 2", hive::modelsLibrary::helper::toHexQString(model.priority2, true, true));
+			addTextItem(descriptorItem, "Domain Number", hive::modelsLibrary::helper::toHexQString(model.domainNumber, true, true));
+			addTextItem(descriptorItem, "Log Sync Interval", hive::modelsLibrary::helper::toHexQString(model.logSyncInterval, true, true));
+			addTextItem(descriptorItem, "Log Announce Interval", hive::modelsLibrary::helper::toHexQString(model.logAnnounceInterval, true, true));
+			addTextItem(descriptorItem, "Log Delay Interval", hive::modelsLibrary::helper::toHexQString(model.logPDelayInterval, true, true));
+			addTextItem(descriptorItem, "Port Number", hive::modelsLibrary::helper::toHexQString(model.portNumber, true, true));
 		}
 
 		// Dynamic model
 		if (isActiveConfiguration)
 		{
 			auto linkStatus = controlledEntity->getAvbInterfaceLinkStatus(node.descriptorIndex);
-			auto* dynamicItem = new AvbInterfaceDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel, linkStatus, q);
+			auto* dynamicItem = new AvbInterfaceDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, &node.dynamicModel, linkStatus, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 
 		// Counters (if supported by the entity)
-		if (isActiveConfiguration && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
+		if (isActiveConfiguration && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
-			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
+			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
@@ -585,7 +593,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -595,15 +603,15 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
-			auto const* const dynamicModel = node.dynamicModel;
+			auto const& model = node.staticModel;
+			auto const& dynamicModel = node.dynamicModel;
 
-			addTextItem(descriptorItem, "Clock Source Type", avdecc::helper::clockSourceTypeToString(model->clockSourceType));
-			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(dynamicModel->clockSourceFlags.value()), avdecc::helper::flagsToString(dynamicModel->clockSourceFlags));
+			addTextItem(descriptorItem, "Clock Source Type", avdecc::helper::clockSourceTypeToString(model.clockSourceType));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(dynamicModel.clockSourceFlags.value()), avdecc::helper::flagsToString(dynamicModel.clockSourceFlags));
 
-			addTextItem(descriptorItem, "Clock Source Identifier", hive::modelsLibrary::helper::uniqueIdentifierToString(dynamicModel->clockSourceIdentifier));
-			addTextItem(descriptorItem, "Clock Source Location Type", avdecc::helper::descriptorTypeToString(model->clockSourceLocationType));
-			addTextItem(descriptorItem, "Clock Source Location Index", model->clockSourceLocationIndex);
+			addTextItem(descriptorItem, "Clock Source Identifier", hive::modelsLibrary::helper::uniqueIdentifierToString(dynamicModel.clockSourceIdentifier));
+			addTextItem(descriptorItem, "Clock Source Location Type", avdecc::helper::descriptorTypeToString(model.clockSourceLocationType));
+			addTextItem(descriptorItem, "Clock Source Location Index", model.clockSourceLocationIndex);
 		}
 	}
 
@@ -618,9 +626,9 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "Number of String Descriptors", model->numberOfStringDescriptors);
+			addTextItem(descriptorItem, "Number of String Descriptors", model.numberOfStringDescriptors);
 		}
 	}
 
@@ -635,20 +643,13 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			if (model)
+			auto idx = 0u;
+			for (auto const& str : model.strings)
 			{
-				auto idx = 0u;
-				for (auto const& str : model->strings)
-				{
-					addTextItem(descriptorItem, QString("String %1").arg(idx), str.str());
-					++idx;
-				}
-			}
-			else
-			{
-				addTextItem(descriptorItem, ("Not retrieved from entity"), "");
+				addTextItem(descriptorItem, QString("String %1").arg(idx), str.str());
+				++idx;
 			}
 		}
 	}
@@ -664,18 +665,22 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "Clock Domain Index", model->clockDomainIndex);
-			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model->portFlags.value()), avdecc::helper::flagsToString(model->portFlags));
-			addTextItem(descriptorItem, "Supports Dynamic Mapping", model->hasDynamicAudioMap ? "Yes" : "No");
+			addTextItem(descriptorItem, "Clock Domain Index", model.clockDomainIndex);
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.portFlags.value()), avdecc::helper::flagsToString(model.portFlags));
+			addTextItem(descriptorItem, "Supports Dynamic Mapping", model.hasDynamicAudioMap ? "Yes" : "No");
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::Control)), QString{ "%1 / %2" }.arg(node.controls.size()).arg(model.numberOfControls));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
 		}
 
 		// Dynamic model
-		auto const hasAtLeastOneDynamicInfo = node.staticModel->hasDynamicAudioMap;
+		auto const hasAtLeastOneDynamicInfo = node.staticModel.hasDynamicAudioMap;
 		if (isActiveConfiguration && hasAtLeastOneDynamicInfo)
 		{
-			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, node.staticModel, node.dynamicModel, q);
+			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 	}
@@ -683,7 +688,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -693,16 +698,16 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "Signal Type", avdecc::helper::descriptorTypeToString(model->signalType));
-			addTextItem(descriptorItem, "Signal Index", model->signalIndex);
+			addTextItem(descriptorItem, "Signal Type", avdecc::helper::descriptorTypeToString(model.signalType));
+			addTextItem(descriptorItem, "Signal Index", model.signalIndex);
 
-			addTextItem(descriptorItem, "Signal Output", model->signalOutput);
-			addTextItem(descriptorItem, "Path Latency", model->pathLatency);
-			addTextItem(descriptorItem, "Block Latency", model->blockLatency);
-			addTextItem(descriptorItem, "Channel Count", model->channelCount);
-			addTextItem(descriptorItem, "Format", avdecc::helper::audioClusterFormatToString(model->format));
+			addTextItem(descriptorItem, "Signal Output", model.signalOutput);
+			addTextItem(descriptorItem, "Path Latency", model.pathLatency);
+			addTextItem(descriptorItem, "Block Latency", model.blockLatency);
+			addTextItem(descriptorItem, "Channel Count", model.channelCount);
+			addTextItem(descriptorItem, "Format", avdecc::helper::audioClusterFormatToString(model.format));
 		}
 	}
 
@@ -717,7 +722,7 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
+			auto const& model = node.staticModel;
 
 			auto* mappingsIndexItem = new QTreeWidgetItem(descriptorItem);
 			mappingsIndexItem->setText(0, "Mappings");
@@ -726,7 +731,7 @@ private:
 
 			q->setItemWidget(mappingsIndexItem, 1, listWidget);
 
-			for (auto const& mapping : model->mappings)
+			for (auto const& mapping : model.mappings)
 			{
 				listWidget->addItem(QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel));
 			}
@@ -743,46 +748,38 @@ private:
 		}
 
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
-		auto const* const staticModel = node.staticModel;
-		auto const* const dynamicModel = node.dynamicModel;
-		auto const valueType = staticModel->controlValueType.getType();
-
-		if (!staticModel->values)
-		{
-			auto* descriptorItem = new QTreeWidgetItem(q);
-			descriptorItem->setText(0, "Error");
-			descriptorItem->setText(1, "Invalid Descriptor");
-			return;
-		}
+		auto const& staticModel = node.staticModel;
+		auto const& dynamicModel = node.dynamicModel;
+		auto const valueType = staticModel.controlValueType.getType();
 
 		// Static model
 		{
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			addTextItem(descriptorItem, "Signal Type", avdecc::helper::descriptorTypeToString(staticModel->signalType));
-			addTextItem(descriptorItem, "Signal Index", staticModel->signalIndex);
-			addTextItem(descriptorItem, "Signal Output", staticModel->signalOutput);
+			addTextItem(descriptorItem, "Signal Type", avdecc::helper::descriptorTypeToString(staticModel.signalType));
+			addTextItem(descriptorItem, "Signal Index", staticModel.signalIndex);
+			addTextItem(descriptorItem, "Signal Output", staticModel.signalOutput);
 
-			addTextItem(descriptorItem, "Block Latency", staticModel->blockLatency);
-			addTextItem(descriptorItem, "Control Latency", staticModel->controlLatency);
-			addTextItem(descriptorItem, "Control Domain", staticModel->controlDomain);
-			addTextItem(descriptorItem, "Auto Reset Time (usec)", staticModel->resetTime);
+			addTextItem(descriptorItem, "Block Latency", staticModel.blockLatency);
+			addTextItem(descriptorItem, "Control Latency", staticModel.controlLatency);
+			addTextItem(descriptorItem, "Control Domain", staticModel.controlDomain);
+			addTextItem(descriptorItem, "Auto Reset Time (usec)", staticModel.resetTime);
 
-			addTextItem(descriptorItem, "Control Type", avdecc::helper::controlTypeToString(staticModel->controlType));
+			addTextItem(descriptorItem, "Control Type", avdecc::helper::controlTypeToString(staticModel.controlType));
 			addTextItem(descriptorItem, "Values Type", avdecc::helper::controlValueTypeToString(valueType));
-			addTextItem(descriptorItem, "Values Writable", staticModel->controlValueType.isReadOnly() ? "False" : "True");
-			addTextItem(descriptorItem, "Values Valid", staticModel->controlValueType.isUnknown() ? "False" : "True");
-			addTextItem(descriptorItem, "Values Count", dynamicModel->values.size());
+			addTextItem(descriptorItem, "Values Writable", staticModel.controlValueType.isReadOnly() ? "False" : "True");
+			addTextItem(descriptorItem, "Values Valid", staticModel.controlValueType.isUnknown() ? "False" : "True");
+			addTextItem(descriptorItem, "Values Count", dynamicModel.values.size());
 
 			// Display static values
 			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
 			{
-				it->second->visitStaticControlValues(this, controlledEntity, descriptorItem, *staticModel, *dynamicModel);
+				it->second->visitStaticControlValues(this, controlledEntity, descriptorItem, staticModel, dynamicModel);
 			}
 			else
 			{
@@ -795,13 +792,13 @@ private:
 			// Display static values
 			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
 			{
-				it->second->visitDynamicControlValues(q, _controlledEntityID, node.descriptorIndex, *staticModel, *dynamicModel);
+				it->second->visitDynamicControlValues(q, _controlledEntityID, node.descriptorIndex, staticModel, dynamicModel);
 			}
 			else
 			{
 				auto* descriptorItem = new QTreeWidgetItem(q);
 				descriptorItem->setText(0, "Dynamic Info");
-				descriptorItem->setText(0, "Value Type Not Supported");
+				descriptorItem->setText(1, "Value Type Not Supported");
 			}
 		}
 	}
@@ -809,19 +806,19 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
-		auto const* const model = node.staticModel;
-		auto const* const dynamicModel = node.dynamicModel;
+		auto const& model = node.staticModel;
+		auto const& dynamicModel = node.dynamicModel;
 
 		// Static model
 		{
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			addTextItem(descriptorItem, "Clock Sources count", model->clockSources.size());
+			addTextItem(descriptorItem, "Clock Sources count", model.clockSources.size());
 		}
 
 		// Dynamic model
@@ -835,7 +832,7 @@ private:
 
 			auto* sourceComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ClockSourceIndex>();
 			auto clockSources = std::remove_pointer_t<decltype(sourceComboBox)>::Data{};
-			for (auto const sourceIndex : model->clockSources)
+			for (auto const sourceIndex : model.clockSources)
 			{
 				clockSources.insert(sourceIndex);
 				/*try
@@ -890,13 +887,13 @@ private:
 				});
 
 			// Update now
-			sourceComboBox->setCurrentData(dynamicModel->clockSourceIndex);
+			sourceComboBox->setCurrentData(dynamicModel.clockSourceIndex);
 		}
 
 		// Counters (if supported by the entity)
-		if (isActiveConfiguration && node.dynamicModel->counters && !node.dynamicModel->counters->empty())
+		if (isActiveConfiguration && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
-			auto* countersItem = new ClockDomainCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel->counters, q);
+			auto* countersItem = new ClockDomainCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
@@ -921,7 +918,7 @@ private:
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
 	{
 		createIdItem(&node);
-		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel->currentConfiguration;
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
 		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
@@ -931,24 +928,24 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			auto const* const model = node.staticModel;
-			addTextItem(descriptorItem, "Memory object type", avdecc::helper::memoryObjectTypeToString(model->memoryObjectType));
-			addTextItem(descriptorItem, "Target descriptor type", avdecc::helper::descriptorTypeToString(model->targetDescriptorType));
-			addTextItem(descriptorItem, "Target descriptor index", model->targetDescriptorIndex);
-			addTextItem(descriptorItem, "Start address", hive::modelsLibrary::helper::toHexQString(model->startAddress, false, true));
-			addTextItem(descriptorItem, "Maximum length", hive::modelsLibrary::helper::toHexQString(model->maximumLength, false, true));
+			auto const& model = node.staticModel;
+			addTextItem(descriptorItem, "Memory object type", avdecc::helper::memoryObjectTypeToString(model.memoryObjectType));
+			addTextItem(descriptorItem, "Target descriptor type", avdecc::helper::descriptorTypeToString(model.targetDescriptorType));
+			addTextItem(descriptorItem, "Target descriptor index", model.targetDescriptorIndex);
+			addTextItem(descriptorItem, "Start address", hive::modelsLibrary::helper::toHexQString(model.startAddress, false, true));
+			addTextItem(descriptorItem, "Maximum length", hive::modelsLibrary::helper::toHexQString(model.maximumLength, false, true));
 
 			// Check and add ImageItem, if this MemoryObject is a supported image type
-			checkAddImageItem(descriptorItem, "Preview", model->memoryObjectType);
+			checkAddImageItem(descriptorItem, "Preview", model.memoryObjectType);
 
 			// Check and add FirmwareUpload, if this MemoryObject is a supported firmware type
-			checkAddFirmwareItem(descriptorItem, "Firmware", model->memoryObjectType, node.descriptorIndex, model->startAddress, model->maximumLength);
+			checkAddFirmwareItem(descriptorItem, "Firmware", model.memoryObjectType, node.descriptorIndex, model.startAddress, model.maximumLength);
 		}
 
 		// Dynamic model
 		if (isActiveConfiguration)
 		{
-			auto* dynamicItem = new MemoryObjectDynamicTreeWidgetItem(_controlledEntityID, configurationIndex, node.descriptorIndex, node.dynamicModel, q);
+			auto* dynamicItem = new MemoryObjectDynamicTreeWidgetItem(_controlledEntityID, configurationIndex, node.descriptorIndex, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 	}
@@ -1037,11 +1034,11 @@ public:
 	template<la::avdecc::entity::model::DescriptorType DescriptorType, typename DescriptorCountType>
 	void addEnumeratedDescriptorType(QTreeWidgetItem* const descriptorItem, la::avdecc::controller::model::ConfigurationNode const& node, DescriptorCountType const& counts)
 	{
-		auto const* const model = node.staticModel;
+		auto const& model = node.staticModel;
 		auto descriptorCount = 0u;
 		try
 		{
-			descriptorCount = model->descriptorCounts.at(DescriptorType);
+			descriptorCount = model.descriptorCounts.at(DescriptorType);
 		}
 		catch (std::out_of_range const&)
 		{
@@ -1062,11 +1059,11 @@ public:
 		{
 			if (commandType != hive::modelsLibrary::ControllerManager::AecpCommandType::None)
 			{
-				addEditableTextItem(nameItem, "Name", node.dynamicModel->objectName.data(), commandType, descriptorIndex, customData);
+				addEditableTextItem(nameItem, "Name", node.dynamicModel.objectName.data(), commandType, descriptorIndex, customData);
 			}
 			else
 			{
-				addTextItem(nameItem, "Name", node.dynamicModel->objectName.data());
+				addTextItem(nameItem, "Name", node.dynamicModel.objectName.data());
 			}
 		}
 		else
@@ -1076,13 +1073,22 @@ public:
 
 		auto* localizedNameItem = new QTreeWidgetItem(nameItem);
 		localizedNameItem->setText(0, "Localized Name");
-		localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, configurationIndex, node.staticModel->localizedDescription));
+		localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, configurationIndex, node.staticModel.localizedDescription));
 
 		return nameItem;
 	}
 
 	/** A label (readonly) item */
-	template<typename ValueType, typename std::enable_if_t<!std::is_same_v<QString, std::decay_t<ValueType>> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
+	template<typename ValueType, typename std::enable_if_t<std::is_arithmetic_v<ValueType> && !std::is_same_v<QString, std::decay_t<ValueType>> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
+	QTreeWidgetItem* addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
+	{
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+		item->setText(1, QString::number(itemValue));
+		//item->setData(1, Qt::DisplayRole, QVariant::fromValue<ValueType>(itemValue));
+		return item;
+	}
+	template<typename ValueType, typename std::enable_if_t<!std::is_arithmetic_v<ValueType> && !std::is_same_v<QString, std::decay_t<ValueType>> && std::is_move_assignable_v<ValueType> && !std::is_reference_v<ValueType> && !std::is_pointer_v<ValueType>, bool> = true>
 	QTreeWidgetItem* addTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, ValueType const itemValue)
 	{
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
@@ -1569,7 +1575,7 @@ private:
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
 };
 
-/** Linear Values */
+/** Linear Values - Clause 7.3.5.2.1 */
 template<class StaticValueType, class DynamicValueType>
 class VisitControlLinearValues final : public NodeTreeWidgetPrivate::VisitControlValues
 {
@@ -1603,7 +1609,26 @@ class VisitControlLinearValues final : public NodeTreeWidgetPrivate::VisitContro
 	}
 };
 
-/** Array Values */
+/** Selector Values - Clause 7.3.5.2.2 */
+template<typename SizeType, typename StaticValueType = la::avdecc::entity::model::SelectorValueStatic<SizeType>, typename DynamicValueType = la::avdecc::entity::model::SelectorValueDynamic<SizeType>>
+class VisitControlSelectorValues final : public NodeTreeWidgetPrivate::VisitControlValues
+{
+	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
+	{
+		auto valNumber = decltype(std::declval<decltype(staticModel.values)>().size()){ 0u };
+		auto const& selectorValue = staticModel.values.getValues<StaticValueType>();
+
+		self->addTextItem(item, "Default Value", selectorValue.defaultValue);
+		self->addTextItem(item, "Unit Type", ::avdecc::helper::controlValueUnitToString(selectorValue.unit.getUnit()));
+	}
+	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	{
+		auto* dynamicItem = new SelectorControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
+		dynamicItem->setText(0, "Dynamic Info");
+	}
+};
+
+/** Array Values - Clause 7.3.5.2.3 */
 template<typename SizeType, typename StaticValueType = la::avdecc::entity::model::ArrayValueStatic<SizeType>, typename DynamicValueType = la::avdecc::entity::model::ArrayValueDynamic<SizeType>>
 class VisitControlArrayValues final : public NodeTreeWidgetPrivate::VisitControlValues
 {
@@ -1628,7 +1653,7 @@ class VisitControlArrayValues final : public NodeTreeWidgetPrivate::VisitControl
 	}
 };
 
-/** UTF-8 String Value */
+/** UTF-8 String Value - Clause 7.3.5.2.4 */
 class VisitControlUtf8Values final : public NodeTreeWidgetPrivate::VisitControlValues
 {
 public:
@@ -1645,6 +1670,7 @@ public:
 
 void NodeTreeWidgetPrivate::createControlValuesDispatchTable(VisitControlValuesDispatchTable& dispatchTable)
 {
+	/** Linear Values - Clause 7.3.5.2.1 */
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt8] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int8_t>>>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearUInt8] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::uint8_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>>>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearInt16] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<std::int16_t>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::int16_t>>>>();
@@ -1656,6 +1682,20 @@ void NodeTreeWidgetPrivate::createControlValuesDispatchTable(VisitControlValuesD
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearFloat] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<float>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<float>>>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlLinearDouble] = std::make_unique<VisitControlLinearValues<la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueStatic<double>>, la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<double>>>>();
 
+	/** Selector Value - Clause 7.3.5.2.2 */
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt8] = std::make_unique<VisitControlSelectorValues<std::int8_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt8] = std::make_unique<VisitControlSelectorValues<std::uint8_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt16] = std::make_unique<VisitControlSelectorValues<std::int16_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt16] = std::make_unique<VisitControlSelectorValues<std::uint16_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt32] = std::make_unique<VisitControlSelectorValues<std::int32_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt32] = std::make_unique<VisitControlSelectorValues<std::uint32_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorInt64] = std::make_unique<VisitControlSelectorValues<std::int64_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorUInt64] = std::make_unique<VisitControlSelectorValues<std::uint64_t>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorFloat] = std::make_unique<VisitControlSelectorValues<float>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorDouble] = std::make_unique<VisitControlSelectorValues<double>>();
+	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlSelectorString] = std::make_unique<VisitControlSelectorValues<la::avdecc::entity::model::LocalizedStringReference>>();
+
+	/** Array Values - Clause 7.3.5.2.3 */
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt8] = std::make_unique<VisitControlArrayValues<std::int8_t>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayUInt8] = std::make_unique<VisitControlArrayValues<std::uint8_t>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayInt16] = std::make_unique<VisitControlArrayValues<std::int16_t>>();
@@ -1667,6 +1707,7 @@ void NodeTreeWidgetPrivate::createControlValuesDispatchTable(VisitControlValuesD
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayFloat] = std::make_unique<VisitControlArrayValues<float>>();
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlArrayDouble] = std::make_unique<VisitControlArrayValues<double>>();
 
+	/** UTF-8 String Value - Clause 7.3.5.2.4 */
 	dispatchTable[la::avdecc::entity::model::ControlValueType::Type::ControlUtf8] = std::make_unique<VisitControlUtf8Values>();
 }
 

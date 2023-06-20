@@ -299,9 +299,9 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					{
 						for (auto const& talkerAudioClusterKV : talkerStreamPortOutputKV.second.audioClusters)
 						{
-							for (uint16_t channel = 0; channel < talkerAudioClusterKV.second.staticModel->channelCount; channel++)
+							for (uint16_t channel = 0; channel < talkerAudioClusterKV.second.staticModel.channelCount; channel++)
 							{
-								talkerChannels.emplace_back(avdecc::ChannelIdentification{ talkerConfiguration.descriptorIndex, talkerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::OutputToInput, talkerAudioUnitKV.first, talkerStreamPortOutputKV.first, talkerStreamPortOutputKV.second.staticModel->baseCluster });
+								talkerChannels.emplace_back(avdecc::ChannelIdentification{ talkerConfiguration.descriptorIndex, talkerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::OutputToInput, talkerAudioUnitKV.first, talkerStreamPortOutputKV.first, talkerStreamPortOutputKV.second.staticModel.baseCluster });
 							}
 						}
 					}
@@ -313,9 +313,9 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					{
 						for (auto const& listenerAudioClusterKV : listenerStreamPortOutputKV.second.audioClusters)
 						{
-							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel->channelCount; channel++)
+							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel.channelCount; channel++)
 							{
-								listenerChannels.emplace_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::InputToOutput, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster });
+								listenerChannels.emplace_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::InputToOutput, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel.baseCluster });
 							}
 						}
 					}
@@ -376,9 +376,9 @@ void View::onIntersectionClicked(QModelIndex const& index)
 					{
 						for (auto const& listenerAudioClusterKV : listenerStreamPortOutputKV.second.audioClusters)
 						{
-							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel->channelCount; channel++)
+							for (uint16_t channel = 0; channel < listenerAudioClusterKV.second.staticModel.channelCount; channel++)
 							{
-								listenerChannels.emplace_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::InputToOutput, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel->baseCluster });
+								listenerChannels.emplace_back(avdecc::ChannelIdentification{ listenerConfiguration.descriptorIndex, listenerAudioClusterKV.first, channel, avdecc::ChannelConnectionDirection::InputToOutput, listenerAudioUnitKV.first, listenerStreamPortOutputKV.first, listenerStreamPortOutputKV.second.staticModel.baseCluster });
 							}
 						}
 					}
