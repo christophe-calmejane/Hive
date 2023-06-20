@@ -69,7 +69,7 @@ void FlowSocket::setColor(QColor const& color)
 bool FlowSocket::hit(QPointF const& scenePos) const
 {
 	auto const localPos = mapFromScene(scenePos);
-	return hotSpotBoundingRect().contains(localPos);
+	return boundingRect().contains(localPos);
 }
 
 QPointF FlowSocket::hotSpotSceneCenter() const
