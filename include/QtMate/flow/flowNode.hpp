@@ -56,6 +56,10 @@ public:
 	virtual int type() const override;
 
 	virtual QRectF boundingRect() const override;
+
+	QRectF animatedBoundingRect() const;
+	QRectF fixedBoundingRect() const;
+
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget = nullptr) override;
 
 signals:
@@ -71,6 +75,8 @@ private:
 	void handleItemPositionHasChanged();
 	void handleItemSelectionHasChanged();
 	void updateSockets();
+
+	float collapseRatio(bool animated) const;
 
 private:
 	FlowSceneDelegate* _delegate{};

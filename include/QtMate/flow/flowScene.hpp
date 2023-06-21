@@ -61,6 +61,7 @@ signals:
 	void nodeDestroyed(FlowNodeUid const& uid);
 	void connectionCreated(FlowConnectionDescriptor const& descriptor);
 	void connectionDestroyed(FlowConnectionDescriptor const& descriptor);
+	void layoutRequested();
 
 private:
 	FlowSceneDelegate* _delegate{};
