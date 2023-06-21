@@ -95,6 +95,8 @@ FlowNode* FlowScene::createNode(FlowNodeUid const& uid, FlowNodeDescriptor const
 
 	emit nodeCreated(uid);
 
+	connect(node, &FlowNode::collapsedChanged, this, &FlowScene::layoutRequested);
+
 	return node;
 }
 
