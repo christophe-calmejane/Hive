@@ -68,6 +68,7 @@ public:
 		auto* delegate = new Delegate{ this };
 		auto* scene = new qtMate::flow::FlowScene{ delegate, this };
 		auto* view = new qtMate::flow::FlowView{ scene, this };
+		view->setDragMode(QGraphicsView::ScrollHandDrag);
 
 		auto* layout = new QHBoxLayout{ this };
 		layout->setContentsMargins(0, 0, 0, 0);
