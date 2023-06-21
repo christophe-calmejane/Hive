@@ -20,7 +20,7 @@
 #pragma once
 
 #include <QStandardItemModel>
-#include <QtMate/flow/flowdefs.hpp>
+#include <QtMate/flow/flowDefs.hpp>
 
 class NodeListModel : public QStandardItemModel
 {
