@@ -127,6 +127,11 @@ FlowOutputs const& FlowNode::outputs() const
 	return _outputs;
 }
 
+bool FlowNode::isCollapsed() const {
+	return _collapsed;
+}
+
+
 FlowInput* FlowNode::input(FlowSocketIndex index) const
 {
 	if (index < 0 || index >= _inputs.size())
@@ -263,6 +268,11 @@ void FlowNode::toggleCollapsed()
 
 void FlowNode::setCollapsed(bool collapsed)
 {
+	if (collapsed == _collapsed)
+	{
+		return;
+	}
+
 	_collapsed = collapsed;
 
 	_collapseAnimation.stop();
@@ -278,6 +288,8 @@ void FlowNode::setCollapsed(bool collapsed)
 	}
 
 	_collapseAnimation.start(QAbstractAnimation::DeletionPolicy::KeepWhenStopped);
+
+	emit collapsedChanged();
 }
 
 void FlowNode::handleItemPositionHasChanged()

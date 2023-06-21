@@ -27,8 +27,11 @@ namespace qtMate::flow
 {
 class FlowNodeHeader;
 
-class FlowNode : public QGraphicsItem
+class FlowNode : public QObject, public QGraphicsItem
 {
+	Q_OBJECT
+	Q_PROPERTY(bool collapsed READ isCollapsed NOTIFY collapsedChanged);
+
 public:
 	FlowNode(FlowSceneDelegate* delegate, FlowNodeUid const& uid, FlowNodeDescriptor const& descriptor, QGraphicsItem* parent = nullptr);
 	virtual ~FlowNode() override;
@@ -37,6 +40,8 @@ public:
 	QString const& name() const;
 	FlowInputs const& inputs() const;
 	FlowOutputs const& outputs() const;
+
+	bool isCollapsed() const;
 
 	FlowInput* input(FlowSocketIndex index) const;
 	FlowOutput* output(FlowSocketIndex index) const;
@@ -52,6 +57,9 @@ public:
 
 	virtual QRectF boundingRect() const override;
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget = nullptr) override;
+
+signals:
+	void collapsedChanged();
 
 protected:
 	virtual QVariant itemChange(GraphicsItemChange change, QVariant const& value) override;
