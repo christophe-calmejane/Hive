@@ -88,7 +88,8 @@ public:
 			});
 
 
-		auto const createNodesAndConnections = [&]() {
+		auto const createNodesAndConnections = [&]()
+		{
 			// CAUTION: as the spec tells that outputs and inputs nodes are identified by their index in their own list,
 			// which is not compatible with qtMate::flow API which requires a unique identifier for each node,
 			// we must generate this unique identifier ourselves and also keep the offset to the first input node
@@ -133,9 +134,10 @@ public:
 			}
 		};
 
-		auto const layoutNodes = [&]() {
-			auto const paddingX{ 150.f };    
-			auto const paddingY{ 5.f };    
+		auto const layoutNodes = [&]()
+		{
+			auto const paddingX{ 150.f };
+			auto const paddingY{ 5.f };
 
 			auto outputNodeX{ 0.f };
 			auto outputNodeY{ 0.f };
@@ -143,8 +145,10 @@ public:
 			auto inputNodeX{ 0.f };
 			auto inputNodeY{ 0.f };
 
-			auto animateTo = [&](qtMate::flow::FlowNode* node, float x, float y) {
-				if (!_firstLayoutExecuted) {
+			auto animateTo = [&](qtMate::flow::FlowNode* node, float x, float y)
+			{
+				if (!_firstLayoutExecuted)
+				{
 					node->setPos(x, y);
 					return;
 				}
@@ -165,7 +169,8 @@ public:
 			};
 
 
-			for (auto* node : _outputNodes) {
+			for (auto* node : _outputNodes)
+			{
 				animateTo(node, outputNodeX, outputNodeY);
 
 				auto const boundingRect = node->fixedBoundingRect();
@@ -173,7 +178,8 @@ public:
 				inputNodeX = std::max(inputNodeX, static_cast<float>(boundingRect.width()) + paddingX);
 			}
 
-			for (auto* node : _inputNodes) {
+			for (auto* node : _inputNodes)
+			{
 				animateTo(node, inputNodeX, inputNodeY);
 
 				auto const boundingRect = node->fixedBoundingRect();

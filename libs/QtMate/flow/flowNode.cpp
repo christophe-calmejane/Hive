@@ -127,7 +127,8 @@ FlowOutputs const& FlowNode::outputs() const
 	return _outputs;
 }
 
-bool FlowNode::isCollapsed() const {
+bool FlowNode::isCollapsed() const
+{
 	return _collapsed;
 }
 
@@ -186,13 +187,14 @@ QRectF FlowNode::boundingRect() const
 	return animatedBoundingRect();
 }
 
-QRectF FlowNode::animatedBoundingRect() const {
-
+QRectF FlowNode::animatedBoundingRect() const
+{
 	auto const n = std::max(_inputs.size(), _outputs.size());
 	return QRectF{ 0.f, 0.f, NODE_WIDTH, NODE_HEADER_HEIGHT + collapseRatio(true) * (NODE_HEADER_SEPARATOR_HEIGHT + NODE_SOCKET_AREA_INSET_TOP + n * NODE_LINE_HEIGHT + NODE_SOCKET_AREA_INSET_BOTTOM) };
 }
 
-QRectF FlowNode::fixedBoundingRect() const {
+QRectF FlowNode::fixedBoundingRect() const
+{
 	auto const n = std::max(_inputs.size(), _outputs.size());
 	return QRectF{ 0.f, 0.f, NODE_WIDTH, NODE_HEADER_HEIGHT + collapseRatio(false) * (NODE_HEADER_SEPARATOR_HEIGHT + NODE_SOCKET_AREA_INSET_TOP + n * NODE_LINE_HEIGHT + NODE_SOCKET_AREA_INSET_BOTTOM) };
 }
@@ -340,7 +342,8 @@ void FlowNode::updateSockets()
 	handleItemPositionHasChanged();
 }
 
-float FlowNode::collapseRatio(bool animated) const {
+float FlowNode::collapseRatio(bool animated) const
+{
 	return animated ? _collapseRatio : (_collapsed ? 0.f : 1.f);
 }
 
