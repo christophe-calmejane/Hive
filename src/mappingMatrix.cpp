@@ -86,63 +86,109 @@ public:
 				_connections.remove(descriptor);
 			});
 
-		// Needed to configure each node position in the scene
-		auto const paddingX{ 150.f };
-		auto const paddingY{ 5.f };
 
-		auto outputNodeX{ 0.f };
-		auto outputNodeY{ 0.f };
+		auto const createNodesAndConnections = [&]() {
+			// CAUTION: as the spec tells that outputs and inputs nodes are identified by their index in their own list,
+			// which is not compatible with qtMate::flow API which requires a unique identifier for each node,
+			// we must generate this unique identifier ourselves and also keep the offset to the first input node
+			// in order to be able to translate connections back and forth.
+			auto id = 0;
 
-		auto inputNodeX{ 0.f };
-		auto inputNodeY{ 0.f };
-
-		// CAUTION: as the spec tells that outputs and inputs nodes are identified by their index in their own list,
-		// which is not compatible with qtMate::flow API which requires a unique identifier for each node,
-		// we must generate this unique identifier ourselves and also keep the offset to the first input node
-		// in order to be able to translate connections back and forth.
-		auto id = 0;
-		_offset = static_cast<decltype(_offset)>(outputs.size());
-
-		// Create output nodes
-		for (auto const& output : outputs)
-		{
-			auto descriptor = qtMate::flow::FlowNodeDescriptor{};
-			descriptor.name = QString::fromStdString(output.name);
-			for (auto const& socket : output.sockets)
+			// Create output nodes
+			_outputNodes.reserve(outputs.size());
+			for (auto const& output : outputs)
 			{
-				descriptor.outputs.push_back({ QString::fromStdString(socket), SocketType::Output });
+				auto descriptor = qtMate::flow::FlowNodeDescriptor{};
+				descriptor.name = QString::fromStdString(output.name);
+				for (auto const& socket : output.sockets)
+				{
+					descriptor.outputs.push_back({ QString::fromStdString(socket), SocketType::Output });
+				}
+
+				auto* node = scene->createNode(id++, descriptor);
+				node->setFlag(QGraphicsItem::ItemIsMovable, false);
+				_outputNodes.emplaceBack(node);
 			}
 
-			auto* node = scene->createNode(id++, descriptor);
-			node->setFlag(QGraphicsItem::ItemIsMovable, false);
-			node->setPos(outputNodeX, outputNodeY);
-			outputNodeY += node->boundingRect().height() + paddingY;
-
-			inputNodeX = std::max(inputNodeX, static_cast<float>(node->boundingRect().width()) + paddingX);
-		}
-
-		// Create input nodes
-		for (auto const& input : inputs)
-		{
-			auto descriptor = qtMate::flow::FlowNodeDescriptor{};
-			descriptor.name = QString::fromStdString(input.name);
-			for (auto const& socket : input.sockets)
+			// Create input nodes
+			for (auto const& input : inputs)
 			{
-				descriptor.inputs.push_back({ QString::fromStdString(socket), SocketType::Input });
+				auto descriptor = qtMate::flow::FlowNodeDescriptor{};
+				descriptor.name = QString::fromStdString(input.name);
+				for (auto const& socket : input.sockets)
+				{
+					descriptor.inputs.push_back({ QString::fromStdString(socket), SocketType::Input });
+				}
+
+				auto* node = scene->createNode(id++, descriptor);
+				node->setFlag(QGraphicsItem::ItemIsMovable, false);
+				_inputNodes.emplaceBack(node);
 			}
 
-			auto* node = scene->createNode(id++, descriptor);
-			node->setFlag(QGraphicsItem::ItemIsMovable, false);
-			node->setPos(inputNodeX, inputNodeY);
-			inputNodeY += node->boundingRect().height() + paddingY;
-		}
+			// Create connections
+			for (auto const& connection : connections)
+			{
+				scene->createConnection(convert(connection));
+			}
+		};
 
-		// Create connections
-		for (auto const& connection : connections)
-		{
-			scene->createConnection(convert(connection));
-		}
+		auto const layoutNodes = [&]() {
+			auto const paddingX{ 150.f };    
+			auto const paddingY{ 5.f };    
+
+			auto outputNodeX{ 0.f };
+			auto outputNodeY{ 0.f };
+
+			auto inputNodeX{ 0.f };
+			auto inputNodeY{ 0.f };
+
+			auto animateTo = [&](qtMate::flow::FlowNode* node, float x, float y) {
+				if (!_firstLayoutExecuted) {
+					node->setPos(x, y);
+					return;
+				}
+
+				auto animation = new QVariantAnimation{ this };
+				animation->setDuration(400);
+				animation->setEasingCurve(QEasingCurve::Type::OutQuart);
+				animation->setStartValue(node->pos());
+				animation->setEndValue(QPointF{ x, y });
+
+				connect(animation, &QVariantAnimation::valueChanged, this,
+					[node, uid = node](QVariant const& value)
+					{
+						node->setPos(value.toPointF());
+					});
+
+				animation->start(QAbstractAnimation::DeletionPolicy::DeleteWhenStopped);
+			};
+
+
+			for (auto* node : _outputNodes) {
+				animateTo(node, outputNodeX, outputNodeY);
+
+				auto const boundingRect = node->fixedBoundingRect();
+				outputNodeY += boundingRect.height() + paddingY;
+				inputNodeX = std::max(inputNodeX, static_cast<float>(boundingRect.width()) + paddingX);
+			}
+
+			for (auto* node : _inputNodes) {
+				animateTo(node, inputNodeX, inputNodeY);
+
+				auto const boundingRect = node->fixedBoundingRect();
+				inputNodeY += boundingRect.height() + paddingY;
+			}
+		};
+
+		connect(scene, &qtMate::flow::FlowScene::layoutRequested, this, layoutNodes);
+
+		createNodesAndConnections();
+
+		_firstLayoutExecuted = false;
+		layoutNodes();
+		_firstLayoutExecuted = true;
 	}
+
 
 	Connections connections() const
 	{
@@ -173,6 +219,11 @@ public:
 private:
 	int _offset{}; // we need an offset to identify output nodes
 	qtMate::flow::FlowConnectionDescriptors _connections{};
+
+	QVector<qtMate::flow::FlowNode*> _outputNodes{};
+	QVector<qtMate::flow::FlowNode*> _inputNodes{};
+
+	bool _firstLayoutExecuted{ false };
 };
 
 MappingMatrixDialog::MappingMatrixDialog(QString const& title, Outputs const& outputs, Inputs const& inputs, Connections const& connections, QWidget* parent)
