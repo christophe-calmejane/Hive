@@ -20,7 +20,7 @@
 #pragma once
 
 #include <QWidget>
-#include <QtMate/flow/flowdefs.hpp>
+#include <QtMate/flow/flowDefs.hpp>
 
 class ConnectionEditor : public QWidget
 {

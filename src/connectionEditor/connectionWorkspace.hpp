@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <QtMate/flow/flowview.hpp>
+#include <QtMate/flow/flowView.hpp>
 
 class ConnectionWorkspace : public qtMate::flow::FlowView
 {

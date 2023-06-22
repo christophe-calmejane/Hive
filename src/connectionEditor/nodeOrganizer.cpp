@@ -16,13 +16,13 @@
 * You should have received a copy of the GNU Lesser General Public License
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "nodeorganizer.hpp"
+#include "nodeOrganizer.hpp"
 
-#include <QtMate/flow/flowscene.hpp>
-#include <QtMate/flow/flownode.hpp>
-#include <QtMate/flow/flowinput.hpp>
-#include <QtMate/flow/flowoutput.hpp>
-#include <QtMate/flow/flowconnection.hpp>
+#include <QtMate/flow/flowScene.hpp>
+#include <QtMate/flow/flowNode.hpp>
+#include <QtMate/flow/flowInput.hpp>
+#include <QtMate/flow/flowOutput.hpp>
+#include <QtMate/flow/flowConnection.hpp>
 
 namespace
 {

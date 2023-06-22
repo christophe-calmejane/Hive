@@ -22,11 +22,11 @@
 #include "nodeListView.hpp"
 #include "connectionWorkspace.hpp"
 
-#include <QtMate/flow/flowscene.hpp>
-#include <QtMate/flow/flowscenedelegate.hpp>
-#include <QtMate/flow/flownode.hpp>
-#include <QtMate/flow/flowsocket.hpp>
-#include <QtMate/flow/flowview.hpp>
+#include <QtMate/flow/flowScene.hpp>
+#include <QtMate/flow/flowSceneDelegate.hpp>
+#include <QtMate/flow/flowNode.hpp>
+#include <QtMate/flow/flowSocket.hpp>
+#include <QtMate/flow/flowView.hpp>
 
 #include <QHBoxLayout>
 #include <QListView>

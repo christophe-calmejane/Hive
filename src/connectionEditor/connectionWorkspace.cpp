@@ -16,11 +16,11 @@
 * You should have received a copy of the GNU Lesser General Public License
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "connectionworkspace.hpp"
+#include "connectionWorkspace.hpp"
 
-#include <QtMate/flow/flowscene.hpp>
-#include <QtMate/flow/flowsocket.hpp>
-#include <QtMate/flow/flownode.hpp>
+#include <QtMate/flow/flowScene.hpp>
+#include <QtMate/flow/flowSocket.hpp>
+#include <QtMate/flow/flowNode.hpp>
 
 #include <QDragEnterEvent>
 #include <QDragLeaveEvent>

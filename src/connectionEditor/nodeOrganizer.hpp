@@ -23,7 +23,7 @@
 #include <QVariantAnimation>
 #include <QPropertyAnimation>
 
-#include <QtMate/flow/flowdefs.hpp>
+#include <QtMate/flow/flowDefs.hpp>
 
 class NodeOrganizer : public QObject
 {
