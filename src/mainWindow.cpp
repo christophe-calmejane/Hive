@@ -110,6 +110,10 @@ public:
 
 		// Setup the current profile
 		setupProfile();
+
+		// Force creation of the MC Domain Manager here, since it was removed from the ControllerModel (it registers to the ControllerManager events so we need to create it before entities are discovered)
+		// (Will be completely removed in the future)
+		avdecc::mediaClock::MCDomainManager::getInstance();
 	}
 
 	// Deleted compiler auto-generated methods
