@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for JACK Inputs and JACK Outputs
 - Support for CONTROLs at non-configuration level
 - Support for CONTROL_SELECTOR type for CONTROL descriptors
+- Preliminary support for Virtual Entities modification
 
 ### Changed
 - Complete rework of the `entities list`

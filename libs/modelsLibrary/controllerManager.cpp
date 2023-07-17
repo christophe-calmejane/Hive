@@ -18,6 +18,7 @@
 */
 
 #include "commandsExecutorImpl.hpp"
+#include "VirtualController.hpp"
 #include "hive/modelsLibrary/controllerManager.hpp"
 
 #include <la/avdecc/logger.hpp>
@@ -890,8 +891,14 @@ private:
 			destroyController();
 		}
 
+		// Create a new virtual controller
+		_virtualController = VirtualController{};
+
 		// Create a new controller and store it
-		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel);
+		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel, std::nullopt, &_virtualController);
+
+		_virtualController.setControllerEID(controller->getControllerEID());
+
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
 #else // !HAVE_ATOMIC_SMART_POINTERS
@@ -2420,6 +2427,7 @@ private:
 	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };
 	bool _fullAemEnumeration{ false };
+	VirtualController _virtualController{};
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept
