@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for CONTROLs at non-configuration level
 - Support for CONTROL_SELECTOR type for CONTROL descriptors
 - Preliminary support for Virtual Entities modification
+- File association to directly load ANS and AVE files
+- New command line parameters to load ANS and AVE files
+- New icons for ANS and AVE files
 
 ### Changed
 - Complete rework of the `entities list`

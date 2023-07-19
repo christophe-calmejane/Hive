@@ -33,7 +33,6 @@ macro(configure_NSIS_extra_commands)
 		WriteRegDWORD SHCTX \\\"Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\${PACKAGE_INSTALL_KEY}\\\" \\\"EstimatedSize\\\" \\\"$0\\\""
 	)
 
-
 	# Install winpcap
 	set(COMPONENT_NAME_WINPCAP WinPcap)
 	install(FILES "${CU_ROOT_DIR}/installer/win32/WinPcap_4_1_3.exe" DESTINATION . CONFIGURATIONS Release COMPONENT ${COMPONENT_NAME_WINPCAP})
@@ -43,6 +42,14 @@ macro(configure_NSIS_extra_commands)
 		Delete \\\"$INSTDIR\\\\WinPcap_4_1_3.exe\\\"\n\
 		# IfErrors -1\n"
 	)
+
+	# Add file associations
+	add_installer_file_association("ave" "Hive.ave" "ATDECC Virtual Entity" "bin/${PROJECT_NAME}.exe,1" "bin/${PROJECT_NAME}.exe")
+	add_installer_file_association("ans" "Hive.ans" "ATDECC Network State" "bin/${PROJECT_NAME}.exe,2" "bin/${PROJECT_NAME}.exe")
+
+	# Refresh icons related to the file associations
+	add_installer_refresh_associations()
+
 endmacro()
 
 # Declare a function that will be called before generating the NSIS package, to include custom components

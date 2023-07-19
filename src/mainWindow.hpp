@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QStringList>
 
 class DynamicHeaderView;
 
@@ -28,8 +29,16 @@ class MainWindow : public QMainWindow
 {
 	Q_OBJECT
 public:
+	static constexpr auto FileToLoadNamedMessage = "HiveMessage-FileToLoad";
+
+	enum class MessageType : std::uint8_t
+	{
+		None = 0,
+		LoadFileMessage = 1,
+	};
+
 	// Constructor
-	MainWindow(bool const mustResetViewSettings, QWidget* parent = nullptr);
+	MainWindow(bool const mustResetViewSettings, QStringList&& filesToLoad, QWidget* parent = nullptr);
 	virtual ~MainWindow() noexcept;
 
 	// Public methods
@@ -47,6 +56,8 @@ private:
 	virtual void closeEvent(QCloseEvent* event) override;
 	virtual void dragEnterEvent(QDragEnterEvent* event) override;
 	virtual void dropEvent(QDropEvent* event) override;
+
+	void loadFile(QString const& fileName, bool const silent);
 
 	// Private variables
 	MainWindowImpl* _pImpl{ nullptr };

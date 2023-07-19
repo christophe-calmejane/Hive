@@ -21,6 +21,7 @@
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
 #include "profiles/profileSelectionDialog.hpp"
+#include "processHelper/processHelper.hpp"
 
 #include <la/avdecc/utils.hpp>
 #ifdef USE_SPARKLE
@@ -36,6 +37,7 @@
 #include <QSplashScreen>
 #include <QCommandLineParser>
 #include <QScreen>
+#include <QStringList>
 #include <QtGlobal>
 #if QT_VERSION < 0x050F00
 #	include <QDesktopWidget>
@@ -84,6 +86,13 @@ void setupBugReporter()
 void setupBugReporter() {}
 #endif
 
+struct InstanceInfo
+{
+	QSharedMemory shm{ "d2794ee0-ab5e-48a5-9189-78a9e2c40635" };
+	bool isAlreadyRunning{ false };
+	utils::ProcessHelper::ProcessID pid{ 0u };
+};
+
 int main(int argc, char* argv[])
 {
 	// Setup Bug Reporter
@@ -125,24 +134,111 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-#if 0
-	QSharedMemory lock("d2794ee0-ab5e-48a5-9189-78a9e2c40635");
-	if (!lock.create(512, QSharedMemory::ReadWrite))
+	// Check if we are already running
+	auto instanceInfo = InstanceInfo{};
+	if (!instanceInfo.shm.create(8, QSharedMemory::ReadWrite))
 	{
-#	pragma message("TODO: Read the SM and cast to a processID. Check if that processID is still active and if not, continue.")
-		QMessageBox::critical(nullptr, {}, "An instance of this application is already running.", QMessageBox::Ok);
-		return 1;
+		// If we failed to create the shared memory, check if it's because it already exists
+		if (instanceInfo.shm.error() == QSharedMemory::AlreadyExists)
+		{
+			// Attach to the shared memory
+			if (instanceInfo.shm.attach(QSharedMemory::ReadWrite))
+			{
+				// Make sure the other instance is still running by checking its process ID
+				{
+					// Read the process ID from the shared memory
+					instanceInfo.shm.lock();
+					instanceInfo.pid = *static_cast<utils::ProcessHelper::ProcessID const*>(instanceInfo.shm.constData());
+					instanceInfo.shm.unlock();
+				}
+				// Check if the process is still running
+				instanceInfo.isAlreadyRunning = utils::ProcessHelper::isProcessRunning(instanceInfo.pid);
+			}
+		}
 	}
-#endif
+	// If not already running, write our process ID to the shared memory
+	if (!instanceInfo.isAlreadyRunning && instanceInfo.shm.isAttached())
+	{
+		instanceInfo.shm.lock();
+		*static_cast<utils::ProcessHelper::ProcessID*>(instanceInfo.shm.data()) = utils::ProcessHelper::getCurrentProcessID();
+		instanceInfo.shm.unlock();
+	}
 
 	// Parse command line
 	auto parser = QCommandLineParser{};
+	auto const singleOption = QCommandLineOption{ { "s", "single" }, "Exist if another instance is already running" };
 	auto const settingsFileOption = QCommandLineOption{ "settings", "Use the specified Settings file (.ini)", "Hive Settings" };
+	auto const ansFilesOption = QCommandLineOption{ "ans", "Load the specified ATDECC Network State (.ans)", "Network State" };
+	auto const aveFilesOption = QCommandLineOption{ "ave", "Load the specified ATDECC Virtual Entity (.ave)", "Virtual Entity" };
+	parser.addOption(singleOption);
 	parser.addOption(settingsFileOption);
+	parser.addOption(ansFilesOption);
+	parser.addOption(aveFilesOption);
+	parser.addPositionalArgument("files", "Files to load (.ave, .ans, .json)", "[files...]");
 	parser.addHelpOption();
 	parser.addVersionOption();
 
 	parser.process(app);
+
+	// Get files to load
+	auto filesToLoad = QStringList{};
+	for (auto const& value : parser.values(ansFilesOption))
+	{
+		filesToLoad.append(value);
+	}
+	for (auto const& value : parser.values(aveFilesOption))
+	{
+		filesToLoad.append(value);
+	}
+	for (auto const& value : parser.positionalArguments())
+	{
+		filesToLoad.append(value);
+	}
+
+	// If we have a single file to load, we want to forward it to any already running instance
+	if (filesToLoad.size() == 1 && instanceInfo.isAlreadyRunning)
+	{
+		[[maybe_unused]] auto const data = filesToLoad[0].toUtf8();
+		[[maybe_unused]] auto const dataLength = data.size();
+
+		// Notify the other instance (OS-dependant code)
+#ifdef _WIN32
+		// On windows, we send a custom message to the main window of the other instance
+		// First we need to get the main window handle of the other instance (using its process ID)
+		static auto mainWindowHandle = HWND{ 0u };
+		auto const enumWindowsProc = [](HWND hwnd, LPARAM lParam)
+		{
+			auto windowPid = DWORD{ 0u };
+			auto const otherPID = static_cast<decltype(windowPid)>(lParam);
+			GetWindowThreadProcessId(hwnd, &windowPid);
+			if (windowPid == otherPID)
+			{
+				mainWindowHandle = hwnd;
+				return FALSE;
+			}
+			return TRUE;
+		};
+		EnumWindows(enumWindowsProc, static_cast<LPARAM>(instanceInfo.pid));
+
+		if (mainWindowHandle)
+		{
+			// Send a WM_COPYDATA message to the main window of the other instance
+			auto cds = COPYDATASTRUCT{};
+			cds.dwData = static_cast<decltype(cds.dwData)>(MainWindow::MessageType::LoadFileMessage);
+			cds.cbData = dataLength;
+			cds.lpData = const_cast<char*>(data.constData());
+			SendMessageA(mainWindowHandle, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
+			return 0;
+		}
+#endif // _WIN32
+	}
+
+	// Check if another instance is already running and the single instance option was specified
+	if (instanceInfo.isAlreadyRunning && parser.isSet(singleOption))
+	{
+		QMessageBox::critical(nullptr, {}, "Another instance of Hive is already running.", QMessageBox::Ok);
+		return 0;
+	}
 
 	// Register settings (creating default value if none was saved before)
 	auto const settingsFileParsed = parser.value(settingsFileOption);
@@ -252,7 +348,7 @@ int main(int argc, char* argv[])
 #endif // USE_SPARKLE
 
 	// Load main window (and all associated resources) while the splashscreen is displayed
-	auto window = MainWindow{ mustResetViewSettings };
+	auto window = MainWindow{ mustResetViewSettings, std::move(filesToLoad) };
 
 #if defined(Q_OS_MACOS)
 	// The native window has to be created before the first processEvents() for the initial position and size to be correctly set.
