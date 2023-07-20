@@ -195,14 +195,13 @@ int main(int argc, char* argv[])
 		filesToLoad.append(value);
 	}
 
+#ifdef _WIN32
 	// If we have a single file to load, we want to forward it to any already running instance
 	if (filesToLoad.size() == 1 && instanceInfo.isAlreadyRunning)
 	{
-		[[maybe_unused]] auto const data = filesToLoad[0].toUtf8();
-		[[maybe_unused]] auto const dataLength = data.size();
+		auto const data = filesToLoad[0].toUtf8();
+		auto const dataLength = data.size();
 
-		// Notify the other instance (OS-dependant code)
-#ifdef _WIN32
 		// On windows, we send a custom message to the main window of the other instance
 		// First we need to get the main window handle of the other instance (using its process ID)
 		static auto mainWindowHandle = HWND{ 0u };
@@ -230,8 +229,8 @@ int main(int argc, char* argv[])
 			SendMessageA(mainWindowHandle, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
 			return 0;
 		}
-#endif // _WIN32
 	}
+#endif // _WIN32
 
 	// Check if another instance is already running and the single instance option was specified
 	if (instanceInfo.isAlreadyRunning && parser.isSet(singleOption))

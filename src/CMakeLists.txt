@@ -37,11 +37,19 @@ if(WIN32)
 	find_package(BugTrap REQUIRED)
 	set(BUGREPORTER_LINK_LIBRARIES "BugTrap")
 elseif(APPLE)
+	# Main icon
 	set(ICON_FILE Icon.icns)
 	set(ICON_PATH ${HIVE_RESOURCES_FOLDER}/macOS/${ICON_FILE})
 	set_source_files_properties(${ICON_PATH} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	list(APPEND RESOURCE_FILES
 		${ICON_PATH}
+	)
+	# Add other icons
+	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+	list(APPEND RESOURCE_FILES
+		${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns
+		${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns
 	)
 endif()
 

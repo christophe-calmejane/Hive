@@ -91,7 +91,10 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
-class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer, public QAbstractNativeEventFilter
+class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
+#ifdef _WIN32
+, public QAbstractNativeEventFilter
+#endif // _WIN32
 {
 	Q_OBJECT
 public:
@@ -112,7 +115,10 @@ public:
 		// Setup the current profile
 		setupProfile();
 
+#ifdef _WIN32
 		qApp->installNativeEventFilter(this);
+#endif // _WIN32
+		qApp->installEventFilter(this);
 
 		// Force creation of the MC Domain Manager here, since it was removed from the ControllerModel (it registers to the ControllerManager events so we need to create it before entities are discovered)
 		// (Will be completely removed in the future)
@@ -146,8 +152,10 @@ public:
 	void showChangeLog(QString const title, QString const versionString);
 	void showNewsFeed(QString const& news);
 	void updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename);
+#ifdef _WIN32
 	virtual bool nativeEventFilter(QByteArray const& eventType, void* message, qintptr*) override;
-
+#endif // _WIN32
+	virtual bool eventFilter(QObject *watched, QEvent *event) override;
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
@@ -1277,9 +1285,9 @@ void MainWindowImpl::updateStyleSheet(qtMate::material::color::Name const colorN
 	}
 }
 
+#ifdef _WIN32
 bool MainWindowImpl::nativeEventFilter(QByteArray const& eventType, void* message, qintptr*)
 {
-#ifdef _WIN32
 	if (eventType == "windows_generic_MSG")
 	{
 		auto const* const msg = static_cast<MSG const*>(message);
@@ -1303,7 +1311,18 @@ bool MainWindowImpl::nativeEventFilter(QByteArray const& eventType, void* messag
 			return true;
 		}
 	}
+	return false;
+}
 #endif // _WIN32
+
+bool MainWindowImpl::eventFilter(QObject *watched, QEvent *event)
+{
+	if (event->type() == QEvent::FileOpen)
+	{
+		auto const* const fileEvent = static_cast<QFileOpenEvent const*>(event);
+		loadFile(fileEvent->file(), false);
+		return true;
+	}
 	return false;
 }
 
