@@ -38,7 +38,7 @@ public:
 	};
 
 	// Constructor
-	MainWindow(bool const mustResetViewSettings, QStringList&& filesToLoad, QWidget* parent = nullptr);
+	MainWindow(bool const mustResetViewSettings, QStringList const& filesToLoad, QWidget* parent = nullptr);
 	virtual ~MainWindow() noexcept;
 
 	// Public methods

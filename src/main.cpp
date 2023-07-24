@@ -39,6 +39,7 @@
 #include <QScreen>
 #include <QStringList>
 #include <QtGlobal>
+#include <QFileOpenEvent>
 #if QT_VERSION < 0x050F00
 #	include <QDesktopWidget>
 #endif // Qt < 5.15.0
@@ -86,6 +87,49 @@ void setupBugReporter()
 void setupBugReporter() {}
 #endif
 
+class HiveApplication : public QApplication
+{
+public:
+	HiveApplication(int& argc, char** argv)
+		: QApplication(argc, argv)
+	{
+		// Install the event filter to catch macOS FileOpen events
+		installEventFilter(this);
+
+		// Process the events immediately so we can catch the FileOpen event before the MainWindow is created
+		processEvents();
+
+		// Remove the event filter, the main window will install its own
+		removeEventFilter(this);
+	}
+
+	void addFileToLoad(QString const& filePath)
+	{
+		_filesToLoad.append(filePath);
+	}
+
+	QStringList const& getFilesToLoad() const
+	{
+		return _filesToLoad;
+	}
+
+private:
+	// QObject overrides
+	bool eventFilter(QObject* watched, QEvent* event) override
+	{
+		if (event->type() == QEvent::FileOpen)
+		{
+			auto const* const fileEvent = static_cast<QFileOpenEvent const*>(event);
+			addFileToLoad(fileEvent->file());
+			return true;
+		}
+		return false;
+	}
+
+	// Private members
+	QStringList _filesToLoad{};
+};
+
 struct InstanceInfo
 {
 	QSharedMemory shm{ "d2794ee0-ab5e-48a5-9189-78a9e2c40635" };
@@ -114,7 +158,7 @@ int main(int argc, char* argv[])
 	QCoreApplication::setApplicationVersion(hive::internals::versionString);
 
 	// Create the Qt Application
-	QApplication app(argc, argv);
+	auto app = HiveApplication{ argc, argv };
 
 	// Runtime sanity check on Avdecc Library compilation options
 	{
@@ -181,27 +225,23 @@ int main(int argc, char* argv[])
 	parser.process(app);
 
 	// Get files to load
-	auto filesToLoad = QStringList{};
 	for (auto const& value : parser.values(ansFilesOption))
 	{
-		filesToLoad.append(value);
+		app.addFileToLoad(value);
 	}
 	for (auto const& value : parser.values(aveFilesOption))
 	{
-		filesToLoad.append(value);
+		app.addFileToLoad(value);
 	}
 	for (auto const& value : parser.positionalArguments())
 	{
-		filesToLoad.append(value);
+		app.addFileToLoad(value);
 	}
 
-#ifdef _WIN32
-	// If we have a single file to load, we want to forward it to any already running instance
-	if (filesToLoad.size() == 1 && instanceInfo.isAlreadyRunning)
+#if defined(Q_OS_WIN32)
+	// On windows, if the application is already running, we want to forward the files to load to it, then exit
+	if (!app.getFilesToLoad().isEmpty() && instanceInfo.isAlreadyRunning)
 	{
-		auto const data = filesToLoad[0].toUtf8();
-		auto const dataLength = data.size();
-
 		// On windows, we send a custom message to the main window of the other instance
 		// First we need to get the main window handle of the other instance (using its process ID)
 		static auto mainWindowHandle = HWND{ 0u };
@@ -221,16 +261,23 @@ int main(int argc, char* argv[])
 
 		if (mainWindowHandle)
 		{
-			// Send a WM_COPYDATA message to the main window of the other instance
-			auto cds = COPYDATASTRUCT{};
-			cds.dwData = static_cast<decltype(cds.dwData)>(MainWindow::MessageType::LoadFileMessage);
-			cds.cbData = dataLength;
-			cds.lpData = const_cast<char*>(data.constData());
-			SendMessageA(mainWindowHandle, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
+			// Process each file to load
+			for (auto const& f : app.getFilesToLoad())
+			{
+				auto const data = f.toUtf8();
+				auto const dataLength = data.size();
+
+				// Send a WM_COPYDATA message to the main window of the other instance
+				auto cds = COPYDATASTRUCT{};
+				cds.dwData = static_cast<decltype(cds.dwData)>(MainWindow::MessageType::LoadFileMessage);
+				cds.cbData = dataLength;
+				cds.lpData = const_cast<char*>(data.constData());
+				SendMessageA(mainWindowHandle, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
+			}
 			return 0;
 		}
 	}
-#endif // _WIN32
+#endif // Q_OS_WIN32
 
 	// Check if another instance is already running and the single instance option was specified
 	if (instanceInfo.isAlreadyRunning && parser.isSet(singleOption))
@@ -347,7 +394,7 @@ int main(int argc, char* argv[])
 #endif // USE_SPARKLE
 
 	// Load main window (and all associated resources) while the splashscreen is displayed
-	auto window = MainWindow{ mustResetViewSettings, std::move(filesToLoad) };
+	auto window = MainWindow{ mustResetViewSettings, app.getFilesToLoad() };
 
 #if defined(Q_OS_MACOS)
 	// The native window has to be created before the first processEvents() for the initial position and size to be correctly set.
