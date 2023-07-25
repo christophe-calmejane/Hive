@@ -122,16 +122,6 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-#if 0
-	QSharedMemory lock("d2794ee0-ab5e-48a5-9189-78a9e2c40635");
-	if (!lock.create(512, QSharedMemory::ReadWrite))
-	{
-#	pragma message("TODO: Read the SM and cast to a processID. Check if that processID is still active and if not, continue.")
-		QMessageBox::critical(nullptr, {}, "An instance of this application is already running.", QMessageBox::Ok);
-		return 1;
-	}
-#endif
-
 	// Load fonts
 	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/
 	{
