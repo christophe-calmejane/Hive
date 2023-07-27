@@ -24,6 +24,7 @@
 #include "aecpCommandComboBox.hpp"
 #include "aecpCommandTextEntry.hpp"
 #include "aecpCommandSpinBox.hpp"
+#include "aecpCommandSlider.hpp"
 #include "avdecc/hiveLogItems.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
@@ -60,7 +61,8 @@ class LinearControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTree
 {
 	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
 	static constexpr auto UseSpinBox = std::conditional_t < std::is_integral_v<value_size> && sizeof(value_size) <= 4, std::true_type, std::false_type > ();
-	using WidgetType = std::conditional_t<UseSpinBox, AecpCommandSpinBox<value_size>, AecpCommandComboBox<value_size>>;
+	static constexpr auto UseSlider = std::false_type::value;
+	using WidgetType = std::conditional_t<UseSpinBox, AecpCommandSpinBox<value_size>, std::conditional_t<UseSlider, AecpCommandSlider<value_size>, AecpCommandComboBox<value_size>>>;
 
 public:
 	LinearControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
@@ -119,6 +121,11 @@ public:
 					if constexpr (UseSpinBox)
 					{
 						widget->setRangeAndStep(staticVal.minimum, staticVal.maximum, staticVal.step);
+					}
+					else if constexpr (UseSlider)
+					{
+						widget->setRangeAndStep(staticVal.minimum, staticVal.maximum, staticVal.step);
+						widget->setTickPosition(QSlider::TicksBothSides);
 					}
 					else
 					{
