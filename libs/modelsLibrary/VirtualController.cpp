@@ -31,7 +31,7 @@ void VirtualController::setControllerEID(la::avdecc::UniqueIdentifier const cont
 }
 
 // Empty implementation of all VirtualController overridable methods
-void VirtualController::acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, AcquireEntityHandler const& handler) const noexcept
+void VirtualController::acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const /*isPersistent*/, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, AcquireEntityHandler const& handler) const noexcept
 {
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotSupported, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), descriptorType, descriptorIndex);
 }
@@ -265,14 +265,14 @@ void VirtualController::removeStreamPortOutputAudioMappings(la::avdecc::UniqueId
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, streamPortIndex, mappings);
 }
 
-void VirtualController::setStreamInputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& info, SetStreamInputInfoHandler const& handler) const noexcept
+void VirtualController::setStreamInputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& /*info*/, SetStreamInputInfoHandler const& handler) const noexcept
 {
 	// WARNING: When implementing this, we have to return the complete actual stream info, not the one passed in.
 	static auto const s_emptyStreamInfo = la::avdecc::entity::model::StreamInfo{};
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, streamIndex, s_emptyStreamInfo);
 }
 
-void VirtualController::setStreamOutputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& info, SetStreamOutputInfoHandler const& handler) const noexcept
+void VirtualController::setStreamOutputInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInfo const& /*info*/, SetStreamOutputInfoHandler const& handler) const noexcept
 {
 	// WARNING: When implementing this, we have to return the complete actual stream info, not the one passed in.
 	static auto const s_emptyStreamInfo = la::avdecc::entity::model::StreamInfo{};
@@ -495,7 +495,7 @@ void VirtualController::getClockSource(la::avdecc::UniqueIdentifier const target
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex{ 0u });
 }
 
-void VirtualController::setControlValues(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues, SetControlValuesHandler const& handler) const noexcept
+void VirtualController::setControlValues(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& /*controlValues*/, SetControlValuesHandler const& handler) const noexcept
 {
 	static auto const s_emptyControlValues = la::avdecc::MemoryBuffer{};
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, controlIndex, s_emptyControlValues);
@@ -579,7 +579,7 @@ void VirtualController::rebootToFirmware(la::avdecc::UniqueIdentifier const targ
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, memoryObjectIndex);
 }
 
-void VirtualController::startOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::MemoryObjectOperationType const operationType, la::avdecc::MemoryBuffer const& memoryBuffer, StartOperationHandler const& handler) const noexcept
+void VirtualController::startOperation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::MemoryObjectOperationType const operationType, la::avdecc::MemoryBuffer const& /*memoryBuffer*/, StartOperationHandler const& handler) const noexcept
 {
 	static auto const s_emptyMemoryBuffer = la::avdecc::MemoryBuffer{};
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, descriptorType, descriptorIndex, la::avdecc::entity::model::OperationID{ 0u }, operationType, s_emptyMemoryBuffer);
@@ -600,7 +600,7 @@ void VirtualController::getMemoryObjectLength(la::avdecc::UniqueIdentifier const
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, memoryObjectIndex, std::uint64_t{ 0u });
 }
 
-void VirtualController::addressAccess(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::addressAccess::Tlvs const& tlvs, AddressAccessHandler const& handler) const noexcept
+void VirtualController::addressAccess(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::addressAccess::Tlvs const& /*tlvs*/, AddressAccessHandler const& handler) const noexcept
 {
 	static auto const s_emptyTlvs = la::avdecc::entity::addressAccess::Tlvs{};
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AaCommandStatus::NotImplemented, s_emptyTlvs);
@@ -639,7 +639,7 @@ void VirtualController::getListenerStreamState(la::avdecc::entity::model::Stream
 	la::avdecc::utils::invokeProtectedHandler(handler, this, s_emptyStreamIdentification, listenerStream, std::uint16_t{ 0u }, la::avdecc::entity::ConnectionFlags{}, la::avdecc::entity::LocalEntity::ControlStatus::NotSupported);
 }
 
-void VirtualController::getTalkerStreamConnection(la::avdecc::entity::model::StreamIdentification const& talkerStream, std::uint16_t const connectionIndex, GetTalkerStreamConnectionHandler const& handler) const noexcept
+void VirtualController::getTalkerStreamConnection(la::avdecc::entity::model::StreamIdentification const& talkerStream, std::uint16_t const /*connectionIndex*/, GetTalkerStreamConnectionHandler const& handler) const noexcept
 {
 	static auto const s_emptyStreamIdentification = la::avdecc::entity::model::StreamIdentification{};
 	la::avdecc::utils::invokeProtectedHandler(handler, this, talkerStream, s_emptyStreamIdentification, std::uint16_t{ 0u }, la::avdecc::entity::ConnectionFlags{}, la::avdecc::entity::LocalEntity::ControlStatus::NotSupported);
