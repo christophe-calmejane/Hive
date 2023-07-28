@@ -1020,6 +1020,16 @@ private:
 		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
 	}
 
+	virtual bool refreshEntity(la::avdecc::UniqueIdentifier const entityID) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->refreshEntity(entityID);
+		}
+		return false;
+	}
+
 	virtual bool unloadVirtualEntity(la::avdecc::UniqueIdentifier const entityID) noexcept override
 	{
 		auto controller = getController();

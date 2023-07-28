@@ -136,6 +136,7 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 				auto* getLogo{ static_cast<QAction*>(nullptr) };
 				auto* clearErrorFlags{ static_cast<QAction*>(nullptr) };
 				auto* identify{ static_cast<QAction*>(nullptr) };
+				auto* refreshEntity{ static_cast<QAction*>(nullptr) };
 				auto* dumpFullEntity{ static_cast<QAction*>(nullptr) };
 				auto* dumpEntityModel{ static_cast<QAction*>(nullptr) };
 
@@ -209,6 +210,9 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 						identify = menu.addAction("Identify Device (10 sec)");
 						identify->setEnabled(isIdentifyControlValid);
 					}
+					{
+						refreshEntity = menu.addAction("Refresh Entity");
+					}
 				}
 
 				menu.addSeparator();
@@ -273,6 +277,10 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 					else if (action == identify)
 					{
 						manager.identifyEntity(entity.entityID, std::chrono::seconds{ 10 });
+					}
+					else if (action == refreshEntity)
+					{
+						manager.refreshEntity(entity.entityID);
 					}
 					else if (action == dumpFullEntity || action == dumpEntityModel)
 					{

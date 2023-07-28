@@ -176,6 +176,9 @@ public:
 	/** Deserializes a JSON file representing an entity, and loads it as a virtual ControlledEntity. */
 	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept = 0;
 
+	/** Re-enumerates the specified entity (physical entity only). */
+	virtual bool refreshEntity(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+
 	/** Removes a Virtual Entity from the controller */
 	virtual bool unloadVirtualEntity(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
 
