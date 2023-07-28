@@ -2339,7 +2339,8 @@ public:
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
 			auto const isRegisteredUnsol = controlledEntity.isSubscribedToUnsolicitedNotifications();
-			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol);
+			auto const areUnsolSupported = controlledEntity.areUnsolicitedNotificationsSupported();
+			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol, areUnsolSupported);
 			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamOutputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamOutputNode, auto const& avbInterfaceNode)
@@ -2476,7 +2477,8 @@ public:
 
 			auto const isMilan = controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
 			auto const isRegisteredUnsol = controlledEntity.isSubscribedToUnsolicitedNotifications();
-			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol);
+			auto const areUnsolSupported = controlledEntity.areUnsolicitedNotificationsSupported();
+			auto* entity = EntityNode::create(entityID, isMilan, isRegisteredUnsol, areUnsolSupported);
 			entity->setName(hive::modelsLibrary::helper::smartEntityName(controlledEntity));
 
 			auto const fillStreamInputNode = [&controlledEntity](auto& node, auto const configurationIndex, auto const streamIndex, auto const avbInterfaceIndex, auto const& streamInputNode, auto const& avbInterfaceNode)

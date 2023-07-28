@@ -223,6 +223,7 @@ private:
 		createAccessItem(controlledEntity);
 
 		auto const& entity = *controlledEntity;
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 
 		Q_Q(NodeTreeWidget);
 
@@ -263,6 +264,7 @@ private:
 			addTextItem(descriptorItem, "Model Name", hive::modelsLibrary::helper::localizedString(entity, staticModel.modelNameString));
 			addTextItem(descriptorItem, "Firmware Version", dynamicModel.firmwareVersion.data());
 			addTextItem(descriptorItem, "Serial Number", dynamicModel.serialNumber.data());
+			addTextItem(descriptorItem, "Unsol Supported", entity.areUnsolicitedNotificationsSupported() ? "Yes" : "No");
 
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
@@ -316,6 +318,23 @@ private:
 			else
 			{
 				addTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString("Not Set"));
+			}
+
+			{
+				auto* const subscribedLabel = addChangingTextItem(dynamicItem, "Subscribed to Unsol");
+				auto const updateSubscribedLabel = [this, subscribedLabel](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed)
+				{
+					if (entityID == _controlledEntityID)
+					{
+						subscribedLabel->setText(isSubscribed ? "Yes" : "No");
+					}
+				};
+
+				// Update text now
+				updateSubscribedLabel(_controlledEntityID, entity.isSubscribedToUnsolicitedNotifications());
+
+				// Listen for changes
+				connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, subscribedLabel, updateSubscribedLabel);
 			}
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);

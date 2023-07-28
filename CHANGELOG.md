@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New command line parameters to load ANS and AVE files
 - New icons for ANS and AVE files
 - Possibility to remove a virtual entity (DEL key in Entities list)
+- Entity Descriptor displays the current status for unsolicited notifications registration
 
 ### Changed
 - Complete rework of the `entities list`

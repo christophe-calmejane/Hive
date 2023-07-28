@@ -104,6 +104,7 @@ public:
 		bool isAemSupported{ false };
 		bool hasAnyConfigurationTree{ false };
 		bool isVirtual{ false };
+		bool areUnsolicitedNotificationsSupported{ false };
 		la::avdecc::UniqueIdentifier entityModelID{};
 		std::optional<QString> firmwareVersion{};
 		std::optional<la::avdecc::entity::model::MemoryObjectIndex> firmwareUploadMemoryIndex{ std::nullopt };
