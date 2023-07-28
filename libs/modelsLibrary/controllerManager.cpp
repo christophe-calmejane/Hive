@@ -1020,6 +1020,16 @@ private:
 		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
 	}
 
+	virtual bool unloadVirtualEntity(la::avdecc::UniqueIdentifier const entityID) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->unloadVirtualEntity(entityID);
+		}
+		return false;
+	}
+
 	virtual void setEnableAemCache(bool const enable) noexcept override
 	{
 		_enableAemCache = enable;

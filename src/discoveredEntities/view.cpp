@@ -273,4 +273,19 @@ void View::showEvent(QShowEvent* event)
 		});
 }
 
+void View::keyReleaseEvent(QKeyEvent* event)
+{
+	// If the user pressed the delete key, delete the selected entity
+	if (event->key() == Qt::Key::Key_Delete)
+	{
+		auto const index = currentIndex();
+		auto const entityOpt = getEntityAtIndex(index);
+
+		if (entityOpt)
+		{
+			emit deleteEntityRequested(entityOpt->get().entityID);
+		}
+	}
+}
+
 } // namespace discoveredEntities

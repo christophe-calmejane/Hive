@@ -13,9 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for CONTROLs at non-configuration level
 - Support for CONTROL_SELECTOR type for CONTROL descriptors
 - Preliminary support for Virtual Entities modification
-- File association to directly load ANS and AVE files
+- [File association to directly load ANS and AVE files](https://github.com/christophe-calmejane/Hive/issues/146)
 - New command line parameters to load ANS and AVE files
 - New icons for ANS and AVE files
+- Possibility to remove a virtual entity (DEL key in Entities list)
 
 ### Changed
 - Complete rework of the `entities list`

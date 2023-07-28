@@ -30,6 +30,8 @@
 #include <hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp>
 
 #include <QSortFilterProxyModel>
+#include <QKeyEvent>
+#include <QShowEvent>
 
 namespace discoveredEntities
 {
@@ -71,6 +73,7 @@ public:
 	Q_SIGNAL void selectedControlledEntityChanged(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void doubleClicked(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void contextMenuRequested(hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity, QPoint const& pos);
+	Q_SIGNAL void deleteEntityRequested(la::avdecc::UniqueIdentifier const entityID);
 
 private:
 	void saveDynamicHeaderState() const noexcept;
@@ -80,6 +83,7 @@ private:
 
 	// qtMate::widgets::TableView overrides
 	virtual void showEvent(QShowEvent* event) override;
+	virtual void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
 	QSortFilterProxyModel _proxyModel{};

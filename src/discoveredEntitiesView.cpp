@@ -368,6 +368,25 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 			}
 		});
 
+	connect(&_entitiesView, &discoveredEntities::View::deleteEntityRequested, this,
+		[this](auto const& entityID)
+		{
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+			auto controlledEntity = manager.getControlledEntity(entityID);
+
+			if (controlledEntity)
+			{
+				if (controlledEntity->isVirtual())
+				{
+					auto const choice = QMessageBox::question(this, "", QString("Do you really want to remove virtual entity %1 (%2)?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID), hive::modelsLibrary::helper::smartEntityName(*controlledEntity)), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+					if (choice == QMessageBox::StandardButton::Yes)
+					{
+						manager.unloadVirtualEntity(entityID);
+					}
+				}
+			}
+		});
+
 	auto* searchShortcut = new QShortcut{ QKeySequence::Find, this };
 	connect(searchShortcut, &QShortcut::activated, this,
 		[this]()
