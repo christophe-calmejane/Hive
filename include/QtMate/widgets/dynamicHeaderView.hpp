@@ -20,6 +20,7 @@
 #pragma once
 
 #include <QHeaderView>
+#include <set>
 
 namespace qtMate
 {
@@ -31,8 +32,7 @@ class DynamicHeaderView : public QHeaderView
 public:
 	DynamicHeaderView(Qt::Orientation orientation, QWidget* parent = nullptr);
 
-	int mandatorySection() const;
-	void setMandatorySection(int mandatorySection);
+	void setMandatorySection(int const mandatorySection);
 
 	Q_SIGNAL void sectionChanged();
 
@@ -40,7 +40,7 @@ protected:
 	void customContextMenuRequested(QPoint const& pos);
 
 private:
-	int _mandatorySection{ 0 };
+	std::set<int> _mandatorySections{};
 };
 
 } // namespace widgets
