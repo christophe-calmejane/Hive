@@ -189,7 +189,7 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 	createToolbars();
 
 	// Setup the ControllerView widget
-	discoveredEntitiesView->setupView(defaults);
+	discoveredEntitiesView->setupView(defaults, _mustResetViewSettings);
 
 	// Create ListViewMatrixViewController
 	// Initialization to be moved to NSDM when layout classes are introduced

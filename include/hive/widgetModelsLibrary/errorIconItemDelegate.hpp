@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include "errorIconItemDelegate.hpp"
-#include "imageItemDelegate.hpp"
+#include <la/avdecc/utils.hpp>
+#include <QtMate/material/color.hpp>
 
 #include <QStyledItemDelegate>
 
@@ -28,12 +28,12 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-// This delegate handles all QtUserRoles used by DiscoveredEntitiesTableModel and can be used as global ItemDelegate
-class DiscoveredEntitiesTableItemDelegate : public QStyledItemDelegate
+// This delegate paints an small circle on each item who's index returns true for the "QtUserRoles::ErrorRole"
+class ErrorIconItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	DiscoveredEntitiesTableItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+	ErrorIconItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 
@@ -42,10 +42,8 @@ protected:
 
 private:
 	// Private members
+	bool _paintBaseDelegate{ true };
 	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
-	bool _isDark{ false };
-	ErrorIconItemDelegate _errorIconItemDelegate{ false };
-	ImageItemDelegate _imageItemDelegate{ false };
 };
 
 } // namespace widgetModelsLibrary

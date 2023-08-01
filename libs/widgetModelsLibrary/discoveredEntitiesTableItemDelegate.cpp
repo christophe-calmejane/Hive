@@ -37,7 +37,7 @@ void DiscoveredEntitiesTableItemDelegate::setThemeColorName(qtMate::material::co
 {
 	_themeColorName = themeColorName;
 	_isDark = qtMate::material::color::luminance(_themeColorName) == qtMate::material::color::Luminance::Dark;
-	_errorItemDelegate.setThemeColorName(themeColorName);
+	_errorIconItemDelegate.setThemeColorName(themeColorName);
 	_imageItemDelegate.setThemeColorName(themeColorName);
 }
 
@@ -67,8 +67,17 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 
 	// Base painter
 	{
+		auto ignoreBase = false;
 		switch (index.column())
 		{
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityError):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::AcquireState):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::LockState):
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::ClockDomainLockState):
+				ignoreBase = true;
+				break;
 			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityID):
 			{
 				// Check for Identification
@@ -76,15 +85,6 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 				if (identifying)
 				{
 					basePainterOption.font.setBold(true);
-				}
-
-				// Check for Error
-				auto const isError = index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool();
-				if (isError)
-				{
-					// Right now, always use default value, as we draw on white background
-					auto const errorColorValue = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::DefaultShade);
-					basePainterOption.palette.setColor(QPalette::ColorRole::Text, errorColorValue);
 				}
 				break;
 			}
@@ -99,7 +99,10 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			basePainterOption.font.setItalic(true);
 		}
 
-		QStyledItemDelegate::paint(painter, basePainterOption, index);
+		if (!ignoreBase)
+		{
+			QStyledItemDelegate::paint(painter, basePainterOption, index);
+		}
 	}
 
 	// Image painter
@@ -122,8 +125,8 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 	{
 		switch (index.column())
 		{
-			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityID):
-				static_cast<QStyledItemDelegate const&>(_errorItemDelegate).paint(painter, option, index);
+			case DiscoveredEntitiesTableModel::EntityDataFlags::getPosition(DiscoveredEntitiesTableModel::EntityDataFlag::EntityError):
+				static_cast<QStyledItemDelegate const&>(_errorIconItemDelegate).paint(painter, option, index);
 				break;
 			default:
 				break;

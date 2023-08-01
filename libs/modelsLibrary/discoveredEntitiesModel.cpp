@@ -491,8 +491,8 @@ private:
 				auto const diagnostics = manager.getDiagnostics(entityID);
 
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), entity.areUnsolicitedNotificationsSupported(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), std::move(macAddresses), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences), entity.isIdentifying(),
-					!statisticsCounters.empty(), diagnostics.redundancyWarning, std::move(clockDomainInfo), {}, diagnostics.streamInputOverLatency };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), entity.areUnsolicitedNotificationsSupported(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), std::move(macAddresses), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences),
+					entity.isIdentifying(), !statisticsCounters.empty(), diagnostics.redundancyWarning, std::move(clockDomainInfo), {}, diagnostics.streamInputOverLatency };
 
 				// Insert at the end
 				auto const row = _model->rowCount();

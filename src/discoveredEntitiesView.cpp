@@ -404,9 +404,9 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 		});
 }
 
-void DiscoveredEntitiesView::setupView(hive::VisibilityDefaults const& defaults) noexcept
+void DiscoveredEntitiesView::setupView(hive::VisibilityDefaults const& defaults, bool const firstSetup) noexcept
 {
-	_entitiesView.setupView(defaults);
+	_entitiesView.setupView(defaults, firstSetup);
 }
 
 discoveredEntities::View* DiscoveredEntitiesView::entitiesTableView() noexcept

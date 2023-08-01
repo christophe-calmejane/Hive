@@ -36,8 +36,10 @@ View::View(QWidget* parent)
 
 View::~View() {}
 
-void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
+void View::setupView(hive::VisibilityDefaults const& defaults, bool const firstSetup) noexcept
 {
+	_firstSetup = firstSetup;
+
 	// Set selection behavior
 	setSelectionBehavior(QAbstractItemView::SelectRows);
 	setSelectionMode(QAbstractItemView::SingleSelection);
@@ -49,9 +51,11 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	// Set dynamic header view
 	_dynamicHeaderView.setSectionsClickable(true);
 	_dynamicHeaderView.setHighlightSections(false);
+	_dynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityError);
 	_dynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityID);
 
 	// Configure sortable sections
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityError);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_Compatibility);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityID);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_Name);
@@ -94,6 +98,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults) noexcept
 	setColumnHidden(ControllerModelEntityColumn_MediaClockName, !defaults.controllerTableView_MediaClockMasterName_Visible);
 	setColumnHidden(ControllerModelEntityColumn_ClockDomainLockState, !defaults.controllerTableView_ClockDomainLockState_Visible);
 
+	setColumnWidth(ControllerModelEntityColumn_EntityError, defaults::ui::AdvancedView::ColumnWidth_Error);
 	setColumnWidth(ControllerModelEntityColumn_EntityLogo, defaults::ui::AdvancedView::ColumnWidth_Logo);
 	setColumnWidth(ControllerModelEntityColumn_Compatibility, defaults::ui::AdvancedView::ColumnWidth_Compatibility);
 	setColumnWidth(ControllerModelEntityColumn_EntityID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);
@@ -265,7 +270,7 @@ void View::showEvent(QShowEvent* event)
 		[this]()
 		{
 			// Set default sort section, if current is unsortable
-			if (!_headerSectionSortFilter.isEnabled(_dynamicHeaderView.sortIndicatorSection()))
+			if (_firstSetup || !_headerSectionSortFilter.isEnabled(_dynamicHeaderView.sortIndicatorSection()))
 			{
 				_dynamicHeaderView.setSortIndicator(ControllerModelEntityColumn_EntityID, Qt::SortOrder::DescendingOrder);
 				saveDynamicHeaderState();

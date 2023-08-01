@@ -160,6 +160,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 				case Qt::DisplayRole:
 					switch (entityDataFlag)
 					{
+						case EntityDataFlag::EntityError:
+							return "Error";
 						case EntityDataFlag::EntityLogo:
 							return "Logo";
 						case EntityDataFlag::Compatibility:
@@ -202,6 +204,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 				case Qt::ToolTipRole:
 					switch (entityDataFlag)
 					{
+						case EntityDataFlag::EntityError:
+							return "Entity Error Status";
 						case EntityDataFlag::EntityLogo:
 							return "Logo";
 						case EntityDataFlag::Compatibility:
@@ -272,6 +276,8 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 					{
 						switch (entityDataFlag)
 						{
+							case EntityDataFlag::EntityError: // Return something as DisplayRole is used by the sort filter proxy model (but not actually displayed)
+								return entity.hasAnyError();
 							case EntityDataFlag::EntityID:
 								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityID);
 							case EntityDataFlag::Name:
@@ -515,6 +521,50 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 					{
 						switch (entityDataFlag)
 						{
+							case EntityDataFlag::EntityError:
+							{
+								auto tooltip = QStringList{};
+
+								if (entity.hasStatisticsError)
+								{
+									tooltip.append("One or more statistics error");
+								}
+								if (entity.hasRedundancyWarning)
+								{
+									tooltip.append("Milan redundancy warning");
+								}
+								if (!entity.streamsWithErrorCounter.empty())
+								{
+									// Print each stream with error counter (up to 10 streams)
+									auto count = 0u;
+									for (auto const streamIndex : entity.streamsWithErrorCounter)
+									{
+										tooltip.append(QString{ "Input Stream with index '%1' has counter errors" }.arg(streamIndex));
+										if (++count == 10)
+										{
+											tooltip.append("(more Input Streams with counter errors)");
+											break;
+										}
+									}
+								}
+								if (!entity.streamsWithLatencyError.empty())
+								{
+									// Print each stream with latency error (up to 10 streams)
+									auto count = 0u;
+									for (auto const streamIndex : entity.streamsWithLatencyError)
+									{
+										tooltip.append(QString{ "Input Stream with index '%1' has latency errors" }.arg(streamIndex));
+										if (++count == 10)
+										{
+											tooltip.append("(more Input Streams with latency errors)");
+											break;
+										}
+									}
+								}
+
+								// Concat all lines into a single string separated by newlines
+								return tooltip.join("\n");
+							}
 							case EntityDataFlag::Compatibility:
 							{
 								switch (entity.protocolCompatibility)
@@ -658,7 +708,7 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>
 		case ChangedInfoFlag::GroupName:
 			return std::make_pair(EntityDataFlag::Group, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::SubscribedToUnsol:
-			return std::make_pair(EntityDataFlag::All, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole) });
+			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::Compatibility:
 			return std::make_pair(EntityDataFlag::Compatibility, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::EntityCapabilities:
@@ -691,13 +741,13 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>
 		case ChangedInfoFlag::Identification:
 			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole) });
 		case ChangedInfoFlag::StatisticsError:
-			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::RedundancyWarning:
-			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::StreamInputCountersError:
-			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::StreamInputLatencyError:
-			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		default:
 			AVDECC_ASSERT(false, "Unhandled");
 			break;

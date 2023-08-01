@@ -34,7 +34,7 @@ class DiscoveredEntitiesView : public QWidget
 public:
 	DiscoveredEntitiesView(QWidget* parent = nullptr);
 
-	void setupView(hive::VisibilityDefaults const& defaults) noexcept;
+	void setupView(hive::VisibilityDefaults const& defaults, bool const firstSetup) noexcept;
 	discoveredEntities::View* entitiesTableView() noexcept;
 	void setInspectorGeometry(QByteArray const& geometry) noexcept;
 	QString filterText() const noexcept;

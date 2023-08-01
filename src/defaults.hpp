@@ -25,6 +25,7 @@ namespace ui
 {
 struct AdvancedView
 {
+	static constexpr int ColumnWidth_Error = 40;
 	static constexpr int ColumnWidth_UniqueIdentifier = 130;
 	static constexpr int ColumnWidth_Logo = 60;
 	static constexpr int ColumnWidth_Compatibility = 50;

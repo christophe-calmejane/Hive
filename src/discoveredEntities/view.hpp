@@ -38,11 +38,12 @@ namespace discoveredEntities
 class View final : public qtMate::widgets::TableView
 {
 	Q_OBJECT
-	static constexpr auto ControllerModelEntityDataFlags = hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlags{ hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Name, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Group, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::AcquireState, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::LockState,
-		hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GrandmasterID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GPTPDomain, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::InterfaceIndex, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MacAddress, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::AssociationID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityModelID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MediaClockReferenceID,
+	static constexpr auto ControllerModelEntityDataFlags = hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlags{ hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityError, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Name, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Group, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::AcquireState,
+		hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::LockState, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GrandmasterID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::GPTPDomain, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::InterfaceIndex, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MacAddress, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::AssociationID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityModelID, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::FirmwareVersion, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MediaClockReferenceID,
 		hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::MediaClockReferenceName, hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::ClockDomainLockState };
 
 public:
+	static constexpr auto ControllerModelEntityColumn_EntityError = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityError);
 	static constexpr auto ControllerModelEntityColumn_EntityLogo = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityLogo);
 	static constexpr auto ControllerModelEntityColumn_Compatibility = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::Compatibility);
 	static constexpr auto ControllerModelEntityColumn_EntityID = ControllerModelEntityDataFlags.getBitSetPosition(hive::widgetModelsLibrary::DiscoveredEntitiesTableModel::EntityDataFlag::EntityID);
@@ -64,7 +65,7 @@ public:
 	View(QWidget* parent = nullptr);
 	virtual ~View();
 
-	void setupView(hive::VisibilityDefaults const& defaults) noexcept;
+	void setupView(hive::VisibilityDefaults const& defaults, bool const firstSetup) noexcept;
 	void restoreState() noexcept;
 	la::avdecc::UniqueIdentifier selectedControlledEntity() const noexcept;
 	void selectControlledEntity(la::avdecc::UniqueIdentifier const entityID) noexcept;
@@ -93,6 +94,7 @@ private:
 	hive::widgetModelsLibrary::DiscoveredEntitiesTableItemDelegate _controllerModelItemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	SettingsSignaler _settingsSignaler{};
 	la::avdecc::UniqueIdentifier _selectedControlledEntity{};
+	bool _firstSetup{ false };
 };
 
 } // namespace discoveredEntities
