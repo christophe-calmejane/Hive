@@ -631,8 +631,8 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						return entity.hasAnyError();
 					case la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole):
 						return entity.isIdentifying;
-					case la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole):
-						return entity.isSubscribedToUnsol;
+					case la::avdecc::utils::to_integral(QtUserRoles::UnsolSupportedRole):
+						return entity.areUnsolicitedNotificationsSupported;
 					case la::avdecc::utils::to_integral(QtUserRoles::IsVirtualRole):
 						return entity.isVirtual;
 					default:

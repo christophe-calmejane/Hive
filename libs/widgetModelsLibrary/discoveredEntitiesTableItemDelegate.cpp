@@ -52,16 +52,13 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		basePainterOption.state &= ~QStyle::State_HasFocus;
 	}
 
-	// Subscribed to unsol
-	auto const subscribedToUnsol = index.data(la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole)).toBool();
-	if (!subscribedToUnsol)
+	// Unsol supported
+	auto const unsolSupported = index.data(la::avdecc::utils::to_integral(QtUserRoles::UnsolSupportedRole)).toBool();
+	if (!unsolSupported)
 	{
-		if (basePainterOption.state & QStyle::StateFlag::State_Selected)
-		{
-			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::BlueGray, qtMate::material::color::DefaultShade);
-			painter->fillRect(basePainterOption.rect, brush);
-		}
-		else
+		auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
+		// Only change the background color if not selected
+		if (!isSelected)
 		{
 			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::DefaultShade);
 			painter->fillRect(basePainterOption.rect, brush);
