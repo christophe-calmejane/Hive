@@ -628,7 +628,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						break;
 					}
 					case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
-						return entity.hasStatisticsError || entity.hasRedundancyWarning || !entity.streamsWithErrorCounter.empty() || !entity.streamsWithLatencyError.empty();
+						return entity.hasAnyError();
 					case la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole):
 						return entity.isIdentifying;
 					case la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole):
