@@ -386,7 +386,12 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 			{
 				if (controlledEntity->isVirtual())
 				{
-					auto const choice = QMessageBox::question(this, "", QString("Do you really want to remove virtual entity %1 (%2)?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID), hive::modelsLibrary::helper::smartEntityName(*controlledEntity)), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
+					auto const name = hive::modelsLibrary::helper::smartEntityName(*controlledEntity);
+
+					// Release the controlled entity before starting a long operation (messagebox & call to manager)
+					controlledEntity.reset();
+
+					auto const choice = QMessageBox::question(this, "", QString("Do you really want to remove virtual entity %1 (%2)?").arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID), name), QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
 					if (choice == QMessageBox::StandardButton::Yes)
 					{
 						manager.unloadVirtualEntity(entityID);
