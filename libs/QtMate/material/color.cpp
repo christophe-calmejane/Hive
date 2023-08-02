@@ -601,6 +601,12 @@ QColor foregroundErrorColorValue(Name const name, Shade const shade)
 	return errorColor;
 }
 
+QColor foregroundWarningColorValue(Name const name, Shade const shade)
+{
+	auto errorColor = value(Name::Orange, qtMate::material::color::Shade::ShadeA700);
+	return errorColor;
+}
+
 Luminance luminance(Name const name, Shade const shade)
 {
 	return colorData(name, shade).luminance;

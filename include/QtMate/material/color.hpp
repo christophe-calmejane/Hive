@@ -111,6 +111,10 @@ QColor foregroundComplementaryValue(Name const name, Shade const shade = Default
 // May throw invalid_argument for non existing combinations
 QColor foregroundErrorColorValue(Name const name, Shade const shade);
 
+// Return the foreground warning color value for given name + shade
+// May throw invalid_argument for non existing combinations
+QColor foregroundWarningColorValue(Name const name, Shade const shade);
+
 // Return the luminance for a given name + shade
 // May throw invalid_argument for non existing combinations
 Luminance luminance(Name const name, Shade const shade = DefaultShade);
