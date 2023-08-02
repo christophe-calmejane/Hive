@@ -28,6 +28,10 @@ NodeTreeWidget .QListWidget {
 	margin-top: 4;
 	margin-bottom: 4;
 }
+NodeTreeWidget .QLabel {
+	margin-left: 0;
+	margin-right: 4;
+}
 QPushButton#DisconnectButton {
 	font-size: 14px;
 	color: #f44336;
