@@ -54,23 +54,30 @@ void ErrorIconItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const&
 	}
 
 	painter->save();
-	if (index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool())
+	auto const errorType = index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).value<ErrorType>();
+	switch (errorType)
 	{
-		auto color = QColor{};
-		//if (option.state & QStyle::StateFlag::State_Selected)
-		//{
-		//	color = qtMate::material::color::complementaryValue(_themeColorName, qtMate::material::color::Shade::Shade600);
-		//}
-		//else
+		case ErrorType::Error:
 		{
-			color = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700); // Right now, always use default value, as we draw on white background
+			auto const color = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700); // Right now always use default value as we draw on white background (not actually true as the highlight color is not white)
+			auto const brush = QBrush{ color, Qt::SolidPattern };
+			painter->setBrush(brush);
+			painter->drawEllipse(getCenteredSquare(option.rect, 10));
+			break;
 		}
-		auto const brush = QBrush{ color, Qt::SolidPattern };
-		painter->setBrush(brush);
-		painter->drawEllipse(getCenteredSquare(option.rect, 10));
+		case ErrorType::Warning:
+		{
+			auto const color = qtMate::material::color::foregroundWarningColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700); // Right now always use default value as we draw on white background (not actually true as the highlight color is not white)
+			auto const brush = QBrush{ color, Qt::SolidPattern };
+			painter->setBrush(brush);
+			painter->drawEllipse(getCenteredSquare(option.rect, 10));
+			break;
+		}
+		default:
+			break;
 	}
 	painter->restore();
-}
+} // namespace widgetModelsLibrary
 
 } // namespace widgetModelsLibrary
 } // namespace hive

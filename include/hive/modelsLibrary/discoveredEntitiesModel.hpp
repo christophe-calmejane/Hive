@@ -128,12 +128,6 @@ public:
 		ClockDomainInfo clockDomainInfo{}; /** Change triggers ChangedInfoFlag::ClockDomainLockState */
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{}; /** Change triggers ChangedInfoFlag::StreamInputCountersError */
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{}; /** Change triggers ChangedInfoFlag::StreamInputLatencyError */
-
-		// Methods
-		bool hasAnyError() const noexcept
-		{
-			return hasStatisticsError || hasRedundancyWarning || !streamsWithErrorCounter.empty() || !streamsWithLatencyError.empty();
-		}
 	};
 
 	using Model = DiscoveredEntitiesAbstractTableModel;

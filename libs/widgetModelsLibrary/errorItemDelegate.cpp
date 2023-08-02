@@ -56,7 +56,7 @@ void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 		else
 		{
 			//painter->setPen(qtMate::material::color::foregroundErrorColorValue(_colorName, qtMate::material::color::Shade::ShadeA700));
-			painter->setPen(qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700)); // Right now, always use default value, as we draw on white background
+			painter->setPen(qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700)); // Right now always use default value as we draw on white background
 			painter->drawRect(option.rect.adjusted(0, 0, -1, -1));
 		}
 	}

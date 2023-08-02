@@ -149,7 +149,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 				else if (!intfc.isConnected)
 				{
 					//return qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::Shade::ShadeA700);
-					return qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::DefaultShade); // Right now, always use default value, as we draw on white background
+					return qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::DefaultShade); // Right now always use default value as we draw on white background
 				}
 				else
 				{

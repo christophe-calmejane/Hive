@@ -28,11 +28,18 @@ namespace hive
 {
 namespace widgetModelsLibrary
 {
-// This delegate paints an small circle on each item who's index returns true for the "QtUserRoles::ErrorRole"
+// This delegate paints an small circle on each item based on the ErrorType value returned for the "QtUserRoles::WarningErrorRole"
 class ErrorIconItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
+	enum class ErrorType
+	{
+		None = 0,
+		Warning = 1,
+		Error = 2,
+	};
+
 	ErrorIconItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
 
 	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);

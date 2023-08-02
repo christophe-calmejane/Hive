@@ -19,6 +19,7 @@
 
 #include "hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp"
 #include "hive/widgetModelsLibrary/entityLogoCache.hpp"
+#include "hive/widgetModelsLibrary/errorIconItemDelegate.hpp"
 #include "hive/widgetModelsLibrary/imageItemDelegate.hpp"
 
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
@@ -256,6 +257,84 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 	return {};
 }
 
+static ErrorIconItemDelegate::ErrorType getErrorType(modelsLibrary::DiscoveredEntitiesModel::Entity const& e) noexcept
+{
+	if (e.hasStatisticsError || !e.streamsWithErrorCounter.empty() || !e.streamsWithLatencyError.empty())
+	{
+		return ErrorIconItemDelegate::ErrorType::Error;
+	}
+	if (e.hasRedundancyWarning || (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol))
+	{
+		return ErrorIconItemDelegate::ErrorType::Warning;
+	}
+	return ErrorIconItemDelegate::ErrorType::None;
+}
+
+static QString getErrorTooltip(modelsLibrary::DiscoveredEntitiesModel::Entity const& e) noexcept
+{
+	auto const errorType = getErrorType(e);
+	auto tooltip = QStringList{};
+
+	switch (errorType)
+	{
+		case ErrorIconItemDelegate::ErrorType::Error:
+		{
+			if (e.hasStatisticsError)
+			{
+				// TODO: Split statistics error into multiple errors
+				tooltip.append("One or more statistics error");
+			}
+			if (!e.streamsWithErrorCounter.empty())
+			{
+				// Print each stream with error counter (up to 10 streams)
+				auto count = 0u;
+				for (auto const streamIndex : e.streamsWithErrorCounter)
+				{
+					tooltip.append(QString{ "Input Stream with index '%1' has counter errors" }.arg(streamIndex));
+					if (++count == 10)
+					{
+						tooltip.append("(more Input Streams with counter errors)");
+						break;
+					}
+				}
+			}
+			if (!e.streamsWithLatencyError.empty())
+			{
+				// Print each stream with latency error (up to 10 streams)
+				auto count = 0u;
+				for (auto const streamIndex : e.streamsWithLatencyError)
+				{
+					tooltip.append(QString{ "Input Stream with index '%1' has latency errors" }.arg(streamIndex));
+					if (++count == 10)
+					{
+						tooltip.append("(more Input Streams with latency errors)");
+						break;
+					}
+				}
+			}
+			break;
+		}
+		case ErrorIconItemDelegate::ErrorType::Warning:
+		{
+			if (e.hasRedundancyWarning)
+			{
+				tooltip.append("Primary and Secondary interfaces connected to the same network");
+			}
+			if (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol)
+			{
+				tooltip.append("Not getting live updates from the entity");
+			}
+			break;
+		}
+		default:
+			break;
+	}
+
+
+	// Concat all lines into a single string separated by newlines
+	return tooltip.join("\n");
+}
+
 QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) const
 {
 	auto const row = static_cast<std::size_t>(index.row());
@@ -277,7 +356,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						switch (entityDataFlag)
 						{
 							case EntityDataFlag::EntityError: // Return something as DisplayRole is used by the sort filter proxy model (but not actually displayed)
-								return entity.hasAnyError();
+								return la::avdecc::utils::to_integral(getErrorType(entity));
 							case EntityDataFlag::EntityID:
 								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityID);
 							case EntityDataFlag::Name:
@@ -523,47 +602,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						{
 							case EntityDataFlag::EntityError:
 							{
-								auto tooltip = QStringList{};
-
-								if (entity.hasStatisticsError)
-								{
-									tooltip.append("One or more statistics error");
-								}
-								if (entity.hasRedundancyWarning)
-								{
-									tooltip.append("Milan redundancy warning");
-								}
-								if (!entity.streamsWithErrorCounter.empty())
-								{
-									// Print each stream with error counter (up to 10 streams)
-									auto count = 0u;
-									for (auto const streamIndex : entity.streamsWithErrorCounter)
-									{
-										tooltip.append(QString{ "Input Stream with index '%1' has counter errors" }.arg(streamIndex));
-										if (++count == 10)
-										{
-											tooltip.append("(more Input Streams with counter errors)");
-											break;
-										}
-									}
-								}
-								if (!entity.streamsWithLatencyError.empty())
-								{
-									// Print each stream with latency error (up to 10 streams)
-									auto count = 0u;
-									for (auto const streamIndex : entity.streamsWithLatencyError)
-									{
-										tooltip.append(QString{ "Input Stream with index '%1' has latency errors" }.arg(streamIndex));
-										if (++count == 10)
-										{
-											tooltip.append("(more Input Streams with latency errors)");
-											break;
-										}
-									}
-								}
-
-								// Concat all lines into a single string separated by newlines
-								return tooltip.join("\n");
+								return getErrorTooltip(entity);
 							}
 							case EntityDataFlag::Compatibility:
 							{
@@ -678,7 +717,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 						break;
 					}
 					case la::avdecc::utils::to_integral(QtUserRoles::ErrorRole):
-						return entity.hasAnyError();
+						return QVariant::fromValue(getErrorType(entity));
 					case la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole):
 						return entity.isIdentifying;
 					case la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole):
