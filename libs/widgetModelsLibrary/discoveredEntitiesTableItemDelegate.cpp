@@ -52,8 +52,9 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		basePainterOption.state &= ~QStyle::State_HasFocus;
 	}
 
-	// Unsol supported
+	// Unsol not supported or not subscribed to
 	auto const unsolSupported = index.data(la::avdecc::utils::to_integral(QtUserRoles::UnsolSupportedRole)).toBool();
+	auto const unsolSubscribed = index.data(la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole)).toBool();
 	if (!unsolSupported)
 	{
 		auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
@@ -61,6 +62,17 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		if (!isSelected)
 		{
 			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::DefaultShade);
+			painter->fillRect(basePainterOption.rect, brush);
+		}
+	}
+	else if (!unsolSubscribed)
+	{
+		auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
+		// Only change the background color if not selected
+		if (!isSelected)
+		{
+			auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::DefaultShade);
+			brush.setStyle(Qt::BrushStyle::Dense6Pattern);
 			painter->fillRect(basePainterOption.rect, brush);
 		}
 	}
