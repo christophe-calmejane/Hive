@@ -43,8 +43,11 @@ void DiscoveredEntitiesTableItemDelegate::setThemeColorName(qtMate::material::co
 
 void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
-	// Override default options according to the model current state
+	// Options to be passed to the base class
 	auto basePainterOption = option;
+
+	// Function to be called to fill the background, if not using the base delegate
+	auto backgroundFill = std::function<void()>{};
 
 	// Clear focus state if any
 	if (basePainterOption.state & QStyle::State_HasFocus)
@@ -58,22 +61,61 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 	if (!unsolSupported)
 	{
 		auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
-		// Only change the background color if not selected
+		// Change the text color
 		if (!isSelected)
 		{
 			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::DefaultShade);
-			painter->fillRect(basePainterOption.rect, brush);
+			basePainterOption.palette.setBrush(QPalette::Text, brush);
+		}
+		else
+		{
+			// If theme is dark, it means the selected color is light, so we want to use a light gray
+			if (_isDark)
+			{
+				auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade300);
+				basePainterOption.palette.setBrush(QPalette::HighlightedText, brush);
+			}
+			else
+			{
+				auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::ShadeA400);
+				basePainterOption.palette.setBrush(QPalette::HighlightedText, brush);
+			}
 		}
 	}
 	else if (!unsolSubscribed)
 	{
 		auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
-		// Only change the background color if not selected
+		// Change the background
 		if (!isSelected)
 		{
 			auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::DefaultShade);
 			brush.setStyle(Qt::BrushStyle::Dense6Pattern);
+			basePainterOption.palette.setBrush(QPalette::NoRole, brush);
+			// We need to draw right away as there is no background fill when there is no selection (ie. don't use the backgroundFill function)
 			painter->fillRect(basePainterOption.rect, brush);
+		}
+		else
+		{
+			// If theme is dark, it means the text will be light, so we want to use black
+			if (_isDark)
+			{
+				auto brush = QBrush{ Qt::black, Qt::BrushStyle::Dense6Pattern };
+				basePainterOption.palette.setBrush(QPalette::Highlight, brush);
+				backgroundFill = [&painter, &basePainterOption, brush = std::move(brush)]()
+				{
+					painter->fillRect(basePainterOption.rect, brush);
+				};
+			}
+			else
+			{
+				auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade400);
+				brush.setStyle(Qt::BrushStyle::Dense6Pattern);
+				basePainterOption.palette.setBrush(QPalette::Highlight, brush);
+				backgroundFill = [&painter, &basePainterOption, brush = std::move(brush)]()
+				{
+					painter->fillRect(basePainterOption.rect, brush);
+				};
+			}
 		}
 	}
 
@@ -114,6 +156,10 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		if (!ignoreBase)
 		{
 			QStyledItemDelegate::paint(painter, basePainterOption, index);
+		}
+		else if (backgroundFill)
+		{
+			backgroundFill();
 		}
 	}
 

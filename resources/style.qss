@@ -8,7 +8,11 @@ QWidget {
 	selection-background-color: %1;
 	selection-color: %2;
 }
-QAbstractItemView::item:selected {
+QComboBox QAbstractItemView::item:selected {
+	background-color: %1;
+	color: %2;
+}
+QTreeWidget::item:selected {
 	background-color: %1;
 	color: %2;
 }
