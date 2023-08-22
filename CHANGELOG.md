@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Always display CONTROL descriptor even if the ControlDataType is not supported by the library
 - CONTROL values updated by the device itself didn't update properly
 - Possible crash for entities returning an out-of-bounds MemoryObject length value
+- [Files can be loaded/saved from/to UTF8 path](https://github.com/christophe-calmejane/Hive/issues/156)
 
 ## [1.2.9] - 2023-01-13
 ### Added
