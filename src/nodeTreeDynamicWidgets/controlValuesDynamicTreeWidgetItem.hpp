@@ -214,22 +214,33 @@ private:
 				return;
 			}
 
-			auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
-			auto valNumber = size_t{ 0u };
-			for (auto const& val : dynamicValues.getValues())
+			try
 			{
-				if (_isReadOnly)
+				auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
+				auto valNumber = size_t{ 0u };
+				for (auto const& val : dynamicValues.getValues())
 				{
-					auto* label = static_cast<QLabel*>(_widgets[valNumber]);
-					label->setText(QString::number(val.currentValue));
-				}
-				else
-				{
-					auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
-					widget->setCurrentData(val.currentValue);
-				}
+					if (_isReadOnly)
+					{
+						auto* label = static_cast<QLabel*>(_widgets[valNumber]);
+						label->setText(QString::number(val.currentValue));
+					}
+					else
+					{
+						auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
+						widget->setCurrentData(val.currentValue);
+					}
 
-				++valNumber;
+					++valNumber;
+				}
+			}
+			catch (std::invalid_argument const&)
+			{
+				AVDECC_ASSERT(false, "Identify Control Descriptor values doesn't seem valid");
+			}
+			catch (...)
+			{
+				AVDECC_ASSERT(false, "Identify Control Descriptor was validated, this should not throw");
 			}
 		}
 	}
@@ -354,17 +365,28 @@ private:
 				return;
 			}
 
-			auto const& dynamicValue = controlValues.getValues<DynamicValueType>();
+			try
+			{
+				auto const& dynamicValue = controlValues.getValues<DynamicValueType>();
 
-			if (_isReadOnly)
-			{
-				auto* label = static_cast<QLabel*>(_widget);
-				label->setText(QString::number(dynamicValue.currentValue));
+				if (_isReadOnly)
+				{
+					auto* label = static_cast<QLabel*>(_widget);
+					label->setText(QString::number(dynamicValue.currentValue));
+				}
+				else
+				{
+					auto* widget = static_cast<WidgetType*>(_widget);
+					widget->setCurrentData(dynamicValue.currentValue);
+				}
 			}
-			else
+			catch (std::invalid_argument const&)
 			{
-				auto* widget = static_cast<WidgetType*>(_widget);
-				widget->setCurrentData(dynamicValue.currentValue);
+				AVDECC_ASSERT(false, "Identify Control Descriptor values doesn't seem valid");
+			}
+			catch (...)
+			{
+				AVDECC_ASSERT(false, "Identify Control Descriptor was validated, this should not throw");
 			}
 		}
 	}
@@ -516,22 +538,33 @@ private:
 				return;
 			}
 
-			auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
-			auto valNumber = size_t{ 0u };
-			for (auto const& val : dynamicValues.currentValues)
+			try
 			{
-				if (_isReadOnly)
+				auto const dynamicValues = controlValues.getValues<DynamicValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
+				auto valNumber = size_t{ 0u };
+				for (auto const& val : dynamicValues.currentValues)
 				{
-					auto* label = static_cast<QLabel*>(_widgets[valNumber]);
-					label->setText(QString::number(val));
-				}
-				else
-				{
-					auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
-					widget->setCurrentData(val);
-				}
+					if (_isReadOnly)
+					{
+						auto* label = static_cast<QLabel*>(_widgets[valNumber]);
+						label->setText(QString::number(val));
+					}
+					else
+					{
+						auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
+						widget->setCurrentData(val);
+					}
 
-				++valNumber;
+					++valNumber;
+				}
+			}
+			catch (std::invalid_argument const&)
+			{
+				AVDECC_ASSERT(false, "Identify Control Descriptor values doesn't seem valid");
+			}
+			catch (...)
+			{
+				AVDECC_ASSERT(false, "Identify Control Descriptor was validated, this should not throw");
 			}
 		}
 	}
@@ -645,18 +678,29 @@ private:
 				return;
 			}
 
-			auto const& dynamicValue = controlValues.getValues<DynamicValueType>();
-			auto const text = QString::fromUtf8(reinterpret_cast<char const*>(dynamicValue.currentValue.data()));
+			try
+			{
+				auto const& dynamicValue = controlValues.getValues<DynamicValueType>();
+				auto const text = QString::fromUtf8(reinterpret_cast<char const*>(dynamicValue.currentValue.data()));
 
-			if (_isReadOnly)
-			{
-				auto* label = static_cast<QLabel*>(_widget);
-				label->setText(text);
+				if (_isReadOnly)
+				{
+					auto* label = static_cast<QLabel*>(_widget);
+					label->setText(text);
+				}
+				else
+				{
+					auto* widget = static_cast<WidgetType*>(_widget);
+					widget->setCurrentData(text);
+				}
 			}
-			else
+			catch (std::invalid_argument const&)
 			{
-				auto* widget = static_cast<WidgetType*>(_widget);
-				widget->setCurrentData(text);
+				AVDECC_ASSERT(false, "Identify Control Descriptor values doesn't seem valid");
+			}
+			catch (...)
+			{
+				AVDECC_ASSERT(false, "Identify Control Descriptor was validated, this should not throw");
 			}
 		}
 	}

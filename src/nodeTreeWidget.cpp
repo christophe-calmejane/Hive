@@ -1600,25 +1600,34 @@ class VisitControlLinearValues final : public NodeTreeWidgetPrivate::VisitContro
 {
 	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
 	{
-		auto valNumber = decltype(std::declval<decltype(staticModel.values)>().size()){ 0u };
-		auto const linearValues = staticModel.values.getValues<StaticValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
+		try
+		{
+			auto valNumber = decltype(std::declval<decltype(staticModel.values)>().size()){ 0u };
+			auto const linearValues = staticModel.values.getValues<StaticValueType>(); // We have to store the copy or it will go out of scope if using it directly in the range-based loop
 
-		for (auto const& val : linearValues.getValues())
+			for (auto const& val : linearValues.getValues())
+			{
+				auto* valueItem = new QTreeWidgetItem(item);
+				valueItem->setText(0, QString("Value %1").arg(valNumber));
+
+				self->addTextItem(valueItem, "Minimum", val.minimum);
+				self->addTextItem(valueItem, "Maximum", val.maximum);
+				self->addTextItem(valueItem, "Step", val.step);
+				self->addTextItem(valueItem, "Default Value", val.defaultValue);
+				self->addTextItem(valueItem, "Unit Type", ::avdecc::helper::controlValueUnitToString(val.unit.getUnit()));
+				self->addTextItem(valueItem, "Unit Multiplier", val.unit.getMultiplier());
+				auto* localizedNameItem = new QTreeWidgetItem(valueItem);
+				localizedNameItem->setText(0, "Localized Name");
+				localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, val.localizedName));
+
+				++valNumber;
+			}
+		}
+		catch (...)
 		{
 			auto* valueItem = new QTreeWidgetItem(item);
-			valueItem->setText(0, QString("Value %1").arg(valNumber));
-
-			self->addTextItem(valueItem, "Minimum", val.minimum);
-			self->addTextItem(valueItem, "Maximum", val.maximum);
-			self->addTextItem(valueItem, "Step", val.step);
-			self->addTextItem(valueItem, "Default Value", val.defaultValue);
-			self->addTextItem(valueItem, "Unit Type", ::avdecc::helper::controlValueUnitToString(val.unit.getUnit()));
-			self->addTextItem(valueItem, "Unit Multiplier", val.unit.getMultiplier());
-			auto* localizedNameItem = new QTreeWidgetItem(valueItem);
-			localizedNameItem->setText(0, "Localized Name");
-			localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, val.localizedName));
-
-			++valNumber;
+			valueItem->setText(0, "Values");
+			valueItem->setText(1, "Cannot unpack");
 		}
 	}
 	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
@@ -1634,11 +1643,20 @@ class VisitControlSelectorValues final : public NodeTreeWidgetPrivate::VisitCont
 {
 	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
 	{
-		auto valNumber = decltype(std::declval<decltype(staticModel.values)>().size()){ 0u };
-		auto const& selectorValue = staticModel.values.getValues<StaticValueType>();
+		try
+		{
+			auto valNumber = decltype(std::declval<decltype(staticModel.values)>().size()){ 0u };
+			auto const& selectorValue = staticModel.values.getValues<StaticValueType>();
 
-		self->addTextItem(item, "Default Value", selectorValue.defaultValue);
-		self->addTextItem(item, "Unit Type", ::avdecc::helper::controlValueUnitToString(selectorValue.unit.getUnit()));
+			self->addTextItem(item, "Default Value", selectorValue.defaultValue);
+			self->addTextItem(item, "Unit Type", ::avdecc::helper::controlValueUnitToString(selectorValue.unit.getUnit()));
+		}
+		catch (...)
+		{
+			auto* valueItem = new QTreeWidgetItem(item);
+			valueItem->setText(0, "Values");
+			valueItem->setText(1, "Cannot unpack");
+		}
 	}
 	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
@@ -1653,17 +1671,26 @@ class VisitControlArrayValues final : public NodeTreeWidgetPrivate::VisitControl
 {
 	virtual void visitStaticControlValues(NodeTreeWidgetPrivate* self, la::avdecc::controller::ControlledEntity const* const controlledEntity, QTreeWidgetItem* const item, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept override
 	{
-		auto const& arrayValue = staticModel.values.getValues<StaticValueType>();
+		try
+		{
+			auto const& arrayValue = staticModel.values.getValues<StaticValueType>();
 
-		self->addTextItem(item, "Minimum", arrayValue.minimum);
-		self->addTextItem(item, "Maximum", arrayValue.maximum);
-		self->addTextItem(item, "Step", arrayValue.step);
-		self->addTextItem(item, "Default Value", arrayValue.defaultValue);
-		self->addTextItem(item, "Unit Type", ::avdecc::helper::controlValueUnitToString(arrayValue.unit.getUnit()));
-		self->addTextItem(item, "Unit Multiplier", arrayValue.unit.getMultiplier());
-		auto* localizedNameItem = new QTreeWidgetItem(item);
-		localizedNameItem->setText(0, "Localized Name");
-		localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, arrayValue.localizedName));
+			self->addTextItem(item, "Minimum", arrayValue.minimum);
+			self->addTextItem(item, "Maximum", arrayValue.maximum);
+			self->addTextItem(item, "Step", arrayValue.step);
+			self->addTextItem(item, "Default Value", arrayValue.defaultValue);
+			self->addTextItem(item, "Unit Type", ::avdecc::helper::controlValueUnitToString(arrayValue.unit.getUnit()));
+			self->addTextItem(item, "Unit Multiplier", arrayValue.unit.getMultiplier());
+			auto* localizedNameItem = new QTreeWidgetItem(item);
+			localizedNameItem->setText(0, "Localized Name");
+			localizedNameItem->setText(1, hive::modelsLibrary::helper::localizedString(*controlledEntity, arrayValue.localizedName));
+		}
+		catch (...)
+		{
+			auto* valueItem = new QTreeWidgetItem(item);
+			valueItem->setText(0, "Values");
+			valueItem->setText(1, "Cannot unpack");
+		}
 	}
 	virtual void visitDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{

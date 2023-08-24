@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - CONTROL values updated by the device itself didn't update properly
 - Possible crash for entities returning an out-of-bounds MemoryObject length value
 - [Files can be loaded/saved from/to UTF8 path](https://github.com/christophe-calmejane/Hive/issues/156)
+- Crash when displaying vendor specific control values
 
 ## [1.2.9] - 2023-01-13
 ### Added
