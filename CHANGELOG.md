@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Entity Descriptor displays the current status for unsolicited notifications registration
 - [Entry in the entities list context menu to force reload a single entity](https://github.com/christophe-calmejane/Hive/issues/145)
 - [New column in entities list showing error/warning status](https://github.com/christophe-calmejane/Hive/issues/155)
+- New diagnostics for CONTROL descriptors, when the current value is out of min-max bounds
 
 ### Changed
 - Complete rework of the `entities list`

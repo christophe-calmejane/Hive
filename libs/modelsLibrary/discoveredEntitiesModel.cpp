@@ -492,7 +492,7 @@ private:
 
 				// Build a discovered entity
 				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), entity.areUnsolicitedNotificationsSupported(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), std::move(macAddresses), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences),
-					entity.isIdentifying(), !statisticsCounters.empty(), diagnostics.redundancyWarning, std::move(clockDomainInfo), {}, diagnostics.streamInputOverLatency };
+					entity.isIdentifying(), !statisticsCounters.empty(), diagnostics.redundancyWarning, std::move(clockDomainInfo), {}, diagnostics.streamInputOverLatency, diagnostics.controlCurrentValueOutOfBounds };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -855,9 +855,11 @@ private:
 
 			auto const wasRedundancyWarning = data.hasRedundancyWarning;
 			auto const wasStreamInputLatencyError = !data.streamsWithLatencyError.empty();
+			auto const wasControlValueOutOfBounds = !data.controlsWithOutOfBoundsValue.empty();
 
 			auto nowRedundancyWarning = false;
 			auto nowStreamInputLatencyError = false;
+			auto nowControlValueOutOfBounds = false;
 
 			// Redundancy Warning
 			{
@@ -871,6 +873,12 @@ private:
 				nowStreamInputLatencyError = !diagnostics.streamInputOverLatency.empty();
 			}
 
+			// Control OutOfBounds Value Error
+			{
+				data.controlsWithOutOfBoundsValue = diagnostics.controlCurrentValueOutOfBounds;
+				nowControlValueOutOfBounds = !diagnostics.controlCurrentValueOutOfBounds.empty();
+			}
+
 			// Check what changed
 			auto changedFlags = Model::ChangedInfoFlags{};
 			if (wasRedundancyWarning != nowRedundancyWarning)
@@ -880,6 +888,10 @@ private:
 			if (wasStreamInputLatencyError != nowStreamInputLatencyError)
 			{
 				changedFlags.set(Model::ChangedInfoFlag::StreamInputLatencyError);
+			}
+			if (wasControlValueOutOfBounds != nowControlValueOutOfBounds)
+			{
+				changedFlags.set(Model::ChangedInfoFlag::ControlValueOutOfBoundsError);
 			}
 
 			// Notify if something changed

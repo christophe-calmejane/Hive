@@ -33,6 +33,7 @@
 #include "counters/clockDomainCountersTreeWidgetItem.hpp"
 #include "counters/streamInputCountersTreeWidgetItem.hpp"
 #include "counters/streamOutputCountersTreeWidgetItem.hpp"
+#include "diagnostics/controlDiagnosticsTreeWidgetItem.hpp"
 #include "diagnostics/entityDiagnosticsTreeWidgetItem.hpp"
 #include "diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp"
 #include "statistics/entityStatisticsTreeWidgetItem.hpp"
@@ -819,6 +820,13 @@ private:
 				descriptorItem->setText(0, "Dynamic Info");
 				descriptorItem->setText(1, "Value Type Not Supported");
 			}
+		}
+
+		// Diagnostics
+		if (isActiveConfiguration)
+		{
+			auto* diagnosticsItem = new ControlDiagnosticsTreeWidgetItem(_controlledEntityID, node.descriptorIndex, controlledEntity->getDiagnostics(), q);
+			diagnosticsItem->setText(0, "Diagnostics");
 		}
 	}
 

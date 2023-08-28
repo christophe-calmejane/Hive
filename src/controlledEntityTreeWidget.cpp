@@ -57,6 +57,8 @@ public:
 		// StreamInput Level
 		StreamInputCounter = 1u << 2,
 		StreamInputLatency = 1u << 3,
+		// Control Level
+		ControlValueOutOfBounds = 1u << 4,
 	};
 	using ErrorBits = la::avdecc::utils::EnumBitfield<ErrorBit>;
 
@@ -256,6 +258,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::statisticsErrorCounterChanged, this, &ControlledEntityTreeWidgetPrivate::statisticsErrorCounterChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::redundancyWarningChanged, this, &ControlledEntityTreeWidgetPrivate::redundancyWarningChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamInputLatencyErrorChanged, this, &ControlledEntityTreeWidgetPrivate::handleStreamInputLatencyErrorChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::controlCurrentValueOutOfBoundsChanged, this, &ControlledEntityTreeWidgetPrivate::handleControlCurrentValueOutOfBoundsChanged);
 
 		// Configure settings observers
 		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
@@ -346,6 +349,19 @@ public:
 		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex }))
 		{
 			item->setErrorBit(NodeItem::ErrorBit::StreamInputLatency, isLatencyError);
+		}
+	}
+
+	Q_SLOT void handleControlCurrentValueOutOfBoundsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, bool const isValueOutOfBounds)
+	{
+		if (entityID != _controlledEntityID)
+		{
+			return;
+		}
+
+		if (auto* item = findItem({ _currentConfigurationIndex, la::avdecc::entity::model::DescriptorType::Control, controlIndex }))
+		{
+			item->setErrorBit(NodeItem::ErrorBit::ControlValueOutOfBounds, isValueOutOfBounds);
 		}
 	}
 
@@ -674,11 +690,11 @@ private:
 		// Init ErrorBits
 		{
 			// Statistics
-			auto const errorCounters = manager.getStatisticsCounters(_controlledEntityID); // Why not directly use value from ControlledEntity??
+			auto const errorCounters = manager.getStatisticsCounters(_controlledEntityID);
 			item->setErrorBit(NodeItem::ErrorBit::EntityStatistics, !errorCounters.empty());
 
 			// Redundancy Warning
-			auto const redundancyWarning = manager.getDiagnostics(_controlledEntityID).redundancyWarning; // Why not directly use value from ControlledEntity??
+			auto const redundancyWarning = manager.getDiagnostics(_controlledEntityID).redundancyWarning;
 			item->setErrorBit(NodeItem::ErrorBit::EntityRedundancyWarning, redundancyWarning);
 		}
 
@@ -747,11 +763,11 @@ private:
 		// Init ErrorBits
 		{
 			// StreamInput Counters
-			auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex); // Why not directly use value from ControlledEntity??
+			auto const errorCounters = manager.getStreamInputErrorCounters(_controlledEntityID, node.descriptorIndex);
 			item->setErrorBit(NodeItem::ErrorBit::StreamInputCounter, !errorCounters.empty());
 
 			// StreamInput Latency
-			auto const errorLatency = manager.getStreamInputLatencyError(_controlledEntityID, node.descriptorIndex); // Why not directly use value from ControlledEntity??
+			auto const errorLatency = manager.getStreamInputLatencyError(_controlledEntityID, node.descriptorIndex);
 			item->setErrorBit(NodeItem::ErrorBit::StreamInputLatency, errorLatency);
 		}
 
@@ -829,6 +845,14 @@ private:
 	{
 		auto const name = genDescriptorName(controlledEntity, grandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(grandParent->descriptorIndex, parent, &node, name);
+
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		// Init ErrorBits
+		{
+			// ControlValue OutOfBounds
+			auto const valueOutOfBounds = manager.getControlValueOutOfBounds(_controlledEntityID, node.descriptorIndex);
+			item->setErrorBit(NodeItem::ErrorBit::ControlValueOutOfBounds, valueOutOfBounds);
+		}
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, item,
 			[this, item, node, confIndex = grandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
@@ -925,6 +949,14 @@ private:
 		auto const name = genDescriptorName(controlledEntity, grandGrandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(grandGrandParent->descriptorIndex, parent, &node, name);
 
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		// Init ErrorBits
+		{
+			// ControlValue OutOfBounds
+			auto const valueOutOfBounds = manager.getControlValueOutOfBounds(_controlledEntityID, node.descriptorIndex);
+			item->setErrorBit(NodeItem::ErrorBit::ControlValueOutOfBounds, valueOutOfBounds);
+		}
+
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, item,
 			[this, item, node, confIndex = grandGrandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
 			{
@@ -940,6 +972,14 @@ private:
 		auto const name = genDescriptorName(controlledEntity, grandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(grandParent->descriptorIndex, parent, &node, name);
 
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		// Init ErrorBits
+		{
+			// ControlValue OutOfBounds
+			auto const valueOutOfBounds = manager.getControlValueOutOfBounds(_controlledEntityID, node.descriptorIndex);
+			item->setErrorBit(NodeItem::ErrorBit::ControlValueOutOfBounds, valueOutOfBounds);
+		}
+
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, item,
 			[this, item, node, confIndex = grandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
 			{
@@ -954,6 +994,14 @@ private:
 	{
 		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
+
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		// Init ErrorBits
+		{
+			// ControlValue OutOfBounds
+			auto const valueOutOfBounds = manager.getControlValueOutOfBounds(_controlledEntityID, node.descriptorIndex);
+			item->setErrorBit(NodeItem::ErrorBit::ControlValueOutOfBounds, valueOutOfBounds);
+		}
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, item,
 			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)

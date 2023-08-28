@@ -263,7 +263,7 @@ static ErrorIconItemDelegate::ErrorType getErrorType(modelsLibrary::DiscoveredEn
 	{
 		return ErrorIconItemDelegate::ErrorType::Error;
 	}
-	if (e.hasRedundancyWarning || (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol))
+	if (e.hasRedundancyWarning || (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol) || !e.controlsWithOutOfBoundsValue.empty())
 	{
 		return ErrorIconItemDelegate::ErrorType::Warning;
 	}
@@ -323,6 +323,20 @@ static QString getErrorTooltip(modelsLibrary::DiscoveredEntitiesModel::Entity co
 			if (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol)
 			{
 				tooltip.append("Not getting live updates from the entity");
+			}
+			if (!e.controlsWithOutOfBoundsValue.empty())
+			{
+				// Print each control with out of bounds warning (up to 10 streams)
+				auto count = 0u;
+				for (auto const controlIndex : e.controlsWithOutOfBoundsValue)
+				{
+					tooltip.append(QString{ "Control with index '%1' has out of bounds value(s)" }.arg(controlIndex));
+					if (++count == 10)
+					{
+						tooltip.append("(more Controls with out of bounds value(s))");
+						break;
+					}
+				}
 			}
 			break;
 		}
@@ -788,6 +802,8 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>
 		case ChangedInfoFlag::StreamInputCountersError:
 			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::StreamInputLatencyError:
+			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+		case ChangedInfoFlag::ControlValueOutOfBoundsError:
 			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		default:
 			AVDECC_ASSERT(false, "Unhandled");

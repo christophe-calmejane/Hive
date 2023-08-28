@@ -308,9 +308,19 @@ public:
 			_diagnostics = diags;
 		}
 
+		bool getControlCurrentValueOutOfBoundsError(la::avdecc::entity::model::ControlIndex const controlIndex) const noexcept
+		{
+			return _diagnostics.controlCurrentValueOutOfBounds.count(controlIndex) > 0;
+		}
+
 		bool getStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 		{
 			return _diagnostics.streamInputOverLatency.count(streamIndex) > 0;
+		}
+
+		bool getControlValueOutOfBounds(la::avdecc::entity::model::ControlIndex const controlIndex) const noexcept
+		{
+			return _diagnostics.controlCurrentValueOutOfBounds.count(controlIndex) > 0;
 		}
 
 	private:
@@ -867,6 +877,28 @@ private:
 						}
 					}
 
+					// Check for ControlCurrentValueOutOfBounds state change
+					{
+						auto const oldControlsErrors = entityCache->getDiagnostics().controlCurrentValueOutOfBounds;
+
+						// Check for no longer in error (present in old but not in new)
+						for (auto const controlIndex : oldControlsErrors)
+						{
+							if (diags.controlCurrentValueOutOfBounds.count(controlIndex) == 0)
+							{
+								emit controlCurrentValueOutOfBoundsChanged(entityID, controlIndex, false);
+							}
+						}
+						// Check for newly in error (not present in old but present in new)
+						for (auto const controlIndex : diags.controlCurrentValueOutOfBounds)
+						{
+							if (oldControlsErrors.count(controlIndex) == 0)
+							{
+								emit controlCurrentValueOutOfBoundsChanged(entityID, controlIndex, true);
+							}
+						}
+					}
+
 					// Update diags cache
 					entityCache->setDiagnostics(diags);
 
@@ -1168,6 +1200,15 @@ private:
 		if (auto* entityCache = entityCachedData(entityID))
 		{
 			return entityCache->getStreamInputLatencyError(streamIndex);
+		}
+		return {};
+	}
+
+	virtual bool getControlValueOutOfBounds(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex) const noexcept override
+	{
+		if (auto* entityCache = entityCachedData(entityID))
+		{
+			return entityCache->getControlValueOutOfBounds(controlIndex);
 		}
 		return {};
 	}

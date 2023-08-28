@@ -128,6 +128,7 @@ public:
 		ClockDomainInfo clockDomainInfo{}; /** Change triggers ChangedInfoFlag::ClockDomainLockState */
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithErrorCounter{}; /** Change triggers ChangedInfoFlag::StreamInputCountersError */
 		std::set<la::avdecc::entity::model::StreamIndex> streamsWithLatencyError{}; /** Change triggers ChangedInfoFlag::StreamInputLatencyError */
+		std::set<la::avdecc::entity::model::ControlIndex> controlsWithOutOfBoundsValue{}; /** Change triggers ChangedInfoFlag::ControlValueOutOfBoundsError */
 	};
 
 	using Model = DiscoveredEntitiesAbstractTableModel;
@@ -174,6 +175,7 @@ public:
 		RedundancyWarning = 1u << 19,
 		StreamInputCountersError = 1u << 20,
 		StreamInputLatencyError = 1u << 21,
+		ControlValueOutOfBoundsError = 1u << 22,
 	};
 	using ChangedInfoFlags = la::avdecc::utils::EnumBitfield<ChangedInfoFlag>;
 
