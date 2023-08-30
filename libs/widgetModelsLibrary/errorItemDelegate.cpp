@@ -48,17 +48,9 @@ void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 
 	if (index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool())
 	{
-		if (option.state & QStyle::StateFlag::State_Selected)
-		{
-			painter->setPen(QPen{ qtMate::material::color::complementaryValue(_themeColorName, qtMate::material::color::Shade::Shade600), 2 });
-			painter->drawRect(option.rect.adjusted(1, 1, -1, -1));
-		}
-		else
-		{
-			//painter->setPen(qtMate::material::color::foregroundErrorColorValue(_colorName, qtMate::material::color::Shade::ShadeA700));
-			painter->setPen(qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700)); // Right now always use default value as we draw on white background
-			painter->drawRect(option.rect.adjusted(0, 0, -1, -1));
-		}
+		auto const colorName = (option.state & QStyle::StateFlag::State_Selected) ? _themeColorName : qtMate::material::color::backgroundColorName(qtMate::material::color::DefaultBackgroundLuminance); // For now, hardcode the background luminance to "Light"
+		painter->setPen(qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::DefaultShade));
+		painter->drawRect(option.rect.adjusted(0, 0, -1, -1));
 	}
 }
 
