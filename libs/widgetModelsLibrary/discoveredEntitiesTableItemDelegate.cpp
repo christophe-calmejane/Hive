@@ -64,7 +64,7 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		// Change the text color
 		if (!isSelected)
 		{
-			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::DefaultShade);
+			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade500);
 			basePainterOption.palette.setBrush(QPalette::Text, brush);
 		}
 		else
@@ -88,8 +88,8 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		// Change the background
 		if (!isSelected)
 		{
-			auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::DefaultShade);
-			brush.setStyle(Qt::BrushStyle::Dense6Pattern);
+			auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade300);
+			brush.setStyle(Qt::BrushStyle::BDiagPattern);
 			basePainterOption.palette.setBrush(QPalette::NoRole, brush);
 			// We need to draw right away as there is no background fill when there is no selection (ie. don't use the backgroundFill function)
 			painter->fillRect(basePainterOption.rect, brush);
@@ -99,7 +99,7 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			// If theme is dark, it means the text will be light, so we want to use black
 			if (_isDark)
 			{
-				auto brush = QBrush{ Qt::black, Qt::BrushStyle::Dense6Pattern };
+				auto brush = QBrush{ Qt::black, Qt::BrushStyle::BDiagPattern };
 				basePainterOption.palette.setBrush(QPalette::Highlight, brush);
 				backgroundFill = [&painter, &basePainterOption, brush = std::move(brush)]()
 				{
@@ -109,7 +109,7 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			else
 			{
 				auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade400);
-				brush.setStyle(Qt::BrushStyle::Dense6Pattern);
+				brush.setStyle(Qt::BrushStyle::BDiagPattern);
 				basePainterOption.palette.setBrush(QPalette::Highlight, brush);
 				backgroundFill = [&painter, &basePainterOption, brush = std::move(brush)]()
 				{
