@@ -161,8 +161,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 				case Qt::DisplayRole:
 					switch (entityDataFlag)
 					{
-						case EntityDataFlag::EntityError:
-							return "Error";
+						case EntityDataFlag::EntityStatus:
+							return "Status";
 						case EntityDataFlag::EntityLogo:
 							return "Logo";
 						case EntityDataFlag::Compatibility:
@@ -205,8 +205,8 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 				case Qt::ToolTipRole:
 					switch (entityDataFlag)
 					{
-						case EntityDataFlag::EntityError:
-							return "Entity Error Status";
+						case EntityDataFlag::EntityStatus:
+							return "Entity Status (Error/Warning/Info)";
 						case EntityDataFlag::EntityLogo:
 							return "Logo";
 						case EntityDataFlag::Compatibility:
@@ -374,7 +374,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 					{
 						switch (entityDataFlag)
 						{
-							case EntityDataFlag::EntityError: // Return something as DisplayRole is used by the sort filter proxy model (but not actually displayed)
+							case EntityDataFlag::EntityStatus: // Return something as DisplayRole is used by the sort filter proxy model (but not actually displayed)
 								return la::avdecc::utils::to_integral(getErrorType(entity));
 							case EntityDataFlag::EntityID:
 								return hive::modelsLibrary::helper::uniqueIdentifierToString(entity.entityID);
@@ -619,7 +619,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 					{
 						switch (entityDataFlag)
 						{
-							case EntityDataFlag::EntityError:
+							case EntityDataFlag::EntityStatus:
 							{
 								return getErrorTooltip(entity);
 							}
@@ -768,7 +768,7 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>
 		case ChangedInfoFlag::GroupName:
 			return std::make_pair(EntityDataFlag::Group, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::SubscribedToUnsol:
-			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityStatus, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::Compatibility:
 			return std::make_pair(EntityDataFlag::Compatibility, RolesList{ Qt::DisplayRole });
 		case ChangedInfoFlag::EntityCapabilities:
@@ -801,15 +801,15 @@ std::optional<std::pair<DiscoveredEntitiesTableModel::EntityDataFlag, RolesList>
 		case ChangedInfoFlag::Identification:
 			return std::make_pair(EntityDataFlag::EntityID, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::IdentificationRole) });
 		case ChangedInfoFlag::StatisticsError:
-			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityStatus, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::RedundancyWarning:
-			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityStatus, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::StreamInputCountersError:
-			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityStatus, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::StreamInputLatencyError:
-			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityStatus, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		case ChangedInfoFlag::ControlValueOutOfBoundsError:
-			return std::make_pair(EntityDataFlag::EntityError, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
+			return std::make_pair(EntityDataFlag::EntityStatus, RolesList{ la::avdecc::utils::to_integral(QtUserRoles::ErrorRole) });
 		default:
 			AVDECC_ASSERT(false, "Unhandled");
 			break;

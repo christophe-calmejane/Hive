@@ -51,11 +51,11 @@ void View::setupView(hive::VisibilityDefaults const& defaults, bool const firstS
 	// Set dynamic header view
 	_dynamicHeaderView.setSectionsClickable(true);
 	_dynamicHeaderView.setHighlightSections(false);
-	_dynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityError);
+	_dynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityStatus);
 	_dynamicHeaderView.setMandatorySection(ControllerModelEntityColumn_EntityID);
 
 	// Configure sortable sections
-	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityError);
+	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityStatus);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_Compatibility);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_EntityID);
 	_headerSectionSortFilter.enable(ControllerModelEntityColumn_Name);
@@ -98,7 +98,7 @@ void View::setupView(hive::VisibilityDefaults const& defaults, bool const firstS
 	setColumnHidden(ControllerModelEntityColumn_MediaClockName, !defaults.controllerTableView_MediaClockMasterName_Visible);
 	setColumnHidden(ControllerModelEntityColumn_ClockDomainLockState, !defaults.controllerTableView_ClockDomainLockState_Visible);
 
-	setColumnWidth(ControllerModelEntityColumn_EntityError, defaults::ui::AdvancedView::ColumnWidth_Error);
+	setColumnWidth(ControllerModelEntityColumn_EntityStatus, defaults::ui::AdvancedView::ColumnWidth_Error);
 	setColumnWidth(ControllerModelEntityColumn_EntityLogo, defaults::ui::AdvancedView::ColumnWidth_Logo);
 	setColumnWidth(ControllerModelEntityColumn_Compatibility, defaults::ui::AdvancedView::ColumnWidth_Compatibility);
 	setColumnWidth(ControllerModelEntityColumn_EntityID, defaults::ui::AdvancedView::ColumnWidth_UniqueIdentifier);

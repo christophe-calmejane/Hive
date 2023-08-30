@@ -37,7 +37,7 @@ public:
 	enum class EntityDataFlag : std::uint32_t
 	{
 		All = 0u,
-		EntityError = 1u << 0,
+		EntityStatus = 1u << 0,
 		EntityLogo = 1u << 1,
 		Compatibility = 1u << 2,
 		EntityID = 1u << 3,
