@@ -259,14 +259,32 @@ QVariant DiscoveredEntitiesTableModel::headerData(int section, Qt::Orientation o
 
 static ErrorIconItemDelegate::ErrorType getErrorType(modelsLibrary::DiscoveredEntitiesModel::Entity const& e) noexcept
 {
-	if (e.hasStatisticsError || !e.streamsWithErrorCounter.empty() || !e.streamsWithLatencyError.empty())
+	// Error
+	if (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol)
 	{
 		return ErrorIconItemDelegate::ErrorType::Error;
 	}
-	if (e.hasRedundancyWarning || (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol) || !e.controlsWithOutOfBoundsValue.empty())
+	if (!e.streamsWithLatencyError.empty())
+	{
+		return ErrorIconItemDelegate::ErrorType::Error;
+	}
+
+	// Warning
+	if (e.hasRedundancyWarning)
 	{
 		return ErrorIconItemDelegate::ErrorType::Warning;
 	}
+	if (!e.controlsWithOutOfBoundsValue.empty())
+	{
+		return ErrorIconItemDelegate::ErrorType::Warning;
+	}
+
+	// Information
+	if (e.hasStatisticsError || !e.streamsWithErrorCounter.empty())
+	{
+		return ErrorIconItemDelegate::ErrorType::Information;
+	}
+
 	return ErrorIconItemDelegate::ErrorType::None;
 }
 
@@ -275,73 +293,60 @@ static QString getErrorTooltip(modelsLibrary::DiscoveredEntitiesModel::Entity co
 	auto const errorType = getErrorType(e);
 	auto tooltip = QStringList{};
 
-	switch (errorType)
+	if (e.hasStatisticsError)
 	{
-		case ErrorIconItemDelegate::ErrorType::Error:
+		// TODO: Split statistics error into multiple errors
+		tooltip.append("One or more statistics error");
+	}
+	if (!e.streamsWithErrorCounter.empty())
+	{
+		// Print each stream with error counter (up to 10 streams)
+		auto count = 0u;
+		for (auto const streamIndex : e.streamsWithErrorCounter)
 		{
-			if (e.hasStatisticsError)
+			tooltip.append(QString{ "Input Stream with index '%1' has counter errors" }.arg(streamIndex));
+			if (++count == 10)
 			{
-				// TODO: Split statistics error into multiple errors
-				tooltip.append("One or more statistics error");
+				tooltip.append("(more Input Streams with counter errors)");
+				break;
 			}
-			if (!e.streamsWithErrorCounter.empty())
-			{
-				// Print each stream with error counter (up to 10 streams)
-				auto count = 0u;
-				for (auto const streamIndex : e.streamsWithErrorCounter)
-				{
-					tooltip.append(QString{ "Input Stream with index '%1' has counter errors" }.arg(streamIndex));
-					if (++count == 10)
-					{
-						tooltip.append("(more Input Streams with counter errors)");
-						break;
-					}
-				}
-			}
-			if (!e.streamsWithLatencyError.empty())
-			{
-				// Print each stream with latency error (up to 10 streams)
-				auto count = 0u;
-				for (auto const streamIndex : e.streamsWithLatencyError)
-				{
-					tooltip.append(QString{ "Input Stream with index '%1' has latency errors" }.arg(streamIndex));
-					if (++count == 10)
-					{
-						tooltip.append("(more Input Streams with latency errors)");
-						break;
-					}
-				}
-			}
-			break;
 		}
-		case ErrorIconItemDelegate::ErrorType::Warning:
+	}
+	if (!e.streamsWithLatencyError.empty())
+	{
+		// Print each stream with latency error (up to 10 streams)
+		auto count = 0u;
+		for (auto const streamIndex : e.streamsWithLatencyError)
 		{
-			if (e.hasRedundancyWarning)
+			tooltip.append(QString{ "Input Stream with index '%1' has latency errors" }.arg(streamIndex));
+			if (++count == 10)
 			{
-				tooltip.append("Primary and Secondary interfaces connected to the same network");
+				tooltip.append("(more Input Streams with latency errors)");
+				break;
 			}
-			if (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol)
-			{
-				tooltip.append("Not getting live updates from the entity");
-			}
-			if (!e.controlsWithOutOfBoundsValue.empty())
-			{
-				// Print each control with out of bounds warning (up to 10 streams)
-				auto count = 0u;
-				for (auto const controlIndex : e.controlsWithOutOfBoundsValue)
-				{
-					tooltip.append(QString{ "Control with index '%1' has out of bounds value(s)" }.arg(controlIndex));
-					if (++count == 10)
-					{
-						tooltip.append("(more Controls with out of bounds value(s))");
-						break;
-					}
-				}
-			}
-			break;
 		}
-		default:
-			break;
+	}
+	if (e.hasRedundancyWarning)
+	{
+		tooltip.append("Primary and Secondary interfaces connected to the same network");
+	}
+	if (e.areUnsolicitedNotificationsSupported && !e.isSubscribedToUnsol)
+	{
+		tooltip.append("No longer getting live updates from the entity");
+	}
+	if (!e.controlsWithOutOfBoundsValue.empty())
+	{
+		// Print each control with out of bounds warning (up to 10 streams)
+		auto count = 0u;
+		for (auto const controlIndex : e.controlsWithOutOfBoundsValue)
+		{
+			tooltip.append(QString{ "Control with index '%1' has out of bounds value(s)" }.arg(controlIndex));
+			if (++count == 10)
+			{
+				tooltip.append("(more Controls with out of bounds value(s))");
+				break;
+			}
+		}
 	}
 
 
