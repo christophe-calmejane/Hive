@@ -38,6 +38,7 @@ public:
 		None = 0,
 		Warning = 1,
 		Error = 2,
+		Information = 3,
 	};
 
 	ErrorIconItemDelegate(bool const paintBaseDelegate, qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;

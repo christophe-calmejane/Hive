@@ -55,22 +55,37 @@ void ErrorIconItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const&
 
 	painter->save();
 	auto const errorType = index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).value<ErrorType>();
+	auto const colorName = (option.state & QStyle::StateFlag::State_Selected) ? _themeColorName : qtMate::material::color::backgroundColorName(qtMate::material::color::DefaultBackgroundLuminance); // For now, hardcode the background luminance to "Light"
 	switch (errorType)
 	{
 		case ErrorType::Error:
 		{
-			auto const color = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700); // Right now always use default value as we draw on white background (not actually true as the highlight color is not white)
-			auto const brush = QBrush{ color, Qt::SolidPattern };
-			painter->setBrush(brush);
-			painter->drawEllipse(getCenteredSquare(option.rect, 10));
+			auto font = QFont{ "Hive" };
+			font.setStyleStrategy(QFont::PreferQuality);
+			font.setPointSize(14);
+			painter->setPen(qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::DefaultShade));
+			painter->setFont(font);
+			painter->drawText(option.rect, Qt::AlignCenter, "error_fill");
 			break;
 		}
 		case ErrorType::Warning:
 		{
-			auto const color = qtMate::material::color::foregroundWarningColorValue(qtMate::material::color::DefaultColor, qtMate::material::color::Shade::ShadeA700); // Right now always use default value as we draw on white background (not actually true as the highlight color is not white)
-			auto const brush = QBrush{ color, Qt::SolidPattern };
-			painter->setBrush(brush);
-			painter->drawEllipse(getCenteredSquare(option.rect, 10));
+			auto font = QFont{ "Hive" };
+			font.setStyleStrategy(QFont::PreferQuality);
+			font.setPointSize(14);
+			painter->setPen(qtMate::material::color::foregroundWarningColorValue(colorName, qtMate::material::color::DefaultShade));
+			painter->setFont(font);
+			painter->drawText(option.rect, Qt::AlignCenter, "warning_fill");
+			break;
+		}
+		case ErrorType::Information:
+		{
+			auto font = QFont{ "Hive" };
+			font.setStyleStrategy(QFont::PreferQuality);
+			font.setPointSize(14);
+			painter->setPen(qtMate::material::color::foregroundInformationColorValue(colorName, qtMate::material::color::DefaultShade));
+			painter->setFont(font);
+			painter->drawText(option.rect, Qt::AlignCenter, "information_fill");
 			break;
 		}
 		default:
