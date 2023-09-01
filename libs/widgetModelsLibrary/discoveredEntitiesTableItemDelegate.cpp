@@ -55,13 +55,15 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		basePainterOption.state &= ~QStyle::State_HasFocus;
 	}
 
-	// Unsol not supported or not subscribed to
+	auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
+	auto const isVirtual = index.data(la::avdecc::utils::to_integral(QtUserRoles::IsVirtualRole)).toBool();
 	auto const unsolSupported = index.data(la::avdecc::utils::to_integral(QtUserRoles::UnsolSupportedRole)).toBool();
 	auto const unsolSubscribed = index.data(la::avdecc::utils::to_integral(QtUserRoles::SubscribedUnsolRole)).toBool();
-	if (!unsolSupported)
+
+	// Check for Virtual Entity
+	if (isVirtual)
 	{
-		auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
-		// Change the text color
+		// Change the text color for all columns using the base painter
 		if (!isSelected)
 		{
 			auto const brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade500);
@@ -82,17 +84,26 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			}
 		}
 	}
-	else if (!unsolSubscribed)
+
+	// Unsol not supported or not subscribed to
+	if (!unsolSupported) // Unsolicited notifications not supported
 	{
-		auto const isSelected = basePainterOption.state & QStyle::StateFlag::State_Selected;
-		// Change the background
+		// Change the text font to italic for all columns using the base painter
+		basePainterOption.font.setItalic(true);
+	}
+	else if (!unsolSubscribed) // Unsolicited notifications supported, but not subscribed to
+	{
+		// Change the background pattern for all columns
 		if (!isSelected)
 		{
 			auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade300);
 			brush.setStyle(Qt::BrushStyle::BDiagPattern);
-			basePainterOption.palette.setBrush(QPalette::NoRole, brush);
-			// We need to draw right away as there is no background fill when there is no selection (ie. don't use the backgroundFill function)
-			painter->fillRect(basePainterOption.rect, brush);
+			basePainterOption.palette.setBrush(QPalette::NoRole, brush); // Change the base painter option (will be used by the base delegate)
+			if (qtMate::material::color::DefaultBackgroundLuminance == qtMate::material::color::Luminance::Light) // TODO: Change to the current active luminance, and not the default one!!
+			{
+				// We need to draw right away as there is no background fill when there is no selection in light mode (ie. don't use the backgroundFill function)
+				painter->fillRect(basePainterOption.rect, brush);
+			}
 		}
 		else
 		{
@@ -100,8 +111,8 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			if (_isDark)
 			{
 				auto brush = QBrush{ Qt::black, Qt::BrushStyle::BDiagPattern };
-				basePainterOption.palette.setBrush(QPalette::Highlight, brush);
-				backgroundFill = [&painter, &basePainterOption, brush = std::move(brush)]()
+				basePainterOption.palette.setBrush(QPalette::Highlight, brush); // Change the base painter option (will be used by the base delegate)
+				backgroundFill = [&painter, basePainterOption, brush = std::move(brush)]() // Set the background fill function
 				{
 					painter->fillRect(basePainterOption.rect, brush);
 				};
@@ -110,8 +121,8 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			{
 				auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade400);
 				brush.setStyle(Qt::BrushStyle::BDiagPattern);
-				basePainterOption.palette.setBrush(QPalette::Highlight, brush);
-				backgroundFill = [&painter, &basePainterOption, brush = std::move(brush)]()
+				basePainterOption.palette.setBrush(QPalette::Highlight, brush); // Change the base painter option (will be used by the base delegate)
+				backgroundFill = [&painter, basePainterOption, brush = std::move(brush)]() // Set the background fill function
 				{
 					painter->fillRect(basePainterOption.rect, brush);
 				};
@@ -144,13 +155,6 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 			}
 			default:
 				break;
-		}
-
-		// Check for Virtual Entity
-		auto const isVirtual = index.data(la::avdecc::utils::to_integral(QtUserRoles::IsVirtualRole)).toBool();
-		if (isVirtual)
-		{
-			basePainterOption.font.setItalic(true);
 		}
 
 		if (!ignoreBase)
