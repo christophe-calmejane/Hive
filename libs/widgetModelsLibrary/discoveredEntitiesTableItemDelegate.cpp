@@ -96,14 +96,11 @@ void DiscoveredEntitiesTableItemDelegate::paint(QPainter* painter, QStyleOptionV
 		// Change the background pattern for all columns
 		if (!isSelected)
 		{
-			auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::Shade::Shade300);
+			auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade800 : qtMate::material::color::Shade::Shade300);
 			brush.setStyle(Qt::BrushStyle::BDiagPattern);
-			basePainterOption.palette.setBrush(QPalette::NoRole, brush); // Change the base painter option (will be used by the base delegate)
-			if (qtMate::material::color::DefaultBackgroundLuminance == qtMate::material::color::Luminance::Light) // TODO: Change to the current active luminance, and not the default one!!
-			{
-				// We need to draw right away as there is no background fill when there is no selection in light mode (ie. don't use the backgroundFill function)
-				painter->fillRect(basePainterOption.rect, brush);
-			}
+			// We need to draw right away as there is no background fill when there is no selection (ie. don't use the backgroundFill function)
+			// (or just maybe I couldn't find the correct QPalette ColorRole to set in the brush, tried 'Window' but didn't work)
+			painter->fillRect(basePainterOption.rect, brush);
 		}
 		else
 		{

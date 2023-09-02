@@ -141,19 +141,17 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 		{
 			if (auto const optInterface = _model.networkInterface(static_cast<std::size_t>(index.row())))
 			{
+				// TODO: This should be moved to the errorItemDelegate, with isEnabled/isConnected as roles (so that we can change the color when an item is selected and in error state)
 				auto const& intfc = (*optInterface).get();
 				if (!intfc.isEnabled)
 				{
-					return qtMate::material::color::value(qtMate::material::color::Name::Gray);
+					return qtMate::material::color::disabledForegroundColor();
 				}
 				else if (!intfc.isConnected)
 				{
-					auto const colorName = qtMate::material::color::backgroundColorName(qtMate::material::color::DefaultBackgroundLuminance); // For now, hardcode the background luminance to "Light"
-					return qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::DefaultShade);
-				}
-				else
-				{
-					return QColor{ Qt::black };
+					auto const colorName = qtMate::material::color::backgroundColorName();
+					auto const shade = qtMate::material::color::colorSchemeShade();
+					return qtMate::material::color::foregroundErrorColorValue(colorName, shade);
 				}
 			}
 			break;

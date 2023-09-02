@@ -19,6 +19,9 @@
 
 #include "QtMate/material/color.hpp"
 
+#include <QStyleHints>
+#include <QGuiApplication>
+
 #include <unordered_map>
 #include <stdexcept>
 #include <mutex>
@@ -751,14 +754,19 @@ QColor value(Name const name, Shade const shade)
 	return colorData(name, shade).value;
 }
 
-QColor backgroundColor(Luminance const luminance)
-{
-	return luminance == Luminance::Light ? Qt::white : Qt::black;
-}
+//QColor backgroundColor(Luminance const luminance)
+//{
+//	return luminance == Luminance::Light ? Qt::white : Qt::black;
+//}
 
 Name backgroundColorName(Luminance const luminance)
 {
 	return luminance == Luminance::Light ? Name::White : Name::Black;
+}
+
+Name backgroundColorName()
+{
+	return isDarkColorScheme() ? Name::Black : Name::White;
 }
 
 QColor foregroundValue(Name const name, Shade const shade)
@@ -859,6 +867,22 @@ QBrush brush(Name const name, Shade const shade) noexcept
 	}
 
 	return shades[shade];
+}
+
+Shade colorSchemeShade()
+{
+	return isDarkColorScheme() ? DefaultDarkShade : DefaultLightShade;
+}
+
+
+bool isDarkColorScheme()
+{
+	return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+}
+
+QColor disabledForegroundColor()
+{
+	return value(Name::Gray, isDarkColorScheme() ? Shade::ShadeA200 : Shade::Shade500);
 }
 
 } // namespace color

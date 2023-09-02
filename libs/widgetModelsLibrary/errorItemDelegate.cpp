@@ -48,8 +48,9 @@ void ErrorItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& opt
 
 	if (index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).toBool())
 	{
-		auto const colorName = (option.state & QStyle::StateFlag::State_Selected) ? _themeColorName : qtMate::material::color::backgroundColorName(qtMate::material::color::DefaultBackgroundLuminance); // For now, hardcode the background luminance to "Light"
-		painter->setPen(qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::DefaultShade));
+		auto const colorName = (option.state & QStyle::StateFlag::State_Selected) ? _themeColorName : qtMate::material::color::backgroundColorName();
+		auto const shade = (option.state & QStyle::StateFlag::State_Selected) ? qtMate::material::color::DefaultLightShade : qtMate::material::color::colorSchemeShade();
+		painter->setPen(qtMate::material::color::foregroundErrorColorValue(colorName, shade));
 		painter->drawRect(option.rect.adjusted(0, 0, -1, -1));
 	}
 }
