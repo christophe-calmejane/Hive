@@ -754,10 +754,15 @@ QColor value(Name const name, Shade const shade)
 	return colorData(name, shade).value;
 }
 
-//QColor backgroundColor(Luminance const luminance)
-//{
-//	return luminance == Luminance::Light ? Qt::white : Qt::black;
-//}
+QColor foregroundColor()
+{
+	return isDarkColorScheme() ? Qt::white : Qt::black;
+}
+
+QColor backgroundColor()
+{
+	return isDarkColorScheme() ? Qt::black : Qt::white;
+}
 
 Name backgroundColorName(Luminance const luminance)
 {

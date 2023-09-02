@@ -98,10 +98,15 @@ static auto constexpr DefaultBackgroundLuminance = Luminance::Light;
 // May throw invalid_argument for non existing combinations
 QColor value(Name const name, Shade const shade = DefaultLightShade);
 
-// Return the background color based on the given luminance
+// Return the foreground color based on current color scheme
+// Dark: white
+// Light: black
+QColor foregroundColor();
+
+// Return the background color based on current color scheme
 // Dark: black
 // Light: white
-//QColor backgroundColor(Luminance const luminance = DefaultBackgroundLuminance);
+QColor backgroundColor();
 
 // Return the background color name based on the given luminance
 // Dark: Name::Black
