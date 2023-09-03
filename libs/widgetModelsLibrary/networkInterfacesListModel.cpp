@@ -156,9 +156,7 @@ QVariant NetworkInterfacesListModel::data(QModelIndex const& index, int role) co
 				}
 				else if (!intfc.isConnected)
 				{
-					auto const colorName = qtMate::material::color::backgroundColorName();
-					auto const shade = qtMate::material::color::colorSchemeShade();
-					return qtMate::material::color::foregroundErrorColorValue(colorName, shade);
+					return qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::backgroundColorName(), qtMate::material::color::colorSchemeShade());
 				}
 			}
 			break;

@@ -52,11 +52,11 @@ void EntityDiagnosticsTreeWidgetItem::updateDiagnostics(la::avdecc::controller::
 
 	// Redundancy Warning
 	{
-		auto color = QColor{ Qt::black };
+		auto color = qtMate::material::color::foregroundColor();
 		auto text = "No";
 		if (_diagnostics.redundancyWarning)
 		{
-			color = QColor{ Qt::red };
+			color = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::backgroundColorName(), qtMate::material::color::colorSchemeShade());
 			text = "Yes";
 		}
 		_redundancyWarning->setForeground(0, color);

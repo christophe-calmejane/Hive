@@ -56,6 +56,8 @@ void NetworkInterfacesListItemDelegate::paint(QPainter* painter, QStyleOptionVie
 
 	// Base painter
 	{
+		painter->save();
+
 		if (auto* view = dynamic_cast<QAbstractItemView const*>(option.widget))
 		{
 			if (auto* parent = view->parent(); !qstrcmp("QComboBoxPrivateContainer", parent->metaObject()->className()))
@@ -68,6 +70,8 @@ void NetworkInterfacesListItemDelegate::paint(QPainter* painter, QStyleOptionVie
 		}
 
 		QStyledItemDelegate::paint(painter, basePainterOption, index);
+
+		painter->restore();
 	}
 
 	// Error painter
