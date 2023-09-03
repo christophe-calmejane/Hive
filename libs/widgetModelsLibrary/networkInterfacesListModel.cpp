@@ -24,15 +24,24 @@
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/helper.hpp>
 
+#include <QStyleHints>
+
 #include <unordered_map>
 
 namespace hive
 {
 namespace widgetModelsLibrary
 {
+static std::unordered_map<la::networkInterface::Interface::Type, QIcon> s_cachedIcons{};
+
 NetworkInterfacesListModel::NetworkInterfacesListModel(bool const addOfflineInterface) noexcept
 	: _model{ hive::modelsLibrary::NetworkInterfacesModel{ this, addOfflineInterface } }
 {
+	connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this,
+		[](Qt::ColorScheme scheme)
+		{
+			s_cachedIcons.clear();
+		});
 }
 
 bool NetworkInterfacesListModel::isEnabled(QString const& id) const noexcept
@@ -61,10 +70,8 @@ la::networkInterface::Interface::Type NetworkInterfacesListModel::getInterfaceTy
 
 QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::networkInterface::Interface::Type const type) noexcept
 {
-	static std::unordered_map<la::networkInterface::Interface::Type, QIcon> s_icon;
-
-	auto const it = s_icon.find(type);
-	if (it == std::end(s_icon))
+	auto const it = s_cachedIcons.find(type);
+	if (it == std::end(s_cachedIcons))
 	{
 		auto what = QString{};
 
@@ -85,10 +92,10 @@ QIcon NetworkInterfacesListModel::interfaceTypeIcon(la::networkInterface::Interf
 				break;
 		}
 
-		s_icon[type] = qtMate::material::helper::generateIcon(what);
+		s_cachedIcons[type] = qtMate::material::helper::generateIcon(what, qtMate::material::color::foregroundColor());
 	}
 
-	return s_icon[type];
+	return s_cachedIcons[type];
 }
 
 // hive::modelsLibrary::NetworkInterfacesAbstractListModel overrides

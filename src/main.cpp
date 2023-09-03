@@ -139,6 +139,11 @@ struct InstanceInfo
 
 int main(int argc, char* argv[])
 {
+#if defined(Q_OS_WIN32)
+	// Enable dark mode on windows
+	qputenv("QT_QPA_PLATFORM", "windows:darkmode=2"); // Not actually needed, since Qt 6.5 dark mode is enabled by default
+#endif // Q_OS_WIN32
+
 	// Setup Bug Reporter
 	setupBugReporter();
 
@@ -159,6 +164,9 @@ int main(int argc, char* argv[])
 
 	// Create the Qt Application
 	auto app = HiveApplication{ argc, argv };
+
+	// Set the "fusion" style
+	app.setStyle("fusion"); // We need to set the fusion style as dark mode was removed from windows default style in Qt 6.5 
 
 	// Runtime sanity check on Avdecc Library compilation options
 	{
