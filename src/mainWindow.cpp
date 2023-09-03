@@ -229,7 +229,7 @@ void MainWindowImpl::setupStandardProfile()
 
 void MainWindowImpl::setupDeveloperProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{true, true, true, true, true, true, true, true, true, false });
+	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, true, true, true, true, true, true, false });
 }
 
 void MainWindowImpl::setupProfile()
@@ -1034,6 +1034,16 @@ void MainWindowImpl::connectSignals()
 				});
 		});
 #endif // USE_SPARKLE
+
+	// Color Scheme changed
+	connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this,
+		[this](Qt::ColorScheme scheme)
+		{
+			auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			auto const themeColorIndex = settings->getValue(settings::General_ThemeColorIndex.name).toInt();
+			auto const colorName = qtMate::material::color::Palette::name(themeColorIndex);
+			updateStyleSheet(colorName, ":/style.qss");
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
@@ -1268,15 +1278,16 @@ void MainWindow::dropEvent(QDropEvent* event)
 
 void MainWindowImpl::updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename)
 {
-	auto const baseBackgroundColor = qtMate::material::color::value(colorName);
-	auto const baseForegroundColor = QColor{ qtMate::material::color::luminance(colorName) == qtMate::material::color::Luminance::Dark ? Qt::white : Qt::black };
-	auto const connectionMatrixBackgroundColor = qtMate::material::color::value(colorName, qtMate::material::color::Shade::Shade100);
+	auto const themeBackgroundColor = qtMate::material::color::value(colorName);
+	auto const colorSchemeForegroundColor = qtMate::material::color::foregroundColor();
+	auto const connectionMatrixBackgroundColor = qtMate::material::color::value(colorName, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade900 : qtMate::material::color::Shade::Shade100);
+	auto const flatButtonColor = qtMate::material::color::value(qtMate::material::color::Name::Gray, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade300 : qtMate::material::color::Shade::Shade800);
 
 	// Load and apply the stylesheet
 	auto styleFile = QFile{ filename };
 	if (styleFile.open(QFile::ReadOnly))
 	{
-		auto const styleSheet = QString{ styleFile.readAll() }.arg(baseBackgroundColor.name()).arg(baseForegroundColor.name()).arg(connectionMatrixBackgroundColor.name());
+		auto const styleSheet = QString{ styleFile.readAll() }.arg(themeBackgroundColor.name()).arg(colorSchemeForegroundColor.name()).arg(connectionMatrixBackgroundColor.name()).arg(flatButtonColor.name());
 
 		qApp->setStyleSheet(styleSheet);
 	}

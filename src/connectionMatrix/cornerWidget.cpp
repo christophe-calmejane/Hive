@@ -66,7 +66,7 @@ CornerWidget::CornerWidget(QWidget* parent)
 	_centerContainerLayout.addStretch();
 	_centerContainerLayout.addWidget(&_legendButton);
 	_centerContainerLayout.addWidget(&_searchLineEdit);
-	_centerContainerLayout.addWidget(&_removeAllConnectionsButton);
+	_centerContainerLayout.addWidget(&_removeAllConnectionsButton, 0, Qt::AlignHCenter);
 	_centerContainerLayout.addStretch();
 
 	_layout.setRowStretch(0, 1);
@@ -79,6 +79,8 @@ CornerWidget::CornerWidget(QWidget* parent)
 	_verticalPlaceholder.setFixedWidth(20);
 	_title.setAlignment(Qt::AlignHCenter);
 	_removeAllConnectionsButton.setToolTip(QCoreApplication::translate("CornerWidget", "Remove all active connections", nullptr));
+	// Prevent the button from expanding
+	_removeAllConnectionsButton.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
 	// Connect buttons
 	connect(&_legendButton, &qtMate::widgets::FlatIconButton::clicked, this,
@@ -233,7 +235,8 @@ void CornerWidget::paintEvent(QPaintEvent*)
 
 	// Whole section
 	{
-		painter.fillRect(geometry(), 0xf5f5f5);
+		auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade900 : qtMate::material::color::Shade::Shade100);
+		painter.fillRect(geometry(), brush);
 	}
 
 	// Horizontal section
