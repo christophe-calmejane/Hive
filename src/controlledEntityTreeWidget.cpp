@@ -26,22 +26,12 @@
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 
 #include <QHeaderView>
 #include <QMenu>
 
 #include <unordered_set>
-
-namespace priv
-{
-void useBoldFont(QTreeWidgetItem* item, bool const bold)
-{
-	auto font = item->data(0, Qt::FontRole).value<QFont>();
-	font.setBold(bold);
-	item->setData(0, Qt::FontRole, font);
-}
-
-} // namespace priv
 
 // Base node item
 class NodeItem : public QObject, public QTreeWidgetItem
@@ -89,8 +79,7 @@ public:
 		}
 
 		auto const inError = hasError();
-		setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::ErrorRole), inError);
-		setForeground(0, inError ? Qt::red : Qt::black);
+		setData(0, la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole), inError);
 
 		// Also update the parent node
 		if (auto* parent = static_cast<NodeItem*>(QTreeWidgetItem::parent()))
@@ -112,8 +101,7 @@ public:
 		_errorBits = errorBits;
 
 		auto const inError = hasError();
-		setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::ErrorRole), inError);
-		setForeground(0, inError ? Qt::red : Qt::black);
+		setData(0, la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole), inError);
 	}
 
 	ErrorBits getErrorBits() const noexcept
@@ -731,7 +719,8 @@ private:
 
 		if (node.dynamicModel.isActiveConfiguration)
 		{
-			priv::useBoldFont(item, true);
+			// Set the ActiveRole
+			item->setData(0, la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ActiveRole), true);
 
 			Q_Q(ControlledEntityTreeWidget);
 			item->setExpanded(true);
@@ -1048,14 +1037,17 @@ private:
 			{
 				if (isCurrentConfiguration && entityID == _controlledEntityID && clockDomainIndex == parentIndex)
 				{
-					priv::useBoldFont(item, node.descriptorIndex == clockSourceIndex);
+					// Set the ActiveRole
+					auto const isCurrentClockSource = node.descriptorIndex == clockSourceIndex;
+					item->setData(0, la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ActiveRole), isCurrentClockSource);
 				}
 			});
 
 		if (isCurrentConfiguration)
 		{
-			auto const isCurrentClockSource = (node.descriptorIndex == parent->dynamicModel.clockSourceIndex);
-			priv::useBoldFont(item, isCurrentClockSource);
+			// Set the ActiveRole
+			auto const isCurrentClockSource = node.descriptorIndex == parent->dynamicModel.clockSourceIndex;
+			item->setData(0, la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ActiveRole), isCurrentClockSource);
 		}
 	}
 

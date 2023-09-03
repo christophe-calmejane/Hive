@@ -131,6 +131,7 @@ set(HEADER_FILES_COMMON
 	aecpCommandSpinBox.hpp
 	aecpCommandTextEntry.hpp
 	controlledEntityTreeWidget.hpp
+	controlledEntityTreeWidgetItemDelegate.hpp
 	entityInspector.hpp
 	mappingMatrix.hpp
 	activeNetworkInterfacesModel.hpp
@@ -206,6 +207,7 @@ set(SOURCE_FILES_COMMON
 	mainWindow.cpp
 	settingsDialog.cpp
 	controlledEntityTreeWidget.cpp
+	controlledEntityTreeWidgetItemDelegate.cpp
 	entityInspector.cpp
 	mappingMatrix.cpp
 	activeNetworkInterfacesModel.cpp

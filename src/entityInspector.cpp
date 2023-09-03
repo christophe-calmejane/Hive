@@ -64,7 +64,7 @@ EntityInspector::EntityInspector(QWidget* parent)
 	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOnline, this, &EntityInspector::entityOnline);
 	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityOffline, this, &EntityInspector::entityOffline);
 	connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityNameChanged, this, &EntityInspector::entityNameChanged);
-	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_itemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
+	connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_itemDelegate, &ControlledEntityTreeWidgetItemDelegate::setThemeColorName);
 
 	_settingsSignaler.start();
 }
