@@ -21,10 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Entry in the entities list context menu to force reload a single entity](https://github.com/christophe-calmejane/Hive/issues/145)
 - [New column in entities list showing error/warning status](https://github.com/christophe-calmejane/Hive/issues/155)
 - New diagnostics for CONTROL descriptors, when the current value is out of min-max bounds
+- [Support for Dark Mode](https://github.com/christophe-calmejane/Hive/issues/39)
 
 ### Changed
 - Complete rework of the `entities list`
 - Updated AVDECC library to v4.0
+- Defaulting to Qt "fusion" style, can be changed with command line parameter _-style <style name>_
 
 ### Fixed
 - Current selection in list of entities lost when changing the filter
