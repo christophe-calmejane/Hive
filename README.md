@@ -13,7 +13,7 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 ## Minimum requirements for compilation
 
 - CMake 3.22
-- Qt 6.4.2 (although Qt 5.15.2 was supported in the past, it's no longer guaranteed to compile correctly)
+- Qt 6.5.2 (although Qt 5.15.2 was supported in the past, it's no longer guaranteed to compile correctly)
 - Visual Studio 2022 17.4 (using platform toolset v143), Xcode 14, g++ 11.0
 - [Optional, for cross-compilation] Docker / Docker Compose
 
@@ -35,7 +35,7 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 - Requires `docker` and `docker-compose` to be installed
 - Go to the `Docker` folder
 - Build the docker builder image: _docker-compose build_
-- Generate the build solution: _docker-compose run --rm gen_cmake -debug -c Ninja -qtvers 6.4.2 -qtdir /usr/local/Qt-6.4.2/lib/cmake -- -DBUILD_HIVE_TESTS=FALSE_
+- Generate the build solution: _docker-compose run --rm gen_cmake -debug -c Ninja -qtvers 6.5.2 -qtdir /usr/local/Qt-6.5.2/lib/cmake -- -DBUILD_HIVE_TESTS=FALSE_
  - You may change parameters to your convenience
 - Build the solution: _docker-compose run --rm build --target install_
 - If you want to run the application, you must authorize X connections to your display: _xhost local:root_
