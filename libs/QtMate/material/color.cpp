@@ -21,6 +21,7 @@
 
 #include <QStyleHints>
 #include <QGuiApplication>
+#include <QApplication>
 
 #include <unordered_map>
 #include <stdexcept>
@@ -882,6 +883,14 @@ Shade colorSchemeShade()
 
 bool isDarkColorScheme()
 {
+	// First check for an application property
+	auto const prop = qApp->property("isDarkColorScheme");
+	if (prop.isValid())
+	{
+		return prop.toBool();
+	}
+
+	// If no application property, check the style hints
 	return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
 }
 
