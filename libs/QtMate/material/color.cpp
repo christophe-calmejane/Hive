@@ -19,6 +19,10 @@
 
 #include "QtMate/material/color.hpp"
 
+#include <QStyleHints>
+#include <QGuiApplication>
+#include <QApplication>
+
 #include <unordered_map>
 #include <stdexcept>
 #include <mutex>
@@ -751,14 +755,24 @@ QColor value(Name const name, Shade const shade)
 	return colorData(name, shade).value;
 }
 
-QColor backgroundColor(Luminance const luminance)
+QColor foregroundColor()
 {
-	return luminance == Luminance::Light ? Qt::white : Qt::black;
+	return isDarkColorScheme() ? Qt::white : Qt::black;
+}
+
+QColor backgroundColor()
+{
+	return isDarkColorScheme() ? Qt::black : Qt::white;
 }
 
 Name backgroundColorName(Luminance const luminance)
 {
 	return luminance == Luminance::Light ? Name::White : Name::Black;
+}
+
+Name backgroundColorName()
+{
+	return isDarkColorScheme() ? Name::Black : Name::White;
 }
 
 QColor foregroundValue(Name const name, Shade const shade)
@@ -859,6 +873,30 @@ QBrush brush(Name const name, Shade const shade) noexcept
 	}
 
 	return shades[shade];
+}
+
+Shade colorSchemeShade()
+{
+	return isDarkColorScheme() ? DefaultDarkShade : DefaultLightShade;
+}
+
+
+bool isDarkColorScheme()
+{
+	// First check for an application property
+	auto const prop = qApp->property("isDarkColorScheme");
+	if (prop.isValid())
+	{
+		return prop.toBool();
+	}
+
+	// If no application property, check the style hints
+	return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+}
+
+QColor disabledForegroundColor()
+{
+	return value(Name::Gray, isDarkColorScheme() ? Shade::ShadeA200 : Shade::Shade500);
 }
 
 } // namespace color

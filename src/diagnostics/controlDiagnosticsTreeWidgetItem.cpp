@@ -19,6 +19,8 @@
 
 #include "controlDiagnosticsTreeWidgetItem.hpp"
 
+#include <qtMate/material/color.hpp>
+
 #include <map>
 #include <QMenu>
 
@@ -53,11 +55,11 @@ void ControlDiagnosticsTreeWidgetItem::updateDiagnostics(la::avdecc::controller:
 
 	// Latency Error
 	{
-		auto color = QColor{ Qt::black };
+		auto color = qtMate::material::color::foregroundColor();
 		auto text = "No";
 		if (_diagnostics.controlCurrentValueOutOfBounds.count(_controlIndex) > 0)
 		{
-			color = QColor{ Qt::red };
+			color = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::backgroundColorName(), qtMate::material::color::colorSchemeShade());
 			text = "Yes";
 		}
 		_controlValueOutOfBounds->setForeground(0, color);

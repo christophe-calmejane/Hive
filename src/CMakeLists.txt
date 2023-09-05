@@ -131,6 +131,7 @@ set(HEADER_FILES_COMMON
 	aecpCommandSpinBox.hpp
 	aecpCommandTextEntry.hpp
 	controlledEntityTreeWidget.hpp
+	controlledEntityTreeWidgetItemDelegate.hpp
 	entityInspector.hpp
 	mappingMatrix.hpp
 	activeNetworkInterfacesModel.hpp
@@ -141,6 +142,7 @@ set(HEADER_FILES_COMMON
 	streamFormatComboBox.hpp
 	visibilitySettings.hpp
 	listViewMatrixViewController.hpp
+	application.hpp
 )
 
 set(SOURCE_FILES_COMMON
@@ -206,6 +208,7 @@ set(SOURCE_FILES_COMMON
 	mainWindow.cpp
 	settingsDialog.cpp
 	controlledEntityTreeWidget.cpp
+	controlledEntityTreeWidgetItemDelegate.cpp
 	entityInspector.cpp
 	mappingMatrix.cpp
 	activeNetworkInterfacesModel.cpp
@@ -214,6 +217,7 @@ set(SOURCE_FILES_COMMON
 	nodeVisitor.cpp
 	windowsNpfHelper.cpp
 	listViewMatrixViewController.cpp
+	application.cpp
 )
 
 set(UI_FILES_COMMON

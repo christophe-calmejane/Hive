@@ -17,6 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "application.hpp"
 #include "mainWindow.hpp"
 #include "internals/config.hpp"
 #include "settingsManager/settings.hpp"
@@ -29,7 +30,6 @@
 #endif // USE_SPARKLE
 #include <hive/modelsLibrary/controllerManager.hpp>
 
-#include <QApplication>
 #include <QFontDatabase>
 #include <QSharedMemory>
 #include <QMessageBox>
@@ -39,7 +39,6 @@
 #include <QScreen>
 #include <QStringList>
 #include <QtGlobal>
-#include <QFileOpenEvent>
 #if QT_VERSION < 0x050F00
 #	include <QDesktopWidget>
 #endif // Qt < 5.15.0
@@ -87,49 +86,6 @@ void setupBugReporter()
 void setupBugReporter() {}
 #endif
 
-class HiveApplication : public QApplication
-{
-public:
-	HiveApplication(int& argc, char** argv)
-		: QApplication(argc, argv)
-	{
-		// Install the event filter to catch macOS FileOpen events
-		installEventFilter(this);
-
-		// Process the events immediately so we can catch the FileOpen event before the MainWindow is created
-		processEvents();
-
-		// Remove the event filter, the main window will install its own
-		removeEventFilter(this);
-	}
-
-	void addFileToLoad(QString const& filePath)
-	{
-		_filesToLoad.append(filePath);
-	}
-
-	QStringList const& getFilesToLoad() const
-	{
-		return _filesToLoad;
-	}
-
-private:
-	// QObject overrides
-	bool eventFilter(QObject* watched, QEvent* event) override
-	{
-		if (event->type() == QEvent::FileOpen)
-		{
-			auto const* const fileEvent = static_cast<QFileOpenEvent const*>(event);
-			addFileToLoad(fileEvent->file());
-			return true;
-		}
-		return false;
-	}
-
-	// Private members
-	QStringList _filesToLoad{};
-};
-
 struct InstanceInfo
 {
 	QSharedMemory shm{ "d2794ee0-ab5e-48a5-9189-78a9e2c40635" };
@@ -139,6 +95,14 @@ struct InstanceInfo
 
 int main(int argc, char* argv[])
 {
+#if defined(Q_OS_WIN32)
+	// Enable dark mode on windows
+	qputenv("QT_QPA_PLATFORM", "windows:darkmode=2"); // Not actually needed, since Qt 6.5 dark mode is enabled by default
+#endif // Q_OS_WIN32
+
+	// Set the "fusion" style
+	QApplication::setStyle("fusion"); // We need to set the fusion style as dark mode was removed from windowsvista default style in Qt 6.5
+
 	// Setup Bug Reporter
 	setupBugReporter();
 

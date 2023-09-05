@@ -38,7 +38,7 @@ void ErrorIconItemDelegate::setThemeColorName(qtMate::material::color::Name cons
 	_themeColorName = themeColorName;
 }
 
-static QRect getCenteredSquare(QRect const& rect, int const size)
+inline QRect getCenteredSquare(QRect const& rect, int const size)
 {
 	auto const x = rect.x() + (rect.width() - size) / 2;
 	auto const y = rect.y() + (rect.height() - size) / 2;
@@ -55,7 +55,9 @@ void ErrorIconItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const&
 
 	painter->save();
 	auto const errorType = index.data(la::avdecc::utils::to_integral(QtUserRoles::ErrorRole)).value<ErrorType>();
-	auto const colorName = (option.state & QStyle::StateFlag::State_Selected) ? _themeColorName : qtMate::material::color::backgroundColorName(qtMate::material::color::DefaultBackgroundLuminance); // For now, hardcode the background luminance to "Light"
+	auto const colorName = (option.state & QStyle::StateFlag::State_Selected) ? _themeColorName : qtMate::material::color::backgroundColorName();
+	auto const shade = (option.state & QStyle::StateFlag::State_Selected) ? qtMate::material::color::DefaultLightShade : qtMate::material::color::colorSchemeShade();
+
 	switch (errorType)
 	{
 		case ErrorType::Error:
@@ -63,7 +65,7 @@ void ErrorIconItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const&
 			auto font = QFont{ "Hive" };
 			font.setStyleStrategy(QFont::PreferQuality);
 			font.setPointSize(14);
-			painter->setPen(qtMate::material::color::foregroundErrorColorValue(colorName, qtMate::material::color::DefaultShade));
+			painter->setPen(qtMate::material::color::foregroundErrorColorValue(colorName, shade));
 			painter->setFont(font);
 			painter->drawText(option.rect, Qt::AlignCenter, "error_fill");
 			break;
@@ -73,7 +75,7 @@ void ErrorIconItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const&
 			auto font = QFont{ "Hive" };
 			font.setStyleStrategy(QFont::PreferQuality);
 			font.setPointSize(14);
-			painter->setPen(qtMate::material::color::foregroundWarningColorValue(colorName, qtMate::material::color::DefaultShade));
+			painter->setPen(qtMate::material::color::foregroundWarningColorValue(colorName, shade));
 			painter->setFont(font);
 			painter->drawText(option.rect, Qt::AlignCenter, "warning_fill");
 			break;
@@ -83,7 +85,7 @@ void ErrorIconItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const&
 			auto font = QFont{ "Hive" };
 			font.setStyleStrategy(QFont::PreferQuality);
 			font.setPointSize(14);
-			painter->setPen(qtMate::material::color::foregroundInformationColorValue(colorName, qtMate::material::color::DefaultShade));
+			painter->setPen(qtMate::material::color::foregroundInformationColorValue(colorName, shade));
 			painter->setFont(font);
 			painter->drawText(option.rect, Qt::AlignCenter, "information_fill");
 			break;

@@ -397,8 +397,8 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	switch (nodeType)
 	{
 		case Node::Type::OfflineOutputStream:
-			backgroundColor = Qt::black;
-			foregroundColor = Qt::white;
+			backgroundColor = Qt::black; // Always use black for background offline streams, even in dark mode
+			foregroundColor = Qt::white; // Always use white for foreground offline streams, even in dark mode
 			foregroundErrorColor = Qt::red;
 			break;
 		case Node::Type::Entity:

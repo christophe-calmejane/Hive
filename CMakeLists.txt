@@ -159,7 +159,7 @@ find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network REQUIRED)
 cu_setup_project_version_variables(${HIVE_VERSION})
 
 # Set minimum OSX/iOS version
-cu_setup_apple_minimum_versions(MACOS 10.14 IOS 11)
+cu_setup_apple_minimum_versions(MACOS 11 IOS 14)
 
 ############ Define some variables
 

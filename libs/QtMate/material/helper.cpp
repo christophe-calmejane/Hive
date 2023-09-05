@@ -40,7 +40,7 @@ QIcon generateIcon(QString const& what, QColor const& color)
 
 		QFont font{ "Material Icons" };
 		font.setStyleStrategy(QFont::PreferQuality);
-		font.setPointSize(size - 8);
+		font.setPointSize(size / 2);
 
 		painter.setFont(font);
 

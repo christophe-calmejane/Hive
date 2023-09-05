@@ -17,56 +17,52 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "hive/widgetModelsLibrary/networkInterfacesListItemDelegate.hpp"
-#include "hive/widgetModelsLibrary/networkInterfacesListModel.hpp"
-#include "hive/widgetModelsLibrary/qtUserRoles.hpp"
+#include "controlledEntityTreeWidgetItemDelegate.hpp"
+
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 
 #include <QPainter>
 #include <QAbstractItemView>
 #include <QComboBox>
 
-namespace hive
-{
-namespace widgetModelsLibrary
-{
-NetworkInterfacesListItemDelegate::NetworkInterfacesListItemDelegate(qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
+ControlledEntityTreeWidgetItemDelegate::ControlledEntityTreeWidgetItemDelegate(qtMate::material::color::Name const themeColorName, QObject* parent) noexcept
 	: QStyledItemDelegate(parent)
 {
 	setThemeColorName(themeColorName);
 }
 
-void NetworkInterfacesListItemDelegate::setThemeColorName(qtMate::material::color::Name const themeColorName)
+void ControlledEntityTreeWidgetItemDelegate::setThemeColorName(qtMate::material::color::Name const themeColorName)
 {
 	_themeColorName = themeColorName;
 	_isDark = qtMate::material::color::luminance(_themeColorName) == qtMate::material::color::Luminance::Dark;
 	_errorItemDelegate.setThemeColorName(themeColorName);
-	_imageItemDelegate.setThemeColorName(themeColorName);
 }
 
-void NetworkInterfacesListItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
+void ControlledEntityTreeWidgetItemDelegate::paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const
 {
 	// Override default options according to the model current state
 	auto basePainterOption = option;
 
-	// Clear focus state if any
-	if (basePainterOption.state & QStyle::State_HasFocus)
-	{
-		basePainterOption.state &= ~QStyle::State_HasFocus;
-	}
 
 	// Base painter
 	{
 		painter->save();
 
-		if (auto* view = dynamic_cast<QAbstractItemView const*>(option.widget))
+		// Check if the item has the active role
+		auto const isActive = index.data(la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ActiveRole)).toBool();
+		// If active, use a bold font
+		if (isActive)
 		{
-			if (auto* parent = view->parent(); !qstrcmp("QComboBoxPrivateContainer", parent->metaObject()->className()))
-			{
-				if (auto* widget = dynamic_cast<QComboBox const*>(parent->parent()))
-				{
-					basePainterOption.font.setBold(index.row() == widget->currentIndex());
-				}
-			}
+			basePainterOption.font.setBold(true);
+		}
+
+		// Check if the item has the error role
+		auto const isError = index.data(la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole)).toBool();
+		// If error, change the text color
+		if (isError)
+		{
+			// Change foreground color
+			basePainterOption.palette.setColor(QPalette::Text, qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::backgroundColorName(), qtMate::material::color::colorSchemeShade()));
 		}
 
 		QStyledItemDelegate::paint(painter, basePainterOption, index);
@@ -79,6 +75,3 @@ void NetworkInterfacesListItemDelegate::paint(QPainter* painter, QStyleOptionVie
 		static_cast<QStyledItemDelegate const&>(_errorItemDelegate).paint(painter, option, index);
 	}
 }
-
-} // namespace widgetModelsLibrary
-} // namespace hive

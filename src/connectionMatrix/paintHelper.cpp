@@ -301,7 +301,9 @@ void drawCapabilities(QPainter* painter, QRect const& rect, Model::IntersectionD
 
 	auto const drawInvalidIntersection = [painter, &rect]()
 	{
-		painter->fillRect(rect, QBrush{ 0xE1E1E1, Qt::BDiagPattern });
+		auto brush = qtMate::material::color::brush(qtMate::material::color::Name::Gray, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade800 : qtMate::material::color::Shade::Shade300);
+		brush.setStyle(Qt::BrushStyle::BDiagPattern);
+		painter->fillRect(rect, brush);
 	};
 	auto const drawEntitySummaryIntersection = [painter, &rect, state, flags, drawMediaLockedDot](auto const brush, auto const penColor, auto const penWidth)
 	{
