@@ -38,7 +38,7 @@ void ErrorIconItemDelegate::setThemeColorName(qtMate::material::color::Name cons
 	_themeColorName = themeColorName;
 }
 
-static QRect getCenteredSquare(QRect const& rect, int const size)
+inline QRect getCenteredSquare(QRect const& rect, int const size)
 {
 	auto const x = rect.x() + (rect.width() - size) / 2;
 	auto const y = rect.y() + (rect.height() - size) / 2;

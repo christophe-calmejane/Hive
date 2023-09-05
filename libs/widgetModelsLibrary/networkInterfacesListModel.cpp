@@ -39,7 +39,7 @@ NetworkInterfacesListModel::NetworkInterfacesListModel(bool const addOfflineInte
 	: _model{ hive::modelsLibrary::NetworkInterfacesModel{ this, addOfflineInterface } }
 {
 	connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this,
-		[](Qt::ColorScheme scheme)
+		[](Qt::ColorScheme /*scheme*/)
 		{
 			s_cachedIcons.clear();
 		});
