@@ -29,6 +29,7 @@
 #include <QSettings>
 #include <QLabel>
 #include <QStringView>
+#include <QGuiApplication>
 
 #ifdef DEBUG
 #	include <QFileInfo>

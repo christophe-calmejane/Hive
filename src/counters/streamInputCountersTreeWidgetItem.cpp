@@ -19,6 +19,8 @@
 
 #include "streamInputCountersTreeWidgetItem.hpp"
 
+#include <qtMate/material/color.hpp>
+
 #include <map>
 #include <QMenu>
 

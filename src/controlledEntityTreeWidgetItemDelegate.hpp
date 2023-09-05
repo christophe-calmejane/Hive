@@ -24,6 +24,7 @@
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 
 #include <QStyledItemDelegate>
+#include <QApplication>
 
 class ControlledEntityTreeWidgetItemDelegate : public QStyledItemDelegate
 {

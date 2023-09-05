@@ -25,6 +25,7 @@
 #include <QtMate/material/helper.hpp>
 
 #include <QStyleHints>
+#include <QGuiApplication>
 
 #include <unordered_map>
 
