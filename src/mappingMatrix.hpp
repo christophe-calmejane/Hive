@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <string>
+#include <any>
 
 namespace mappingMatrix
 {
@@ -32,6 +33,7 @@ struct Node
 {
 	std::string name{};
 	std::vector<std::string> sockets{};
+	std::any userData{};
 };
 
 using Nodes = std::vector<Node>;

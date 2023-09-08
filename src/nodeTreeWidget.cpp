@@ -457,6 +457,7 @@ private:
 			auto* dynamicItem = new AudioUnitDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
+		_currentAudioUnitIndex = node.descriptorIndex;
 	}
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
@@ -700,7 +701,7 @@ private:
 		auto const hasAtLeastOneDynamicInfo = node.staticModel.hasDynamicAudioMap;
 		if (isActiveConfiguration && hasAtLeastOneDynamicInfo)
 		{
-			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
+			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, _currentAudioUnitIndex, node.descriptorType, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 	}
@@ -1600,6 +1601,7 @@ private:
 	Q_DECLARE_PUBLIC(NodeTreeWidget);
 
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
+	la::avdecc::entity::model::AudioUnitIndex _currentAudioUnitIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
 };
 
 /** Linear Values - Clause 7.3.5.2.1 */

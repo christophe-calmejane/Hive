@@ -592,6 +592,20 @@ void HeaderView::paintSection(QPainter* painter, QRect const& rect, int logicalI
 	painter->restore();
 }
 
+template<class StreamPorts>
+bool atLeastOneDynamicMappings(StreamPorts const& streamPorts)
+{
+	for (auto const& [streamPortIndex, streamPortNode] : streamPorts)
+	{
+		if (streamPortNode.staticModel.hasDynamicAudioMap)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 {
 	auto const logicalIndex = logicalIndexAt(event->pos());
@@ -645,47 +659,30 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 	struct MapSupTypeIndex
 	{
 		bool supportsDynamicMappings{ false };
+		la::avdecc::entity::model::AudioUnitIndex audioUnitIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
 		la::avdecc::entity::model::DescriptorType streamPortType{ la::avdecc::entity::model::DescriptorType::Invalid };
-		la::avdecc::entity::model::StreamPortIndex streamPortIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
 		la::avdecc::entity::model::StreamIndex streamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
 	};
 	auto findMappingsSupportTypeIndexForDescriptor = [](la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::DescriptorType const& descriptorType)
 	{
 		// Currently returning the first audio unit - TODO: If we have devices with multiple audio units, we shall probably offer to choose which audio unit to edit
 		auto mti = MapSupTypeIndex{};
+		auto constexpr audioUnitIndex = la::avdecc::entity::model::AudioUnitIndex{ 0u };
+
 		try
 		{
+			auto const& audioUnitNode = controlledEntity.getAudioUnitNode(controlledEntity.getCurrentConfigurationIndex(), audioUnitIndex);
 			if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
 			{
-				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
-				{
-					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortInputs)
-					{
-						if (streamPortNode.staticModel.hasDynamicAudioMap)
-						{
-							mti.supportsDynamicMappings = true;
-							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
-							mti.streamPortIndex = spi;
-							break;
-						}
-					}
-				}
+				mti.supportsDynamicMappings = atLeastOneDynamicMappings(audioUnitNode.streamPortInputs);
+				mti.audioUnitIndex = audioUnitIndex;
+				mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
 			}
 			else if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 			{
-				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
-				{
-					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortOutputs)
-					{
-						if (streamPortNode.staticModel.hasDynamicAudioMap)
-						{
-							mti.supportsDynamicMappings = true;
-							mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
-							mti.streamPortIndex = spi;
-							break;
-						}
-					}
-				}
+				mti.supportsDynamicMappings = atLeastOneDynamicMappings(audioUnitNode.streamPortOutputs);
+				mti.audioUnitIndex = audioUnitIndex;
+				mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
 			}
 		}
 		catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -697,6 +694,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 	};
 	auto findMappingsSupportTypeIndexForStreamNode = [](la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::controller::model::StreamNode const& streamNode)
 	{
+		// Currently returning the first audio unit - TODO: If we have devices with multiple audio units, we shall probably offer to choose which audio unit to edit
 		auto mti = MapSupTypeIndex{};
 
 		auto const isValidStreamFormat = [](auto const& streamNode)
@@ -712,23 +710,14 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 			{
 				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
 				{
-					// Search which StreamPort has the same ClockDomain than passed StreamNode
-					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortInputs)
+					// Search which AudioUnit has the same ClockDomain than passed StreamNode
+					if (audioUnitNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex)
 					{
-						if (streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex)
-						{
-							if (streamPortNode.staticModel.hasDynamicAudioMap)
-							{
-								auto const& streamInputNode = static_cast<la::avdecc::controller::model::StreamInputNode const&>(streamNode);
-								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamInputNode.dynamicModel.streamFormat);
-
-								mti.supportsDynamicMappings = isValidStreamFormat(streamInputNode);
-								mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
-								mti.streamPortIndex = spi;
-								// Don't allow StreamInput to be configured individually to prevent user errors
-							}
-							break;
-						}
+						mti.supportsDynamicMappings = atLeastOneDynamicMappings(audioUnitNode.streamPortInputs);
+						mti.audioUnitIndex = audioUnitIndex;
+						mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortInput;
+						// Don't allow StreamInput to be configured individually to prevent user errors
+						break;
 					}
 				}
 			}
@@ -736,23 +725,15 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 			{
 				for (auto const& [audioUnitIndex, audioUnitNode] : controlledEntity.getCurrentConfigurationNode().audioUnits)
 				{
-					// Search which StreamPort has the same ClockDomain than passed StreamNode
-					for (auto const& [spi, streamPortNode] : audioUnitNode.streamPortOutputs)
+					// Search which AudioUnit has the same ClockDomain than passed StreamNode
+					if (audioUnitNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex)
 					{
-						if (streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex)
-						{
-							if (streamPortNode.staticModel.hasDynamicAudioMap)
-							{
-								auto const& streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const&>(streamNode);
-								auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamOutputNode.dynamicModel.streamFormat);
-
-								mti.supportsDynamicMappings = isValidStreamFormat(streamOutputNode);
-								mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
-								mti.streamPortIndex = spi;
-								mti.streamIndex = streamOutputNode.descriptorIndex;
-							}
-							break;
-						}
+						auto const& streamOutputNode = static_cast<la::avdecc::controller::model::StreamOutputNode const&>(streamNode);
+						mti.supportsDynamicMappings = atLeastOneDynamicMappings(audioUnitNode.streamPortOutputs) && isValidStreamFormat(streamOutputNode);
+						mti.audioUnitIndex = audioUnitIndex;
+						mti.streamPortType = la::avdecc::entity::model::DescriptorType::StreamPortOutput;
+						mti.streamIndex = streamOutputNode.descriptorIndex;
+						break;
 					}
 				}
 			}
@@ -833,7 +814,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 					}
 					else if (action == editMappingsAction)
 					{
-						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, mti.streamIndex);
+						handleEditMappingsClicked(entityID, mti.audioUnitIndex, mti.streamPortType, mti.streamIndex);
 					}
 				}
 			}
@@ -868,7 +849,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 				{
 					if (action == editMappingsAction)
 					{
-						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, mti.streamIndex);
+						handleEditMappingsClicked(entityID, mti.audioUnitIndex, mti.streamPortType, mti.streamIndex);
 					}
 				}
 			}
@@ -899,7 +880,7 @@ void HeaderView::contextMenuEvent(QContextMenuEvent* event)
 					}
 					else if (action == editMappingsAction)
 					{
-						handleEditMappingsClicked(entityID, mti.streamPortType, mti.streamPortIndex, mti.streamIndex);
+						handleEditMappingsClicked(entityID, mti.audioUnitIndex, mti.streamPortType, mti.streamIndex);
 					}
 				}
 			}
@@ -939,9 +920,9 @@ void HeaderView::leaveEvent(QEvent* event)
 	QHeaderView::leaveEvent(event);
 }
 
-void HeaderView::handleEditMappingsClicked(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex)
+void HeaderView::handleEditMappingsClicked(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamIndex const streamIndex)
 {
-	avdecc::mappingsHelper::showMappingsEditor(this, entityID, streamPortType, streamPortIndex, streamIndex);
+	avdecc::mappingsHelper::showMappingsEditor(this, entityID, audioUnitIndex, streamPortType, std::nullopt, streamIndex);
 }
 
 } // namespace connectionMatrix

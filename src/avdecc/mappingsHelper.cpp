@@ -24,31 +24,63 @@
 
 #include <QMessageBox>
 
+#include <map>
+#include <utility>
+
 namespace avdecc
 {
 namespace mappingsHelper
 {
-struct NodeMapping
+struct StreamNodeMapping
 {
-	la::avdecc::entity::model::DescriptorIndex descriptorIndex{ la::avdecc::entity::model::DescriptorIndex{ 0u } };
+	la::avdecc::entity::model::StreamIndex streamIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
 	std::vector<std::uint16_t> channels{};
+
+	// Comparison operator
+	friend bool operator==(StreamNodeMapping const& lhs, StreamNodeMapping const& rhs)
+	{
+		return lhs.streamIndex == rhs.streamIndex && lhs.channels == rhs.channels;
+	}
 };
-using NodeMappings = std::vector<NodeMapping>;
+
+struct ClusterNodeMapping
+{
+	la::avdecc::entity::model::StreamPortIndex streamPortIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
+	la::avdecc::entity::model::ClusterIndex clusterOffset{ la::avdecc::entity::model::getInvalidDescriptorIndex() }; // Offset from baseCluster
+	std::vector<std::uint16_t> channels{};
+
+	// Comparison operator
+	friend bool operator==(ClusterNodeMapping const& lhs, ClusterNodeMapping const& rhs)
+	{
+		return lhs.streamPortIndex == rhs.streamPortIndex && lhs.clusterOffset == rhs.clusterOffset && lhs.channels == rhs.channels;
+	}
+};
+
+struct StreamInputNodeUserData
+{
+	bool isConnected{ false };
+};
+
+struct StreamOutputNodeUserData
+{
+	bool isStreaming{ false };
+};
+
+using StreamNodeMappings = std::vector<StreamNodeMapping>;
+using ClusterNodeMappings = std::vector<ClusterNodeMapping>;
 using HashType = std::uint64_t;
 using HashedConnectionsList = std::set<HashType>;
+using StreamPortMappings = std::map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings>;
 
 template<class StreamNodeType>
-std::pair<NodeMappings, mappingMatrix::Nodes> buildStreamMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, std::vector<StreamNodeType const*> const& streamNodes)
+void buildStreamMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, std::vector<StreamNodeType const*> const& streamNodes, StreamNodeMappings& streamMappings, mappingMatrix::Nodes& streamMatrixNodes)
 {
-	NodeMappings streamMappings;
-	mappingMatrix::Nodes streamMatrixNodes;
-
 	// Build list of stream mappings
 	for (auto const* streamNode : streamNodes)
 	{
 		auto streamName = hive::modelsLibrary::helper::objectName(controlledEntity, *streamNode).toStdString();
 		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel.streamFormat);
-		NodeMapping nodeMapping{ streamNode->descriptorIndex };
+		StreamNodeMapping nodeMapping{ streamNode->descriptorIndex };
 		mappingMatrix::Node node{ streamName };
 
 		for (auto i = 0u; i < sfi->getChannelsCount(); ++i)
@@ -56,18 +88,41 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildStreamMappings(la::avdecc::co
 			nodeMapping.channels.push_back(i);
 			node.sockets.push_back("Channel " + std::to_string(i));
 		}
-		streamMappings.push_back(std::move(nodeMapping));
-		streamMatrixNodes.push_back(std::move(node));
+		if constexpr (std::is_same_v<StreamNodeType, la::avdecc::controller::model::StreamInputNode>)
+		{
+			node.userData = StreamInputNodeUserData{ streamNode->dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected };
+		}
+		else
+		{
+			auto userData = StreamOutputNodeUserData{};
+			if (streamNode->dynamicModel.counters)
+			{
+				try
+				{
+					auto const& counters = *streamNode->dynamicModel.counters;
+					auto const startValue = counters.at(la::avdecc::entity::StreamOutputCounterValidFlag::StreamStart);
+					auto const stopValue = counters.at(la::avdecc::entity::StreamOutputCounterValidFlag::StreamStop);
+					userData.isStreaming = startValue > stopValue;
+				}
+				catch (std::out_of_range const&)
+				{
+					// Ignore
+				}
+			}
+			node.userData = std::move(userData);
+		}
+		// Before adding, search if not already present
+		if (std::find(streamMappings.begin(), streamMappings.end(), nodeMapping) == streamMappings.end())
+		{
+			streamMappings.push_back(std::move(nodeMapping));
+			streamMatrixNodes.push_back(std::move(node));
+		}
 	}
-
-	return std::make_pair(streamMappings, streamMatrixNodes);
 }
 
 template<class StreamNodeType>
-mappingMatrix::Connections buildConnections(la::avdecc::controller::model::StreamPortNode const& streamPortNode, std::vector<StreamNodeType const*> const& streamNodes, NodeMappings const& streamMappings, NodeMappings const& clusterMappings, std::function<mappingMatrix::Connection(mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)> const& creationConnectionFunction)
+void buildConnections(la::avdecc::controller::model::StreamPortNode const& streamPortNode, std::vector<StreamNodeType const*> const& streamNodes, StreamNodeMappings const& streamMappings, ClusterNodeMappings const& clusterMappings, std::function<mappingMatrix::Connection(mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)> const& creationConnectionFunction, mappingMatrix::Connections& connections)
 {
-	mappingMatrix::Connections connections;
-
 	// Build list of current connections
 	for (auto const& mapping : streamPortNode.dynamicModel.dynamicAudioMap)
 	{
@@ -120,7 +175,7 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 			// Search for descriptorIndex
 			for (auto const& m : streamMappings)
 			{
-				if (streamIndex == m.descriptorIndex)
+				if (streamIndex == m.streamIndex)
 				{
 					// Now search for channel number
 					if (mapping.streamChannel < m.channels.size())
@@ -137,7 +192,7 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 			// Search for descriptorIndex
 			for (auto const& m : clusterMappings)
 			{
-				if (mapping.clusterOffset == m.descriptorIndex)
+				if (mapping.clusterOffset == m.clusterOffset)
 				{
 					// Now search for channel number
 					if (mapping.clusterChannel < m.channels.size())
@@ -154,8 +209,6 @@ mappingMatrix::Connections buildConnections(la::avdecc::controller::model::Strea
 			connections.push_back(creationConnectionFunction(streamSlotID, clusterSlotID));
 		}
 	}
-
-	return connections;
 }
 
 HashType makeHash(mappingMatrix::Connection const& connection)
@@ -234,39 +287,40 @@ mappingMatrix::SlotID getClusterSlotIDFromConnection(mappingMatrix::Connection c
 }
 
 template<la::avdecc::entity::model::DescriptorType StreamPortType>
-la::avdecc::entity::model::AudioMapping convertToAudioMapping(NodeMappings const& streamMappings, NodeMappings const& clusterMappings, mappingMatrix::Connection const& connection)
+std::pair<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMapping> convertToAudioMapping(StreamNodeMappings const& streamMappings, ClusterNodeMappings const& clusterMappings, mappingMatrix::Connection const& connection)
 {
 	auto const streamSlotID = getStreamSlotIDFromConnection<StreamPortType>(connection);
 	auto const clusterSlotID = getClusterSlotIDFromConnection<StreamPortType>(connection);
 	auto const& streamMapping = streamMappings[streamSlotID.first];
 	auto const& clusterMapping = clusterMappings[clusterSlotID.first];
 
-	return la::avdecc::entity::model::AudioMapping{ streamMapping.descriptorIndex, static_cast<std::uint16_t>(streamSlotID.second), clusterMapping.descriptorIndex, static_cast<std::uint16_t>(clusterSlotID.second) };
+	return std::make_pair(clusterMapping.streamPortIndex, la::avdecc::entity::model::AudioMapping{ streamMapping.streamIndex, static_cast<std::uint16_t>(streamSlotID.second), clusterMapping.clusterOffset, static_cast<std::uint16_t>(clusterSlotID.second) });
 }
 
 template<la::avdecc::entity::model::DescriptorType StreamPortType>
-la::avdecc::entity::model::AudioMappings convertList(NodeMappings const& streamMappings, NodeMappings const& clusterMappings, HashedConnectionsList const& list)
+StreamPortMappings convertList(StreamNodeMappings const& streamMappings, ClusterNodeMappings const& clusterMappings, HashedConnectionsList const& list)
 {
-	la::avdecc::entity::model::AudioMappings mappings;
+	auto mappings = StreamPortMappings{};
 
 	for (auto const& l : list)
 	{
 		auto const c = unmakeHash(l);
-		mappings.push_back(convertToAudioMapping<StreamPortType>(streamMappings, clusterMappings, c));
+		auto [streamPortIndex, mapping] = convertToAudioMapping<StreamPortType>(streamMappings, clusterMappings, c);
+		mappings[streamPortIndex].emplace_back(std::move(mapping));
 	}
 
 	return mappings;
 };
 
 template<la::avdecc::entity::model::DescriptorType StreamPortType>
-void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, NodeMappings const& streamMappings, NodeMappings const& clusterMappings, mappingMatrix::Connections const& oldConn, mappingMatrix::Connections const& newConn)
+void processNewConnections(la::avdecc::UniqueIdentifier const entityID, StreamNodeMappings const& streamMappings, ClusterNodeMappings const& clusterMappings, mappingMatrix::Connections const& oldConn, mappingMatrix::Connections const& newConn)
 {
 	// Build lists of mappings to add/remove
 	auto const oldConnections = hashConnectionsList(oldConn);
 	auto const newConnections = hashConnectionsList(newConn);
 
-	la::avdecc::entity::model::AudioMappings toRemove{};
-	la::avdecc::entity::model::AudioMappings toAdd{};
+	auto toRemove = StreamPortMappings{};
+	auto toAdd = StreamPortMappings{};
 
 	if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 	{
@@ -283,67 +337,70 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, la::avde
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	if (!toRemove.empty())
 	{
-		auto const countMappings = toRemove.size();
-		auto offset = decltype(countMappings){ 0u };
-		while (offset < countMappings)
+		for (auto const& [streamPortIndex, mappings] : toRemove)
 		{
-			auto const mappings = getMaximumAudioMappings(toRemove, offset);
-			auto const count = mappings.size();
-			if (!AVDECC_ASSERT_WITH_RET(count != 0, "Should have at least one mapping to change"))
+			auto const countMappings = mappings.size();
+			auto offset = decltype(countMappings){ 0u };
+			while (offset < countMappings)
 			{
-				break;
-			}
-			offset += count;
+				auto const m = getMaximumAudioMappings(mappings, offset);
+				auto const count = m.size();
+				if (!AVDECC_ASSERT_WITH_RET(count != 0, "Should have at least one mapping to change"))
+				{
+					break;
+				}
+				offset += count;
 
-			if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
-			{
-				manager.removeStreamPortInputAudioMappings(entityID, streamPortIndex, mappings);
-			}
-			else if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-			{
-				manager.removeStreamPortOutputAudioMappings(entityID, streamPortIndex, mappings);
+				if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+				{
+					manager.removeStreamPortInputAudioMappings(entityID, streamPortIndex, m);
+				}
+				else if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+				{
+					manager.removeStreamPortOutputAudioMappings(entityID, streamPortIndex, m);
+				}
 			}
 		}
 	}
 	if (!toAdd.empty())
 	{
-		auto const countMappings = toAdd.size();
-		auto offset = decltype(countMappings){ 0u };
-		while (offset < countMappings)
+		for (auto const& [streamPortIndex, mappings] : toAdd)
 		{
-			auto const mappings = getMaximumAudioMappings(toAdd, offset);
-			auto const count = mappings.size();
-			if (!AVDECC_ASSERT_WITH_RET(count != 0, "Should have at least one mapping to change"))
+			auto const countMappings = mappings.size();
+			auto offset = decltype(countMappings){ 0u };
+			while (offset < countMappings)
 			{
-				break;
-			}
-			offset += count;
+				auto const m = getMaximumAudioMappings(mappings, offset);
+				auto const count = m.size();
+				if (!AVDECC_ASSERT_WITH_RET(count != 0, "Should have at least one mapping to change"))
+				{
+					break;
+				}
+				offset += count;
 
-			if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
-			{
-				manager.addStreamPortInputAudioMappings(entityID, streamPortIndex, mappings);
-			}
-			else if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
-			{
-				manager.addStreamPortOutputAudioMappings(entityID, streamPortIndex, mappings);
+				if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+				{
+					manager.addStreamPortInputAudioMappings(entityID, streamPortIndex, m);
+				}
+				else if constexpr (StreamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+				{
+					manager.addStreamPortOutputAudioMappings(entityID, streamPortIndex, m);
+				}
 			}
 		}
 	}
 }
 
-std::pair<NodeMappings, mappingMatrix::Nodes> buildClusterMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamPortNode const& streamPortNode)
+void buildClusterMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamPortNode const& streamPortNode, ClusterNodeMappings& clusterMappings, mappingMatrix::Nodes& clusterMatrixNodes)
 {
-	NodeMappings clusterMappings;
-	mappingMatrix::Nodes clusterMatrixNodes;
-
 	// Build list of cluster mappings
 	for (auto const& clusterKV : streamPortNode.audioClusters)
 	{
-		auto const clusterIndex = static_cast<la::avdecc::entity::model::ClusterIndex>(clusterKV.first - streamPortNode.staticModel.baseCluster); // Mappings use relative index (see IEEE1722.1 Table 7.33)
-		AVDECC_ASSERT(clusterIndex < streamPortNode.staticModel.numberOfClusters, "ClusterIndex invalid");
+		auto const clusterOffset = static_cast<la::avdecc::entity::model::ClusterIndex>(clusterKV.first - streamPortNode.staticModel.baseCluster); // Mappings use relative index (see IEEE1722.1 Table 7.33)
+		AVDECC_ASSERT(clusterOffset < streamPortNode.staticModel.numberOfClusters, "ClusterOffset invalid");
 		auto const& clusterNode = clusterKV.second;
 		auto clusterName = hive::modelsLibrary::helper::objectName(controlledEntity, clusterNode).toStdString();
-		NodeMapping nodeMapping{ clusterIndex };
+		ClusterNodeMapping nodeMapping{ streamPortNode.descriptorIndex, clusterOffset };
 		mappingMatrix::Node node{ clusterName };
 
 		for (auto i = 0u; i < clusterNode.staticModel.channelCount; ++i)
@@ -354,18 +411,16 @@ std::pair<NodeMappings, mappingMatrix::Nodes> buildClusterMappings(la::avdecc::c
 		clusterMappings.push_back(std::move(nodeMapping));
 		clusterMatrixNodes.push_back(std::move(node));
 	}
-
-	return std::make_pair(clusterMappings, clusterMatrixNodes);
 }
 
-template<class StreamNodeType, class RedundantStreamNodeType, class StreamPortNodeType>
-std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity::model::StreamIndex const streamIndex, std::map<la::avdecc::entity::model::StreamIndex, StreamNodeType> const& streamNodes, std::map<la::avdecc::controller::model::VirtualIndex, RedundantStreamNodeType> const& redundantStreamNodes, StreamPortNodeType const& streamPortNode)
+template<class StreamNodeType, class RedundantStreamNodeType>
+std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity::model::StreamIndex const streamIndex, std::map<la::avdecc::entity::model::StreamIndex, StreamNodeType> const& streamNodes, std::map<la::avdecc::controller::model::VirtualIndex, RedundantStreamNodeType> const& redundantStreamNodes, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex)
 {
 	auto streamNodesToDisplay = std::vector<StreamNodeType const*>{};
 
-	auto const isValidClockDomain = [](auto const& streamPortNode, auto const& streamNode)
+	auto const isValidClockDomain = [](auto const clockDomainIndex, auto const& streamNode)
 	{
-		return streamPortNode.staticModel.clockDomainIndex == streamNode.staticModel.clockDomainIndex;
+		return clockDomainIndex == streamNode.staticModel.clockDomainIndex;
 	};
 
 	auto const isValidStreamFormat = [](auto const& streamNode)
@@ -375,9 +430,9 @@ std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity:
 		return sfi->getChannelsCount() > 0;
 	};
 
-	auto const checkAddStream = [&isValidClockDomain, &isValidStreamFormat, &streamNodesToDisplay](auto const streamIndex, auto const& streamPortNode, auto const& streamNode, auto const& redundantStreamNodes)
+	auto const checkAddStream = [&isValidClockDomain, &isValidStreamFormat, &streamNodesToDisplay](auto const streamIndex, auto const clockDomainIndex, auto const& streamNode, auto const& redundantStreamNodes)
 	{
-		if (isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
+		if (isValidStreamFormat(streamNode) && isValidClockDomain(clockDomainIndex, streamNode))
 		{
 			// Add single Stream
 			if (!streamNode.isRedundant)
@@ -403,9 +458,9 @@ std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity:
 	{
 		auto const& streamNode = streamNodes.at(streamIndex);
 
-		if (isValidStreamFormat(streamNode) && isValidClockDomain(streamPortNode, streamNode))
+		if (isValidStreamFormat(streamNode) && isValidClockDomain(clockDomainIndex, streamNode))
 		{
-			checkAddStream(streamIndex, streamPortNode, streamNode, redundantStreamNodes);
+			checkAddStream(streamIndex, clockDomainIndex, streamNode, redundantStreamNodes);
 		}
 	}
 	else
@@ -413,15 +468,16 @@ std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity:
 		// Build list of StreamInput (single and primary)
 		for (auto const& [strIndex, strNode] : streamNodes)
 		{
-			checkAddStream(strIndex, streamPortNode, strNode, redundantStreamNodes);
+			checkAddStream(strIndex, clockDomainIndex, strNode, redundantStreamNodes);
 		}
 	}
 
 	return streamNodesToDisplay;
 }
 
-void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, std::optional<la::avdecc::entity::model::StreamPortIndex> const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
 {
+	AVDECC_ASSERT(audioUnitIndex != la::avdecc::entity::model::getInvalidDescriptorIndex(), "Invalid AudioUnitIndex");
 	if (AVDECC_ASSERT_WITH_RET(streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput || streamIndex == la::avdecc::entity::model::getInvalidDescriptorIndex(), "StreamPortInput shall not specify a StreamIndex"))
 	{
 		try
@@ -433,48 +489,87 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 			{
 				auto const* const entity = controlledEntity.get();
 				auto const& entityNode = entity->getEntityNode();
-				auto const& configurationNode = entity->getConfigurationNode(entityNode.dynamicModel.currentConfiguration);
+				auto const currentConfigurationIndex = entityNode.dynamicModel.currentConfiguration;
+				auto const& configurationNode = entity->getConfigurationNode(currentConfigurationIndex);
+				auto const& audioUnitNode = entity->getAudioUnitNode(currentConfigurationIndex, audioUnitIndex);
+				auto const clockDomainIndex = audioUnitNode.staticModel.clockDomainIndex;
 				mappingMatrix::Nodes outputs;
 				mappingMatrix::Nodes inputs;
 				mappingMatrix::Connections connections;
-				NodeMappings streamMappings;
-				NodeMappings clusterMappings;
+				StreamNodeMappings streamMappings;
+				ClusterNodeMappings clusterMappings;
 
 				if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 				{
-					auto const& streamPortNode = entity->getStreamPortInputNode(entityNode.dynamicModel.currentConfiguration, streamPortIndex);
-					auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamInputs, configurationNode.redundantStreamInputs, streamPortNode);
-
-					// Build mappingMatrix vectors
-					auto clusterResult = buildClusterMappings(entity, streamPortNode);
-					clusterMappings = std::move(clusterResult.first);
-					inputs = std::move(clusterResult.second);
-					auto streamResult = buildStreamMappings(entity, streamNodes);
-					streamMappings = std::move(streamResult.first);
-					outputs = std::move(streamResult.second);
-					connections = buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
-						[](mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)
+					auto const handleStreamPort = [entity, clockDomainIndex, streamIndex, &configurationNode, &outputs, &inputs, &connections, &streamMappings, &clusterMappings](auto const& streamPortNode)
+					{
+						if (streamPortNode.staticModel.clockDomainIndex != clockDomainIndex)
 						{
-							return std::make_pair(streamSlotID, clusterSlotID);
-						});
+							return;
+						}
+						auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamInputs, configurationNode.redundantStreamInputs, clockDomainIndex);
+
+						// Build mappingMatrix vectors
+						buildClusterMappings(entity, streamPortNode, clusterMappings, inputs);
+						buildStreamMappings(entity, streamNodes, streamMappings, outputs);
+						buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
+							[](mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)
+							{
+								return std::make_pair(streamSlotID, clusterSlotID);
+							},
+							connections);
+					};
+					if (streamPortIndex)
+					{
+						auto const& streamPortNode = entity->getStreamPortInputNode(currentConfigurationIndex, *streamPortIndex);
+						handleStreamPort(streamPortNode);
+					}
+					else
+					{
+						for (auto const& [streamPortIndex, streamPortNode] : audioUnitNode.streamPortInputs)
+						{
+							if (streamPortNode.staticModel.clockDomainIndex == clockDomainIndex)
+							{
+								handleStreamPort(streamPortNode);
+							}
+						}
+					}
 				}
 				else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 				{
-					auto const& streamPortNode = entity->getStreamPortOutputNode(entityNode.dynamicModel.currentConfiguration, streamPortIndex);
-					auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamOutputs, configurationNode.redundantStreamOutputs, streamPortNode);
-
-					// Build mappingMatrix vectors
-					auto clusterResult = buildClusterMappings(entity, streamPortNode);
-					clusterMappings = std::move(clusterResult.first);
-					outputs = std::move(clusterResult.second);
-					auto streamResult = buildStreamMappings(entity, streamNodes);
-					streamMappings = std::move(streamResult.first);
-					inputs = std::move(streamResult.second);
-					connections = buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
-						[](mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)
+					auto const handleStreamPort = [entity, clockDomainIndex, streamIndex, &configurationNode, &outputs, &inputs, &connections, &streamMappings, &clusterMappings](auto const& streamPortNode)
+					{
+						if (streamPortNode.staticModel.clockDomainIndex != clockDomainIndex)
 						{
-							return std::make_pair(clusterSlotID, streamSlotID);
-						});
+							return;
+						}
+						auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamOutputs, configurationNode.redundantStreamOutputs, clockDomainIndex);
+
+						// Build mappingMatrix vectors
+						buildClusterMappings(entity, streamPortNode, clusterMappings, outputs);
+						buildStreamMappings(entity, streamNodes, streamMappings, inputs);
+						buildConnections(streamPortNode, streamNodes, streamMappings, clusterMappings,
+							[](mappingMatrix::SlotID const streamSlotID, mappingMatrix::SlotID const clusterSlotID)
+							{
+								return std::make_pair(clusterSlotID, streamSlotID);
+							},
+							connections);
+					};
+					if (streamPortIndex)
+					{
+						auto const& streamPortNode = entity->getStreamPortOutputNode(currentConfigurationIndex, *streamPortIndex);
+						handleStreamPort(streamPortNode);
+					}
+					else
+					{
+						for (auto const& [streamPortIndex, streamPortNode] : audioUnitNode.streamPortOutputs)
+						{
+							if (streamPortNode.staticModel.clockDomainIndex == clockDomainIndex)
+							{
+								handleStreamPort(streamPortNode);
+							}
+						}
+					}
 				}
 				else
 				{
@@ -508,22 +603,26 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 									}
 
 									// Create the dialog
-									auto title = QString("%1 - %2.%3 Dynamic Mappings").arg(smartName).arg(avdecc::helper::descriptorTypeToString(streamPortType)).arg(streamPortIndex);
+									auto title = QString("%1 - %2 Dynamic Mappings").arg(smartName).arg(streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput ? "Output" : "Input");
 									auto dialog = mappingMatrix::MappingMatrixDialog{ title, outputs, inputs, connections };
 
 									if (dialog.exec() == QDialog::Accepted)
 									{
 										if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 										{
-											processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+											processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortInput>(entityID, streamMappings, clusterMappings, connections, dialog.connections());
 										}
 										else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 										{
-											processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(entityID, streamPortIndex, streamMappings, clusterMappings, connections, dialog.connections());
+											processNewConnections<la::avdecc::entity::model::DescriptorType::StreamPortOutput>(entityID, streamMappings, clusterMappings, connections, dialog.connections());
 										}
 									}
 								});
 						});
+				}
+				else
+				{
+					QMessageBox::warning(nullptr, QString(""), QString("No editable channel mappings found for AUDIO_UNIT.%1").arg(audioUnitIndex));
 				}
 			}
 		}

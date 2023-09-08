@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Possible crash for entities returning an out-of-bounds MemoryObject length value
 - [Files can be loaded/saved from/to UTF8 path](https://github.com/christophe-calmejane/Hive/issues/156)
 - Crash when displaying vendor specific control values
+- Opening the Dynamic Mappings editor from the matrix only showed the first STREAM_PORT, it now shows all STREAM_PORTs
 
 ## [1.2.9] - 2023-01-13
 ### Added
