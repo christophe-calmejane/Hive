@@ -126,11 +126,27 @@ void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 
 						if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 						{
-							avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, entity.getStreamPortInputNonRedundantAudioMappings(streamPortIndex));
+							// For virtual devices, also include redundant mappings
+							if (entity.isVirtual())
+							{
+								avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, entity.getStreamPortInputAudioMappings(streamPortIndex));
+							}
+							// No need for real devices as a Milan device must remove them automatically (we could always remove all mappings, but we want to keep short payloads if we can)
+							{
+								avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, entity.getStreamPortInputNonRedundantAudioMappings(streamPortIndex));
+							}
 						}
 						else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 						{
-							avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, entity.getStreamPortOutputNonRedundantAudioMappings(streamPortIndex));
+							// For virtual devices, also include redundant mappings
+							if (entity.isVirtual())
+							{
+								avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, entity.getStreamPortOutputAudioMappings(streamPortIndex));
+							}
+							// No need for real devices as a Milan device must remove them automatically (we could always remove all mappings, but we want to keep short payloads if we can)
+							{
+								avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, entity.getStreamPortOutputNonRedundantAudioMappings(streamPortIndex));
+							}
 						}
 					}
 					catch (...)

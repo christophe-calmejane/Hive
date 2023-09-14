@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Complete rework of the `entities list`
 - Updated AVDECC library to v4.0
-- Defaulting to Qt "fusion" style, can be changed with command line parameter _-style <style name>_
+- Defaulting to Qt "fusion" style, can be changed with command line parameter `-style <style name>`
 
 ### Fixed
 - Current selection in list of entities lost when changing the filter
@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Files can be loaded/saved from/to UTF8 path](https://github.com/christophe-calmejane/Hive/issues/156)
 - Crash when displaying vendor specific control values
 - Opening the Dynamic Mappings editor from the matrix only showed the first STREAM_PORT, it now shows all STREAM_PORTs
+- `Clear All Dynamic Mappings` correctly clears redundant mappings for virtual entities
 
 ## [1.2.9] - 2023-01-13
 ### Added
