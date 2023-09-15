@@ -161,6 +161,80 @@ void HeaderView::collapseAll()
 	applyFilterPattern();
 }
 
+bool HeaderView::isNodeAndChildrenExpanded(int logicalIndex) const
+{
+	auto* model = static_cast<Model*>(this->model());
+	auto* node = model->node(logicalIndex, orientation());
+
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return false;
+	}
+
+	auto isExpanded = true;
+
+	auto const checkExpanded = [&isExpanded, model, this](Node* node)
+	{
+		auto const section = model->section(node, orientation());
+		isExpanded &= _sectionState[section].expanded;
+	};
+
+	model->accept(node, checkExpanded, false);
+	return isExpanded;
+}
+
+void HeaderView::expandNodeAndChildren(int logicalIndex)
+{
+	auto* model = static_cast<Model*>(this->model());
+	auto* node = model->node(logicalIndex, orientation());
+
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return;
+	}
+
+	// Update hierarchy visibility
+	auto const update = [=](Node* node)
+	{
+		auto const section = model->section(node, orientation());
+		_sectionState[section].expanded = true;
+		_sectionState[section].visible = true;
+		updateSectionVisibility(section);
+	};
+
+	model->accept(node, update, false);
+}
+
+void HeaderView::collapseNodeAndChildren(int logicalIndex)
+{
+	auto* model = static_cast<Model*>(this->model());
+	auto* node = model->node(logicalIndex, orientation());
+
+	if (!AVDECC_ASSERT_WITH_RET(node, "invalid node"))
+	{
+		return;
+	}
+
+	// Update hierarchy visibility
+	auto const update = [=](Node* node)
+	{
+		auto const section = model->section(node, orientation());
+		if (node->type() == Node::Type::Entity)
+		{
+			_sectionState[section].expanded = false;
+			_sectionState[section].visible = true;
+		}
+		else
+		{
+			_sectionState[section].expanded = false;
+			_sectionState[section].visible = false;
+		}
+		updateSectionVisibility(section);
+	};
+
+	model->accept(node, update, false);
+}
+
 void HeaderView::handleSectionClicked(int logicalIndex)
 {
 	auto* model = static_cast<Model*>(this->model());

@@ -341,6 +341,25 @@ void View::onIntersectionClicked(QModelIndex const& index)
 				};
 				handleChannelCreationResult(error, false, true, elevatedRightsCallback);
 			}
+			else
+			{
+				// Expand/collapse the entity (if both talker and listener are expanded, collapse them. Otherwise, expand them)
+				auto const row = index.row();
+				auto const column = index.column();
+				auto const horizontalExpanded = _horizontalHeaderView->isNodeAndChildrenExpanded(column);
+				auto const verticalExpanded = _verticalHeaderView->isNodeAndChildrenExpanded(row);
+
+				if (horizontalExpanded && verticalExpanded)
+				{
+					_horizontalHeaderView->collapseNodeAndChildren(column);
+					_verticalHeaderView->collapseNodeAndChildren(row);
+				}
+				else
+				{
+					_horizontalHeaderView->expandNodeAndChildren(column);
+					_verticalHeaderView->expandNodeAndChildren(row);
+				}
+			}
 			break;
 		}
 

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [New column in entities list showing error/warning status](https://github.com/christophe-calmejane/Hive/issues/155)
 - New diagnostics for CONTROL descriptors, when the current value is out of min-max bounds
 - [Support for Dark Mode](https://github.com/christophe-calmejane/Hive/issues/39)
+- Clicking on an Entity-Entity crosspoint in the matrix expands/collapses both entities
 
 ### Changed
 - Complete rework of the `entities list`

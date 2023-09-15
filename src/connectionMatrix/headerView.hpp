@@ -64,6 +64,15 @@ public:
 	// Collapse all child nodes of each entity
 	void collapseAll();
 
+	// Returns true if the node and all children at the specified index are expanded
+	bool isNodeAndChildrenExpanded(int logicalIndex) const;
+
+	// Expand the node and all children at the specified index
+	void expandNodeAndChildren(int logicalIndex);
+
+	// Collapse the node and all children at the specified index
+	void collapseNodeAndChildren(int logicalIndex);
+
 private:
 	void handleSectionClicked(int logicalIndex);
 	void handleSectionInserted(QModelIndex const& parent, int first, int last);
