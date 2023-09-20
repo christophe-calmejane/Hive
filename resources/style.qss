@@ -1,7 +1,7 @@
 /*
 %1: theme color background
-%2: color scheme foreground text
-%3: connection matrix highlight color
+%2: theme color foreground (text)
+%3: connection matrix highlight color (central matrix, not header)
 %4: flat icon button color
 */
 
