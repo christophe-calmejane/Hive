@@ -34,12 +34,11 @@
 #include <QObject>
 #include <QTreeWidgetItem>
 #include <QPushButton>
-#include <QLabel>
 #include <QHBoxLayout>
 #include <QListWidget>
 #include <QSignalBlocker>
 
-#include <vector>
+#include <map>
 #include <cstring> // std::memcpy
 
 class ControlValuesDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
@@ -94,9 +93,9 @@ public:
 				item->setText(0, "Current Value");
 				if (_isReadOnly)
 				{
-					auto* label = new QLabel(QString::number(val.currentValue));
-					parent->setItemWidget(item, 1, label);
-					_widgets.push_back(label);
+					// Do not use a widget for read only values (especially not a QLabel), the 'selected' state of the item will not be applied
+					item->setText(1, QString::number(val.currentValue));
+					_items[valNumber] = item;
 				}
 				else
 				{
@@ -149,7 +148,7 @@ public:
 							sendControlValues(widget, previousValue);
 						});
 
-					_widgets.push_back(widget);
+					_widgets[valNumber] = widget;
 				}
 
 				++valNumber;
@@ -172,7 +171,7 @@ private:
 		{
 			auto values = DynamicValueType{};
 
-			for (auto const* item : _widgets)
+			for (auto const [valNumber, item] : _widgets)
 			{
 				auto const* widget = static_cast<WidgetType const*>(item);
 				auto value = typename DynamicValueType::value_type{};
@@ -207,7 +206,7 @@ private:
 	{
 		if (_isValid)
 		{
-			if (controlValues.size() != _widgets.size())
+			if (controlValues.size() != (_items.size() + _widgets.size()))
 			{
 				// This should probably be detected by the AVDECC library
 				LOG_HIVE_WARN("ControlValues update not valid: Dynamic count mismatch");
@@ -222,13 +221,27 @@ private:
 				{
 					if (_isReadOnly)
 					{
-						auto* label = static_cast<QLabel*>(_widgets[valNumber]);
-						label->setText(QString::number(val.currentValue));
+						if (auto const itemIt = _items.find(valNumber); itemIt != _items.end())
+						{
+							auto* const item = itemIt->second;
+							item->setText(1, QString::number(val.currentValue));
+						}
+						else
+						{
+							LOG_HIVE_WARN(QString("Failed to update ControlValue n°%1: Item not found").arg(valNumber));
+						}
 					}
 					else
 					{
-						auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
-						widget->setCurrentData(val.currentValue);
+						if (auto const widgetIt = _widgets.find(valNumber); widgetIt != _widgets.end())
+						{
+							auto* const widget = static_cast<WidgetType*>(widgetIt->second);
+							widget->setCurrentData(val.currentValue);
+						}
+						else
+						{
+							LOG_HIVE_WARN(QString("Failed to update ControlValue n°%1: Widget not found").arg(valNumber));
+						}
 					}
 
 					++valNumber;
@@ -247,7 +260,8 @@ private:
 
 	bool _isValid{ false };
 	bool _isReadOnly{ false };
-	std::vector<QWidget*> _widgets{};
+	std::map<size_t, QTreeWidgetItem*> _items{};
+	std::map<size_t, QWidget*> _widgets{};
 };
 
 /** Selector Values - Clause 7.3.5.2.2 */
@@ -278,9 +292,9 @@ public:
 
 			if (_isReadOnly)
 			{
-				auto* label = new QLabel(QString::number(dynamicValue.currentValue));
-				parent->setItemWidget(valueItem, 1, label);
-				_widget = label;
+				// Do not use a widget for read only values (especially not a QLabel), the 'selected' state of the item will not be applied
+				valueItem->setText(1, QString::number(dynamicValue.currentValue));
+				_item = valueItem;
 			}
 			else
 			{
@@ -371,8 +385,7 @@ private:
 
 				if (_isReadOnly)
 				{
-					auto* label = static_cast<QLabel*>(_widget);
-					label->setText(QString::number(dynamicValue.currentValue));
+					_item->setText(1, QString::number(dynamicValue.currentValue));
 				}
 				else
 				{
@@ -393,7 +406,8 @@ private:
 
 	bool _isValid{ false };
 	bool _isReadOnly{ false };
-	QWidget* _widget{};
+	QTreeWidgetItem* _item{ nullptr };
+	QWidget* _widget{ nullptr };
 };
 
 /** Array Values - Clause 7.3.5.2.3 */
@@ -426,9 +440,9 @@ public:
 				item->setText(0, "Current Value");
 				if (_isReadOnly)
 				{
-					auto* label = new QLabel(QString::number(val));
-					parent->setItemWidget(item, 1, label);
-					_widgets.push_back(label);
+					// Do not use a widget for read only values (especially not a QLabel), the 'selected' state of the item will not be applied
+					item->setText(1, QString::number(val));
+					_items[valNumber] = item;
 				}
 				else
 				{
@@ -476,7 +490,7 @@ public:
 							sendControlValues(widget, previousValue);
 						});
 
-					_widgets.push_back(widget);
+					_widgets[valNumber] = widget;
 				}
 
 				++valNumber;
@@ -499,7 +513,7 @@ private:
 		{
 			auto values = DynamicValueType{};
 
-			for (auto const* item : _widgets)
+			for (auto const [valNumber, item] : _widgets)
 			{
 				auto const* widget = static_cast<WidgetType const*>(item);
 				values.currentValues.push_back(widget->getCurrentData());
@@ -531,7 +545,7 @@ private:
 	{
 		if (_isValid)
 		{
-			if (controlValues.size() != _widgets.size())
+			if (controlValues.size() != (_items.size() + _widgets.size()))
 			{
 				// This should probably be detected by the AVDECC library
 				LOG_HIVE_WARN("ControlValues update not valid: Dynamic count mismatch");
@@ -546,13 +560,27 @@ private:
 				{
 					if (_isReadOnly)
 					{
-						auto* label = static_cast<QLabel*>(_widgets[valNumber]);
-						label->setText(QString::number(val));
+						if (auto const itemIt = _items.find(valNumber); itemIt != _items.end())
+						{
+							auto* const item = itemIt->second;
+							item->setText(1, QString::number(val));
+						}
+						else
+						{
+							LOG_HIVE_WARN(QString("Failed to update ControlValue n°%1: Item not found").arg(valNumber));
+						}
 					}
 					else
 					{
-						auto* widget = static_cast<WidgetType*>(_widgets[valNumber]);
-						widget->setCurrentData(val);
+						if (auto const widgetIt = _widgets.find(valNumber); widgetIt != _widgets.end())
+						{
+							auto* const widget = static_cast<WidgetType*>(widgetIt->second);
+							widget->setCurrentData(val);
+						}
+						else
+						{
+							LOG_HIVE_WARN(QString("Failed to update ControlValue n°%1: Widget not found").arg(valNumber));
+						}
 					}
 
 					++valNumber;
@@ -571,7 +599,8 @@ private:
 
 	bool _isValid{ false };
 	bool _isReadOnly{ false };
-	std::vector<QWidget*> _widgets{};
+	std::map<size_t, QTreeWidgetItem*> _items{};
+	std::map<size_t, QWidget*> _widgets{};
 };
 
 /** UTF-8 String Value - Clause 7.3.5.2.4 */
@@ -605,9 +634,9 @@ public:
 			item->setText(0, "Current Value");
 			if (_isReadOnly)
 			{
-				auto label = new QLabel(text);
-				parent->setItemWidget(item, 1, label);
-				_widget = label;
+				// Do not use a widget for read only values (especially not a QLabel), the 'selected' state of the item will not be applied
+				item->setText(1, text);
+				_item = item;
 			}
 			else
 			{
@@ -685,8 +714,7 @@ private:
 
 				if (_isReadOnly)
 				{
-					auto* label = static_cast<QLabel*>(_widget);
-					label->setText(text);
+					_item->setText(1, text);
 				}
 				else
 				{
@@ -707,5 +735,6 @@ private:
 
 	bool _isValid{ false };
 	bool _isReadOnly{ false };
-	QWidget* _widget{};
+	QTreeWidgetItem* _item{ nullptr };
+	QWidget* _widget{ nullptr };
 };

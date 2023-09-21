@@ -322,12 +322,13 @@ private:
 			}
 
 			{
-				auto* const subscribedLabel = addChangingTextItem(dynamicItem, "Subscribed to Unsol");
+				auto* const subscribedLabel = new QTreeWidgetItem(dynamicItem);
+				subscribedLabel->setText(0, "Subcsribed to Unsol");
 				auto const updateSubscribedLabel = [this, subscribedLabel](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed)
 				{
 					if (entityID == _controlledEntityID)
 					{
-						subscribedLabel->setText(isSubscribed ? "Yes" : "No");
+						subscribedLabel->setText(1, isSubscribed ? "Yes" : "No");
 					}
 				};
 
@@ -335,7 +336,7 @@ private:
 				updateSubscribedLabel(_controlledEntityID, entity.isSubscribedToUnsolicitedNotifications());
 
 				// Listen for changes
-				connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, subscribedLabel, updateSubscribedLabel);
+				connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, q, updateSubscribedLabel);
 			}
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
@@ -1026,34 +1027,40 @@ public:
 		// Acquire State
 		if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 		{
-			auto* acquireLabel = addChangingTextItem(accessItem, "Acquire State");
+			auto* const acquireLabel = new QTreeWidgetItem(accessItem);
+			acquireLabel->setText(0, "Acquire State");
 			auto const updateAcquireLabel = [this, acquireLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity)
 			{
 				if (entityID == _controlledEntityID)
-					acquireLabel->setText(avdecc::helper::acquireStateToString(acquireState, owningEntity));
+				{
+					acquireLabel->setText(1, avdecc::helper::acquireStateToString(acquireState, owningEntity));
+				}
 			};
 
 			// Update text now
 			updateAcquireLabel(_controlledEntityID, controlledEntity->getAcquireState(), controlledEntity->getOwningControllerID());
 
 			// Listen for changes
-			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::acquireStateChanged, acquireLabel, updateAcquireLabel);
+			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::acquireStateChanged, q, updateAcquireLabel);
 		}
 
 		// Lock State
 		{
-			auto* lockLabel = addChangingTextItem(accessItem, "Lock State");
+			auto* const lockLabel = new QTreeWidgetItem(accessItem);
+			lockLabel->setText(0, "Lock State");
 			auto const updateLockLabel = [this, lockLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity)
 			{
 				if (entityID == _controlledEntityID)
-					lockLabel->setText(avdecc::helper::lockStateToString(lockState, lockingEntity));
+				{
+					lockLabel->setText(1, avdecc::helper::lockStateToString(lockState, lockingEntity));
+				}
 			};
 
 			// Update text now
 			updateLockLabel(_controlledEntityID, controlledEntity->getLockState(), controlledEntity->getLockingControllerID());
 
 			// Listen for changes
-			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::lockStateChanged, lockLabel, updateLockLabel);
+			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::lockStateChanged, q, updateLockLabel);
 		}
 
 		return accessItem;
@@ -1144,20 +1151,6 @@ public:
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, std::move(itemName));
 		setFlagsItemText(item, flagsValue, flagsString);
-	}
-
-	/** A changing (readonly) text item */
-	QLabel* addChangingTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName)
-	{
-		Q_Q(NodeTreeWidget);
-
-		auto* item = new QTreeWidgetItem(treeWidgetItem);
-		item->setText(0, std::move(itemName));
-
-		auto* label = new QLabel;
-		q->setItemWidget(item, 1, label);
-
-		return label;
 	}
 
 	/** An editable text entry item */
