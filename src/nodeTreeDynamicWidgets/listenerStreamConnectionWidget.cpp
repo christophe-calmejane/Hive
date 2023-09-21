@@ -29,13 +29,13 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	, _stream(stream)
 	, _info(info)
 {
-	auto const margin = style()->pixelMetric(QStyle::PM_FocusFrameHMargin, 0, this) + 1;
-	_layout.setContentsMargins(margin, 0, margin, 0);
+	_layout.setContentsMargins(0, 0, 0, 0);
 
 	_layout.addWidget(&_streamConnectionLabel, 1);
 	_layout.addWidget(&_entityNameLabel, 2);
 	_layout.addWidget(&_disconnectButton);
 
+	_streamConnectionLabel.setObjectName("StreamConnectionLabel");
 	_entityNameLabel.setObjectName("EntityNameLabel");
 	_disconnectButton.setObjectName("DisconnectButton");
 
@@ -81,6 +81,23 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 		{
 			hive::modelsLibrary::ControllerManager::getInstance().disconnectStream(_info.talkerStream.entityID, _info.talkerStream.streamIndex, _stream.entityID, _stream.streamIndex);
 		});
+}
+
+void ListenerStreamConnectionWidget::selectionChanged(bool const isSelected)
+{
+	if (isSelected != _isSelected)
+	{
+		_isSelected = isSelected;
+		_streamConnectionLabel.setProperty("isSelected", isSelected);
+		style()->unpolish(&_streamConnectionLabel);
+		style()->polish(&_streamConnectionLabel);
+		_entityNameLabel.setProperty("isSelected", isSelected);
+		style()->unpolish(&_entityNameLabel);
+		style()->polish(&_entityNameLabel);
+		_disconnectButton.setProperty("isSelected", isSelected);
+		style()->unpolish(&_disconnectButton);
+		style()->polish(&_disconnectButton);
+	}
 }
 
 void ListenerStreamConnectionWidget::updateData()
