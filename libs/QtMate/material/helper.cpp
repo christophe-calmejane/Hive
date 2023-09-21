@@ -55,7 +55,7 @@ QIcon generateIcon(QString const& what, QColor const& color)
 	for (auto const size : { 16, 32, 64, 128 })
 	{
 		icon.addPixmap(generatePixmap(size, 1));
-		//icon.addPixmap(generatePixmap(size, 2));
+		icon.addPixmap(generatePixmap(size, 2));
 	}
 
 	return icon;
