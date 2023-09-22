@@ -17,7 +17,7 @@
 * along with Hive.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "VirtualController.hpp"
+#include "virtualController.hpp"
 
 #include <la/avdecc/utils.hpp>
 

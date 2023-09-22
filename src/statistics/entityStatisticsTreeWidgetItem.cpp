@@ -19,7 +19,7 @@
 
 #include "entityStatisticsTreeWidgetItem.hpp"
 
-#include <qtMate/material/color.hpp>
+#include <QtMate/material/color.hpp>
 
 #include <QMenu>
 

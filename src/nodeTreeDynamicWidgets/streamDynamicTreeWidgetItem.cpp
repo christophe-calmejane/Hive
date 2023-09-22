@@ -23,7 +23,7 @@
 #include "nodeTreeWidget.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>
-#include <qtMate/material/color.hpp>
+#include <QtMate/material/color.hpp>
 
 #include <QMenu>
 #include <QMessageBox>

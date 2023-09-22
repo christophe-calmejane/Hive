@@ -18,7 +18,7 @@
 */
 
 #include "commandsExecutorImpl.hpp"
-#include "VirtualController.hpp"
+#include "virtualController.hpp"
 #include "hive/modelsLibrary/controllerManager.hpp"
 
 #include <la/avdecc/logger.hpp>
