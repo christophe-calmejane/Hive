@@ -1283,12 +1283,15 @@ void MainWindowImpl::updateStyleSheet(qtMate::material::color::Name const colorN
 	auto const themeForegroundTextColor = qtMate::material::color::foregroundValue(colorName);
 	auto const connectionMatrixHighlightColor = qtMate::material::color::value(colorName, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade900 : qtMate::material::color::Shade::Shade100);
 	auto const flatButtonColor = qtMate::material::color::value(qtMate::material::color::Name::Gray, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade300 : qtMate::material::color::Shade::Shade800);
+	auto const complementaryColor = qtMate::material::color::complementaryValue(colorName);
+	// TODO: Add error color, selected-error color, success color, selected-success color (ie. green)
+	// We need those colors for ListenerStreamConnectionWidget
 
 	// Load and apply the stylesheet
 	auto styleFile = QFile{ filename };
 	if (styleFile.open(QFile::ReadOnly))
 	{
-		auto const styleSheet = QString{ styleFile.readAll() }.arg(themeBackgroundColor.name()).arg(themeForegroundTextColor.name()).arg(connectionMatrixHighlightColor.name()).arg(flatButtonColor.name());
+		auto const styleSheet = QString{ styleFile.readAll() }.arg(themeBackgroundColor.name()).arg(themeForegroundTextColor.name()).arg(connectionMatrixHighlightColor.name()).arg(flatButtonColor.name()).arg(complementaryColor.name());
 
 		qApp->setStyleSheet(styleSheet);
 	}

@@ -174,6 +174,12 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		}
 		_connectionStateWidget = new ListenerStreamConnectionWidget({ _entityID, _streamIndex }, inputDynamicModel->connectionInfo, parent);
 		parent->setItemWidget(_connectionState, 1, _connectionStateWidget);
+		connect(parent, &QTreeWidget::itemSelectionChanged, this,
+			[this, parent]()
+			{
+				// Update the selection state of the widget
+				_connectionStateWidget->selectionChanged(_connectionState->isSelected());
+			});
 	}
 
 	// StreamOutput dynamic info
