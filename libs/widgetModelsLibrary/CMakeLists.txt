@@ -42,11 +42,13 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/painterHelper.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/entityLogoCache.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/qtUserRoles.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/errorIconItemDelegate.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/errorItemDelegate.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/imageItemDelegate.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/networkInterfacesListModel.hpp
 	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp
+	${CU_ROOT_DIR}/include/hive/widgetModelsLibrary/networkInterfacesListItemDelegate.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -56,11 +58,13 @@ set(SOURCE_FILES_COMMON
 	widgetModelsLibrary.cpp
 	painterHelper.cpp
 	entityLogoCache.cpp
+	errorIconItemDelegate.cpp
 	errorItemDelegate.cpp
 	imageItemDelegate.cpp
 	discoveredEntitiesTableItemDelegate.cpp
 	networkInterfacesListModel.cpp
 	discoveredEntitiesTableModel.cpp
+	networkInterfacesListItemDelegate.cpp
 )
 
 # Group source files

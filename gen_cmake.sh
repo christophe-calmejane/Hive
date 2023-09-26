@@ -127,18 +127,18 @@ function extend_gc_fnc_precmake()
 	# Using automatic Qt detection
 	if [ $overrideQtDir -eq 0 ]; then
 		if isWindows; then
-			qtBasePath="${default_win_basePath}/${QtVersion}"
+			qtBasePath="${default_qt_win_basePath}/${QtVersion}"
 			if [ "$arch" == "x64" ]; then
-				qtArch="${default_win_arch}_64"
+				qtArch="${default_qt_win_arch}_64"
 			else
-				qtArch="${default_win_arch}"
+				qtArch="${default_qt_win_arch}"
 			fi
 		elif isMac; then
-			qtBasePath="${default_mac_basePath}/${QtVersion}"
+			qtBasePath="${default_qt_mac_basePath}/${QtVersion}"
 			if [ "${QtMajorVersion}" == "6" ] ; then
 				qtArch="macos"
 			else
-				qtArch="${default_mac_arch}"
+				qtArch="${default_qt_mac_arch}"
 			fi
 		elif isLinux; then
 			if [ "x${QT_BASE_PATH}" != "x" ]; then
@@ -149,12 +149,12 @@ function extend_gc_fnc_precmake()
 				fi
 
 				qtBasePath="${QT_BASE_PATH}/${QtVersion}"
-				qtArch="" # Maybe use default_linux_arch as well? (if yes, factorize qtArch for both QT_BASE_PATH and system wide)
+				qtArch="" # Maybe use default_qt_linux_arch as well? (if yes, factorize qtArch for both QT_BASE_PATH and system wide)
 			else
 				echo "Using system wide Qt headers and libraries."
 				echo "QT_BASE_PATH env variable can be defined to the root folder of Qt installation (where MaintenanceTool resides), or the -qtdir option. See help (-h) for more details."
-				qtBasePath="${default_linux_basePath}"
-				qtArch="${default_linux_arch}"
+				qtBasePath="${default_qt_linux_basePath}"
+				qtArch="${default_qt_linux_arch}"
 			fi
 		else
 			echo "Unsupported platform"

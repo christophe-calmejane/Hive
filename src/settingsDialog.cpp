@@ -86,7 +86,7 @@ private:
 		{
 			auto const lock = QSignalBlocker{ themeColorComboBox };
 			themeColorComboBox->setModel(&_themeColorModel);
-			themeColorComboBox->setModelColumn(_themeColorModel.index(qtMate::material::color::DefaultShade));
+			themeColorComboBox->setModelColumn(_themeColorModel.index(qtMate::material::color::DefaultLightShade));
 			themeColorComboBox->setCurrentIndex(settings->getValue(settings::General_ThemeColorIndex.name).toInt());
 		}
 	}

@@ -37,11 +37,19 @@ if(WIN32)
 	find_package(BugTrap REQUIRED)
 	set(BUGREPORTER_LINK_LIBRARIES "BugTrap")
 elseif(APPLE)
+	# Main icon
 	set(ICON_FILE Icon.icns)
 	set(ICON_PATH ${HIVE_RESOURCES_FOLDER}/macOS/${ICON_FILE})
 	set_source_files_properties(${ICON_PATH} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	list(APPEND RESOURCE_FILES
 		${ICON_PATH}
+	)
+	# Add other icons
+	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+	list(APPEND RESOURCE_FILES
+		${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns
+		${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns
 	)
 endif()
 
@@ -51,7 +59,6 @@ set(HEADER_FILES_GENERATED
 
 set(HEADER_FILES_COMMON
 	avdecc/mcDomainManager.hpp
-	avdecc/controllerModel.hpp
 	avdecc/channelConnectionManager.hpp
 	avdecc/helper.hpp
 	avdecc/mappingsHelper.hpp
@@ -59,6 +66,11 @@ set(HEADER_FILES_COMMON
 	avdecc/loggerModel.hpp
 	avdecc/commandChain.hpp
 	avdecc/stringValidator.hpp
+	connectionEditor/connectionEditor.hpp
+	connectionEditor/connectionWorkspace.hpp
+	connectionEditor/nodeListModel.hpp
+	connectionEditor/nodeListView.hpp
+	connectionEditor/nodeOrganizer.hpp
 	connectionMatrix/cornerWidget.hpp
 	connectionMatrix/headerView.hpp
 	connectionMatrix/itemDelegate.hpp
@@ -73,6 +85,7 @@ set(HEADER_FILES_COMMON
 	counters/streamInputCountersTreeWidgetItem.hpp
 	counters/streamOutputCountersTreeWidgetItem.hpp
 	discoveredEntities/view.hpp
+	diagnostics/controlDiagnosticsTreeWidgetItem.hpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.hpp
 	diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp
 	mediaClock/mediaClockManagementDialog.hpp
@@ -94,6 +107,7 @@ set(HEADER_FILES_COMMON
 	nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/asPathWidget.hpp
+	processHelper/processHelper.hpp
 	profiles/profiles.hpp
 	profiles/profileSelectionDialog.hpp
 	profiles/profileWidget.hpp
@@ -113,9 +127,11 @@ set(HEADER_FILES_COMMON
 	multiFirmwareUpdateDialog.hpp
 	mainWindow.hpp
 	aecpCommandComboBox.hpp
+	aecpCommandSlider.hpp
 	aecpCommandSpinBox.hpp
 	aecpCommandTextEntry.hpp
 	controlledEntityTreeWidget.hpp
+	controlledEntityTreeWidgetItemDelegate.hpp
 	entityInspector.hpp
 	mappingMatrix.hpp
 	activeNetworkInterfacesModel.hpp
@@ -125,17 +141,22 @@ set(HEADER_FILES_COMMON
 	windowsNpfHelper.hpp
 	streamFormatComboBox.hpp
 	visibilitySettings.hpp
-	listViewSelectionToMatrixModelController.hpp
+	listViewMatrixViewController.hpp
+	application.hpp
 )
 
 set(SOURCE_FILES_COMMON
 	avdecc/mcDomainManager.cpp
-	avdecc/controllerModel.cpp
 	avdecc/channelConnectionManager.cpp
 	avdecc/helper.cpp
 	avdecc/mappingsHelper.cpp
 	avdecc/loggerModel.cpp
 	avdecc/commandChain.cpp
+	connectionEditor/connectionEditor.cpp
+	connectionEditor/connectionWorkspace.cpp
+	connectionEditor/nodeListModel.cpp
+	connectionEditor/nodeListView.cpp
+	connectionEditor/nodeOrganizer.cpp
 	connectionMatrix/cornerWidget.cpp
 	connectionMatrix/legendDialog.cpp
 	connectionMatrix/headerView.cpp
@@ -150,6 +171,7 @@ set(SOURCE_FILES_COMMON
 	counters/streamInputCountersTreeWidgetItem.cpp
 	counters/streamOutputCountersTreeWidgetItem.cpp
 	discoveredEntities/view.cpp
+	diagnostics/controlDiagnosticsTreeWidgetItem.cpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.cpp
 	diagnostics/streamInputDiagnosticsTreeWidgetItem.cpp
 	mediaClock/mediaClockManagementDialog.cpp
@@ -186,13 +208,16 @@ set(SOURCE_FILES_COMMON
 	mainWindow.cpp
 	settingsDialog.cpp
 	controlledEntityTreeWidget.cpp
+	controlledEntityTreeWidgetItemDelegate.cpp
 	entityInspector.cpp
+	mappingMatrix.cpp
 	activeNetworkInterfacesModel.cpp
 	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp
 	windowsNpfHelper.cpp
-	listViewSelectionToMatrixModelController.cpp
+	listViewMatrixViewController.cpp
+	application.cpp
 )
 
 set(UI_FILES_COMMON
@@ -212,17 +237,30 @@ set(SOURCE_FILES_APP
 	main.cpp
 )
 
+# OS-specific files and options
+set(OSDEP_SOURCE_FILES "")
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
+	list(APPEND OSDEP_SOURCE_FILES processHelper/processHelper_macos.mm)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	list(APPEND OSDEP_SOURCE_FILES processHelper/processHelper_win32.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	list(APPEND OSDEP_SOURCE_FILES processHelper/processHelper_unix.cpp)
+else()
+	message(FATAL_ERROR "Unsupported system: ${CMAKE_SYSTEM_NAME}")
+endif()
+
 # Group source files
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
 source_group("Header Files\\\\Generated" FILES ${HEADER_FILES_GENERATED})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files\\OS-Dep Files" FILES ${OSDEP_SOURCE_FILES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON})
 source_group(TREE ${HIVE_RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
 source_group("Resource Files\\\\Generated" FILES ${RESOURCE_FILES_GENERATED})
 source_group("Configure Input Files" FILES ${CONFIGURE_IN_FILES})
 
 # Define static library to be used by main application and unit tests
-add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${UI_FILES_COMMON} ${CONFIGURE_IN_FILES})
+add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILES_COMMON} ${HEADER_FILES_GENERATED} ${SOURCE_FILES_COMMON} ${OSDEP_SOURCE_FILES} ${UI_FILES_COMMON} ${CONFIGURE_IN_FILES})
 
 # Setup common options
 cu_setup_library_options(${PROJECT_NAME}_static)

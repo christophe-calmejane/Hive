@@ -48,6 +48,13 @@ public:
 	QLineEdit* talkerFilterLineEdit() noexcept;
 	QLineEdit* listenerFilterLineEdit() noexcept;
 
+	// Other methods
+	bool isEntitiesListAttached() const noexcept;
+	void entitiesListAttached(bool const isAttached);
+
+	// Public signals
+	Q_SIGNAL void selectEntityRequested(la::avdecc::UniqueIdentifier const entityID);
+
 private:
 	void onIntersectionClicked(QModelIndex const& index);
 	void onCustomContextMenuRequested(QPoint const& pos);
@@ -70,6 +77,7 @@ private:
 	std::unique_ptr<HeaderView> _verticalHeaderView;
 	std::unique_ptr<ItemDelegate> _itemDelegate;
 	std::unique_ptr<CornerWidget> _cornerWidget;
+	std::uint32_t _countEntitiesListAttached{ 0u };
 };
 
 } // namespace connectionMatrix

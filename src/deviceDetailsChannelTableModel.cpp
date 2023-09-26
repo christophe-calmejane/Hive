@@ -42,9 +42,9 @@
 */
 bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
 {
-	if (listenerNode && listenerNode->dynamicModel && talkerNode)
+	if (listenerNode && talkerNode)
 	{
-		return (listenerNode->dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected) && (listenerNode->dynamicModel->connectionInfo.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionInfo.talkerStream.streamIndex == talkerNode->descriptorIndex);
+		return (listenerNode->dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected) && (listenerNode->dynamicModel.connectionInfo.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel.connectionInfo.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
 
 	return false;
@@ -58,9 +58,9 @@ bool isStreamConnected(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::
 */
 bool isStreamFastConnecting(la::avdecc::UniqueIdentifier const talkerID, la::avdecc::controller::model::StreamOutputNode const* const talkerNode, la::avdecc::controller::model::StreamInputNode const* const listenerNode) noexcept
 {
-	if (listenerNode && listenerNode->dynamicModel && talkerNode)
+	if (listenerNode && talkerNode)
 	{
-		return (listenerNode->dynamicModel->connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::FastConnecting) && (listenerNode->dynamicModel->connectionInfo.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel->connectionInfo.talkerStream.streamIndex == talkerNode->descriptorIndex);
+		return (listenerNode->dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::FastConnecting) && (listenerNode->dynamicModel.connectionInfo.talkerStream.entityID == talkerID) && (listenerNode->dynamicModel.connectionInfo.talkerStream.streamIndex == talkerNode->descriptorIndex);
 	}
 
 	return false;
@@ -85,21 +85,21 @@ DeviceDetailsChannelTableModel::ConnectionStatus calculateConnectionStatus(la::a
 	auto const& talkerEntityNode = talkerEntity->getEntityNode();
 	auto const& listenerEntityNode = listenerEntity->getEntityNode();
 
-	auto const& talkerConfigurationNode = talkerEntity->getConfigurationNode(talkerEntityNode.dynamicModel->currentConfiguration);
-	auto const& listenerConfigurationNode = listenerEntity->getConfigurationNode(listenerEntityNode.dynamicModel->currentConfiguration);
+	auto const& talkerConfigurationNode = talkerEntity->getConfigurationNode(talkerEntityNode.dynamicModel.currentConfiguration);
+	auto const& listenerConfigurationNode = listenerEntity->getConfigurationNode(listenerEntityNode.dynamicModel.currentConfiguration);
 	auto status = DeviceDetailsChannelTableModel::ConnectionStatus{ connectionMatrix::Model::IntersectionData::Type::SingleStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected };
 	auto const& talkerOutputStreamNode = talkerEntity->getStreamOutputNode(talkerConfigurationNode.descriptorIndex, talkerStreamIndex);
 	auto const& listenerInputStreamNode = listenerEntity->getStreamInputNode(listenerConfigurationNode.descriptorIndex, listenerStreamIndex);
 
-	auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel->avbInterfaceIndex };
+	auto const talkerAvbInterfaceIndex{ talkerOutputStreamNode.staticModel.avbInterfaceIndex };
 	auto const& talkerAvbInterfaceNode = talkerEntity->getAvbInterfaceNode(talkerConfigurationNode.descriptorIndex, talkerAvbInterfaceIndex);
-	auto talkerStreamFormat = talkerOutputStreamNode.dynamicModel->streamFormat;
+	auto talkerStreamFormat = talkerOutputStreamNode.dynamicModel.streamFormat;
 	auto const talkerDynamicInterfaceNode = talkerAvbInterfaceNode.dynamicModel;
 	auto talkerInterfaceLinkStatus = talkerEntity->getAvbInterfaceLinkStatus(talkerAvbInterfaceIndex);
 
-	auto const listenerAvbInterfaceIndex{ listenerInputStreamNode.staticModel->avbInterfaceIndex };
+	auto const listenerAvbInterfaceIndex{ listenerInputStreamNode.staticModel.avbInterfaceIndex };
 	auto const& listenerAvbInterfaceNode = listenerEntity->getAvbInterfaceNode(listenerConfigurationNode.descriptorIndex, listenerAvbInterfaceIndex);
-	auto listenerStreamFormat = listenerInputStreamNode.dynamicModel->streamFormat;
+	auto listenerStreamFormat = listenerInputStreamNode.dynamicModel.streamFormat;
 	auto const listenerDynamicInterfaceNode = listenerAvbInterfaceNode.dynamicModel;
 	auto listenerInterfaceLinkStatus = listenerEntity->getAvbInterfaceLinkStatus(listenerAvbInterfaceIndex);
 
@@ -125,7 +125,7 @@ DeviceDetailsChannelTableModel::ConnectionStatus calculateConnectionStatus(la::a
 		status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::InterfaceDown);
 	}
 
-	if (isSameDomain(*talkerDynamicInterfaceNode, *listenerDynamicInterfaceNode))
+	if (isSameDomain(talkerDynamicInterfaceNode, listenerDynamicInterfaceNode))
 	{
 		status.flags.reset(connectionMatrix::Model::IntersectionData::Flag::WrongDomain);
 	}
@@ -475,58 +475,55 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 								continue;
 							}
 							auto const& entityNode = controlledEntity->getEntityNode();
-							if (entityNode.dynamicModel)
+							auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel.currentConfiguration);
+							QString clusterName;
+							if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 							{
-								auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel->currentConfiguration);
-								QString clusterName;
+								clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+							}
+							else
+							{
+								clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+							}
+
+							if (connection->isSourceRedundant && connection->isTargetRedundant)
+							{
+								connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Prim)"));
+
+								auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
+								std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantInputs;
 								if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 								{
-									clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+									redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
+									redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
 								}
 								else
 								{
-									clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+									redundantOutputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
+									redundantInputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
 								}
+								auto itOutputs = redundantOutputs.begin();
+								auto itInputs = redundantInputs.begin();
 
-								if (connection->isSourceRedundant && connection->isTargetRedundant)
+								if (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Prim)"));
-
-									auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantOutputs;
-									std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::controller::model::StreamNode const*> redundantInputs;
-									if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
-									{
-										redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
-										redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
-									}
-									else
-									{
-										redundantOutputs = channelConnectionManager.getRedundantStreamInputsForPrimary(connectionInfo->sourceEntityId, connection->sourceStreamIndex);
-										redundantInputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(connection->targetEntityId, connection->targetStreamIndex);
-									}
-									auto itOutputs = redundantOutputs.begin();
-									auto itInputs = redundantInputs.begin();
-
-									if (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
-									{
-										// skip primary
-										itOutputs++;
-										itInputs++;
-									}
-
-									while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
-									{
-										connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Sec)"));
-
-										itOutputs++;
-										itInputs++;
-									}
+									// skip primary
+									itOutputs++;
+									itInputs++;
 								}
-								else
+
+								while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
 								{
-									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())));
+									connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())).append(" (Sec)"));
+
+									itOutputs++;
+									itInputs++;
 								}
+							}
+							else
+							{
+								connectionLines.append(QString(clusterName).append(": ").append(hive::modelsLibrary::helper::smartEntityName(*controlledEntity.get())));
 							}
 						}
 					}
@@ -581,45 +578,42 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 						auto const& talkerEntityNode = talkerEntity->getEntityNode();
 						auto const& listenerEntityNode = listenerEntity->getEntityNode();
 
-						if (talkerEntityNode.dynamicModel && listenerEntityNode.dynamicModel)
 						{
-							{
-								auto status = calculateConnectionStatus(talkerEntityId, talkerStreamIndex, listenerEntityId, listenerStreamIndex);
+							auto status = calculateConnectionStatus(talkerEntityId, talkerStreamIndex, listenerEntityId, listenerStreamIndex);
 
+							connectionStatesTmp.append(QVariant::fromValue(status));
+						}
+
+						if (connection->isSourceRedundant && connection->isTargetRedundant)
+						{
+							auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
+
+							auto redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(talkerEntityId, talkerStreamIndex);
+							auto redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(listenerEntityId, listenerStreamIndex);
+
+							auto itOutputs = redundantOutputs.begin();
+							auto itInputs = redundantInputs.begin();
+
+							if (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
+							{
+								// skip primary
+								itOutputs++;
+								itInputs++;
+							}
+							while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
+							{
+								auto status = calculateConnectionStatus(talkerEntityId, itOutputs->first, listenerEntityId, itInputs->first);
 								connectionStatesTmp.append(QVariant::fromValue(status));
+
+								itOutputs++;
+								itInputs++;
 							}
+						}
 
-							if (connection->isSourceRedundant && connection->isTargetRedundant)
-							{
-								auto const& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
-
-								auto redundantOutputs = channelConnectionManager.getRedundantStreamOutputsForPrimary(talkerEntityId, talkerStreamIndex);
-								auto redundantInputs = channelConnectionManager.getRedundantStreamInputsForPrimary(listenerEntityId, listenerStreamIndex);
-
-								auto itOutputs = redundantOutputs.begin();
-								auto itInputs = redundantInputs.begin();
-
-								if (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
-								{
-									// skip primary
-									itOutputs++;
-									itInputs++;
-								}
-								while (itOutputs != redundantOutputs.end() && itInputs != redundantInputs.end())
-								{
-									auto status = calculateConnectionStatus(talkerEntityId, itOutputs->first, listenerEntityId, itInputs->first);
-									connectionStatesTmp.append(QVariant::fromValue(status));
-
-									itOutputs++;
-									itInputs++;
-								}
-							}
-
-							// add the states for each cluster channel
-							for (uint32_t i = 0; i < connection->targetClusterChannels.size(); i++)
-							{
-								connectionStates << connectionStatesTmp;
-							}
+						// add the states for each cluster channel
+						for (uint32_t i = 0; i < connection->targetClusterChannels.size(); i++)
+						{
+							connectionStates << connectionStatesTmp;
 						}
 					}
 					return connectionStates;

@@ -20,12 +20,12 @@
 #pragma once
 
 #include "controlledEntityTreeWidget.hpp"
+#include "controlledEntityTreeWidgetItemDelegate.hpp"
 #include "nodeTreeWidget.hpp"
 #include "settingsManager/settings.hpp"
 #include "settingsManager/settingsSignaler.hpp"
 
 #include <QtMate/material/colorPalette.hpp>
-#include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 
 #include <QSplitter>
@@ -39,7 +39,6 @@ public:
 	enum class RoleInfo
 	{
 		NodeType = Qt::UserRole,
-		ErrorRole = la::avdecc::utils::to_integral(hive::widgetModelsLibrary::QtUserRoles::ErrorRole),
 		IsActiveConfiguration,
 	};
 
@@ -66,6 +65,6 @@ private:
 	QSplitter _splitter{ Qt::Vertical, this };
 	ControlledEntityTreeWidget _controlledEntityTreeWiget{ this };
 	NodeTreeWidget _nodeTreeWiget{ this };
-	hive::widgetModelsLibrary::ErrorItemDelegate _itemDelegate{ true, qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	ControlledEntityTreeWidgetItemDelegate _itemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	SettingsSignaler _settingsSignaler{};
 };

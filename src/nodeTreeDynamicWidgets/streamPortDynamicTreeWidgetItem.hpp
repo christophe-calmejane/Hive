@@ -35,7 +35,7 @@
 class StreamPortDynamicTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
+	StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const dynamicModel, QTreeWidget* parent = nullptr);
 
 private:
 	void editMappingsButtonClicked();
@@ -43,6 +43,7 @@ private:
 	void updateMappings();
 
 	la::avdecc::UniqueIdentifier const _entityID{};
+	la::avdecc::entity::model::AudioUnitIndex const _audioUnitIndex{ 0u };
 	la::avdecc::entity::model::DescriptorType const _streamPortType{ la::avdecc::entity::model::DescriptorType::Entity };
 	la::avdecc::entity::model::StreamPortIndex const _streamPortIndex{ 0u };
 	QListWidget* _mappingsList{ nullptr };

@@ -30,8 +30,6 @@
 		<string>${CU_PROJECT_READABLE_COPYRIGHT}</string>
 		<key>NSHighResolutionCapable</key>
 		<true/>
-		<key>NSRequiresAquaSystemAppearance</key>
-		<true/>
 		<key>CSResourcesFileMapped</key>
 		<true/>
 		<key>CFBundleSignature</key>
@@ -40,5 +38,36 @@
 		<string>${MACOSX_BUNDLE_ICON_FILE}</string>
 		<key>SUPublicEDKey</key>
 		<string>${HIVE_DSA_PUB_KEY}</string>
+		<key>CFBundleDocumentTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeExtensions</key>
+				<array>
+					<string>ave</string>
+				</array>
+				<key>CFBundleTypeName</key>
+				<string>ATDECC Virtual Entity</string>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleTypeIconFile</key>
+				<string>Icon_AVE.icns</string>
+				<key>LSHandlerRank</key>
+				<string>Owner</string>
+			</dict>
+			<dict>
+				<key>CFBundleTypeExtensions</key>
+				<array>
+					<string>ans</string>
+				</array>
+				<key>CFBundleTypeName</key>
+				<string>ATDECC Network State</string>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleTypeIconFile</key>
+				<string>Icon_ANS.icns</string>
+				<key>LSHandlerRank</key>
+				<string>Owner</string>
+			</dict>
+		</array>
 	</dict>
 </plist>

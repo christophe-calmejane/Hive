@@ -34,7 +34,9 @@ enum class QtUserRoles : int
 	SelectedEntityRole, /**< Role used for Entity Selection representation */
 	IdentificationRole, /**< Role used for Entity Identification representation */
 	SubscribedUnsolRole, /**< Role used for Unsolicited Notifications Subscription representation */
+	UnsolSupportedRole, /**< Role used for Supported Unsolicited Notifications representation */
 	IsVirtualRole, /**< Role used for Virtual Entity representation */
+	ActiveRole, /**< Role used for active item representation */
 };
 using RolesList = QVector<int>;
 

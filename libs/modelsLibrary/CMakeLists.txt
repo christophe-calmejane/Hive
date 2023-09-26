@@ -48,6 +48,7 @@ set(HEADER_FILES_PUBLIC
 
 set(HEADER_FILES_COMMON
 	commandsExecutorImpl.hpp
+	virtualController.hpp
 )
 
 set(SOURCE_FILES_COMMON
@@ -57,6 +58,7 @@ set(SOURCE_FILES_COMMON
 	controllerManager.cpp
 	networkInterfacesModel.cpp
 	discoveredEntitiesModel.cpp
+	virtualController.cpp
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")

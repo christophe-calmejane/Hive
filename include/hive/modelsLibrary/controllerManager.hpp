@@ -68,6 +68,7 @@ public:
 		SetConfigurationName,
 		SetAudioUnitName,
 		SetStreamName,
+		SetJackName,
 		SetAvbInterfaceName,
 		SetClockSourceName,
 		SetMemoryObjectName,
@@ -115,6 +116,8 @@ public:
 	using SetAudioUnitNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using SetStreamInputNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using SetStreamOutputNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
+	using SetJackInputNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
+	using SetJackOutputNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using SetAvbInterfaceNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using SetClockSourceNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
 	using SetMemoryObjectNameHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
@@ -173,6 +176,20 @@ public:
 	/** Deserializes a JSON file representing an entity, and loads it as a virtual ControlledEntity. */
 	virtual std::tuple<la::avdecc::jsonSerializer::DeserializationError, std::string> loadVirtualEntityFromJson(QString const& filePath, la::avdecc::entity::model::jsonSerializer::Flags const flags) noexcept = 0;
 
+	/** Re-enumerates the specified entity (physical entity only). */
+	virtual bool refreshEntity(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+
+	/** Removes a Virtual Entity from the controller */
+	virtual bool unloadVirtualEntity(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+
+	/** Returns the StreamFormat among the provided availableFormats, that best matches desiredStreamFormat, using clockValidator delegate callback. Returns invalid StreamFormat if none is available. */
+	virtual la::avdecc::entity::model::StreamFormat chooseBestStreamFormat(la::avdecc::entity::model::StreamFormats const& availableFormats, la::avdecc::entity::model::StreamFormat const desiredStreamFormat, std::function<bool(bool const isDesiredClockSync, bool const isAvailableClockSync)> const& clockValidator) noexcept = 0;
+
+	virtual bool isMediaClockStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept = 0;
+
+	/** Returns a checksum of the static entity model of the given ControlledEntity for the given checksumVersion (defaults to the maximum checksum version supported by the library) */
+	virtual std::optional<std::string> computeEntityModelChecksum(la::avdecc::controller::ControlledEntity const& controlledEntity, std::uint32_t const checksumVersion = la::avdecc::controller::Controller::ChecksumVersion) noexcept = 0;
+
 	/** Enable/Disable AEM cache */
 	virtual void setEnableAemCache(bool const enable) noexcept = 0;
 
@@ -196,6 +213,7 @@ public:
 	virtual la::avdecc::controller::ControlledEntity::Diagnostics getDiagnostics(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 	virtual bool isRedundancyWarning(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 	virtual bool getStreamInputLatencyError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept = 0;
+	virtual bool getControlValueOutOfBounds(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex) const noexcept = 0;
 
 	/* Discovery Protocol (ADP) */
 	/** Enables entity advertising with available duration included between 2-62 seconds on the specified interfaceIndex if set, otherwise on all interfaces. */
@@ -226,6 +244,8 @@ public:
 	virtual void setAudioUnitName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetAudioUnitNameHandler const& resultHandler = {}) noexcept = 0;
 	virtual void setStreamInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetStreamInputNameHandler const& resultHandler = {}) noexcept = 0;
 	virtual void setStreamOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetStreamOutputNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setJackInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetJackInputNameHandler const& resultHandler = {}) noexcept = 0;
+	virtual void setJackOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetJackOutputNameHandler const& resultHandler = {}) noexcept = 0;
 	virtual void setAvbInterfaceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetAvbInterfaceNameHandler const& resultHandler = {}) noexcept = 0;
 	virtual void setClockSourceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetClockSourceNameHandler const& resultHandler = {}) noexcept = 0;
 	virtual void setMemoryObjectName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& name, BeginCommandHandler const& beginHandler = {}, SetMemoryObjectNameHandler const& resultHandler = {}) noexcept = 0;
@@ -299,6 +319,7 @@ public:
 	Q_SIGNAL void configurationNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& configurationName);
 	Q_SIGNAL void audioUnitNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& audioUnitName);
 	Q_SIGNAL void streamNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& streamName);
+	Q_SIGNAL void jackNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::JackIndex const jackIndex, QString const& jackName);
 	Q_SIGNAL void avbInterfaceNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& avbInterfaceName);
 	Q_SIGNAL void clockSourceNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& clockSourceName);
 	Q_SIGNAL void memoryObjectNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& memoryObjectName);
@@ -349,6 +370,7 @@ public:
 	Q_SIGNAL void diagnosticsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::Diagnostics const& diagnostics);
 	Q_SIGNAL void redundancyWarningChanged(la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning);
 	Q_SIGNAL void streamInputLatencyErrorChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError);
+	Q_SIGNAL void controlCurrentValueOutOfBoundsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, bool const isValueOutOfBounds);
 };
 
 } // namespace modelsLibrary

@@ -19,6 +19,8 @@
 
 #include "streamInputDiagnosticsTreeWidgetItem.hpp"
 
+#include <QtMate/material/color.hpp>
+
 #include <map>
 #include <QMenu>
 
@@ -64,7 +66,7 @@ void StreamInputDiagnosticsTreeWidgetItem::updateDiagnostics(la::avdecc::control
 
 	// Latency Error
 	{
-		auto color = QColor{ _isConnected ? Qt::black : Qt::gray };
+		auto color = QColor{ _isConnected ? qtMate::material::color::foregroundColor() : qtMate::material::color::disabledForegroundColor() };
 		auto text = "No";
 		if (_isConnected)
 		{

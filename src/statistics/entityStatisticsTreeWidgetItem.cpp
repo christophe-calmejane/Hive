@@ -19,6 +19,8 @@
 
 #include "entityStatisticsTreeWidgetItem.hpp"
 
+#include <QtMate/material/color.hpp>
+
 #include <QMenu>
 
 EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::uint64_t const aemAecpUnsolicitedLossCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent)
@@ -110,13 +112,13 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 
 void EntityStatisticsTreeWidgetItem::setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept
 {
-	auto color = QColor{ Qt::black };
+	auto color = qtMate::material::color::foregroundColor();
 	auto text = QString::number(value);
 
 	auto const errorCounterIt = _errorCounters.find(flag);
 	if (errorCounterIt != _errorCounters.end())
 	{
-		color = QColor{ Qt::red };
+		color = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::backgroundColorName(), qtMate::material::color::colorSchemeShade());
 		text += QString(" (+%1)").arg(errorCounterIt->second);
 	}
 

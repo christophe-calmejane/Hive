@@ -8,6 +8,8 @@
         <file>unlocked.png</file>
         <file>locked_by_other.png</file>
         <file>lock_not_supported.png</file>
+        <file>unknown_light.png</file>
+        <file>unknown_dark.png</file>
         <file>Milan_Compatible.png</file>
         <file>Milan_Compatible_inv.png</file>
         <file>Milan_Certified.png</file>

@@ -19,24 +19,6 @@
 
 #pragma once
 
-// Public Headers
-#include "QtMate/material/color.hpp"
-#include "QtMate/material/colorPalette.hpp"
-#include "QtMate/material/helper.hpp"
-#include "QtMate/graph/connection.hpp"
-#include "QtMate/graph/inputSocket.hpp"
-#include "QtMate/graph/node.hpp"
-#include "QtMate/graph/outputSocket.hpp"
-#include "QtMate/graph/socket.hpp"
-#include "QtMate/graph/type.hpp"
-#include "QtMate/graph/view.hpp"
-#include "QtMate/widgets/comboBox.hpp"
-#include "QtMate/widgets/dynamicHeaderView.hpp"
-#include "QtMate/widgets/flatIconButton.hpp"
-#include "QtMate/widgets/tableView.hpp"
-#include "QtMate/widgets/textEntry.hpp"
-#include "QtMate/widgets/tickableMenu.hpp"
-
 // Qt Headers
 #include <QAbstractItemView>
 #include <QAbstractTableModel>

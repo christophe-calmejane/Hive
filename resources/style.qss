@@ -1,24 +1,30 @@
 /*
-%1: base color backgound
-%2: base color foreground
-%3: connection matrix highlight color
+%1: theme color
+%2: theme foreground text color
+%3: connection matrix highlight color (central matrix, not header)
+%4: flat icon button color
+%5: theme complementary color
 */
 
 QWidget {
 	selection-background-color: %1;
 	selection-color: %2;
 }
-QAbstractItemView::item:selected {
+QComboBox QAbstractItemView::item:selected {
+	background-color: %1;
+	color: %2;
+}
+QTreeWidget::item:selected {
 	background-color: %1;
 	color: %2;
 }
 qtMate--widgets--FlatIconButton {
 	font-size: 24px;
 	border: none;
-	color: #3e3e3e;
+	color: %4;
 }
 qtMate--widgets--FlatIconButton:hover {
-	color: #262626;
+	color: %1;
 }
 qtMate--widgets--FlatIconButton:pressed {
 	margin: 2 0 0 2;
@@ -28,6 +34,27 @@ NodeTreeWidget .QListWidget {
 	margin-top: 4;
 	margin-bottom: 4;
 }
+NodeTreeWidget .QLabel {
+	margin-left: 0;
+	margin-right: 2;
+}
+QLabel#StreamConnectionLabel[isSelected=true] {
+	color: %2;
+}
+QLabel#EntityNameLabel {
+	color: grey;
+}
+QLabel#EntityNameLabel[isSelected=true] {
+	color: lightgrey;
+}
+QLabel#EntityNameLabel[isOnline=true] {
+	color: green;
+	font-weight: bold;
+}
+QLabel#EntityNameLabel[isOnline=true][isSelected=true] {
+	color: %5;
+	font-weight: bold;
+}
 QPushButton#DisconnectButton {
 	font-size: 14px;
 	color: #f44336;
@@ -36,14 +63,7 @@ QPushButton#DisconnectButton:disabled {
 	color: gray;
 }
 QPushButton#DisconnectButton:pressed {
-	color: black;
-}
-QLabel#EntityNameLabel {
-	color: grey;
-}
-QLabel#EntityNameLabel[isOnline=true] {
-	color: #4caf50;
-	font-weight: bold;
+	color: %5;
 }
 connectionMatrix--View {
 	selection-background-color: %3;

@@ -4,6 +4,46 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2023-09-26
+### Added
+- Selection of an entity from the connection matrix (context menu)
+- [Mac Address field in entities list](https://github.com/christophe-calmejane/Hive/issues/38)
+- [ClockDomain locked state in entities list](https://github.com/christophe-calmejane/Hive/issues/133)
+- Support for JACK Inputs and JACK Outputs
+- Support for CONTROLs at non-configuration level
+- Support for CONTROL_SELECTOR type for CONTROL descriptors
+- Preliminary support for Virtual Entities modification
+- [File association to directly load ANS and AVE files](https://github.com/christophe-calmejane/Hive/issues/146)
+- New command line parameters to load ANS and AVE files
+- New icons for ANS and AVE files
+- Possibility to remove a virtual entity (DEL key in Entities list)
+- Entity Descriptor displays the current status for unsolicited notifications registration
+- [Entry in the entities list context menu to force reload a single entity](https://github.com/christophe-calmejane/Hive/issues/145)
+- [New column in entities list showing error/warning status](https://github.com/christophe-calmejane/Hive/issues/155)
+- New diagnostics for CONTROL descriptors, when the current value is out of min-max bounds
+- [Support for Dark Mode](https://github.com/christophe-calmejane/Hive/issues/39)
+- Clicking on an Entity-Entity crosspoint in the matrix expands/collapses both entities
+- Display of Entity AEM Checksum (in Entity Descriptor)
+- Detection of invalid *descriptor_counts* field in CONFIGURATION descriptor
+
+### Changed
+- Complete rework of the `entities list`
+- Updated AVDECC library to v4.0
+- Defaulting to Qt "fusion" style, can be changed with command line parameter `-style <style name>`
+
+### Fixed
+- Current selection in list of entities lost when changing the filter
+- [Network Interfaces combobox displays errors and selected interface in bold](https://github.com/christophe-calmejane/Hive/issues/128)
+- Refresh issue for ClockSource, MemoryObject, AvbInterface, AudioCluster, Control, ClockDomain, AssociationID custom names
+- Possible crash for entities with more than 1 configuration, when using full device enumration
+- Always display CONTROL descriptor even if the ControlDataType is not supported by the library
+- CONTROL values updated by the device itself didn't update properly
+- Possible crash for entities returning an out-of-bounds MemoryObject length value
+- [Files can be loaded/saved from/to UTF8 path](https://github.com/christophe-calmejane/Hive/issues/156)
+- Crash when displaying vendor specific control values
+- Opening the Dynamic Mappings editor from the matrix only showed the first STREAM_PORT, it now shows all STREAM_PORTs
+- `Clear All Dynamic Mappings` correctly clears redundant mappings for virtual entities
+
 ## [1.2.9] - 2023-01-13
 ### Added
 - Option to hide (meaningless) connections between CRF and Audio streams

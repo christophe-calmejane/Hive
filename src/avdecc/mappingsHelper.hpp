@@ -32,12 +32,13 @@
 #include <set>
 #include <utility>
 #include <QObject>
+#include <optional>
 
 namespace avdecc
 {
 namespace mappingsHelper
 {
-void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
+void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, std::optional<la::avdecc::entity::model::StreamPortIndex> const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 la::avdecc::entity::model::AudioMappings getMaximumAudioMappings(la::avdecc::entity::model::AudioMappings const& mappings, size_t const offset) noexcept;
 /** Adds new input audio mappings. Entity is expected to be under ExclusiveAccess. */
 void batchAddInputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::AddStreamPortInputAudioMappingsHandler const& handler = {}) noexcept;

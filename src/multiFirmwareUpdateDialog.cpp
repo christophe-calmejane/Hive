@@ -171,29 +171,26 @@ private:
 			if (controlledEntity && controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && controlledEntity->hasAnyConfiguration())
 			{
 				auto const& entityNode = controlledEntity->getEntityNode();
-				if (entityNode.dynamicModel)
+				auto const configurationIndex = entityNode.dynamicModel.currentConfiguration;
+				auto const& configurationNode = controlledEntity->getConfigurationNode(configurationIndex);
+				for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
 				{
-					auto const configurationIndex = entityNode.dynamicModel->currentConfiguration;
-					auto const& configurationNode = controlledEntity->getConfigurationNode(configurationIndex);
-					for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
+					if (memoryObjectNode.staticModel.memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
 					{
-						if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
-						{
-							Q_Q(Model);
+						Q_Q(Model);
 
-							// Insert at the end
-							auto const row = rowCount();
-							emit q->beginInsertRows({}, row, row);
+						// Insert at the end
+						auto const row = rowCount();
+						emit q->beginInsertRows({}, row, row);
 
-							_entities.push_back(EntityData{ entityID, hive::modelsLibrary::helper::smartEntityName(*controlledEntity), entityNode.dynamicModel->firmwareVersion.data() });
+						_entities.push_back(EntityData{ entityID, hive::modelsLibrary::helper::smartEntityName(*controlledEntity), entityNode.dynamicModel.firmwareVersion.data() });
 
-							// Update the cache
-							rebuildEntityRowMap();
+						// Update the cache
+						rebuildEntityRowMap();
 
-							emit q->endInsertRows();
+						emit q->endInsertRows();
 
-							return;
-						}
+						return;
 					}
 				}
 			}
@@ -407,19 +404,16 @@ void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const&, QI
 		auto const controlledEntity = manager.getControlledEntity(entityID);
 		auto const& entityNode = controlledEntity->getEntityNode();
 
-		if (entityNode.staticModel)
-		{
-			auto const rowModelName = hive::modelsLibrary::helper::localizedString(*controlledEntity, entityNode.staticModel->modelNameString);
+		auto const rowModelName = hive::modelsLibrary::helper::localizedString(*controlledEntity, entityNode.staticModel.modelNameString);
 
-			if (modelName.isEmpty())
-			{
-				modelName = rowModelName;
-			}
-			else if (modelName != rowModelName)
-			{
-				_ui->buttonContinue->setEnabled(false);
-				return;
-			}
+		if (modelName.isEmpty())
+		{
+			modelName = rowModelName;
+		}
+		else if (modelName != rowModelName)
+		{
+			_ui->buttonContinue->setEnabled(false);
+			return;
 		}
 	}
 
@@ -457,24 +451,21 @@ void MultiFirmwareUpdateDialog::startFirmwareUpdate()
 		if (controlledEntity)
 		{
 			auto const& entityNode = controlledEntity->getEntityNode();
-			if (entityNode.dynamicModel)
+			auto const configurationIndex = entityNode.dynamicModel.currentConfiguration;
+			auto const& configurationNode = controlledEntity->getConfigurationNode(configurationIndex);
+			for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
 			{
-				auto const configurationIndex = entityNode.dynamicModel->currentConfiguration;
-				auto const& configurationNode = controlledEntity->getConfigurationNode(configurationIndex);
-				for (auto const& [memoryObjectIndex, memoryObjectNode] : configurationNode.memoryObjects)
+				if (memoryObjectNode.staticModel.memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
 				{
-					if (memoryObjectNode.staticModel->memoryObjectType == la::avdecc::entity::model::MemoryObjectType::FirmwareImage)
+					if (maximumLength == 0)
 					{
-						if (maximumLength == 0)
-						{
-							// Pick first entity's max length, all following entities should have the same.
-							maximumLength = memoryObjectNode.staticModel->maximumLength;
-						}
-
-						auto const* const model = memoryObjectNode.staticModel;
-						firmwareUpdateEntityInfos.emplace_back(entityID, memoryObjectNode.descriptorIndex, model->startAddress);
-						break;
+						// Pick first entity's max length, all following entities should have the same.
+						maximumLength = memoryObjectNode.staticModel.maximumLength;
 					}
+
+					auto const& model = memoryObjectNode.staticModel;
+					firmwareUpdateEntityInfos.emplace_back(entityID, memoryObjectNode.descriptorIndex, model.startAddress);
+					break;
 				}
 			}
 		}
@@ -494,7 +485,7 @@ void MultiFirmwareUpdateDialog::startFirmwareUpdate()
 	close();
 
 	// Start firmware upload dialog
-	auto dialog = FirmwareUploadDialog{ { firmwareFileData.constData(), static_cast<size_t>(firmwareFileData.count()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
+	auto dialog = FirmwareUploadDialog{ { firmwareFileData.constData(), static_cast<size_t>(firmwareFileData.size()) }, QFileInfo(fileName).fileName(), firmwareUpdateEntityInfos, this };
 	dialog.exec();
 }
 

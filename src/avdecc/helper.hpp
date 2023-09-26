@@ -46,6 +46,7 @@ QString samplingRateToString(la::avdecc::entity::model::SamplingRate const& samp
 QString streamFormatToString(la::avdecc::entity::model::StreamFormatInfo const& format) noexcept;
 QString clockSourceToString(la::avdecc::controller::model::ClockSourceNode const& node) noexcept;
 
+QString flagsToString(la::avdecc::entity::JackFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept;
@@ -62,6 +63,7 @@ QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps) 
 QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps) noexcept;
 QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const caps) noexcept;
 
+QString jackTypeToString(la::avdecc::entity::model::JackType const type) noexcept;
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type) noexcept;
 QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format) noexcept;
 QString controlTypeToString(la::avdecc::entity::model::ControlType const& controlType) noexcept;

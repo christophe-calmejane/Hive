@@ -18,6 +18,7 @@
 */
 
 #include "commandsExecutorImpl.hpp"
+#include "virtualController.hpp"
 #include "hive/modelsLibrary/controllerManager.hpp"
 
 #include <la/avdecc/logger.hpp>
@@ -41,7 +42,7 @@ public:
 
 	class EntityDataCache
 	{
-		class InitVisitor : public la::avdecc::controller::model::EntityModelVisitor
+		class InitVisitor : public la::avdecc::controller::model::DefaultedEntityModelVisitor
 		{
 		public:
 			InitVisitor(EntityDataCache& entityCache)
@@ -50,7 +51,7 @@ public:
 			}
 
 		protected:
-			// la::avdecc::controller::model::EntityModelVisitor overrides
+			// la::avdecc::controller::model::DefaultedEntityModelVisitor overrides
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityNode const& /*node*/) noexcept override
 			{
 				// Initialize internal counter value, always setting lastClearCount to 0 (Statistics counters always start at 0 in the Controller, contrary to endpoint Counters) so that we directly see any error during enumeration
@@ -76,9 +77,9 @@ public:
 			}
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 			{
-				if (node.dynamicModel->counters)
+				if (node.dynamicModel.counters)
 				{
-					for (auto const [flag, counter] : *node.dynamicModel->counters)
+					for (auto const [flag, counter] : *node.dynamicModel.counters)
 					{
 						// Initialize internal counter value
 						_entityCache._streamInputCounters[node.descriptorIndex][flag] = ErrorCounterInfo{ counter, counter };
@@ -90,7 +91,7 @@ public:
 			EntityDataCache& _entityCache;
 		};
 
-		class ClearCounterVisitor : public la::avdecc::controller::model::EntityModelVisitor
+		class ClearCounterVisitor : public la::avdecc::controller::model::DefaultedEntityModelVisitor
 		{
 		public:
 			ClearCounterVisitor(ControllerManager& manager, EntityDataCache& entityCache)
@@ -307,9 +308,19 @@ public:
 			_diagnostics = diags;
 		}
 
+		bool getControlCurrentValueOutOfBoundsError(la::avdecc::entity::model::ControlIndex const controlIndex) const noexcept
+		{
+			return _diagnostics.controlCurrentValueOutOfBounds.count(controlIndex) > 0;
+		}
+
 		bool getStreamInputLatencyError(la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 		{
 			return _diagnostics.streamInputOverLatency.count(streamIndex) > 0;
+		}
+
+		bool getControlValueOutOfBounds(la::avdecc::entity::model::ControlIndex const controlIndex) const noexcept
+		{
+			return _diagnostics.controlCurrentValueOutOfBounds.count(controlIndex) > 0;
 		}
 
 	private:
@@ -565,6 +576,14 @@ private:
 	{
 		emit streamNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, QString::fromStdString(streamName));
 	}
+	virtual void onJackInputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
+	{
+		emit jackNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackInput, jackIndex, QString::fromStdString(jackName));
+	}
+	virtual void onJackOutputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
+	{
+		emit jackNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackOutput, jackIndex, QString::fromStdString(jackName));
+	}
 	virtual void onAvbInterfaceNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvdeccFixedString const& avbInterfaceName) noexcept override
 	{
 		emit avbInterfaceNameChanged(entity->getEntity().getEntityID(), configurationIndex, avbInterfaceIndex, QString::fromStdString(avbInterfaceName));
@@ -663,8 +682,8 @@ private:
 					try
 					{
 						auto const& entityNode = entity->getEntityNode();
-						auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
-						if (streamNode.dynamicModel->connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
+						auto const& streamNode = entity->getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
+						if (streamNode.dynamicModel.connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
 						{
 							// Only consider MediaUnlocked as an error if the stream is connected, otherwise juste ignore this
 							break;
@@ -858,6 +877,28 @@ private:
 						}
 					}
 
+					// Check for ControlCurrentValueOutOfBounds state change
+					{
+						auto const oldControlsErrors = entityCache->getDiagnostics().controlCurrentValueOutOfBounds;
+
+						// Check for no longer in error (present in old but not in new)
+						for (auto const controlIndex : oldControlsErrors)
+						{
+							if (diags.controlCurrentValueOutOfBounds.count(controlIndex) == 0)
+							{
+								emit controlCurrentValueOutOfBoundsChanged(entityID, controlIndex, false);
+							}
+						}
+						// Check for newly in error (not present in old but present in new)
+						for (auto const controlIndex : diags.controlCurrentValueOutOfBounds)
+						{
+							if (oldControlsErrors.count(controlIndex) == 0)
+							{
+								emit controlCurrentValueOutOfBoundsChanged(entityID, controlIndex, true);
+							}
+						}
+					}
+
 					// Update diags cache
 					entityCache->setDiagnostics(diags);
 
@@ -882,8 +923,14 @@ private:
 			destroyController();
 		}
 
+		// Create a new virtual controller
+		_virtualController = VirtualController{};
+
 		// Create a new controller and store it
-		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel);
+		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel, std::nullopt, &_virtualController);
+
+		_virtualController.setControllerEID(controller->getControllerEID());
+
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
 #else // !HAVE_ATOMIC_SMART_POINTERS
@@ -1003,6 +1050,41 @@ private:
 			return controller->loadVirtualEntityFromJson(filePath.toStdString(), flags);
 		}
 		return { la::avdecc::jsonSerializer::DeserializationError::InternalError, "Controller offline" };
+	}
+
+	virtual bool refreshEntity(la::avdecc::UniqueIdentifier const entityID) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->refreshEntity(entityID);
+		}
+		return false;
+	}
+
+	virtual bool unloadVirtualEntity(la::avdecc::UniqueIdentifier const entityID) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->unloadVirtualEntity(entityID);
+		}
+		return false;
+	}
+
+	virtual la::avdecc::entity::model::StreamFormat chooseBestStreamFormat(la::avdecc::entity::model::StreamFormats const& availableFormats, la::avdecc::entity::model::StreamFormat const desiredStreamFormat, std::function<bool(bool const isDesiredClockSync, bool const isAvailableClockSync)> const& clockValidator) noexcept override
+	{
+		return la::avdecc::controller::Controller::chooseBestStreamFormat(availableFormats, desiredStreamFormat, clockValidator);
+	}
+
+	virtual bool isMediaClockStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
+	{
+		return la::avdecc::controller::Controller::isMediaClockStreamFormat(streamFormat);
+	}
+
+	virtual std::optional<std::string> computeEntityModelChecksum(la::avdecc::controller::ControlledEntity const& controlledEntity, std::uint32_t const checksumVersion) noexcept override
+	{
+		return la::avdecc::controller::Controller::computeEntityModelChecksum(controlledEntity, checksumVersion);
 	}
 
 	virtual void setEnableAemCache(bool const enable) noexcept override
@@ -1133,6 +1215,15 @@ private:
 		if (auto* entityCache = entityCachedData(entityID))
 		{
 			return entityCache->getStreamInputLatencyError(streamIndex);
+		}
+		return {};
+	}
+
+	virtual bool getControlValueOutOfBounds(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex) const noexcept override
+	{
+		if (auto* entityCache = entityCachedData(entityID))
+		{
+			return entityCache->getControlValueOutOfBounds(controlIndex);
 		}
 		return {};
 	}
@@ -1583,6 +1674,62 @@ private:
 					else
 					{
 						emit endAecpCommand(targetEntityID, AecpCommandType::SetStreamName, streamIndex, status);
+					}
+				});
+		}
+	}
+
+	virtual void setJackInputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, QString const& name, BeginCommandHandler const& beginHandler, SetJackInputNameHandler const& resultHandler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex);
+			}
+			controller->setJackInputName(targetEntityID, configurationIndex, jackIndex, name.toStdString(),
+				[this, targetEntityID, jackIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex, status);
+					}
+				});
+		}
+	}
+
+	virtual void setJackOutputName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, QString const& name, BeginCommandHandler const& beginHandler, SetJackOutputNameHandler const& resultHandler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex);
+			}
+			controller->setJackOutputName(targetEntityID, configurationIndex, jackIndex, name.toStdString(),
+				[this, targetEntityID, jackIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetJackName, jackIndex, status);
 					}
 				});
 		}
@@ -2356,6 +2503,7 @@ private:
 	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };
 	bool _fullAemEnumeration{ false };
+	VirtualController _virtualController{};
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept
@@ -2389,6 +2537,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Stream Name";
 		case AecpCommandType::SetStreamInfo:
 			return "Set Stream Info";
+		case AecpCommandType::SetJackName:
+			return "Set Jack Name";
 		case AecpCommandType::SetAvbInterfaceName:
 			return "Set AVB Interface Name";
 		case AecpCommandType::SetClockSourceName:

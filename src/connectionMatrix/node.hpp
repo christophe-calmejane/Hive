@@ -219,7 +219,7 @@ class EntityNode : public Node
 	friend class ModelPrivate;
 
 public:
-	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept;
+	static EntityNode* create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol, bool const areUnsolSupported) noexcept;
 
 	// Visitor pattern that is called on every stream node that matches avbInterfaceIndex
 	using AvbInterfaceIndexVisitor = std::function<void(class StreamNode*)>;
@@ -227,6 +227,7 @@ public:
 
 	bool isMilan() const noexcept;
 	bool isRegisteredUnsol() const noexcept;
+	bool areUnsolSupported() const noexcept;
 	la::avdecc::entity::model::ClusterIndex getStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const;
 	la::avdecc::entity::model::ClusterIndex getStreamPortOutputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const;
 	la::avdecc::entity::model::AudioMappings const& getInputAudioMappings(la::avdecc::entity::model::StreamPortIndex const streamPortInputIndex) const;
@@ -235,7 +236,7 @@ public:
 	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> getOutputAudioMappings() const noexcept;
 
 protected:
-	EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept;
+	EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol, bool const areUnsolSupported) noexcept;
 	void setRegisteredUnsol(bool const isRegisteredUnsol) noexcept;
 	void setStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept;
 	void setStreamPortOutputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::ClusterIndex const clusterOffset) noexcept;
@@ -245,6 +246,7 @@ protected:
 protected:
 	bool _isMilan{ false };
 	bool _isRegisteredUnsol{ false };
+	bool _areUnsolSupported{ false };
 	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::ClusterIndex> _streamPortInputClusterOffset{};
 	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::ClusterIndex> _streamPortOutputClusterOffset{};
 	std::unordered_map<la::avdecc::entity::model::StreamPortIndex, la::avdecc::entity::model::AudioMappings> _inputMappings{};

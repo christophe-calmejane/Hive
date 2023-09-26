@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "errorItemDelegate.hpp"
+#include "errorIconItemDelegate.hpp"
 #include "imageItemDelegate.hpp"
 
 #include <QStyledItemDelegate>
@@ -33,14 +33,18 @@ class DiscoveredEntitiesTableItemDelegate : public QStyledItemDelegate
 {
 	Q_OBJECT
 public:
-	using QStyledItemDelegate::QStyledItemDelegate;
+	DiscoveredEntitiesTableItemDelegate(qtMate::material::color::Name const themeColorName = qtMate::material::color::DefaultColor, QObject* parent = nullptr) noexcept;
+
+	Q_SLOT void setThemeColorName(qtMate::material::color::Name const themeColorName);
 
 protected:
 	virtual void paint(QPainter* painter, QStyleOptionViewItem const& option, QModelIndex const& index) const override;
 
 private:
 	// Private members
-	ErrorItemDelegate _errorItemDelegate{ false };
+	qtMate::material::color::Name _themeColorName{ qtMate::material::color::DefaultColor };
+	bool _isDark{ false };
+	ErrorIconItemDelegate _errorIconItemDelegate{ false };
 	ImageItemDelegate _imageItemDelegate{ false };
 };
 

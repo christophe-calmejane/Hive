@@ -111,7 +111,7 @@ public:
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
 	qtMate::widgets::DynamicHeaderView _controllerDynamicHeaderView{ Qt::Horizontal, _parent };
 	hive::widgetModelsLibrary::DiscoveredEntitiesTableModel _controllerModel{ ControllerModelEntityDataFlags };
-	hive::widgetModelsLibrary::DiscoveredEntitiesTableItemDelegate _controllerModelItemDelegate{ _parent };
+	hive::widgetModelsLibrary::DiscoveredEntitiesTableItemDelegate _controllerModelItemDelegate{ qtMate::material::color::DefaultColor, _parent };
 	bool _shown{ false };
 	la::avdecc::entity::model::EntityTree _entityModel{};
 };
