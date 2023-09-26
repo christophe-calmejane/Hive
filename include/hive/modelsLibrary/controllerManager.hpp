@@ -182,6 +182,14 @@ public:
 	/** Removes a Virtual Entity from the controller */
 	virtual bool unloadVirtualEntity(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
 
+	/** Returns the StreamFormat among the provided availableFormats, that best matches desiredStreamFormat, using clockValidator delegate callback. Returns invalid StreamFormat if none is available. */
+	virtual la::avdecc::entity::model::StreamFormat chooseBestStreamFormat(la::avdecc::entity::model::StreamFormats const& availableFormats, la::avdecc::entity::model::StreamFormat const desiredStreamFormat, std::function<bool(bool const isDesiredClockSync, bool const isAvailableClockSync)> const& clockValidator) noexcept = 0;
+
+	virtual bool isMediaClockStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept = 0;
+
+	/** Returns a checksum of the static entity model of the given ControlledEntity for the given checksumVersion (defaults to the maximum checksum version supported by the library) */
+	virtual std::optional<std::string> computeEntityModelChecksum(la::avdecc::controller::ControlledEntity const& controlledEntity, std::uint32_t const checksumVersion = la::avdecc::controller::Controller::ChecksumVersion) noexcept = 0;
+
 	/** Enable/Disable AEM cache */
 	virtual void setEnableAemCache(bool const enable) noexcept = 0;
 

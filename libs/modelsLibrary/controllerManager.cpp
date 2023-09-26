@@ -1072,6 +1072,21 @@ private:
 		return false;
 	}
 
+	virtual la::avdecc::entity::model::StreamFormat chooseBestStreamFormat(la::avdecc::entity::model::StreamFormats const& availableFormats, la::avdecc::entity::model::StreamFormat const desiredStreamFormat, std::function<bool(bool const isDesiredClockSync, bool const isAvailableClockSync)> const& clockValidator) noexcept override
+	{
+		return la::avdecc::controller::Controller::chooseBestStreamFormat(availableFormats, desiredStreamFormat, clockValidator);
+	}
+
+	virtual bool isMediaClockStreamFormat(la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
+	{
+		return la::avdecc::controller::Controller::isMediaClockStreamFormat(streamFormat);
+	}
+
+	virtual std::optional<std::string> computeEntityModelChecksum(la::avdecc::controller::ControlledEntity const& controlledEntity, std::uint32_t const checksumVersion) noexcept override
+	{
+		return la::avdecc::controller::Controller::computeEntityModelChecksum(controlledEntity, checksumVersion);
+	}
+
 	virtual void setEnableAemCache(bool const enable) noexcept override
 	{
 		_enableAemCache = enable;

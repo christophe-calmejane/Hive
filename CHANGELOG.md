@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New diagnostics for CONTROL descriptors, when the current value is out of min-max bounds
 - [Support for Dark Mode](https://github.com/christophe-calmejane/Hive/issues/39)
 - Clicking on an Entity-Entity crosspoint in the matrix expands/collapses both entities
+- Display of Entity AEM Checksum (in Entity Descriptor)
 
 ### Changed
 - Complete rework of the `entities list`
