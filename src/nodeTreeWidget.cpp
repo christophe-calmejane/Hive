@@ -61,8 +61,35 @@
 #include <utility>
 #include <algorithm>
 #include <stdexcept>
+#include <memory>
 
 Q_DECLARE_METATYPE(la::avdecc::UniqueIdentifier)
+
+class ChangingTextItem final : public QObject
+{
+public:
+	ChangingTextItem(QTreeWidgetItem* const item) noexcept
+		: _item{ item }
+	{
+	}
+	virtual ~ChangingTextItem() noexcept override = default;
+
+	void setText(QString const& text)
+	{
+		_item->setText(1, text);
+	}
+
+	// Deleted compiler auto-generated methods
+	ChangingTextItem(ChangingTextItem const&) = delete;
+	ChangingTextItem(ChangingTextItem&&) = delete;
+	ChangingTextItem& operator=(ChangingTextItem const&) = delete;
+	ChangingTextItem& operator=(ChangingTextItem&&) = delete;
+
+private:
+	QTreeWidgetItem* _item{ nullptr };
+};
+Q_DECLARE_METATYPE(std::shared_ptr<ChangingTextItem>)
+
 
 class Label : public QWidget
 {
@@ -326,13 +353,12 @@ private:
 			}
 
 			{
-				auto* const subscribedLabel = new QTreeWidgetItem(dynamicItem);
-				subscribedLabel->setText(0, "Subcsribed to Unsol");
+				auto* const subscribedLabel = addChangingTextItem(dynamicItem, "Subcsribed to Unsol");
 				auto const updateSubscribedLabel = [this, subscribedLabel](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed)
 				{
 					if (entityID == _controlledEntityID)
 					{
-						subscribedLabel->setText(1, isSubscribed ? "Yes" : "No");
+						subscribedLabel->setText(isSubscribed ? "Yes" : "No");
 					}
 				};
 
@@ -340,7 +366,7 @@ private:
 				updateSubscribedLabel(_controlledEntityID, entity.isSubscribedToUnsolicitedNotifications());
 
 				// Listen for changes
-				connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, q, updateSubscribedLabel);
+				connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, subscribedLabel, updateSubscribedLabel);
 			}
 
 			auto* currentConfigurationItem = new QTreeWidgetItem(dynamicItem);
@@ -1054,13 +1080,12 @@ public:
 		// Acquire State
 		if (!controlledEntity->getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 		{
-			auto* const acquireLabel = new QTreeWidgetItem(accessItem);
-			acquireLabel->setText(0, "Acquire State");
+			auto* const acquireLabel = addChangingTextItem(accessItem, "Acquire State");
 			auto const updateAcquireLabel = [this, acquireLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity)
 			{
 				if (entityID == _controlledEntityID)
 				{
-					acquireLabel->setText(1, avdecc::helper::acquireStateToString(acquireState, owningEntity));
+					acquireLabel->setText(avdecc::helper::acquireStateToString(acquireState, owningEntity));
 				}
 			};
 
@@ -1068,18 +1093,17 @@ public:
 			updateAcquireLabel(_controlledEntityID, controlledEntity->getAcquireState(), controlledEntity->getOwningControllerID());
 
 			// Listen for changes
-			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::acquireStateChanged, q, updateAcquireLabel);
+			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::acquireStateChanged, acquireLabel, updateAcquireLabel);
 		}
 
 		// Lock State
 		{
-			auto* const lockLabel = new QTreeWidgetItem(accessItem);
-			lockLabel->setText(0, "Lock State");
+			auto* const lockLabel = addChangingTextItem(accessItem, "Lock State");
 			auto const updateLockLabel = [this, lockLabel](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity)
 			{
 				if (entityID == _controlledEntityID)
 				{
-					lockLabel->setText(1, avdecc::helper::lockStateToString(lockState, lockingEntity));
+					lockLabel->setText(avdecc::helper::lockStateToString(lockState, lockingEntity));
 				}
 			};
 
@@ -1180,6 +1204,16 @@ public:
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, std::move(itemName));
 		setFlagsItemText(item, flagsValue, flagsString);
+	}
+
+	/** A changing (readonly) text item */
+	ChangingTextItem* addChangingTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName)
+	{
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, std::move(itemName));
+		auto changingTextItem = std::make_shared<ChangingTextItem>(item);
+		item->setData(1, Qt::UserRole, QVariant::fromValue(changingTextItem));
+		return changingTextItem.get();
 	}
 
 	/** An editable text entry item */
