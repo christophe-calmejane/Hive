@@ -464,7 +464,7 @@ private:
 			if (!descriptorCounts.empty())
 			{
 				auto* unsupportedDescriptorsItem = new QTreeWidgetItem(descriptorItem);
-				unsupportedDescriptorsItem->setText(0, "Invalid descriptor hierarchy");
+				unsupportedDescriptorsItem->setText(0, "Invalid/unknown descriptors");
 				unsupportedDescriptorsItem->setToolTip(0, "Descriptor count that is not supposed to be declared as son of Configuration (or is unknown)");
 				for (auto const [descriptorType, count] : descriptorCounts)
 				{
@@ -476,7 +476,8 @@ private:
 					}
 					else
 					{
-						addTextItem(unsupportedDescriptorsItem, QString{ "%1" }.arg(avdecc::helper::descriptorTypeToString(descriptorType)), QString{ "%1" }.arg(count));
+						auto* const item = addTextItem(unsupportedDescriptorsItem, QString{ "%1" }.arg(avdecc::helper::descriptorTypeToString(descriptorType)), QString{ "%1" }.arg(count));
+						item->setToolTip(0, QString{ "Invalid: Not a son of Configuration" });
 					}
 				}
 			}
