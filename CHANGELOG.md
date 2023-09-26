@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Support for Dark Mode](https://github.com/christophe-calmejane/Hive/issues/39)
 - Clicking on an Entity-Entity crosspoint in the matrix expands/collapses both entities
 - Display of Entity AEM Checksum (in Entity Descriptor)
+- Detection of invalid *descriptor_counts* field in CONFIGURATION descriptor
 
 ### Changed
 - Complete rework of the `entities list`

@@ -420,17 +420,40 @@ private:
 			auto* descriptorItem = new QTreeWidgetItem(q);
 			descriptorItem->setText(0, "Static Info");
 
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::AudioUnit>(descriptorItem, node, node.audioUnits);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::StreamInput>(descriptorItem, node, node.streamInputs);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::StreamOutput>(descriptorItem, node, node.streamOutputs);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::JackInput>(descriptorItem, node, node.jackInputs);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::JackOutput>(descriptorItem, node, node.jackOutputs);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::AvbInterface>(descriptorItem, node, node.avbInterfaces);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::ClockSource>(descriptorItem, node, node.clockSources);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::MemoryObject>(descriptorItem, node, node.memoryObjects);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Locale>(descriptorItem, node, node.locales);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Control>(descriptorItem, node, node.controls);
-			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::ClockDomain>(descriptorItem, node, node.clockDomains);
+			auto descriptorCounts = node.staticModel.descriptorCounts; // Make a copy so we can modify it without impacting the model
+
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::AudioUnit>(descriptorItem, node, node.audioUnits, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::StreamInput>(descriptorItem, node, node.streamInputs, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::StreamOutput>(descriptorItem, node, node.streamOutputs, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::JackInput>(descriptorItem, node, node.jackInputs, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::JackOutput>(descriptorItem, node, node.jackOutputs, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::AvbInterface>(descriptorItem, node, node.avbInterfaces, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::ClockSource>(descriptorItem, node, node.clockSources, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::MemoryObject>(descriptorItem, node, node.memoryObjects, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Locale>(descriptorItem, node, node.locales, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Control>(descriptorItem, node, node.controls, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::ClockDomain>(descriptorItem, node, node.clockDomains, descriptorCounts);
+
+			// Display any descriptors that are not supposed to be there
+			if (!descriptorCounts.empty())
+			{
+				auto* unsupportedDescriptorsItem = new QTreeWidgetItem(descriptorItem);
+				unsupportedDescriptorsItem->setText(0, "Invalid descriptor hierarchy");
+				unsupportedDescriptorsItem->setToolTip(0, "Descriptor count that is not supposed to be declared as son of Configuration (or is unknown)");
+				for (auto const [descriptorType, count] : descriptorCounts)
+				{
+					auto const descriptorIntegralValue = la::avdecc::utils::to_integral(descriptorType);
+					if (descriptorIntegralValue > la::avdecc::utils::to_integral(la::avdecc::entity::model::DescriptorType::LAST_VALID_DESCRIPTOR))
+					{
+						auto* const item = addTextItem(unsupportedDescriptorsItem, QString{ "%1" }.arg(QString::fromStdString(la::avdecc::utils::toHexString<std::uint32_t, 6>(descriptorIntegralValue, true, true))), QString{ "%1" }.arg(count));
+						item->setToolTip(0, QString{ "Unknown descriptor type" });
+					}
+					else
+					{
+						addTextItem(unsupportedDescriptorsItem, QString{ "%1" }.arg(avdecc::helper::descriptorTypeToString(descriptorType)), QString{ "%1" }.arg(count));
+					}
+				}
+			}
 		}
 	}
 
@@ -1064,20 +1087,22 @@ public:
 			updateLockLabel(_controlledEntityID, controlledEntity->getLockState(), controlledEntity->getLockingControllerID());
 
 			// Listen for changes
-			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::lockStateChanged, q, updateLockLabel);
+			connect(&controllerManager, &hive::modelsLibrary::ControllerManager::lockStateChanged, lockLabel, updateLockLabel);
 		}
 
 		return accessItem;
 	}
 
 	template<la::avdecc::entity::model::DescriptorType DescriptorType, typename DescriptorCountType>
-	void addEnumeratedDescriptorType(QTreeWidgetItem* const descriptorItem, la::avdecc::controller::model::ConfigurationNode const& node, DescriptorCountType const& counts)
+	void addEnumeratedDescriptorType(QTreeWidgetItem* const descriptorItem, la::avdecc::controller::model::ConfigurationNode const& node, DescriptorCountType const& counts, la::avdecc::entity::model::DescriptorCounts& descriptorCounts)
 	{
 		auto const& model = node.staticModel;
 		auto descriptorCount = 0u;
 		try
 		{
 			descriptorCount = model.descriptorCounts.at(DescriptorType);
+			// Remove this descriptor type from the list of descriptor counts
+			descriptorCounts.erase(DescriptorType);
 		}
 		catch (std::out_of_range const&)
 		{
