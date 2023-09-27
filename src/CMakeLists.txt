@@ -290,6 +290,20 @@ if(BUILD_HIVE_APPLICATION)
 		fixup_sparkleHelper_resources(${PROJECT_NAME}) # Temporary fix to resolve SparkleHelper resources
 	endif()
 
+	# Fix for missing openSSL files on Windows
+	if(WIN32)
+		add_custom_command(
+			TARGET ${PROJECT_NAME}
+			POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${HIVE_RESOURCES_FOLDER}/win32/libcrypto-1_1.dll" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/libcrypto-1_1.dll"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${HIVE_RESOURCES_FOLDER}/win32/libssl-1_1.dll" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/libssl-1_1.dll"
+			VERBATIM
+		)
+
+		install(FILES ${HIVE_RESOURCES_FOLDER}/win32/libcrypto-1_1.dll DESTINATION bin)
+		install(FILES ${HIVE_RESOURCES_FOLDER}/win32/libssl-1_1.dll DESTINATION bin)
+	endif()
+
 	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
 	cu_setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
 endif()
