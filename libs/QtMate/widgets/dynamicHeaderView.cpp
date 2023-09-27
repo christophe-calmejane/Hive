@@ -33,21 +33,14 @@ DynamicHeaderView::DynamicHeaderView(Qt::Orientation orientation, QWidget* paren
 	connect(this, &QHeaderView::sectionResized, this, &DynamicHeaderView::sectionChanged);
 }
 
-int DynamicHeaderView::mandatorySection() const
+void DynamicHeaderView::setMandatorySection(int const mandatorySection)
 {
-	return _mandatorySection;
-}
-
-void DynamicHeaderView::setMandatorySection(int mandatorySection)
-{
-	_mandatorySection = mandatorySection;
+	_mandatorySections.insert(mandatorySection);
 }
 
 void DynamicHeaderView::customContextMenuRequested(QPoint const& pos)
 {
 	QMenu menu;
-
-	auto const mandatorySection = qMax(0, qMin(_mandatorySection, count()));
 
 	for (auto section = 0; section < count(); ++section)
 	{
@@ -56,7 +49,8 @@ void DynamicHeaderView::customContextMenuRequested(QPoint const& pos)
 		auto* action = menu.addAction(text);
 		action->setData(section);
 		action->setCheckable(true);
-		action->setEnabled(section != mandatorySection);
+		auto const isEnabled = _mandatorySections.count(section) == 0;
+		action->setEnabled(isEnabled);
 		action->setChecked(!isSectionHidden(section));
 	}
 	menu.addSeparator();

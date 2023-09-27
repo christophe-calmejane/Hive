@@ -37,21 +37,24 @@ public:
 	enum class EntityDataFlag : std::uint32_t
 	{
 		All = 0u,
-		EntityLogo = 1u << 0,
-		Compatibility = 1u << 1,
-		EntityID = 1u << 2,
-		Name = 1u << 3,
-		Group = 1u << 4,
-		AcquireState = 1u << 5,
-		LockState = 1u << 6,
-		GrandmasterID = 1u << 7,
-		GPTPDomain = 1u << 8,
-		InterfaceIndex = 1u << 9,
-		AssociationID = 1u << 10,
-		EntityModelID = 1u << 11,
-		FirmwareVersion = 1u << 12,
-		MediaClockReferenceID = 1u << 13,
-		MediaClockReferenceStatus = 1u << 14,
+		EntityStatus = 1u << 0,
+		EntityLogo = 1u << 1,
+		Compatibility = 1u << 2,
+		EntityID = 1u << 3,
+		Name = 1u << 4,
+		Group = 1u << 5,
+		AcquireState = 1u << 6,
+		LockState = 1u << 7,
+		GrandmasterID = 1u << 8,
+		GPTPDomain = 1u << 9,
+		InterfaceIndex = 1u << 10,
+		MacAddress = 1u << 11,
+		AssociationID = 1u << 12,
+		EntityModelID = 1u << 13,
+		FirmwareVersion = 1u << 14,
+		MediaClockReferenceID = 1u << 15,
+		MediaClockReferenceName = 1u << 16,
+		ClockDomainLockState = 1u << 17,
 	};
 	/** List of columns to be displayed */
 	using EntityDataFlags = la::avdecc::utils::EnumBitfield<EntityDataFlag>;
@@ -60,6 +63,7 @@ public:
 
 	// Data getter
 	std::optional<std::reference_wrapper<hive::modelsLibrary::DiscoveredEntitiesModel::Entity const>> entity(int const row) const noexcept;
+	QModelIndex indexOf(la::avdecc::UniqueIdentifier const& entityID) const noexcept;
 
 private:
 	// hive::modelsLibrary::DiscoveredEntitiesAbstractTableModel overrides

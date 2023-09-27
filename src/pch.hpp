@@ -19,94 +19,53 @@
 
 #pragma once
 
-// Private Headers
-#include "aboutDialog.hpp"
-#include "activeNetworkInterfacesModel.hpp"
-#include "aecpCommandComboBox.hpp"
-#include "aecpCommandTextEntry.hpp"
-#include "controlledEntityTreeWidget.hpp"
-#include "defaults.hpp"
-#include "deviceDetailsChannelTableModel.hpp"
-#include "deviceDetailsDialog.hpp"
-#include "entityInspector.hpp"
-#include "firmwareUploadDialog.hpp"
-#include "loggerView.hpp"
-#include "mainWindow.hpp"
-#include "mappingMatrix.hpp"
-#include "multiFirmwareUpdateDialog.hpp"
-#include "networkInterfaceTypeModel.hpp"
-#include "nodeTreeWidget.hpp"
-#include "nodeVisitor.hpp"
-#include "settingsDialog.hpp"
-#include "windowsNpfHelper.hpp"
-#include "avdecc/channelConnectionManager.hpp"
-#include "avdecc/commandChain.hpp"
-#include "avdecc/controllerModel.hpp"
-#include "avdecc/helper.hpp"
-#include "avdecc/hiveLogItems.hpp"
-#include "avdecc/loggerModel.hpp"
-#include "avdecc/mappingsHelper.hpp"
-#include "avdecc/mcDomainManager.hpp"
-#include "avdecc/stringValidator.hpp"
-#include "connectionMatrix/cornerWidget.hpp"
-#include "connectionMatrix/headerView.hpp"
-#include "connectionMatrix/itemDelegate.hpp"
-#include "connectionMatrix/legendDialog.hpp"
-#include "connectionMatrix/model.hpp"
-#include "connectionMatrix/node.hpp"
-#include "connectionMatrix/paintHelper.hpp"
-#include "connectionMatrix/view.hpp"
-#include "counters/avbInterfaceCountersTreeWidgetItem.hpp"
-#include "counters/clockDomainCountersTreeWidgetItem.hpp"
-#include "counters/entityCountersTreeWidgetItem.hpp"
-#include "counters/streamInputCountersTreeWidgetItem.hpp"
-#include "counters/streamOutputCountersTreeWidgetItem.hpp"
-#include "mediaClock/domainTreeDomainNameDelegate.hpp"
-#include "mediaClock/domainTreeEntityNameDelegate.hpp"
-#include "mediaClock/domainTreeModel.hpp"
-#include "mediaClock/mediaClockManagementDialog.hpp"
-#include "mediaClock/unassignedListModel.hpp"
-#include "nodeTreeDynamicWidgets/asPathWidget.hpp"
-#include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
-#include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
-#include "nodeTreeDynamicWidgets/memoryObjectDynamicTreeWidgetItem.hpp"
-#include "nodeTreeDynamicWidgets/streamDynamicTreeWidgetItem.hpp"
-#include "nodeTreeDynamicWidgets/streamPortDynamicTreeWidgetItem.hpp"
-#include "profiles/profileSelectionDialog.hpp"
-#include "profiles/profiles.hpp"
-#include "settingsManager/settings.hpp"
 #ifdef USE_SPARKLE
 #	include "sparkleHelper/sparkleHelper.hpp"
 #endif // USE_SPARKLE
-#include "statistics/entityStatisticsTreeWidgetItem.hpp"
 
 // QtMate Library
-#include <QtMate/graph/inputSocket.hpp>
-#include <QtMate/graph/node.hpp>
-#include <QtMate/graph/outputSocket.hpp>
-#include <QtMate/graph/view.hpp>
+#include <QtMate/flow/flowConnection.hpp>
+#include <QtMate/flow/flowDefs.hpp>
+#include <QtMate/flow/flowInput.hpp>
+#include <QtMate/flow/flowLink.hpp>
+#include <QtMate/flow/flowNode.hpp>
+#include <QtMate/flow/flowOutput.hpp>
+#include <QtMate/flow/flowScene.hpp>
+#include <QtMate/flow/flowSceneDelegate.hpp>
+#include <QtMate/flow/flowSocket.hpp>
+#include <QtMate/flow/flowStyle.hpp>
+#include <QtMate/flow/flowView.hpp>
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
 #include <QtMate/material/helper.hpp>
+#include <QtMate/widgets/autoSizeLabel.hpp>
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/dynamicHeaderView.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
+#include <QtMate/widgets/headerViewSortSectionFilter.hpp>
+#include <QtMate/widgets/tableView.hpp>
 #include <QtMate/widgets/textEntry.hpp>
 #include <QtMate/widgets/tickableMenu.hpp>
 
 // Models Library
-#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/commandsExecutor.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
-#include <hive/modelsLibrary/networkInterfacesModel.hpp>
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/modelsLibrary.hpp>
+#include <hive/modelsLibrary/networkInterfacesModel.hpp>
 
 // Widget Models Library
+#include <hive/widgetModelsLibrary/discoveredEntitiesTableItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
 #include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/networkInterfacesListItemDelegate.hpp>
 #include <hive/widgetModelsLibrary/networkInterfacesListModel.hpp>
 #include <hive/widgetModelsLibrary/painterHelper.hpp>
-
+#include <hive/widgetModelsLibrary/qtUserRoles.hpp>
+#include <hive/widgetModelsLibrary/widgetModelsLibrary.hpp>
 
 // Other Headers
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>

@@ -29,6 +29,7 @@
 #include <QSettings>
 #include <QLabel>
 #include <QStringView>
+#include <QGuiApplication>
 
 #ifdef DEBUG
 #	include <QFileInfo>
@@ -38,7 +39,6 @@
 #include "avdecc/helper.hpp"
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/channelConnectionManager.hpp"
-#include "avdecc/controllerModel.hpp"
 #include "avdecc/mcDomainManager.hpp"
 #include "mediaClock/mediaClockManagementDialog.hpp"
 #include "newsFeed/newsFeed.hpp"
@@ -55,7 +55,7 @@
 #include "defaults.hpp"
 #include "windowsNpfHelper.hpp"
 #include "visibilitySettings.hpp"
-#include "listViewSelectionToMatrixModelController.hpp"
+#include "listViewMatrixViewController.hpp"
 
 #include <QtMate/widgets/comboBox.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
@@ -70,8 +70,7 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/modelsLibrary/networkInterfacesModel.hpp>
 #include <hive/widgetModelsLibrary/entityLogoCache.hpp>
-#include <hive/widgetModelsLibrary/errorItemDelegate.hpp>
-#include <hive/widgetModelsLibrary/imageItemDelegate.hpp>
+#include <hive/widgetModelsLibrary/networkInterfacesListItemDelegate.hpp>
 
 #include <mutex>
 #include <memory>
@@ -93,13 +92,14 @@ extern "C"
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
 
-class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer
+class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer, public QAbstractNativeEventFilter
 {
 	Q_OBJECT
 public:
-	MainWindowImpl(bool const mustResetViewSettings, ::MainWindow* parent)
+	MainWindowImpl(bool const mustResetViewSettings, QStringList const& filesToLoad, ::MainWindow* parent)
 		: _parent(parent)
 		, _mustResetViewSettings{ mustResetViewSettings }
+		, _filesToLoad{ filesToLoad }
 	{
 		// Setup entity model
 		setupEntityModel();
@@ -112,7 +112,20 @@ public:
 
 		// Setup the current profile
 		setupProfile();
+
+#if defined(Q_OS_WIN32)
+		qApp->installNativeEventFilter(this);
+#endif // Q_OS_WIN32
+#if defined(Q_OS_MACOS)
+		qApp->installEventFilter(this);
+#endif // Q_OS_MACOS
+
+		// Force creation of the MC Domain Manager here, since it was removed from the ControllerModel (it registers to the ControllerManager events so we need to create it before entities are discovered)
+		// (Will be completely removed in the future)
+		avdecc::mediaClock::MCDomainManager::getInstance();
 	}
+
+	void loadFile(QString const& fileName, bool const silent);
 
 	// Deleted compiler auto-generated methods
 	MainWindowImpl(MainWindowImpl const&) = delete;
@@ -139,7 +152,8 @@ public:
 	void showChangeLog(QString const title, QString const versionString);
 	void showNewsFeed(QString const& news);
 	void updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename);
-
+	virtual bool nativeEventFilter(QByteArray const& eventType, void* message, qintptr*) override;
+	virtual bool eventFilter(QObject* watched, QEvent* event) override;
 	// settings::SettingsManager::Observer overrides
 	virtual void onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept override;
 
@@ -148,6 +162,7 @@ public:
 	qtMate::widgets::ComboBox _interfaceComboBox{ _parent };
 	ActiveNetworkInterfacesModel _activeNetworkInterfacesModel{ _parent };
 	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
+	hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate _networkInterfaceModelItemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	qtMate::widgets::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
 	qtMate::widgets::FlatIconButton _discoverButton{ "Hive", "radar", _parent };
 	qtMate::widgets::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
@@ -160,9 +175,10 @@ public:
 	la::avdecc::entity::model::EntityTree _entityModel{};
 	SettingsSignaler _settingsSignaler{};
 	bool _mustResetViewSettings{ false };
+	QStringList _filesToLoad{};
 	bool _usingBetaAppcast{ false };
 	bool _usingBackupAppcast{ false };
-	std::unique_ptr<ListViewSelectionToMatrixModelController> _listViewSelectionToMatrixModelController{ nullptr }; // Remove smartpointer once in use in the upcoming layout classes
+	std::unique_ptr<ListViewMatrixViewController> _listViewMatrixViewController{ nullptr }; // Remove smartpointer once in use in the upcoming layout classes
 };
 
 void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
@@ -174,11 +190,11 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 	createToolbars();
 
 	// Setup the ControllerView widget
-	discoveredEntitiesView->setupView(defaults);
+	discoveredEntitiesView->setupView(defaults, _mustResetViewSettings);
 
-	// Create ListViewSelectionToMatrixModelController
+	// Create ListViewMatrixViewController
 	// Initialization to be moved to NSDM when layout classes are introduced
-	_listViewSelectionToMatrixModelController = std::make_unique<ListViewSelectionToMatrixModelController>(discoveredEntitiesView->entitiesTableView(), static_cast<connectionMatrix::Model*>(routingTableView->model()), this);
+	_listViewMatrixViewController = std::make_unique<ListViewMatrixViewController>(discoveredEntitiesView->entitiesTableView(), routingTableView, this);
 
 	controllerToolBar->setVisible(defaults.mainWindow_ControllerToolbar_Visible);
 	utilitiesToolBar->setVisible(defaults.mainWindow_UtilitiesToolbar_Visible);
@@ -204,17 +220,17 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 
 void MainWindowImpl::setupMatrixProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, false, false, false, true, true, true });
 }
 
 void MainWindowImpl::setupStandardProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, false, false, false, false, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, true, false, false, false, false, false, true, false, true, true });
 }
 
 void MainWindowImpl::setupDeveloperProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{});
+	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, true, true, true, true, true, true, false });
 }
 
 void MainWindowImpl::setupProfile()
@@ -239,6 +255,175 @@ void MainWindowImpl::setupProfile()
 		case profiles::ProfileType::Matrix:
 			setupMatrixProfile();
 			break;
+	}
+}
+
+void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
+{
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	auto const getErrorString = [](auto const error, auto const& message)
+	{
+		auto msg = QString{};
+		if (!!error)
+		{
+			switch (error)
+			{
+				case la::avdecc::jsonSerializer::DeserializationError::AccessDenied:
+					msg = "Access Denied";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::FileReadError:
+					msg = "Error Reading File";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
+					msg = "Unsupported Dump Version";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::ParseError:
+					msg = QString("Parse Error: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::MissingKey:
+					msg = QString("Missing Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidKey:
+					msg = QString("Invalid Key: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InvalidValue:
+					msg = QString("Invalid Value: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::OtherError:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::DuplicateEntityID:
+					msg = QString("An Entity already exists with the same EntityID: %1").arg(message.c_str());
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotCompliant:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::Incomplete:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
+					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::InternalError:
+					msg = QString("Internal Error: %1").arg(message.c_str());
+					break;
+				default:
+					AVDECC_ASSERT(false, "Unknown Error");
+					msg = "Unknown Error";
+					break;
+			}
+		}
+		return msg;
+	};
+
+	auto const loadEntity = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
+	};
+
+	auto const loadNetworkState = [&manager, &getErrorString](auto const& filePath, auto const flags)
+	{
+		auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(filePath, flags);
+		return std::make_tuple(error, getErrorString(error, message));
+	};
+
+	auto const fi = QFileInfo{ fileName };
+	auto const ext = fi.suffix();
+
+	// AVDECC Virtual Entity
+	if (ext == "ave")
+	{
+		auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
+		flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+		auto [error, message] = loadEntity(fileName, flags);
+		if (!!error)
+		{
+			if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+			{
+				auto choice = QMessageBox::StandardButton::Yes;
+				if (silent)
+				{
+					LOG_HIVE_WARN(QString("[%1] Entity model is not fully IEEE1722.1 compliant").arg(fileName));
+				}
+				else
+				{
+					choice = static_cast<QMessageBox::StandardButton>(QMessageBox::question(_parent, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No));
+				}
+				if (choice == QMessageBox::StandardButton::Yes)
+				{
+					flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+					auto const result = loadEntity(fileName, flags);
+					error = std::get<0>(result);
+					message = std::get<1>(result);
+					// Fallthrough to warning message
+				}
+			}
+			if (!!error)
+			{
+				if (silent)
+				{
+					LOG_HIVE_WARN(QString("[%1] Error loading file: %2").arg(fileName).arg(message));
+				}
+				else
+				{
+					QMessageBox::warning(_parent, "Failed to load Entity", QString("Error loading JSON file '%1':\n%2").arg(fileName).arg(message));
+				}
+			}
+		}
+	}
+
+	// AVDECC Network State
+	else if (ext == "ans")
+	{
+		auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
+		flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+		auto [error, message] = loadNetworkState(fileName, flags);
+		if (!!error)
+		{
+			if (silent)
+			{
+				LOG_HIVE_WARN(QString("[%1] Error loading file: %2").arg(fileName).arg(message));
+			}
+			else
+			{
+				QMessageBox::warning(_parent, "Failed to load Network State", QString("Error loading JSON file '%1':\n%2").arg(fileName).arg(message));
+			}
+		}
+	}
+
+	// Any kind of file, we have to autodetect
+	else if (ext == "json")
+	{
+		auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
+		// Start with AVE file type
+		auto [error, message] = loadEntity(fileName, flags);
+		if (!!error)
+		{
+			if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+			{
+				auto choice = QMessageBox::StandardButton::Yes;
+				if (silent)
+				{
+					LOG_HIVE_WARN(QString("[%1] Entity model is not fully IEEE1722.1 compliant").arg(fileName));
+				}
+				else
+				{
+					choice = static_cast<QMessageBox::StandardButton>(QMessageBox::question(_parent, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No));
+				}
+				if (choice == QMessageBox::StandardButton::Yes)
+				{
+					flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+					loadEntity(fileName, flags);
+				}
+			}
+			else
+			{
+				// Then try ANS file type
+				loadNetworkState(fileName, flags);
+			}
+		}
 	}
 }
 
@@ -290,6 +475,14 @@ void MainWindowImpl::currentControllerChanged()
 		{
 			manager.enableEntityAdvertising(*_advertisingDuration);
 		}
+
+		// Load virtual entities
+		for (auto const& f : _filesToLoad)
+		{
+			loadFile(f, true);
+		}
+		// Clear the list
+		_filesToLoad.clear();
 	}
 	catch (la::avdecc::controller::Controller::Exception const& e)
 	{
@@ -355,10 +548,11 @@ void MainWindowImpl::createToolbars()
 		_interfaceComboBox.setMinimumWidth(100);
 		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
 
-		// The combobox takes ownership of the item delegate
-		auto* interfaceComboBoxItemDelegate = new hive::widgetModelsLibrary::ErrorItemDelegate{ true, qtMate::material::color::Palette::name(settings->getValue(settings::General_ThemeColorIndex.name).toInt()) };
-		_interfaceComboBox.setItemDelegate(interfaceComboBoxItemDelegate);
-		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, interfaceComboBoxItemDelegate, &hive::widgetModelsLibrary::ErrorItemDelegate::setThemeColorName);
+		// Set delegate for the entire table
+		_interfaceComboBox.setItemDelegate(&_networkInterfaceModelItemDelegate);
+
+		// Connect the item delegates with theme color changes
+		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_networkInterfaceModelItemDelegate, &hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate::setThemeColorName);
 
 		auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
 		controllerEntityIDLabel->setMinimumWidth(50);
@@ -669,7 +863,14 @@ void MainWindowImpl::connectSignals()
 				}
 				else
 				{
-					QMessageBox::warning(_parent, "", QString("Export failed:\n%1").arg(message.c_str()));
+					if (error == la::avdecc::jsonSerializer::SerializationError::Incomplete)
+					{
+						QMessageBox::warning(_parent, "", QString("Export partially completed (some entities are missing):\n%1").arg(message.c_str()));
+					}
+					else
+					{
+						QMessageBox::warning(_parent, "", QString("Export failed:\n%1").arg(message.c_str()));
+					}
 				}
 			}
 		});
@@ -834,6 +1035,16 @@ void MainWindowImpl::connectSignals()
 				});
 		});
 #endif // USE_SPARKLE
+
+	// Color Scheme changed
+	connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this,
+		[this](Qt::ColorScheme scheme)
+		{
+			auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			auto const themeColorIndex = settings->getValue(settings::General_ThemeColorIndex.name).toInt();
+			auto const colorName = qtMate::material::color::Palette::name(themeColorIndex);
+			updateStyleSheet(colorName, ":/style.qss");
+		});
 }
 
 void MainWindowImpl::showChangeLog(QString const title, QString const versionString)
@@ -1059,150 +1270,72 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 
 void MainWindow::dropEvent(QDropEvent* event)
 {
-	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-
-	auto const getErrorString = [](auto const error, auto const& message)
-	{
-		auto msg = QString{};
-		if (!!error)
-		{
-			switch (error)
-			{
-				case la::avdecc::jsonSerializer::DeserializationError::AccessDenied:
-					msg = "Access Denied";
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::FileReadError:
-					msg = "Error Reading File";
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
-					msg = "Unsupported Dump Version";
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::ParseError:
-					msg = QString("Parse Error: %1").arg(message.c_str());
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::MissingKey:
-					msg = QString("Missing Key: %1").arg(message.c_str());
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::InvalidKey:
-					msg = QString("Invalid Key: %1").arg(message.c_str());
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::InvalidValue:
-					msg = QString("Invalid Value: %1").arg(message.c_str());
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::OtherError:
-					msg = message.c_str();
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::DuplicateEntityID:
-					msg = QString("An Entity already exists with the same EntityID: %1").arg(message.c_str());
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::NotCompliant:
-					msg = message.c_str();
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::Incomplete:
-					msg = message.c_str();
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
-					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
-					break;
-				case la::avdecc::jsonSerializer::DeserializationError::InternalError:
-					msg = QString("Internal Error: %1").arg(message.c_str());
-					break;
-				default:
-					AVDECC_ASSERT(false, "Unknown Error");
-					msg = "Unknown Error";
-					break;
-			}
-		}
-		return msg;
-	};
-
-	auto const loadEntity = [&manager, &getErrorString](auto const& filePath, auto const flags)
-	{
-		auto const [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
-		return std::make_tuple(error, getErrorString(error, message));
-	};
-
-	auto const loadNetworkState = [&manager, &getErrorString](auto const& filePath, auto const flags)
-	{
-		auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(filePath, flags);
-		return std::make_tuple(error, getErrorString(error, message));
-	};
-
 	for (auto const& u : event->mimeData()->urls())
 	{
 		auto const f = u.toLocalFile();
-		auto const fi = QFileInfo{ f };
-		auto const ext = fi.suffix();
-
-		// AVDECC Virtual Entity
-		if (ext == "ave")
-		{
-			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
-			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
-			auto [error, message] = loadEntity(f, flags);
-			if (!!error)
-			{
-				if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
-				{
-					auto const choice = QMessageBox::question(this, "", "Entity model is not fully IEEE1722.1 compliant.\n\nDo you want to import anyway?", QMessageBox::StandardButton::Yes, QMessageBox::StandardButton::No);
-					if (choice == QMessageBox::StandardButton::Yes)
-					{
-						flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-						auto const result = loadEntity(f, flags);
-						error = std::get<0>(result);
-						message = std::get<1>(result);
-						// Fallthrough to warning message
-					}
-				}
-				if (!!error)
-				{
-					QMessageBox::warning(this, "Failed to load Entity", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
-				}
-			}
-		}
-
-		// AVDECC Network State
-		else if (ext == "ans")
-		{
-			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
-			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
-			auto [error, message] = loadNetworkState(f, flags);
-			if (!!error)
-			{
-				QMessageBox::warning(this, "Failed to load Network State", QString("Error loading JSON file '%1':\n%2").arg(f).arg(message));
-			}
-		}
-
-		// Any kind of file, we have to autodetect
-		else if (ext == "json")
-		{
-			auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
-			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-			// Start with AVE file type
-			auto [error, message] = loadEntity(f, flags);
-			if (!!error)
-			{
-				// Then try ANS file type
-				loadNetworkState(f, flags);
-			}
-		}
+		_pImpl->loadFile(f, false);
 	}
 }
 
 void MainWindowImpl::updateStyleSheet(qtMate::material::color::Name const colorName, QString const& filename)
 {
-	auto const baseBackgroundColor = qtMate::material::color::value(colorName);
-	auto const baseForegroundColor = QColor{ qtMate::material::color::luminance(colorName) == qtMate::material::color::Luminance::Dark ? Qt::white : Qt::black };
-	auto const connectionMatrixBackgroundColor = qtMate::material::color::value(colorName, qtMate::material::color::Shade::Shade100);
+	auto const themeBackgroundColor = qtMate::material::color::value(colorName);
+	auto const themeForegroundTextColor = qtMate::material::color::foregroundValue(colorName);
+	auto const connectionMatrixHighlightColor = qtMate::material::color::value(colorName, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade900 : qtMate::material::color::Shade::Shade100);
+	auto const flatButtonColor = qtMate::material::color::value(qtMate::material::color::Name::Gray, qtMate::material::color::isDarkColorScheme() ? qtMate::material::color::Shade::Shade300 : qtMate::material::color::Shade::Shade800);
+	auto const complementaryColor = qtMate::material::color::complementaryValue(colorName);
+	// TODO: Add error color, selected-error color, success color, selected-success color (ie. green)
+	// We need those colors for ListenerStreamConnectionWidget
 
 	// Load and apply the stylesheet
 	auto styleFile = QFile{ filename };
 	if (styleFile.open(QFile::ReadOnly))
 	{
-		auto const styleSheet = QString{ styleFile.readAll() }.arg(baseBackgroundColor.name()).arg(baseForegroundColor.name()).arg(connectionMatrixBackgroundColor.name());
+		auto const styleSheet = QString{ styleFile.readAll() }.arg(themeBackgroundColor.name()).arg(themeForegroundTextColor.name()).arg(connectionMatrixHighlightColor.name()).arg(flatButtonColor.name()).arg(complementaryColor.name());
 
 		qApp->setStyleSheet(styleSheet);
 	}
+}
+
+bool MainWindowImpl::nativeEventFilter(QByteArray const& eventType, void* message, qintptr*)
+{
+#if defined(Q_OS_WIN32)
+	if (eventType == "windows_generic_MSG")
+	{
+		auto const* const msg = static_cast<MSG const*>(message);
+
+		// Check if we received a WM_COPYDATA
+		if (msg->message == WM_COPYDATA)
+		{
+			auto const cds = *reinterpret_cast<COPYDATASTRUCT const*>(msg->lParam);
+			switch (static_cast<::MainWindow::MessageType>(cds.dwData))
+			{
+				case ::MainWindow::MessageType::LoadFileMessage:
+				{
+					auto const filename = QString::fromUtf8(static_cast<char const*>(cds.lpData), static_cast<int>(cds.cbData));
+					loadFile(filename, false);
+					SetForegroundWindow(msg->hwnd);
+					break;
+				}
+				default:
+					break;
+			}
+			return true;
+		}
+	}
+#endif // Q_OS_WIN32
+	return false;
+}
+
+bool MainWindowImpl::eventFilter(QObject* watched, QEvent* event)
+{
+	if (event->type() == QEvent::FileOpen)
+	{
+		auto const* const fileEvent = static_cast<QFileOpenEvent const*>(event);
+		loadFile(fileEvent->file(), false);
+		return true;
+	}
+	return false;
 }
 
 void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& name, QVariant const& value) noexcept
@@ -1290,9 +1423,9 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 #endif // USE_SPARKLE
 }
 
-MainWindow::MainWindow(bool const mustResetViewSettings, QWidget* parent)
+MainWindow::MainWindow(bool const mustResetViewSettings, QStringList const& filesToLoad, QWidget* parent)
 	: QMainWindow(parent)
-	, _pImpl(new MainWindowImpl(mustResetViewSettings, this))
+	, _pImpl(new MainWindowImpl(mustResetViewSettings, filesToLoad, this))
 {
 	// Set title
 	setWindowTitle(hive::internals::applicationLongName + " - Version " + QCoreApplication::applicationVersion());

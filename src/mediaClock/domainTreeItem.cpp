@@ -76,13 +76,10 @@ QList<QPair<std::optional<la::avdecc::entity::model::SamplingRate>, QString>> Do
 			auto configurationIndex = controlledEntity->getCurrentConfigurationNode().descriptorIndex;
 			try
 			{
-				auto* audioUnitStaticModel = controlledEntity->getAudioUnitNode(configurationIndex, 0).staticModel;
-				if (audioUnitStaticModel)
+				auto& audioUnitStaticModel = controlledEntity->getAudioUnitNode(configurationIndex, 0).staticModel;
+				for (const auto& sampleRate : audioUnitStaticModel.samplingRates)
 				{
-					for (const auto& sampleRate : audioUnitStaticModel->samplingRates)
-					{
-						domainSampleRates << qMakePair(sampleRate, QString::number(sampleRate / 1000) + " kHz");
-					}
+					domainSampleRates << qMakePair(sampleRate, QString::number(sampleRate / 1000) + " kHz");
 				}
 			}
 			catch (la::avdecc::controller::ControlledEntity::Exception const& ex)

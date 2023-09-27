@@ -35,6 +35,11 @@ QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 	return toHexQString(identifier.getValue(), true, true);
 }
 
+QString macAddressToString(la::networkInterface::MacAddress const& macAddress)
+{
+	return QString::fromStdString(la::networkInterface::NetworkInterfaceHelper::macAddressToString(macAddress));
+}
+
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
 {
 	return objectName(controlledEntity, node.descriptorIndex, node);
@@ -70,7 +75,7 @@ QString entityName(la::avdecc::controller::ControlledEntity const& controlledEnt
 
 		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
-			return controlledEntity.getEntityNode().dynamicModel->entityName.data();
+			return controlledEntity.getEntityNode().dynamicModel.entityName.data();
 		}
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -92,7 +97,23 @@ QString smartEntityName(la::avdecc::controller::ControlledEntity const& controll
 	name = entityName(controlledEntity);
 
 	if (name.isEmpty())
+	{
 		name = uniqueIdentifierToString(controlledEntity.getEntity().getEntityID());
+	}
+
+	return name;
+}
+
+QString smartEntityName(hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity) noexcept
+{
+	QString name;
+
+	name = entity.name;
+
+	if (name.isEmpty())
+	{
+		name = uniqueIdentifierToString(entity.entityID);
+	}
 
 	return name;
 }
@@ -105,7 +126,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 
 		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
-			return controlledEntity.getEntityNode().dynamicModel->groupName.data();
+			return controlledEntity.getEntityNode().dynamicModel.groupName.data();
 		}
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -125,7 +146,7 @@ QString outputStreamName(la::avdecc::controller::ControlledEntity const& control
 	try
 	{
 		auto const& entityNode = controlledEntity.getEntityNode();
-		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
 		return objectName(&controlledEntity, streamNode);
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -145,7 +166,7 @@ QString inputStreamName(la::avdecc::controller::ControlledEntity const& controll
 	try
 	{
 		auto const& entityNode = controlledEntity.getEntityNode();
-		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel->currentConfiguration, streamIndex);
+		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
 		return objectName(&controlledEntity, streamNode);
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)

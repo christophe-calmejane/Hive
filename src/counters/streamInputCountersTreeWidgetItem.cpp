@@ -19,6 +19,8 @@
 
 #include "streamInputCountersTreeWidgetItem.hpp"
 
+#include <QtMate/material/color.hpp>
+
 #include <map>
 #include <QMenu>
 
@@ -117,7 +119,7 @@ void StreamInputCountersTreeWidgetItem::updateCounters(la::avdecc::entity::model
 			auto* widget = it->second;
 			AVDECC_ASSERT(widget != nullptr, "If widget is found in the map, it should not be nullptr");
 
-			auto color = QColor{ _isConnected ? Qt::black : Qt::gray };
+			auto color = QColor{ _isConnected ? qtMate::material::color::foregroundColor() : qtMate::material::color::disabledForegroundColor() };
 			auto text = QString::number(value);
 
 			auto const errorCounterIt = _errorCounters.find(flag);

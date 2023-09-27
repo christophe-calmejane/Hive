@@ -10,8 +10,8 @@ cmake_minimum_required(VERSION 3.22)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.2.10.1)
-set(AEMDUMPER_VERSION 1.2.0.1)
+set(HIVE_VERSION 1.3.1.1)
+set(AEMDUMPER_VERSION 1.3.1.1)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -159,7 +159,7 @@ find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network REQUIRED)
 cu_setup_project_version_variables(${HIVE_VERSION})
 
 # Set minimum OSX/iOS version
-cu_setup_apple_minimum_versions(MACOS 10.13 IOS 11)
+cu_setup_apple_minimum_versions(MACOS 11 IOS 14)
 
 ############ Define some variables
 

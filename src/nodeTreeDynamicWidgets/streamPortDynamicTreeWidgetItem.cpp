@@ -35,12 +35,15 @@
 /* ************************************************************ */
 /* StreamPortDynamicTreeWidgetItem                              */
 /* ************************************************************ */
-StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const /*staticModel*/, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const /*dynamicModel*/, QTreeWidget* parent)
+StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamPortNodeStaticModel const* const /*staticModel*/, la::avdecc::entity::model::StreamPortNodeDynamicModel const* const /*dynamicModel*/, QTreeWidget* parent)
 	: QTreeWidgetItem(parent)
 	, _entityID(entityID)
+	, _audioUnitIndex(audioUnitIndex)
 	, _streamPortType(streamPortType)
 	, _streamPortIndex(streamPortIndex)
 {
+	AVDECC_ASSERT(audioUnitIndex != la::avdecc::entity::model::getInvalidDescriptorIndex(), "Invalid AudioUnitIndex");
+
 	// StreamPortInfo
 	{
 		// Create fields
@@ -82,7 +85,7 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 
 void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 {
-	avdecc::mappingsHelper::showMappingsEditor(this, _entityID, _streamPortType, _streamPortIndex, la::avdecc::entity::model::getInvalidDescriptorIndex());
+	avdecc::mappingsHelper::showMappingsEditor(this, _entityID, _audioUnitIndex, _streamPortType, _streamPortIndex, la::avdecc::entity::model::getInvalidDescriptorIndex());
 }
 
 void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
@@ -123,11 +126,27 @@ void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()
 
 						if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
 						{
-							avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, entity.getStreamPortInputNonRedundantAudioMappings(streamPortIndex));
+							// For virtual devices, also include redundant mappings
+							if (entity.isVirtual())
+							{
+								avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, entity.getStreamPortInputAudioMappings(streamPortIndex));
+							}
+							// No need for real devices as a Milan device must remove them automatically (we could always remove all mappings, but we want to keep short payloads if we can)
+							{
+								avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, entity.getStreamPortInputNonRedundantAudioMappings(streamPortIndex));
+							}
 						}
 						else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
 						{
-							avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, entity.getStreamPortOutputNonRedundantAudioMappings(streamPortIndex));
+							// For virtual devices, also include redundant mappings
+							if (entity.isVirtual())
+							{
+								avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, entity.getStreamPortOutputAudioMappings(streamPortIndex));
+							}
+							// No need for real devices as a Milan device must remove them automatically (we could always remove all mappings, but we want to keep short payloads if we can)
+							{
+								avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, entity.getStreamPortOutputNonRedundantAudioMappings(streamPortIndex));
+							}
 						}
 					}
 					catch (...)

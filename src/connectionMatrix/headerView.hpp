@@ -64,12 +64,21 @@ public:
 	// Collapse all child nodes of each entity
 	void collapseAll();
 
+	// Returns true if the node and all children at the specified index are expanded
+	bool isNodeAndChildrenExpanded(int logicalIndex) const;
+
+	// Expand the node and all children at the specified index
+	void expandNodeAndChildren(int logicalIndex);
+
+	// Collapse the node and all children at the specified index
+	void collapseNodeAndChildren(int logicalIndex);
+
 private:
 	void handleSectionClicked(int logicalIndex);
 	void handleSectionInserted(QModelIndex const& parent, int first, int last);
 	void handleSectionRemoved(QModelIndex const& parent, int first, int last);
 	void handleModelReset();
-	void handleEditMappingsClicked(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex);
+	void handleEditMappingsClicked(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamIndex const streamIndex);
 	void updateSectionVisibility(int const logicalIndex);
 	void applyFilterPattern();
 

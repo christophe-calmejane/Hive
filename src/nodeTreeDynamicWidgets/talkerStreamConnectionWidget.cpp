@@ -106,12 +106,12 @@ void TalkerStreamConnectionWidget::updateData()
 			auto const& entityNode = controlledEntity->getEntityNode();
 
 			// Check if entity is connected as well (or if we have a ghost connection)
-			auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel->currentConfiguration, _listenerConnection.streamIndex);
-			auto const* const dynamicModel = streamNode.dynamicModel;
+			auto const& streamNode = controlledEntity->getStreamInputNode(entityNode.dynamicModel.currentConfiguration, _listenerConnection.streamIndex);
+			auto const& dynamicModel = streamNode.dynamicModel;
 
-			if (dynamicModel->connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
+			if (dynamicModel.connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected)
 			{
-				if (dynamicModel->connectionInfo.talkerStream == _talkerConnection)
+				if (dynamicModel.connectionInfo.talkerStream == _talkerConnection)
 				{
 					isGhost = false;
 				}

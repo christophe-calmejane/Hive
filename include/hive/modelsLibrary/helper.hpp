@@ -21,6 +21,7 @@
 
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/controller/avdeccController.hpp>
+#include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 #include <QString>
 
 #include <sstream>
@@ -59,6 +60,7 @@ inline QString toHexQString(T const v, bool const zeroFilled = false, bool const
 QString toUpperCamelCase(std::string const& text) noexcept;
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
+QString macAddressToString(la::networkInterface::MacAddress const& macAddress);
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept;
@@ -66,23 +68,23 @@ QString configurationName(la::avdecc::controller::ControlledEntity const* const 
 template<class NodeType>
 QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, NodeType const& node) noexcept
 {
-	if (node.dynamicModel->objectName.empty())
+	if (node.dynamicModel.objectName.empty())
 	{
-		return localizedString(*controlledEntity, configurationIndex, node.staticModel->localizedDescription);
+		return localizedString(*controlledEntity, configurationIndex, node.staticModel.localizedDescription);
 	}
 
-	return node.dynamicModel->objectName.data();
+	return node.dynamicModel.objectName.data();
 }
 
 template<class NodeType>
 QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, NodeType const& node) noexcept
 {
-	if (node.dynamicModel->objectName.empty())
+	if (node.dynamicModel.objectName.empty())
 	{
-		return localizedString(*controlledEntity, node.staticModel->localizedDescription);
+		return localizedString(*controlledEntity, node.staticModel.localizedDescription);
 	}
 
-	return node.dynamicModel->objectName.data();
+	return node.dynamicModel.objectName.data();
 }
 
 bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
@@ -97,6 +99,7 @@ bool constexpr isFastConnectingToTalker(la::avdecc::entity::model::StreamIdentif
 
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString smartEntityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
+QString smartEntityName(hive::modelsLibrary::DiscoveredEntitiesModel::Entity const& entity) noexcept;
 QString groupName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept;
 QString outputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 QString inputStreamName(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;

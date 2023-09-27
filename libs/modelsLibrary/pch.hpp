@@ -19,13 +19,6 @@
 
 #pragma once
 
-// Public Headers
-#include "hive/modelsLibrary/controllerManager.hpp"
-#include "hive/modelsLibrary/discoveredEntitiesModel.hpp"
-#include "hive/modelsLibrary/helper.hpp"
-#include "hive/modelsLibrary/modelsLibrary.hpp"
-#include "hive/modelsLibrary/networkInterfacesModel.hpp"
-
 // Other Headers
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 #include <la/avdecc/avdecc.hpp>

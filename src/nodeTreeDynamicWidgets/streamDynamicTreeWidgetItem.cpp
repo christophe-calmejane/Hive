@@ -23,6 +23,7 @@
 #include "nodeTreeWidget.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>
+#include <QtMate/material/color.hpp>
 
 #include <QMenu>
 #include <QMessageBox>
@@ -30,8 +31,8 @@
 static inline void setNoValue(QTreeWidgetItem* const widget)
 {
 	widget->setText(1, "No Value");
-	widget->setForeground(0, QColor{ Qt::gray });
-	widget->setForeground(1, QColor{ Qt::gray });
+	widget->setForeground(0, qtMate::material::color::disabledForegroundColor());
+	widget->setForeground(1, qtMate::material::color::disabledForegroundColor());
 }
 
 StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const streamType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamNodeStaticModel const* const staticModel, la::avdecc::entity::model::StreamInputNodeDynamicModel const* const inputDynamicModel, la::avdecc::entity::model::StreamOutputNodeDynamicModel const* const outputDynamicModel, QTreeWidget* parent)
@@ -97,8 +98,8 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 			auto* const widget = new QTreeWidgetItem(this);
 			widget->setText(0, label);
 			widget->setText(1, "No Value");
-			widget->setForeground(0, QColor{ Qt::gray });
-			widget->setForeground(1, QColor{ Qt::gray });
+			widget->setForeground(0, QColor{ qtMate::material::color::disabledForegroundColor() });
+			widget->setForeground(1, QColor{ qtMate::material::color::disabledForegroundColor() });
 			return widget;
 		};
 
@@ -173,6 +174,12 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		}
 		_connectionStateWidget = new ListenerStreamConnectionWidget({ _entityID, _streamIndex }, inputDynamicModel->connectionInfo, parent);
 		parent->setItemWidget(_connectionState, 1, _connectionStateWidget);
+		connect(parent, &QTreeWidget::itemSelectionChanged, this,
+			[this, parent]()
+			{
+				// Update the selection state of the widget
+				_connectionStateWidget->selectionChanged(_connectionState->isSelected());
+			});
 	}
 
 	// StreamOutput dynamic info
@@ -202,15 +209,17 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 void StreamDynamicTreeWidgetItem::updateStreamFormat(la::avdecc::entity::model::StreamFormat const& streamFormat)
 {
-	_streamFormat->setForeground(0, QColor{ Qt::black });
-	_streamFormat->setForeground(1, QColor{ Qt::black });
+	auto const color = qtMate::material::color::foregroundColor();
+	_streamFormat->setForeground(0, color);
+	_streamFormat->setForeground(1, color);
 	_streamFormat->setText(1, hive::modelsLibrary::helper::toHexQString(streamFormat.getValue(), true, true));
 }
 
 void StreamDynamicTreeWidgetItem::updateStreamIsRunning(bool const isRunning)
 {
-	_streamWait->setForeground(0, QColor{ Qt::black });
-	_streamWait->setForeground(1, QColor{ Qt::black });
+	auto const color = qtMate::material::color::foregroundColor();
+	_streamWait->setForeground(0, color);
+	_streamWait->setForeground(1, color);
 	_streamWait->setText(1, isRunning ? "No" : "Yes");
 }
 
@@ -218,15 +227,17 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 {
 	auto const setBoolValue = [](auto* const widget, bool const value)
 	{
-		widget->setForeground(0, QColor{ Qt::black });
-		widget->setForeground(1, QColor{ Qt::black });
+		auto const color = qtMate::material::color::foregroundColor();
+		widget->setForeground(0, color);
+		widget->setForeground(1, color);
 		widget->setText(1, value ? "Yes" : "No");
 	};
 
 	auto const setStringValue = [](auto* const widget, QString const value)
 	{
-		widget->setForeground(0, QColor{ Qt::black });
-		widget->setForeground(1, QColor{ Qt::black });
+		auto const color = qtMate::material::color::foregroundColor();
+		widget->setForeground(0, color);
+		widget->setForeground(1, color);
 		widget->setText(1, value);
 	};
 
@@ -235,8 +246,9 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	setBoolValue(_doesSupportEncrypted, streamDynamicInfo.doesSupportEncrypted);
 	setBoolValue(_arePdusEncrypted, streamDynamicInfo.arePdusEncrypted);
 	setBoolValue(_hasTalkerFailed, streamDynamicInfo.hasTalkerFailed);
-	_streamFlags->setForeground(0, QColor{ Qt::black });
-	_streamFlags->setForeground(1, QColor{ Qt::black });
+	auto const color = qtMate::material::color::foregroundColor();
+	_streamFlags->setForeground(0, color);
+	_streamFlags->setForeground(1, color);
 	setFlagsItemText(_streamFlags, la::avdecc::utils::forceNumeric(streamDynamicInfo._streamInfoFlags.value()), avdecc::helper::flagsToString(streamDynamicInfo._streamInfoFlags));
 
 	if (streamDynamicInfo.streamID)
@@ -285,8 +297,8 @@ void StreamDynamicTreeWidgetItem::updateStreamDynamicInfo(la::avdecc::entity::mo
 	if (streamDynamicInfo.streamInfoFlagsEx)
 	{
 		auto const flagsEx = *streamDynamicInfo.streamInfoFlagsEx;
-		_streamFlagsEx->setForeground(0, QColor{ Qt::black });
-		_streamFlagsEx->setForeground(1, QColor{ Qt::black });
+		_streamFlagsEx->setForeground(0, qtMate::material::color::foregroundColor());
+		_streamFlagsEx->setForeground(1, qtMate::material::color::foregroundColor());
 		setFlagsItemText(_streamFlagsEx, la::avdecc::utils::forceNumeric(flagsEx.value()), avdecc::helper::flagsToString(flagsEx));
 	}
 	else

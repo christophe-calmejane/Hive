@@ -214,31 +214,28 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 						if (controlledEntity)
 						{
 							auto const& entityNode = controlledEntity->getEntityNode();
-							if (entityNode.dynamicModel)
+							auto const configurationIndex = entityNode.dynamicModel.currentConfiguration;
+
+							auto streamName = QString();
+
+							if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 							{
-								auto const configurationIndex = entityNode.dynamicModel->currentConfiguration;
+								auto const& streamOutput = controlledEntity->getStreamOutputNode(configurationIndex, streamFormatData.streamIndex);
+								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamOutput.staticModel.localizedDescription);
 
-								auto streamName = QString();
-
-								if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-								{
-									auto const& streamOutput = controlledEntity->getStreamOutputNode(configurationIndex, streamFormatData.streamIndex);
-									streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamOutput.staticModel->localizedDescription);
-
-									if (configurationIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration && !streamOutput.dynamicModel->objectName.empty())
-										streamName = streamOutput.dynamicModel->objectName.data();
-								}
-								else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
-								{
-									auto const& streamInput = controlledEntity->getStreamInputNode(configurationIndex, streamFormatData.streamIndex);
-									streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamInput.staticModel->localizedDescription);
-
-									if (configurationIndex == controlledEntity->getEntityNode().dynamicModel->currentConfiguration && !streamInput.dynamicModel->objectName.empty())
-										streamName = streamInput.dynamicModel->objectName.data();
-								}
-
-								return streamName;
+								if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !streamOutput.dynamicModel.objectName.empty())
+									streamName = streamOutput.dynamicModel.objectName.data();
 							}
+							else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
+							{
+								auto const& streamInput = controlledEntity->getStreamInputNode(configurationIndex, streamFormatData.streamIndex);
+								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamInput.staticModel.localizedDescription);
+
+								if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !streamInput.dynamicModel.objectName.empty())
+									streamName = streamInput.dynamicModel.objectName.data();
+							}
+
+							return streamName;
 						}
 					}
 					catch (...)
@@ -550,22 +547,19 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 	if (controlledEntity)
 	{
 		auto const& entityNode = controlledEntity->getEntityNode();
-		if (entityNode.dynamicModel)
-		{
-			auto const configurationIndex = entityNode.dynamicModel->currentConfiguration;
+		auto const configurationIndex = entityNode.dynamicModel.currentConfiguration;
 
-			if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
-			{
-				auto const& streamOutput = controlledEntity->getStreamOutputNode(configurationIndex, streamFormatData.streamIndex);
-				staticModel = streamOutput.staticModel;
-				dynamicModel = static_cast<decltype(dynamicModel)>(streamOutput.dynamicModel);
-			}
-			else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
-			{
-				auto const& streamInput = controlledEntity->getStreamInputNode(configurationIndex, streamFormatData.streamIndex);
-				staticModel = streamInput.staticModel;
-				dynamicModel = static_cast<decltype(dynamicModel)>(streamInput.dynamicModel);
-			}
+		if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+		{
+			auto const& streamOutput = controlledEntity->getStreamOutputNode(configurationIndex, streamFormatData.streamIndex);
+			staticModel = &streamOutput.staticModel;
+			dynamicModel = static_cast<decltype(dynamicModel)>(&streamOutput.dynamicModel);
+		}
+		else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			auto const& streamInput = controlledEntity->getStreamInputNode(configurationIndex, streamFormatData.streamIndex);
+			staticModel = &streamInput.staticModel;
+			dynamicModel = static_cast<decltype(dynamicModel)>(&streamInput.dynamicModel);
 		}
 	}
 

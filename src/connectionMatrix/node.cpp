@@ -225,9 +225,9 @@ OfflineOutputStreamNode::OfflineOutputStreamNode() noexcept
 /* ************************************************************ */
 /* EntityNode                                                   */
 /* ************************************************************ */
-EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept
+EntityNode* EntityNode::create(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol, bool const areUnsolSupported) noexcept
 {
-	return new EntityNode{ entityID, isMilan, isRegisteredUnsol };
+	return new EntityNode{ entityID, isMilan, isRegisteredUnsol, areUnsolSupported };
 }
 
 void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, AvbInterfaceIndexVisitor const& visitor) const noexcept
@@ -246,10 +246,11 @@ void EntityNode::accept(la::avdecc::entity::model::AvbInterfaceIndex const avbIn
 		});
 }
 
-EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol) noexcept
+EntityNode::EntityNode(la::avdecc::UniqueIdentifier const& entityID, bool const isMilan, bool const isRegisteredUnsol, bool const areUnsolSupported) noexcept
 	: Node{ Type::Entity, entityID, nullptr }
 	, _isMilan{ isMilan }
 	, _isRegisteredUnsol{ isRegisteredUnsol }
+	, _areUnsolSupported{ areUnsolSupported }
 {
 }
 
@@ -286,6 +287,11 @@ bool EntityNode::isMilan() const noexcept
 bool EntityNode::isRegisteredUnsol() const noexcept
 {
 	return _isRegisteredUnsol;
+}
+
+bool EntityNode::areUnsolSupported() const noexcept
+{
+	return _areUnsolSupported;
 }
 
 la::avdecc::entity::model::ClusterIndex EntityNode::getStreamPortInputClusterOffset(la::avdecc::entity::model::StreamPortIndex const streamPortIndex) const

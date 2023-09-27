@@ -36,12 +36,15 @@ class ListenerStreamConnectionWidget : public QWidget
 public:
 	ListenerStreamConnectionWidget(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info, QWidget* parent = nullptr);
 
+	void selectionChanged(bool const isSelected);
+
 private:
 	void updateData();
 
 	la::avdecc::entity::model::StreamIdentification _stream{};
 	la::avdecc::entity::model::StreamInputConnectionInfo _info{};
 
+	bool _isSelected{ false };
 	QHBoxLayout _layout{ this };
 	QLabel _streamConnectionLabel{ this };
 	QLabel _entityNameLabel{ this };

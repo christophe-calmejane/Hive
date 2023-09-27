@@ -7,14 +7,16 @@ volumes:
 services:
   # Base builder image
   builder:
-    image: builder:${TAG}
+    image: builder:${TAG}_Qt${QT_VERSION}
     build:
       context: .
       dockerfile: dockerHelper/builders/${TAG}/Dockerfile
+      args:
+        - QT_VERSION=${QT_VERSION}
 
   # CMake configure service
   gen_cmake:
-    image: builder:${TAG}
+    image: builder:${TAG}_Qt${QT_VERSION}
     volumes:
       - ../:/home/builder/sources:ro
       - builds:/home/builder/builds
@@ -22,7 +24,7 @@ services:
 
   # Build service
   build:
-    image: builder:${TAG}
+    image: builder:${TAG}_Qt${QT_VERSION}
     volumes:
       - ../:/home/builder/sources:ro
       - builds:/home/builder/builds
@@ -30,7 +32,7 @@ services:
 
   # Shell service
   shell:
-    image: builder:${TAG}
+    image: builder:${TAG}_Qt${QT_VERSION}
     volumes:
       - ../:/home/builder/sources:ro
       - builds:/home/builder/builds
@@ -38,7 +40,7 @@ services:
 
   # Run service
   run:
-    image: builder:${TAG}
+    image: builder:${TAG}_Qt${QT_VERSION}
     volumes:
       - builds:/home/builder/builds
     entrypoint: ./${APP}
