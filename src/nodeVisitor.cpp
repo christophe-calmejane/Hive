@@ -83,6 +83,12 @@ void NodeVisitor::accept(NodeVisitor* const visitor, la::avdecc::controller::Con
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::ControlNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::ControlNode const*>();
 		// ClockDomainNode
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::ClockDomainNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::ClockDomainNode const*>();
+		// TimingNode
+		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::TimingNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::TimingNode const*>();
+		// PtpInstanceNode
+		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::PtpInstanceNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::PtpInstanceNode const*>();
+		// PtpPortNode
+		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::PtpPortNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::PtpPortNode const*>();
 		// RedundantStreamNodes
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::RedundantStreamInputNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::RedundantStreamInputNode const*>();
 		s_visitDispatch[std::type_index(typeid(la::avdecc::controller::model::RedundantStreamOutputNode const*))] = createNodeVisitDispatchFunctor<la::avdecc::controller::model::RedundantStreamOutputNode const*>();

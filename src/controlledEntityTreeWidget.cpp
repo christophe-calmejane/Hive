@@ -1051,6 +1051,89 @@ private:
 		}
 	}
 
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::TimingNode const& node) noexcept override
+	{
+		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
+		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
+
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::timingNameChanged, item,
+			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, QString const& timingName)
+			{
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::Timing == node.descriptorType && timingIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Timing, timingIndex, node.staticModel.localizedDescription, timingName);
+				}
+			});
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*parent*/, la::avdecc::controller::model::PtpInstanceNode const& /*node*/) noexcept override
+	{
+		// Ignored, we'll show the PtpInstanceNode in the TimingNode
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandParent, la::avdecc::controller::model::TimingNode const* const parent, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept override
+	{
+		auto const name = genDescriptorName(controlledEntity, grandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
+		auto* item = addItem(grandParent->descriptorIndex, parent, &node, name);
+
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::ptpInstanceNameChanged, item,
+			[this, item, node, confIndex = grandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, QString const& ptpInstanceName)
+			{
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::PtpInstance == node.descriptorType && ptpInstanceIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::PtpInstance, ptpInstanceIndex, node.staticModel.localizedDescription, ptpInstanceName);
+				}
+			});
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::PtpInstanceNode const* const /*parent*/, la::avdecc::controller::model::ControlNode const& /*node*/) noexcept override
+	{
+		// Ignored, we'll show the ControlNode in the TimingNode/PtpInstanceNode
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const /*grandParent*/, la::avdecc::controller::model::PtpInstanceNode const* const /*parent*/, la::avdecc::controller::model::PtpPortNode const& /*node*/) noexcept override
+	{
+		// Ignored, we'll show the PtpPortNode in the TimingNode/PtpInstanceNode
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandGrandParent, la::avdecc::controller::model::TimingNode const* const /*grandParent*/, la::avdecc::controller::model::PtpInstanceNode const* const parent, la::avdecc::controller::model::ControlNode const& node) noexcept override
+	{
+		auto const name = genDescriptorName(controlledEntity, grandGrandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
+		auto* item = addItem(grandGrandParent->descriptorIndex, parent, &node, name);
+
+		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+		// Init ErrorBits
+		{
+			// ControlValue OutOfBounds
+			auto const valueOutOfBounds = manager.getControlValueOutOfBounds(_controlledEntityID, node.descriptorIndex);
+			item->setErrorBit(NodeItem::ErrorBit::ControlValueOutOfBounds, valueOutOfBounds);
+		}
+
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::controlNameChanged, item,
+			[this, item, node, confIndex = grandGrandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& controlName)
+			{
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::Control == node.descriptorType && controlIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Control, controlIndex, node.staticModel.localizedDescription, controlName);
+				}
+			});
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const* const grandGrandParent, la::avdecc::controller::model::TimingNode const* const /*grandParent*/, la::avdecc::controller::model::PtpInstanceNode const* const parent, la::avdecc::controller::model::PtpPortNode const& node) noexcept override
+	{
+		auto const name = genDescriptorName(controlledEntity, grandGrandParent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
+		auto* item = addItem(grandGrandParent->descriptorIndex, parent, &node, name);
+
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::ptpPortNameChanged, item,
+			[this, item, node, confIndex = grandGrandParent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, QString const& ptpPortName)
+			{
+				if (entityID == _controlledEntityID && confIndex == configurationIndex && la::avdecc::entity::model::DescriptorType::PtpPort == node.descriptorType && ptpPortIndex == node.descriptorIndex)
+				{
+					updateName(item, entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::PtpPort, ptpPortIndex, node.staticModel.localizedDescription, ptpPortName);
+				}
+			});
+	}
+
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::RedundantStreamInputNode const& node) noexcept override
 	{
 		auto const name = QString("REDUNDANT_INPUT.%1: %2").arg(QString::number(node.virtualIndex), QString::fromStdString(node.virtualName));
