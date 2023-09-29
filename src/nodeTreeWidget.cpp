@@ -284,6 +284,10 @@ private:
 					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 1u });
 					addTextItem(descriptorItem, "AEM Checksum v1", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
 				}
+				{
+					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 2u });
+					addTextItem(descriptorItem, "AEM Checksum v2", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+				}
 				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::forceNumeric(talkerCaps.value()), avdecc::helper::capabilitiesToString(talkerCaps));
 				addTextItem(descriptorItem, "Talker Max Sources", QString::number(e.getTalkerStreamSources()));
 				addFlagsItem(descriptorItem, "Listener Capabilities", la::avdecc::utils::forceNumeric(listenerCaps.value()), avdecc::helper::capabilitiesToString(listenerCaps));
@@ -459,6 +463,8 @@ private:
 			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Locale>(descriptorItem, node, node.locales, descriptorCounts);
 			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Control>(descriptorItem, node, node.controls, descriptorCounts);
 			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::ClockDomain>(descriptorItem, node, node.clockDomains, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::Timing>(descriptorItem, node, node.timings, descriptorCounts);
+			addEnumeratedDescriptorType<la::avdecc::entity::model::DescriptorType::PtpInstance>(descriptorItem, node, node.ptpInstances, descriptorCounts);
 
 			// Display any descriptors that are not supposed to be there
 			if (!descriptorCounts.empty())
@@ -981,6 +987,77 @@ private:
 		}
 	}
 
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::TimingNode const& node) noexcept override
+	{
+		createIdItem(&node);
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetTimingName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+
+		Q_Q(NodeTreeWidget);
+		auto const& model = node.staticModel;
+		auto const& dynamicModel = node.dynamicModel;
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			addTextItem(descriptorItem, "Timing Algorithm", avdecc::helper::timingAlgorithmToString(model.algorithm));
+			addTextItem(descriptorItem, "PTP Instances count", model.ptpInstances.size());
+		}
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept override
+	{
+		createIdItem(&node);
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpInstanceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+
+		Q_Q(NodeTreeWidget);
+		auto const& model = node.staticModel;
+		auto const& dynamicModel = node.dynamicModel;
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			addTextItem(descriptorItem, "Clock Identity", hive::modelsLibrary::helper::uniqueIdentifierToString(model.clockIdentity));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.flags.value()), avdecc::helper::flagsToString(model.flags));
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::Control)), QString{ "%1 / %2" }.arg(node.controls.size()).arg(model.numberOfControls));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
+			{
+				auto* const item = addTextItem(descriptorItem, QString{ "%1 Count" }.arg(avdecc::helper::descriptorTypeToString(la::avdecc::entity::model::DescriptorType::PtpPort)), QString{ "%1 / %2" }.arg(node.ptpPorts.size()).arg(model.numberOfPtpPorts));
+				item->setToolTip(1, QString{ "Enumerated / Defined in %1 descriptor" }.arg(avdecc::helper::descriptorTypeToString(node.descriptorType)));
+			}
+		}
+	}
+
+	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpPortNode const& node) noexcept override
+	{
+		createIdItem(&node);
+		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
+		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpPortName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+
+		Q_Q(NodeTreeWidget);
+		auto const& model = node.staticModel;
+		auto const& dynamicModel = node.dynamicModel;
+
+		// Static model
+		{
+			auto* descriptorItem = new QTreeWidgetItem(q);
+			descriptorItem->setText(0, "Static Info");
+
+			addTextItem(descriptorItem, "Port Number", hive::modelsLibrary::helper::toHexQString(model.portNumber, true, true));
+			addTextItem(descriptorItem, "Port Type", avdecc::helper::ptpPortTypeToString(model.portType));
+			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.flags.value()), avdecc::helper::flagsToString(model.flags));
+			addTextItem(descriptorItem, "AVB Interface Index", model.avbInterfaceIndex);
+			addTextItem(descriptorItem, "Profile Identifier", la::networkInterface::NetworkInterfaceHelper::macAddressToString(model.profileIdentifier, true));
+		}
+	}
+
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
 	{
 		Q_Q(NodeTreeWidget);
@@ -1375,6 +1452,42 @@ public:
 						{
 						}
 						break;
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetTimingName:
+						try
+						{
+							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::TimingIndex>>(customData);
+							auto const configIndex = std::get<0>(customTuple);
+							auto const timingIndex = std::get<1>(customTuple);
+							hive::modelsLibrary::ControllerManager::getInstance().setTimingName(_controlledEntityID, configIndex, timingIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetTimingName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetTimingName, oldText));
+						}
+						catch (...)
+						{
+						}
+						break;
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpInstanceName:
+						try
+						{
+							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::PtpInstanceIndex>>(customData);
+							auto const configIndex = std::get<0>(customTuple);
+							auto const ptpInstanceIndex = std::get<1>(customTuple);
+							hive::modelsLibrary::ControllerManager::getInstance().setPtpInstanceName(_controlledEntityID, configIndex, ptpInstanceIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpInstanceName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpInstanceName, oldText));
+						}
+						catch (...)
+						{
+						}
+						break;
+					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpPortName:
+						try
+						{
+							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::PtpPortIndex>>(customData);
+							auto const configIndex = std::get<0>(customTuple);
+							auto const ptpPortIndex = std::get<1>(customTuple);
+							hive::modelsLibrary::ControllerManager::getInstance().setPtpPortName(_controlledEntityID, configIndex, ptpPortIndex, newText, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpPortName), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpPortName, oldText));
+						}
+						catch (...)
+						{
+						}
+						break;
 					case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID:
 						try
 						{
@@ -1539,6 +1652,45 @@ public:
 						{
 							if (entityID == _controlledEntityID && configurationIndex == configIndex && clockDomainIndex == cdIndex)
 								textEntry->setCurrentData(clockDomainName);
+						});
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetTimingName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::TimingIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const timingIndex = std::get<1>(customTuple);
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::timingNameChanged, textEntry,
+						[this, textEntry, configIndex, tIndex = timingIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, QString const& timingName)
+						{
+							if (entityID == _controlledEntityID && configurationIndex == configIndex && timingIndex == tIndex)
+								textEntry->setCurrentData(timingName);
+						});
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpInstanceName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::PtpInstanceIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const ptpInstanceIndex = std::get<1>(customTuple);
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::ptpInstanceNameChanged, textEntry,
+						[this, textEntry, configIndex, piIndex = ptpInstanceIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, QString const& ptpInstanceName)
+						{
+							if (entityID == _controlledEntityID && configurationIndex == configIndex && ptpInstanceIndex == piIndex)
+								textEntry->setCurrentData(ptpInstanceName);
+						});
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpPortName:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ConfigurationIndex, la::avdecc::entity::model::PtpPortIndex>>(customData);
+					auto const configIndex = std::get<0>(customTuple);
+					auto const ptpPortIndex = std::get<1>(customTuple);
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::ptpPortNameChanged, textEntry,
+						[this, textEntry, configIndex, ppIndex = ptpPortIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, QString const& ptpPortName)
+						{
+							if (entityID == _controlledEntityID && configurationIndex == configIndex && ptpPortIndex == ppIndex)
+								textEntry->setCurrentData(ptpPortName);
 						});
 					break;
 				}

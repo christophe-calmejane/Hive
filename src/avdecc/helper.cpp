@@ -331,6 +331,80 @@ QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept
 	return str;
 }
 
+QString flagsToString(la::avdecc::entity::PtpInstanceFlags const flags) noexcept
+{
+	QString str;
+
+	if (flags.empty())
+		return "None";
+
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetInstanceEnable))
+		concatenateFlags(str, "CanSetInstanceEnable");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetPriority1))
+		concatenateFlags(str, "CanSetPriority1");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetPriority2))
+		concatenateFlags(str, "CanSetPriority2");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetDomainNumber))
+		concatenateFlags(str, "CanSetDomainNumber");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetExternalPortConfiguration))
+		concatenateFlags(str, "CanSetExternalPortConfiguration");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetSlaveOnly))
+		concatenateFlags(str, "CanSetSlaveOnly");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanEnablePerformance))
+		concatenateFlags(str, "CanEnablePerformance");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::PerformanceMonitoring))
+		concatenateFlags(str, "PerformanceMonitoring");
+	if (flags.test(la::avdecc::entity::PtpInstanceFlag::GrandmasterCapable))
+		concatenateFlags(str, "GrandmasterCapable");
+
+	return str;
+}
+
+QString flagsToString(la::avdecc::entity::PtpPortFlags const flags) noexcept
+{
+	QString str;
+
+	if (flags.empty())
+		return "None";
+
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetEnable))
+		concatenateFlags(str, "CanSetEnable");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetLinkDelayThreshold))
+		concatenateFlags(str, "CanSetLinkDelayThreshold");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetDelayMechanism))
+		concatenateFlags(str, "CanSetDelayMechanism");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetDelayAsymmetry))
+		concatenateFlags(str, "CanSetDelayAsymmetry");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetInitialMessageIntervals))
+		concatenateFlags(str, "CanSetInitialMessageIntervals");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetTimeouts))
+		concatenateFlags(str, "CanSetTimeouts");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideAnnounceInterval))
+		concatenateFlags(str, "CanOverrideAnnounceInterval");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideSyncInterval))
+		concatenateFlags(str, "CanOverrideSyncInterval");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverridePDelayInterval))
+		concatenateFlags(str, "CanOverridePDelayInterval");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideGptpCapableInterval))
+		concatenateFlags(str, "CanOverrideGptpCapableInterval");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideComputeNeighbor))
+		concatenateFlags(str, "CanOverrideComputeNeighbor");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideComputeLinkDelay))
+		concatenateFlags(str, "CanOverrideComputeLinkDelay");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideOnestep))
+		concatenateFlags(str, "CanOverrideOnestep");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsRemoteIntervalSignal))
+		concatenateFlags(str, "SupportsRemoteIntervalSignal");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsOnestepTransmit))
+		concatenateFlags(str, "SupportsOnestepTransmit");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsOnestepReceive))
+		concatenateFlags(str, "SupportsOnestepReceive");
+	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsUnicastNegotiate))
+		concatenateFlags(str, "SupportsUnicastNegotiate");
+
+	return str;
+}
+
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 {
 	QString str;
@@ -1049,6 +1123,56 @@ QString controlValueUnitToString(la::avdecc::entity::model::ControlValueUnit::Un
 			return "LUFS";
 		case la::avdecc::entity::model::ControlValueUnit::Unit::DbA:
 			return "dB(A)";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
+
+QString timingAlgorithmToString(la::avdecc::entity::model::TimingAlgorithm const algorithm) noexcept
+{
+	switch (algorithm)
+	{
+		case la::avdecc::entity::model::TimingAlgorithm::Single:
+			return "Single";
+		case la::avdecc::entity::model::TimingAlgorithm::Fallback:
+			return "Fallback";
+		case la::avdecc::entity::model::TimingAlgorithm::Combined:
+			return "Combined";
+		default:
+			AVDECC_ASSERT(false, "Not handled!");
+			return "Unknown";
+	}
+}
+
+QString ptpPortTypeToString(la::avdecc::entity::model::PtpPortType const ptpPortType) noexcept
+{
+	switch (ptpPortType)
+	{
+		case la::avdecc::entity::model::PtpPortType::P2PLinkLayer:
+			return "P2PLinkLayer";
+		case la::avdecc::entity::model::PtpPortType::P2PMulticastUdpV4:
+			return "P2PMulticastUdpV4";
+		case la::avdecc::entity::model::PtpPortType::P2PMulticastUdpV6:
+			return "P2PMulticastUdpV6";
+		case la::avdecc::entity::model::PtpPortType::TimingMeasurement:
+			return "TimingMeasurement";
+		case la::avdecc::entity::model::PtpPortType::FineTimingMeasurement:
+			return "FineTimingMeasurement";
+		case la::avdecc::entity::model::PtpPortType::E2ELinkLayer:
+			return "E2ELinkLayer";
+		case la::avdecc::entity::model::PtpPortType::E2EMulticastUdpV4:
+			return "E2EMulticastUdpV4";
+		case la::avdecc::entity::model::PtpPortType::E2EMulticastUdpV6:
+			return "E2EMulticastUdpV6";
+		case la::avdecc::entity::model::PtpPortType::P2PUnicastUdpV4:
+			return "P2PUnicastUdpV4";
+		case la::avdecc::entity::model::PtpPortType::P2PUnicastUdpV6:
+			return "P2PUnicastUdpV6";
+		case la::avdecc::entity::model::PtpPortType::E2EUnicastUdpV4:
+			return "E2EUnicastUdpV4";
+		case la::avdecc::entity::model::PtpPortType::E2EUnicastUdpV6:
+			return "E2EUnicastUdpV6";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";

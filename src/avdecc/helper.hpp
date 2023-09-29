@@ -51,6 +51,8 @@ QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcep
 QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::PtpInstanceFlags const flags) noexcept;
+QString flagsToString(la::avdecc::entity::PtpPortFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept;
 QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcept;
 QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) noexcept;
@@ -69,6 +71,8 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 QString controlTypeToString(la::avdecc::entity::model::ControlType const& controlType) noexcept;
 QString controlValueTypeToString(la::avdecc::entity::model::ControlValueType::Type const controlValueType) noexcept;
 QString controlValueUnitToString(la::avdecc::entity::model::ControlValueUnit::Unit const controlValueUnit) noexcept;
+QString timingAlgorithmToString(la::avdecc::entity::model::TimingAlgorithm const algorithm) noexcept;
+QString ptpPortTypeToString(la::avdecc::entity::model::PtpPortType const ptpPortType) noexcept;
 
 QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept;
 
