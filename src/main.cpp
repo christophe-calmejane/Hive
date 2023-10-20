@@ -286,6 +286,7 @@ int main(int argc, char* argv[])
 	// Controller
 	settings.registerSetting(settings::Controller_DiscoveryDelay);
 	settings.registerSetting(settings::Controller_AemCacheEnabled);
+	settings.registerSetting(settings::Controller_FastEnumerationEnabled);
 	settings.registerSetting(settings::Controller_FullStaticModelEnabled);
 	settings.registerSetting(settings::Controller_AdvertisingEnabled);
 	settings.registerSetting(settings::Controller_ControllerSubID);

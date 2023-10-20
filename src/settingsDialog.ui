@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>746</width>
-    <height>424</height>
+    <height>446</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -128,13 +128,20 @@
       </item>
       <item row="6" column="0">
        <widget class="QLabel" name="checkForBetaVersionsLabel">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="text">
          <string>Check For Beta Versions</string>
         </property>
        </widget>
       </item>
       <item row="6" column="1">
-       <widget class="QCheckBox" name="checkForBetaVersionsCheckBox"/>
+       <widget class="QCheckBox" name="checkForBetaVersionsCheckBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+       </widget>
       </item>
       <item row="7" column="0">
        <widget class="QLabel" name="themeColorLabel">
@@ -259,7 +266,7 @@
       <item row="1" column="1">
        <widget class="QCheckBox" name="enableAEMCacheCheckBox"/>
       </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="enableAdvertisingLabel">
         <property name="enabled">
          <bool>true</bool>
@@ -269,14 +276,14 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="4" column="1">
        <widget class="QCheckBox" name="enableAdvertisingCheckBox">
         <property name="enabled">
          <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="controllerIDLabel">
         <property name="enabled">
          <bool>true</bool>
@@ -286,7 +293,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <widget class="qtMate::widgets::TextEntry" name="controllerIDLineEdit">
         <property name="enabled">
          <bool>true</bool>
@@ -296,14 +303,14 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="fullAEMEnumerationLabel">
         <property name="text">
          <string>Full AEM Enumeration</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="QCheckBox" name="fullAEMEnumerationCheckBox"/>
       </item>
       <item row="0" column="0">
@@ -317,6 +324,23 @@
        <widget class="qtMate::widgets::TextEntry" name="discoveryDelayLineEdit">
         <property name="maxLength">
          <number>3</number>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="enableFastEnumerationLabel">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>Enable Fast Enumeration</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QCheckBox" name="enableFastEnumerationCheckBox">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
        </widget>
       </item>

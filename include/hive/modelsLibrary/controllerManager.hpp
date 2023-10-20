@@ -199,6 +199,9 @@ public:
 	/** Enable/Disable AEM cache */
 	virtual void setEnableAemCache(bool const enable) noexcept = 0;
 
+	/** Enable/Disable fast enumeration */
+	virtual void setEnableFastEnumeration(bool const enable) noexcept = 0;
+
 	/** Enable/Disable full AEM enumeration */
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept = 0;
 

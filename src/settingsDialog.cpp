@@ -82,6 +82,23 @@ private:
 #endif // USE_SPARKLE
 		}
 
+		// Check For Beta Updates
+		{
+#ifdef USE_SPARKLE
+			auto const lock = QSignalBlocker{ checkForBetaVersionsCheckBox };
+			checkForBetaVersionsCheckBox->setChecked(settings->getValue(settings::General_CheckForBetaVersions.name).toBool());
+			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
+			checkForBetaVersionsLabel->setEnabled(enabled);
+			checkForBetaVersionsCheckBox->setEnabled(enabled);
+#else // !USE_SPARKLE
+			checkForBetaVersionsLabel->setToolTip("Not compiled with auto-update support");
+			checkForBetaVersionsLabel->setEnabled(false);
+			checkForBetaVersionsCheckBox->setToolTip("Not compiled with auto-update support");
+			checkForBetaVersionsCheckBox->setChecked(false);
+			checkForBetaVersionsCheckBox->setEnabled(false);
+#endif // USE_SPARKLE
+		}
+
 		// Theme Color
 		{
 			auto const lock = QSignalBlocker{ themeColorComboBox };
@@ -142,23 +159,6 @@ private:
 	{
 		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-		// Check For Beta Updates
-		{
-#ifdef USE_SPARKLE
-			auto const lock = QSignalBlocker{ checkForBetaVersionsCheckBox };
-			checkForBetaVersionsCheckBox->setChecked(settings->getValue(settings::General_CheckForBetaVersions.name).toBool());
-			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
-			checkForBetaVersionsLabel->setEnabled(enabled);
-			checkForBetaVersionsCheckBox->setEnabled(enabled);
-#else // !USE_SPARKLE
-			checkForBetaVersionsLabel->setToolTip("Not compiled with auto-update support");
-			checkForBetaVersionsLabel->setEnabled(false);
-			checkForBetaVersionsCheckBox->setToolTip("Not compiled with auto-update support");
-			checkForBetaVersionsCheckBox->setChecked(false);
-			checkForBetaVersionsCheckBox->setEnabled(false);
-#endif // USE_SPARKLE
-		}
-
 		// Discovery Delay
 		{
 			auto const lock = QSignalBlocker{ discoveryDelayLineEdit };
@@ -169,6 +169,15 @@ private:
 		{
 			auto const lock = QSignalBlocker{ enableAEMCacheCheckBox };
 			enableAEMCacheCheckBox->setChecked(settings->getValue(settings::Controller_AemCacheEnabled.name).toBool());
+		}
+
+		// Fast Enumeration
+		{
+			auto const lock = QSignalBlocker{ enableFastEnumerationCheckBox };
+			enableFastEnumerationCheckBox->setChecked(settings->getValue(settings::Controller_FastEnumerationEnabled.name).toBool());
+			auto const enabled = enableAEMCacheCheckBox->isChecked();
+			enableFastEnumerationLabel->setEnabled(enabled);
+			enableFastEnumerationCheckBox->setEnabled(enabled);
 		}
 
 		// Full Static Model
@@ -340,6 +349,15 @@ void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::Controller_AemCacheEnabled.name, checked);
+
+	_pImpl->enableFastEnumerationLabel->setEnabled(checked);
+	_pImpl->enableFastEnumerationCheckBox->setEnabled(checked);
+}
+
+void SettingsDialog::on_enableFastEnumerationCheckBox_toggled(bool checked)
+{
+	auto * const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::Controller_FastEnumerationEnabled.name, checked);
 }
 
 void SettingsDialog::on_fullAEMEnumerationCheckBox_toggled(bool checked)

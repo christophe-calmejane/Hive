@@ -711,6 +711,7 @@ void MainWindowImpl::loadSettings()
 	settings->registerSettingObserver(settings::Network_ProtocolType.name, this);
 	settings->registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 	settings->registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+	settings->registerSettingObserver(settings::Controller_FastEnumerationEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_AdvertisingEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_ControllerSubID.name, this);
@@ -1241,6 +1242,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings->unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_FastEnumerationEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_AdvertisingEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_ControllerSubID.name, _pImpl);
@@ -1353,13 +1355,18 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 		auto const delay = std::chrono::seconds{ value.toInt() };
 		manager.setAutomaticDiscoveryDelay(delay);
 	}
-	else if (name == settings::Controller_AemCacheEnabled.name || name == settings::Controller_FullStaticModelEnabled.name)
+	else if (name == settings::Controller_AemCacheEnabled.name || name == settings::Controller_FastEnumerationEnabled.name || name == settings::Controller_FullStaticModelEnabled.name)
 	{
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		if (name == settings::Controller_AemCacheEnabled.name)
 		{
 			auto const enabled = value.toBool();
 			manager.setEnableAemCache(enabled);
+		}
+		else if (name == settings::Controller_FastEnumerationEnabled.name)
+		{
+			auto const enabled = value.toBool();
+			manager.setEnableFastEnumeration(enabled);
 		}
 		else if (name == settings::Controller_FullStaticModelEnabled.name)
 		{

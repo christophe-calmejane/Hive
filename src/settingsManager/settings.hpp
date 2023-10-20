@@ -60,6 +60,7 @@ static SettingsManager::SettingDefault Network_InterfaceTypeWiFi = { "avdecc/net
 // Controller settings
 static SettingsManager::SettingDefault Controller_DiscoveryDelay = { "avdecc/controller/discoveryDelay", 0 };
 static SettingsManager::SettingDefault Controller_AemCacheEnabled = { "avdecc/controller/enableAemCache", false };
+static SettingsManager::SettingDefault Controller_FastEnumerationEnabled = { "avdecc/controller/enableFastEnumeration", false }; // Requires Controller_AemCacheEnabled
 static SettingsManager::SettingDefault Controller_FullStaticModelEnabled = { "avdecc/controller/fullStaticModel", false };
 static SettingsManager::SettingDefault Controller_AdvertisingEnabled = { "avdecc/controller/enableAdvertising", true };
 #ifdef DEBUG

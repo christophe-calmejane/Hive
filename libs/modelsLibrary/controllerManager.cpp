@@ -970,6 +970,15 @@ private:
 				ctrl->disableEntityModelCache();
 			}
 
+			if (_enableAemCache && _enableFastEnumeration)
+			{
+				ctrl->enableFastEnumeration();
+			}
+			else
+			{
+				ctrl->disableFastEnumeration();
+			}
+
 			if (_fullAemEnumeration)
 			{
 				ctrl->enableFullStaticEntityModelEnumeration();
@@ -1105,6 +1114,11 @@ private:
 	virtual void setEnableAemCache(bool const enable) noexcept override
 	{
 		_enableAemCache = enable;
+	}
+
+	virtual void setEnableFastEnumeration(bool const enable) noexcept override
+	{
+		_enableFastEnumeration = enable;
 	}
 
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept override
@@ -2601,6 +2615,7 @@ private:
 	std::unordered_map<CommandsExecutorImpl const*, std::unique_ptr<CommandsExecutorImpl>> _commandsExecutors{};
 	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };
+	bool _enableFastEnumeration{ false };
 	bool _fullAemEnumeration{ false };
 	VirtualController _virtualController{};
 };

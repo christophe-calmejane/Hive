@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Support for TIMING, PTP_INSTANCE and PTP_PORT descriptors
+- Support for Fast Device Enumeration (when cache is enabled)
 
 ### Fixed
 - CONTROL descriptors not properly enumerated in JACKS

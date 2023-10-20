@@ -651,6 +651,11 @@ void VirtualController::getMemoryObjectLength(la::avdecc::UniqueIdentifier const
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, memoryObjectIndex, std::uint64_t{ 0u });
 }
 
+void VirtualController::getDynamicInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::controller::DynamicInfoParameters const& parameters, GetDynamicInfoHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, parameters);
+}
+
 void VirtualController::addressAccess(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::addressAccess::Tlvs const& /*tlvs*/, AddressAccessHandler const& handler) const noexcept
 {
 	static auto const s_emptyTlvs = la::avdecc::entity::addressAccess::Tlvs{};
