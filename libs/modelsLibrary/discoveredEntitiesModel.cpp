@@ -144,7 +144,8 @@ private:
 		}
 		else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
 		{
-			return ProtocolCompatibility::IEEE;
+			auto const isWarning = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221Warning);
+			return isWarning ? ProtocolCompatibility::IEEEWarning : ProtocolCompatibility::IEEE;
 		}
 
 		return ProtocolCompatibility::NotCompliant;

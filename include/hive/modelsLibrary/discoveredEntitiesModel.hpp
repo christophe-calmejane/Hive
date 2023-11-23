@@ -48,6 +48,7 @@ public:
 		IEEE,
 		Milan,
 		MilanCertified,
+		IEEEWarning,
 		MilanWarning,
 		MilanRedundant,
 		MilanCertifiedRedundant,
