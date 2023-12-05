@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - CONTROL descriptors not properly enumerated in JACKS
+- Incorrect dynamic mappings in some rare case
 
 ## [1.3.0] - 2023-09-26
 ### Added
