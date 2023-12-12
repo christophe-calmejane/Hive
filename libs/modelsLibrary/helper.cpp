@@ -21,8 +21,13 @@
 #include "hive/modelsLibrary/helper.hpp"
 
 #include <la/avdecc/utils.hpp>
+#include <nlohmann/json.hpp>
+
+#include <QFile>
 
 #include <cctype>
+
+using json = nlohmann::json;
 
 namespace hive
 {
@@ -220,47 +225,40 @@ QString toUpperCamelCase(std::string const& text) noexcept
 
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 {
+	static auto s_fileLoaded = false;
 	static auto s_oui24ToName = std::unordered_map<std::uint32_t, QString>{};
 	static auto s_oui36ToName = std::unordered_map<std::uint64_t, QString>{};
 
-	// Map is empty, load it
-	if (s_oui24ToName.empty())
+	// If file not loaded, load it
+	if (!s_fileLoaded)
 	{
-		// Right now statically build the map, later use a resource file generated from https://standards.ieee.org/develop/regauth/oui/oui.csv
-		s_oui24ToName.emplace(std::make_pair(0x001B92, "l-acoustics"));
-		s_oui24ToName.emplace(std::make_pair(0x001CF7, "AudioScience"));
-		s_oui24ToName.emplace(std::make_pair(0xB4994C, "Texas Instruments"));
-		s_oui24ToName.emplace(std::make_pair(0x3CC0C6, "d&b audiotechnik GmbH"));
-		s_oui24ToName.emplace(std::make_pair(0x001CAB, "Meyer Sound Laboratories, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x0C4DE9, "Apple"));
-		s_oui24ToName.emplace(std::make_pair(0x0090E5, "TEKNEMA, INC."));
-		s_oui24ToName.emplace(std::make_pair(0x0001F2, "Mark of the Unicorn, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xD0699E, "LUMINEX Lighting Control Equipment"));
-		s_oui24ToName.emplace(std::make_pair(0xCC46D6, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x58AC78, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x00107B, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x00906D, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x0090BF, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x005080, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0xF4CFE2, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x501CBF, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x88F031, "Cisco Systems, Inc"));
-		s_oui24ToName.emplace(std::make_pair(0x508789, "Cisco Systems, Inc")); // Too many cisco OUI-24 to manually add them
-		s_oui24ToName.emplace(std::make_pair(0x00A07E, "AVID TECHNOLOGY, INC."));
-		s_oui24ToName.emplace(std::make_pair(0xD88466, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x000496, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xB85001, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x5C0E8B, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xB4C799, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x7467F7, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x00E02B, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x949B2C, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xA4EA8E, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xFC0A81, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xB42D56, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x000130, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0xF46E95, "Extreme Networks, Inc."));
-		s_oui24ToName.emplace(std::make_pair(0x784501, "Biamp Systems"));
+		s_fileLoaded = true;
+
+		auto jsonFile = QFile{ ":/oui.json" };
+		if (jsonFile.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			// Read file
+			try
+			{
+				auto const jsonContent = json::parse(jsonFile.readAll().toStdString());
+
+				// Read oui_24 key, if present
+				if (auto it = jsonContent.find("oui_24"); it != jsonContent.end())
+				{
+					// Read each entry, converting "key" to hex and "value" to string
+					for (auto const& [key, value] : it->items())
+					{
+						auto const oui24 = la::avdecc::utils::convertFromString<std::uint32_t>(key.c_str());
+						auto const& vendorName = value.get<std::string>();
+						s_oui24ToName.emplace(std::make_pair(oui24, QString::fromStdString(vendorName)));
+					}
+				}
+			}
+			catch (...)
+			{
+				// Ignore exception
+			}
+		}
 	}
 
 	// First search in OUI-24
