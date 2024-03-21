@@ -45,8 +45,6 @@ overrideQtDir=0
 QtDir=""
 overrideQtVers=0
 QtVersion="${default_qt_version}"
-QtMajorVersion="${default_qt_version%%.*}"
-QtConfigFileName="Qt${QtMajorVersion}Config.cmake"
 useSparkle=0
 dsaFilePath="${selfFolderPath}resources/dsa_pub.pem"
 
@@ -57,8 +55,12 @@ fi
 
 function extend_gc_fnc_help()
 {
+	local qtBaseInstallPath=""
+	local qtArchName=""
 	local default_path=""
-	get_default_qt_path default_path
+	get_default_qt_path qtBaseInstallPath
+	get_default_qt_arch qtArchName
+	getQtDir default_path "${qtBaseInstallPath}" "${qtArchName}" "${QtVersion}"
 
 	echo " -no-sparkle -> Disable sparkle usage, even if specified in config file"
 	echo " -qtvers <Qt Version> -> Override the default Qt version (v${default_qt_version}) with the specified one."
@@ -117,62 +119,31 @@ function extend_gc_fnc_postparse()
 		echo "ERROR: -qtdir option requires -qtvers option, see help (-h)"
 		exit 4
 	fi
-	# Reset QtMajorVersion and QtConfigFileName, since QtVersion might have been overridden by -qtvers option
-	QtMajorVersion="${QtVersion%%.*}"
-	QtConfigFileName="Qt${QtMajorVersion}Config.cmake"
 }
 
 function extend_gc_fnc_precmake()
 {
 	# Using automatic Qt detection
 	if [ $overrideQtDir -eq 0 ]; then
-		if isWindows; then
-			qtBasePath="${default_qt_win_basePath}/${QtVersion}"
-			if [ "$arch" == "x64" ]; then
-				qtArch="${default_qt_win_arch}_64"
-			else
-				qtArch="${default_qt_win_arch}"
-			fi
-		elif isMac; then
-			qtBasePath="${default_qt_mac_basePath}/${QtVersion}"
-			if [ "${QtMajorVersion}" == "6" ] ; then
-				qtArch="macos"
-			else
-				qtArch="${default_qt_mac_arch}"
-			fi
-		elif isLinux; then
-			if [ "x${QT_BASE_PATH}" != "x" ]; then
-				if [ ! -f "${QT_BASE_PATH}/MaintenanceTool" ]; then
-					echo "Invalid QT_BASE_PATH: MaintenanceTool not found in specified folder: ${QT_BASE_PATH}"
-					echo "Maybe try the -qtdir option, see help (-h)"
-					exit 1
-				fi
-
-				qtBasePath="${QT_BASE_PATH}/${QtVersion}"
-				qtArch="" # Maybe use default_qt_linux_arch as well? (if yes, factorize qtArch for both QT_BASE_PATH and system wide)
-			else
-				echo "Using system wide Qt headers and libraries."
-				echo "QT_BASE_PATH env variable can be defined to the root folder of Qt installation (where MaintenanceTool resides), or the -qtdir option. See help (-h) for more details."
-				qtBasePath="${default_qt_linux_basePath}"
-				qtArch="${default_qt_linux_arch}"
-			fi
-		else
-			echo "Unsupported platform"
-			exit 1
-		fi
-
-		build_qt_config_folder QtDir "${qtBasePath}" "${qtArch}" "${QtMajorVersion}"
+		local qtBaseInstallPath=""
+		local qtArchName=""
+		get_default_qt_path qtBaseInstallPath
+		get_default_qt_arch qtArchName
+		getQtDir QtDir "${qtBaseInstallPath}" "${qtArchName}" "${QtVersion}"
 	fi
 
 	# Validate QtDir
-	if [ ! -f "${QtDir}/Qt${QtMajorVersion}/${QtConfigFileName}" ]; then
-		echo "Invalid Qt folder (${QtDir}): ${QtConfigFileName} not found in the folder."
+	local qtMajorVersion="${QtVersion%%.*}"
+	local qtConfigFileName="Qt${qtMajorVersion}Config.cmake"
+
+	if [ ! -f "${QtDir}/Qt${qtMajorVersion}/${qtConfigFileName}" ]; then
+		echo "Invalid Qt folder (${QtDir}): ${qtConfigFileName} not found in the folder."
 		echo "Maybe try the -qtdir option, see help (-h)"
 		exit 1
 	fi
 
 	add_cmake_opt+=("-DCMAKE_PREFIX_PATH=${QtDir}")
-	add_cmake_opt+=("-DQT_MAJOR_VERSION=${QtMajorVersion}")
+	add_cmake_opt+=("-DQT_MAJOR_VERSION=${qtMajorVersion}")
 
 	# Add NewsFeeds
 	add_cmake_opt+=("-DNEWSFEED_URL=${params["newsfeed_url"]}")
