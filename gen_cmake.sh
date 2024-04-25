@@ -16,6 +16,11 @@ if [ ! -f "${selfFolderPath}.initialized" ]; then
 fi
 
 # Include default values
+if [ ! -f "${selfFolderPath}.defaults.sh" ]; then
+	echo "ERROR: Missing ${selfFolderPath}.defaults.sh file"
+	echo "Copy .defaults.sh.sample file to .defaults.sh then edit it to your needs."
+	exit 4
+fi
 . "${selfFolderPath}.defaults.sh"
 
 # Include utils functions
