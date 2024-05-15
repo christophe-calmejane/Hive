@@ -55,7 +55,7 @@ if(NOT NEWSFEED_URL)
 endif()
 message(STATUS "Newsfeed URL for Hive defined to: ${NEWSFEED_URL}")
 if(NOT QT_MAJOR_VERSION)
-	set(QT_MAJOR_VERSION 5)
+	message(FATAL_ERROR "Qt major version not set in QT_MAJOR_VERSION CMake Variable")
 endif()
 
 ############ CMake Configuration

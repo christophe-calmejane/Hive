@@ -53,8 +53,12 @@ do_notarize=1
 do_appcast=$use_sparkle
 function extend_gi_fnc_help()
 {
+	local qtBaseInstallPath=""
+	local qtArchName=""
 	local default_path=""
-	get_default_qt_path default_path
+	get_default_qt_path qtBaseInstallPath
+	get_default_qt_arch qtArchName
+	getQtDir default_path "${qtBaseInstallPath}" "${qtArchName}" "${QtVersion}"
 
 	echo " -qtvers <Qt Version> -> Override the default Qt version (v${default_qt_version}) with the specified one."
 	echo " -qtdir <Qt CMake Folder> -> Override default Qt path (${default_path}) with the specified one."

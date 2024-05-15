@@ -32,43 +32,34 @@ function extend_gi_fnc_defaults()
 }
 
 # Some helper functions
-function build_qt_config_folder()
+function get_default_qt_path()
 {
 	local -n _retval="$1"
-	local basePath="$2"
-	local arch="$3"
-	local majorVers="$4"
 	local result=""
 
 	if isWindows; then
-		result="${basePath}/${arch}/lib/cmake"
+		result="${default_qt_win_basePath}"
 	elif isMac; then
-		result="${basePath}/${arch}/lib/cmake"
+		result="${default_qt_mac_basePath}"
 	elif isLinux; then
-		which g++ &> /dev/null
-		if [ $? -ne 0 ];
-		then
-			echo "ERROR: g++ not found"
-			exit 4
-		fi
-		result="${basePath}/${arch}/cmake"
+		result="${default_qt_linux_basePath}"
 	fi
 
 	_retval="${result}"
 }
 
-function get_default_qt_path()
+function get_default_qt_arch()
 {
 	local -n _retval="$1"
-	local gdqp_result="" # Use a unique name for the result as we pass it by reference
+	local result=""
 
 	if isWindows; then
-		build_qt_config_folder gdqp_result "${default_qt_win_basePath}/${default_qt_version}" "${default_qt_win_arch}" "${QtMajorVersion}"
+		result="${default_qt_win_arch}"
 	elif isMac; then
-		build_qt_config_folder gdqp_result "${default_qt_mac_basePath}/${default_qt_version}" "${default_qt_mac_arch}" "${QtMajorVersion}"
+		result="${default_qt_mac_arch}"
 	elif isLinux; then
-		build_qt_config_folder gdqp_result "${default_qt_linux_basePath}" "${default_qt_linux_arch}" "${QtMajorVersion}"
+		result="${default_qt_linux_arch}"
 	fi
 
-	_retval="${gdqp_result}"
+	_retval="${result}"
 }
