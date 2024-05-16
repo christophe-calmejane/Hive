@@ -26,17 +26,19 @@
 
 #include <QInputDialog>
 
-Q_DECLARE_METATYPE(la::avdecc::entity::model::StreamFormat)
+using StreamFormatComboBox_t = la::avdecc::entity::model::StreamFormat;
 
-class StreamFormatComboBox final : public AecpCommandComboBox<la::avdecc::entity::model::StreamFormat>
+Q_DECLARE_METATYPE(StreamFormatComboBox_t)
+
+class StreamFormatComboBox final : public AecpCommandComboBox<StreamFormatComboBox_t>
 {
 public:
 	StreamFormatComboBox(QWidget* parent = nullptr)
-		: AecpCommandComboBox<la::avdecc::entity::model::StreamFormat>{ parent }
+		: AecpCommandComboBox<StreamFormatComboBox_t>{ parent }
 	{
 		// Handle index change
 		setIndexChangedHandler(
-			[this](la::avdecc::entity::model::StreamFormat const& streamFormat)
+			[this](StreamFormatComboBox_t const& streamFormat)
 			{
 				auto format = streamFormat;
 				auto streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
@@ -58,32 +60,32 @@ public:
 			});
 	}
 
-	void setCurrentStreamFormat(la::avdecc::entity::model::StreamFormat const& streamFormat)
+	void setCurrentStreamFormat(StreamFormatComboBox_t const& streamFormat)
 	{
 		setCurrentData(streamFormat);
 	}
 
 	void setStreamFormats(Data const& streamFormats) noexcept
 	{
-		AecpCommandComboBox<la::avdecc::entity::model::StreamFormat>::setAllData(streamFormats,
-			[](la::avdecc::entity::model::StreamFormat const& streamFormat)
+		AecpCommandComboBox<StreamFormatComboBox_t>::setAllData(streamFormats,
+			[](StreamFormatComboBox_t const& streamFormat)
 			{
 				auto const streamFormatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
 				return avdecc::helper::streamFormatToString(*streamFormatInfo);
 			});
 	}
 
-	la::avdecc::entity::model::StreamFormat const& getCurrentStreamFormat() const noexcept
+	StreamFormatComboBox_t const& getCurrentStreamFormat() const noexcept
 	{
 		return getCurrentData();
 	}
 
 private:
-	using AecpCommandComboBox<la::avdecc::entity::model::StreamFormat>::setIndexChangedHandler;
-	using AecpCommandComboBox<la::avdecc::entity::model::StreamFormat>::setAllData;
-	using AecpCommandComboBox<la::avdecc::entity::model::StreamFormat>::getCurrentData;
+	using AecpCommandComboBox<StreamFormatComboBox_t>::setIndexChangedHandler;
+	using AecpCommandComboBox<StreamFormatComboBox_t>::setAllData;
+	using AecpCommandComboBox<StreamFormatComboBox_t>::getCurrentData;
 
-	virtual void setCurrentData(la::avdecc::entity::model::StreamFormat const& data) noexcept override
+	virtual void setCurrentData(StreamFormatComboBox_t const& data) noexcept override
 	{
 		auto const lg = QSignalBlocker{ this }; // Block internal signals so setCurrentText do not trigger "currentIndexChanged"
 
