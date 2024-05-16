@@ -20,7 +20,8 @@
 #pragma once
 
 #include <QTreeWidget>
-#include "nodeVisitor.hpp"
+#include <QModelIndex>
+#include "nodeDispatcher.hpp"
 #include "avdecc/helper.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>
@@ -39,7 +40,7 @@ public:
 	NodeTreeWidget(QWidget* parent = nullptr);
 	~NodeTreeWidget();
 
-	void setNode(la::avdecc::UniqueIdentifier const entityID, bool const isActiveConfiguration, AnyNode const& node);
+	void setNode(la::avdecc::UniqueIdentifier const entityID, QModelIndex const& index, AnyNode const& node);
 
 private:
 	NodeTreeWidgetPrivate* d_ptr{ nullptr };

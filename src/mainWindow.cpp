@@ -49,7 +49,6 @@
 #include "activeNetworkInterfacesModel.hpp"
 #include "aboutDialog.hpp"
 #include "deviceDetailsDialog.hpp"
-#include "nodeVisitor.hpp"
 #include "settingsDialog.hpp"
 #include "multiFirmwareUpdateDialog.hpp"
 #include "defaults.hpp"

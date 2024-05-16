@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Opening the Dynamic Mappings editor from the matrix only showed the first STREAM_PORT, it now shows all STREAM_PORTs
 - `Clear All Dynamic Mappings` correctly clears redundant mappings for virtual entities
 - Incorrect dynamic mappings visualization for devices with multiple stream ports
+- [Can't open dynamic mappings editor in Inspector if not selecting audio unit first](https://github.com/christophe-calmejane/Hive/issues/159)
 
 ## [1.2.9] - 2023-01-13
 ### Added
