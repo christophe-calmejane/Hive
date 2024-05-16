@@ -53,6 +53,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Crash when displaying vendor specific control values
 - Opening the Dynamic Mappings editor from the matrix only showed the first STREAM_PORT, it now shows all STREAM_PORTs
 - `Clear All Dynamic Mappings` correctly clears redundant mappings for virtual entities
+- Incorrect dynamic mappings visualization for devices with multiple stream ports
 
 ## [1.2.9] - 2023-01-13
 ### Added
