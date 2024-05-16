@@ -187,7 +187,7 @@ mappingMatrix::Connection convertFromAudioMapping(StreamNodeMappings const& stre
 	auto streamSlotID = mappingMatrix::SlotID{ -1, -1 };
 	auto clusterSlotID = mappingMatrix::SlotID{ -1, -1 };
 
-  // Try to find StreamSlotID
+	// Try to find StreamSlotID
 	{
 		auto pos = mappingMatrix::SlotID::first_type{ 0 };
 		// Search for matching StreamIndex
