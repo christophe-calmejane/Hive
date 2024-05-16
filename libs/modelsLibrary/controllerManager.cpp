@@ -347,6 +347,7 @@ public:
 		qRegisterMetaType<std::uint16_t>("std::uint16_t");
 		qRegisterMetaType<std::uint64_t>("std::uint64_t");
 		qRegisterMetaType<std::chrono::milliseconds>("std::chrono::milliseconds");
+		qRegisterMetaType<std::chrono::nanoseconds>("std::chrono::nanoseconds");
 		qRegisterMetaType<AecpCommandType>("hive::modelsLibrary::ControllerManager::AecpCommandType");
 		qRegisterMetaType<AcmpCommandType>("hive::modelsLibrary::ControllerManager::AcmpCommandType");
 		qRegisterMetaType<StreamInputErrorCounters>("hive::modelsLibrary::ControllerManager::StreamInputErrorCounters");
@@ -775,6 +776,10 @@ private:
 	virtual void onMediaClockChainChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::controller::model::MediaClockChain const& mcChain) noexcept override
 	{
 		emit mediaClockChainChanged(entity->getEntity().getEntityID(), clockDomainIndex, mcChain);
+	}
+	virtual void onMaxTransitTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, std::chrono::nanoseconds const& maxTransitTime) noexcept override
+	{
+		emit maxTransitTimeChanged(entity->getEntity().getEntityID(), streamIndex, maxTransitTime);
 	}
 	// Statistics
 	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override

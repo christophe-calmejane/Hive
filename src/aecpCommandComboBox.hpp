@@ -30,13 +30,13 @@
 #include <set>
 #include <string>
 
-template<typename DataType>
+template<typename DataType, typename DataContainer = std::set<DataType>>
 class AecpCommandComboBox : public qtMate::widgets::ComboBox
 {
 public:
 	using IndexChangedHandler = std::function<DataType(DataType const& data)>;
 	using DataChangedHandler = std::function<void(DataType const& previousData, DataType const& newData)>;
-	using Data = std::set<DataType>;
+	using Data = DataContainer;
 	using DataToStringHandler = std::function<QString(DataType const& data)>;
 	using AecpBeginCommandHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID)>;
 	using AecpResultHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;

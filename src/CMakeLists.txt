@@ -120,6 +120,7 @@ set(HEADER_FILES_COMMON
 	deviceDetailsDialog.hpp
 	deviceDetailsChannelTableModel.hpp
 	deviceDetailsStreamFormatTableModel.hpp
+	deviceDetailsLatencyTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
 	discoveredEntitiesView.hpp
@@ -135,11 +136,13 @@ set(HEADER_FILES_COMMON
 	entityInspector.hpp
 	mappingMatrix.hpp
 	activeNetworkInterfacesModel.hpp
+	latencyItemDelegate.hpp
 	networkInterfaceTypeModel.hpp
 	nodeTreeWidget.hpp
 	nodeVisitor.hpp
 	windowsNpfHelper.hpp
 	streamFormatComboBox.hpp
+	latencyComboBox.hpp
 	visibilitySettings.hpp
 	listViewMatrixViewController.hpp
 	application.hpp
@@ -201,6 +204,7 @@ set(SOURCE_FILES_COMMON
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
 	deviceDetailsStreamFormatTableModel.cpp
+	deviceDetailsLatencyTableModel.cpp
 	firmwareUploadDialog.cpp
 	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp
@@ -212,6 +216,7 @@ set(SOURCE_FILES_COMMON
 	entityInspector.cpp
 	mappingMatrix.cpp
 	activeNetworkInterfacesModel.cpp
+	latencyItemDelegate.cpp
 	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
 	nodeVisitor.cpp

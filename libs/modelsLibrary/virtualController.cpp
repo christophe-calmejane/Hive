@@ -656,6 +656,17 @@ void VirtualController::getDynamicInfo(la::avdecc::UniqueIdentifier const target
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, parameters);
 }
 
+void VirtualController::setMaxTransitTime(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, std::chrono::nanoseconds const& maxTransitTime, SetMaxTransitTimeHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, streamIndex, maxTransitTime);
+}
+
+void VirtualController::getMaxTransitTime(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, GetMaxTransitTimeHandler const& handler) const noexcept
+{
+	static auto const s_emptyMaxTransitTime = std::chrono::nanoseconds{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, streamIndex, s_emptyMaxTransitTime);
+}
+
 void VirtualController::addressAccess(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::addressAccess::Tlvs const& /*tlvs*/, AddressAccessHandler const& handler) const noexcept
 {
 	static auto const s_emptyTlvs = la::avdecc::entity::addressAccess::Tlvs{};

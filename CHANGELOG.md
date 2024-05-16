@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Clicking on an Entity-Entity crosspoint in the matrix expands/collapses both entities
 - Display of Entity AEM Checksum (in Entity Descriptor)
 - Detection of invalid *descriptor_counts* field in CONFIGURATION descriptor
+- [Possibility to modify the presentation time of each stream from Device Details Dialog](https://github.com/christophe-calmejane/Hive/issues/151)
 
 ### Changed
 - Complete rework of the `entities list`

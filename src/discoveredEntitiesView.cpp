@@ -252,9 +252,8 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 					}
 					else if (action == deviceView)
 					{
-						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(entity.entityID, this);
 						dialog->setAttribute(Qt::WA_DeleteOnClose);
-						dialog->setControlledEntityID(entity.entityID);
 						dialog->show();
 					}
 					else if (action == inspect)

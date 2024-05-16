@@ -31,6 +31,7 @@
 #include "ui_deviceDetailsDialog.h"
 #include "deviceDetailsChannelTableModel.hpp"
 #include "deviceDetailsStreamFormatTableModel.hpp"
+#include "deviceDetailsLatencyTableModel.hpp"
 #include "internals/config.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/channelConnectionManager.hpp"
@@ -65,13 +66,16 @@ private:
 	DeviceDetailsChannelTableModel _deviceDetailsChannelTableModelTransmit;
 	DeviceDetailsStreamFormatTableModel _deviceDetailsInputStreamFormatTableModel;
 	DeviceDetailsStreamFormatTableModel _deviceDetailsOutputStreamFormatTableModel;
+	DeviceDetailsLatencyTableModel _deviceDetailsLatencyTableModel;
 
 public:
 	/**
 	* Constructor.
 	* @param parent The parent class.
 	*/
-	DeviceDetailsDialogImpl(::DeviceDetailsDialog* parent)
+	DeviceDetailsDialogImpl(la::avdecc::UniqueIdentifier entityID, ::DeviceDetailsDialog* parent)
+		: QObject(parent)
+		, _entityID{ entityID }
 	{
 		// Link UI
 		setupUi(parent);
@@ -103,6 +107,10 @@ public:
 		tableViewOutputStreamFormat->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
 		tableViewOutputStreamFormat->setModel(&_deviceDetailsOutputStreamFormatTableModel);
 
+		tableViewLatency->setItemDelegateForColumn(static_cast<int>(DeviceDetailsLatencyTableModelColumn::Latency), new LatencyItemDelegate(_entityID, tableViewLatency));
+		tableViewLatency->setStyleSheet("QTableView::item {border: 0px; padding: 6px;} ");
+		tableViewLatency->setModel(&_deviceDetailsLatencyTableModel);
+
 		// disable row resize
 		QHeaderView* verticalHeaderReceive = tableViewReceive->verticalHeader();
 		verticalHeaderReceive->setSectionResizeMode(QHeaderView::Fixed);
@@ -112,6 +120,8 @@ public:
 		verticalHeaderInputStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
 		QHeaderView* verticalHeaderOutputStreamFormat = tableViewOutputStreamFormat->verticalHeader();
 		verticalHeaderOutputStreamFormat->setSectionResizeMode(QHeaderView::Fixed);
+		QHeaderView* verticalHeaderInputLatency = tableViewLatency->verticalHeader();
+		verticalHeaderInputLatency->setSectionResizeMode(QHeaderView::Fixed);
 
 		connect(lineEditDeviceName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditDeviceNameChanged);
 		connect(lineEditGroupName, &QLineEdit::textChanged, this, &DeviceDetailsDialogImpl::lineEditGroupNameChanged);
@@ -123,6 +133,7 @@ public:
 		connect(&_deviceDetailsChannelTableModelTransmit, &DeviceDetailsChannelTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsInputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 		connect(&_deviceDetailsOutputStreamFormatTableModel, &DeviceDetailsStreamFormatTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
+		connect(&_deviceDetailsLatencyTableModel, &DeviceDetailsLatencyTableModel::dataEdited, this, &DeviceDetailsDialogImpl::tableDataChanged);
 
 		connect(&_deviceDetailsChannelTableModelReceive, &DeviceDetailsChannelTableModel::dataChanged, this,
 			[this](const QModelIndex& /*topLeft*/, const QModelIndex& /*bottomRight*/, const QVector<int>& /*roles*/)
@@ -163,18 +174,17 @@ public:
 	* Loads all data needed from an entity to display in this dialog.
 	* @param entityID Id of the entity to load the data from.
 	*/
-	void loadCurrentControlledEntity(la::avdecc::UniqueIdentifier const entityID, bool leaveOutGeneralData)
+	void loadCurrentControlledEntity(bool leaveOutGeneralData)
 	{
-		if (!entityID)
+		if (!_entityID)
 			return;
 
-		_entityID = entityID;
 		_hasChangesByUser = false;
 		_activeConfigurationIndex = std::nullopt;
 		updateButtonStates();
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-		auto controlledEntity = manager.getControlledEntity(entityID);
+		auto controlledEntity = manager.getControlledEntity(_entityID);
 		if (controlledEntity)
 		{
 			auto configurationNode = la::avdecc::controller::model::ConfigurationNode{ controlledEntity->getCurrentConfigurationNode() };
@@ -188,8 +198,9 @@ public:
 			}
 			_dialog->setWindowTitle(QCoreApplication::applicationName() + " - Device View - " + hive::modelsLibrary::helper::smartEntityName(*controlledEntity));
 
-			_deviceDetailsInputStreamFormatTableModel.setControlledEntityID(entityID);
-			_deviceDetailsOutputStreamFormatTableModel.setControlledEntityID(entityID);
+			_deviceDetailsInputStreamFormatTableModel.setControlledEntityID(_entityID);
+			_deviceDetailsOutputStreamFormatTableModel.setControlledEntityID(_entityID);
+			_deviceDetailsLatencyTableModel.setControlledEntityID(_entityID);
 
 			if (!leaveOutGeneralData)
 			{
@@ -208,7 +219,7 @@ public:
 				auto const& staticModel = entityNode.staticModel;
 				auto const& dynamicModel = entityNode.dynamicModel;
 
-				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(entityID.getValue(), true, true));
+				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(_entityID.getValue(), true, true));
 				labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.vendorNameString));
 				labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.modelNameString));
 				labelFirmwareVersionValue->setText(dynamicModel.firmwareVersion.data());
@@ -241,7 +252,15 @@ public:
 					if (!w)
 						continue;
 
-					if (pureListener && (w->objectName() == "tabLatency" || w->objectName() == "tabTransmit"))
+#if 1
+					// Just remove the old "tabLatency" tab
+					if (w->objectName() == "tabLatency")
+					{
+						tabWidget->removeTab(i);
+						i--;
+					}
+#endif
+					if (pureListener && (w->objectName() == "tabTransmit" || w->objectName() == "tabLatencies"))
 					{
 						tabWidget->removeTab(i);
 						i--;
@@ -267,6 +286,8 @@ public:
 			tableViewInputStreamFormat->resizeRowsToContents();
 			tableViewOutputStreamFormat->resizeColumnsToContents();
 			tableViewOutputStreamFormat->resizeRowsToContents();
+			tableViewLatency->resizeColumnsToContents();
+			tableViewLatency->resizeRowsToContents();
 		}
 	}
 
@@ -373,6 +394,26 @@ public:
 				}
 			}
 
+			// apply the new latencies
+			auto const changesLatency = _deviceDetailsLatencyTableModel.getChanges();
+			for (auto const& descriptorIdx : changesLatency.keys())
+			{
+				auto const& latencyData = changesLatency.value(descriptorIdx);
+				if (latencyData->value(DeviceDetailsLatencyTableModelColumn::Latency).canConvert<LatencyTableRowEntry>())
+				{
+					auto const& latencyTableRowEntry = latencyData->value(DeviceDetailsLatencyTableModelColumn::Latency).value<LatencyTableRowEntry>();
+
+					{
+						auto streamInfo = la::avdecc::entity::model::StreamInfo{};
+						streamInfo.streamInfoFlags.set(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid);
+						streamInfo.msrpAccumulatedLatency = latencyTableRowEntry.latency.count();
+						manager.setStreamOutputInfo(_entityID, latencyTableRowEntry.streamIndex, streamInfo);
+					}
+
+					_expectedChanges++;
+				}
+			}
+
 			// apply new device name
 			if (_hasChangesMap.contains(lineEditDeviceName) && _hasChangesMap[lineEditDeviceName])
 			{
@@ -440,7 +481,12 @@ public:
 
 						// TODO: All streams have to be stopped for this to work. So this needs a state machine / task sequence.
 						// TODO: needs update of library:
-						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo);
+						manager.setStreamOutputInfo(_entityID, streamOutput.first, streamInfo, {},
+							[](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+							{
+								// Define empty result handler so we don't trigger ControllerManager::AecpCommandType::SetStreamInfo
+								// We don't want to trigger it because we didn't increase _expectedChanges (so we don't want to increase _gottenChanges)
+							});
 					}
 				}
 			}
@@ -479,8 +525,11 @@ public:
 		_deviceDetailsOutputStreamFormatTableModel.resetChangedData();
 		_deviceDetailsOutputStreamFormatTableModel.removeAllNodes();
 
+		_deviceDetailsLatencyTableModel.resetChangedData();
+		_deviceDetailsLatencyTableModel.removeAllNodes();
+
 		// read out actual data again
-		loadCurrentControlledEntity(_entityID, false);
+		loadCurrentControlledEntity(false);
 	}
 
 
@@ -573,12 +622,28 @@ public:
 		if (node.isRedundant)
 			return;
 
-		// add the streamoutput node to the model
-		_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
+		{
+			// add the streamoutput node to the stream format model
+			_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
 
-		// open the persistent editor for the just added streamoutput
-		auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-		tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+			// open the persistent editor for the just added streamoutput
+			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+			tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+		}
+
+		{
+			// Try to get the streamoutput's current latency from the dynamic model
+			auto const currentLatency = node.dynamicModel.streamDynamicInfo ? (*node.dynamicModel.streamDynamicInfo).msrpAccumulatedLatency : std::nullopt;
+			if (currentLatency)
+			{
+				// add the streamoutput node to the latencies model
+				_deviceDetailsLatencyTableModel.addNode(node.descriptorIndex, std::chrono::nanoseconds{ *currentLatency });
+
+				// open the persistent editor for the just added streamoutput
+				auto modIdx = _deviceDetailsLatencyTableModel.index(_deviceDetailsLatencyTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsLatencyTableModelColumn::Latency), QModelIndex());
+				tableViewLatency->openPersistentEditor(modIdx);
+			}
+		}
 	}
 
 	/**
@@ -652,12 +717,28 @@ public:
 	{
 		if (node.descriptorIndex == parent->primaryStreamIndex)
 		{
-			// add the streamoutput node to the model
-			_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
+			{
+				// add the streamoutput node to the stream format model
+				_deviceDetailsOutputStreamFormatTableModel.addNode(node.descriptorIndex, node.descriptorType, node.dynamicModel.streamFormat);
 
-			// open the persistent editor for the just added streamoutput
-			auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
-			tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+				// open the persistent editor for the just added streamoutput
+				auto modIdx = _deviceDetailsOutputStreamFormatTableModel.index(_deviceDetailsOutputStreamFormatTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamFormat), QModelIndex());
+				tableViewOutputStreamFormat->openPersistentEditor(modIdx);
+			}
+
+			{
+				// Try to get the streamoutput's current latency from the dynamic model
+				auto const currentLatency = node.dynamicModel.streamDynamicInfo ? (*node.dynamicModel.streamDynamicInfo).msrpAccumulatedLatency : std::nullopt;
+				if (currentLatency)
+				{
+					// add the streamoutput node to the latencies model
+					_deviceDetailsLatencyTableModel.addNode(node.descriptorIndex, std::chrono::nanoseconds{ *currentLatency });
+
+					// open the persistent editor for the just added streamoutput
+					auto modIdx = _deviceDetailsLatencyTableModel.index(_deviceDetailsLatencyTableModel.rowCount() - 1, static_cast<int>(DeviceDetailsLatencyTableModelColumn::Latency), QModelIndex());
+					tableViewLatency->openPersistentEditor(modIdx);
+				}
+			}
 		}
 	}
 
@@ -779,6 +860,8 @@ public:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetEntityGroupName:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName:
 				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamFormat:
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamInfo:
+				case hive::modelsLibrary::ControllerManager::AecpCommandType::SetMaxTransitTime:
 					_gottenChanges++;
 					break;
 				default:
@@ -1044,10 +1127,11 @@ private:
 /**
 * Constructor.
 */
-DeviceDetailsDialog::DeviceDetailsDialog(QWidget* parent)
-	: QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint)
-	, _pImpl(new DeviceDetailsDialogImpl(this))
+DeviceDetailsDialog::DeviceDetailsDialog(la::avdecc::UniqueIdentifier const entityID, QWidget* parent)
+	: QDialog{ parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint } //, _controlledEntityID{ entityID }
+	, _pImpl{ new DeviceDetailsDialogImpl(entityID, this) }
 {
+	_pImpl->loadCurrentControlledEntity(false);
 }
 
 /**
@@ -1057,22 +1141,3 @@ DeviceDetailsDialog::~DeviceDetailsDialog() noexcept
 {
 	delete _pImpl;
 }
-
-/**
-* Sets the controlled entity id and loads the corresponding entity data.
-* @param entityID The id of the entity to display and edit in the dialog.
-*/
-void DeviceDetailsDialog::setControlledEntityID(la::avdecc::UniqueIdentifier const entityID)
-{
-	if (_controlledEntityID == entityID)
-	{
-		return;
-	}
-	_controlledEntityID = entityID;
-
-	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto controlledEntity = manager.getControlledEntity(_controlledEntityID);
-
-	_pImpl->loadCurrentControlledEntity(_controlledEntityID, false);
-}
-//#include "deviceDetailsDialog.moc"
