@@ -510,7 +510,7 @@ public:
 		{
 			case la::avdecc::entity::model::DescriptorType::Configuration:
 			{
-				auto const& anyNode = item->data(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::NodeType)).value<AnyNode>().getNode();
+				auto const& anyNode = item->data(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::NodeType)).value<AnyNode>().getNode();
 				auto const* configurationNode = std::any_cast<la::avdecc::controller::model::ConfigurationNode const*>(anyNode);
 				auto const isEnabled = !configurationNode->dynamicModel.isActiveConfiguration;
 
@@ -528,7 +528,7 @@ public:
 					auto const parentNodeIdentifier = findNodeIdentifier(parentItem);
 					if (parentNodeIdentifier.type == la::avdecc::entity::model::DescriptorType::ClockDomain)
 					{
-						auto const& anyNode = parentItem->data(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::NodeType)).value<AnyNode>().getNode();
+						auto const& anyNode = parentItem->data(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::NodeType)).value<AnyNode>().getNode();
 						auto const* clockDomainNode = std::any_cast<la::avdecc::controller::model::ClockDomainNode const*>(anyNode);
 
 						auto const clockDomainIndex = clockDomainNode->descriptorIndex;
@@ -613,8 +613,8 @@ private:
 
 		// Store the node inside the item
 		auto const anyNode = AnyNode(node);
-		item->setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::NodeType), QVariant::fromValue(anyNode));
-		item->setData(0, la::avdecc::utils::to_integral(EntityInspector::RoleInfo::IsActiveConfiguration), isActiveConfiguration);
+		item->setData(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::NodeType), QVariant::fromValue(anyNode));
+		item->setData(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::IsActiveConfiguration), isActiveConfiguration);
 
 		if (parent)
 		{
@@ -731,6 +731,7 @@ private:
 	{
 		auto const name = genDescriptorName(controlledEntity, parent->descriptorIndex, node.descriptorType, node.descriptorIndex, node.staticModel.localizedDescription, node.dynamicModel.objectName);
 		auto* item = addItem(parent->descriptorIndex, parent, &node, name);
+		item->setData(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::AudioUnitIndex), node.descriptorIndex);
 
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::audioUnitNameChanged, item,
 			[this, item, node, confIndex = parent->descriptorIndex](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& audioUnitName)

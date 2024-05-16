@@ -134,6 +134,7 @@ set(HEADER_FILES_COMMON
 	controlledEntityTreeWidget.hpp
 	controlledEntityTreeWidgetItemDelegate.hpp
 	entityInspector.hpp
+	entityInspectorRoles.hpp
 	mappingMatrix.hpp
 	activeNetworkInterfacesModel.hpp
 	latencyItemDelegate.hpp

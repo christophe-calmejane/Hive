@@ -62,28 +62,28 @@ Q_DECLARE_METATYPE(AnyNode)
 class NodeDispatcher
 {
 public:
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::EntityNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::ConfigurationNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioUnitNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamInputNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamOutputNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockSourceNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::LocaleNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::StringsNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamPortNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioClusterNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioMapNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::TimingNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpPortNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept = 0;
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AudioUnitNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::StreamInputNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::StreamOutputNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::JackNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ClockSourceNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::LocaleNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::StringsNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::StreamPortNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AudioClusterNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AudioMapNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ControlNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ClockDomainNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::TimingNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::PtpPortNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept = 0;
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept = 0;
 
-	static void accept(NodeDispatcher* const dispatchor, la::avdecc::controller::ControlledEntity const* const entity, bool const isActiveConfiguration, AnyNode const& node) noexcept;
+	static void accept(NodeDispatcher* const dispatchor, la::avdecc::controller::ControlledEntity const* const entity, AnyNode const& node) noexcept;
 
 	// Defaulted compiler auto-generated methods
 	NodeDispatcher() noexcept = default;

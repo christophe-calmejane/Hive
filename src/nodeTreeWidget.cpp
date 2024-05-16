@@ -40,6 +40,7 @@
 #include "firmwareUploadDialog.hpp"
 #include "aecpCommandComboBox.hpp"
 #include "aecpCommandTextEntry.hpp"
+#include "entityInspectorRoles.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
@@ -188,7 +189,7 @@ public:
 	{
 		Q_Q(NodeTreeWidget);
 
-		q->setNode(la::avdecc::UniqueIdentifier{}, false, {});
+		q->setNode(la::avdecc::UniqueIdentifier{}, QModelIndex{}, {});
 		q->clearSelection();
 	}
 
@@ -199,7 +200,7 @@ public:
 		if (_controlledEntityID == entityID)
 		{
 			Q_Q(NodeTreeWidget);
-			q->setNode(la::avdecc::UniqueIdentifier{}, false, {});
+			q->setNode(la::avdecc::UniqueIdentifier{}, QModelIndex{}, {});
 			q->clearSelection();
 		}
 	}
@@ -225,27 +226,29 @@ public:
 		}
 	}
 
-	void setNode(la::avdecc::UniqueIdentifier const entityID, bool const isActiveConfiguration, AnyNode const& node)
+	void setNode(la::avdecc::UniqueIdentifier const entityID, QModelIndex const& index, AnyNode const& node)
 	{
 		Q_Q(NodeTreeWidget);
 
 		q->clear();
 
 		_controlledEntityID = entityID;
+		_isActiveConfiguration = index.data(la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::IsActiveConfiguration)).toBool();
+		_audioUnitIndex = index.data(la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::AudioUnitIndex)).value<la::avdecc::entity::model::AudioUnitIndex>();
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		auto controlledEntity = manager.getControlledEntity(entityID);
 
 		if (controlledEntity && node.getNode().has_value())
 		{
-			NodeDispatcher::accept(this, controlledEntity.get(), isActiveConfiguration, node);
+			NodeDispatcher::accept(this, controlledEntity.get(), node);
 		}
 
 		q->expandAll();
 	}
 
 private:
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::EntityNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		createAccessItem(controlledEntity);
@@ -437,7 +440,7 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		// Always want to display dynamic information for configurations
@@ -490,11 +493,11 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioUnitName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -513,19 +516,18 @@ private:
 		}
 
 		// Dynamic model
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto* dynamicItem = new AudioUnitDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
-		_currentAudioUnitIndex = node.descriptorIndex;
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -541,7 +543,7 @@ private:
 		}
 
 		// Dynamic model
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, &node.staticModel, &node.dynamicModel, nullptr, q);
 			dynamicItem->setText(0, "Dynamic Info");
@@ -549,25 +551,25 @@ private:
 
 		// Counters (if supported by the entity)
 		AVDECC_ASSERT(node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput, "Not sure why we test for StreamInput in the following statement, remove it?");
-		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
+		if (_isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
 			auto* countersItem = new StreamInputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 
 		// Diagnostics
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto* diagnosticsItem = new StreamInputDiagnosticsTreeWidgetItem(_controlledEntityID, node.descriptorIndex, node.dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, controlledEntity->getDiagnostics(), q);
 			diagnosticsItem->setText(0, "Diagnostics");
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetStreamName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -583,25 +585,25 @@ private:
 		}
 
 		// Dynamic model
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto* dynamicItem = new StreamDynamicTreeWidgetItem(_controlledEntityID, node.descriptorType, node.descriptorIndex, &node.staticModel, nullptr, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 
 		// Counters (if supported by the entity)
-		if (isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
+		if (_isActiveConfiguration && node.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
 			auto* countersItem = new StreamOutputCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
 
-	void processJackNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept
+	void processJackNode(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::JackNode const& node) noexcept
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetJackName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorType, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -621,16 +623,16 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::JackNode const& node) noexcept override
 	{
-		processJackNode(controlledEntity, isActiveConfiguration, node);
+		processJackNode(controlledEntity, node);
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAvbInterfaceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -657,7 +659,7 @@ private:
 		}
 
 		// Dynamic model
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto linkStatus = controlledEntity->getAvbInterfaceLinkStatus(node.descriptorIndex);
 			auto* dynamicItem = new AvbInterfaceDynamicTreeWidgetItem(_controlledEntityID, node.descriptorIndex, &node.dynamicModel, linkStatus, q);
@@ -665,18 +667,18 @@ private:
 		}
 
 		// Counters (if supported by the entity)
-		if (isActiveConfiguration && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
+		if (_isActiveConfiguration && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
 			auto* countersItem = new AvbInterfaceCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSourceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -697,7 +699,7 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::LocaleNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::LocaleNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -714,7 +716,7 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::StringsNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::StringsNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -736,7 +738,7 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const isActiveConfiguration, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -760,18 +762,18 @@ private:
 
 		// Dynamic model
 		auto const hasAtLeastOneDynamicInfo = node.staticModel.hasDynamicAudioMap;
-		if (isActiveConfiguration && hasAtLeastOneDynamicInfo)
+		if (_isActiveConfiguration && hasAtLeastOneDynamicInfo)
 		{
-			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, _currentAudioUnitIndex, node.descriptorType, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
+			auto* dynamicItem = new StreamPortDynamicTreeWidgetItem(_controlledEntityID, _audioUnitIndex, node.descriptorType, node.descriptorIndex, &node.staticModel, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetAudioClusterName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -793,7 +795,7 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -820,7 +822,7 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ControlNode const& node) noexcept override
 	{
 		static auto s_Dispatch = DispatchControlValuesDispatchTable{};
 		if (s_Dispatch.empty())
@@ -831,7 +833,7 @@ private:
 
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetControlName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const& staticModel = node.staticModel;
@@ -885,18 +887,18 @@ private:
 		}
 
 		// Diagnostics
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto* diagnosticsItem = new ControlDiagnosticsTreeWidgetItem(_controlledEntityID, node.descriptorIndex, controlledEntity->getDiagnostics(), q);
 			diagnosticsItem->setText(0, "Diagnostics");
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockDomainName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const& model = node.staticModel;
@@ -911,7 +913,7 @@ private:
 		}
 
 		// Dynamic model
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto* dynamicItem = new QTreeWidgetItem(q);
 			dynamicItem->setText(0, "Dynamic Info");
@@ -980,18 +982,18 @@ private:
 		}
 
 		// Counters (if supported by the entity)
-		if (isActiveConfiguration && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
+		if (_isActiveConfiguration && node.dynamicModel.counters && !node.dynamicModel.counters->empty())
 		{
 			auto* countersItem = new ClockDomainCountersTreeWidgetItem(_controlledEntityID, node.descriptorIndex, *node.dynamicModel.counters, q);
 			countersItem->setText(0, "Counters");
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::TimingNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::TimingNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetTimingName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetTimingName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const& model = node.staticModel;
@@ -1007,11 +1009,11 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpInstanceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpInstanceName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const& model = node.staticModel;
@@ -1035,11 +1037,11 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpPortNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::PtpPortNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpPortName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetPtpPortName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 		auto const& model = node.staticModel;
@@ -1058,7 +1060,7 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
 	{
 		Q_Q(NodeTreeWidget);
 
@@ -1075,11 +1077,11 @@ private:
 		}
 	}
 
-	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
-		createNameItem(controlledEntity, isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
+		createNameItem(controlledEntity, _isActiveConfiguration, node, hive::modelsLibrary::ControllerManager::AecpCommandType::SetMemoryObjectName, configurationIndex, node.descriptorIndex, std::make_tuple(configurationIndex, node.descriptorIndex));
 
 		Q_Q(NodeTreeWidget);
 
@@ -1103,7 +1105,7 @@ private:
 		}
 
 		// Dynamic model
-		if (isActiveConfiguration)
+		if (_isActiveConfiguration)
 		{
 			auto* dynamicItem = new MemoryObjectDynamicTreeWidgetItem(_controlledEntityID, configurationIndex, node.descriptorIndex, &node.dynamicModel, q);
 			dynamicItem->setText(0, "Dynamic Info");
@@ -1810,7 +1812,8 @@ private:
 	Q_DECLARE_PUBLIC(NodeTreeWidget);
 
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
-	la::avdecc::entity::model::AudioUnitIndex _currentAudioUnitIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
+	bool _isActiveConfiguration{ false };
+	la::avdecc::entity::model::AudioUnitIndex _audioUnitIndex{ la::avdecc::entity::model::getInvalidDescriptorIndex() };
 };
 
 /** Linear Values - Clause 7.3.5.2.1 */
@@ -1990,10 +1993,10 @@ NodeTreeWidget::~NodeTreeWidget()
 	delete d_ptr;
 }
 
-void NodeTreeWidget::setNode(la::avdecc::UniqueIdentifier const entityID, bool const isActiveConfiguration, AnyNode const& node)
+void NodeTreeWidget::setNode(la::avdecc::UniqueIdentifier const entityID, QModelIndex const& index, AnyNode const& node)
 {
 	Q_D(NodeTreeWidget);
-	d->setNode(entityID, isActiveConfiguration, node);
+	d->setNode(entityID, index, node);
 }
 
 #include "nodeTreeWidget.moc"

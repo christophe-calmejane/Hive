@@ -24,6 +24,7 @@
 #include "nodeTreeWidget.hpp"
 #include "settingsManager/settings.hpp"
 #include "settingsManager/settingsSignaler.hpp"
+#include "entityInspectorRoles.hpp"
 
 #include <QtMate/material/colorPalette.hpp>
 #include <hive/widgetModelsLibrary/qtUserRoles.hpp>
@@ -36,12 +37,6 @@ class EntityInspector : public QWidget
 {
 	Q_OBJECT
 public:
-	enum class RoleInfo
-	{
-		NodeType = Qt::UserRole,
-		IsActiveConfiguration,
-	};
-
 	EntityInspector(QWidget* parent = nullptr);
 
 	Q_SLOT void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
