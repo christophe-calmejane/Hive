@@ -1,499 +1,506 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
-  <class>DeviceDetailsDialog</class>
-  <widget class="QDialog" name="DeviceDetailsDialog">
-    <property name="geometry">
-      <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>636</width>
-        <height>553</height>
-      </rect>
-    </property>
-    <property name="windowTitle">
-      <string>Dialog</string>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-        <widget class="QTabWidget" name="tabWidget">
-          <property name="contextMenuPolicy">
-            <enum>Qt::NoContextMenu</enum>
-          </property>
-          <property name="accessibleName">
-            <string/>
-          </property>
-          <property name="currentIndex">
-            <number>0</number>
-          </property>
-          <widget class="QWidget" name="tabGeneral">
-            <attribute name="title">
-              <string>General</string>
-            </attribute>
-            <layout class="QHBoxLayout" name="horizontalLayout">
-              <property name="sizeConstraint">
-                <enum>QLayout::SetMaximumSize</enum>
-              </property>
-              <item>
-                <spacer name="horizontalSpacer">
-                  <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                    <size>
-                      <width>40</width>
-                      <height>20</height>
-                    </size>
-                  </property>
-                </spacer>
-              </item>
-              <item>
-                <layout class="QVBoxLayout" name="verticalLayout">
-                  <item>
-                    <spacer name="verticalSpacer_2">
-                      <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                        <size>
-                          <width>20</width>
-                          <height>40</height>
-                        </size>
-                      </property>
-                    </spacer>
-                  </item>
-                  <item>
-                    <layout class="QFormLayout" name="formLayout">
-                      <property name="horizontalSpacing">
-                        <number>20</number>
-                      </property>
-                      <item row="0" column="0">
-                        <widget class="QLabel" name="label_4">
-                          <property name="font">
-                            <font>
-                              <weight>75</weight>
-                              <bold>true</bold>
-                            </font>
-                          </property>
-                          <property name="text">
-                            <string>Device Names</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="1" column="0">
-                        <widget class="QLabel" name="label">
-                          <property name="text">
-                            <string>Device Name</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="1" column="1">
-                        <widget class="QLineEdit" name="lineEditDeviceName">
-                          <property name="minimumSize">
-                            <size>
-                              <width>160</width>
-                              <height>0</height>
-                            </size>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="2" column="1">
-                        <widget class="QLineEdit" name="lineEditGroupName">
-                          <property name="minimumSize">
-                            <size>
-                              <width>160</width>
-                              <height>20</height>
-                            </size>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="2" column="0">
-                        <widget class="QLabel" name="label_2">
-                          <property name="text">
-                            <string>Group Name</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="5" column="0">
-                        <widget class="QLabel" name="labelVendorName">
-                          <property name="text">
-                            <string>Vendor Name</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="5" column="1">
-                        <widget class="QLabel" name="labelVendorNameValue">
-                          <property name="minimumSize">
-                            <size>
-                              <width>0</width>
-                              <height>20</height>
-                            </size>
-                          </property>
-                          <property name="text">
-                            <string>TextLabel</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="6" column="0">
-                        <widget class="QLabel" name="labelModelName">
-                          <property name="text">
-                            <string>Model Name</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="6" column="1">
-                        <widget class="QLabel" name="labelModelNameValue">
-                          <property name="minimumSize">
-                            <size>
-                              <width>0</width>
-                              <height>20</height>
-                            </size>
-                          </property>
-                          <property name="text">
-                            <string>TextLabel</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="7" column="0">
-                        <widget class="QLabel" name="labelFirmwareVersion">
-                          <property name="text">
-                            <string>Firmware Version</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="7" column="1">
-                        <widget class="QLabel" name="labelFirmwareVersionValue">
-                          <property name="minimumSize">
-                            <size>
-                              <width>0</width>
-                              <height>20</height>
-                            </size>
-                          </property>
-                          <property name="text">
-                            <string>TextLabel</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="8" column="0">
-                        <widget class="QLabel" name="labelSerialNumber">
-                          <property name="text">
-                            <string>Serial Number</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="8" column="1">
-                        <widget class="QLabel" name="labelSerialNumberValue">
-                          <property name="minimumSize">
-                            <size>
-                              <width>0</width>
-                              <height>20</height>
-                            </size>
-                          </property>
-                          <property name="text">
-                            <string>TextLabel</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="3" column="0">
-                        <spacer name="verticalSpacer_5">
-                          <property name="orientation">
-                            <enum>Qt::Vertical</enum>
-                          </property>
-                          <property name="sizeType">
-                            <enum>QSizePolicy::Fixed</enum>
-                          </property>
-                          <property name="sizeHint" stdset="0">
-                            <size>
-                              <width>20</width>
-                              <height>14</height>
-                            </size>
-                          </property>
-                        </spacer>
-                      </item>
-                      <item row="4" column="0">
-                        <widget class="QLabel" name="labelEntityId">
-                          <property name="text">
-                            <string>Entity ID</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="4" column="1">
-                        <widget class="QLabel" name="labelEntityIdValue">
-                          <property name="minimumSize">
-                            <size>
-                              <width>0</width>
-                              <height>20</height>
-                            </size>
-                          </property>
-                          <property name="text">
-                            <string>TextLabel</string>
-                          </property>
-                        </widget>
-                      </item>
-                    </layout>
-                  </item>
-                  <item>
-                    <spacer name="verticalSpacer_3">
-                      <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                      </property>
-                      <property name="sizeType">
-                        <enum>QSizePolicy::Fixed</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                        <size>
-                          <width>20</width>
-                          <height>46</height>
-                        </size>
-                      </property>
-                    </spacer>
-                  </item>
-                  <item>
-                    <layout class="QFormLayout" name="formLayout_2">
-                      <property name="horizontalSpacing">
-                        <number>10</number>
-                      </property>
-                      <item row="0" column="0">
-                        <widget class="QLabel" name="label_5">
-                          <property name="font">
-                            <font>
-                              <weight>75</weight>
-                              <bold>true</bold>
-                            </font>
-                          </property>
-                          <property name="text">
-                            <string>Device Configuration</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="1" column="0">
-                        <widget class="QLabel" name="label_3">
-                          <property name="text">
-                            <string>Configuration</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="1" column="1">
-                        <widget class="QComboBox" name="comboBoxConfiguration"/>
-                      </item>
-                    </layout>
-                  </item>
-                  <item>
-                    <spacer name="verticalSpacer">
-                      <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                        <size>
-                          <width>20</width>
-                          <height>40</height>
-                        </size>
-                      </property>
-                    </spacer>
-                  </item>
-                </layout>
-              </item>
-              <item>
-                <spacer name="horizontalSpacer_2">
-                  <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                    <size>
-                      <width>40</width>
-                      <height>20</height>
-                    </size>
-                  </property>
-                </spacer>
-              </item>
-            </layout>
-          </widget>
-          <widget class="QWidget" name="tabLatency">
-            <attribute name="title">
-              <string>Latency</string>
-            </attribute>
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
-              <item>
-                <spacer name="horizontalSpacer_4">
-                  <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                    <size>
-                      <width>40</width>
-                      <height>20</height>
-                    </size>
-                  </property>
-                </spacer>
-              </item>
-              <item>
-                <layout class="QVBoxLayout" name="verticalLayout_5">
-                  <item>
-                    <spacer name="verticalSpacer_4">
-                      <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                        <size>
-                          <width>20</width>
-                          <height>40</height>
-                        </size>
-                      </property>
-                    </spacer>
-                  </item>
-                  <item>
-                    <widget class="QLabel" name="label_Info">
-                      <property name="font">
-                        <font>
-                          <weight>75</weight>
-                          <bold>true</bold>
-                        </font>
-                      </property>
-                      <property name="text">
-                        <string>Talker stream presentation time</string>
-                      </property>
-                    </widget>
-                  </item>
-                  <item>
-                    <layout class="QFormLayout" name="formLayout_3">
-                      <item row="1" column="1">
-                        <widget class="QLineEdit" name="lineEdit_CustomPT">
-                          <property name="enabled">
-                            <bool>false</bool>
-                          </property>
-                          <property name="minimumSize">
-                            <size>
-                              <width>160</width>
-                              <height>0</height>
-                            </size>
-                          </property>
-                          <property name="readOnly">
-                            <bool>true</bool>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="1" column="0">
-                        <widget class="QRadioButton" name="radioButton_CustomPT">
-                          <property name="enabled">
-                            <bool>false</bool>
-                          </property>
-                          <property name="text">
-                            <string>Custom</string>
-                          </property>
-                          <property name="checkable">
-                            <bool>true</bool>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="0" column="0">
-                        <widget class="QRadioButton" name="radioButton_PredefinedPT">
-                          <property name="text">
-                            <string>Predefined</string>
-                          </property>
-                        </widget>
-                      </item>
-                      <item row="0" column="1">
-                        <widget class="QComboBox" name="comboBox_PredefinedPT"/>
-                      </item>
-                    </layout>
-                  </item>
-                  <item>
-                    <spacer name="verticalSpacer_6">
-                      <property name="orientation">
-                        <enum>Qt::Vertical</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                        <size>
-                          <width>20</width>
-                          <height>40</height>
-                        </size>
-                      </property>
-                    </spacer>
-                  </item>
-                </layout>
-              </item>
-              <item>
-                <spacer name="horizontalSpacer_5">
-                  <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                    <size>
-                      <width>40</width>
-                      <height>20</height>
-                    </size>
-                  </property>
-                </spacer>
-              </item>
-            </layout>
-          </widget>
-          <widget class="QWidget" name="tabReceive">
-            <attribute name="title">
-              <string>Receive</string>
-            </attribute>
-            <layout class="QVBoxLayout" name="verticalLayout_3">
-              <item>
-                <widget class="QTableView" name="tableViewReceive"/>
-              </item>
-            </layout>
-          </widget>
-          <widget class="QWidget" name="tabTransmit">
-            <attribute name="title">
-              <string>Transmit</string>
-            </attribute>
-            <layout class="QVBoxLayout" name="verticalLayout_4">
-              <item>
-                <widget class="QTableView" name="tableViewTransmit"/>
-              </item>
-            </layout>
-          </widget>
-          <widget class="QWidget" name="tabStreamFormat">
-            <attribute name="title">
-              <string>Stream Format</string>
-            </attribute>
-            <layout class="QVBoxLayout" name="verticalLayout_6">
-              <item>
-                <widget class="QTableView" name="tableViewInputStreamFormat"/>
-              </item>
-			  <item>
-                <widget class="QTableView" name="tableViewOutputStreamFormat"/>
-              </item>
-            </layout>
-          </widget> 
-        </widget>
-      </item>
-      <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-            <spacer name="horizontalSpacer_3">
-              <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-                <size>
-                  <width>40</width>
-                  <height>20</height>
-                </size>
-              </property>
+ <class>DeviceDetailsDialog</class>
+ <widget class="QDialog" name="DeviceDetailsDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>636</width>
+    <height>553</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="contextMenuPolicy">
+      <enum>Qt::NoContextMenu</enum>
+     </property>
+     <property name="accessibleName">
+      <string/>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tabGeneral">
+      <attribute name="title">
+       <string>General</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="sizeConstraint">
+        <enum>QLayout::SetMaximumSize</enum>
+       </property>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout">
+         <item>
+          <spacer name="verticalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <layout class="QFormLayout" name="formLayout">
+           <property name="horizontalSpacing">
+            <number>20</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_4">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Device Names</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Device Name</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEditDeviceName">
+             <property name="minimumSize">
+              <size>
+               <width>160</width>
+               <height>0</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="lineEditGroupName">
+             <property name="minimumSize">
+              <size>
+               <width>160</width>
+               <height>20</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Group Name</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <widget class="QLabel" name="labelVendorName">
+             <property name="text">
+              <string>Vendor Name</string>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="1">
+            <widget class="QLabel" name="labelVendorNameValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="labelModelName">
+             <property name="text">
+              <string>Model Name</string>
+             </property>
+            </widget>
+           </item>
+           <item row="6" column="1">
+            <widget class="QLabel" name="labelModelNameValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="0">
+            <widget class="QLabel" name="labelFirmwareVersion">
+             <property name="text">
+              <string>Firmware Version</string>
+             </property>
+            </widget>
+           </item>
+           <item row="7" column="1">
+            <widget class="QLabel" name="labelFirmwareVersionValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="0">
+            <widget class="QLabel" name="labelSerialNumber">
+             <property name="text">
+              <string>Serial Number</string>
+             </property>
+            </widget>
+           </item>
+           <item row="8" column="1">
+            <widget class="QLabel" name="labelSerialNumberValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <spacer name="verticalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>14</height>
+              </size>
+             </property>
             </spacer>
-          </item>
-          <item>
-            <widget class="QPushButton" name="pushButtonApplyChanges">
-              <property name="text">
-                <string>Apply Changes</string>
-              </property>
+           </item>
+           <item row="4" column="0">
+            <widget class="QLabel" name="labelEntityId">
+             <property name="text">
+              <string>Entity ID</string>
+             </property>
             </widget>
-          </item>
-          <item>
-            <widget class="QPushButton" name="pushButtonRevertChanges">
-              <property name="text">
-                <string>Revert Changes</string>
-              </property>
+           </item>
+           <item row="4" column="1">
+            <widget class="QLabel" name="labelEntityIdValue">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>20</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
             </widget>
-          </item>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeType">
+            <enum>QSizePolicy::Fixed</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>46</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <layout class="QFormLayout" name="formLayout_2">
+           <property name="horizontalSpacing">
+            <number>10</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_5">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Device Configuration</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Configuration</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="comboBoxConfiguration"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
         </layout>
-      </item>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabLatencies">
+      <attribute name="title">
+       <string>Stream Latency</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_7">
+       <item>
+        <widget class="QTableView" name="tableViewLatency"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabLatency">
+      <attribute name="title">
+       <string>Latency</string>
+      </attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_5">
+         <item>
+          <spacer name="verticalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_Info">
+           <property name="font">
+            <font>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Talker stream presentation time</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QFormLayout" name="formLayout_3">
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="lineEdit_CustomPT">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>160</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QRadioButton" name="radioButton_CustomPT">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="text">
+              <string>Custom</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QRadioButton" name="radioButton_PredefinedPT">
+             <property name="text">
+              <string>Predefined</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="comboBox_PredefinedPT"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacer_6">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_5">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabReceive">
+      <attribute name="title">
+       <string>Receive</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QTableView" name="tableViewReceive"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabTransmit">
+      <attribute name="title">
+       <string>Transmit</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <item>
+        <widget class="QTableView" name="tableViewTransmit"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tabStreamFormat">
+      <attribute name="title">
+       <string>Stream Format</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_6">
+       <item>
+        <widget class="QTableView" name="tableViewInputStreamFormat"/>
+       </item>
+       <item>
+        <widget class="QTableView" name="tableViewOutputStreamFormat"/>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <spacer name="horizontalSpacer_3">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonApplyChanges">
+       <property name="text">
+        <string>Apply Changes</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButtonRevertChanges">
+       <property name="text">
+        <string>Revert Changes</string>
+       </property>
+      </widget>
+     </item>
     </layout>
-  </widget>
-  <resources/>
-  <connections/>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
 </ui>

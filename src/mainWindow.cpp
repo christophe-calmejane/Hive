@@ -760,9 +760,8 @@ void MainWindowImpl::connectSignals()
 
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && controlledEntity->hasAnyConfiguration())
 			{
-				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
+				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(entityID, _parent);
 				dialog->setAttribute(Qt::WA_DeleteOnClose);
-				dialog->setControlledEntityID(entityID);
 				dialog->show();
 			}
 		});

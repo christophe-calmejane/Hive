@@ -356,7 +356,7 @@ void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 
 void SettingsDialog::on_enableFastEnumerationCheckBox_toggled(bool checked)
 {
-	auto * const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::Controller_FastEnumerationEnabled.name, checked);
 }
 
