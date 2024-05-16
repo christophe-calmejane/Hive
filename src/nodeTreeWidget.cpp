@@ -151,7 +151,7 @@ private:
 	QImage _image;
 };
 
-class NodeTreeWidgetPrivate : public QObject, public NodeVisitor
+class NodeTreeWidgetPrivate : public QObject, public NodeDispatcher
 {
 	Q_OBJECT
 public:
@@ -238,14 +238,14 @@ public:
 
 		if (controlledEntity && node.getNode().has_value())
 		{
-			NodeVisitor::accept(this, controlledEntity.get(), isActiveConfiguration, node);
+			NodeDispatcher::accept(this, controlledEntity.get(), isActiveConfiguration, node);
 		}
 
 		q->expandAll();
 	}
 
 private:
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::EntityNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::EntityNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		createAccessItem(controlledEntity);
@@ -437,7 +437,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::ConfigurationNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		// Always want to display dynamic information for configurations
@@ -490,7 +490,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioUnitNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -521,7 +521,7 @@ private:
 		_currentAudioUnitIndex = node.descriptorIndex;
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamInputNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -563,7 +563,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::StreamOutputNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -621,12 +621,12 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::JackNode const& node) noexcept override
 	{
 		processJackNode(controlledEntity, isActiveConfiguration, node);
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AvbInterfaceNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -672,7 +672,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockSourceNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -697,7 +697,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::LocaleNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::LocaleNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -714,7 +714,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::StringsNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::StringsNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -736,7 +736,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const isActiveConfiguration, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const isActiveConfiguration, la::avdecc::controller::model::StreamPortNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -767,7 +767,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::AudioClusterNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -793,7 +793,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::AudioMapNode const& node) noexcept override
 	{
 		createIdItem(&node);
 
@@ -820,7 +820,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ControlNode const& node) noexcept override
 	{
 		static auto s_Dispatch = VisitControlValuesDispatchTable{};
 		if (s_Dispatch.empty())
@@ -892,7 +892,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::ClockDomainNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -987,7 +987,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::TimingNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::TimingNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -1007,7 +1007,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpInstanceNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -1035,7 +1035,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpPortNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::PtpPortNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;
@@ -1058,7 +1058,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, bool const /*isActiveConfiguration*/, la::avdecc::controller::model::RedundantStreamNode const& node) noexcept override
 	{
 		Q_Q(NodeTreeWidget);
 
@@ -1075,7 +1075,7 @@ private:
 		}
 	}
 
-	virtual void visit(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
+	virtual void dispatch(la::avdecc::controller::ControlledEntity const* const controlledEntity, bool const isActiveConfiguration, la::avdecc::controller::model::MemoryObjectNode const& node) noexcept override
 	{
 		createIdItem(&node);
 		auto const configurationIndex = controlledEntity->getEntityNode().dynamicModel.currentConfiguration;

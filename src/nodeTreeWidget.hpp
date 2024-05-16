@@ -20,7 +20,7 @@
 #pragma once
 
 #include <QTreeWidget>
-#include "nodeVisitor.hpp"
+#include "nodeDispatcher.hpp"
 #include "avdecc/helper.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>

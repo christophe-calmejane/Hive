@@ -139,7 +139,7 @@ set(HEADER_FILES_COMMON
 	latencyItemDelegate.hpp
 	networkInterfaceTypeModel.hpp
 	nodeTreeWidget.hpp
-	nodeVisitor.hpp
+	nodeDispatcher.hpp
 	windowsNpfHelper.hpp
 	streamFormatComboBox.hpp
 	latencyComboBox.hpp
@@ -219,7 +219,7 @@ set(SOURCE_FILES_COMMON
 	latencyItemDelegate.cpp
 	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
-	nodeVisitor.cpp
+	nodeDispatcher.cpp
 	windowsNpfHelper.cpp
 	listViewMatrixViewController.cpp
 	application.cpp

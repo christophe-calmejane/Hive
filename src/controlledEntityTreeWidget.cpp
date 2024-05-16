@@ -20,7 +20,7 @@
 #include "controlledEntityTreeWidget.hpp"
 #include "avdecc/helper.hpp"
 #include "settingsManager/settings.hpp"
-#include "nodeVisitor.hpp"
+#include "nodeDispatcher.hpp"
 #include "entityInspector.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
