@@ -262,12 +262,11 @@ StreamPortMappings convertList(StreamNodeMappings const& streamMappings, Cluster
 };
 
 template<class StreamNodeType>
-void buildStreamMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, std::vector<StreamNodeType const*> const& streamNodes, StreamNodeMappings& streamMappings, mappingMatrix::Nodes& streamMatrixNodes)
+void buildStreamMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, std::vector<std::pair<std::string, StreamNodeType const*>> streamNodes, StreamNodeMappings& streamMappings, mappingMatrix::Nodes& streamMatrixNodes)
 {
 	// Build list of stream mappings
-	for (auto const* streamNode : streamNodes)
+	for (auto const& [streamName, streamNode] : streamNodes)
 	{
-		auto streamName = hive::modelsLibrary::helper::objectName(controlledEntity, *streamNode).toStdString();
 		auto const sfi = la::avdecc::entity::model::StreamFormatInfo::create(streamNode->dynamicModel.streamFormat);
 		StreamNodeMapping nodeMapping{ streamNode->descriptorIndex };
 		mappingMatrix::Node node{ streamName };
@@ -310,7 +309,7 @@ void buildStreamMappings(la::avdecc::controller::ControlledEntity const* const c
 }
 
 template<la::avdecc::entity::model::DescriptorType StreamPortType, class StreamNodeType>
-void buildConnections(la::avdecc::controller::model::StreamPortNode const& streamPortNode, std::vector<StreamNodeType const*> const& streamNodes, StreamNodeMappings const& streamMappings, ClusterNodeMappings const& clusterMappings, mappingMatrix::Connections& connections)
+void buildConnections(la::avdecc::controller::model::StreamPortNode const& streamPortNode, std::vector<std::pair<std::string, StreamNodeType const*>> streamNodes, StreamNodeMappings const& streamMappings, ClusterNodeMappings const& clusterMappings, mappingMatrix::Connections& connections)
 {
 	// Build list of current connections
 	for (auto const& mapping : streamPortNode.dynamicModel.dynamicAudioMap)
@@ -325,7 +324,7 @@ void buildConnections(la::avdecc::controller::model::StreamPortNode const& strea
 		// In case of redundancy, we must check the streamIndex in the mapping is the one matching the primary stream
 		{
 			auto shouldIgnoreMapping = false;
-			for (auto const* streamNode : streamNodes)
+			for (auto const& [_, streamNode] : streamNodes)
 			{
 				if (streamIndex == streamNode->descriptorIndex)
 				{
@@ -470,9 +469,9 @@ void buildClusterMappings(la::avdecc::controller::ControlledEntity const* const 
 }
 
 template<class StreamNodeType, class RedundantStreamNodeType>
-std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity::model::StreamIndex const streamIndex, std::map<la::avdecc::entity::model::StreamIndex, StreamNodeType> const& streamNodes, std::map<la::avdecc::controller::model::VirtualIndex, RedundantStreamNodeType> const& redundantStreamNodes, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex)
+std::vector<std::pair<std::string, StreamNodeType const*>> buildStreamsListToDisplay(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::StreamIndex const streamIndex, std::map<la::avdecc::entity::model::StreamIndex, StreamNodeType> const& streamNodes, std::map<la::avdecc::controller::model::VirtualIndex, RedundantStreamNodeType> const& redundantStreamNodes, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex)
 {
-	auto streamNodesToDisplay = std::vector<StreamNodeType const*>{};
+	auto streamNodesToDisplay = std::vector<std::pair<std::string, StreamNodeType const*>>{};
 
 	auto const isValidClockDomain = [](auto const clockDomainIndex, auto const& streamNode)
 	{
@@ -486,24 +485,45 @@ std::vector<StreamNodeType const*> buildStreamsListToDisplay(la::avdecc::entity:
 		return sfi->getChannelsCount() > 0;
 	};
 
-	auto const checkAddStream = [&isValidClockDomain, &isValidStreamFormat, &streamNodesToDisplay](auto const streamIndex, auto const clockDomainIndex, auto const& streamNode, auto const& redundantStreamNodes)
+	auto const checkAddStream = [&controlledEntity, &isValidClockDomain, &isValidStreamFormat, &streamNodesToDisplay](auto const streamIndex, auto const clockDomainIndex, auto const& streamNode, auto const& redundantStreamNodes)
 	{
 		if (isValidStreamFormat(streamNode) && isValidClockDomain(clockDomainIndex, streamNode))
 		{
 			// Add single Stream
 			if (!streamNode.isRedundant)
 			{
-				streamNodesToDisplay.push_back(&streamNode);
+				auto streamName = hive::modelsLibrary::helper::objectName(controlledEntity, streamNode).toStdString();
+				streamNodesToDisplay.push_back(std::make_pair(streamName, &streamNode));
 			}
 			else
 			{
 				// Add primary stream of a Redundant Set
 				for (auto const& redundantStreamKV : redundantStreamNodes)
 				{
-					auto const& redundantStreamNode = redundantStreamKV.second;
+					auto const& [redundantStreamIndex, redundantStreamNode] = redundantStreamKV;
 					if (redundantStreamNode.primaryStreamIndex == streamIndex)
 					{
-						streamNodesToDisplay.push_back(&streamNode);
+						auto streamName = std::string("[R] ");
+						if (!redundantStreamNode.virtualName.empty())
+						{
+							streamName += redundantStreamNode.virtualName.str();
+						}
+						else
+						{
+							if (redundantStreamNode.descriptorType == la::avdecc::entity::model::DescriptorType::StreamOutput)
+							{
+								streamName = hive::modelsLibrary::helper::redundantOutputName(redundantStreamIndex).toStdString();
+							}
+							else if (redundantStreamNode.descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+							{
+								streamName = hive::modelsLibrary::helper::redundantInputName(redundantStreamIndex).toStdString();
+							}
+							else
+							{
+								AVDECC_ASSERT(false, "Invalide node descriptor type for redundant stream node");
+							}
+						}
+						streamNodesToDisplay.push_back(std::make_pair(streamName, &streamNode));
 					}
 				}
 			}
@@ -563,7 +583,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 						{
 							return;
 						}
-						auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamInputs, configurationNode.redundantStreamInputs, clockDomainIndex);
+						auto streamNodes = buildStreamsListToDisplay(entity, streamIndex, configurationNode.streamInputs, configurationNode.redundantStreamInputs, clockDomainIndex);
 
 						// Build mappingMatrix vectors
 						buildClusterMappings(entity, streamPortNode, clusterMappings, inputs);
@@ -594,7 +614,7 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 						{
 							return;
 						}
-						auto streamNodes = buildStreamsListToDisplay(streamIndex, configurationNode.streamOutputs, configurationNode.redundantStreamOutputs, clockDomainIndex);
+						auto streamNodes = buildStreamsListToDisplay(entity, streamIndex, configurationNode.streamOutputs, configurationNode.redundantStreamOutputs, clockDomainIndex);
 
 						// Build mappingMatrix vectors
 						buildClusterMappings(entity, streamPortNode, clusterMappings, outputs);

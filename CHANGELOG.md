@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for TIMING, PTP_INSTANCE and PTP_PORT descriptors
 - Support for Fast Device Enumeration (when cache is enabled)
 
+### Changed
+- [Channel Mappings Editor should display the redundant stream name instead of the primary name](https://github.com/christophe-calmejane/Hive/issues/130)
+
 ### Fixed
 - CONTROL descriptors not properly enumerated in JACKS
 - Incorrect dynamic mappings in some rare case
