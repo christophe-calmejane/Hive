@@ -1,0 +1,4 @@
+# Includes
+include:
+  - dockerHelper/compose/builder_qt.yml # Use builder_qt.yml for Qt projects
+  - dockerHelper/compose/services.yml
