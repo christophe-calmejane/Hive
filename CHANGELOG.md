@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Support for TIMING, PTP_INSTANCE and PTP_PORT descriptors
 - Support for Fast Device Enumeration (when cache is enabled)
+- [Possibility to modify the presentation time of each stream from Device Details Dialog](https://github.com/christophe-calmejane/Hive/issues/151)
 
 ### Changed
 - [Channel Mappings Editor should display the redundant stream name instead of the primary name](https://github.com/christophe-calmejane/Hive/issues/130)
@@ -16,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - CONTROL descriptors not properly enumerated in JACKS
 - Incorrect dynamic mappings in some rare case
 - Crash when a device fails to properly enumerate STRING descriptors
+- Incorrect dynamic mappings visualization for devices with multiple stream ports
+- [Can't open dynamic mappings editor in Inspector if not selecting audio unit first](https://github.com/christophe-calmejane/Hive/issues/159)
 
 ## [1.3.0] - 2023-09-26
 ### Added
@@ -38,7 +41,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Clicking on an Entity-Entity crosspoint in the matrix expands/collapses both entities
 - Display of Entity AEM Checksum (in Entity Descriptor)
 - Detection of invalid *descriptor_counts* field in CONFIGURATION descriptor
-- [Possibility to modify the presentation time of each stream from Device Details Dialog](https://github.com/christophe-calmejane/Hive/issues/151)
 
 ### Changed
 - Complete rework of the `entities list`
@@ -57,8 +59,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Crash when displaying vendor specific control values
 - Opening the Dynamic Mappings editor from the matrix only showed the first STREAM_PORT, it now shows all STREAM_PORTs
 - `Clear All Dynamic Mappings` correctly clears redundant mappings for virtual entities
-- Incorrect dynamic mappings visualization for devices with multiple stream ports
-- [Can't open dynamic mappings editor in Inspector if not selecting audio unit first](https://github.com/christophe-calmejane/Hive/issues/159)
 
 ## [1.2.9] - 2023-01-13
 ### Added
