@@ -212,5 +212,5 @@ endif()
 # Force Project as visual default target
 set_directory_properties(PROPERTIES VS_STARTUP_PROJECT ${PROJECT_NAME})
 
-# Allow generator expressions in install(CODE/SCRIPT)
-cmake_policy(SET CMP0087 NEW)
+# Configure a few things that has to be done last
+cu_finalize()
