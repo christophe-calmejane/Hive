@@ -45,6 +45,10 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
   - Start it with _access control disabled_
   - Find the IP address of your WSL network interface using _ipconfig_
   - Set a DISPLAY environment variable with value _WSL\_Interface\_IP_:0
+- macOS users need to have a running XQuartz:
+  - Install [XQuartz](https://www.xquartz.org)
+  - Start it and make sure it's not running with the _Allow connections from network clients_ option (XQuartz -> Preferences -> Security)
+  - Change the above command line to _APP=Hive-d docker-compose run -e DISPLAY=docker.for.mac.host.internal:0 --rm run_
 
 ## Installer generation
 
