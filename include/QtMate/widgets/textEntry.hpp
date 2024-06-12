@@ -51,7 +51,7 @@ protected:
 private:
 	class TextEntryPrivate;
 	TextEntryPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(TextEntry);
+	Q_DECLARE_PRIVATE(TextEntry)
 };
 
 } // namespace widgets

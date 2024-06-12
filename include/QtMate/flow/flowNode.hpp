@@ -30,7 +30,7 @@ class FlowNodeHeader;
 class FlowNode : public QObject, public QGraphicsItem
 {
 	Q_OBJECT
-	Q_PROPERTY(bool collapsed READ isCollapsed NOTIFY collapsedChanged);
+	Q_PROPERTY(bool collapsed READ isCollapsed NOTIFY collapsedChanged)
 	Q_INTERFACES(QGraphicsItem)
 
 public:

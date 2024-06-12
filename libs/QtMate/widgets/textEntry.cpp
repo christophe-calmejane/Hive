@@ -109,7 +109,7 @@ public:
 
 protected:
 	TextEntry* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(TextEntry);
+	Q_DECLARE_PUBLIC(TextEntry)
 
 	QString _focusInText{};
 	bool _validated{ false };

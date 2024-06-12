@@ -224,7 +224,7 @@ public:
 
 private:
 	QScopedPointer<ModelPrivate> d_ptr;
-	Q_DECLARE_PRIVATE(Model);
+	Q_DECLARE_PRIVATE(Model)
 };
 
 } // namespace connectionMatrix
