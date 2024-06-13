@@ -1809,7 +1809,7 @@ public:
 
 private:
 	NodeTreeWidget* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(NodeTreeWidget);
+	Q_DECLARE_PUBLIC(NodeTreeWidget)
 
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
 	bool _isActiveConfiguration{ false };

@@ -1159,7 +1159,7 @@ private:
 
 private:
 	ControlledEntityTreeWidget* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(ControlledEntityTreeWidget);
+	Q_DECLARE_PUBLIC(ControlledEntityTreeWidget)
 
 	la::avdecc::UniqueIdentifier _controlledEntityID{};
 	la::avdecc::entity::model::ConfigurationIndex _currentConfigurationIndex{ 0u };

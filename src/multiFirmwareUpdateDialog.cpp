@@ -266,7 +266,7 @@ private:
 
 private:
 	Model* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(Model);
+	Q_DECLARE_PUBLIC(Model)
 
 	struct EntityData
 	{

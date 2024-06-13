@@ -183,7 +183,7 @@ public:
 
 private:
 	LoggerModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(LoggerModel);
+	Q_DECLARE_PUBLIC(LoggerModel)
 
 	la::avdecc::logger::Logger* _logger{ nullptr };
 

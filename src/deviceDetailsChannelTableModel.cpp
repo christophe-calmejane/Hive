@@ -177,7 +177,7 @@ public:
 
 private:
 	DeviceDetailsChannelTableModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(DeviceDetailsChannelTableModel);
+	Q_DECLARE_PUBLIC(DeviceDetailsChannelTableModel)
 
 	QTableView* _ui;
 

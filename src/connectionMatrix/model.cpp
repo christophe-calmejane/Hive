@@ -4097,7 +4097,7 @@ private:
 
 private:
 	Model* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(Model);
+	Q_DECLARE_PUBLIC(Model)
 
 	Model::Mode _mode{ Model::Mode::None };
 	bool _transposed{ false };
