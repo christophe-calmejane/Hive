@@ -213,4 +213,4 @@ endif()
 set_directory_properties(PROPERTIES VS_STARTUP_PROJECT ${PROJECT_NAME})
 
 # Configure a few things that has to be done last
-cu_finalize()
+cu_finalize(NO_VSCODE_WORKSPACE)

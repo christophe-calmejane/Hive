@@ -39,5 +39,5 @@ private:
 
 private:
 	QScopedPointer<ActiveNetworkInterfacesModelPrivate> const d_ptr;
-	Q_DECLARE_PRIVATE(ActiveNetworkInterfacesModel);
+	Q_DECLARE_PRIVATE(ActiveNetworkInterfacesModel)
 };

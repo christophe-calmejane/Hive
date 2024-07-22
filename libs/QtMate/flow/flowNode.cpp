@@ -135,7 +135,7 @@ bool FlowNode::isCollapsed() const
 
 FlowInput* FlowNode::input(FlowSocketIndex index) const
 {
-	if (index < 0 || index >= _inputs.size())
+	if (index >= _inputs.size())
 	{
 		return nullptr;
 	}
@@ -144,7 +144,7 @@ FlowInput* FlowNode::input(FlowSocketIndex index) const
 
 FlowOutput* FlowNode::output(FlowSocketIndex index) const
 {
-	if (index < 0 || index >= _outputs.size())
+	if (index >= _outputs.size())
 	{
 		return nullptr;
 	}

@@ -97,7 +97,7 @@ private:
 
 private:
 	NetworkInterfaceTypeModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(NetworkInterfaceTypeModel);
+	Q_DECLARE_PUBLIC(NetworkInterfaceTypeModel)
 
 	struct Info
 	{

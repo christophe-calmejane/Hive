@@ -67,7 +67,7 @@ public:
 
 private:
 	DeviceDetailsLatencyTableModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(DeviceDetailsLatencyTableModel);
+	Q_DECLARE_PUBLIC(DeviceDetailsLatencyTableModel)
 
 	QTableView* _ui;
 

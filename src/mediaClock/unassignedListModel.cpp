@@ -69,7 +69,7 @@ private:
 
 private:
 	UnassignedListModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(UnassignedListModel);
+	Q_DECLARE_PUBLIC(UnassignedListModel)
 };
 
 //////////////////////////////////////

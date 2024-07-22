@@ -70,7 +70,7 @@ public:
 
 private:
 	DeviceDetailsStreamFormatTableModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(DeviceDetailsStreamFormatTableModel);
+	Q_DECLARE_PUBLIC(DeviceDetailsStreamFormatTableModel)
 
 	QTableView* _ui;
 

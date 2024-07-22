@@ -48,7 +48,7 @@ public:
 
 protected:
 	ComboBox* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(ComboBox);
+	Q_DECLARE_PUBLIC(ComboBox)
 };
 
 class BoldCurrentIndexSelectionDelegate : public QStyledItemDelegate

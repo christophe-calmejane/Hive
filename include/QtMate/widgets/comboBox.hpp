@@ -34,7 +34,7 @@ public:
 
 private:
 	ComboBoxPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(ComboBox);
+	Q_DECLARE_PRIVATE(ComboBox)
 };
 
 } // namespace widgets

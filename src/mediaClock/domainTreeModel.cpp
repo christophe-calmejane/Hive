@@ -102,7 +102,7 @@ private:
 
 private:
 	DomainTreeModel* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(DomainTreeModel);
+	Q_DECLARE_PUBLIC(DomainTreeModel)
 };
 
 //////////////////////////////////////
