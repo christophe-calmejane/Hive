@@ -141,7 +141,13 @@ function extend_gc_fnc_precmake()
 	local qtMajorVersion="${QtVersion%%.*}"
 	local qtConfigFileName="Qt${qtMajorVersion}Config.cmake"
 
-	if [ ! -f "${QtDir}/Qt${qtMajorVersion}/${qtConfigFileName}" ]; then
+	local qtConfigFilePath="${QtDir}/Qt${qtMajorVersion}/${qtConfigFileName}"
+	if isWSL; then
+		# Convert Windows path to WSL path
+		qtConfigFilePath=$(wslpath -u "${qtConfigFilePath}")
+	fi
+
+	if [ ! -f "${qtConfigFilePath}" ]; then
 		echo "Invalid Qt folder (${QtDir}): ${qtConfigFileName} not found in the folder."
 		echo "Maybe try the -qtdir option, see help (-h)"
 		exit 1
