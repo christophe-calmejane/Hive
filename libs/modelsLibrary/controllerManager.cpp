@@ -1309,6 +1309,16 @@ private:
 		return false;
 	}
 
+	virtual bool forgetRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->forgetRemoteEntity(entityID);
+		}
+		return false;
+	}
+
 	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept
 	{
 		_discoveryDelay = delay;

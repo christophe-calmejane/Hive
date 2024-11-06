@@ -234,6 +234,8 @@ public:
 	virtual bool discoverRemoteEntities() const noexcept = 0;
 	/** Requests a targetted remote entity discovery. */
 	virtual bool discoverRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	/** Forgets the specified remote entity. */
+	virtual bool forgetRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 	/** Sets automatic discovery delay. 0 (default) for no automatic discovery. */
 	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept = 0;
 
