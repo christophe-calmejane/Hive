@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for TIMING, PTP_INSTANCE and PTP_PORT descriptors
 - Support for Fast Device Enumeration (when cache is enabled)
 - [Possibility to modify the presentation time of each stream from Device Details Dialog](https://github.com/christophe-calmejane/Hive/issues/151)
+- Possibility to refresh a virtual entity
 
 ### Changed
 - [Channel Mappings Editor should display the redundant stream name instead of the primary name](https://github.com/christophe-calmejane/Hive/issues/130)
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Crash when a device fails to properly enumerate STRING descriptors
 - Incorrect dynamic mappings visualization for devices with multiple stream ports
 - [Can't open dynamic mappings editor in Inspector if not selecting audio unit first](https://github.com/christophe-calmejane/Hive/issues/159)
+- Virtual entities locales correctly loaded for all configurations
 
 ## [1.3.0] - 2023-09-26
 ### Added
