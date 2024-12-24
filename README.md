@@ -10,6 +10,8 @@ Hive is a pro audio Avdecc (IEEE Std 1722.1) controller. Hive allows you to insp
 
 Precompiled binaries for macOS and Windows [can be found here](https://github.com/christophe-calmejane/Hive/releases).
 
+**Note**: Starting with Hive 1.3, the precompiled Mac binaries require macOS 11 or later to run (both Intel and Apple Silicon).
+
 ## Minimum requirements for compilation
 
 - CMake 3.22
