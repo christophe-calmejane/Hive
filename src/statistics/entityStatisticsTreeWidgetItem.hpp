@@ -55,7 +55,7 @@ private:
 class EntityStatisticsTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::uint64_t const aemAecpUnsolicitedLossCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent = nullptr);
+	EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::uint64_t const aemAecpUnsolicitedLossCounter, std::uint64_t const mvuAecpUnsolicitedCounter, std::uint64_t const mvuAecpUnsolicitedLossCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent = nullptr);
 	virtual ~EntityStatisticsTreeWidgetItem() override
 	{
 		takeChildren();
@@ -69,6 +69,8 @@ private:
 	void updateAecpResponseAverageTime(std::chrono::milliseconds const& value) noexcept;
 	void updateAemAecpUnsolicitedCounter(std::uint64_t const value) noexcept;
 	void updateAemAecpUnsolicitedLossCounter(std::uint64_t const value) noexcept;
+	void updateMvuAecpUnsolicitedCounter(std::uint64_t const value) noexcept;
+	void updateMvuAecpUnsolicitedLossCounter(std::uint64_t const value) noexcept;
 
 	la::avdecc::UniqueIdentifier const _entityID{};
 
@@ -79,6 +81,8 @@ private:
 	QTreeWidgetItem _aecpResponseAverageTimeItem{ this };
 	QTreeWidgetItem _aemAecpUnsolicitedCounterItem{ this };
 	EntityStatisticTreeWidgetItem _aemAecpUnsolicitedLossCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses, this };
+	QTreeWidgetItem _mvuAecpUnsolicitedCounterItem{ this };
+	EntityStatisticTreeWidgetItem _mvuAecpUnsolicitedLossCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, this };
 	QTreeWidgetItem _enumerationTimeItem{ this };
 	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _counters{};
 	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _errorCounters{};
