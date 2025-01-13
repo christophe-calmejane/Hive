@@ -679,6 +679,29 @@ void VirtualController::getMilanInfo(la::avdecc::UniqueIdentifier const targetEn
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, s_emptyMilanInfo);
 }
 
+void VirtualController::setSystemUniqueID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::SystemUniqueIdentifier const systemUniqueID, SetSystemUniqueIDHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::Success, systemUniqueID);
+}
+
+void VirtualController::getSystemUniqueID(la::avdecc::UniqueIdentifier const targetEntityID, GetSystemUniqueIDHandler const& handler) const noexcept
+{
+	static auto const s_emptySystemUniqueID = la::avdecc::entity::model::SystemUniqueIdentifier{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, s_emptySystemUniqueID);
+}
+
+void VirtualController::setMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, std::optional<la::avdecc::entity::model::MediaClockReferencePriority> const userPriority, std::optional<la::avdecc::entity::model::AvdeccFixedString> const& domainName, SetMediaClockReferenceInfoHandler const& handler) const noexcept
+{
+	auto const mediaClockReferenceInfo = la::avdecc::entity::model::MediaClockReferenceInfo{ la::avdecc::entity::model::DefaultMediaClockReferencePriority::Default, userPriority, domainName };
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::Success, clockDomainIndex, mediaClockReferenceInfo);
+}
+
+void VirtualController::getMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, GetMediaClockReferenceInfoHandler const& handler) const noexcept
+{
+	static auto const s_emptyMediaClockReferenceInfo = la::avdecc::entity::model::MediaClockReferenceInfo{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, clockDomainIndex, s_emptyMediaClockReferenceInfo);
+}
+
 void VirtualController::connectStream(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamIdentification const& listenerStream, ConnectStreamHandler const& handler) const noexcept
 {
 	la::avdecc::utils::invokeProtectedHandler(handler, this, talkerStream, listenerStream, std::uint16_t{ 1u }, la::avdecc::entity::ConnectionFlags{}, la::avdecc::entity::LocalEntity::ControlStatus::Success);
