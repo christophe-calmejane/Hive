@@ -33,7 +33,9 @@ public:
 	using DataChangedHandler = std::function<void(QString const& previousData, QString const& newData)>;
 	using DataType = QString;
 	using AecpBeginCommandHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID)>;
+	using MilanBeginCommandHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID)>;
 	using AecpResultHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)>;
+	using MilanResultHandler = std::function<void(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::MvuCommandStatus const status)>;
 
 	AecpCommandTextEntry(QString const& text, std::optional<QValidator*> validator = std::nullopt, QWidget* parent = nullptr)
 		: qtMate::widgets::TextEntry{ text, validator, parent }
@@ -73,7 +75,8 @@ public:
 		return _previousData;
 	}
 
-	AecpBeginCommandHandler getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType const commandType) noexcept
+	template<class CommandType, class CommandHandlerType = std::conditional_t<std::is_same_v<CommandType, hive::modelsLibrary::ControllerManager::AecpCommandType>, AecpBeginCommandHandler, MilanBeginCommandHandler>>
+	CommandHandlerType getBeginCommandHandler(CommandType const commandType) noexcept
 	{
 		return [this](la::avdecc::UniqueIdentifier const entityID)
 		{
@@ -81,14 +84,15 @@ public:
 		};
 	}
 
-	AecpResultHandler getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, DataType const& previousData) noexcept
+	template<class CommandType, class CommandStatus = std::conditional_t<std::is_same_v<CommandType, hive::modelsLibrary::ControllerManager::AecpCommandType>, la::avdecc::entity::ControllerEntity::AemCommandStatus, la::avdecc::entity::ControllerEntity::MvuCommandStatus>, class ResultHandlerType = std::conditional_t<std::is_same_v<CommandType, hive::modelsLibrary::ControllerManager::AecpCommandType>, AecpResultHandler, MilanResultHandler>>
+	ResultHandlerType getResultHandler(CommandType const commandType, DataType const& previousData) noexcept
 	{
-		return [this, commandType, previousData](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
+		return [this, commandType, previousData](la::avdecc::UniqueIdentifier const entityID, CommandStatus const status)
 		{
 			QMetaObject::invokeMethod(this,
 				[this, commandType, previousData, status]()
 				{
-					if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+					if (status != CommandStatus::Success)
 					{
 						setCurrentData(previousData);
 

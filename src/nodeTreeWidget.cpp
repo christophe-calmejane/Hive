@@ -21,6 +21,7 @@
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/stringValidator.hpp"
+#include "nodeTreeDynamicWidgets/milanDynamicStateTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.hpp"
@@ -338,6 +339,16 @@ private:
 				addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 				addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
 				addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
+			}
+		}
+
+		// Milan Dynamic State - Display the information if available, even if the device is not Milan Compatible
+		{
+			auto const milanDynStateOpt = entity.getMilanDynamicState();
+			if (milanDynStateOpt)
+			{
+				auto* dynamicItem = new MilanDynamicStateTreeWidgetItem(_controlledEntityID, *milanDynStateOpt, q);
+				dynamicItem->setText(0, "Milan Dynamic State");
 			}
 		}
 
