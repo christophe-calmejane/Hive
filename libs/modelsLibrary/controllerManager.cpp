@@ -2778,6 +2778,8 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Abort Operation";
 		case AecpCommandType::IdentifyEntity:
 			return "Identify Entity";
+		case AecpCommandType::SetMaxTransitTime:
+			return "Set Max Transit Time";
 		default:
 			AVDECC_ASSERT(false, "Unhandled type");
 			return "Unknown";
