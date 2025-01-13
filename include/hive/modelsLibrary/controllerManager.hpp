@@ -48,6 +48,7 @@ public:
 		AecpTimeouts = 1u << 1,
 		AecpUnexpectedResponses = 1u << 2,
 		AemAecpUnsolicitedLosses = 1u << 3,
+		MvuAecpUnsolicitedLosses = 1u << 4,
 	};
 
 	using StreamInputErrorCounters = std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, la::avdecc::entity::model::DescriptorCounter>;
@@ -383,6 +384,8 @@ public:
 	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
 	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void aemAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	Q_SIGNAL void mvuAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	Q_SIGNAL void mvuAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
 	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters);
 
 	/* Diagnostics signals */

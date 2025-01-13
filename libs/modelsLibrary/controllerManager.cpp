@@ -71,6 +71,10 @@ public:
 					auto const counter = entity->getAemAecpUnsolicitedLossCounter();
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses] = StatisticsCounterInfo{ counter, 0u };
 				}
+				{
+					auto const counter = entity->getMvuAecpUnsolicitedLossCounter();
+					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses] = StatisticsCounterInfo{ counter, 0u };
+				}
 
 				// Get and copy diagnostics
 				_entityCache._diagnostics = entity->getDiagnostics();
@@ -860,6 +864,28 @@ private:
 				}
 
 				emit aemAecpUnsolicitedLossCounterChanged(entityID, value);
+			});
+	}
+	virtual void onMvuAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		emit mvuAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), value);
+	}
+	virtual void onMvuAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), value]()
+			{
+				if (auto* entityCache = entityCachedData(entityID))
+				{
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, value))
+					{
+						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
+					}
+				}
+
+				emit mvuAecpUnsolicitedLossCounterChanged(entityID, value);
 			});
 	}
 	// Diagnostics
