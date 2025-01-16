@@ -18,6 +18,7 @@
 */
 
 #include "milanDynamicStateTreeWidgetItem.hpp"
+#include "avdecc/numberValidator.hpp"
 
 #include <QMenu>
 
@@ -38,7 +39,8 @@ MilanDynamicStateTreeWidgetItem::MilanDynamicStateTreeWidgetItem(la::avdecc::Uni
 	_systemUniqueID->setDataChangedHandler(
 		[this](QString const& oldText, QString const& newText)
 		{
-			hive::modelsLibrary::ControllerManager::getInstance().setSystemUniqueID(_entityID, newText.toUInt(), _systemUniqueID->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID), _systemUniqueID->getResultHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID, oldText));
+			auto const systemUniqueID = static_cast<la::avdecc::entity::model::SystemUniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::entity::model::SystemUniqueIdentifier>(newText.toStdString().c_str()));
+			hive::modelsLibrary::ControllerManager::getInstance().setSystemUniqueID(_entityID, systemUniqueID, _systemUniqueID->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID), _systemUniqueID->getResultHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID, oldText));
 		});
 
 	// Listen for changes

@@ -21,6 +21,8 @@
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/stringValidator.hpp"
+#include "avdecc/euiValidator.hpp"
+#include "avdecc/numberValidator.hpp"
 #include "nodeTreeDynamicWidgets/milanDynamicStateTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
@@ -368,7 +370,7 @@ private:
 			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::forceNumeric(entityCaps.value()), avdecc::helper::capabilitiesToString(entityCaps));
 			if (entityCaps.test(la::avdecc::entity::EntityCapability::AssociationIDSupported))
 			{
-				addEditableTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString(""), hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, la::avdecc::entity::model::DescriptorIndex{ 0u }, {});
+				addEditableTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString(""), hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, la::avdecc::entity::model::DescriptorIndex{ 0u }, {}, avdecc::EUIValidator::getSharedInstance());
 			}
 			else
 			{
@@ -1313,14 +1315,14 @@ public:
 	}
 
 	/** An editable text entry item */
-	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::any const& customData)
+	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::any const& customData, std::optional<QValidator*> validator = avdecc::AvdeccStringValidator::getSharedInstance())
 	{
 		Q_Q(NodeTreeWidget);
 
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, itemName);
 
-		auto* textEntry = new AecpCommandTextEntry(itemValue, avdecc::AvdeccStringValidator::getSharedInstance());
+		auto* textEntry = new AecpCommandTextEntry(itemValue, validator);
 
 		q->setItemWidget(item, 1, textEntry);
 
