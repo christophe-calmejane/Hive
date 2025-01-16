@@ -2536,7 +2536,33 @@ private:
 		}
 	}
 
-	virtual void setMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, std::optional<la::avdecc::entity::model::MediaClockReferencePriority> const userPriority, std::optional<la::avdecc::entity::model::AvdeccFixedString> const& domainName, BeginCommandHandler const& beginHandler = {}, SetMediaClockReferenceInfoHandler const& resultHandler = {}) noexcept override {}
+	virtual void setMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, std::optional<la::avdecc::entity::model::MediaClockReferencePriority> const userPriority, std::optional<la::avdecc::entity::model::AvdeccFixedString> const& domainName, BeginCommandHandler const& beginHandler = {}, SetMediaClockReferenceInfoHandler const& resultHandler = {}) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginMilanCommand(targetEntityID, MilanCommandType::SetMediaClockReferenceInfo, clockDomainIndex);
+			}
+			controller->setMediaClockReferenceInfo(targetEntityID, clockDomainIndex, userPriority, domainName,
+				[this, targetEntityID, clockDomainIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::MvuCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endMilanCommand(targetEntityID, MilanCommandType::SetMediaClockReferenceInfo, clockDomainIndex, status);
+					}
+				});
+		}
+	}
 
 	/* Connection Management Protocol (ACMP) */
 	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, ConnectStreamHandler const& resultHandler) noexcept override
