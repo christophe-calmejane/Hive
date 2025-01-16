@@ -66,6 +66,8 @@ set(HEADER_FILES_COMMON
 	avdecc/loggerModel.hpp
 	avdecc/commandChain.hpp
 	avdecc/stringValidator.hpp
+	avdecc/euiValidator.hpp
+	avdecc/numberValidator.hpp
 	connectionEditor/connectionEditor.hpp
 	connectionEditor/connectionWorkspace.hpp
 	connectionEditor/nodeListModel.hpp
