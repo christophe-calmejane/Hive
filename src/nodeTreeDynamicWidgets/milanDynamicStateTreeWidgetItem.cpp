@@ -30,7 +30,8 @@ MilanDynamicStateTreeWidgetItem::MilanDynamicStateTreeWidgetItem(la::avdecc::Uni
 	auto* systemUniqueIDItem = new QTreeWidgetItem(this);
 	systemUniqueIDItem->setText(0, "System Unique ID");
 
-	_systemUniqueID = new AecpCommandTextEntry("");
+	static_assert(!std::is_same_v<la::avdecc::entity::model::SystemUniqueIdentifier, la::avdecc::UniqueIdentifier>, "Update this code and use avdecc::EUIValidator::getSharedInstance()");
+	_systemUniqueID = new AecpCommandTextEntry("", avdecc::PositiveIntegerValidator<std::numeric_limits<la::avdecc::entity::model::SystemUniqueIdentifier>::max()>::getSharedInstance());
 	parent->setItemWidget(systemUniqueIDItem, 1, _systemUniqueID);
 
 	// Send changes
@@ -56,5 +57,6 @@ MilanDynamicStateTreeWidgetItem::MilanDynamicStateTreeWidgetItem(la::avdecc::Uni
 
 void MilanDynamicStateTreeWidgetItem::updateSystemUniqueID(la::avdecc::entity::model::SystemUniqueIdentifier const systemUniqueID) noexcept
 {
+	static_assert(!std::is_same_v<la::avdecc::entity::model::SystemUniqueIdentifier, la::avdecc::UniqueIdentifier>, "Update this code to handle SystemUniqueIdentifier as a UniqueIdentifier using: hive::modelsLibrary::helper::uniqueIdentifierToString(systemUniqueID)");
 	_systemUniqueID->setCurrentData(QString::number(systemUniqueID));
 }
