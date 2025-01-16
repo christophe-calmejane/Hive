@@ -155,6 +155,12 @@ private:
 	QImage _image;
 };
 
+enum class MediaClockReferenceInfoType
+{
+	UserPriority = 0,
+	DomainName,
+};
+
 class NodeTreeWidgetPrivate : public QObject, public NodeDispatcher
 {
 	Q_OBJECT
@@ -928,6 +934,10 @@ private:
 			descriptorItem->setText(0, "Static Info");
 
 			addTextItem(descriptorItem, "Clock Sources count", model.clockSources.size());
+			// Default Media Clock Priority
+			{
+				addTextItem(descriptorItem, "Default Media Clock Priority", dynamicModel.mediaClockReferenceInfo.defaultMediaClockPriority);
+			}
 		}
 
 		// Dynamic model
@@ -936,67 +946,75 @@ private:
 			auto* dynamicItem = new QTreeWidgetItem(q);
 			dynamicItem->setText(0, "Dynamic Info");
 
-			auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
-			currentSourceItem->setText(0, "Current Clock Source");
-
-			auto* sourceComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ClockSourceIndex>();
-			auto clockSources = std::remove_pointer_t<decltype(sourceComboBox)>::Data{};
-			for (auto const sourceIndex : model.clockSources)
+			// Current Clock Source
 			{
-				clockSources.insert(sourceIndex);
-				/*try
+				auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
+				currentSourceItem->setText(0, "Current Clock Source");
+
+				auto* sourceComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ClockSourceIndex>();
+				auto clockSources = std::remove_pointer_t<decltype(sourceComboBox)>::Data{};
+				for (auto const sourceIndex : model.clockSources)
 				{
-					auto const& clockSourceNode = controlledEntity->getClockSourceNode(configurationIndex, sourceIndex);
-					auto const name = QString::number(sourceIndex) + ": '" + hive::modelsLibrary::helper::objectName(controlledEntity, clockSourceNode) + "' (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
-					sourceComboBox->addItem(name, QVariant::fromValue(sourceIndex));
+					clockSources.insert(sourceIndex);
 				}
-				catch (...)
-				{
-				}*/
+				sourceComboBox->setAllData(clockSources,
+					[this, configurationIndex](auto const& sourceIndex)
+					{
+						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+						auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
+
+						if (controlledEntity)
+						{
+							try
+							{
+								auto const& entity = *controlledEntity;
+								auto const& clockSourceNode = entity.getClockSourceNode(configurationIndex, sourceIndex);
+								return QString::number(sourceIndex) + ": " + hive::modelsLibrary::helper::objectName(&entity, clockSourceNode) + " (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
+							}
+							catch (...)
+							{
+								// Ignore exception
+							}
+						}
+						return QString::number(sourceIndex);
+					});
+
+				q->setItemWidget(currentSourceItem, 1, sourceComboBox);
+
+				// Send changes
+				sourceComboBox->setDataChangedHandler(
+					[this, sourceComboBox, clockDomainIndex = node.descriptorIndex](auto const& previousSourceIndex, auto const& newSourceIndex)
+					{
+						hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, newSourceIndex, sourceComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource), sourceComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource, previousSourceIndex));
+					});
+
+				// Listen for changes
+				connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceChanged, sourceComboBox,
+					[this, streamType = node.descriptorType, domainIndex = node.descriptorIndex, sourceComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const sourceIndex)
+					{
+						if (entityID == _controlledEntityID && clockDomainIndex == domainIndex)
+						{
+							sourceComboBox->setCurrentData(sourceIndex);
+						}
+					});
+
+				// Update now
+				sourceComboBox->setCurrentData(dynamicModel.clockSourceIndex);
 			}
-			sourceComboBox->setAllData(clockSources,
-				[this, configurationIndex](auto const& sourceIndex)
+
+			// User writable Media Clock Reference Info
+			{
+				// User Media Clock Priority
+				if (dynamicModel.mediaClockReferenceInfo.userMediaClockPriority)
 				{
-					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-					auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
-
-					if (controlledEntity)
-					{
-						try
-						{
-							auto const& entity = *controlledEntity;
-							auto const& clockSourceNode = entity.getClockSourceNode(configurationIndex, sourceIndex);
-							return QString::number(sourceIndex) + ": " + hive::modelsLibrary::helper::objectName(&entity, clockSourceNode) + " (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
-						}
-						catch (...)
-						{
-							// Ignore exception
-						}
-					}
-					return QString::number(sourceIndex);
-				});
-
-			q->setItemWidget(currentSourceItem, 1, sourceComboBox);
-
-			// Send changes
-			sourceComboBox->setDataChangedHandler(
-				[this, sourceComboBox, clockDomainIndex = node.descriptorIndex](auto const& previousSourceIndex, auto const& newSourceIndex)
+					addEditableTextItem(dynamicItem, "User Media Clock Priority", QString::number(*dynamicModel.mediaClockReferenceInfo.userMediaClockPriority), hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo, std::make_tuple(node.descriptorIndex, MediaClockReferenceInfoType::UserPriority), avdecc::PositiveIntegerValidator<std::numeric_limits<std::uint8_t>::max()>::getSharedInstance());
+				}
+				// Media Clock Domain Name
+				if (dynamicModel.mediaClockReferenceInfo.mediaClockDomainName)
 				{
-					hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, newSourceIndex, sourceComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource), sourceComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource, previousSourceIndex));
-				});
-
-			// Listen for changes
-			connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceChanged, sourceComboBox,
-				[this, streamType = node.descriptorType, domainIndex = node.descriptorIndex, sourceComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const sourceIndex)
-				{
-					if (entityID == _controlledEntityID && clockDomainIndex == domainIndex)
-					{
-						sourceComboBox->setCurrentData(sourceIndex);
-					}
-				});
-
-			// Update now
-			sourceComboBox->setCurrentData(dynamicModel.clockSourceIndex);
+					addEditableTextItem(dynamicItem, "Media Clock Domain Name", QString::fromStdString(static_cast<std::string>(*dynamicModel.mediaClockReferenceInfo.mediaClockDomainName)), hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo, std::make_tuple(node.descriptorIndex, MediaClockReferenceInfoType::DomainName));
+				}
+			}
 		}
 
 		// Counters (if supported by the entity)
@@ -1722,6 +1740,126 @@ public:
 							if (entityID == _controlledEntityID)
 							{
 								textEntry->setCurrentData(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
+							}
+						});
+					break;
+				}
+				default:
+					break;
+			}
+		}
+		catch (...)
+		{
+		}
+	}
+
+	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::MilanCommandType const commandType, std::any const& customData, std::optional<QValidator*> validator = avdecc::AvdeccStringValidator::getSharedInstance())
+	{
+		Q_Q(NodeTreeWidget);
+
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, itemName);
+
+		auto* textEntry = new AecpCommandTextEntry(itemValue, validator);
+
+		q->setItemWidget(item, 1, textEntry);
+
+		textEntry->setDataChangedHandler(
+			[this, textEntry, commandType, customData](QString const& oldText, QString const& newText)
+			{
+				// Send changes
+				switch (commandType)
+				{
+					case hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID:
+						try
+						{
+							auto const systemUniqueID = static_cast<la::avdecc::entity::model::SystemUniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::entity::model::SystemUniqueIdentifier>(newText.toStdString().c_str()));
+							hive::modelsLibrary::ControllerManager::getInstance().setSystemUniqueID(_controlledEntityID, systemUniqueID, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID, oldText));
+						}
+						catch (std::invalid_argument const& e)
+						{
+							QMessageBox::warning(q_ptr, "", QString("Cannot set System Unique ID: Invalid EID: %1").arg(e.what()));
+						}
+						break;
+					case hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo:
+						try
+						{
+							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ClockDomainIndex, MediaClockReferenceInfoType>>(customData);
+							auto const clockDomainIndex = std::get<0>(customTuple);
+							auto const infoType = std::get<1>(customTuple);
+							auto userPriority = decltype(la::avdecc::entity::model::MediaClockReferenceInfo::userMediaClockPriority){};
+							auto domainName = decltype(la::avdecc::entity::model::MediaClockReferenceInfo::mediaClockDomainName){};
+							switch (infoType)
+							{
+								case MediaClockReferenceInfoType::UserPriority:
+									userPriority = static_cast<decltype(userPriority)::value_type>(newText.toUInt());
+									break;
+								case MediaClockReferenceInfoType::DomainName:
+									domainName = newText.toStdString();
+									break;
+								default:
+									break;
+							}
+							hive::modelsLibrary::ControllerManager::getInstance().setMediaClockReferenceInfo(_controlledEntityID, clockDomainIndex, userPriority, domainName, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo, oldText));
+						}
+						catch (...)
+						{
+						}
+						break;
+					default:
+						break;
+				}
+			});
+
+		// Listen for changes
+		try
+		{
+			switch (commandType)
+			{
+				case hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID:
+				{
+					// TODO
+					/*connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::associationIDChanged, textEntry,
+						[this, textEntry](la::avdecc::UniqueIdentifier const entityID, std::optional<la::avdecc::UniqueIdentifier> const& associationID)
+						{
+							if (entityID == _controlledEntityID)
+							{
+								textEntry->setCurrentData(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
+							}
+						});*/
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ClockDomainIndex, MediaClockReferenceInfoType>>(customData);
+					auto const clockDomainIndex = std::get<0>(customTuple);
+					auto const infoType = std::get<1>(customTuple);
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::mediaClockReferenceInfoChanged, textEntry,
+						[this, textEntry, cdIndex = clockDomainIndex, infoType](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& mcrInfo)
+						{
+							if (entityID == _controlledEntityID && clockDomainIndex == cdIndex)
+							{
+								switch (infoType)
+								{
+									case MediaClockReferenceInfoType::UserPriority:
+									{
+										if (mcrInfo.userMediaClockPriority)
+										{
+											textEntry->setCurrentData(QString::number(*mcrInfo.userMediaClockPriority));
+										}
+										break;
+									}
+									case MediaClockReferenceInfoType::DomainName:
+									{
+										if (mcrInfo.mediaClockDomainName)
+										{
+											textEntry->setCurrentData(QString::fromStdString(static_cast<std::string>(*mcrInfo.mediaClockDomainName)));
+										}
+										break;
+									}
+									default:
+										break;
+								}
 							}
 						});
 					break;
