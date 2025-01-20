@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Support for Fast Device Enumeration (when cache is enabled)
 - [Possibility to modify the presentation time of each stream from Device Details Dialog](https://github.com/christophe-calmejane/Hive/issues/151)
 - Possibility to refresh a virtual entity
+- Added Milan 1.2 values:
+  - System Unique ID
+  - Media Clock Reference Info (in ClockDomain descriptor)
 
 ### Changed
 - [Channel Mappings Editor should display the redundant stream name instead of the primary name](https://github.com/christophe-calmejane/Hive/issues/130)
