@@ -936,7 +936,7 @@ private:
 			addTextItem(descriptorItem, "Clock Sources count", model.clockSources.size());
 			// Default Media Clock Priority
 			{
-				addTextItem(descriptorItem, "Default Media Clock Priority", dynamicModel.mediaClockReferenceInfo.defaultMediaClockPriority);
+				addTextItem(descriptorItem, "Default Media Clock Priority", model.defaultMediaClockPriority);
 			}
 		}
 

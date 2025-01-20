@@ -981,12 +981,10 @@ private:
 		}
 
 		// Create a new virtual controller
-		_virtualController = VirtualController{};
+		_virtualController = VirtualController{ this };
 
 		// Create a new controller and store it
 		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel, std::nullopt, &_virtualController);
-
-		_virtualController.setControllerEID(controller->getControllerEID());
 
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
@@ -2726,7 +2724,7 @@ private:
 	bool _enableAemCache{ false };
 	bool _enableFastEnumeration{ false };
 	bool _fullAemEnumeration{ false };
-	VirtualController _virtualController{};
+	VirtualController _virtualController{ nullptr };
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept

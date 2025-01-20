@@ -25,9 +25,10 @@ namespace hive
 {
 namespace modelsLibrary
 {
-void VirtualController::setControllerEID(la::avdecc::UniqueIdentifier const controllerEID) noexcept
+// Constructor
+VirtualController::VirtualController(ControllerManager const* const controllerManager) noexcept
+	: _controllerManager{ controllerManager }
 {
-	_controllerEID = controllerEID;
 }
 
 // Empty implementation of all VirtualController overridable methods
@@ -43,7 +44,8 @@ void VirtualController::releaseEntity(la::avdecc::UniqueIdentifier const targetE
 
 void VirtualController::lockEntity(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, LockEntityHandler const& handler) const noexcept
 {
-	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, _controllerEID, descriptorType, descriptorIndex);
+	auto const controllerEID = _controllerManager ? _controllerManager->getControllerEID() : la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, controllerEID, descriptorType, descriptorIndex);
 }
 
 void VirtualController::unlockEntity(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, UnlockEntityHandler const& handler) const noexcept
@@ -692,14 +694,29 @@ void VirtualController::getSystemUniqueID(la::avdecc::UniqueIdentifier const tar
 
 void VirtualController::setMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, std::optional<la::avdecc::entity::model::MediaClockReferencePriority> const userPriority, std::optional<la::avdecc::entity::model::AvdeccFixedString> const& domainName, SetMediaClockReferenceInfoHandler const& handler) const noexcept
 {
-	auto const mediaClockReferenceInfo = la::avdecc::entity::model::MediaClockReferenceInfo{ la::avdecc::entity::model::DefaultMediaClockReferencePriority::Default, userPriority, domainName };
-	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::Success, clockDomainIndex, mediaClockReferenceInfo);
+	auto const mediaClockReferenceInfo = la::avdecc::entity::model::MediaClockReferenceInfo{ userPriority, domainName };
+	auto defaultPrio = la::avdecc::entity::model::DefaultMediaClockReferencePriority::Default;
+	// Get defaultPrio value from the entity model of the targetEntityID
+	auto controlledEntity = _controllerManager->getControlledEntity(targetEntityID);
+	if (controlledEntity)
+	{
+		try
+		{
+			defaultPrio = controlledEntity->getClockDomainNode(controlledEntity->getCurrentConfigurationIndex(), clockDomainIndex).staticModel.defaultMediaClockPriority;
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
+		{
+			// Ignore the exception
+		}
+	}
+
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::Success, clockDomainIndex, defaultPrio, mediaClockReferenceInfo);
 }
 
 void VirtualController::getMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, GetMediaClockReferenceInfoHandler const& handler) const noexcept
 {
 	static auto const s_emptyMediaClockReferenceInfo = la::avdecc::entity::model::MediaClockReferenceInfo{};
-	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, clockDomainIndex, s_emptyMediaClockReferenceInfo);
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, clockDomainIndex, la::avdecc::entity::model::DefaultMediaClockReferencePriority::Default, s_emptyMediaClockReferenceInfo);
 }
 
 void VirtualController::connectStream(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamIdentification const& listenerStream, ConnectStreamHandler const& handler) const noexcept

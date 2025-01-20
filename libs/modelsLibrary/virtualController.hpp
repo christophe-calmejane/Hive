@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "hive/modelsLibrary/controllerManager.hpp"
 #include <la/avdecc/internals/controllerEntity.hpp>
 
 namespace hive
@@ -29,10 +30,7 @@ class VirtualController : public la::avdecc::entity::controller::Interface
 {
 public:
 	/** Constructor */
-	VirtualController() noexcept = default;
-
-	/** Set controller EID */
-	void setControllerEID(la::avdecc::UniqueIdentifier const controllerEID) noexcept;
+	VirtualController(ControllerManager const* const controllerManager) noexcept;
 
 	// la::avdecc::entity::controller::Interface overrides
 	virtual void acquireEntity(la::avdecc::UniqueIdentifier const targetEntityID, bool const isPersistent, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, AcquireEntityHandler const& handler) const noexcept override;
@@ -175,7 +173,7 @@ private:
 	// Private methods
 
 	// Private members
-	la::avdecc::UniqueIdentifier _controllerEID{};
+	ControllerManager const* _controllerManager{ nullptr };
 };
 
 } // namespace modelsLibrary
