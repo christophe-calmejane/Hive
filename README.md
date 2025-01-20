@@ -14,7 +14,7 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 
 ## Minimum requirements for compilation
 
-- CMake 3.22
+- CMake 3.29
 - Qt 6.5.2 (although Qt 5.15.2 was supported in the past, it's no longer guaranteed to compile correctly)
 - Visual Studio 2022 17.4 (using platform toolset v143), Xcode 14, g++ 11.0
 - [Optional, for cross-compilation] Docker / Docker Compose
