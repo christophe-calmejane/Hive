@@ -274,8 +274,8 @@ void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
 				case la::avdecc::jsonSerializer::DeserializationError::FileReadError:
 					msg = "Error Reading File";
 					break;
-				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
-					msg = "Unsupported Dump Version";
+				case la::avdecc::jsonSerializer::DeserializationError::IncompatibleDumpVersion:
+					msg = "Incompatible Dump Version";
 					break;
 				case la::avdecc::jsonSerializer::DeserializationError::ParseError:
 					msg = QString("Parse Error: %1").arg(message.c_str());

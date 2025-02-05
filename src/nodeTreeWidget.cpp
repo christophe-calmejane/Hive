@@ -292,6 +292,10 @@ private:
 					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 2u });
 					addTextItem(descriptorItem, "AEM Checksum v2", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
 				}
+				{
+					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 3u });
+					addTextItem(descriptorItem, "AEM Checksum v3", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+				}
 				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::forceNumeric(talkerCaps.value()), avdecc::helper::capabilitiesToString(talkerCaps));
 				addTextItem(descriptorItem, "Talker Max Sources", QString::number(e.getTalkerStreamSources()));
 				addFlagsItem(descriptorItem, "Listener Capabilities", la::avdecc::utils::forceNumeric(listenerCaps.value()), avdecc::helper::capabilitiesToString(listenerCaps));
@@ -644,18 +648,18 @@ private:
 
 			auto const& model = node.staticModel;
 
-			addTextItem(descriptorItem, "MAC Address", la::networkInterface::NetworkInterfaceHelper::macAddressToString(model.macAddress, true));
+			addTextItem(descriptorItem, "MAC Address", la::networkInterface::NetworkInterfaceHelper::macAddressToString(node.dynamicModel.macAddress, true));
 			addFlagsItem(descriptorItem, "Flags", la::avdecc::utils::forceNumeric(model.interfaceFlags.value()), avdecc::helper::flagsToString(model.interfaceFlags));
-			addTextItem(descriptorItem, "Clock Identity", hive::modelsLibrary::helper::uniqueIdentifierToString(model.clockIdentity));
-			addTextItem(descriptorItem, "Priority 1", hive::modelsLibrary::helper::toHexQString(model.priority1, true, true));
-			addTextItem(descriptorItem, "Clock Class", hive::modelsLibrary::helper::toHexQString(model.clockClass, true, true));
-			addTextItem(descriptorItem, "Offset Scaled Log Variance", hive::modelsLibrary::helper::toHexQString(model.offsetScaledLogVariance, true, true));
-			addTextItem(descriptorItem, "Clock Accuracy", hive::modelsLibrary::helper::toHexQString(model.clockAccuracy, true, true));
-			addTextItem(descriptorItem, "Priority 2", hive::modelsLibrary::helper::toHexQString(model.priority2, true, true));
-			addTextItem(descriptorItem, "Domain Number", hive::modelsLibrary::helper::toHexQString(model.domainNumber, true, true));
-			addTextItem(descriptorItem, "Log Sync Interval", hive::modelsLibrary::helper::toHexQString(model.logSyncInterval, true, true));
-			addTextItem(descriptorItem, "Log Announce Interval", hive::modelsLibrary::helper::toHexQString(model.logAnnounceInterval, true, true));
-			addTextItem(descriptorItem, "Log Delay Interval", hive::modelsLibrary::helper::toHexQString(model.logPDelayInterval, true, true));
+			addTextItem(descriptorItem, "Clock Identity", hive::modelsLibrary::helper::uniqueIdentifierToString(node.dynamicModel.clockIdentity));
+			addTextItem(descriptorItem, "Priority 1", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.priority1, true, true));
+			addTextItem(descriptorItem, "Clock Class", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.clockClass, true, true));
+			addTextItem(descriptorItem, "Offset Scaled Log Variance", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.offsetScaledLogVariance, true, true));
+			addTextItem(descriptorItem, "Clock Accuracy", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.clockAccuracy, true, true));
+			addTextItem(descriptorItem, "Priority 2", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.priority2, true, true));
+			addTextItem(descriptorItem, "Domain Number", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.domainNumber, true, true));
+			addTextItem(descriptorItem, "Log Sync Interval", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.logSyncInterval, true, true));
+			addTextItem(descriptorItem, "Log Announce Interval", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.logAnnounceInterval, true, true));
+			addTextItem(descriptorItem, "Log Delay Interval", hive::modelsLibrary::helper::toHexQString(node.dynamicModel.logPDelayInterval, true, true));
 			addTextItem(descriptorItem, "Port Number", hive::modelsLibrary::helper::toHexQString(model.portNumber, true, true));
 		}
 
