@@ -158,6 +158,7 @@ function extend_gc_fnc_precmake()
 
 	# Add NewsFeeds
 	add_cmake_opt+=("-DNEWSFEED_URL=${params["newsfeed_url"]}")
+	add_cmake_opt+=("-DNEWSFEEDFILE_URL=${params["newsfeedfile_url"]}")
 }
 
 function extend_gc_fnc_props_summary()

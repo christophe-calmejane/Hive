@@ -19,6 +19,8 @@
 
 #pragma once
 
+// clang-format off
+
 #include <QString>
 #include <string>
 #include <cstdint>
@@ -27,36 +29,37 @@ namespace hive
 {
 namespace internals
 {
-QString const projectURL{ "@CU_PROJECT_URLABOUTINFO@" };
-QString const authors{ "@CU_COPYRIGHT_HOLDER@" };
-QString const applicationShortName{ "@PROJECT_NAME@" };
-QString const applicationLongName{ "@CU_PROJECT_FULL_NAME@" };
-QString const companyName{ "@CU_COMPANY_NAME@" };
-QString const companyDomain{ "@CU_COMPANY_DOMAIN@" };
-QString const companyURL{ "@CU_COMPANY_URL@" };
-QString const projectContact{ "@CU_PROJECT_CONTACT@" };
-QString const versionString{ "@CU_PROJECT_FRIENDLY_VERSION@" }; // Friendly version (3 digits for release, 3 digits and beta postfix for beta)
-QString const marketingVersion{ "@CU_PROJECT_MARKETING_VERSION@" }; // Marketing version
-std::uint32_t const majorVersion{ @CU_PROJECT_VERSION_MAJOR@ };
-std::uint32_t const minorVersion{ @CU_PROJECT_VERSION_MINOR@ };
-std::uint32_t const marketingDigits{ @CU_PROJECT_MARKETING_VERSION_DIGITS@ }; // Marketing digits
-QString const cmakeVersionString{ "@CU_PROJECT_CMAKEVERSION_STRING@" }; // CMake version (3 digits for a release, 4 digits for a beta)
-QString const legalCopyright{ "@CU_PROJECT_LEGALCOPYRIGHT@" };
-QString const readableCopyright{ "@CU_PROJECT_READABLE_COPYRIGHT@" };
-QString const buildArchitecture{ "@CU_TARGET_ARCH@" };
-QString const buildNumber{ "@CU_BUILD_NUMBER@" };
+QString const projectURL = "@CU_PROJECT_URLABOUTINFO@";
+QString const authors = "@CU_COPYRIGHT_HOLDER@";
+QString const applicationShortName = "@PROJECT_NAME@";
+QString const applicationLongName = "@CU_PROJECT_FULL_NAME@";
+QString const companyName = "@CU_COMPANY_NAME@";
+QString const companyDomain = "@CU_COMPANY_DOMAIN@";
+QString const companyURL = "@CU_COMPANY_URL@";
+QString const projectContact = "@CU_PROJECT_CONTACT@";
+QString const versionString = "@CU_PROJECT_FRIENDLY_VERSION@"; // Friendly version (3 digits for release, 3 digits and beta postfix for beta)
+QString const marketingVersion = "@CU_PROJECT_MARKETING_VERSION@"; // Marketing version
+std::uint32_t const majorVersion = @CU_PROJECT_VERSION_MAJOR@;
+std::uint32_t const minorVersion = @CU_PROJECT_VERSION_MINOR@;
+std::uint32_t const marketingDigits = @CU_PROJECT_MARKETING_VERSION_DIGITS@; // Marketing digits
+QString const cmakeVersionString = "@CU_PROJECT_CMAKEVERSION_STRING@"; // CMake version (3 digits for a release, 4 digits for a beta)
+QString const legalCopyright = "@CU_PROJECT_LEGALCOPYRIGHT@";
+QString const readableCopyright = "@CU_PROJECT_READABLE_COPYRIGHT@";
+QString const buildArchitecture = "@CU_TARGET_ARCH@";
+QString const buildNumber = "@CU_BUILD_NUMBER@";
 #ifdef DEBUG
-QString const buildConfiguration{ "Debug" };
+QString const buildConfiguration = "Debug";
 #else // !DEBUG
-QString const buildConfiguration{ "Release" };
+QString const buildConfiguration = "Release";
 #endif // DEBUG
 #ifdef USE_SPARKLE
-std::string const appcastReleasesUrl{ "@APPCAST_RELEASES_URL@" };
-std::string const appcastBetasUrl{ "@APPCAST_BETAS_URL@" };
-std::string const appcastReleasesFallbackUrl{ "@APPCAST_RELEASES_FALLBACK_URL@" };
-std::string const appcastBetasFallbackUrl{ "@APPCAST_BETAS_FALLBACK_URL@" };
+std::string const appcastReleasesUrl = "@APPCAST_RELEASES_URL@";
+std::string const appcastBetasUrl = "@APPCAST_BETAS_URL@";
+std::string const appcastReleasesFallbackUrl = "@APPCAST_RELEASES_FALLBACK_URL@";
+std::string const appcastBetasFallbackUrl = "@APPCAST_BETAS_FALLBACK_URL@";
 #endif // USE_SPARKLE
-std::string const newsFeedUrl{ "@NEWSFEED_URL@" };
+std::string const newsFeedUrl = "@NEWSFEED_URL@";
+std::string const newsFeedFileUrl = "@NEWSFEEDFILE_URL@";
 
 } // namespace internals
 } // namespace hive

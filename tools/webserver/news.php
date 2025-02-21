@@ -1,7 +1,7 @@
 <?php
 /*
 	News Feed generator
-	(c) 2022 - Christophe Calmejane
+	(C) 2022-2025 - Christophe Calmejane
 */
 
 function addNewsToBuffer($output, $news)
@@ -41,8 +41,14 @@ if(!isset($_GET["buildNumber"]))
 }
 $buildNumber = $_GET["buildNumber"];
 
+$fileURL = "news.json";
+if(isset($_GET["fileURL"]))
+{
+	$fileURL = $_GET["fileURL"];
+}
+
 // Open json file
-$json = file_get_contents("news.json");
+$json = file_get_contents($fileURL);
 
 // Parse json
 $json_a = json_decode($json, true);
