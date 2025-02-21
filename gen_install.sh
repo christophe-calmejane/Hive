@@ -140,16 +140,22 @@ fi
 if [ $do_appcast -eq 1 ]; then
 	appcastURL="${params["appcast_releases"]}"
 	installerSubUrl="release"
-	if [ $is_release -eq 0 ];
-	then
+	if [ $is_release -eq 0 ]; then
 		appcastURL="${params["appcast_betas"]}"
 		installerSubUrl="beta"
 	fi
+
 	# Get URL of folder containing appcast file
 	updateBaseURL="${appcastURL%/*}/"
 
+	# Get URL for changelog script
+	changelogScriptURL="${updateBaseURL}changelog.php"
+	if [ "x${params["changelog_script_url"]}" != "x" ]; then
+		changelogScriptURL="${params["changelog_script_url"]}"
+	fi
+
 	# Generate appcast file
-	"${selfFolderPath}3rdparty/sparkleHelper/scripts/generate_appcast.sh" "${deliverablesFolder}${appcastInstallerName}" "${releaseVersion}${beta_tag}" "${internalVersion}" "resources/dsa_priv.pem" "${updateBaseURL}changelog.php?lastKnownVersion=next" "${updateBaseURL}${installerSubUrl}/${appcastInstallerName}" "/S /NOPCAP /LAUNCH"
+	"${selfFolderPath}3rdparty/sparkleHelper/scripts/generate_appcast.sh" "${deliverablesFolder}${appcastInstallerName}" "${releaseVersion}${beta_tag}" "${internalVersion}" "resources/dsa_priv.pem" "${changelogScriptURL}?fileURL=${updateBaseURL}CHANGELOG.md&amp;lastKnownVersion=next" "${updateBaseURL}${installerSubUrl}/${appcastInstallerName}" "/S /NOPCAP /LAUNCH"
 
 	# Move appcast file to deliverablesFolder
 	mv "appcastItem-${releaseVersion}${beta_tag}.xml" "${deliverablesFolder}"
