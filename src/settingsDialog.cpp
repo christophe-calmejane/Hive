@@ -227,6 +227,8 @@ private:
 			{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::Serial, "Serial Port" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::Local, "Local Domain Socket" },
 		};
 
 		for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())

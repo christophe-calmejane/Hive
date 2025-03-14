@@ -43,6 +43,10 @@ QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type 
 			return "Proxy";
 		case la::avdecc::protocol::ProtocolInterface::Type::Virtual:
 			return "Virtual";
+		case la::avdecc::protocol::ProtocolInterface::Type::Serial:
+			return "Serial Port";
+		case la::avdecc::protocol::ProtocolInterface::Type::Local:
+			return "Local Domain Socket";
 		default:
 			AVDECC_ASSERT(false, "Not handled!");
 			return {};

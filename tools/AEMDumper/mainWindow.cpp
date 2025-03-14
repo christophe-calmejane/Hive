@@ -473,6 +473,12 @@ void MainWindow::dropEvent([[maybe_unused]] QDropEvent* event)
 				case la::avdecc::jsonSerializer::DeserializationError::Incomplete:
 					msg = message.c_str();
 					break;
+				case la::avdecc::jsonSerializer::DeserializationError::MissingInformation:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::IncompatibleEntityModelVersion:
+					msg = "Incompatible Entity Model Version";
+					break;
 				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
 					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
 					break;
