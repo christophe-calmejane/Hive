@@ -293,17 +293,28 @@ private:
 				auto const ctrlCaps = e.getControllerCapabilities();
 
 				addTextItem(descriptorItem, "Entity Model ID", hive::modelsLibrary::helper::uniqueIdentifierToString(e.getEntityModelID()));
+				// AEM Checksums
 				{
-					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 1u });
-					addTextItem(descriptorItem, "AEM Checksum v1", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
-				}
-				{
-					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 2u });
-					addTextItem(descriptorItem, "AEM Checksum v2", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
-				}
-				{
-					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 3u });
-					addTextItem(descriptorItem, "AEM Checksum v3", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					auto* checksumItem = new QTreeWidgetItem(descriptorItem);
+					checksumItem->setText(0, "AEM Checksums");
+					// Collapsed by default
+					checksumItem->setExpanded(false); // Doesn't seem to have an effect
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 1u });
+						addTextItem(checksumItem, "AEM Checksum v1", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 2u });
+						addTextItem(checksumItem, "AEM Checksum v2", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 3u });
+						addTextItem(checksumItem, "AEM Checksum v3", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 4u });
+						addTextItem(checksumItem, "AEM Checksum v4", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
 				}
 				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::forceNumeric(talkerCaps.value()), avdecc::helper::capabilitiesToString(talkerCaps));
 				addTextItem(descriptorItem, "Talker Max Sources", QString::number(e.getTalkerStreamSources()));
