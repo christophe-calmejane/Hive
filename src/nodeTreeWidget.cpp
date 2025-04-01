@@ -343,21 +343,22 @@ private:
 
 				auto const milanInfo = *milanInfoOpt;
 				auto const compat = entity.getCompatibilityFlags();
+				auto const compatVersion = entity.getMilanCompatibilityVersion();
 
 				auto compatStr = QString{ "Not Milan Compatible" };
 				if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning))
 				{
-					compatStr = "Milan Compatible (with warnings)";
+					compatStr = QString{ "Milan Compatible v%1 (with warnings)" }.arg(compatVersion.to_string(2).c_str());
 				}
 				else if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 				{
-					compatStr = "Milan Compatible";
+					compatStr = QString{ "Milan Compatible v%1" }.arg(compatVersion.to_string(2).c_str());
 				}
 
 				addTextItem(milanInfoItem, "Compatibility", compatStr);
 				addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 				addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
-				addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
+				addTextItem(milanInfoItem, "Certification Version", static_cast<std::string>(milanInfo.certificationVersion));
 			}
 		}
 

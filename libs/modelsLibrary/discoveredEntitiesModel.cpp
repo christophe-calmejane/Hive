@@ -26,6 +26,7 @@
 #include <vector>
 #include <optional>
 #include <unordered_set>
+#include <tuple>
 
 namespace hive
 {
@@ -46,7 +47,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOnline, this, &pImpl::handleEntityRedundantInterfaceOnline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityRedundantInterfaceOffline, this, &pImpl::handleEntityRedundantInterfaceOffline);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, this, &pImpl::handleUnsolicitedRegistrationChanged);
-		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityFlagsChanged, this, &pImpl::handleCompatibilityFlagsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityChanged, this, &pImpl::handleCompatibilityChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::entityCapabilitiesChanged, this, &pImpl::handleEntityCapabilitiesChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::associationIDChanged, this, &pImpl::handleAssociationIDChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::identificationStarted, this, &pImpl::handleIdentificationStarted);
@@ -118,37 +119,37 @@ private:
 		}
 	}
 
-	ProtocolCompatibility computeProtocolCompatibility(std::optional<la::avdecc::entity::model::MilanInfo> const& milanInfo, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags) noexcept
+	std::tuple<ProtocolCompatibility, la::avdecc::entity::model::MilanVersion, bool> computeCompatibilityInfo(std::optional<la::avdecc::entity::model::MilanInfo> const& milanInfo, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion) noexcept
 	{
 		if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Misbehaving))
 		{
-			return ProtocolCompatibility::Misbehaving;
+			return { ProtocolCompatibility::Misbehaving, la::avdecc::entity::model::MilanVersion{}, false };
 		}
 		else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 		{
 			auto const isRedundant = milanInfo && milanInfo->featuresFlags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy);
-			auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= 0x01000000;
+			auto const isCertifiedV1 = milanInfo && milanInfo->certificationVersion >= la::avdecc::entity::model::MilanVersion{ 1, 0 };
 			auto const isWarning = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning);
 
 			if (isWarning)
 			{
-				return isRedundant ? ProtocolCompatibility::MilanWarningRedundant : ProtocolCompatibility::MilanWarning;
+				return { ProtocolCompatibility::MilanWarning, milanCompatibleVersion, isRedundant };
 			}
 
 			if (isCertifiedV1)
 			{
-				return isRedundant ? ProtocolCompatibility::MilanCertifiedRedundant : ProtocolCompatibility::MilanCertified;
+				return { ProtocolCompatibility::MilanCertified, milanCompatibleVersion, isRedundant };
 			}
 
-			return isRedundant ? ProtocolCompatibility::MilanRedundant : ProtocolCompatibility::Milan;
+			return { ProtocolCompatibility::Milan, milanCompatibleVersion, isRedundant };
 		}
 		else if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221))
 		{
 			auto const isWarning = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::IEEE17221Warning);
-			return isWarning ? ProtocolCompatibility::IEEEWarning : ProtocolCompatibility::IEEE;
+			return { isWarning ? ProtocolCompatibility::IEEEWarning : ProtocolCompatibility::IEEE, la::avdecc::entity::model::MilanVersion{}, false };
 		}
 
-		return ProtocolCompatibility::NotCompliant;
+		return { ProtocolCompatibility::NotCompliant, la::avdecc::entity::model::MilanVersion{}, false };
 	}
 
 	static inline ExclusiveAccessInfo computeExclusiveInfo(bool const isAemSupported, la::avdecc::controller::model::AcquireState state, la::avdecc::UniqueIdentifier const owner) noexcept
@@ -491,9 +492,12 @@ private:
 				auto const statisticsCounters = manager.getStatisticsCounters(entityID);
 				auto const diagnostics = manager.getDiagnostics(entityID);
 
+				// Get compatibility info
+				auto const [protocolCompatibility, milanCompatibleVersion, isRedundant] = computeCompatibilityInfo(entity.getMilanInfo(), entity.getCompatibilityFlags(), entity.getMilanCompatibilityVersion());
+
 				// Build a discovered entity
-				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), entity.areUnsolicitedNotificationsSupported(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), std::move(macAddresses), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), computeProtocolCompatibility(entity.getMilanInfo(), entity.getCompatibilityFlags()), e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences),
-					entity.isIdentifying(), !statisticsCounters.empty(), diagnostics.redundancyWarning, std::move(clockDomainInfo), {}, diagnostics.streamInputOverLatency, diagnostics.controlCurrentValueOutOfBounds };
+				auto discoveredEntity = Entity{ entityID, isAemSupported, hasAnyConfiguration, entity.isVirtual(), entity.areUnsolicitedNotificationsSupported(), e.getEntityModelID(), firmwareVersion, firmwareUploadMemoryIndex, entity.getMilanInfo(), std::move(macAddresses), helper::entityName(entity), helper::groupName(entity), entity.isSubscribedToUnsolicitedNotifications(), protocolCompatibility, milanCompatibleVersion, isRedundant, e.getEntityCapabilities(), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getAcquireState(), entity.getOwningControllerID()), computeExclusiveInfo(isAemSupported && hasAnyConfiguration, entity.getLockState(), entity.getLockingControllerID()), std::move(gptpInfo), e.getAssociationID(), std::move(mediaClockReferences), entity.isIdentifying(),
+					!statisticsCounters.empty(), diagnostics.redundancyWarning, std::move(clockDomainInfo), {}, diagnostics.streamInputOverLatency, diagnostics.controlCurrentValueOutOfBounds };
 
 				// Insert at the end
 				auto const row = _model->rowCount();
@@ -586,7 +590,7 @@ private:
 		}
 	}
 
-	void handleCompatibilityFlagsChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags)
+	void handleCompatibilityChanged(la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion)
 	{
 		if (auto const index = indexOf(entityID))
 		{
@@ -599,7 +603,10 @@ private:
 				if (auto controlledEntity = manager.getControlledEntity(entityID))
 				{
 					data.milanInfo = controlledEntity->getMilanInfo();
-					data.protocolCompatibility = computeProtocolCompatibility(data.milanInfo, compatibilityFlags);
+					auto const [protocolCompatibility, compatVersion, isRedundant] = computeCompatibilityInfo(data.milanInfo, compatibilityFlags, milanCompatibleVersion);
+					data.protocolCompatibility = protocolCompatibility;
+					data.milanCompatibleVersion = compatVersion;
+					data.isRedundant = isRedundant;
 
 					la::avdecc::utils::invokeProtectedMethod(&Model::entityInfoChanged, _model, idx, data, Model::ChangedInfoFlags{ Model::ChangedInfoFlag::Compatibility });
 				}

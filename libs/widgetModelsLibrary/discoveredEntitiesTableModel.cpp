@@ -36,9 +36,9 @@ static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompat
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified, QImage{ ":/Milan_Certified.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning, QImage{ ":/ieee_Warning.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning.png" } },
+	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible.png" } },
+	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified.png" } },
+	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
 };
 
@@ -49,9 +49,9 @@ static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompat
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified, QImage{ ":/Milan_Certified_inv.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning, QImage{ ":/ieee_Warning.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning_inv.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible_inv.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified_inv.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning_inv.png" } },
+	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible_inv.png" } },
+	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified_inv.png" } },
+	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning_inv.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
 };
 
@@ -632,15 +632,15 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving:
 										return "Entity is sending incoherent values that can cause undefined behavior";
 									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan:
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant:
+										//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant:
 										return "MILAN compatible";
 									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning:
 										return "IEEE 1722.1 with warnings";
 									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified:
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant:
+										//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant:
 										return "MILAN certified";
 									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning:
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant:
+										//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant:
 										return "MILAN with warnings";
 									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE:
 										return "IEEE 1722.1 compatible";

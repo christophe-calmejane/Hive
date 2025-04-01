@@ -50,9 +50,6 @@ public:
 		MilanCertified,
 		IEEEWarning,
 		MilanWarning,
-		MilanRedundant,
-		MilanCertifiedRedundant,
-		MilanWarningRedundant,
 		Misbehaving,
 	};
 
@@ -117,6 +114,8 @@ public:
 		QString groupName{}; /** Change triggers ChangedInfoFlag::GroupName */
 		bool isSubscribedToUnsol{ false }; /** Change triggers ChangedInfoFlag::SubscribedToUnsol */
 		ProtocolCompatibility protocolCompatibility{ ProtocolCompatibility::NotCompliant }; /** Change triggers ChangedInfoFlag::Compatibility */
+		la::avdecc::entity::model::MilanVersion milanCompatibleVersion{}; /** Change triggers ChangedInfoFlag::Compatibility */
+		bool isRedundant{ false }; /** Change triggers ChangedInfoFlag::Compatibility */
 		la::avdecc::entity::EntityCapabilities entityCapabilities{}; /** Change triggers ChangedInfoFlag::EntityCapabilities */
 		ExclusiveAccessInfo acquireInfo{}; /** Change triggers ChangedInfoFlag::AcquireState and/or ChangedInfoFlag::OwningController */
 		ExclusiveAccessInfo lockInfo{}; /** Change triggers ChangedInfoFlag::LockState and/or ChangedInfoFlag::LockingController */

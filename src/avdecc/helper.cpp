@@ -1458,11 +1458,6 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 	}
 }
 
-QString certificationVersionToString(std::uint32_t const certificationVersion) noexcept
-{
-	return QString("%1.%2.%3.%4").arg(certificationVersion >> 24 & 0xFF).arg(certificationVersion >> 16 & 0xFF).arg(certificationVersion >> 8 & 0xFF).arg(certificationVersion & 0xFF);
-}
-
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept
 {
 	switch (layer)

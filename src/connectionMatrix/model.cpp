@@ -487,7 +487,7 @@ public:
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::streamNameChanged, this, &ModelPrivate::handleStreamNameChanged);
 
 		// Channel Mode specific signals
-		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityFlagsChanged, this, &ModelPrivate::handleCompatibilityFlagsChanged);
+		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::compatibilityChanged, this, &ModelPrivate::handleCompatibilityChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
 
 		auto& channelConnectionManager = avdecc::ChannelConnectionManager::getInstance();
@@ -3486,7 +3486,7 @@ public:
 		}
 	}
 
-	void handleCompatibilityFlagsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags compatibilityFlags)
+	void handleCompatibilityChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion)
 	{
 		auto const isMilan = compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan);
 

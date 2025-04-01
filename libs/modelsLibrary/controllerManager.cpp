@@ -401,6 +401,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
 		qRegisterMetaType<la::avdecc::entity::model::ControlValues>("la::avdecc::entity::model::ControlValues");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
+		qRegisterMetaType<la::avdecc::entity::model::MilanVersion>("la::avdecc::entity::model::MilanVersion");
 		qRegisterMetaType<la::avdecc::entity::model::StreamInputConnectionInfo>("la::avdecc::entity::model::StreamInputConnectionInfo");
 		qRegisterMetaType<la::avdecc::entity::model::StreamConnections>("la::avdecc::entity::model::StreamConnections");
 		qRegisterMetaType<la::avdecc::entity::model::EntityCounters>("la::avdecc::entity::model::EntityCounters");
@@ -516,9 +517,9 @@ private:
 	{
 		emit unsolicitedRegistrationChanged(entity->getEntity().getEntityID(), isSubscribed);
 	}
-	virtual void onCompatibilityFlagsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags) noexcept override
+	virtual void onCompatibilityChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion) noexcept override
 	{
-		emit compatibilityFlagsChanged(entity->getEntity().getEntityID(), compatibilityFlags);
+		emit compatibilityChanged(entity->getEntity().getEntityID(), compatibilityFlags, milanCompatibleVersion);
 	}
 	virtual void onIdentificationStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
