@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import csv
 import json
@@ -13,7 +13,7 @@ def download_csv(url):
 	else:
 		raise Exception(f"Failed to download CSV from {url}")
 
-def main(output_file):
+def main(output_file, csv_data):
 	# Dictionary of filter lines and corresponding output names
 	filter_dict = {
 		"NETGEAR": "Netgear",
@@ -30,10 +30,9 @@ def main(output_file):
 		"AVID TECHNOLOGY, INC.": "Avid",
 		"Extreme Networks Headquarters": "Extreme Networks",
 		"Biamp Systems": "Biamp",
+		"Adamson Systems Engineering": "Adamson",
+		"AllDSP GmbH & Co. KG": "AllDSP",
 	}
-
-	# Download CSV from the given URL
-	csv_data = download_csv("https://standards.ieee.org/develop/regauth/oui/oui.csv")
 
 	# Initialize the result dictionary
 	result_dict = {}
@@ -69,7 +68,14 @@ def main(output_file):
 		json.dump(result_dict, json_output_file, indent=2)
 
 if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print("Usage: python generate_oui.py <output_file.json>")
+	if len(sys.argv) < 2 or len(sys.argv) > 3:
+		print("Usage: python generate_oui.py <output_file.json> [oui.csv]")
 		sys.exit(1)
-	main(sys.argv[1])
+	# Download CSV from the given URL or use the provided file
+	if len(sys.argv) == 3:
+		with open(sys.argv[2], 'r', encoding='utf-8') as csv_file:
+			csv_data = csv_file.read()
+	else:
+		csv_data = download_csv("https://standards.ieee.org/develop/regauth/oui/oui.csv")
+
+	main(sys.argv[1], csv_data)
