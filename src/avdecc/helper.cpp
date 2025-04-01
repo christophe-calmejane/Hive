@@ -550,6 +550,27 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 			case la::avdecc::entity::StreamInfoFlag::TalkerFailed:
 				concatenateFlags(str, "TalkerFailed");
 				break;
+			case la::avdecc::entity::StreamInfoFlag::NoSrp:
+				concatenateFlags(str, "NoSrp");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpFlagsValid:
+				concatenateFlags(str, "IpFlagsValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpSrcPortValid:
+				concatenateFlags(str, "IpSrcPortValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpDstPortValid:
+				concatenateFlags(str, "IpDstPortValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpSrcAddrValid:
+				concatenateFlags(str, "IpSrcAddrValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpDstAddrValid:
+				concatenateFlags(str, "IpDstAddrValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::NotRegisteringSrp:
+				concatenateFlags(str, "NotRegisteringSrp");
+				break;
 			case la::avdecc::entity::StreamInfoFlag::StreamVlanIDValid:
 				concatenateFlags(str, "StreamVlanIDValid");
 				break;
@@ -749,6 +770,18 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) 
 				break;
 			case la::avdecc::entity::EntityCapability::AemPersistentAcquireSupported:
 				concatenateFlags(str, "AemPersistentAcquireSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::AemIdentifyControlIndexValid:
+				concatenateFlags(str, "AemIdentifyControlIndexValid");
+				break;
+			case la::avdecc::entity::EntityCapability::AemInterfaceIndexValid:
+				concatenateFlags(str, "AemInterfaceIndexValid");
+				break;
+			case la::avdecc::entity::EntityCapability::GeneralControllerIgnore:
+				concatenateFlags(str, "GeneralControllerIgnore");
+				break;
+			case la::avdecc::entity::EntityCapability::EntityNotReady:
+				concatenateFlags(str, "EntityNotReady");
 				break;
 			default:
 				concatenateFlags(str, "Unknown");
