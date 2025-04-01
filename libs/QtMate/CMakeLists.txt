@@ -4,7 +4,7 @@
 cu_setup_project(QtMate "1.0.0.1" "QtMate Library")
 
 # Find dependencies
-find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets Xml Svg REQUIRED)
 
 set(PCH_HEADER_NAME "pch.hpp")
 set(PCH_SOURCE_NAME "pch.cpp")
@@ -37,6 +37,8 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/QtMate/widgets/tableView.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/textEntry.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/tickableMenu.hpp
+	${CU_ROOT_DIR}/include/QtMate/image/logoGenerator.hpp
+	${CU_ROOT_DIR}/include/QtMate/image/svgUtils.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -63,6 +65,8 @@ set(SOURCE_FILES_COMMON
 	widgets/tableView.cpp
 	widgets/textEntry.cpp
 	widgets/tickableMenu.cpp
+	image/logoGenerator.cpp
+	image/svgUtils.cpp
 )
 
 # Group source files
@@ -85,7 +89,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 )
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets Qt${QT_MAJOR_VERSION}::Xml Qt${QT_MAJOR_VERSION}::Svg)
 
 ###### We unfortunately have to reduce compiler warnings due to Qt not willing to fix it's mess (https://bugreports.qt.io/browse/QTBUG-35620)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
