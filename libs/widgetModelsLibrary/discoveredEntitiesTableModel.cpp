@@ -18,43 +18,17 @@
 */
 
 #include "hive/widgetModelsLibrary/discoveredEntitiesTableModel.hpp"
+#include "hive/widgetModelsLibrary/compatibilityLogoCache.hpp"
 #include "hive/widgetModelsLibrary/entityLogoCache.hpp"
 #include "hive/widgetModelsLibrary/errorIconItemDelegate.hpp"
 #include "hive/widgetModelsLibrary/imageItemDelegate.hpp"
 
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 #include <hive/modelsLibrary/helper.hpp>
-
 namespace hive
 {
 namespace widgetModelsLibrary
 {
-static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility, QImage> s_compatibilityImagesLight{
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE, QImage{ ":/ieee.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan, QImage{ ":/Milan_Compatible.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified, QImage{ ":/Milan_Certified.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning, QImage{ ":/ieee_Warning.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning.png" } },
-	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible.png" } },
-	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified.png" } },
-	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
-};
-
-static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility, QImage> s_compatibilityImagesDark{
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::NotCompliant, QImage{ ":/not_compliant.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE, QImage{ ":/ieee.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan, QImage{ ":/Milan_Compatible_inv.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified, QImage{ ":/Milan_Certified_inv.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning, QImage{ ":/ieee_Warning.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning, QImage{ ":/Milan_Compatible_Warning_inv.png" } },
-	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant, QImage{ ":/Milan_Redundant_Compatible_inv.png" } },
-	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant, QImage{ ":/Milan_Redundant_Certified_inv.png" } },
-	//{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant, QImage{ ":/Milan_Redundant_Compatible_Warning_inv.png" } },
-	{ modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving, QImage{ ":/misbehaving.png" } },
-};
-
 static std::unordered_map<modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState, QImage> s_excusiveAccessStateImagesLight{
 	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NoAccess, QImage{ ":/unlocked.png" } },
 	{ modelsLibrary::DiscoveredEntitiesModel::ExclusiveAccessState::NotSupported, QImage{ ":/lock_not_supported.png" } },
@@ -500,15 +474,8 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 							}
 							case EntityDataFlag::Compatibility:
 							{
-								try
-								{
-									return s_compatibilityImagesLight.at(entity.protocolCompatibility);
-								}
-								catch (std::out_of_range const&)
-								{
-									AVDECC_ASSERT(false, "Image missing");
-									return {};
-								}
+								auto& compatibilityLogoCache = CompatibilityLogoCache::getInstance();
+								return compatibilityLogoCache.getImage(entity.protocolCompatibility, CompatibilityLogoCache::Theme::Light);
 							}
 							case EntityDataFlag::AcquireState:
 							{
@@ -566,15 +533,8 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 							}
 							case EntityDataFlag::Compatibility:
 							{
-								try
-								{
-									return s_compatibilityImagesDark.at(entity.protocolCompatibility);
-								}
-								catch (std::out_of_range const&)
-								{
-									AVDECC_ASSERT(false, "Image missing");
-									return {};
-								}
+								auto& compatibilityLogoCache = CompatibilityLogoCache::getInstance();
+								return compatibilityLogoCache.getImage(entity.protocolCompatibility, CompatibilityLogoCache::Theme::Light);
 							}
 							case EntityDataFlag::AcquireState:
 							{
