@@ -49,20 +49,20 @@ public:
 	struct IconInfo
 	{
 		QString path{}; // Path to the SVG icon file
-		QColor color = QColor(0, 0, 0, 255); // Default color for the icon
+		std::optional<QColor> color = std::nullopt; // Don't override color if not specified
 	};
 
 	/**
 	 * @brief Generate a compatibility logo image with a specific color.
 	 * @param logoSize The size of the logo image.
-	 * @param mainTextInfo The properties of the main text (font, color, text).
-	 * @param iconInfo Path and color of the Icon (optional).
-	 * @param additionalTextInfo The properties of the additional text (optional).
-	 * @param redundantOptions Whether to include a redundant text reflection with color and spacing parameters (optional).
+	 * @param mainTextInfo Main text drawn to the center row (font, color, text).
+	 * @param iconInfo SVG Icon decorator drawn to top left of the logo (optional).
+	 * @param additionalTextInfo Additional text decorator drawn to top right of the logo (optional).
+	 * @param redundantOptions Add a mirrored version of the main text right below (optional).
 	 * @return The generated logo image as QImage.
 	 * @throws std::runtime_error if the SVG file is invalid or cannot be loaded.
 	 */
-	static QImage generateCompatibilityLogo(const QSize& logoSize, const LabelInfo& mainTextInfo, std::optional<IconInfo> iconInfo = std::nullopt, const std::optional<LabelInfo>& additionalTextInfo = std::nullopt, std::optional<RedundantOptions> redundantOptions = std::nullopt);
+	static QImage generateCompatibilityLogo(QSize const& logoSize, LabelInfo const& mainTextInfo, std::optional<IconInfo> const& iconInfo = std::nullopt, std::optional<LabelInfo> const& additionalTextInfo = std::nullopt, std::optional<RedundantOptions> const& redundantOptions = std::nullopt);
 
 private:
 	// Private constructor to prevent instantiation
@@ -76,11 +76,10 @@ private:
 	LogoGenerator(LogoGenerator&&) = delete;
 	LogoGenerator& operator=(LogoGenerator&&) = delete;
 
-	static QImage generateCompatibilityLogoFromSvgRenderer(const QSize& logoSize, const LabelInfo& mainTextInfo, QSvgRenderer* iconSvgRenderer, const std::optional<LabelInfo>& additionalTextInfo, std::optional<RedundantOptions> redundantOptions);
 	static void drawIcon(QPainter& painter, QSvgRenderer* iconSvgRenderer, int rowHeight, int x, int y);
-	static void drawAdditionalText(QPainter& painter, const LabelInfo& textInfo, int rowHeight, int xEnd, int y);
-	static QRect drawMainText(QPainter& painter, const LabelInfo& textInfo, int rowHeight, int width);
-	static void drawRedundantText(QPainter& painter, const LabelInfo& textInfo, RedundantOptions const& redundantOptions, int rowHeight, int width, int y);
-	static QFontMetrics fitFontToWidth(QFont& font, const QString& text, int width);
+	static void drawAdditionalText(QPainter& painter, LabelInfo const& textInfo, int rowHeight, int xEnd, int y);
+	static QRect drawMainText(QPainter& painter, LabelInfo const& textInfo, int rowHeight, int width);
+	static void drawRedundantText(QPainter& painter, LabelInfo const& textInfo, RedundantOptions const& redundantOptions, int rowHeight, int width, int y);
+	static QFontMetrics fitFontToWidth(QFont& font, QString const& text, int width);
 };
 } // namespace qtMate::image

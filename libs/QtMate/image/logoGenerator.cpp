@@ -27,20 +27,19 @@
 
 namespace qtMate::image
 {
-QImage LogoGenerator::generateCompatibilityLogoFromSvgRenderer(const QSize& logoSize, const LabelInfo& textInfo, QSvgRenderer* iconSvgRenderer, const std::optional<LabelInfo>& additionalTextInfo, std::optional<RedundantOptions> redundantOptions)
+QImage LogoGenerator::generateCompatibilityLogo(QSize const& logoSize, LabelInfo const& mainTextInfo, std::optional<IconInfo> const& iconInfo, std::optional<LabelInfo> const& additionalTextInfo, std::optional<RedundantOptions> const& redundantOptions)
 {
-	// Create the final image with the provided size
-	auto finalImage = QImage(logoSize, QImage::Format_ARGB32);
-	finalImage.fill(Qt::transparent); // Fill with transparency
+	auto image = QImage(logoSize, QImage::Format_ARGB32);
+	image.fill(Qt::transparent); // Fill with transparency
 
-	auto painter = QPainter(&finalImage);
+	auto painter = QPainter(&image);
 	painter.setRenderHint(QPainter::Antialiasing);
 
 	// Calculate row height (split into 3 equal rows)
 	auto rowHeight = logoSize.height() / 3;
 
 	// Draw the main text in the middle row
-	auto mainTextRect = drawMainText(painter, textInfo, rowHeight, logoSize.width());
+	auto mainTextRect = drawMainText(painter, mainTextInfo, rowHeight, logoSize.width());
 	auto targetAdditionalTextXEnd = mainTextRect.right(); // Get the right edge of the main text rectangle
 	auto targetIconX = mainTextRect.left(); // Icon is drawn to the left of the main text
 	auto targetRedundantTextY = mainTextRect.bottom(); // Redundant text is drawn below the main text
@@ -48,7 +47,7 @@ QImage LogoGenerator::generateCompatibilityLogoFromSvgRenderer(const QSize& logo
 	// Draw the redundant text in the bottom row if enabled
 	if (redundantOptions)
 	{
-		drawRedundantText(painter, textInfo, redundantOptions.value(), rowHeight, logoSize.width(), targetRedundantTextY);
+		drawRedundantText(painter, mainTextInfo, redundantOptions.value(), rowHeight, logoSize.width(), targetRedundantTextY);
 	}
 
 	// Then draw the icon and additional text according to the main text position if any
@@ -56,17 +55,13 @@ QImage LogoGenerator::generateCompatibilityLogoFromSvgRenderer(const QSize& logo
 	{
 		drawAdditionalText(painter, additionalTextInfo.value(), rowHeight, targetAdditionalTextXEnd, 0);
 	}
+
+	// Load the icon SVG and draw it
+	auto* iconSvgRenderer = iconInfo && !iconInfo->path.isEmpty() ? svgUtils::loadSVGImage(iconInfo->path, iconInfo->color) : nullptr;
 	drawIcon(painter, iconSvgRenderer, rowHeight, targetIconX, 0);
+	delete iconSvgRenderer; // Clean up the SVG renderer
 
 	painter.end();
-	return finalImage;
-}
-
-QImage LogoGenerator::generateCompatibilityLogo(const QSize& logoSize, const LabelInfo& mainTextInfo, std::optional<IconInfo> iconInfo, const std::optional<LabelInfo>& additionalTextInfo, std::optional<RedundantOptions> redundantOptions)
-{
-	auto* iconSvgRenderer = iconInfo && !iconInfo->path.isEmpty() ? svgUtils::loadSVGImage(iconInfo->path, iconInfo->color) : nullptr;
-	QImage image = qtMate::image::LogoGenerator::generateCompatibilityLogoFromSvgRenderer(logoSize, mainTextInfo, iconSvgRenderer, additionalTextInfo, redundantOptions);
-	delete iconSvgRenderer; // Clean up the SVG renderer
 	return image;
 }
 
@@ -87,7 +82,7 @@ void LogoGenerator::drawIcon(QPainter& painter, QSvgRenderer* iconSvgRenderer, i
 		iconSvgRenderer->render(&painter, iconRect);
 	}
 }
-void LogoGenerator::drawAdditionalText(QPainter& painter, const LabelInfo& textInfo, int rowHeight, int xEnd, int y)
+void LogoGenerator::drawAdditionalText(QPainter& painter, LabelInfo const& textInfo, int rowHeight, int xEnd, int y)
 {
 	if (!textInfo.text.isEmpty())
 	{
@@ -109,7 +104,7 @@ void LogoGenerator::drawAdditionalText(QPainter& painter, const LabelInfo& textI
 	}
 }
 
-QRect LogoGenerator::drawMainText(QPainter& painter, const LabelInfo& textInfo, int rowHeight, int width)
+QRect LogoGenerator::drawMainText(QPainter& painter, LabelInfo const& textInfo, int rowHeight, int width)
 {
 	if (textInfo.text.isEmpty())
 	{
@@ -135,7 +130,7 @@ QRect LogoGenerator::drawMainText(QPainter& painter, const LabelInfo& textInfo, 
 	return QRect(actualTextX, rowHeight, actualTextWidth, rowHeight);
 }
 
-void LogoGenerator::drawRedundantText(QPainter& painter, const LabelInfo& textInfo, RedundantOptions const& redundantOptions, int rowHeight, int width, int y)
+void LogoGenerator::drawRedundantText(QPainter& painter, LabelInfo const& textInfo, RedundantOptions const& redundantOptions, int rowHeight, int width, int y)
 {
 	if (textInfo.text.isEmpty())
 	{
@@ -169,7 +164,7 @@ void LogoGenerator::drawRedundantText(QPainter& painter, const LabelInfo& textIn
 	painter.resetTransform(); // Reset the transformation
 }
 
-QFontMetrics LogoGenerator::fitFontToWidth(QFont& font, const QString& text, int width)
+QFontMetrics LogoGenerator::fitFontToWidth(QFont& font, QString const& text, int width)
 {
 	auto fontMetrics = QFontMetrics(font);
 	int textWidth = 0;

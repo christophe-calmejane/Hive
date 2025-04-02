@@ -26,7 +26,7 @@
 
 namespace qtMate::image::svgUtils
 {
-bool validateSVG(const QDomDocument& doc)
+bool validateSVG(QDomDocument const& doc)
 {
 	// Get the root element of the XML document
 	QDomElement root = doc.documentElement();
@@ -39,7 +39,7 @@ bool validateSVG(const QDomDocument& doc)
 	return true;
 }
 
-void patchSVGColor(QDomDocument& doc, const std::optional<QColor>& fill, const std::optional<QColor>& stroke)
+void patchSVGColor(QDomDocument& doc, std::optional<QColor> const& fill, std::optional<QColor> const& stroke)
 {
 	// Modify the color attributes in the SVG XML
 	QDomNodeList elements = doc.elementsByTagName("*");
@@ -79,7 +79,7 @@ void patchSVGColor(QDomDocument& doc, const std::optional<QColor>& fill, const s
 	}
 }
 
-QSvgRenderer* loadSVGImage(const QString& path, const std::optional<QColor>& fill, const std::optional<QColor>& stroke)
+QSvgRenderer* loadSVGImage(QString const& path, std::optional<QColor> const& fill, std::optional<QColor> const& stroke)
 {
 	auto file = QFile(path);
 	if (!file.open(QIODevice::ReadOnly))
@@ -88,7 +88,7 @@ QSvgRenderer* loadSVGImage(const QString& path, const std::optional<QColor>& fil
 	}
 
 	auto doc = QDomDocument{};
-	if (!doc.setContent(&file))
+	if (!doc.setContent(&file) && !validateSVG(doc))
 	{
 		file.close();
 		throw std::runtime_error("Invalid SVG file.");

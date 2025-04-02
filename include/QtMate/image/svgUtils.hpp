@@ -32,7 +32,7 @@ namespace qtMate::image::svgUtils
  * @param doc The QDomDocument containing the loaded XML.
  * @throws std::runtime_error if the XML is not a valid SVG file.
  */
-bool validateSVG(const QDomDocument& doc);
+bool validateSVG(QDomDocument const& doc);
 
 /**
  * @brief Patch the color of an SVG file loaded as XML.
@@ -42,7 +42,7 @@ bool validateSVG(const QDomDocument& doc);
  * @param stroke The stroke color to set for the SVG elements.
  * @throws std::runtime_error if the QDomDocument is not valid.
  */
-void patchSVGColor(QDomDocument& doc, const std::optional<QColor>& fill, const std::optional<QColor>& stroke = std::nullopt);
+void patchSVGColor(QDomDocument& doc, std::optional<QColor> const& fill, std::optional<QColor> const& stroke = std::nullopt);
 
 /**
  * @brief Construct an SVG Renderer from a file path and patch color.
@@ -51,5 +51,5 @@ void patchSVGColor(QDomDocument& doc, const std::optional<QColor>& fill, const s
  * @return QSvgRenderer object containing the loaded SVG image.
  * @throws std::runtime_error if the SVG file is invalid or cannot be loaded.
  */
-QSvgRenderer* loadSVGImage(const QString& path, const std::optional<QColor>& fill, const std::optional<QColor>& stroke = std::nullopt);
+QSvgRenderer* loadSVGImage(QString const& path, std::optional<QColor> const& fill, std::optional<QColor> const& stroke = std::nullopt);
 } // namespace qtMate::image::svgUtils
