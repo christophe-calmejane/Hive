@@ -43,14 +43,24 @@ static const auto s_milanRedundantMainColorMap = std::unordered_map<hive::widget
 
 namespace hive::widgetModelsLibrary
 {
-inline auto qHash(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const type, uint seed = 0)
+inline auto qHash(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, uint seed = 0)
 {
-	return ::qHash(la::avdecc::utils::to_integral(type), seed);
+	return ::qHash(la::avdecc::utils::to_integral(compatibility), seed);
 }
 
-inline auto qHash(CompatibilityLogoCache::Theme const type, uint seed = 0)
+inline auto qHash(CompatibilityLogoCache::Theme const theme, uint seed = 0)
 {
-	return ::qHash(la::avdecc::utils::to_integral(type), seed);
+	return ::qHash(la::avdecc::utils::to_integral(theme), seed);
+}
+
+inline auto qHash(la::avdecc::entity::model::MilanVersion const version, uint seed = 0)
+{
+	return ::qHash(version.getValue(), seed);
+}
+
+inline auto qHash(bool const value, uint seed = 0)
+{
+	return ::qHash(static_cast<uint>(value), seed);
 }
 
 // Helper to combine hashes
@@ -92,11 +102,11 @@ class CompatibilityLogoCacheImpl : public CompatibilityLogoCache
 public:
 	CompatibilityLogoCacheImpl() {}
 
-	virtual QImage getImage(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, Theme const theme) noexcept override
+	virtual QImage getImage(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, la::avdecc::entity::model::MilanVersion milanVersion, bool isRedundant, Theme const theme) noexcept override
 	{
 		Q_ASSERT_X(QThread::currentThread() == qApp->thread(), "CompatibilityLogoCache", "getImage must be called in the GUI thread.");
 
-		auto const key = makeKey(compatibility, theme);
+		auto const key = makeKey(compatibility, milanVersion, isRedundant, theme);
 
 		// Check if requested compatibility logo is in cache
 		auto imageIt = _cache.find(key);
@@ -105,15 +115,15 @@ public:
 			// Return the cached image
 			return imageIt.value();
 		}
-		buildImage(compatibility, theme);
+		buildImage(compatibility, milanVersion, isRedundant, theme);
 		return _cache[key];
 	}
 
-	virtual bool isImageInCache(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, Theme const theme) const noexcept override
+	virtual bool isImageInCache(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, la::avdecc::entity::model::MilanVersion milanVersion, bool isRedundant, Theme const theme) const noexcept override
 	{
 		Q_ASSERT_X(QThread::currentThread() == qApp->thread(), "CompatibilityLogoCache", "isImageInCache must be called in the GUI thread.");
 
-		auto const key = makeKey(compatibility, theme);
+		auto const key = makeKey(compatibility, milanVersion, isRedundant, theme);
 		// Check if we have the specified image in the memory cache
 		auto imageIt = _cache.find(key);
 		if (imageIt != _cache.end())
@@ -126,16 +136,16 @@ public:
 	}
 
 private:
-	using Key = std::tuple<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility, Theme>;
+	using Key = std::tuple<modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility, la::avdecc::entity::model::MilanVersion, bool, Theme>;
 
-	Key makeKey(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility compatibility, Theme theme) const noexcept
+	Key makeKey(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility compatibility, la::avdecc::entity::model::MilanVersion milanVersion, bool isRedundant, Theme theme) const noexcept
 	{
-		return std::make_tuple(compatibility, theme);
+		return std::make_tuple(compatibility, milanVersion, isRedundant, theme);
 	}
 
-	void buildImage(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility compatibility, Theme theme) noexcept
+	void buildImage(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility compatibility, la::avdecc::entity::model::MilanVersion milanVersion, bool isRedundant, Theme theme) noexcept
 	{
-		auto const key = makeKey(compatibility, theme);
+		auto const key = makeKey(compatibility, milanVersion, isRedundant, theme);
 		try
 		{
 			switch (compatibility)
@@ -147,49 +157,21 @@ private:
 					_cache[key] = QImage{ ":/ieee.png" };
 					break;
 				case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan:
-				{
-					auto mainLabel = getMilanMainLabelInfo(s_milanMainColorMap.at(theme));
-					_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel);
-					break;
-				}
+					[[fallthrough]];
 				case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified:
+					[[fallthrough]];
+				case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning:
 				{
 					auto mainLabel = getMilanMainLabelInfo(s_milanMainColorMap.at(theme));
-					auto iconInfo = getMilanCertifiedIconInfo(s_milanMainColorMap.at(theme));
-					_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel, iconInfo);
+					auto iconInfo = getMilanIconInfo(compatibility, s_milanMainColorMap.at(theme));
+					auto versionLabel = getMilanVersionLabelInfo(milanVersion, s_milanMainColorMap.at(theme));
+					auto redundantOptions = getMilanRedundantOptions(isRedundant, s_milanMainColorMap.at(theme));
+					_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel, iconInfo, versionLabel, redundantOptions);
 					break;
 				}
 				case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning:
 					_cache[key] = QImage{ ":/ieee_Warning.png" };
 					break;
-				case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning:
-				{
-					auto mainLabel = getMilanMainLabelInfo(s_milanMainColorMap.at(theme));
-					_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel, s_warningIconInfo);
-					break;
-				}
-				// case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant:
-				// {
-				// 	auto mainLabel = getMilanMainLabelInfo(s_milanRedundantMainColorMap.at(theme));
-				// 	auto redundantOptions = getMilanRedundantOptions(s_milanRedundantMainColorMap.at(theme));
-				// 	_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel, std::nullopt, std::nullopt, redundantOptions);
-				// 	break;
-				// }
-				// case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant:
-				// {
-				// 	auto mainLabel = getMilanMainLabelInfo(s_milanRedundantMainColorMap.at(theme));
-				// 	auto iconInfo = getMilanCertifiedIconInfo(s_milanRedundantMainColorMap.at(theme));
-				// 	auto redundantOptions = getMilanRedundantOptions(s_milanRedundantMainColorMap.at(theme));
-				// 	_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel, iconInfo, std::nullopt, redundantOptions);
-				// 	break;
-				// }
-				// case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant:
-				// {
-				// 	auto mainLabel = getMilanMainLabelInfo(s_milanRedundantMainColorMap.at(theme));
-				// 	auto redundantOptions = getMilanRedundantOptions(s_milanRedundantMainColorMap.at(theme));
-				// 	_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel, s_warningIconInfo, std::nullopt, redundantOptions);
-				// 	break;
-				// }
 				case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving:
 					_cache[key] = QImage{ ":/misbehaving.png" };
 					break;
@@ -212,19 +194,36 @@ private:
 		return { font, color, s_milanMainLabel };
 	}
 
-	static qtMate::image::LogoGenerator::LabelInfo getMilanVersionLabelInfo(QString version, QColor color) noexcept
+	static std::optional<qtMate::image::LogoGenerator::LabelInfo> getMilanVersionLabelInfo(la::avdecc::entity::model::MilanVersion version, QColor color) noexcept
 	{
-		return { QFont("Futura LT Book"), color, version };
+		if (version.getValue() == 0u)
+		{
+			return std::nullopt;
+		}
+		auto const versionString = QString::fromStdString(version.to_string(2)); // 2 digit string is used: MAJOR.MINOR
+		return qtMate::image::LogoGenerator::LabelInfo{ QFont("Futura LT Book"), color, versionString };
 	}
 
-	static qtMate::image::LogoGenerator::RedundantOptions getMilanRedundantOptions(QColor color) noexcept
+	static std::optional<qtMate::image::LogoGenerator::RedundantOptions> getMilanRedundantOptions(bool isRedundant, QColor color) noexcept
 	{
-		return { 0.05f, color };
+		if (!isRedundant)
+		{
+			return std::nullopt;
+		}
+		return qtMate::image::LogoGenerator::RedundantOptions{ 0.05f, color };
 	}
 
-	static qtMate::image::LogoGenerator::IconInfo getMilanCertifiedIconInfo(QColor color) noexcept
+	static std::optional<qtMate::image::LogoGenerator::IconInfo> getMilanIconInfo(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility compatibility, QColor color) noexcept
 	{
-		return { s_milanCertifiedIconPath, color };
+		if (compatibility == modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified)
+		{
+			return qtMate::image::LogoGenerator::IconInfo{ s_milanCertifiedIconPath, color };
+		}
+		else if (compatibility == modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning)
+		{
+			return qtMate::image::LogoGenerator::IconInfo{ s_warningIcon, color };
+		}
+		return std::nullopt; // No icon for Milan compatible uncertified device
 	}
 
 private:

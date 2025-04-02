@@ -41,14 +41,14 @@ public:
 	 * @details This function will generate the logo image if it is not already in the cache.
 	 * @note The function is thread-safe and should be called from the GUI thread.
 	 */
-	virtual QImage getImage(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, Theme const theme) noexcept = 0;
+	virtual QImage getImage(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, la::avdecc::entity::model::MilanVersion milanVersion, bool isRedundant, Theme const theme) noexcept = 0;
 	/**
 	 * @brief Check if the logo image is already in the cache.
 	 * @param compatibility The compatibility type.
 	 * @param theme The theme (light or dark).
 	 * @return True if the image is in the cache, false otherwise.
 	 */
-	virtual bool isImageInCache(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, Theme const theme) const noexcept = 0;
+	virtual bool isImageInCache(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility const compatibility, la::avdecc::entity::model::MilanVersion milanVersion, bool isRedundant, Theme const theme) const noexcept = 0;
 
 	virtual ~CompatibilityLogoCache() = default;
 
