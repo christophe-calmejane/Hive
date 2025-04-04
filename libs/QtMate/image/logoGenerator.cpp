@@ -27,7 +27,7 @@
 
 namespace qtMate::image
 {
-QImage LogoGenerator::generateCompatibilityLogo(QSize const& logoSize, LabelInfo const& mainTextInfo, std::optional<IconInfo> const& iconInfo, std::optional<LabelInfo> const& additionalTextInfo, std::optional<RedundantOptions> const& redundantOptions)
+QImage LogoGenerator::generateCompatibilityLogo(QSize const& logoSize, LabelInfo const& mainTextInfo, std::optional<IconInfo> const& iconInfo, std::optional<LabelInfo> const& topRightTextInfo, std::optional<LabelInfo> const& bottomTextInfo)
 {
 	auto image = QImage(logoSize, QImage::Format_ARGB32);
 	image.fill(Qt::transparent); // Fill with transparency
@@ -35,137 +35,161 @@ QImage LogoGenerator::generateCompatibilityLogo(QSize const& logoSize, LabelInfo
 	auto painter = QPainter(&image);
 	painter.setRenderHint(QPainter::Antialiasing);
 
+	auto labelOptions = QTextOption();
+	labelOptions.setTextDirection(Qt::LeftToRight);
+
 	// Calculate row height (split into 3 equal rows)
 	auto rowHeight = logoSize.height() / 3;
 
+	auto topRightLabelRect = std::optional<QRectF>{};
+	auto iconRect = std::optional<QRectF>{};
+	auto mainTextRect = std::optional<QRectF>{};
+	auto bottomTextRect = std::optional<QRectF>{};
+
+	// Draw the top right label if provided
+	if (topRightTextInfo)
+	{
+		labelOptions.setAlignment(Qt::AlignRight | Qt::AlignTop);
+		topRightLabelRect = drawLabel(painter, topRightTextInfo.value(), labelOptions, 0, 0, rowHeight, logoSize.width());
+	}
+
+	// Load the icon SVG and draw it after Top right label last to overlap the top right text if needed
+	if (iconInfo && !iconInfo->path.isEmpty())
+	{
+		auto* iconSvgRenderer = svgUtils::loadSVGImage(iconInfo->path, iconInfo->color);
+		auto topMargin = iconInfo->topMargin;
+		auto leftMargin = iconInfo->leftMargin;
+		auto iconSize = iconInfo->size.value_or(QSize(logoSize.width() / 3, logoSize.height() / 3));
+		iconRect = drawIcon(painter, iconSvgRenderer, 0, 0, iconSize.height(), iconSize.width(), topMargin, leftMargin);
+		delete iconSvgRenderer; // Clean up the SVG renderer
+	}
+
 	// Draw the main text in the middle row
-	auto mainTextRect = drawMainText(painter, mainTextInfo, rowHeight, logoSize.width());
-	auto targetAdditionalTextXEnd = mainTextRect.right(); // Get the right edge of the main text rectangle
-	auto targetIconX = mainTextRect.left(); // Icon is drawn to the left of the main text
-	auto targetRedundantTextY = mainTextRect.bottom(); // Redundant text is drawn below the main text
-
-	// Draw the redundant text in the bottom row if enabled
-	if (redundantOptions)
 	{
-		drawRedundantText(painter, mainTextInfo, redundantOptions.value(), rowHeight, logoSize.width(), targetRedundantTextY);
+		labelOptions.setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+		// Compute the Y position based on the icon and top right label
+		auto mainTextY = iconRect ? iconRect->bottom() : topRightLabelRect ? topRightLabelRect->bottom() : 0;
+		mainTextRect = drawLabel(painter, mainTextInfo, labelOptions, 0, mainTextY, rowHeight, logoSize.width());
 	}
 
-	// Then draw the icon and additional text according to the main text position if any
-	if (additionalTextInfo)
+	// Draw the bottom text if provided
+	if (bottomTextInfo)
 	{
-		drawAdditionalText(painter, additionalTextInfo.value(), rowHeight, targetAdditionalTextXEnd, 0);
+		labelOptions.setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+		// Compute Y position based on the previous elements
+		auto bottomTextY = mainTextRect ? mainTextRect->bottom() : iconRect ? iconRect->bottom() : topRightLabelRect ? topRightLabelRect->bottom() : 0;
+		bottomTextRect = drawLabel(painter, bottomTextInfo.value(), labelOptions, 0, bottomTextY, rowHeight, logoSize.width());
 	}
-
-	// Load the icon SVG and draw it
-	auto* iconSvgRenderer = iconInfo && !iconInfo->path.isEmpty() ? svgUtils::loadSVGImage(iconInfo->path, iconInfo->color) : nullptr;
-	drawIcon(painter, iconSvgRenderer, rowHeight, targetIconX, 0);
-	delete iconSvgRenderer; // Clean up the SVG renderer
 
 	painter.end();
-	return image;
+
+	// Return a recentred image based on the bounding rectangle of non-transparent pixels
+	return generateRecentredImage(image, logoSize);
 }
 
-void LogoGenerator::drawIcon(QPainter& painter, QSvgRenderer* iconSvgRenderer, int rowHeight, int x, int y)
+QImage LogoGenerator::generateRecentredImage(QImage& image, QSize const& size)
 {
-	// Draw the top row (topImage and topText on the same row)
-	if (iconSvgRenderer != nullptr)
+	// Step 1: Find the bounding rectangle of non-transparent pixels
+	QRect boundingRect;
+	for (int y = 0; y < image.height(); ++y)
 	{
-		// Get the original size of the SVG
-		auto iconOriginalSize = iconSvgRenderer->defaultSize();
-
-		// Calculate the target width while maintaining the aspect ratio to fit the row height
-		auto iconTargetHeight = rowHeight;
-		auto iconTargetWidth = (iconOriginalSize.width() * iconTargetHeight) / iconOriginalSize.height();
-
-		// Render the SVG image using the SVG renderer
-		auto iconRect = QRect(x, y, iconTargetWidth, iconTargetHeight);
-		iconSvgRenderer->render(&painter, iconRect);
-	}
-}
-void LogoGenerator::drawAdditionalText(QPainter& painter, LabelInfo const& textInfo, int rowHeight, int xEnd, int y)
-{
-	if (!textInfo.text.isEmpty())
-	{
-		auto topFont = textInfo.font;
-		topFont.setPixelSize(rowHeight); // Match font size to row height
-
-		// Adjust the font size to fit the text within the row
-		auto topTextFontMetrics = fitFontToWidth(topFont, textInfo.text, xEnd);
-		int topTextWidth = topTextFontMetrics.horizontalAdvance(textInfo.text);
-		int topTextHeight = topTextFontMetrics.height();
-
-		painter.setFont(topFont);
-		painter.setPen(textInfo.color);
-
-		//draw top text aligned to the right of the main text
-		auto targetX = xEnd - topTextWidth; // Compute the target X position (origin is top left)
-		auto topTextRect = QRect(targetX, y, topTextWidth, topTextHeight);
-		painter.drawText(topTextRect, Qt::AlignHCenter | Qt::AlignVCenter, textInfo.text);
-	}
-}
-
-QRect LogoGenerator::drawMainText(QPainter& painter, LabelInfo const& textInfo, int rowHeight, int width)
-{
-	if (textInfo.text.isEmpty())
-	{
-		return QRect(0, 0, width, rowHeight); // No main text to draw
+		for (int x = 0; x < image.width(); ++x)
+		{
+			if (image.pixelColor(x, y).alpha() > 0)
+			{ // Non-transparent pixel
+				if (boundingRect.isNull())
+				{
+					boundingRect = QRect(x, y, 1, 1);
+				}
+				else
+				{
+					boundingRect = boundingRect.united(QRect(x, y, 1, 1));
+				}
+			}
+		}
 	}
 
-	auto mainFont = textInfo.font;
-	mainFont.setPixelSize(rowHeight); // Start with the maximum font size
+	// Step 2: Create a new image with the target size and recenter the cropped image
+	QImage centeredImage(size, QImage::Format_ARGB32);
+	centeredImage.setDevicePixelRatio(image.devicePixelRatio()); // Preserve DPI scaling
+	centeredImage.fill(Qt::transparent); // Fill with transparent background
 
-	// Adjust the font size to fit the text within the row
-	auto mainFontMetric = fitFontToWidth(mainFont, textInfo.text, width);
+	QPainter painter(&centeredImage);
+	painter.setRenderHint(QPainter::Antialiasing);
+	QPoint centeringOffset((size.width() - boundingRect.width()) / 2, (size.height() - boundingRect.height()) / 2);
+	painter.drawImage(centeringOffset, image.copy(boundingRect));
+	painter.end();
 
-	painter.setFont(mainFont);
-	painter.setPen(textInfo.color);
-	auto mainTextRect = QRect(0, rowHeight, width, rowHeight);
-	painter.drawText(mainTextRect, Qt::AlignHCenter | Qt::AlignTop, textInfo.text);
-
-	// Get actual main text rectangle size
-	auto actualMainTextRect = mainFontMetric.tightBoundingRect(textInfo.text);
-	auto actualTextWidth = actualMainTextRect.width();
-	auto actualTextX = (width - actualTextWidth) / 2;
-	// Return the rectangle of the main text for further use
-	return QRect(actualTextX, rowHeight, actualTextWidth, rowHeight);
+	return centeredImage;
 }
 
-void LogoGenerator::drawRedundantText(QPainter& painter, LabelInfo const& textInfo, RedundantOptions const& redundantOptions, int rowHeight, int width, int y)
+std::optional<QRectF> LogoGenerator::drawIcon(QPainter& painter, QSvgRenderer* iconSvgRenderer, qreal x, qreal y, qreal height, qreal width, qreal topMargin, qreal leftMargin)
 {
-	if (textInfo.text.isEmpty())
+	if (iconSvgRenderer == nullptr)
 	{
-		return; // No redundant text to draw
+		return {};
 	}
 
-	// Draw the text mirrored horizontally with a darker color
-	auto redundantFont = textInfo.font;
-	redundantFont.setPixelSize(rowHeight); // Match font size to row height
+	// Get the original size of the SVG
+	auto iconOriginalSize = iconSvgRenderer->defaultSize();
 
-	// Adjust the font size to fit the text within the row
-	fitFontToWidth(redundantFont, textInfo.text, width);
+	// Calculate the target width and height for the icon flattening by the scale factor
+	auto iconTargetHeight = height - topMargin;
+	auto iconTargetWidth = (iconOriginalSize.width() * iconTargetHeight) / iconOriginalSize.height();
 
-	painter.setFont(redundantFont);
-	painter.setPen(redundantOptions.color);
-	auto redundantTextFontMetrics = QFontMetrics(redundantFont);
-	int redundantTextWidth = redundantTextFontMetrics.horizontalAdvance(textInfo.text);
-	int redundantTextHeight = redundantTextFontMetrics.height();
-	auto targetX = (width - redundantTextWidth) / 2; // Center the redundant text
-	auto overlappingOffset = redundantTextFontMetrics.height() * redundantOptions.spacingRatio;
-	auto targetY = y + rowHeight - redundantTextHeight - overlappingOffset; // Adjust Y to stick to the bottom of the main text
-	auto redundantTextRect = QRect(targetX, targetY, redundantTextWidth, redundantTextHeight);
-
-	// Draw the mirrored redundant text
-	QTransform redundantTextTransform;
-	redundantTextTransform.translate(targetX + redundantTextWidth / 2, targetY + redundantTextHeight / 2); // Translate to center
-	redundantTextTransform.scale(1, -1); // Mirror Vertically
-	redundantTextTransform.translate(-(targetX + redundantTextWidth / 2), -(targetY + redundantTextHeight / 2)); // Translate back
-	painter.setTransform(redundantTextTransform, true);
-	painter.drawText(redundantTextRect, Qt::AlignHCenter | Qt::AlignTop, textInfo.text);
-	painter.resetTransform(); // Reset the transformation
+	// Render the SVG image using the SVG renderer
+	auto iconRect = QRectF(x + leftMargin, y + topMargin, iconTargetWidth, iconTargetHeight);
+	iconSvgRenderer->render(&painter, iconRect);
+	return iconRect;
 }
 
-QFontMetrics LogoGenerator::fitFontToWidth(QFont& font, QString const& text, int width)
+std::optional<QRectF> LogoGenerator::drawLabel(QPainter& painter, LabelInfo const& labelInfo, QTextOption const& options, qreal x, qreal y, qreal height, qreal width)
 {
+	if (labelInfo.text.isEmpty())
+	{
+		return {};
+	}
+
+	auto font = labelInfo.font;
+	font.setPixelSize(width); // Start with the maximum font size
+	// If font size is not enforced auto scale it to fit the row width
+	auto fontMetric = QFontMetrics(font);
+	if (labelInfo.font.pixelSize() == -1 || labelInfo.font.pointSize() == -1)
+	{
+		// Auto scale the font to fit the row width and height if provided font do not enforce a size
+		fitFontToWidth(font, labelInfo.text, width);
+		fontMetric = fitFontToHeight(font, labelInfo.text, height);
+	}
+
+	painter.setFont(font);
+	painter.setPen(labelInfo.color);
+	auto labelRect = QRectF(x, y + labelInfo.topMargin, width, height);
+
+	if (labelInfo.horizontalMirror)
+	{
+		qreal xTranslation = labelRect.left() + labelRect.width() / 2;
+		qreal yTranslation = labelRect.top() + labelRect.height() / 2;
+
+		QTransform horizontalMirrorTransform;
+		horizontalMirrorTransform.translate(xTranslation, yTranslation); // Translate to center
+		horizontalMirrorTransform.scale(1, -1); // Mirror Vertically
+		horizontalMirrorTransform.translate(-xTranslation, -yTranslation); // Translate back
+		painter.setTransform(horizontalMirrorTransform, true);
+	}
+
+	painter.drawText(labelRect, labelInfo.text, options);
+	painter.resetTransform(); // Reset the eventual transformation
+
+	auto const labelTightRect = fontMetric.tightBoundingRect(labelInfo.text);
+	auto const labelTightWidth = static_cast<qreal>(labelTightRect.width());
+	auto const labelTightHeight = static_cast<qreal>(labelTightRect.height());
+
+	return QRectF{ labelRect.left(), labelRect.top(), labelTightWidth, labelTightHeight }; // Return the rectangle of drawn label
+}
+
+QFontMetrics LogoGenerator::fitFontToWidth(QFont& font, QString const& text, qreal width)
+{
+	font.setPixelSize(width); // Start with the maximum font size
 	auto fontMetrics = QFontMetrics(font);
 	int textWidth = 0;
 	do
@@ -174,6 +198,21 @@ QFontMetrics LogoGenerator::fitFontToWidth(QFont& font, QString const& text, int
 		font.setPixelSize(font.pixelSize() - 1);
 		fontMetrics = QFontMetrics(font);
 	} while (textWidth > width && font.pixelSize() > 1);
+
+	return fontMetrics;
+}
+
+QFontMetrics LogoGenerator::fitFontToHeight(QFont& font, QString const& text, qreal height)
+{
+	font.setPixelSize(height); // Start with the maximum font size
+	auto fontMetrics = QFontMetrics(font);
+	int textHeight = 0;
+	do
+	{
+		textHeight = fontMetrics.height();
+		font.setPixelSize(font.pixelSize() - 1);
+		fontMetrics = QFontMetrics(font);
+	} while (textHeight > height && font.pixelSize() > 1);
 
 	return fontMetrics;
 }

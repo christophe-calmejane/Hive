@@ -36,9 +36,11 @@ static const auto s_warningIconInfo = qtMate::image::LogoGenerator::IconInfo{ s_
 
 // Milan static definitions
 static constexpr auto s_milanMainLabel = "MILAN";
+static const auto s_milanFont = QFont{ "Futura LT", -1, QFont::ExtraBold, false };
+static const auto s_milanVersionFont = QFont{ "Futura LT", 50, QFont::Normal, false }; // Disable logo generator auto scale of the font by forcing it to 8px
 static constexpr auto s_milanCertifiedIconPath = ":/Cocarde.svg";
-static const auto s_milanMainColorMap = std::unordered_map<hive::widgetModelsLibrary::CompatibilityLogoCache::Theme, QColor>{ { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Light, QColor(83, 79, 155) }, { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Dark, QColor(255, 255, 255) } };
-static const auto s_milanRedundantMainColorMap = std::unordered_map<hive::widgetModelsLibrary::CompatibilityLogoCache::Theme, QColor>{ { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Light, QColor(60, 56, 94) }, { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Dark, QColor(144, 144, 144) } };
+static const auto s_milanMainColorMap = std::unordered_map<hive::widgetModelsLibrary::CompatibilityLogoCache::Theme, QColor>{ { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Light, QColor(81, 77, 149) }, { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Dark, QColor(255, 255, 255) } };
+static const auto s_milanRedundantMainColorMap = std::unordered_map<hive::widgetModelsLibrary::CompatibilityLogoCache::Theme, QColor>{ { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Light, QColor(64, 62, 100) }, { hive::widgetModelsLibrary::CompatibilityLogoCache::Theme::Dark, QColor(144, 144, 144) } };
 } // namespace
 
 namespace hive::widgetModelsLibrary
@@ -165,7 +167,7 @@ private:
 					auto mainLabel = getMilanMainLabelInfo(s_milanMainColorMap.at(theme));
 					auto iconInfo = getMilanIconInfo(compatibility, s_milanMainColorMap.at(theme));
 					auto versionLabel = getMilanVersionLabelInfo(milanVersion, s_milanMainColorMap.at(theme));
-					auto redundantOptions = getMilanRedundantOptions(isRedundant, s_milanMainColorMap.at(theme));
+					auto redundantOptions = getMilanRedundantOptions(isRedundant, s_milanRedundantMainColorMap.at(theme));
 					_cache[key] = qtMate::image::LogoGenerator::generateCompatibilityLogo(s_CompatibilityLogoSize, mainLabel, iconInfo, versionLabel, redundantOptions);
 					break;
 				}
@@ -189,9 +191,7 @@ private:
 
 	static qtMate::image::LogoGenerator::LabelInfo getMilanMainLabelInfo(QColor color) noexcept
 	{
-		auto font = QFont("Futura LT Book");
-		font.setBold(true);
-		return { font, color, s_milanMainLabel };
+		return { s_milanFont, color, s_milanMainLabel };
 	}
 
 	static std::optional<qtMate::image::LogoGenerator::LabelInfo> getMilanVersionLabelInfo(la::avdecc::entity::model::MilanVersion version, QColor color) noexcept
@@ -201,32 +201,34 @@ private:
 			return std::nullopt;
 		}
 		auto const versionString = QString::fromStdString(version.to_string(2)); // 2 digit string is used: MAJOR.MINOR
-		return qtMate::image::LogoGenerator::LabelInfo{ QFont("Futura LT Book"), color, versionString };
+		return qtMate::image::LogoGenerator::LabelInfo{ s_milanVersionFont, color, versionString };
 	}
 
-	static std::optional<qtMate::image::LogoGenerator::RedundantOptions> getMilanRedundantOptions(bool isRedundant, QColor color) noexcept
+	static std::optional<qtMate::image::LogoGenerator::LabelInfo> getMilanRedundantOptions(bool isRedundant, QColor color) noexcept
 	{
 		if (!isRedundant)
 		{
 			return std::nullopt;
 		}
-		return qtMate::image::LogoGenerator::RedundantOptions{ 0.05f, color };
+		auto labelInfo = getMilanMainLabelInfo(color);
+		labelInfo.horizontalMirror = true;
+		labelInfo.topMargin = -1.f; // negative Margin due to the font definition in order to get the text sticking to the bottom of main label
+		return labelInfo;
 	}
 
 	static std::optional<qtMate::image::LogoGenerator::IconInfo> getMilanIconInfo(modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility compatibility, QColor color) noexcept
 	{
 		if (compatibility == modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified)
 		{
-			return qtMate::image::LogoGenerator::IconInfo{ s_milanCertifiedIconPath, color };
+			return qtMate::image::LogoGenerator::IconInfo{ s_milanCertifiedIconPath, color, std::nullopt, 0.f, 2.f };
 		}
 		else if (compatibility == modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning)
 		{
-			return qtMate::image::LogoGenerator::IconInfo{ s_warningIcon, color };
+			return qtMate::image::LogoGenerator::IconInfo{ s_warningIcon, color, std::nullopt, 0.f, 2.f };
 		}
 		return std::nullopt; // No icon for Milan compatible uncertified device
 	}
 
-private:
 	QHash<Key, QImage> _cache;
 }; // namespace hive::widgetModelsLibrary
 

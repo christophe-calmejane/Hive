@@ -27,8 +27,8 @@ class CompatibilityLogoCache
 public:
 	enum class Theme
 	{
-		Light,
-		Dark,
+		Light = 0,
+		Dark = 1,
 	};
 
 	static CompatibilityLogoCache& getInstance() noexcept;
