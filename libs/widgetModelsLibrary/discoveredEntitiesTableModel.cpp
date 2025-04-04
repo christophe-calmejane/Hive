@@ -534,7 +534,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 							case EntityDataFlag::Compatibility:
 							{
 								auto& compatibilityLogoCache = CompatibilityLogoCache::getInstance();
-								return compatibilityLogoCache.getImage(entity.protocolCompatibility, entity.milanCompatibleVersion, entity.isRedundant, CompatibilityLogoCache::Theme::Light);
+								return compatibilityLogoCache.getImage(entity.protocolCompatibility, entity.milanCompatibleVersion, entity.isRedundant, CompatibilityLogoCache::Theme::Dark);
 							}
 							case EntityDataFlag::AcquireState:
 							{
