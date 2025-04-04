@@ -1,7 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file>MaterialIcons-Regular.ttf</file>
-		<file>FuturaLT-Book.ttf</file>
+		<file>FuturaLT.ttf</file>
+        <file>FuturaLT-ExtraBold.ttf</file>
         <file>Hive.ttf</file>
         <file>Logo.png</file>
         <file alias="CHANGELOG.md">../CHANGELOG.md</file>
