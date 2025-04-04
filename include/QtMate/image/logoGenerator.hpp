@@ -24,6 +24,7 @@
 #include <QSize>
 #include <QString>
 #include <QSvgRenderer>
+#include <QTextOption>
 
 #include <memory>
 #include <optional>
