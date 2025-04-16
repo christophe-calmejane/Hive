@@ -25,3 +25,7 @@ ehthumbs.db
 
 # Ignore setup_fresh ran file
 /.initialized
+
+# Ignore CMakeUser presets
+CMakeUserPresets.json
+
