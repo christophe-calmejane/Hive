@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - [Channel Mappings Editor should display the redundant stream name instead of the primary name](https://github.com/christophe-calmejane/Hive/issues/130)
-- [MacOS Native] Workarkound for macOS AVB Framework bug
+- [[MacOS Native] Workarkound for macOS AVB Framework bug](https://github.com/christophe-calmejane/Hive/issues/179)
 - Reworked Milan Compatibility logo to handle different versions of Milan
 
 ### Fixed
