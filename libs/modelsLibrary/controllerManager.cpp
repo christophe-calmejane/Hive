@@ -1011,7 +1011,7 @@ private:
 				ctrl->disableEntityModelCache();
 			}
 
-			if (_enableAemCache && _enableFastEnumeration)
+			if (_enableFastEnumeration)
 			{
 				ctrl->enableFastEnumeration();
 			}
@@ -1157,14 +1157,29 @@ private:
 		_enableAemCache = enable;
 	}
 
+	virtual bool isAemCacheEnabled() const noexcept override
+	{
+		return _enableAemCache;
+	}
+
 	virtual void setEnableFastEnumeration(bool const enable) noexcept override
 	{
 		_enableFastEnumeration = enable;
 	}
 
+	virtual bool isFastEnumerationEnabled() const noexcept override
+	{
+		return _enableFastEnumeration;
+	}
+
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept override
 	{
 		_fullAemEnumeration = enable;
+	}
+
+	virtual bool isFullAemEnumerationEnabled() const noexcept override
+	{
+		return _fullAemEnumeration;
 	}
 
 	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, std::chrono::milliseconds const duration, IdentifyEntityHandler const& resultHandler) noexcept override

@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added Milan 1.2 values:
   - System Unique ID
   - Media Clock Reference Info (in ClockDomain descriptor)
+- Controlled Entity enumeration status:
+  - Is using AEM Cache
+  - Is using Fast Device Enumeration
 
 ### Changed
 - [Channel Mappings Editor should display the redundant stream name instead of the primary name](https://github.com/christophe-calmejane/Hive/issues/130)
@@ -28,6 +31,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Incorrect dynamic mappings visualization for devices with multiple stream ports
 - [Can't open dynamic mappings editor in Inspector if not selecting audio unit first](https://github.com/christophe-calmejane/Hive/issues/159)
 - Virtual entities locales correctly loaded for all configurations
+- Fast Device Enumeration not properly working for some devices
+- Fast Device Enumeration usable without using the AEM Cache (reduces enumeration time)
+- AEM Cache working correctly for devices with multiple configurations
 
 ## [1.3.0] - 2023-09-26
 ### Added

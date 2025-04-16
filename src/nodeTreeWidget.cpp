@@ -329,6 +329,8 @@ private:
 			addTextItem(descriptorItem, "Firmware Version", dynamicModel.firmwareVersion.data());
 			addTextItem(descriptorItem, "Serial Number", dynamicModel.serialNumber.data());
 			addTextItem(descriptorItem, "Unsol Supported", entity.areUnsolicitedNotificationsSupported() ? "Yes" : "No");
+			addTextItem(descriptorItem, "Fast Enum Supported", controllerManager.isFastEnumerationEnabled() ? (entity.isPackedDynamicInfoSupported() ? "Yes" : "No") : "Disabled in options");
+			addTextItem(descriptorItem, "Using Cached AEM", controllerManager.isAemCacheEnabled() ? (entity.isUsingCachedEntityModel() ? "Yes" : "No") : "Disabled in options");
 
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}

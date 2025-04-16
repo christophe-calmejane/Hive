@@ -209,12 +209,15 @@ public:
 
 	/** Enable/Disable AEM cache */
 	virtual void setEnableAemCache(bool const enable) noexcept = 0;
+	virtual bool isAemCacheEnabled() const noexcept = 0;
 
 	/** Enable/Disable fast enumeration */
 	virtual void setEnableFastEnumeration(bool const enable) noexcept = 0;
+	virtual bool isFastEnumerationEnabled() const noexcept = 0;
 
 	/** Enable/Disable full AEM enumeration */
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept = 0;
+	virtual bool isFullAemEnumerationEnabled() const noexcept = 0;
 
 	/** Identify entity */
 	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, std::chrono::milliseconds const duration, IdentifyEntityHandler const& resultHandler = {}) noexcept = 0;

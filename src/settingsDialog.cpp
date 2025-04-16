@@ -175,9 +175,6 @@ private:
 		{
 			auto const lock = QSignalBlocker{ enableFastEnumerationCheckBox };
 			enableFastEnumerationCheckBox->setChecked(settings->getValue(settings::Controller_FastEnumerationEnabled.name).toBool());
-			auto const enabled = enableAEMCacheCheckBox->isChecked();
-			enableFastEnumerationLabel->setEnabled(enabled);
-			enableFastEnumerationCheckBox->setEnabled(enabled);
 		}
 
 		// Full Static Model
@@ -351,9 +348,6 @@ void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::Controller_AemCacheEnabled.name, checked);
-
-	_pImpl->enableFastEnumerationLabel->setEnabled(checked);
-	_pImpl->enableFastEnumerationCheckBox->setEnabled(checked);
 }
 
 void SettingsDialog::on_enableFastEnumerationCheckBox_toggled(bool checked)

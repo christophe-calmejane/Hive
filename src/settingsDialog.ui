@@ -329,9 +329,6 @@
       </item>
       <item row="2" column="0">
        <widget class="QLabel" name="enableFastEnumerationLabel">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="text">
          <string>Enable Fast Enumeration</string>
         </property>
@@ -339,9 +336,6 @@
       </item>
       <item row="2" column="1">
        <widget class="QCheckBox" name="enableFastEnumerationCheckBox">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
        </widget>
       </item>
      </layout>
