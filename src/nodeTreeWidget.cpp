@@ -174,7 +174,7 @@ public:
 			AVDECC_ASSERT(false, "Should not be there. Missing specialization?");
 			self->addTextItem(item, "Values", "Not supported (but should be), please report this bug");
 		}
-		virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
+		virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
 		{
 			AVDECC_ASSERT(false, "Should not be there. Missing specialization?");
 			auto* dynamicItem = new QTreeWidgetItem(tree);
@@ -914,7 +914,7 @@ private:
 			// Display static values
 			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
 			{
-				it->second->dispatchDynamicControlValues(q, _controlledEntityID, node.descriptorIndex, staticModel, dynamicModel);
+				it->second->dispatchDynamicControlValues(q, controlledEntity, _controlledEntityID, node.descriptorIndex, staticModel, dynamicModel);
 			}
 			else
 			{
@@ -2022,7 +2022,7 @@ class DispatchControlLinearValues final : public NodeTreeWidgetPrivate::Dispatch
 			valueItem->setText(1, "Cannot unpack");
 		}
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
 		auto* dynamicItem = new LinearControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
@@ -2050,9 +2050,9 @@ class DispatchControlSelectorValues final : public NodeTreeWidgetPrivate::Dispat
 			valueItem->setText(1, "Cannot unpack");
 		}
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
-		auto* dynamicItem = new SelectorControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
+		auto* dynamicItem = new SelectorControlValuesDynamicTreeWidgetItem<SizeType, StaticValueType, DynamicValueType>(controlledEntity, entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
 	}
 };
@@ -2084,7 +2084,7 @@ class DispatchControlArrayValues final : public NodeTreeWidgetPrivate::DispatchC
 			valueItem->setText(1, "Cannot unpack");
 		}
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
 		auto* dynamicItem = new ArrayControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
@@ -2099,7 +2099,7 @@ public:
 	{
 		// Nothing to display
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
 		auto* dynamicItem = new UTF8ControlValuesDynamicTreeWidgetItem(entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");

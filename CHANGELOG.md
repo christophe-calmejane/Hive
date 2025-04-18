@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Fast Device Enumeration usable without using the AEM Cache (reduces enumeration time)
 - AEM Cache working correctly for devices with multiple configurations
 - [Dark mode text readability for first launch popup window](https://github.com/christophe-calmejane/Hive/issues/160)
+- [Control Selector String not properly rendered](https://github.com/christophe-calmejane/Hive/issues/166)
 
 ## [1.3.0] - 2023-09-26
 ### Added
