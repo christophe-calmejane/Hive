@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -22,6 +22,8 @@
 #include <QGridLayout>
 #include <QFrame>
 #include <QLabel>
+#include <QEvent>
+#include <QEnterEvent>
 
 namespace profiles
 {
@@ -35,6 +37,8 @@ signals:
 	void clicked();
 
 protected:
+	virtual void enterEvent(QEnterEvent* event) override;
+	virtual void leaveEvent(QEvent* event) override;
 	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:

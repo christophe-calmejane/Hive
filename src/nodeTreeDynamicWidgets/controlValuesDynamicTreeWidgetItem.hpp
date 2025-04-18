@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -30,6 +30,7 @@
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 
 #include <QObject>
 #include <QTreeWidgetItem>
@@ -265,14 +266,13 @@ private:
 };
 
 /** Selector Values - Clause 7.3.5.2.2 */
-template<class StaticValueType, class DynamicValueType>
+template<typename ValueType, class StaticValueType, class DynamicValueType>
 class SelectorControlValuesDynamicTreeWidgetItem : public ControlValuesDynamicTreeWidgetItem
 {
-	using value_size = typename DynamicValueType::control_value_details_traits::size_type;
-	using WidgetType = AecpCommandComboBox<value_size>;
+	using WidgetType = AecpCommandComboBox<ValueType>;
 
 public:
-	SelectorControlValuesDynamicTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
+	SelectorControlValuesDynamicTreeWidgetItem([[maybe_unused]] la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel, QTreeWidget* parent = nullptr)
 		: ControlValuesDynamicTreeWidgetItem{ entityID, controlIndex, staticModel, dynamicModel, parent }
 	{
 		_isReadOnly = staticModel.controlValueType.isReadOnly();
@@ -301,7 +301,6 @@ public:
 				auto* widget = new WidgetType{};
 				parent->setItemWidget(valueItem, 1, widget);
 
-
 				{
 					auto data = typename std::remove_pointer_t<decltype(widget)>::Data{};
 					for (auto const& option : staticValue.options)
@@ -309,9 +308,16 @@ public:
 						data.insert(option);
 					}
 					widget->setAllData(data,
-						[](auto const& value)
+						[controlledEntity](auto const& value)
 						{
-							return QString::number(value);
+							if constexpr (std::is_same_v<ValueType, la::avdecc::entity::model::LocalizedStringReference>)
+							{
+								return hive::modelsLibrary::helper::localizedString(*controlledEntity, value);
+							}
+							else
+							{
+								return QString::number(value);
+							}
 						});
 				}
 
@@ -325,7 +331,6 @@ public:
 				_widget = widget;
 			}
 
-
 			_isValid = true;
 
 			// Update now
@@ -337,7 +342,7 @@ public:
 	}
 
 private:
-	void sendControlValues(WidgetType* const changedWidget, value_size const previousValue) noexcept
+	void sendControlValues(WidgetType* const changedWidget, ValueType const previousValue) noexcept
 	{
 		if (AVDECC_ASSERT_WITH_RET(!_isReadOnly, "Should never call sendControlValues with read only values"))
 		{

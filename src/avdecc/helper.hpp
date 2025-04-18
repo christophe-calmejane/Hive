@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -75,8 +75,6 @@ QString timingAlgorithmToString(la::avdecc::entity::model::TimingAlgorithm const
 QString ptpPortTypeToString(la::avdecc::entity::model::PtpPortType const ptpPortType) noexcept;
 
 QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType const type) noexcept;
-
-QString certificationVersionToString(std::uint32_t const certificationVersion) noexcept;
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept;
 QString loggerLevelToString(la::avdecc::logger::Level const& level) noexcept;

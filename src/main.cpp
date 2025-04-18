@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -92,6 +92,35 @@ struct InstanceInfo
 	bool isAlreadyRunning{ false };
 	utils::ProcessHelper::ProcessID pid{ 0u };
 };
+
+static auto const s_hive_fonts = QStringList{
+	":/MaterialIcons-Regular.ttf", // From https://material.io/icons/
+	":/Hive.ttf", // Our own made font
+	":/FuturaLT.ttf", // Futura LT Book
+	":/FuturaLT-ExtraBold.ttf", // Futura LT ExtraBold
+};
+
+int loadFont(QString const& fontPath)
+{
+	if (QFontDatabase::addApplicationFont(fontPath) == -1)
+	{
+		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
+		return 1;
+	}
+	return 0;
+}
+
+int loadFonts(QStringList const& fontPaths)
+{
+	for (auto const& fontPath : fontPaths)
+	{
+		if (loadFont(fontPath) != 0)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -300,17 +329,7 @@ int main(int argc, char* argv[])
 	}
 	settings.setValue(settings::ViewSettingsVersion, settings::ViewSettingsCurrentVersion);
 
-	// Load fonts
-	if (QFontDatabase::addApplicationFont(":/MaterialIcons-Regular.ttf") == -1) // From https://material.io/icons/
-	{
-		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
-		return 1;
-	}
-	if (QFontDatabase::addApplicationFont(":/Hive.ttf") == -1) // Our own made font
-	{
-		QMessageBox::critical(nullptr, "", "Failed to load font resource.\n\nCannot continue!");
-		return 1;
-	}
+	loadFonts(s_hive_fonts);
 
 	// Read saved profile
 	auto const userProfile = settings.getValue<profiles::ProfileType>(settings::UserProfile.name);

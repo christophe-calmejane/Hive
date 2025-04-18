@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -50,9 +50,6 @@ public:
 		MilanCertified,
 		IEEEWarning,
 		MilanWarning,
-		MilanRedundant,
-		MilanCertifiedRedundant,
-		MilanWarningRedundant,
 		Misbehaving,
 	};
 
@@ -117,6 +114,8 @@ public:
 		QString groupName{}; /** Change triggers ChangedInfoFlag::GroupName */
 		bool isSubscribedToUnsol{ false }; /** Change triggers ChangedInfoFlag::SubscribedToUnsol */
 		ProtocolCompatibility protocolCompatibility{ ProtocolCompatibility::NotCompliant }; /** Change triggers ChangedInfoFlag::Compatibility */
+		la::avdecc::entity::model::MilanVersion milanCompatibleVersion{}; /** Change triggers ChangedInfoFlag::Compatibility */
+		bool isRedundant{ false }; /** Change triggers ChangedInfoFlag::Compatibility */
 		la::avdecc::entity::EntityCapabilities entityCapabilities{}; /** Change triggers ChangedInfoFlag::EntityCapabilities */
 		ExclusiveAccessInfo acquireInfo{}; /** Change triggers ChangedInfoFlag::AcquireState and/or ChangedInfoFlag::OwningController */
 		ExclusiveAccessInfo lockInfo{}; /** Change triggers ChangedInfoFlag::LockState and/or ChangedInfoFlag::LockingController */

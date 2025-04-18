@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -261,10 +261,22 @@ QString flagsToString(la::avdecc::entity::JackFlags const flags) noexcept
 	if (flags.empty())
 		return "None";
 
-	if (flags.test(la::avdecc::entity::JackFlag::ClockSyncSource))
-		concatenateFlags(str, "ClockSyncSource");
-	if (flags.test(la::avdecc::entity::JackFlag::Captive))
-		concatenateFlags(str, "Captive");
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::JackFlag::ClockSyncSource:
+				concatenateFlags(str, "ClockSyncSource");
+				break;
+			case la::avdecc::entity::JackFlag::Captive:
+				concatenateFlags(str, "Captive");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
 
 	return str;
 }
@@ -276,12 +288,25 @@ QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcep
 	if (flags.empty())
 		return "None";
 
-	if (flags.test(la::avdecc::entity::AvbInterfaceFlag::GptpGrandmasterSupported))
-		concatenateFlags(str, "GptpGrandmasterSupported");
-	if (flags.test(la::avdecc::entity::AvbInterfaceFlag::GptpSupported))
-		concatenateFlags(str, "GptpSupported");
-	if (flags.test(la::avdecc::entity::AvbInterfaceFlag::SrpSupported))
-		concatenateFlags(str, "SrpSupported");
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::AvbInterfaceFlag::GptpGrandmasterSupported:
+				concatenateFlags(str, "GptpGrandmasterSupported");
+				break;
+			case la::avdecc::entity::AvbInterfaceFlag::GptpSupported:
+				concatenateFlags(str, "GptpSupported");
+				break;
+			case la::avdecc::entity::AvbInterfaceFlag::SrpSupported:
+				concatenateFlags(str, "SrpSupported");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
 
 	return str;
 }
@@ -293,12 +318,25 @@ QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags) noexcept
 	if (flags.empty())
 		return "None";
 
-	if (flags.test(la::avdecc::entity::AvbInfoFlag::AsCapable))
-		concatenateFlags(str, "AS Capable");
-	if (flags.test(la::avdecc::entity::AvbInfoFlag::GptpEnabled))
-		concatenateFlags(str, "Gptp Enabled");
-	if (flags.test(la::avdecc::entity::AvbInfoFlag::SrpEnabled))
-		concatenateFlags(str, "Srp Enabled");
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::AvbInfoFlag::AsCapable:
+				concatenateFlags(str, "AS Capable");
+				break;
+			case la::avdecc::entity::AvbInfoFlag::GptpEnabled:
+				concatenateFlags(str, "Gptp Enabled");
+				break;
+			case la::avdecc::entity::AvbInfoFlag::SrpEnabled:
+				concatenateFlags(str, "Srp Enabled");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
 
 	return str;
 }
@@ -310,10 +348,22 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept
 	if (flags.empty())
 		return "None";
 
-	if (flags.test(la::avdecc::entity::ClockSourceFlag::StreamID))
-		concatenateFlags(str, "Stream");
-	if (flags.test(la::avdecc::entity::ClockSourceFlag::LocalID))
-		concatenateFlags(str, "Local");
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::ClockSourceFlag::StreamID:
+				concatenateFlags(str, "Stream");
+				break;
+			case la::avdecc::entity::ClockSourceFlag::LocalID:
+				concatenateFlags(str, "Local");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
 
 	return str;
 }
@@ -325,12 +375,25 @@ QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept
 	if (flags.empty())
 		return "None";
 
-	if (flags.test(la::avdecc::entity::PortFlag::ClockSyncSource))
-		concatenateFlags(str, "ClockSyncSource");
-	if (flags.test(la::avdecc::entity::PortFlag::AsyncSampleRateConv))
-		concatenateFlags(str, "AsyncSampleRateConv");
-	if (flags.test(la::avdecc::entity::PortFlag::SyncSampleRateConv))
-		concatenateFlags(str, "SyncSampleRateConv");
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::PortFlag::ClockSyncSource:
+				concatenateFlags(str, "ClockSyncSource");
+				break;
+			case la::avdecc::entity::PortFlag::AsyncSampleRateConv:
+				concatenateFlags(str, "AsyncSampleRateConv");
+				break;
+			case la::avdecc::entity::PortFlag::SyncSampleRateConv:
+				concatenateFlags(str, "SyncSampleRateConv");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
 
 	return str;
 }
@@ -342,24 +405,43 @@ QString flagsToString(la::avdecc::entity::PtpInstanceFlags const flags) noexcept
 	if (flags.empty())
 		return "None";
 
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetInstanceEnable))
-		concatenateFlags(str, "CanSetInstanceEnable");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetPriority1))
-		concatenateFlags(str, "CanSetPriority1");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetPriority2))
-		concatenateFlags(str, "CanSetPriority2");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetDomainNumber))
-		concatenateFlags(str, "CanSetDomainNumber");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetExternalPortConfiguration))
-		concatenateFlags(str, "CanSetExternalPortConfiguration");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanSetSlaveOnly))
-		concatenateFlags(str, "CanSetSlaveOnly");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::CanEnablePerformance))
-		concatenateFlags(str, "CanEnablePerformance");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::PerformanceMonitoring))
-		concatenateFlags(str, "PerformanceMonitoring");
-	if (flags.test(la::avdecc::entity::PtpInstanceFlag::GrandmasterCapable))
-		concatenateFlags(str, "GrandmasterCapable");
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::PtpInstanceFlag::CanSetInstanceEnable:
+				concatenateFlags(str, "CanSetInstanceEnable");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::CanSetPriority1:
+				concatenateFlags(str, "CanSetPriority1");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::CanSetPriority2:
+				concatenateFlags(str, "CanSetPriority2");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::CanSetDomainNumber:
+				concatenateFlags(str, "CanSetDomainNumber");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::CanSetExternalPortConfiguration:
+				concatenateFlags(str, "CanSetExternalPortConfiguration");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::CanSetSlaveOnly:
+				concatenateFlags(str, "CanSetSlaveOnly");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::CanEnablePerformance:
+				concatenateFlags(str, "CanEnablePerformance");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::PerformanceMonitoring:
+				concatenateFlags(str, "PerformanceMonitoring");
+				break;
+			case la::avdecc::entity::PtpInstanceFlag::GrandmasterCapable:
+				concatenateFlags(str, "GrandmasterCapable");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
 
 	return str;
 }
@@ -371,40 +453,67 @@ QString flagsToString(la::avdecc::entity::PtpPortFlags const flags) noexcept
 	if (flags.empty())
 		return "None";
 
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetEnable))
-		concatenateFlags(str, "CanSetEnable");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetLinkDelayThreshold))
-		concatenateFlags(str, "CanSetLinkDelayThreshold");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetDelayMechanism))
-		concatenateFlags(str, "CanSetDelayMechanism");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetDelayAsymmetry))
-		concatenateFlags(str, "CanSetDelayAsymmetry");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetInitialMessageIntervals))
-		concatenateFlags(str, "CanSetInitialMessageIntervals");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanSetTimeouts))
-		concatenateFlags(str, "CanSetTimeouts");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideAnnounceInterval))
-		concatenateFlags(str, "CanOverrideAnnounceInterval");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideSyncInterval))
-		concatenateFlags(str, "CanOverrideSyncInterval");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverridePDelayInterval))
-		concatenateFlags(str, "CanOverridePDelayInterval");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideGptpCapableInterval))
-		concatenateFlags(str, "CanOverrideGptpCapableInterval");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideComputeNeighbor))
-		concatenateFlags(str, "CanOverrideComputeNeighbor");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideComputeLinkDelay))
-		concatenateFlags(str, "CanOverrideComputeLinkDelay");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::CanOverrideOnestep))
-		concatenateFlags(str, "CanOverrideOnestep");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsRemoteIntervalSignal))
-		concatenateFlags(str, "SupportsRemoteIntervalSignal");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsOnestepTransmit))
-		concatenateFlags(str, "SupportsOnestepTransmit");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsOnestepReceive))
-		concatenateFlags(str, "SupportsOnestepReceive");
-	if (flags.test(la::avdecc::entity::PtpPortFlag::SupportsUnicastNegotiate))
-		concatenateFlags(str, "SupportsUnicastNegotiate");
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::PtpPortFlag::CanSetEnable:
+				concatenateFlags(str, "CanSetEnable");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanSetLinkDelayThreshold:
+				concatenateFlags(str, "CanSetLinkDelayThreshold");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanSetDelayMechanism:
+				concatenateFlags(str, "CanSetDelayMechanism");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanSetDelayAsymmetry:
+				concatenateFlags(str, "CanSetDelayAsymmetry");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanSetInitialMessageIntervals:
+				concatenateFlags(str, "CanSetInitialMessageIntervals");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanSetTimeouts:
+				concatenateFlags(str, "CanSetTimeouts");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanOverrideAnnounceInterval:
+				concatenateFlags(str, "CanOverrideAnnounceInterval");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanOverrideSyncInterval:
+				concatenateFlags(str, "CanOverrideSyncInterval");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanOverridePDelayInterval:
+				concatenateFlags(str, "CanOverridePDelayInterval");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanOverrideGptpCapableInterval:
+				concatenateFlags(str, "CanOverrideGptpCapableInterval");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanOverrideComputeNeighbor:
+				concatenateFlags(str, "CanOverrideComputeNeighbor");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanOverrideComputeLinkDelay:
+				concatenateFlags(str, "CanOverrideComputeLinkDelay");
+				break;
+			case la::avdecc::entity::PtpPortFlag::CanOverrideOnestep:
+				concatenateFlags(str, "CanOverrideOnestep");
+				break;
+			case la::avdecc::entity::PtpPortFlag::SupportsRemoteIntervalSignal:
+				concatenateFlags(str, "SupportsRemoteIntervalSignal");
+				break;
+			case la::avdecc::entity::PtpPortFlag::SupportsOnestepTransmit:
+				concatenateFlags(str, "SupportsOnestepTransmit");
+				break;
+			case la::avdecc::entity::PtpPortFlag::SupportsOnestepReceive:
+				concatenateFlags(str, "SupportsOnestepReceive");
+				break;
+			case la::avdecc::entity::PtpPortFlag::SupportsUnicastNegotiate:
+				concatenateFlags(str, "SupportsUnicastNegotiate");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
 
 	return str;
 }
@@ -413,37 +522,83 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 {
 	QString str;
 
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::ClassB))
-		concatenateFlags(str, "ClassB");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::FastConnect))
-		concatenateFlags(str, "FastConnect");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::SavedState))
-		concatenateFlags(str, "SavedState");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamingWait))
-		concatenateFlags(str, "StreamingWait");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::SupportsEncrypted))
-		concatenateFlags(str, "SupportsEncrypted");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::EncryptedPdu))
-		concatenateFlags(str, "EncryptedPdu");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::TalkerFailed))
-		concatenateFlags(str, "TalkerFailed");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamVlanIDValid))
-		concatenateFlags(str, "StreamVlanIDValid");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::Connected))
-		concatenateFlags(str, "Connected");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::MsrpFailureValid))
-		concatenateFlags(str, "MsrpFailureValid");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamDestMacValid))
-		concatenateFlags(str, "StreamDestMacValid");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid))
-		concatenateFlags(str, "MsrpAccLatValid");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamIDValid))
-		concatenateFlags(str, "StreamIDValid");
-	if (flags.test(la::avdecc::entity::StreamInfoFlag::StreamFormatValid))
-		concatenateFlags(str, "StreamFormatValid");
+	if (flags.empty())
+		return "None";
 
-	if (str.isEmpty())
-		str = "None";
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::StreamInfoFlag::ClassB:
+				concatenateFlags(str, "ClassB");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::FastConnect:
+				concatenateFlags(str, "FastConnect");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::SavedState:
+				concatenateFlags(str, "SavedState");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::StreamingWait:
+				concatenateFlags(str, "StreamingWait");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::SupportsEncrypted:
+				concatenateFlags(str, "SupportsEncrypted");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::EncryptedPdu:
+				concatenateFlags(str, "EncryptedPdu");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::TalkerFailed:
+				concatenateFlags(str, "TalkerFailed");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::NoSrp:
+				concatenateFlags(str, "NoSrp");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpFlagsValid:
+				concatenateFlags(str, "IpFlagsValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpSrcPortValid:
+				concatenateFlags(str, "IpSrcPortValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpDstPortValid:
+				concatenateFlags(str, "IpDstPortValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpSrcAddrValid:
+				concatenateFlags(str, "IpSrcAddrValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::IpDstAddrValid:
+				concatenateFlags(str, "IpDstAddrValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::NotRegisteringSrp:
+				concatenateFlags(str, "NotRegisteringSrp");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::StreamVlanIDValid:
+				concatenateFlags(str, "StreamVlanIDValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::Connected:
+				concatenateFlags(str, "Connected");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::MsrpFailureValid:
+				concatenateFlags(str, "MsrpFailureValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::StreamDestMacValid:
+				concatenateFlags(str, "StreamDestMacValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::MsrpAccLatValid:
+				concatenateFlags(str, "MsrpAccLatValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::StreamIDValid:
+				concatenateFlags(str, "StreamIDValid");
+				break;
+			case la::avdecc::entity::StreamInfoFlag::StreamFormatValid:
+				concatenateFlags(str, "StreamFormatValid");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
+
 	return str;
 }
 
@@ -451,11 +606,23 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcep
 {
 	QString str;
 
-	if (flags.test(la::avdecc::entity::StreamInfoFlagEx::Registering))
-		concatenateFlags(str, "Registering");
+	if (flags.empty())
+		return "None";
 
-	if (str.isEmpty())
-		str = "None";
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::StreamInfoFlagEx::Registering:
+				concatenateFlags(str, "Registering");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
+
 	return str;
 }
 
@@ -463,11 +630,26 @@ QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) no
 {
 	QString str;
 
-	if (flags.test(la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy))
-		concatenateFlags(str, "Redundancy");
+	if (flags.empty())
+		return "None";
 
-	if (str.isEmpty())
-		str = "None";
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case la::avdecc::entity::MilanInfoFeaturesFlag::Redundancy:
+				concatenateFlags(str, "Redundancy");
+				break;
+			case la::avdecc::entity::MilanInfoFeaturesFlag::TalkerDynamicMappingsWhileRunning:
+				concatenateFlags(str, "TalkerDynMappingsRunning");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
+
 	return str;
 }
 
@@ -543,35 +725,71 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) 
 {
 	QString str;
 
-	if (caps.test(la::avdecc::entity::EntityCapability::EfuMode))
-		concatenateFlags(str, "EfuMode");
-	if (caps.test(la::avdecc::entity::EntityCapability::AddressAccessSupported))
-		concatenateFlags(str, "AddressAccessSupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::GatewayEntity))
-		concatenateFlags(str, "GatewayEntity");
-	if (caps.test(la::avdecc::entity::EntityCapability::AemSupported))
-		concatenateFlags(str, "AemSupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::LegacyAvc))
-		concatenateFlags(str, "LegacyAvc");
-	if (caps.test(la::avdecc::entity::EntityCapability::AssociationIDSupported))
-		concatenateFlags(str, "AssociationIDSupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::VendorUniqueSupported))
-		concatenateFlags(str, "VendorUniqueSupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::ClassASupported))
-		concatenateFlags(str, "ClassASupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::ClassBSupported))
-		concatenateFlags(str, "ClassBSupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::GptpSupported))
-		concatenateFlags(str, "GptpSupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::AemAuthenticationSupported))
-		concatenateFlags(str, "AemAuthenticationSupported");
-	if (caps.test(la::avdecc::entity::EntityCapability::AemAuthenticationRequired))
-		concatenateFlags(str, "AemAuthenticationRequired");
-	if (caps.test(la::avdecc::entity::EntityCapability::AemPersistentAcquireSupported))
-		concatenateFlags(str, "AemPersistentAcquireSupported");
+	if (caps.empty())
+		return "None";
 
-	if (str.isEmpty())
-		str = "None";
+	for (auto const cap : caps)
+	{
+		switch (cap)
+		{
+			case la::avdecc::entity::EntityCapability::EfuMode:
+				concatenateFlags(str, "EfuMode");
+				break;
+			case la::avdecc::entity::EntityCapability::AddressAccessSupported:
+				concatenateFlags(str, "AddressAccessSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::GatewayEntity:
+				concatenateFlags(str, "GatewayEntity");
+				break;
+			case la::avdecc::entity::EntityCapability::AemSupported:
+				concatenateFlags(str, "AemSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::LegacyAvc:
+				concatenateFlags(str, "LegacyAvc");
+				break;
+			case la::avdecc::entity::EntityCapability::AssociationIDSupported:
+				concatenateFlags(str, "AssociationIDSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::VendorUniqueSupported:
+				concatenateFlags(str, "VendorUniqueSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::ClassASupported:
+				concatenateFlags(str, "ClassASupported");
+				break;
+			case la::avdecc::entity::EntityCapability::ClassBSupported:
+				concatenateFlags(str, "ClassBSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::GptpSupported:
+				concatenateFlags(str, "GptpSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::AemAuthenticationSupported:
+				concatenateFlags(str, "AemAuthenticationSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::AemAuthenticationRequired:
+				concatenateFlags(str, "AemAuthenticationRequired");
+				break;
+			case la::avdecc::entity::EntityCapability::AemPersistentAcquireSupported:
+				concatenateFlags(str, "AemPersistentAcquireSupported");
+				break;
+			case la::avdecc::entity::EntityCapability::AemIdentifyControlIndexValid:
+				concatenateFlags(str, "AemIdentifyControlIndexValid");
+				break;
+			case la::avdecc::entity::EntityCapability::AemInterfaceIndexValid:
+				concatenateFlags(str, "AemInterfaceIndexValid");
+				break;
+			case la::avdecc::entity::EntityCapability::GeneralControllerIgnore:
+				concatenateFlags(str, "GeneralControllerIgnore");
+				break;
+			case la::avdecc::entity::EntityCapability::EntityNotReady:
+				concatenateFlags(str, "EntityNotReady");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
+
 	return str;
 }
 
@@ -579,25 +797,44 @@ QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps) 
 {
 	QString str;
 
-	if (caps.test(la::avdecc::entity::TalkerCapability::Implemented))
-		concatenateFlags(str, "Implemented");
-	if (caps.test(la::avdecc::entity::TalkerCapability::OtherSource))
-		concatenateFlags(str, "OtherSource");
-	if (caps.test(la::avdecc::entity::TalkerCapability::ControlSource))
-		concatenateFlags(str, "ControlSource");
-	if (caps.test(la::avdecc::entity::TalkerCapability::MediaClockSource))
-		concatenateFlags(str, "MediaClockSource");
-	if (caps.test(la::avdecc::entity::TalkerCapability::SmpteSource))
-		concatenateFlags(str, "SmpteSource");
-	if (caps.test(la::avdecc::entity::TalkerCapability::MidiSource))
-		concatenateFlags(str, "MidiSource");
-	if (caps.test(la::avdecc::entity::TalkerCapability::AudioSource))
-		concatenateFlags(str, "AudioSource");
-	if (caps.test(la::avdecc::entity::TalkerCapability::VideoSource))
-		concatenateFlags(str, "VideoSource");
+	if (caps.empty())
+		return "None";
 
-	if (str.isEmpty())
-		str = "None";
+	for (auto const cap : caps)
+	{
+		switch (cap)
+		{
+			case la::avdecc::entity::TalkerCapability::Implemented:
+				concatenateFlags(str, "Implemented");
+				break;
+			case la::avdecc::entity::TalkerCapability::OtherSource:
+				concatenateFlags(str, "OtherSource");
+				break;
+			case la::avdecc::entity::TalkerCapability::ControlSource:
+				concatenateFlags(str, "ControlSource");
+				break;
+			case la::avdecc::entity::TalkerCapability::MediaClockSource:
+				concatenateFlags(str, "MediaClockSource");
+				break;
+			case la::avdecc::entity::TalkerCapability::SmpteSource:
+				concatenateFlags(str, "SmpteSource");
+				break;
+			case la::avdecc::entity::TalkerCapability::MidiSource:
+				concatenateFlags(str, "MidiSource");
+				break;
+			case la::avdecc::entity::TalkerCapability::AudioSource:
+				concatenateFlags(str, "AudioSource");
+				break;
+			case la::avdecc::entity::TalkerCapability::VideoSource:
+				concatenateFlags(str, "VideoSource");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
+
 	return str;
 }
 
@@ -605,25 +842,44 @@ QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps
 {
 	QString str;
 
-	if (caps.test(la::avdecc::entity::ListenerCapability::Implemented))
-		concatenateFlags(str, "Implemented");
-	if (caps.test(la::avdecc::entity::ListenerCapability::OtherSink))
-		concatenateFlags(str, "OtherSink");
-	if (caps.test(la::avdecc::entity::ListenerCapability::ControlSink))
-		concatenateFlags(str, "ControlSink");
-	if (caps.test(la::avdecc::entity::ListenerCapability::MediaClockSink))
-		concatenateFlags(str, "MediaClockSink");
-	if (caps.test(la::avdecc::entity::ListenerCapability::SmpteSink))
-		concatenateFlags(str, "SmpteSink");
-	if (caps.test(la::avdecc::entity::ListenerCapability::MidiSink))
-		concatenateFlags(str, "MidiSink");
-	if (caps.test(la::avdecc::entity::ListenerCapability::AudioSink))
-		concatenateFlags(str, "AudioSink");
-	if (caps.test(la::avdecc::entity::ListenerCapability::VideoSink))
-		concatenateFlags(str, "VideoSink");
+	if (caps.empty())
+		return "None";
 
-	if (str.isEmpty())
-		str = "None";
+	for (auto const cap : caps)
+	{
+		switch (cap)
+		{
+			case la::avdecc::entity::ListenerCapability::Implemented:
+				concatenateFlags(str, "Implemented");
+				break;
+			case la::avdecc::entity::ListenerCapability::OtherSink:
+				concatenateFlags(str, "OtherSink");
+				break;
+			case la::avdecc::entity::ListenerCapability::ControlSink:
+				concatenateFlags(str, "ControlSink");
+				break;
+			case la::avdecc::entity::ListenerCapability::MediaClockSink:
+				concatenateFlags(str, "MediaClockSink");
+				break;
+			case la::avdecc::entity::ListenerCapability::SmpteSink:
+				concatenateFlags(str, "SmpteSink");
+				break;
+			case la::avdecc::entity::ListenerCapability::MidiSink:
+				concatenateFlags(str, "MidiSink");
+				break;
+			case la::avdecc::entity::ListenerCapability::AudioSink:
+				concatenateFlags(str, "AudioSink");
+				break;
+			case la::avdecc::entity::ListenerCapability::VideoSink:
+				concatenateFlags(str, "VideoSink");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
+
 	return str;
 }
 
@@ -631,11 +887,23 @@ QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const ca
 {
 	QString str;
 
-	if (caps.test(la::avdecc::entity::ControllerCapability::Implemented))
-		concatenateFlags(str, "Implemented");
+	if (caps.empty())
+		return "None";
 
-	if (str.isEmpty())
-		str = "None";
+	for (auto const cap : caps)
+	{
+		switch (cap)
+		{
+			case la::avdecc::entity::ControllerCapability::Implemented:
+				concatenateFlags(str, "Implemented");
+				break;
+			default:
+				concatenateFlags(str, "Unknown");
+				AVDECC_ASSERT(false, "Not handled!");
+				break;
+		}
+	}
+
 	return str;
 }
 
@@ -1221,11 +1489,6 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 			AVDECC_ASSERT(false, "Not handled!");
 			return "Unknown";
 	}
-}
-
-QString certificationVersionToString(std::uint32_t const certificationVersion) noexcept
-{
-	return QString("%1.%2.%3.%4").arg(certificationVersion >> 24 & 0xFF).arg(certificationVersion >> 16 & 0xFF).arg(certificationVersion >> 8 & 0xFF).arg(certificationVersion & 0xFF);
 }
 
 QString loggerLayerToString(la::avdecc::logger::Layer const layer) noexcept

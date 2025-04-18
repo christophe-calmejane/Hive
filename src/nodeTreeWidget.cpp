@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -21,6 +21,9 @@
 #include "avdecc/hiveLogItems.hpp"
 #include "avdecc/helper.hpp"
 #include "avdecc/stringValidator.hpp"
+#include "avdecc/euiValidator.hpp"
+#include "avdecc/numberValidator.hpp"
+#include "nodeTreeDynamicWidgets/milanDynamicStateTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.hpp"
@@ -152,6 +155,12 @@ private:
 	QImage _image;
 };
 
+enum class MediaClockReferenceInfoType
+{
+	UserPriority = 0,
+	DomainName,
+};
+
 class NodeTreeWidgetPrivate : public QObject, public NodeDispatcher
 {
 	Q_OBJECT
@@ -165,7 +174,7 @@ public:
 			AVDECC_ASSERT(false, "Should not be there. Missing specialization?");
 			self->addTextItem(item, "Values", "Not supported (but should be), please report this bug");
 		}
-		virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
+		virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const /*entityID*/, la::avdecc::entity::model::ControlIndex const /*controlIndex*/, la::avdecc::entity::model::ControlNodeStaticModel const& /*staticModel*/, la::avdecc::entity::model::ControlNodeDynamicModel const& /*dynamicModel*/) noexcept
 		{
 			AVDECC_ASSERT(false, "Should not be there. Missing specialization?");
 			auto* dynamicItem = new QTreeWidgetItem(tree);
@@ -284,17 +293,28 @@ private:
 				auto const ctrlCaps = e.getControllerCapabilities();
 
 				addTextItem(descriptorItem, "Entity Model ID", hive::modelsLibrary::helper::uniqueIdentifierToString(e.getEntityModelID()));
+				// AEM Checksums
 				{
-					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 1u });
-					addTextItem(descriptorItem, "AEM Checksum v1", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
-				}
-				{
-					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 2u });
-					addTextItem(descriptorItem, "AEM Checksum v2", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
-				}
-				{
-					auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 3u });
-					addTextItem(descriptorItem, "AEM Checksum v3", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					auto* checksumItem = new QTreeWidgetItem(descriptorItem);
+					checksumItem->setText(0, "AEM Checksums");
+					// Collapsed by default
+					checksumItem->setExpanded(false); // Doesn't seem to have an effect
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 1u });
+						addTextItem(checksumItem, "AEM Checksum v1", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 2u });
+						addTextItem(checksumItem, "AEM Checksum v2", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 3u });
+						addTextItem(checksumItem, "AEM Checksum v3", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
+					{
+						auto const chksumOpt = controllerManager.computeEntityModelChecksum(entity, std::uint32_t{ 4u });
+						addTextItem(checksumItem, "AEM Checksum v4", QString::fromStdString(chksumOpt ? (*chksumOpt) : std::string{ "Must enable 'Full AEM Enumeration'" }));
+					}
 				}
 				addFlagsItem(descriptorItem, "Talker Capabilities", la::avdecc::utils::forceNumeric(talkerCaps.value()), avdecc::helper::capabilitiesToString(talkerCaps));
 				addTextItem(descriptorItem, "Talker Max Sources", QString::number(e.getTalkerStreamSources()));
@@ -309,6 +329,8 @@ private:
 			addTextItem(descriptorItem, "Firmware Version", dynamicModel.firmwareVersion.data());
 			addTextItem(descriptorItem, "Serial Number", dynamicModel.serialNumber.data());
 			addTextItem(descriptorItem, "Unsol Supported", entity.areUnsolicitedNotificationsSupported() ? "Yes" : "No");
+			addTextItem(descriptorItem, "Fast Enum Supported", controllerManager.isFastEnumerationEnabled() ? (entity.isPackedDynamicInfoSupported() ? "Yes" : "No") : "Disabled in options");
+			addTextItem(descriptorItem, "Using Cached AEM", controllerManager.isAemCacheEnabled() ? (entity.isUsingCachedEntityModel() ? "Yes" : "No") : "Disabled in options");
 
 			addTextItem(descriptorItem, "Configuration Count", node.configurations.size());
 		}
@@ -323,21 +345,32 @@ private:
 
 				auto const milanInfo = *milanInfoOpt;
 				auto const compat = entity.getCompatibilityFlags();
+				auto const compatVersion = entity.getMilanCompatibilityVersion();
 
 				auto compatStr = QString{ "Not Milan Compatible" };
 				if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::MilanWarning))
 				{
-					compatStr = "Milan Compatible (with warnings)";
+					compatStr = QString{ "Milan Compatible v%1 (with warnings)" }.arg(compatVersion.to_string(2).c_str());
 				}
 				else if (compat.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 				{
-					compatStr = "Milan Compatible";
+					compatStr = QString{ "Milan Compatible v%1" }.arg(compatVersion.to_string(2).c_str());
 				}
 
 				addTextItem(milanInfoItem, "Compatibility", compatStr);
 				addTextItem(milanInfoItem, "Protocol Version", QString::number(milanInfo.protocolVersion));
 				addFlagsItem(milanInfoItem, "Features", la::avdecc::utils::forceNumeric(milanInfo.featuresFlags.value()), avdecc::helper::flagsToString(milanInfo.featuresFlags));
-				addTextItem(milanInfoItem, "Certification Version", avdecc::helper::certificationVersionToString(milanInfo.certificationVersion));
+				addTextItem(milanInfoItem, "Certification Version", static_cast<std::string>(milanInfo.certificationVersion));
+			}
+		}
+
+		// Milan Dynamic State - Display the information if available, even if the device is not Milan Compatible
+		{
+			auto const milanDynStateOpt = entity.getMilanDynamicState();
+			if (milanDynStateOpt)
+			{
+				auto* dynamicItem = new MilanDynamicStateTreeWidgetItem(_controlledEntityID, *milanDynStateOpt, q);
+				dynamicItem->setText(0, "Milan Dynamic State");
 			}
 		}
 
@@ -357,7 +390,7 @@ private:
 			addFlagsItem(dynamicItem, "Entity Capabilities", la::avdecc::utils::forceNumeric(entityCaps.value()), avdecc::helper::capabilitiesToString(entityCaps));
 			if (entityCaps.test(la::avdecc::entity::EntityCapability::AssociationIDSupported))
 			{
-				addEditableTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString(""), hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, la::avdecc::entity::model::DescriptorIndex{ 0u }, {});
+				addEditableTextItem(dynamicItem, "Association ID", e.getAssociationID() ? hive::modelsLibrary::helper::uniqueIdentifierToString(*e.getAssociationID()) : QString(""), hive::modelsLibrary::ControllerManager::AecpCommandType::SetAssociationID, la::avdecc::entity::model::DescriptorIndex{ 0u }, {}, avdecc::EUIValidator::getSharedInstance());
 			}
 			else
 			{
@@ -434,7 +467,7 @@ private:
 
 		// Statistics
 		{
-			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getAemAecpUnsolicitedLossCounter(), entity.getEnumerationTime(), q);
+			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getAemAecpUnsolicitedLossCounter(), entity.getMvuAecpUnsolicitedCounter(), entity.getMvuAecpUnsolicitedLossCounter(), entity.getEnumerationTime(), q);
 			statisticsItem->setText(0, "Statistics");
 		}
 
@@ -881,7 +914,7 @@ private:
 			// Display static values
 			if (auto const& it = s_Dispatch.find(valueType); it != s_Dispatch.end())
 			{
-				it->second->dispatchDynamicControlValues(q, _controlledEntityID, node.descriptorIndex, staticModel, dynamicModel);
+				it->second->dispatchDynamicControlValues(q, controlledEntity, _controlledEntityID, node.descriptorIndex, staticModel, dynamicModel);
 			}
 			else
 			{
@@ -915,6 +948,10 @@ private:
 			descriptorItem->setText(0, "Static Info");
 
 			addTextItem(descriptorItem, "Clock Sources count", model.clockSources.size());
+			// Default Media Clock Priority
+			{
+				addTextItem(descriptorItem, "Default Media Clock Priority", model.defaultMediaClockPriority);
+			}
 		}
 
 		// Dynamic model
@@ -923,67 +960,75 @@ private:
 			auto* dynamicItem = new QTreeWidgetItem(q);
 			dynamicItem->setText(0, "Dynamic Info");
 
-			auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
-			currentSourceItem->setText(0, "Current Clock Source");
-
-			auto* sourceComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ClockSourceIndex>();
-			auto clockSources = std::remove_pointer_t<decltype(sourceComboBox)>::Data{};
-			for (auto const sourceIndex : model.clockSources)
+			// Current Clock Source
 			{
-				clockSources.insert(sourceIndex);
-				/*try
+				auto* currentSourceItem = new QTreeWidgetItem(dynamicItem);
+				currentSourceItem->setText(0, "Current Clock Source");
+
+				auto* sourceComboBox = new AecpCommandComboBox<la::avdecc::entity::model::ClockSourceIndex>();
+				auto clockSources = std::remove_pointer_t<decltype(sourceComboBox)>::Data{};
+				for (auto const sourceIndex : model.clockSources)
 				{
-					auto const& clockSourceNode = controlledEntity->getClockSourceNode(configurationIndex, sourceIndex);
-					auto const name = QString::number(sourceIndex) + ": '" + hive::modelsLibrary::helper::objectName(controlledEntity, clockSourceNode) + "' (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
-					sourceComboBox->addItem(name, QVariant::fromValue(sourceIndex));
+					clockSources.insert(sourceIndex);
 				}
-				catch (...)
-				{
-				}*/
+				sourceComboBox->setAllData(clockSources,
+					[this, configurationIndex](auto const& sourceIndex)
+					{
+						auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+						auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
+
+						if (controlledEntity)
+						{
+							try
+							{
+								auto const& entity = *controlledEntity;
+								auto const& clockSourceNode = entity.getClockSourceNode(configurationIndex, sourceIndex);
+								return QString::number(sourceIndex) + ": " + hive::modelsLibrary::helper::objectName(&entity, clockSourceNode) + " (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
+							}
+							catch (...)
+							{
+								// Ignore exception
+							}
+						}
+						return QString::number(sourceIndex);
+					});
+
+				q->setItemWidget(currentSourceItem, 1, sourceComboBox);
+
+				// Send changes
+				sourceComboBox->setDataChangedHandler(
+					[this, sourceComboBox, clockDomainIndex = node.descriptorIndex](auto const& previousSourceIndex, auto const& newSourceIndex)
+					{
+						hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, newSourceIndex, sourceComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource), sourceComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource, previousSourceIndex));
+					});
+
+				// Listen for changes
+				connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceChanged, sourceComboBox,
+					[this, streamType = node.descriptorType, domainIndex = node.descriptorIndex, sourceComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const sourceIndex)
+					{
+						if (entityID == _controlledEntityID && clockDomainIndex == domainIndex)
+						{
+							sourceComboBox->setCurrentData(sourceIndex);
+						}
+					});
+
+				// Update now
+				sourceComboBox->setCurrentData(dynamicModel.clockSourceIndex);
 			}
-			sourceComboBox->setAllData(clockSources,
-				[this, configurationIndex](auto const& sourceIndex)
+
+			// User writable Media Clock Reference Info
+			{
+				// User Media Clock Priority
+				if (dynamicModel.mediaClockReferenceInfo.userMediaClockPriority)
 				{
-					auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-					auto const controlledEntity = manager.getControlledEntity(_controlledEntityID);
-
-					if (controlledEntity)
-					{
-						try
-						{
-							auto const& entity = *controlledEntity;
-							auto const& clockSourceNode = entity.getClockSourceNode(configurationIndex, sourceIndex);
-							return QString::number(sourceIndex) + ": " + hive::modelsLibrary::helper::objectName(&entity, clockSourceNode) + " (" + avdecc::helper::clockSourceToString(clockSourceNode) + ")";
-						}
-						catch (...)
-						{
-							// Ignore exception
-						}
-					}
-					return QString::number(sourceIndex);
-				});
-
-			q->setItemWidget(currentSourceItem, 1, sourceComboBox);
-
-			// Send changes
-			sourceComboBox->setDataChangedHandler(
-				[this, sourceComboBox, clockDomainIndex = node.descriptorIndex](auto const& previousSourceIndex, auto const& newSourceIndex)
+					addEditableTextItem(dynamicItem, "User Media Clock Priority", QString::number(*dynamicModel.mediaClockReferenceInfo.userMediaClockPriority), hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo, std::make_tuple(node.descriptorIndex, MediaClockReferenceInfoType::UserPriority), avdecc::PositiveIntegerValidator<std::numeric_limits<std::uint8_t>::max()>::getSharedInstance());
+				}
+				// Media Clock Domain Name
+				if (dynamicModel.mediaClockReferenceInfo.mediaClockDomainName)
 				{
-					hive::modelsLibrary::ControllerManager::getInstance().setClockSource(_controlledEntityID, clockDomainIndex, newSourceIndex, sourceComboBox->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource), sourceComboBox->getResultHandler(hive::modelsLibrary::ControllerManager::AecpCommandType::SetClockSource, previousSourceIndex));
-				});
-
-			// Listen for changes
-			connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::clockSourceChanged, sourceComboBox,
-				[this, streamType = node.descriptorType, domainIndex = node.descriptorIndex, sourceComboBox](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const sourceIndex)
-				{
-					if (entityID == _controlledEntityID && clockDomainIndex == domainIndex)
-					{
-						sourceComboBox->setCurrentData(sourceIndex);
-					}
-				});
-
-			// Update now
-			sourceComboBox->setCurrentData(dynamicModel.clockSourceIndex);
+					addEditableTextItem(dynamicItem, "Media Clock Domain Name", QString::fromStdString(static_cast<std::string>(*dynamicModel.mediaClockReferenceInfo.mediaClockDomainName)), hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo, std::make_tuple(node.descriptorIndex, MediaClockReferenceInfoType::DomainName));
+				}
+			}
 		}
 
 		// Counters (if supported by the entity)
@@ -1302,14 +1347,14 @@ public:
 	}
 
 	/** An editable text entry item */
-	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::any const& customData)
+	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, std::any const& customData, std::optional<QValidator*> validator = avdecc::AvdeccStringValidator::getSharedInstance())
 	{
 		Q_Q(NodeTreeWidget);
 
 		auto* item = new QTreeWidgetItem(treeWidgetItem);
 		item->setText(0, itemName);
 
-		auto* textEntry = new AecpCommandTextEntry(itemValue, avdecc::AvdeccStringValidator::getSharedInstance());
+		auto* textEntry = new AecpCommandTextEntry(itemValue, validator);
 
 		q->setItemWidget(item, 1, textEntry);
 
@@ -1722,6 +1767,126 @@ public:
 		}
 	}
 
+	void addEditableTextItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, QString itemValue, hive::modelsLibrary::ControllerManager::MilanCommandType const commandType, std::any const& customData, std::optional<QValidator*> validator = avdecc::AvdeccStringValidator::getSharedInstance())
+	{
+		Q_Q(NodeTreeWidget);
+
+		auto* item = new QTreeWidgetItem(treeWidgetItem);
+		item->setText(0, itemName);
+
+		auto* textEntry = new AecpCommandTextEntry(itemValue, validator);
+
+		q->setItemWidget(item, 1, textEntry);
+
+		textEntry->setDataChangedHandler(
+			[this, textEntry, commandType, customData](QString const& oldText, QString const& newText)
+			{
+				// Send changes
+				switch (commandType)
+				{
+					case hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID:
+						try
+						{
+							auto const systemUniqueID = static_cast<la::avdecc::entity::model::SystemUniqueIdentifier>(la::avdecc::utils::convertFromString<la::avdecc::entity::model::SystemUniqueIdentifier>(newText.toStdString().c_str()));
+							hive::modelsLibrary::ControllerManager::getInstance().setSystemUniqueID(_controlledEntityID, systemUniqueID, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID, oldText));
+						}
+						catch (std::invalid_argument const& e)
+						{
+							QMessageBox::warning(q_ptr, "", QString("Cannot set System Unique ID: Invalid EID: %1").arg(e.what()));
+						}
+						break;
+					case hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo:
+						try
+						{
+							auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ClockDomainIndex, MediaClockReferenceInfoType>>(customData);
+							auto const clockDomainIndex = std::get<0>(customTuple);
+							auto const infoType = std::get<1>(customTuple);
+							auto userPriority = decltype(la::avdecc::entity::model::MediaClockReferenceInfo::userMediaClockPriority){};
+							auto domainName = decltype(la::avdecc::entity::model::MediaClockReferenceInfo::mediaClockDomainName){};
+							switch (infoType)
+							{
+								case MediaClockReferenceInfoType::UserPriority:
+									userPriority = static_cast<decltype(userPriority)::value_type>(newText.toUInt());
+									break;
+								case MediaClockReferenceInfoType::DomainName:
+									domainName = newText.toStdString();
+									break;
+								default:
+									break;
+							}
+							hive::modelsLibrary::ControllerManager::getInstance().setMediaClockReferenceInfo(_controlledEntityID, clockDomainIndex, userPriority, domainName, textEntry->getBeginCommandHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo), textEntry->getResultHandler(hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo, oldText));
+						}
+						catch (...)
+						{
+						}
+						break;
+					default:
+						break;
+				}
+			});
+
+		// Listen for changes
+		try
+		{
+			switch (commandType)
+			{
+				case hive::modelsLibrary::ControllerManager::MilanCommandType::SetSystemUniqueID:
+				{
+					// TODO
+					/*connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::associationIDChanged, textEntry,
+						[this, textEntry](la::avdecc::UniqueIdentifier const entityID, std::optional<la::avdecc::UniqueIdentifier> const& associationID)
+						{
+							if (entityID == _controlledEntityID)
+							{
+								textEntry->setCurrentData(associationID ? hive::modelsLibrary::helper::uniqueIdentifierToString(*associationID) : "");
+							}
+						});*/
+					break;
+				}
+				case hive::modelsLibrary::ControllerManager::MilanCommandType::SetMediaClockReferenceInfo:
+				{
+					auto const customTuple = std::any_cast<std::tuple<la::avdecc::entity::model::ClockDomainIndex, MediaClockReferenceInfoType>>(customData);
+					auto const clockDomainIndex = std::get<0>(customTuple);
+					auto const infoType = std::get<1>(customTuple);
+					connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::mediaClockReferenceInfoChanged, textEntry,
+						[this, textEntry, cdIndex = clockDomainIndex, infoType](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& mcrInfo)
+						{
+							if (entityID == _controlledEntityID && clockDomainIndex == cdIndex)
+							{
+								switch (infoType)
+								{
+									case MediaClockReferenceInfoType::UserPriority:
+									{
+										if (mcrInfo.userMediaClockPriority)
+										{
+											textEntry->setCurrentData(QString::number(*mcrInfo.userMediaClockPriority));
+										}
+										break;
+									}
+									case MediaClockReferenceInfoType::DomainName:
+									{
+										if (mcrInfo.mediaClockDomainName)
+										{
+											textEntry->setCurrentData(QString::fromStdString(static_cast<std::string>(*mcrInfo.mediaClockDomainName)));
+										}
+										break;
+									}
+									default:
+										break;
+								}
+							}
+						});
+					break;
+				}
+				default:
+					break;
+			}
+		}
+		catch (...)
+		{
+		}
+	}
+
 	void checkAddImageItem(QTreeWidgetItem* const treeWidgetItem, QString itemName, la::avdecc::entity::model::MemoryObjectType const memoryObjectType)
 	{
 		auto type = hive::widgetModelsLibrary::EntityLogoCache::Type::None;
@@ -1857,7 +2022,7 @@ class DispatchControlLinearValues final : public NodeTreeWidgetPrivate::Dispatch
 			valueItem->setText(1, "Cannot unpack");
 		}
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
 		auto* dynamicItem = new LinearControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
@@ -1885,9 +2050,9 @@ class DispatchControlSelectorValues final : public NodeTreeWidgetPrivate::Dispat
 			valueItem->setText(1, "Cannot unpack");
 		}
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
-		auto* dynamicItem = new SelectorControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
+		auto* dynamicItem = new SelectorControlValuesDynamicTreeWidgetItem<SizeType, StaticValueType, DynamicValueType>(controlledEntity, entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
 	}
 };
@@ -1919,7 +2084,7 @@ class DispatchControlArrayValues final : public NodeTreeWidgetPrivate::DispatchC
 			valueItem->setText(1, "Cannot unpack");
 		}
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
 		auto* dynamicItem = new ArrayControlValuesDynamicTreeWidgetItem<StaticValueType, DynamicValueType>(entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
@@ -1934,7 +2099,7 @@ public:
 	{
 		// Nothing to display
 	}
-	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
+	virtual void dispatchDynamicControlValues(QTreeWidget* const tree, la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlNodeStaticModel const& staticModel, la::avdecc::entity::model::ControlNodeDynamicModel const& dynamicModel) noexcept override
 	{
 		auto* dynamicItem = new UTF8ControlValuesDynamicTreeWidgetItem(entityID, controlIndex, staticModel, dynamicModel, tree);
 		dynamicItem->setText(0, "Dynamic Info");
