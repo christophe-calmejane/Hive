@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -224,7 +224,7 @@ public:
 
 private:
 	QScopedPointer<ModelPrivate> d_ptr;
-	Q_DECLARE_PRIVATE(Model);
+	Q_DECLARE_PRIVATE(Model)
 };
 
 } // namespace connectionMatrix

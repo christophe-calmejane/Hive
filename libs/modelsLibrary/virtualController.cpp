@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -25,9 +25,10 @@ namespace hive
 {
 namespace modelsLibrary
 {
-void VirtualController::setControllerEID(la::avdecc::UniqueIdentifier const controllerEID) noexcept
+// Constructor
+VirtualController::VirtualController(ControllerManager const* const controllerManager) noexcept
+	: _controllerManager{ controllerManager }
 {
-	_controllerEID = controllerEID;
 }
 
 // Empty implementation of all VirtualController overridable methods
@@ -43,7 +44,8 @@ void VirtualController::releaseEntity(la::avdecc::UniqueIdentifier const targetE
 
 void VirtualController::lockEntity(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, LockEntityHandler const& handler) const noexcept
 {
-	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, _controllerEID, descriptorType, descriptorIndex);
+	auto const controllerEID = _controllerManager ? _controllerManager->getControllerEID() : la::avdecc::UniqueIdentifier::getNullUniqueIdentifier();
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, controllerEID, descriptorType, descriptorIndex);
 }
 
 void VirtualController::unlockEntity(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, UnlockEntityHandler const& handler) const noexcept
@@ -201,6 +203,24 @@ void VirtualController::readClockDomainDescriptor(la::avdecc::UniqueIdentifier c
 {
 	static auto const s_emptyClockDomainDescriptor = la::avdecc::entity::model::ClockDomainDescriptor{};
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, clockDomainIndex, s_emptyClockDomainDescriptor);
+}
+
+void VirtualController::readTimingDescriptor(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, TimingDescriptorHandler const& handler) const noexcept
+{
+	static auto const s_emptyTimingDescriptor = la::avdecc::entity::model::TimingDescriptor{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, timingIndex, s_emptyTimingDescriptor);
+}
+
+void VirtualController::readPtpInstanceDescriptor(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, PtpInstanceDescriptorHandler const& handler) const noexcept
+{
+	static auto const s_emptyPtpInstanceDescriptor = la::avdecc::entity::model::PtpInstanceDescriptor{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, ptpInstanceIndex, s_emptyPtpInstanceDescriptor);
+}
+
+void VirtualController::readPtpPortDescriptor(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, PtpPortDescriptorHandler const& handler) const noexcept
+{
+	static auto const s_emptyPtpPortDescriptor = la::avdecc::entity::model::PtpPortDescriptor{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, ptpPortIndex, s_emptyPtpPortDescriptor);
 }
 
 void VirtualController::setConfiguration(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, SetConfigurationHandler const& handler) const noexcept
@@ -445,6 +465,39 @@ void VirtualController::getClockDomainName(la::avdecc::UniqueIdentifier const ta
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, clockDomainIndex, s_emptyClockDomainName);
 }
 
+void VirtualController::setTimingName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, la::avdecc::entity::model::AvdeccFixedString const& timingName, SetTimingNameHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, configurationIndex, timingIndex, timingName);
+}
+
+void VirtualController::getTimingName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, GetTimingNameHandler const& handler) const noexcept
+{
+	static auto const s_emptyTimingName = la::avdecc::entity::model::AvdeccFixedString{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, timingIndex, s_emptyTimingName);
+}
+
+void VirtualController::setPtpInstanceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpInstanceName, SetPtpInstanceNameHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, configurationIndex, ptpInstanceIndex, ptpInstanceName);
+}
+
+void VirtualController::getPtpInstanceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, GetPtpInstanceNameHandler const& handler) const noexcept
+{
+	static auto const s_emptyPtpInstanceName = la::avdecc::entity::model::AvdeccFixedString{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, ptpInstanceIndex, s_emptyPtpInstanceName);
+}
+
+void VirtualController::setPtpPortName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpPortName, SetPtpPortNameHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, configurationIndex, ptpPortIndex, ptpPortName);
+}
+
+void VirtualController::getPtpPortName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, GetPtpPortNameHandler const& handler) const noexcept
+{
+	static auto const s_emptyPtpPortName = la::avdecc::entity::model::AvdeccFixedString{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, ptpPortIndex, s_emptyPtpPortName);
+}
+
 void VirtualController::setAssociation(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::UniqueIdentifier const associationID, SetAssociationHandler const& handler) const noexcept
 {
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, associationID);
@@ -600,6 +653,22 @@ void VirtualController::getMemoryObjectLength(la::avdecc::UniqueIdentifier const
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, configurationIndex, memoryObjectIndex, std::uint64_t{ 0u });
 }
 
+void VirtualController::getDynamicInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::controller::DynamicInfoParameters const& parameters, GetDynamicInfoHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, parameters);
+}
+
+void VirtualController::setMaxTransitTime(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, std::chrono::nanoseconds const& maxTransitTime, SetMaxTransitTimeHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::Success, streamIndex, maxTransitTime);
+}
+
+void VirtualController::getMaxTransitTime(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::StreamIndex const streamIndex, GetMaxTransitTimeHandler const& handler) const noexcept
+{
+	static auto const s_emptyMaxTransitTime = std::chrono::nanoseconds{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::AemCommandStatus::NotImplemented, streamIndex, s_emptyMaxTransitTime);
+}
+
 void VirtualController::addressAccess(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::addressAccess::Tlvs const& /*tlvs*/, AddressAccessHandler const& handler) const noexcept
 {
 	static auto const s_emptyTlvs = la::avdecc::entity::addressAccess::Tlvs{};
@@ -610,6 +679,44 @@ void VirtualController::getMilanInfo(la::avdecc::UniqueIdentifier const targetEn
 {
 	static auto const s_emptyMilanInfo = la::avdecc::entity::model::MilanInfo{};
 	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, s_emptyMilanInfo);
+}
+
+void VirtualController::setSystemUniqueID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::SystemUniqueIdentifier const systemUniqueID, SetSystemUniqueIDHandler const& handler) const noexcept
+{
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::Success, systemUniqueID);
+}
+
+void VirtualController::getSystemUniqueID(la::avdecc::UniqueIdentifier const targetEntityID, GetSystemUniqueIDHandler const& handler) const noexcept
+{
+	static auto const s_emptySystemUniqueID = la::avdecc::entity::model::SystemUniqueIdentifier{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, s_emptySystemUniqueID);
+}
+
+void VirtualController::setMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, std::optional<la::avdecc::entity::model::MediaClockReferencePriority> const userPriority, std::optional<la::avdecc::entity::model::AvdeccFixedString> const& domainName, SetMediaClockReferenceInfoHandler const& handler) const noexcept
+{
+	auto const mediaClockReferenceInfo = la::avdecc::entity::model::MediaClockReferenceInfo{ userPriority, domainName };
+	auto defaultPrio = la::avdecc::entity::model::DefaultMediaClockReferencePriority::Default;
+	// Get defaultPrio value from the entity model of the targetEntityID
+	auto controlledEntity = _controllerManager->getControlledEntity(targetEntityID);
+	if (controlledEntity)
+	{
+		try
+		{
+			defaultPrio = controlledEntity->getClockDomainNode(controlledEntity->getCurrentConfigurationIndex(), clockDomainIndex).staticModel.defaultMediaClockPriority;
+		}
+		catch (la::avdecc::controller::ControlledEntity::Exception const&)
+		{
+			// Ignore the exception
+		}
+	}
+
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::Success, clockDomainIndex, defaultPrio, mediaClockReferenceInfo);
+}
+
+void VirtualController::getMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, GetMediaClockReferenceInfoHandler const& handler) const noexcept
+{
+	static auto const s_emptyMediaClockReferenceInfo = la::avdecc::entity::model::MediaClockReferenceInfo{};
+	la::avdecc::utils::invokeProtectedHandler(handler, this, targetEntityID, la::avdecc::entity::LocalEntity::MvuCommandStatus::NotImplemented, clockDomainIndex, la::avdecc::entity::model::DefaultMediaClockReferencePriority::Default, s_emptyMediaClockReferenceInfo);
 }
 
 void VirtualController::connectStream(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamIdentification const& listenerStream, ConnectStreamHandler const& handler) const noexcept

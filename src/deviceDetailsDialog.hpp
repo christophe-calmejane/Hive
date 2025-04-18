@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -39,7 +39,7 @@ class DeviceDetailsDialog : public QDialog
 {
 	Q_OBJECT
 public:
-	DeviceDetailsDialog(QWidget* parent = nullptr);
+	DeviceDetailsDialog(la::avdecc::UniqueIdentifier const entityID, QWidget* parent = nullptr);
 	virtual ~DeviceDetailsDialog() noexcept;
 
 	// Delete compiler auto-generated methods
@@ -48,9 +48,6 @@ public:
 	DeviceDetailsDialog& operator=(DeviceDetailsDialog const&) = delete;
 	DeviceDetailsDialog& operator=(DeviceDetailsDialog&&) = delete;
 
-	void setControlledEntityID(la::avdecc::UniqueIdentifier const entityID);
-
 private:
 	DeviceDetailsDialogImpl* _pImpl{ nullptr };
-	la::avdecc::UniqueIdentifier _controlledEntityID;
 };

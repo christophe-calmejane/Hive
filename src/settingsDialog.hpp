@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -55,6 +55,7 @@ private:
 	// Controller
 	Q_SLOT void on_discoveryDelayLineEdit_returnPressed();
 	Q_SLOT void on_enableAEMCacheCheckBox_toggled(bool checked);
+	Q_SLOT void on_enableFastEnumerationCheckBox_toggled(bool checked);
 	Q_SLOT void on_fullAEMEnumerationCheckBox_toggled(bool checked);
 	Q_SLOT void on_enableAdvertisingCheckBox_toggled(bool checked);
 	Q_SLOT void on_controllerIDLineEdit_returnPressed();

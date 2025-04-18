@@ -16,6 +16,9 @@
 # News feed URL
 newsfeed_url=https://www.kikisoft.com/Hive/news.php
 
+# News feed file URL
+newsfeedfile_url=news.json
+
 ################ Automatic check for update
 # Define to true if Sparkle is to be used, false otherwise
 use_sparkle=true

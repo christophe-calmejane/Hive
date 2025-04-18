@@ -1,6 +1,6 @@
 # Hive
 
-Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 ## What is Hive
 
@@ -10,9 +10,11 @@ Hive is a pro audio Avdecc (IEEE Std 1722.1) controller. Hive allows you to insp
 
 Precompiled binaries for macOS and Windows [can be found here](https://github.com/christophe-calmejane/Hive/releases).
 
+**Note**: Starting with Hive 1.3, the precompiled Mac binaries require macOS 11 or later to run (both Intel and Apple Silicon).
+
 ## Minimum requirements for compilation
 
-- CMake 3.22
+- CMake 3.29
 - Qt 6.5.2 (although Qt 5.15.2 was supported in the past, it's no longer guaranteed to compile correctly)
 - Visual Studio 2022 17.4 (using platform toolset v143), Xcode 14, g++ 11.0
 - [Optional, for cross-compilation] Docker / Docker Compose
@@ -24,11 +26,13 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
 - Copy `.hive_config.sample` to `.hive_config`, then edit it for installer customization
 - Run the `setup_fresh_env.sh` script that should properly setup your working copy
 - Run the `gen_cmake.sh` script with whatever optional parameters required (run *gen_cmake.sh -h* to display the help)
-  - [Linux only] For Ubuntu users, install the `qtbase5-dev` package and make sure the major and minor version matches what Hive requires. You can alternatively use the `-qtvers` and `-qtdir` options when invoking `gen_cmake.sh` if you want to use a different Qt version.
+  - [Linux only] For Ubuntu users, install the `qt6-base-dev` package and make sure the major and minor version matches what Hive requires. You can alternatively use the `-qtvers` and `-qtdir` options when invoking `gen_cmake.sh` if you want to use a different Qt version (but there is no guarantee it will compile).
 - Go into the generated output folder
 - Compile everything
   - [macOS/Windows] Open the generated solution and compile from the IDE
-  - [Linux] Run `cmake --build . --config Release`
+  - [Linux] Run `cmake --build .`
+
+Note: If you are using CMake >= 4.0, you have have to pass extra parameters to `gen_cmake.sh` (eg: add this at the end of the command line: `-- -DCMAKE_POLICY_VERSION_MINIMUM=3.5`)
 
 ## Cross-compilation using Docker
 
@@ -45,6 +49,10 @@ Precompiled binaries for macOS and Windows [can be found here](https://github.co
   - Start it with _access control disabled_
   - Find the IP address of your WSL network interface using _ipconfig_
   - Set a DISPLAY environment variable with value _WSL\_Interface\_IP_:0
+- macOS users need to have a running XQuartz:
+  - Install [XQuartz](https://www.xquartz.org)
+  - Start it and make sure it's not running with the _Allow connections from network clients_ option (XQuartz -> Preferences -> Security)
+  - Change the above command line to _APP=Hive-d docker-compose run -e DISPLAY=docker.for.mac.host.internal:0 --rm run_
 
 ## Installer generation
 

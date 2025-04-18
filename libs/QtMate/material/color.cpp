@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -36,7 +36,7 @@ namespace color
 struct ColorData
 {
 	QColor value; // The actual color value
-	Luminance luminance; // The associated luminance
+	Luminance luminance{ Luminance::Dark }; // The associated luminance
 };
 
 using ShadeMap = std::unordered_map<Shade, ColorData>;

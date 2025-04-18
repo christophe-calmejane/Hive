@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -70,6 +70,10 @@ public:
 				{
 					auto const counter = entity->getAemAecpUnsolicitedLossCounter();
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses] = StatisticsCounterInfo{ counter, 0u };
+				}
+				{
+					auto const counter = entity->getMvuAecpUnsolicitedLossCounter();
+					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses] = StatisticsCounterInfo{ counter, 0u };
 				}
 
 				// Get and copy diagnostics
@@ -347,6 +351,7 @@ public:
 		qRegisterMetaType<std::uint16_t>("std::uint16_t");
 		qRegisterMetaType<std::uint64_t>("std::uint64_t");
 		qRegisterMetaType<std::chrono::milliseconds>("std::chrono::milliseconds");
+		qRegisterMetaType<std::chrono::nanoseconds>("std::chrono::nanoseconds");
 		qRegisterMetaType<AecpCommandType>("hive::modelsLibrary::ControllerManager::AecpCommandType");
 		qRegisterMetaType<AcmpCommandType>("hive::modelsLibrary::ControllerManager::AcmpCommandType");
 		qRegisterMetaType<StreamInputErrorCounters>("hive::modelsLibrary::ControllerManager::StreamInputErrorCounters");
@@ -384,6 +389,9 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::SignalMultiplexerIndex>("la::avdecc::entity::model::SignalMultiplexerIndex");
 		qRegisterMetaType<la::avdecc::entity::model::SignalTranscoderIndex>("la::avdecc::entity::model::SignalTranscoderIndex");
 		qRegisterMetaType<la::avdecc::entity::model::ClockDomainIndex>("la::avdecc::entity::model::ClockDomainIndex");
+		qRegisterMetaType<la::avdecc::entity::model::TimingIndex>("la::avdecc::entity::model::TimingIndex");
+		qRegisterMetaType<la::avdecc::entity::model::PtpInstanceIndex>("la::avdecc::entity::model::PtpInstanceIndex");
+		qRegisterMetaType<la::avdecc::entity::model::PtpPortIndex>("la::avdecc::entity::model::PtpPortIndex");
 		qRegisterMetaType<la::avdecc::entity::model::ControlBlockIndex>("la::avdecc::entity::model::ControlBlockIndex");
 		qRegisterMetaType<la::avdecc::entity::model::SamplingRate>("la::avdecc::entity::model::SamplingRate");
 		qRegisterMetaType<la::avdecc::entity::model::StreamFormat>("la::avdecc::entity::model::StreamFormat");
@@ -393,6 +401,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::AsPath>("la::avdecc::entity::model::AsPath");
 		qRegisterMetaType<la::avdecc::entity::model::ControlValues>("la::avdecc::entity::model::ControlValues");
 		qRegisterMetaType<la::avdecc::entity::model::StreamIdentification>("la::avdecc::entity::model::StreamIdentification");
+		qRegisterMetaType<la::avdecc::entity::model::MilanVersion>("la::avdecc::entity::model::MilanVersion");
 		qRegisterMetaType<la::avdecc::entity::model::StreamInputConnectionInfo>("la::avdecc::entity::model::StreamInputConnectionInfo");
 		qRegisterMetaType<la::avdecc::entity::model::StreamConnections>("la::avdecc::entity::model::StreamConnections");
 		qRegisterMetaType<la::avdecc::entity::model::EntityCounters>("la::avdecc::entity::model::EntityCounters");
@@ -400,6 +409,8 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::ClockDomainCounters>("la::avdecc::entity::model::ClockDomainCounters");
 		qRegisterMetaType<la::avdecc::entity::model::StreamInputCounters>("la::avdecc::entity::model::StreamInputCounters");
 		qRegisterMetaType<la::avdecc::entity::model::StreamOutputCounters>("la::avdecc::entity::model::StreamOutputCounters");
+		qRegisterMetaType<la::avdecc::entity::model::SystemUniqueIdentifier>("la::avdecc::entity::model::SystemUniqueIdentifier");
+		qRegisterMetaType<la::avdecc::entity::model::MediaClockReferenceInfo>("la::avdecc::entity::model::MediaClockReferenceInfo");
 		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>("la::avdecc::controller::ControlledEntity::InterfaceLinkStatus");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::CompatibilityFlags>("la::avdecc::controller::ControlledEntity::CompatibilityFlags");
@@ -506,9 +517,9 @@ private:
 	{
 		emit unsolicitedRegistrationChanged(entity->getEntity().getEntityID(), isSubscribed);
 	}
-	virtual void onCompatibilityFlagsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags) noexcept override
+	virtual void onCompatibilityChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion) noexcept override
 	{
-		emit compatibilityFlagsChanged(entity->getEntity().getEntityID(), compatibilityFlags);
+		emit compatibilityChanged(entity->getEntity().getEntityID(), compatibilityFlags, milanCompatibleVersion);
 	}
 	virtual void onIdentificationStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
@@ -607,6 +618,18 @@ private:
 	virtual void onClockDomainNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::AvdeccFixedString const& clockDomainName) noexcept override
 	{
 		emit clockDomainNameChanged(entity->getEntity().getEntityID(), configurationIndex, clockDomainIndex, QString::fromStdString(clockDomainName));
+	}
+	virtual void onTimingNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, la::avdecc::entity::model::AvdeccFixedString const& timingName) noexcept override
+	{
+		emit timingNameChanged(entity->getEntity().getEntityID(), configurationIndex, timingIndex, QString::fromStdString(timingName));
+	}
+	virtual void onPtpInstanceNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpInstanceName) noexcept override
+	{
+		emit ptpInstanceNameChanged(entity->getEntity().getEntityID(), configurationIndex, ptpInstanceIndex, QString::fromStdString(ptpInstanceName));
+	}
+	virtual void onPtpPortNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpPortName) noexcept override
+	{
+		emit ptpPortNameChanged(entity->getEntity().getEntityID(), configurationIndex, ptpPortIndex, QString::fromStdString(ptpPortName));
 	}
 	virtual void onAssociationIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::optional<la::avdecc::UniqueIdentifier> const associationID) noexcept override
 	{
@@ -761,6 +784,19 @@ private:
 	{
 		emit mediaClockChainChanged(entity->getEntity().getEntityID(), clockDomainIndex, mcChain);
 	}
+	virtual void onMaxTransitTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, std::chrono::nanoseconds const& maxTransitTime) noexcept override
+	{
+		emit maxTransitTimeChanged(entity->getEntity().getEntityID(), streamIndex, maxTransitTime);
+	}
+	virtual void onSystemUniqueIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::SystemUniqueIdentifier const systemUniqueID) noexcept override
+	{
+		emit systemUniqueIDChanged(entity->getEntity().getEntityID(), systemUniqueID);
+	}
+	virtual void onMediaClockReferenceInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& mcrInfo) noexcept override
+	{
+		emit mediaClockReferenceInfoChanged(entity->getEntity().getEntityID(), clockDomainIndex, mcrInfo);
+	}
+
 	// Statistics
 	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
 	{
@@ -840,6 +876,28 @@ private:
 				}
 
 				emit aemAecpUnsolicitedLossCounterChanged(entityID, value);
+			});
+	}
+	virtual void onMvuAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		emit mvuAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), value);
+	}
+	virtual void onMvuAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	{
+		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
+		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
+		QMetaObject::invokeMethod(this,
+			[this, entityID = entity->getEntity().getEntityID(), value]()
+			{
+				if (auto* entityCache = entityCachedData(entityID))
+				{
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, value))
+					{
+						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
+					}
+				}
+
+				emit mvuAecpUnsolicitedLossCounterChanged(entityID, value);
 			});
 	}
 	// Diagnostics
@@ -924,12 +982,10 @@ private:
 		}
 
 		// Create a new virtual controller
-		_virtualController = VirtualController{};
+		_virtualController = VirtualController{ this };
 
 		// Create a new controller and store it
 		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel, std::nullopt, &_virtualController);
-
-		_virtualController.setControllerEID(controller->getControllerEID());
 
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
@@ -953,6 +1009,15 @@ private:
 			else
 			{
 				ctrl->disableEntityModelCache();
+			}
+
+			if (_enableFastEnumeration)
+			{
+				ctrl->enableFastEnumeration();
+			}
+			else
+			{
+				ctrl->disableFastEnumeration();
 			}
 
 			if (_fullAemEnumeration)
@@ -1092,9 +1157,29 @@ private:
 		_enableAemCache = enable;
 	}
 
+	virtual bool isAemCacheEnabled() const noexcept override
+	{
+		return _enableAemCache;
+	}
+
+	virtual void setEnableFastEnumeration(bool const enable) noexcept override
+	{
+		_enableFastEnumeration = enable;
+	}
+
+	virtual bool isFastEnumerationEnabled() const noexcept override
+	{
+		return _enableFastEnumeration;
+	}
+
 	virtual void setEnableFullAemEnumeration(bool const enable) noexcept override
 	{
 		_fullAemEnumeration = enable;
+	}
+
+	virtual bool isFullAemEnumerationEnabled() const noexcept override
+	{
+		return _fullAemEnumeration;
 	}
 
 	virtual void identifyEntity(la::avdecc::UniqueIdentifier const targetEntityID, std::chrono::milliseconds const duration, IdentifyEntityHandler const& resultHandler) noexcept override
@@ -1271,6 +1356,16 @@ private:
 		if (controller)
 		{
 			return controller->discoverRemoteEntity(entityID);
+		}
+		return false;
+	}
+
+	virtual bool forgetRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->forgetRemoteEntity(entityID);
 		}
 		return false;
 	}
@@ -1903,6 +1998,90 @@ private:
 		}
 	}
 
+	virtual void setTimingName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, QString const& name, BeginCommandHandler const& beginHandler, SetTimingNameHandler const& resultHandler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::SetTimingName, timingIndex);
+			}
+			controller->setTimingName(targetEntityID, configurationIndex, timingIndex, name.toStdString(),
+				[this, targetEntityID, timingIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetTimingName, timingIndex, status);
+					}
+				});
+		}
+	}
+
+	virtual void setPtpInstanceName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, QString const& name, BeginCommandHandler const& beginHandler, SetPtpInstanceNameHandler const& resultHandler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::SetPtpInstanceName, ptpInstanceIndex);
+			}
+			controller->setPtpInstanceName(targetEntityID, configurationIndex, ptpInstanceIndex, name.toStdString(),
+				[this, targetEntityID, ptpInstanceIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetPtpInstanceName, ptpInstanceIndex, status);
+					}
+				});
+		}
+	}
+
+	virtual void setPtpPortName(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, QString const& name, BeginCommandHandler const& beginHandler, SetPtpPortNameHandler const& resultHandler) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginAecpCommand(targetEntityID, AecpCommandType::SetPtpPortName, ptpPortIndex);
+			}
+			controller->setPtpPortName(targetEntityID, configurationIndex, ptpPortIndex, name.toStdString(),
+				[this, targetEntityID, ptpPortIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endAecpCommand(targetEntityID, AecpCommandType::SetPtpPortName, ptpPortIndex, status);
+					}
+				});
+		}
+	}
+
 	virtual void setAssociationID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::UniqueIdentifier const associationID, BeginCommandHandler const& beginHandler, SetAssociationIDHandler const& resultHandler) noexcept override
 	{
 		auto controller = getController();
@@ -2342,6 +2521,63 @@ private:
 		}
 	}
 
+	/* Enumeration and Control Protocol (AECP) MVU handlers (Milan Vendor Unique) */
+	virtual void setSystemUniqueID(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::SystemUniqueIdentifier const systemUniqueID, BeginCommandHandler const& beginHandler = {}, SetSystemUniqueIDHandler const& resultHandler = {}) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginMilanCommand(targetEntityID, MilanCommandType::SetSystemUniqueID, la::avdecc::entity::model::getInvalidDescriptorIndex());
+			}
+			controller->setSystemUniqueID(targetEntityID, systemUniqueID,
+				[this, targetEntityID, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::MvuCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endMilanCommand(targetEntityID, MilanCommandType::SetSystemUniqueID, la::avdecc::entity::model::getInvalidDescriptorIndex(), status);
+					}
+				});
+		}
+	}
+
+	virtual void setMediaClockReferenceInfo(la::avdecc::UniqueIdentifier const targetEntityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, std::optional<la::avdecc::entity::model::MediaClockReferencePriority> const userPriority, std::optional<la::avdecc::entity::model::AvdeccFixedString> const& domainName, BeginCommandHandler const& beginHandler = {}, SetMediaClockReferenceInfoHandler const& resultHandler = {}) noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			if (beginHandler)
+			{
+				la::avdecc::utils::invokeProtectedHandler(beginHandler, targetEntityID);
+			}
+			else
+			{
+				emit beginMilanCommand(targetEntityID, MilanCommandType::SetMediaClockReferenceInfo, clockDomainIndex);
+			}
+			controller->setMediaClockReferenceInfo(targetEntityID, clockDomainIndex, userPriority, domainName,
+				[this, targetEntityID, clockDomainIndex, resultHandler](la::avdecc::controller::ControlledEntity const* const /*entity*/, la::avdecc::entity::ControllerEntity::MvuCommandStatus const status) noexcept
+				{
+					if (resultHandler)
+					{
+						la::avdecc::utils::invokeProtectedHandler(resultHandler, targetEntityID, status);
+					}
+					else
+					{
+						emit endMilanCommand(targetEntityID, MilanCommandType::SetMediaClockReferenceInfo, clockDomainIndex, status);
+					}
+				});
+		}
+	}
+
 	/* Connection Management Protocol (ACMP) */
 	virtual void connectStream(la::avdecc::UniqueIdentifier const talkerEntityID, la::avdecc::entity::model::StreamIndex const talkerStreamIndex, la::avdecc::UniqueIdentifier const listenerEntityID, la::avdecc::entity::model::StreamIndex const listenerStreamIndex, ConnectStreamHandler const& resultHandler) noexcept override
 	{
@@ -2502,8 +2738,9 @@ private:
 	std::unordered_map<CommandsExecutorImpl const*, std::unique_ptr<CommandsExecutorImpl>> _commandsExecutors{};
 	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };
+	bool _enableFastEnumeration{ false };
 	bool _fullAemEnumeration{ false };
-	VirtualController _virtualController{};
+	VirtualController _virtualController{ nullptr };
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept
@@ -2551,6 +2788,12 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Set Control Name";
 		case AecpCommandType::SetClockDomainName:
 			return "Set Clock Domain Name";
+		case AecpCommandType::SetTimingName:
+			return "Set Timing Name";
+		case AecpCommandType::SetPtpInstanceName:
+			return "Set PTP Instance Name";
+		case AecpCommandType::SetPtpPortName:
+			return "Set PTP Port Name";
 		case AecpCommandType::SetAssociationID:
 			return "Set Association ID";
 		case AecpCommandType::SetSamplingRate:
@@ -2575,6 +2818,22 @@ QString ControllerManager::typeToString(AecpCommandType const type) noexcept
 			return "Abort Operation";
 		case AecpCommandType::IdentifyEntity:
 			return "Identify Entity";
+		case AecpCommandType::SetMaxTransitTime:
+			return "Set Max Transit Time";
+		default:
+			AVDECC_ASSERT(false, "Unhandled type");
+			return "Unknown";
+	}
+}
+
+QString ControllerManager::typeToString(MilanCommandType const type) noexcept
+{
+	switch (type)
+	{
+		case MilanCommandType::SetSystemUniqueID:
+			return "Set System Unique ID";
+		case MilanCommandType::SetMediaClockReferenceInfo:
+			return "Set Media Clock Reference Info";
 		default:
 			AVDECC_ASSERT(false, "Unhandled type");
 			return "Unknown";

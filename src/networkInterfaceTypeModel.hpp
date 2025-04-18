@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -43,5 +43,5 @@ private:
 
 private:
 	QScopedPointer<NetworkInterfaceTypeModelPrivate> const d_ptr;
-	Q_DECLARE_PRIVATE(NetworkInterfaceTypeModel);
+	Q_DECLARE_PRIVATE(NetworkInterfaceTypeModel)
 };

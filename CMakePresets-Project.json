@@ -1,0 +1,20 @@
+{
+	"version": 6,
+	"configurePresets": [
+		{
+			"name": "project",
+			"hidden": true,
+			"cacheVariables": {
+				"BUILD_HIVE_TESTS": "FALSE",
+				"BUILD_HIVE_MODELS_SHARED_LIBRARY": "FALSE",
+				"BUILD_HIVE_APPLICATION": "TRUE",
+				"ENABLE_HIVE_CPACK": "FALSE",
+				"ENABLE_CODE_SIGNING": "FALSE",
+				"ENABLE_HIVE_FEATURE_SPARKLE": "FALSE",
+				"MARKETING_VERSION_DIGITS": "2",
+				"MARKETING_VERSION_POSTFIX": "",
+				"QT_MAJOR_VERSION": "6"
+			}
+		}
+	]
+}

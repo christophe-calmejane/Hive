@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -109,7 +109,7 @@ public:
 
 protected:
 	TextEntry* const q_ptr{ nullptr };
-	Q_DECLARE_PUBLIC(TextEntry);
+	Q_DECLARE_PUBLIC(TextEntry)
 
 	QString _focusInText{};
 	bool _validated{ false };

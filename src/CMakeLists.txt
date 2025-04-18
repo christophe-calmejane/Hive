@@ -66,6 +66,8 @@ set(HEADER_FILES_COMMON
 	avdecc/loggerModel.hpp
 	avdecc/commandChain.hpp
 	avdecc/stringValidator.hpp
+	avdecc/euiValidator.hpp
+	avdecc/numberValidator.hpp
 	connectionEditor/connectionEditor.hpp
 	connectionEditor/connectionWorkspace.hpp
 	connectionEditor/nodeListModel.hpp
@@ -97,6 +99,7 @@ set(HEADER_FILES_COMMON
 	mediaClock/domainTreeItem.hpp
 	mediaClock/entityTreeItem.hpp
 	newsFeed/newsFeed.hpp
+	nodeTreeDynamicWidgets/milanDynamicStateTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp
 	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.hpp
@@ -120,6 +123,7 @@ set(HEADER_FILES_COMMON
 	deviceDetailsDialog.hpp
 	deviceDetailsChannelTableModel.hpp
 	deviceDetailsStreamFormatTableModel.hpp
+	deviceDetailsLatencyTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
 	discoveredEntitiesView.hpp
@@ -133,13 +137,16 @@ set(HEADER_FILES_COMMON
 	controlledEntityTreeWidget.hpp
 	controlledEntityTreeWidgetItemDelegate.hpp
 	entityInspector.hpp
+	entityInspectorRoles.hpp
 	mappingMatrix.hpp
 	activeNetworkInterfacesModel.hpp
+	latencyItemDelegate.hpp
 	networkInterfaceTypeModel.hpp
 	nodeTreeWidget.hpp
-	nodeVisitor.hpp
+	nodeDispatcher.hpp
 	windowsNpfHelper.hpp
 	streamFormatComboBox.hpp
+	latencyComboBox.hpp
 	visibilitySettings.hpp
 	listViewMatrixViewController.hpp
 	application.hpp
@@ -183,6 +190,7 @@ set(SOURCE_FILES_COMMON
 	mediaClock/domainTreeItem.cpp
 	mediaClock/entityTreeItem.cpp
 	newsFeed/newsFeed.cpp
+	nodeTreeDynamicWidgets/milanDynamicStateTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.cpp
 	nodeTreeDynamicWidgets/controlValuesDynamicTreeWidgetItem.cpp
@@ -201,6 +209,7 @@ set(SOURCE_FILES_COMMON
 	deviceDetailsDialog.cpp
 	deviceDetailsChannelTableModel.cpp
 	deviceDetailsStreamFormatTableModel.cpp
+	deviceDetailsLatencyTableModel.cpp
 	firmwareUploadDialog.cpp
 	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp
@@ -212,9 +221,10 @@ set(SOURCE_FILES_COMMON
 	entityInspector.cpp
 	mappingMatrix.cpp
 	activeNetworkInterfacesModel.cpp
+	latencyItemDelegate.cpp
 	networkInterfaceTypeModel.cpp
 	nodeTreeWidget.cpp
-	nodeVisitor.cpp
+	nodeDispatcher.cpp
 	windowsNpfHelper.cpp
 	listViewMatrixViewController.cpp
 	application.cpp

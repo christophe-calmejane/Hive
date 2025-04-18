@@ -4,6 +4,39 @@ All notable changes to Hive will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-04-18
+### Added
+- Support for TIMING, PTP_INSTANCE and PTP_PORT descriptors
+- Support for Fast Device Enumeration (when cache is enabled)
+- [Possibility to modify the presentation time of each stream from Device Details Dialog](https://github.com/christophe-calmejane/Hive/issues/151)
+- Possibility to refresh a virtual entity
+- Support for SERIAL Protocol Interface (by Luke Howard)
+- Support for LOCAL SOCKET Protocol Interface (by Luke Howard)
+- Added Milan 1.2 values:
+  - System Unique ID
+  - Media Clock Reference Info (in ClockDomain descriptor)
+- Controlled Entity enumeration status:
+  - Is using AEM Cache
+  - Is using Fast Device Enumeration
+
+### Changed
+- [Channel Mappings Editor should display the redundant stream name instead of the primary name](https://github.com/christophe-calmejane/Hive/issues/130)
+- [[MacOS Native] Workarkound for macOS AVB Framework bug](https://github.com/christophe-calmejane/Hive/issues/179)
+- Reworked Milan Compatibility logo to handle different versions of Milan
+
+### Fixed
+- CONTROL descriptors not properly enumerated in JACKS
+- Incorrect dynamic mappings in some rare case
+- Crash when a device fails to properly enumerate STRING descriptors
+- Incorrect dynamic mappings visualization for devices with multiple stream ports
+- [Can't open dynamic mappings editor in Inspector if not selecting audio unit first](https://github.com/christophe-calmejane/Hive/issues/159)
+- Virtual entities locales correctly loaded for all configurations
+- Fast Device Enumeration not properly working for some devices
+- Fast Device Enumeration usable without using the AEM Cache (reduces enumeration time)
+- AEM Cache working correctly for devices with multiple configurations
+- [Dark mode text readability for first launch popup window](https://github.com/christophe-calmejane/Hive/issues/160)
+- [Control Selector String not properly rendered](https://github.com/christophe-calmejane/Hive/issues/166)
+
 ## [1.3.0] - 2023-09-26
 ### Added
 - Selection of an entity from the connection matrix (context menu)

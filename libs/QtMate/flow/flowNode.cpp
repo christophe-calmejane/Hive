@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -135,7 +135,7 @@ bool FlowNode::isCollapsed() const
 
 FlowInput* FlowNode::input(FlowSocketIndex index) const
 {
-	if (index < 0 || index >= _inputs.size())
+	if (index >= _inputs.size())
 	{
 		return nullptr;
 	}
@@ -144,7 +144,7 @@ FlowInput* FlowNode::input(FlowSocketIndex index) const
 
 FlowOutput* FlowNode::output(FlowSocketIndex index) const
 {
-	if (index < 0 || index >= _outputs.size())
+	if (index >= _outputs.size())
 	{
 		return nullptr;
 	}

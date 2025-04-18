@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -30,7 +30,7 @@ class FlowNodeHeader;
 class FlowNode : public QObject, public QGraphicsItem
 {
 	Q_OBJECT
-	Q_PROPERTY(bool collapsed READ isCollapsed NOTIFY collapsedChanged);
+	Q_PROPERTY(bool collapsed READ isCollapsed NOTIFY collapsedChanged)
 	Q_INTERFACES(QGraphicsItem)
 
 public:

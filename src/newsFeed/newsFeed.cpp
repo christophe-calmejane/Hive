@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -80,7 +80,7 @@ private:
 	{
 		if (!_checkInProgress)
 		{
-			QNetworkRequest request{ QUrl{ QString{ "%1?lastCheckTime=%2&buildNumber=%3" }.arg(hive::internals::newsFeedUrl.c_str()).arg(lastCheckTime).arg(hive::internals::buildNumber) } };
+			QNetworkRequest request{ QUrl{ QString{ "%1?fileURL=%2&lastCheckTime=%3&buildNumber=%4" }.arg(hive::internals::newsFeedUrl.c_str()).arg(hive::internals::newsFeedFileUrl.c_str()).arg(lastCheckTime).arg(hive::internals::buildNumber) } };
 			_checkInProgress = true;
 			_webCtrlRelease.get(request);
 		}

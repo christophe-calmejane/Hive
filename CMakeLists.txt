@@ -1,7 +1,7 @@
 # Root CMake File for Hive
 
 # Minimum CMake version
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.29)
 
 ############ Versioning
 
@@ -10,8 +10,8 @@ cmake_minimum_required(VERSION 3.22)
 # It should have 3 digits (x.y.z) on main branch, and 4 digits (x.y.z.w) on dev and task branches. The last digit being used as beta label.
 # As soon as a new version begins, update the version number by following SemVer rules.
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
-set(HIVE_VERSION 1.3.0)
-set(AEMDUMPER_VERSION 1.3.0)
+set(HIVE_VERSION 1.3.1)
+set(AEMDUMPER_VERSION 1.3.1)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
@@ -54,8 +54,12 @@ if(NOT NEWSFEED_URL)
 	set(NEWSFEED_URL "https://localhost/hive/news.php" CACHE STRING "Newsfeed URL for Hive" FORCE)
 endif()
 message(STATUS "Newsfeed URL for Hive defined to: ${NEWSFEED_URL}")
+if(NOT NEWSFEEDFILE_URL)
+	set(NEWSFEEDFILE_URL "news.json" CACHE STRING "Newsfeed File URL for Hive" FORCE)
+endif()
+message(STATUS "Newsfeed File URL for Hive defined to: ${NEWSFEEDFILE_URL}")
 if(NOT QT_MAJOR_VERSION)
-	set(QT_MAJOR_VERSION 5)
+	message(FATAL_ERROR "Qt major version not set in QT_MAJOR_VERSION CMake Variable")
 endif()
 
 ############ CMake Configuration
@@ -212,5 +216,5 @@ endif()
 # Force Project as visual default target
 set_directory_properties(PROPERTIES VS_STARTUP_PROJECT ${PROJECT_NAME})
 
-# Allow generator expressions in install(CODE/SCRIPT)
-cmake_policy(SET CMP0087 NEW)
+# Configure a few things that has to be done last
+cu_finalize(NO_VSCODE_WORKSPACE)

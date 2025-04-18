@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -51,7 +51,7 @@ protected:
 private:
 	class TextEntryPrivate;
 	TextEntryPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(TextEntry);
+	Q_DECLARE_PRIVATE(TextEntry)
 };
 
 } // namespace widgets

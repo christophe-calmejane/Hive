@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -34,7 +34,7 @@ public:
 
 private:
 	ComboBoxPrivate* const d_ptr{ nullptr };
-	Q_DECLARE_PRIVATE(ComboBox);
+	Q_DECLARE_PRIVATE(ComboBox)
 };
 
 } // namespace widgets

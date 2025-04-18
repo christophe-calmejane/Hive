@@ -1,6 +1,8 @@
 <RCC>
     <qresource prefix="/">
         <file>MaterialIcons-Regular.ttf</file>
+		<file>FuturaLT.ttf</file>
+        <file>FuturaLT-ExtraBold.ttf</file>
         <file>Hive.ttf</file>
         <file>Logo.png</file>
         <file alias="CHANGELOG.md">../CHANGELOG.md</file>
@@ -25,12 +27,16 @@
         <file>Milan_Redundant_Compatible_Warning.png</file>
         <file>Milan_Redundant_Compatible_Warning_inv.png</file>
         <file>ieee.png</file>
+        <file>ieee_Warning.png</file>
         <file>not_compliant.png</file>
         <file>misbehaving.png</file>
         <file>style.qss</file>
+        <file>oui.json</file>
         <file>dsa_pub.pem</file>
         <file>legal_notices.md</file>
         <file>L-Acoustics.png</file>
         <file>dbaudiotechnik.png</file>
+        <file alias="Cocarde.svg">Raw/Cocarde.svg</file>
+        <file alias="Warning.svg">Raw/Warning.svg</file>
     </qresource>
 </RCC>

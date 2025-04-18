@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -252,9 +252,8 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 					}
 					else if (action == deviceView)
 					{
-						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(this);
+						DeviceDetailsDialog* dialog = new DeviceDetailsDialog(entity.entityID, this);
 						dialog->setAttribute(Qt::WA_DeleteOnClose);
-						dialog->setControlledEntityID(entity.entityID);
 						dialog->show();
 					}
 					else if (action == inspect)

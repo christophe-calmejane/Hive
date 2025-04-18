@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -89,7 +89,7 @@ void FlowOutput::updateConnections()
 	}
 }
 
-void FlowOutput::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
+void FlowOutput::paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/)
 {
 	auto const hotSpot = hotSpotBoundingRect().center();
 	drawOutputHotSpot(painter, hotSpot, _color, isConnected());

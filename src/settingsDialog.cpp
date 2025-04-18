@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -82,6 +82,23 @@ private:
 #endif // USE_SPARKLE
 		}
 
+		// Check For Beta Updates
+		{
+#ifdef USE_SPARKLE
+			auto const lock = QSignalBlocker{ checkForBetaVersionsCheckBox };
+			checkForBetaVersionsCheckBox->setChecked(settings->getValue(settings::General_CheckForBetaVersions.name).toBool());
+			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
+			checkForBetaVersionsLabel->setEnabled(enabled);
+			checkForBetaVersionsCheckBox->setEnabled(enabled);
+#else // !USE_SPARKLE
+			checkForBetaVersionsLabel->setToolTip("Not compiled with auto-update support");
+			checkForBetaVersionsLabel->setEnabled(false);
+			checkForBetaVersionsCheckBox->setToolTip("Not compiled with auto-update support");
+			checkForBetaVersionsCheckBox->setChecked(false);
+			checkForBetaVersionsCheckBox->setEnabled(false);
+#endif // USE_SPARKLE
+		}
+
 		// Theme Color
 		{
 			auto const lock = QSignalBlocker{ themeColorComboBox };
@@ -142,23 +159,6 @@ private:
 	{
 		auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
-		// Check For Beta Updates
-		{
-#ifdef USE_SPARKLE
-			auto const lock = QSignalBlocker{ checkForBetaVersionsCheckBox };
-			checkForBetaVersionsCheckBox->setChecked(settings->getValue(settings::General_CheckForBetaVersions.name).toBool());
-			auto const enabled = automaticCheckForUpdatesCheckBox->isChecked();
-			checkForBetaVersionsLabel->setEnabled(enabled);
-			checkForBetaVersionsCheckBox->setEnabled(enabled);
-#else // !USE_SPARKLE
-			checkForBetaVersionsLabel->setToolTip("Not compiled with auto-update support");
-			checkForBetaVersionsLabel->setEnabled(false);
-			checkForBetaVersionsCheckBox->setToolTip("Not compiled with auto-update support");
-			checkForBetaVersionsCheckBox->setChecked(false);
-			checkForBetaVersionsCheckBox->setEnabled(false);
-#endif // USE_SPARKLE
-		}
-
 		// Discovery Delay
 		{
 			auto const lock = QSignalBlocker{ discoveryDelayLineEdit };
@@ -169,6 +169,12 @@ private:
 		{
 			auto const lock = QSignalBlocker{ enableAEMCacheCheckBox };
 			enableAEMCacheCheckBox->setChecked(settings->getValue(settings::Controller_AemCacheEnabled.name).toBool());
+		}
+
+		// Fast Enumeration
+		{
+			auto const lock = QSignalBlocker{ enableFastEnumerationCheckBox };
+			enableFastEnumerationCheckBox->setChecked(settings->getValue(settings::Controller_FastEnumerationEnabled.name).toBool());
 		}
 
 		// Full Static Model
@@ -218,6 +224,8 @@ private:
 			{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::Serial, "Serial Port" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::Local, "Local Domain Socket" },
 		};
 
 		for (auto const& type : la::avdecc::protocol::ProtocolInterface::getSupportedProtocolInterfaceTypes())
@@ -340,6 +348,12 @@ void SettingsDialog::on_enableAEMCacheCheckBox_toggled(bool checked)
 {
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->setValue(settings::Controller_AemCacheEnabled.name, checked);
+}
+
+void SettingsDialog::on_enableFastEnumerationCheckBox_toggled(bool checked)
+{
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	settings->setValue(settings::Controller_FastEnumerationEnabled.name, checked);
 }
 
 void SettingsDialog::on_fullAEMEnumerationCheckBox_toggled(bool checked)

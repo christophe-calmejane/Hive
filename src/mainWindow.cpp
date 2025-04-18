@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2017-2023, Emilien Vallot, Christophe Calmejane and other contributors
+* Copyright (C) 2017-2025, Emilien Vallot, Christophe Calmejane and other contributors
 
 * This file is part of Hive.
 
@@ -49,7 +49,6 @@
 #include "activeNetworkInterfacesModel.hpp"
 #include "aboutDialog.hpp"
 #include "deviceDetailsDialog.hpp"
-#include "nodeVisitor.hpp"
 #include "settingsDialog.hpp"
 #include "multiFirmwareUpdateDialog.hpp"
 #include "defaults.hpp"
@@ -275,8 +274,8 @@ void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
 				case la::avdecc::jsonSerializer::DeserializationError::FileReadError:
 					msg = "Error Reading File";
 					break;
-				case la::avdecc::jsonSerializer::DeserializationError::UnsupportedDumpVersion:
-					msg = "Unsupported Dump Version";
+				case la::avdecc::jsonSerializer::DeserializationError::IncompatibleDumpVersion:
+					msg = "Incompatible Dump Version";
 					break;
 				case la::avdecc::jsonSerializer::DeserializationError::ParseError:
 					msg = QString("Parse Error: %1").arg(message.c_str());
@@ -301,6 +300,12 @@ void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
 					break;
 				case la::avdecc::jsonSerializer::DeserializationError::Incomplete:
 					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::MissingInformation:
+					msg = message.c_str();
+					break;
+				case la::avdecc::jsonSerializer::DeserializationError::IncompatibleEntityModelVersion:
+					msg = "Incompatible Entity Model Version";
 					break;
 				case la::avdecc::jsonSerializer::DeserializationError::NotSupported:
 					msg = "Virtual Entity Loading not supported by this version of the AVDECC library";
@@ -711,6 +716,7 @@ void MainWindowImpl::loadSettings()
 	settings->registerSettingObserver(settings::Network_ProtocolType.name, this);
 	settings->registerSettingObserver(settings::Controller_DiscoveryDelay.name, this);
 	settings->registerSettingObserver(settings::Controller_AemCacheEnabled.name, this);
+	settings->registerSettingObserver(settings::Controller_FastEnumerationEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_FullStaticModelEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_AdvertisingEnabled.name, this);
 	settings->registerSettingObserver(settings::Controller_ControllerSubID.name, this);
@@ -759,9 +765,8 @@ void MainWindowImpl::connectSignals()
 
 			if (controlledEntity->getEntity().getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported) && controlledEntity->hasAnyConfiguration())
 			{
-				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(_parent);
+				DeviceDetailsDialog* dialog = new DeviceDetailsDialog(entityID, _parent);
 				dialog->setAttribute(Qt::WA_DeleteOnClose);
-				dialog->setControlledEntityID(entityID);
 				dialog->show();
 			}
 		});
@@ -823,6 +828,14 @@ void MainWindowImpl::connectSignals()
 		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::model::DescriptorIndex /*descriptorIndex*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)
 		{
 			if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::Success)
+			{
+				QMessageBox::warning(_parent, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
+			}
+		});
+	connect(&manager, &hive::modelsLibrary::ControllerManager::endMilanCommand, this,
+		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::MilanCommandType commandType, la::avdecc::entity::model::DescriptorIndex /*descriptorIndex*/, la::avdecc::entity::ControllerEntity::MvuCommandStatus const status)
+		{
+			if (status != la::avdecc::entity::ControllerEntity::MvuCommandStatus::Success)
 			{
 				QMessageBox::warning(_parent, "", "<i>" + hive::modelsLibrary::ControllerManager::typeToString(commandType) + "</i> failed:<br>" + QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status)));
 			}
@@ -1241,6 +1254,7 @@ void MainWindow::closeEvent(QCloseEvent* event)
 	settings->unregisterSettingObserver(settings::Network_ProtocolType.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_DiscoveryDelay.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_AemCacheEnabled.name, _pImpl);
+	settings->unregisterSettingObserver(settings::Controller_FastEnumerationEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_FullStaticModelEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_AdvertisingEnabled.name, _pImpl);
 	settings->unregisterSettingObserver(settings::Controller_ControllerSubID.name, _pImpl);
@@ -1353,13 +1367,18 @@ void MainWindowImpl::onSettingChanged(settings::SettingsManager::Setting const& 
 		auto const delay = std::chrono::seconds{ value.toInt() };
 		manager.setAutomaticDiscoveryDelay(delay);
 	}
-	else if (name == settings::Controller_AemCacheEnabled.name || name == settings::Controller_FullStaticModelEnabled.name)
+	else if (name == settings::Controller_AemCacheEnabled.name || name == settings::Controller_FastEnumerationEnabled.name || name == settings::Controller_FullStaticModelEnabled.name)
 	{
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 		if (name == settings::Controller_AemCacheEnabled.name)
 		{
 			auto const enabled = value.toBool();
 			manager.setEnableAemCache(enabled);
+		}
+		else if (name == settings::Controller_FastEnumerationEnabled.name)
+		{
+			auto const enabled = value.toBool();
+			manager.setEnableFastEnumeration(enabled);
 		}
 		else if (name == settings::Controller_FullStaticModelEnabled.name)
 		{
