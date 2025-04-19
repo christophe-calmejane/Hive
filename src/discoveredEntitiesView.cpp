@@ -84,7 +84,11 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 			emit filterChanged(text);
 		});
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+	connect(&_filterLinkedCheckbox, &QCheckBox::checkStateChanged, &_filterLinkedCheckbox,
+#else
 	connect(&_filterLinkedCheckbox, &QCheckBox::stateChanged, &_filterLinkedCheckbox,
+#endif // QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 		[this](int state)
 		{
 			emit filterLinkStateChanged(static_cast<Qt::CheckState>(state) == Qt::CheckState::Checked, _searchLineEdit.text());
