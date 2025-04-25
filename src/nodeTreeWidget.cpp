@@ -326,8 +326,8 @@ private:
 
 			addTextItem(descriptorItem, "Vendor Name", hive::modelsLibrary::helper::localizedString(entity, staticModel.vendorNameString));
 			addTextItem(descriptorItem, "Model Name", hive::modelsLibrary::helper::localizedString(entity, staticModel.modelNameString));
-			addTextItem(descriptorItem, "Firmware Version", dynamicModel.firmwareVersion.data());
-			addTextItem(descriptorItem, "Serial Number", dynamicModel.serialNumber.data());
+			addTextItem(descriptorItem, "Firmware Version", QString::fromStdString(dynamicModel.firmwareVersion));
+			addTextItem(descriptorItem, "Serial Number", QString::fromStdString(dynamicModel.serialNumber));
 			addTextItem(descriptorItem, "Unsol Supported", entity.areUnsolicitedNotificationsSupported() ? "Yes" : "No");
 			addTextItem(descriptorItem, "Fast Enum Supported", controllerManager.isFastEnumerationEnabled() ? (entity.isPackedDynamicInfoSupported() ? "Yes" : "No") : "Disabled in options");
 			addTextItem(descriptorItem, "Using Cached AEM", controllerManager.isAemCacheEnabled() ? (entity.isUsingCachedEntityModel() ? "Yes" : "No") : "Disabled in options");
@@ -1277,11 +1277,11 @@ public:
 		{
 			if (commandType != hive::modelsLibrary::ControllerManager::AecpCommandType::None)
 			{
-				addEditableTextItem(nameItem, "Name", node.dynamicModel.objectName.data(), commandType, descriptorIndex, customData);
+				addEditableTextItem(nameItem, "Name", QString::fromStdString(node.dynamicModel.objectName), commandType, descriptorIndex, customData);
 			}
 			else
 			{
-				addTextItem(nameItem, "Name", node.dynamicModel.objectName.data());
+				addTextItem(nameItem, "Name", QString::fromStdString(node.dynamicModel.objectName));
 			}
 		}
 		else

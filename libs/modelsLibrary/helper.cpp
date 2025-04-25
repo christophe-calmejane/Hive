@@ -58,7 +58,7 @@ QString localizedString(la::avdecc::controller::ControlledEntity const& controll
 	{
 		return "(No Localization)";
 	}
-	return localizedName.data();
+	return QString::fromStdString(localizedName);
 }
 
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept
@@ -69,7 +69,7 @@ QString localizedString(la::avdecc::controller::ControlledEntity const& controll
 	{
 		return "(No Localization)";
 	}
-	return localizedName.data();
+	return QString::fromStdString(localizedName);
 }
 
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
@@ -80,7 +80,7 @@ QString entityName(la::avdecc::controller::ControlledEntity const& controlledEnt
 
 		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
-			return controlledEntity.getEntityNode().dynamicModel.entityName.data();
+			return QString::fromStdString(controlledEntity.getEntityNode().dynamicModel.entityName);
 		}
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
@@ -131,7 +131,7 @@ QString groupName(la::avdecc::controller::ControlledEntity const& controlledEnti
 
 		if (entity.getEntityCapabilities().test(la::avdecc::entity::EntityCapability::AemSupported))
 		{
-			return controlledEntity.getEntityNode().dynamicModel.groupName.data();
+			return QString::fromStdString(controlledEntity.getEntityNode().dynamicModel.groupName);
 		}
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)

@@ -454,7 +454,7 @@ private:
 					auto const& dynamicModel = entityNode.dynamicModel;
 
 					// Get firmware version
-					firmwareVersion = dynamicModel.firmwareVersion.data();
+					firmwareVersion = QString::fromStdString(dynamicModel.firmwareVersion);
 
 					if (hasAnyConfiguration)
 					{

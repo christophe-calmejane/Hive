@@ -645,7 +645,7 @@ private:
 	}
 	QString genDescriptorName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::LocalizedStringReference const& localizedDescription, la::avdecc::entity::model::AvdeccFixedString const& name)
 	{
-		auto qName = QString::fromStdString(name.data());
+		auto qName = QString::fromStdString(name);
 		return genDescriptorName(controlledEntity, configurationIndex, descriptorType, descriptorIndex, localizedDescription, qName);
 	}
 	void updateName(NodeItem* item, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::LocalizedStringReference const& localizedDescription, QString const& name)
@@ -671,7 +671,7 @@ private:
 			return QString("%1: %2").arg(avdecc::helper::descriptorTypeToString(type), name);
 		};
 		// Use Index 0 as ConfigurationIndex for the Entity Descriptor
-		auto* item = addItem<la::avdecc::controller::model::Node const*>(la::avdecc::entity::model::ConfigurationIndex{ 0u }, nullptr, &node, genName(node.dynamicModel.entityName.data()));
+		auto* item = addItem<la::avdecc::controller::model::Node const*>(la::avdecc::entity::model::ConfigurationIndex{ 0u }, nullptr, &node, genName(QString::fromStdString(node.dynamicModel.entityName)));
 
 		auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
@@ -891,7 +891,7 @@ private:
 
 	virtual void visit(la::avdecc::controller::ControlledEntity const* const /*controlledEntity*/, la::avdecc::controller::model::ConfigurationNode const* const parent, la::avdecc::controller::model::LocaleNode const& node) noexcept override
 	{
-		auto const name = QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), node.staticModel.localeID.data());
+		auto const name = QString("%1.%2: %3").arg(avdecc::helper::descriptorTypeToString(node.descriptorType), QString::number(node.descriptorIndex), QString::fromStdString(node.staticModel.localeID));
 		addItem(parent->descriptorIndex, parent, &node, name);
 	}
 

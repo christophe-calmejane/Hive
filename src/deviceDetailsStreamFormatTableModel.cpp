@@ -224,7 +224,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamOutput.staticModel.localizedDescription);
 
 								if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !streamOutput.dynamicModel.objectName.empty())
-									streamName = streamOutput.dynamicModel.objectName.data();
+									streamName = QString::fromStdString(streamOutput.dynamicModel.objectName);
 							}
 							else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 							{
@@ -232,7 +232,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamInput.staticModel.localizedDescription);
 
 								if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !streamInput.dynamicModel.objectName.empty())
-									streamName = streamInput.dynamicModel.objectName.data();
+									streamName = QString::fromStdString(streamInput.dynamicModel.objectName);
 							}
 
 							return streamName;

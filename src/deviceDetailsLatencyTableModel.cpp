@@ -221,7 +221,7 @@ QVariant DeviceDetailsLatencyTableModelPrivate::data(QModelIndex const& index, i
 									return hive::modelsLibrary::helper::localizedString(*controlledEntity, configurationIndex, streamOutput.staticModel.localizedDescription);
 								}
 
-								return streamOutput.dynamicModel.objectName.data();
+								return QString::fromStdString(streamOutput.dynamicModel.objectName);
 							}
 #else
 							// Don't know why this doesn't compile!

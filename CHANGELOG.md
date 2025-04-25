@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- [Possible string overflow when using max length names](https://github.com/christophe-calmejane/Hive/issues/185)
 
 ## [1.3.1] - 2025-04-18
 ### Added

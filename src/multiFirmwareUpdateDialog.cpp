@@ -183,7 +183,7 @@ private:
 						auto const row = rowCount();
 						emit q->beginInsertRows({}, row, row);
 
-						_entities.push_back(EntityData{ entityID, hive::modelsLibrary::helper::smartEntityName(*controlledEntity), entityNode.dynamicModel.firmwareVersion.data() });
+						_entities.push_back(EntityData{ entityID, hive::modelsLibrary::helper::smartEntityName(*controlledEntity), QString::fromStdString(entityNode.dynamicModel.firmwareVersion) });
 
 						// Update the cache
 						rebuildEntityRowMap();

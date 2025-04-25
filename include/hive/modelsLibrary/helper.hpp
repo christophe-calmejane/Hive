@@ -73,7 +73,7 @@ QString objectName(la::avdecc::controller::ControlledEntity const* const control
 		return localizedString(*controlledEntity, configurationIndex, node.staticModel.localizedDescription);
 	}
 
-	return node.dynamicModel.objectName.data();
+	return QString::fromStdString(node.dynamicModel.objectName);
 }
 
 template<class NodeType>
@@ -84,7 +84,7 @@ QString objectName(la::avdecc::controller::ControlledEntity const* const control
 		return localizedString(*controlledEntity, node.staticModel.localizedDescription);
 	}
 
-	return node.dynamicModel.objectName.data();
+	return QString::fromStdString(node.dynamicModel.objectName);
 }
 
 bool constexpr isConnectedToTalker(la::avdecc::entity::model::StreamIdentification const& talkerStream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept

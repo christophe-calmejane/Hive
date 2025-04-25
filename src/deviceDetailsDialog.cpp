@@ -222,8 +222,8 @@ public:
 				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(_entityID.getValue(), true, true));
 				labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.vendorNameString));
 				labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.modelNameString));
-				labelFirmwareVersionValue->setText(dynamicModel.firmwareVersion.data());
-				labelSerialNumberValue->setText(dynamicModel.serialNumber.data());
+				labelFirmwareVersionValue->setText(QString::fromStdString(dynamicModel.firmwareVersion));
+				labelSerialNumberValue->setText(QString::fromStdString(dynamicModel.serialNumber));
 
 				_previousConfigurationIndex = configurationNode.descriptorIndex;
 			}
