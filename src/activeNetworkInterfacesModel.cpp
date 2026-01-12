@@ -39,6 +39,10 @@ private:
 	{
 		auto type = la::networkInterface::Interface::Type::None;
 
+		Q_Q(ActiveNetworkInterfacesModel);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+		q->beginFilterChange();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 		if (name == settings::Network_InterfaceTypeEthernet.name)
 		{
 			type = la::networkInterface::Interface::Type::Ethernet;
@@ -62,8 +66,11 @@ private:
 			_allowedInterfaceTypes.erase(type);
 		}
 
-		Q_Q(ActiveNetworkInterfacesModel);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+		q->endFilterChange();
+#else //
 		q->invalidateFilter();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 	}
 
 private:
