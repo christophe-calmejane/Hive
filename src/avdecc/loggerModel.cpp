@@ -131,11 +131,14 @@ public:
 		q->endResetModel();
 	}
 
-	void save(QString const& filename, LoggerModel::SaveConfiguration const& saveConfiguration) const
+	bool save(QString const& filename, LoggerModel::SaveConfiguration const& saveConfiguration) const
 	{
-		QFile file(filename);
-		file.open(QIODevice::WriteOnly);
-		QTextStream stream(&file);
+		auto file = QFile{ filename };
+		if (!file.open(QIODevice::WriteOnly))
+		{
+			return false;
+		}
+		auto stream = QTextStream{ &file };
 
 		for (auto const& entry : _entries)
 		{
@@ -156,7 +159,7 @@ public:
 				continue;
 			}
 
-			QStringList elements;
+			auto elements = QStringList{};
 
 			elements << entry.timestamp;
 			elements << layer;
@@ -165,6 +168,8 @@ public:
 
 			stream << elements.join("\t") << "\n";
 		}
+
+		return true;
 	}
 
 	virtual void onLogItem(la::avdecc::logger::Level const level, la::avdecc::logger::LogItem const* const item) noexcept override
@@ -245,7 +250,7 @@ void LoggerModel::clear()
 	return d->clear();
 }
 
-void LoggerModel::save(QString const& filename, SaveConfiguration const& saveConfiguration) const
+bool LoggerModel::save(QString const& filename, SaveConfiguration const& saveConfiguration) const
 {
 	Q_D(const LoggerModel);
 	return d->save(filename, saveConfiguration);

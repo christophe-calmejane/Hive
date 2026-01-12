@@ -140,7 +140,10 @@ LoggerView::LoggerView(QWidget* parent)
 			auto const filename = QFileDialog::getSaveFileName(this, "Save As...", QString("%1/%2_%3.log").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(qAppName()).arg(QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss")), "*.log");
 			if (!filename.isEmpty())
 			{
-				_loggerModel.save(filename, { search, level, layer });
+				if (!_loggerModel.save(filename, { search, level, layer }))
+				{
+					QMessageBox::critical(this, {}, "Failed to save the log file.");
+				}
 			}
 		});
 

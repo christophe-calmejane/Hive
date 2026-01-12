@@ -49,7 +49,7 @@ public:
 		QRegularExpression layer{};
 	};
 
-	void save(QString const& filename, SaveConfiguration const& saveConfiguration) const;
+	bool save(QString const& filename, SaveConfiguration const& saveConfiguration) const;
 
 private:
 	LoggerModelPrivate* const d_ptr{ nullptr };
