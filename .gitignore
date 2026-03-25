@@ -3,6 +3,9 @@
 /_install*
 /_deliverables
 
+# Cache files
+/.cache
+
 # CPack generation directory and archives
 _CPack_Packages/
 *.tar.gz

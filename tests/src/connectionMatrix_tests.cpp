@@ -2095,3 +2095,38 @@ TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalRedundant_ConnectedNoError_
 	}
 	validateIntersectionData(1, 4, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::MediaLocked });
 }
+
+TEST_F(ConnectionMatrix_F, EntityStreamSummary_NormalNormal_ConnectedMsrpFailure_NoError)
+{
+	loadNetworkState("data/connectionMatrix/40-Normal_Normal-ConnectedMsrpFailure_NoError.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Talker - Stream0 (connected with MSRP failure)
+	{
+		validateIntersectionData(5, 1, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::MediaLocked, connectionMatrix::Model::IntersectionData::Flag::MsrpFailure });
+	}
+	// Talker - Stream1 (not connected)
+	{
+		validateIntersectionData(5, 2, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+	// Stream0 - Listener (connected with MSRP failure)
+	{
+		validateIntersectionData(6, 0, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::MediaLocked, connectionMatrix::Model::IntersectionData::Flag::MsrpFailure });
+	}
+	// Stream1 - Listener (not connected)
+	{
+		validateIntersectionData(7, 0, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	}
+}
+
+TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalNormal_ConnectedMsrpFailure_NoError)
+{
+	loadNetworkState("data/connectionMatrix/40-Normal_Normal-ConnectedMsrpFailure_NoError.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	validateIntersectionData(5, 0, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::MediaLocked, connectionMatrix::Model::IntersectionData::Flag::MsrpFailure });
+}

@@ -903,7 +903,7 @@
                                                 "REGISTERING"
                                             ],
                                             "has_saved_state": true,
-                                            "has_talker_failed": true,
+                                            "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
                                                 "FAST_CONNECT",
@@ -1007,7 +1007,7 @@
                                                 "REGISTERING"
                                             ],
                                             "has_saved_state": true,
-                                            "has_talker_failed": true,
+                                            "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
                                                 "FAST_CONNECT",
@@ -1111,7 +1111,7 @@
                                                 "REGISTERING"
                                             ],
                                             "has_saved_state": true,
-                                            "has_talker_failed": true,
+                                            "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
                                                 "FAST_CONNECT",
@@ -2621,7 +2621,7 @@
                                                 "REGISTERING"
                                             ],
                                             "has_saved_state": false,
-                                            "has_talker_failed": true,
+                                            "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
                                                 "TALKER_FAILED",
@@ -2709,7 +2709,7 @@
                                                 "REGISTERING"
                                             ],
                                             "has_saved_state": false,
-                                            "has_talker_failed": true,
+                                            "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
                                                 "TALKER_FAILED",
@@ -2797,7 +2797,7 @@
                                                 "REGISTERING"
                                             ],
                                             "has_saved_state": false,
-                                            "has_talker_failed": true,
+                                            "has_talker_failed": false,
                                             "is_class_b": false,
                                             "last_received_flags": [
                                                 "TALKER_FAILED",

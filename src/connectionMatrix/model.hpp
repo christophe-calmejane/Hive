@@ -22,7 +22,7 @@
 // Debugging options
 //#define ENABLE_CONNECTION_MATRIX_DEBUG 1
 #define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 1
-#define ENABLE_CONNECTION_MATRIX_TOOLTIP 1
+#define ENABLE_CONNECTION_MATRIX_DEBUG_TOOLTIP 1
 
 #include <hive/widgetModelsLibrary/qtUserRoles.hpp>
 #include <la/avdecc/utils.hpp>
@@ -31,11 +31,9 @@
 // Always disable debugging options in Release
 #ifndef DEBUG
 #	undef ENABLE_CONNECTION_MATRIX_DEBUG
-#	undef ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
-#	undef ENABLE_CONNECTION_MATRIX_TOOLTIP
+#	undef ENABLE_CONNECTION_MATRIX_DEBUG_TOOLTIP
 #	define ENABLE_CONNECTION_MATRIX_DEBUG 0
-#	define ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED 0
-#	define ENABLE_CONNECTION_MATRIX_TOOLTIP 0
+#	define ENABLE_CONNECTION_MATRIX_DEBUG_TOOLTIP 0
 #endif // !DEBUG
 
 #include <QAbstractTableModel>
@@ -131,6 +129,7 @@ public:
 			LatencyError = 1u << 6, /**< The Listener MSRP latency is greater than the Talker's */
 			NoTalkerPrimaryMappings = 1u << 7, /**< The Talker has no primary (or single) mappings (ChannelNode only) */
 			NoTalkerSecondaryMappings = 1u << 8, /**< The Talker has no secondary mappings (ChannelNode only) */
+			MsrpFailure = 1u << 9, /**< The SRP registration has failed for this stream (MSRP Failure), meaning no audio can flow */
 		};
 		using Flags = la::avdecc::utils::EnumBitfield<Flag>;
 

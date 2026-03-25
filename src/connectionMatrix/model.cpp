@@ -86,7 +86,7 @@ using ChannelNodeMap = std::unordered_map<ChannelKey, ChannelNode*, ChannelKeyHa
 // Section by Node
 using NodeSectionMap = std::unordered_map<Node const*, int>;
 
-#if ENABLE_CONNECTION_MATRIX_TOOLTIP
+#if ENABLE_CONNECTION_MATRIX_DEBUG_TOOLTIP
 
 // Converts IntersectionData::Type to string
 QString typeToString(Model::IntersectionData::Type const type)
@@ -210,6 +210,11 @@ QString flagsToString(Model::IntersectionData::Flags const& flags)
 		stringList << "Latency Error";
 	}
 
+	if (flags.test(Model::IntersectionData::Flag::MsrpFailure))
+	{
+		stringList << "MSRP Failure";
+	}
+
 	return stringList.join(" | ");
 }
 
@@ -223,6 +228,64 @@ QString intersectionDataToString(Model::IntersectionData const& intersectionData
 	return type + "\n" + state + (flags.isEmpty() ? "" : "\n") + flags;
 }
 #endif
+
+// Builds user-facing error tooltip for IntersectionData (always available)
+QString intersectionDataErrorTooltip(Model::IntersectionData const& intersectionData)
+{
+	auto const& flags = intersectionData.flags;
+	auto stringList = QStringList{};
+
+	if (flags.test(Model::IntersectionData::Flag::InterfaceDown))
+	{
+		stringList << "Network Interface is Down";
+	}
+
+	if (flags.test(Model::IntersectionData::Flag::WrongDomain))
+	{
+		stringList << "Incompatible AVB Domain (check links between switches, ensure AVB is enabled)";
+	}
+
+	if (flags.test(Model::IntersectionData::Flag::WrongFormatPossible))
+	{
+		stringList << "Stream Format Mismatch (compatible format exists, change the format on the listener or talker)";
+	}
+
+	if (flags.test(Model::IntersectionData::Flag::WrongFormatImpossible))
+	{
+		stringList << "Stream Format Mismatch (no compatible format available)";
+	}
+
+	if (flags.test(Model::IntersectionData::Flag::LatencyError))
+	{
+		stringList << "MSRP Latency exceeds Presentation Time";
+	}
+
+	if (flags.test(Model::IntersectionData::Flag::MsrpFailure))
+	{
+		auto msrpFailureDescription = QString{ "At least one MSRP Failure" };
+		// Try to get detailed failure code from the listener stream node
+		if (intersectionData.listener)
+		{
+			if (intersectionData.listener->isStreamNode())
+			{
+				auto const* const streamNode = static_cast<StreamNode const*>(intersectionData.listener);
+				auto const failureCode = streamNode->msrpFailureCode();
+				if (failureCode)
+				{
+					msrpFailureDescription = QString{ "MSRP Failure: %1" }.arg(avdecc::helper::msrpFailureCodeToString(*failureCode));
+				}
+			}
+		}
+		stringList << msrpFailureDescription;
+	}
+
+	if (stringList.isEmpty())
+	{
+		return {};
+	}
+
+	return stringList.join("\n");
+}
 
 // Visit node according to mode
 void accept(Node* node, Model::Mode const mode, Node::Visitor const& visitor, bool const childrenOnly = false)
@@ -744,6 +807,7 @@ public:
 		UpdateLinkStatus = 1u << 3, /**< Update the link status, or the summary if this is a parent node */
 		UpdateLockedState = 1u << 4, /**< Update the Media Locked state, or the summary if this is a parent node */
 		UpdateLatencyError = 1u << 5, /**< Update the Latency Error state, or the summary if this is a parent node */
+		UpdateMsrpFailure = 1u << 6, /**< Update the MSRP Failure state, or the summary if this is a parent node */
 	};
 	using IntersectionDirtyFlags = la::avdecc::utils::EnumBitfield<IntersectionDirtyFlag>;
 
@@ -757,6 +821,7 @@ public:
 		flags.set(IntersectionDirtyFlag::UpdateLinkStatus);
 		flags.set(IntersectionDirtyFlag::UpdateLockedState);
 		flags.set(IntersectionDirtyFlag::UpdateLatencyError);
+		flags.set(IntersectionDirtyFlag::UpdateMsrpFailure);
 		return flags;
 	}
 
@@ -1061,6 +1126,12 @@ public:
 			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError))
 			{
 				intersectionDataFlags.set(Model::IntersectionData::Flag::LatencyError);
+			}
+
+			// MsrpFailure if at least one is MsrpFailure
+			if (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MsrpFailure))
+			{
+				intersectionDataFlags.set(Model::IntersectionData::Flag::MsrpFailure);
 			}
 		};
 
@@ -1388,6 +1459,7 @@ public:
 					// Set any non InterfaceDown error and compute some summaries
 					auto allLocked = true;
 					auto allNoLatencyError = true;
+					auto allNoMsrpFailure = true;
 					auto allConnected = true;
 					auto atLeastOneConnected = false;
 					auto atLeastOneConnectedInterfaceDown = false;
@@ -1452,6 +1524,7 @@ public:
 						atLeastOneConnected |= isConnected;
 						allLocked &= (nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked) || !isConnected || nodeIntersectionData.flags.test(Model::IntersectionData::Flag::InterfaceDown)); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
 						allNoLatencyError &= !nodeIntersectionData.flags.test(Model::IntersectionData::Flag::LatencyError);
+						allNoMsrpFailure &= !nodeIntersectionData.flags.test(Model::IntersectionData::Flag::MsrpFailure);
 					}
 
 					// Handle InterfaceDown errors separately as we don't want to see InterfaceDown and/or associated WrongDomain in some cases
@@ -1479,6 +1552,11 @@ public:
 					if (!allNoLatencyError)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::LatencyError);
+					}
+
+					if (!allNoMsrpFailure)
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::MsrpFailure);
 					}
 
 					// Update State
@@ -1626,6 +1704,7 @@ public:
 						bool isConnected{ false };
 						bool isMediaLocked{ false };
 						bool isLatencyError{ false };
+						bool isMsrpFailure{ false };
 						bool isInterfaceDown{ false };
 						bool isDomainError{ false };
 						bool isFormatError{ false };
@@ -1648,6 +1727,7 @@ public:
 						info.isConnected = isConnectedToTalker || isFastConnectingToTalker;
 						info.isMediaLocked = isConnectedToTalker && listenerStreamNode->lockedState() == Node::TriState::True;
 						info.isLatencyError = isConnectedToTalker && listenerStreamNode->isLatencyError();
+						info.isMsrpFailure = isConnectedToTalker && listenerStreamNode->isMsrpFailure();
 
 						auto const talkerInterfaceLinkStatus = talkerStreamNode->interfaceLinkStatus();
 						auto const listenerInterfaceLinkStatus = listenerStreamNode->interfaceLinkStatus();
@@ -1669,6 +1749,7 @@ public:
 					// Set any non InterfaceDown error and compute some summaries
 					auto allLocked = true;
 					auto allNoLatencyError = true;
+					auto allNoMsrpFailure = true;
 					auto allConnected = true;
 					auto atLeastOneConnected = false;
 					auto atLeastOneInterfaceDown = false;
@@ -1708,6 +1789,7 @@ public:
 						atLeastOneConnected |= info.isConnected;
 						allLocked &= (info.isMediaLocked || !info.isConnected || info.isInterfaceDown); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
 						allNoLatencyError &= !info.isLatencyError;
+						allNoMsrpFailure &= !info.isMsrpFailure;
 					}
 
 					// Handle InterfaceDown errors separately as we don't want to see InterfaceDown and/or associated WrongDomain in some cases
@@ -1746,6 +1828,11 @@ public:
 					if (!allNoLatencyError)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::LatencyError);
+					}
+
+					if (!allNoMsrpFailure)
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::MsrpFailure);
 					}
 
 					// Update State
@@ -1800,6 +1887,7 @@ public:
 						bool isConnected{ false };
 						bool isMediaLocked{ false };
 						bool isLatencyError{ false };
+						bool isMsrpFailure{ false };
 						bool isInterfaceDown{ false };
 						bool isDomainError{ false };
 						bool isFormatError{ false };
@@ -1823,6 +1911,7 @@ public:
 							auto listenerStreamFormats = la::avdecc::entity::model::StreamFormats{};
 							auto isListenerLocked = false;
 							auto isListenerLatencyError = false;
+							auto isListenerMsrpFailure = false;
 							auto isTalkerInterfaceDown = false;
 							auto isListenerInterfaceDown = false;
 
@@ -1837,6 +1926,7 @@ public:
 								listenerStreamFormats = nonRedundantStreamNode->streamFormats();
 								isListenerLocked = nonRedundantStreamNode->lockedState() == Node::TriState::True;
 								isListenerLatencyError = nonRedundantStreamNode->isLatencyError();
+								isListenerMsrpFailure = nonRedundantStreamNode->isMsrpFailure();
 								isTalkerInterfaceDown = redundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 								isListenerInterfaceDown = nonRedundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 							}
@@ -1850,6 +1940,7 @@ public:
 								listenerStreamFormats = redundantStreamNode->streamFormats();
 								isListenerLocked = redundantStreamNode->lockedState() == Node::TriState::True;
 								isListenerLatencyError = redundantStreamNode->isLatencyError();
+								isListenerMsrpFailure = redundantStreamNode->isMsrpFailure();
 								isTalkerInterfaceDown = nonRedundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 								isListenerInterfaceDown = redundantStreamNode->interfaceLinkStatus() == la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down;
 							}
@@ -1862,6 +1953,7 @@ public:
 							info.isConnected = connectableStream.isConnected || connectableStream.isFastConnecting;
 							info.isMediaLocked = connectableStream.isConnected && isListenerLocked;
 							info.isLatencyError = connectableStream.isConnected && isListenerLatencyError;
+							info.isMsrpFailure = connectableStream.isConnected && isListenerMsrpFailure;
 							info.isInterfaceDown = isTalkerInterfaceDown || isListenerInterfaceDown;
 							info.isDomainError = !isSameDomain(*redundantStreamNode, *nonRedundantStreamNode);
 							info.isFormatError = !la::avdecc::entity::model::StreamFormatInfo::isListenerFormatCompatibleWithTalkerFormat(listenerStreamFormat, talkerStreamFormat);
@@ -1900,6 +1992,7 @@ public:
 					// Set any non InterfaceDown error and compute some summaries
 					auto allLocked = true;
 					auto allNoLatencyError = true;
+					auto allNoMsrpFailure = true;
 					auto allConnected = true;
 					auto atLeastOneConnected = false;
 					auto atLeastOneInterfaceDown = false;
@@ -1961,6 +2054,7 @@ public:
 						atLeastOneConnected |= info.isConnected;
 						allLocked &= (info.isMediaLocked || !info.isConnected || info.isInterfaceDown); // We consider that InterfaceDown is *not* (always) a user error, so a Redundant Pair is considered MediaLocked even if one of the two is InterfaceDown
 						allNoLatencyError &= !info.isLatencyError;
+						allNoMsrpFailure &= !info.isMsrpFailure;
 					}
 					// No interface without non-domain error
 					if (!atLeastOneSameDomain)
@@ -1997,6 +2091,11 @@ public:
 					if (!allNoLatencyError)
 					{
 						intersectionData.flags.set(Model::IntersectionData::Flag::LatencyError);
+					}
+
+					if (!allNoMsrpFailure)
+					{
+						intersectionData.flags.set(Model::IntersectionData::Flag::MsrpFailure);
 					}
 
 					// Update State
@@ -2173,6 +2272,19 @@ public:
 						else
 						{
 							intersectionData.flags.reset(Model::IntersectionData::Flag::LatencyError);
+						}
+					}
+
+					// MSRP Failure
+					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateMsrpFailure))
+					{
+						if (intersectionData.state == Model::IntersectionData::State::Connected && listenerStreamNode->isMsrpFailure())
+						{
+							intersectionData.flags.set(Model::IntersectionData::Flag::MsrpFailure);
+						}
+						else
+						{
+							intersectionData.flags.reset(Model::IntersectionData::Flag::MsrpFailure);
 						}
 					}
 
@@ -2601,6 +2713,15 @@ public:
 					if (diags.streamInputOverLatency.count(streamIndex) > 0)
 					{
 						node.setLatencyError(true);
+					}
+				}
+				// MSRP Failure
+				if (streamInputNode.dynamicModel.streamDynamicInfo)
+				{
+					auto const& dynInfo = *streamInputNode.dynamicModel.streamDynamicInfo;
+					if (dynInfo.hasSrpRegistrationFailed)
+					{
+						node.setMsrpFailure(true, dynInfo.msrpFailureCode);
 					}
 				}
 			};
@@ -3256,7 +3377,7 @@ public:
 	{
 		// Event affecting a single stream intersection, but having repercussion on parent intersection "summary" nodes
 		auto const entityID = stream.entityID;
-		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected, IntersectionDirtyFlag::UpdateLockedState, IntersectionDirtyFlag::UpdateLatencyError };
+		auto const dirtyFlags = IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateConnected, IntersectionDirtyFlag::UpdateLockedState, IntersectionDirtyFlag::UpdateLatencyError, IntersectionDirtyFlag::UpdateMsrpFailure };
 
 		if (auto* listener = listenerNodeFromEntityID(entityID))
 		{
@@ -3362,6 +3483,27 @@ public:
 									if (auto* listener = listenerNodeFromEntityID(entityID))
 									{
 										updateListenerIntersectionChannels(entityID, IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateLockedState }, listener, node);
+									}
+								}
+							}
+						}
+
+						// MSRP Failure
+						{
+							auto const isMsrpFailure = info.hasSrpRegistrationFailed;
+							auto const msrpFailureCode = info.msrpFailureCode;
+							if (node->setMsrpFailure(isMsrpFailure, msrpFailureCode))
+							{
+								// Update all impacted intersections
+								if (_mode == Model::Mode::Stream)
+								{
+									listenerIntersectionDataChanged(node, true, true, IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateMsrpFailure });
+								}
+								else
+								{
+									if (auto* listener = listenerNodeFromEntityID(entityID))
+									{
+										updateListenerIntersectionChannels(entityID, IntersectionDirtyFlags{ IntersectionDirtyFlag::UpdateMsrpFailure }, listener, node);
 									}
 								}
 							}
@@ -4375,11 +4517,17 @@ QVariant Model::data([[maybe_unused]] QModelIndex const& index, [[maybe_unused]]
 	}
 #endif
 
-#if ENABLE_CONNECTION_MATRIX_TOOLTIP
+#if ENABLE_CONNECTION_MATRIX_DEBUG_TOOLTIP
 	if (role == Qt::ToolTipRole)
 	{
 		auto const& intersectionData = this->intersectionData(index);
-		return priv::intersectionDataToString(intersectionData);
+		return priv::intersectionDataToString(intersectionData) + "\n\n" + priv::intersectionDataErrorTooltip(intersectionData);
+	}
+#else
+	if (role == Qt::ToolTipRole)
+	{
+		auto const& intersectionData = this->intersectionData(index);
+		return priv::intersectionDataErrorTooltip(intersectionData);
 	}
 #endif
 

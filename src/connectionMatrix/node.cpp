@@ -463,6 +463,16 @@ bool StreamNode::isLatencyError() const noexcept
 	return _isLatencyError;
 }
 
+bool StreamNode::isMsrpFailure() const noexcept
+{
+	return _isMsrpFailure;
+}
+
+std::optional<la::avdecc::entity::model::MsrpFailureCode> StreamNode::msrpFailureCode() const noexcept
+{
+	return _msrpFailureCode;
+}
+
 bool StreamNode::isStreaming() const noexcept
 {
 	return _isStreaming;
@@ -535,6 +545,14 @@ bool StreamNode::setLatencyError(bool const isLatencyError) noexcept
 {
 	auto const changed = _isLatencyError != isLatencyError;
 	_isLatencyError = isLatencyError;
+	return changed;
+}
+
+bool StreamNode::setMsrpFailure(bool const isMsrpFailure, std::optional<la::avdecc::entity::model::MsrpFailureCode> const msrpFailureCode) noexcept
+{
+	auto const changed = _isMsrpFailure != isMsrpFailure || _msrpFailureCode != msrpFailureCode;
+	_isMsrpFailure = isMsrpFailure;
+	_msrpFailureCode = msrpFailureCode;
 	return changed;
 }
 

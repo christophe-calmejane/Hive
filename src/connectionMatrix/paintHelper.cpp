@@ -83,10 +83,11 @@ static inline QColor getEntitySummaryBrushColor(Model::IntersectionData::State c
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
 	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
 	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
+	auto const msrpFailure = flags.test(Model::IntersectionData::Flag::MsrpFailure);
 
 	if (interfaceDown)
 	{
-		if (wrongDomain)
+		if (wrongDomain || msrpFailure)
 		{
 			brushColor = Red;
 		}
@@ -107,7 +108,7 @@ static inline QColor getEntitySummaryBrushColor(Model::IntersectionData::State c
 	{
 		brushColor = Grey;
 	}
-	else if (wrongDomain)
+	else if (wrongDomain || msrpFailure)
 	{
 		brushColor = Red;
 	}
@@ -152,6 +153,7 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	auto const wrongDomain = flags.test(Model::IntersectionData::Flag::WrongDomain);
 	auto const wrongFormatPossible = flags.test(Model::IntersectionData::Flag::WrongFormatPossible);
 	auto const wrongFormatImpossible = flags.test(Model::IntersectionData::Flag::WrongFormatImpossible);
+	auto const msrpFailure = flags.test(Model::IntersectionData::Flag::MsrpFailure);
 
 	auto alphaValue = connected ? 1.0 : 0.25;
 
@@ -174,7 +176,7 @@ static inline QColor getConnectionBrushColor(Model::IntersectionData::State cons
 	{
 		brushColor = Grey;
 	}
-	else if (wrongDomain)
+	else if (wrongDomain || msrpFailure)
 	{
 		brushColor = Red;
 	}
