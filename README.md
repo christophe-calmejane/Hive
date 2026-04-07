@@ -52,11 +52,65 @@ Note: If you are using CMake >= 4.0, you have have to pass extra parameters to `
 - macOS users need to have a running XQuartz:
   - Install [XQuartz](https://www.xquartz.org)
   - Start it and make sure it's not running with the _Allow connections from network clients_ option (XQuartz -> Preferences -> Security)
-  - Change the above command line to _APP=Hive-d docker-compose run -e DISPLAY=docker.for.mac.host.internal:0 --rm run_
+  - Change the above command line to _APP=Hive-d docker-compose run -e DISPLAY=host.docker.internal:0 --rm run_
 
 ## Installer generation
 
 - Run the `gen_install.sh` script on either Windows or macOS (not supported on Linux yet)
+
+## AppImage generation (Linux)
+
+On Linux, Hive can be distributed as an [AppImage](https://appimage.org/), a self-contained portable executable that works on most Linux distributions without installation.
+
+### Prerequisites
+
+The following packages must be available on the build system (or Docker image):
+- `file`
+- `patchelf`
+- `squashfs-tools`
+- `libfuse2`
+
+### Generating the AppImage
+
+Run the `gen_appimage.sh` script with the required parameters (run *gen_appimage.sh -h* to display the help):
+
+```bash
+./gen_appimage.sh -qtvers 6.8.3 -qtdir /path/to/Qt/6.8.3/lib/cmake
+```
+
+The generated AppImage will be placed in the `_deliverables/` folder.
+
+### Using Docker
+
+You can also generate the AppImage using the Docker builder:
+
+```bash
+cd Docker
+docker-compose run --rm shell
+# Inside the container:
+cd /home/builder/sources
+bash ./gen_appimage.sh -o ../builds/Hive-appimage -d ../builds/Hive-deliverables -qtvers 6.8.3 -qtdir /usr/local/Qt-6.8.3/lib/cmake
+```
+
+### Network capture (pcap) capabilities
+
+Unlike a regular build, `setcap` cannot be applied directly to an AppImage file (the binary runs from a FUSE mount or a temporary extraction directory, neither of which preserves file capabilities). Additionally, when a binary has file capabilities, the Linux kernel activates secure execution mode (`AT_SECURE`) which rejects `$ORIGIN` in `DT_RPATH`/`DT_RUNPATH` and clears `LD_LIBRARY_PATH`, preventing library resolution.
+
+To solve this, the Hive AppImage includes a custom launcher that handles everything automatically on first run:
+1. It extracts the application to `~/.local/share/Hive/` (persistent, survives reboots)
+2. It rewrites all library RPATHs from `$ORIGIN` to absolute paths (using a bundled `patchelf`), so that library resolution works even under `AT_SECURE`
+3. It creates a `.desktop` entry so Hive appears in your application menu with its icon
+4. It prompts for your administrator password (via `pkexec`) to grant `cap_net_raw` on the binary (for network capture)
+5. On subsequent launches (from the AppImage or the application menu), Hive starts directly
+
+If the capability prompt is skipped, Hive will still run but without network capture. You can set it up later:
+```bash
+sudo setcap cap_net_raw+ep ~/.local/share/Hive/usr/bin/Hive
+```
+
+When a new version of the AppImage is launched, the persistent install is automatically updated and capabilities are re-requested.
+
+**Note:** After the first run, Hive is available in your application menu. You can safely delete the `.AppImage` file — to update later, simply download and run a new AppImage.
 
 ### MacOS notarization
 
@@ -76,7 +130,11 @@ Before running Hive on a macOS system, you must install `Install ChmodBPF.pkg` w
 
 ## Linux runtime specificities
 
-Before running Hive on a linux system, you must give the program access to RAW SOCKETS creation. The easiest way to do it is to run the following command (replace `/path/to/Hive` with the actual path to the binary):
+Before running Hive on a linux system, you must give the program access to RAW SOCKETS creation.
+
+**If using the AppImage**, this is handled automatically on first launch (see [AppImage generation](#appimage-generation-linux) above).
+
+**If using a local build**, run the following command (replace `/path/to/Hive` with the actual path to the binary):
 ```bash
 sudo setcap cap_net_raw+ep /path/to/Hive
 ```
