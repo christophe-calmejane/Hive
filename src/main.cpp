@@ -387,6 +387,10 @@ int main(int argc, char* argv[])
 	window.show();
 	window.hide();
 #endif
+#if defined(Q_OS_LINUX)
+	// Force the creation of the native window on linux as well
+	window.winId();
+#endif
 
 	/* Loading done - Keep the splashscreen displayed until specified delay */
 	do
@@ -396,8 +400,8 @@ int main(int argc, char* argv[])
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	} while (splash.isVisible() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() <= SPLASH_DELAY);
 
-	/* Ok, kill the splashscreen and show the main window */
-	splash.close();
+	/* Now finish the splashscreen and show the main window */
+	splash.finish(&window);
 	window.setReady();
 	window.show();
 
