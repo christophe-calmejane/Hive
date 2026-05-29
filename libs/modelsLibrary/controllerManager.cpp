@@ -447,6 +447,10 @@ private:
 	{
 		emit transportError();
 	}
+	virtual void onRedundantInterfaceTransportError(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::Controller::InterfaceType const interfaceType) noexcept override
+	{
+		emit redundantInterfaceTransportError(static_cast<int>(interfaceType));
+	}
 	virtual void onEntityQueryError(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::Controller::QueryCommandError const error) noexcept override
 	{
 		emit entityQueryError(entity->getEntity().getEntityID(), error);
@@ -1042,6 +1046,64 @@ private:
 		}
 	}
 
+	virtual void createController(std::vector<la::avdecc::controller::Controller::InterfaceConfiguration> const& interfaceConfigurations, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale, la::avdecc::entity::model::EntityTree const* const entityModel) override
+	{
+		// If we have a previous controller, remove it
+		if (_controller)
+		{
+			destroyController();
+		}
+
+		// Create a new virtual controller
+		_virtualController = VirtualController{ this };
+
+		// Create a new redundant controller and store it
+		SharedController controller = la::avdecc::controller::Controller::create(interfaceConfigurations, progID, entityModelID, preferedLocale.toStdString(), entityModel, &_virtualController);
+
+#if HAVE_ATOMIC_SMART_POINTERS
+		_controller = std::move(controller);
+#else // !HAVE_ATOMIC_SMART_POINTERS
+		std::atomic_store(&_controller, std::move(controller));
+#endif // HAVE_ATOMIC_SMART_POINTERS
+
+		// Re-get the controller, just in case another thread changed the controller at the same moment
+		auto ctrl = getController();
+		if (ctrl)
+		{
+			emit controllerOnline();
+			ctrl->registerObserver(this);
+
+			ctrl->setAutomaticDiscoveryDelay(_discoveryDelay);
+
+			if (_enableAemCache)
+			{
+				ctrl->enableEntityModelCache();
+			}
+			else
+			{
+				ctrl->disableEntityModelCache();
+			}
+
+			if (_enableFastEnumeration)
+			{
+				ctrl->enableFastEnumeration();
+			}
+			else
+			{
+				ctrl->disableFastEnumeration();
+			}
+
+			if (_fullAemEnumeration)
+			{
+				ctrl->enableFullStaticEntityModelEnumeration();
+			}
+			else
+			{
+				ctrl->disableFullStaticEntityModelEnumeration();
+			}
+		}
+	}
+
 	virtual void destroyController() noexcept override
 	{
 		if (_controller)
@@ -1074,6 +1136,16 @@ private:
 		if (controller)
 		{
 			return controller->getControllerEID();
+		}
+		return la::avdecc::UniqueIdentifier{};
+	}
+
+	virtual la::avdecc::UniqueIdentifier getControllerEID(la::avdecc::controller::Controller::InterfaceType const interfaceType) const noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->getControllerEID(interfaceType);
 		}
 		return la::avdecc::UniqueIdentifier{};
 	}

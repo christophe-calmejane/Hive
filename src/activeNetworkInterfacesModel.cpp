@@ -29,8 +29,9 @@
 class ActiveNetworkInterfacesModelPrivate : private settings::SettingsManager::Observer
 {
 public:
-	ActiveNetworkInterfacesModelPrivate(ActiveNetworkInterfacesModel* q)
+	ActiveNetworkInterfacesModelPrivate(ActiveNetworkInterfacesModel* q, bool const addOfflineInterface)
 		: q_ptr{ q }
+		, _model{ addOfflineInterface }
 	{
 	}
 
@@ -77,13 +78,13 @@ private:
 	ActiveNetworkInterfacesModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(ActiveNetworkInterfacesModel)
 
-	hive::widgetModelsLibrary::NetworkInterfacesListModel _model{ true };
+	hive::widgetModelsLibrary::NetworkInterfacesListModel _model;
 	std::unordered_set<la::networkInterface::Interface::Type> _allowedInterfaceTypes{ la::networkInterface::Interface::Type::Loopback };
 };
 
-ActiveNetworkInterfacesModel::ActiveNetworkInterfacesModel(QObject* parent)
+ActiveNetworkInterfacesModel::ActiveNetworkInterfacesModel(QObject* parent, bool const addOfflineInterface)
 	: QSortFilterProxyModel{ parent }
-	, d_ptr{ new ActiveNetworkInterfacesModelPrivate{ this } }
+	, d_ptr{ new ActiveNetworkInterfacesModelPrivate{ this, addOfflineInterface } }
 {
 	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 	settings->registerSettingObserver(settings::Network_InterfaceTypeEthernet.name, d_ptr.get());

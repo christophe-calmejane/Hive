@@ -25,6 +25,7 @@
 #include <QTextBrowser>
 #include <QDateTime>
 #include <QAbstractListModel>
+#include <QIdentityProxyModel>
 #include <QVector>
 #include <QSettings>
 #include <QLabel>
@@ -66,6 +67,7 @@
 #include <QtMate/widgets/dynamicHeaderView.hpp>
 #include <QtMate/material/color.hpp>
 #include <QtMate/material/colorPalette.hpp>
+#include <QtMate/material/helper.hpp>
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 #ifdef USE_SPARKLE
 #	include <sparkleHelper/sparkleHelper.hpp>
@@ -79,6 +81,7 @@
 #include <mutex>
 #include <memory>
 #include <optional>
+#include <vector>
 
 extern "C"
 {
@@ -95,6 +98,171 @@ extern "C"
 #define MODEL_ID 0x00000001
 
 Q_DECLARE_METATYPE(la::avdecc::protocol::ProtocolInterface::Type)
+
+// Proxy model that prepends a "None" sentinel entry before the source model's rows
+// and can disable (grey out) a specific interface ID
+class NoneProxyModel final : public QAbstractListModel
+{
+public:
+	NoneProxyModel(QAbstractItemModel* sourceModel, QObject* parent = nullptr)
+		: QAbstractListModel{ parent }
+		, _sourceModel{ sourceModel }
+	{
+		connect(_sourceModel, &QAbstractItemModel::modelReset, this,
+			[this]()
+			{
+				beginResetModel();
+				endResetModel();
+			});
+		connect(_sourceModel, &QAbstractItemModel::rowsInserted, this,
+			[this](QModelIndex const&, int const first, int const last)
+			{
+				beginInsertRows({}, first + 1, last + 1);
+				endInsertRows();
+			});
+		connect(_sourceModel, &QAbstractItemModel::rowsRemoved, this,
+			[this](QModelIndex const&, int const first, int const last)
+			{
+				beginRemoveRows({}, first + 1, last + 1);
+				endRemoveRows();
+			});
+		connect(_sourceModel, &QAbstractItemModel::dataChanged, this,
+			[this](QModelIndex const& topLeft, QModelIndex const& bottomRight, QList<int> const& roles)
+			{
+				emit dataChanged(index(topLeft.row() + 1), index(bottomRight.row() + 1), roles);
+			});
+	}
+
+	void setDisabledInterfaceId(QString const& id)
+	{
+		if (_disabledId != id)
+		{
+			_disabledId = id;
+			emit dataChanged(index(0), index(rowCount() - 1), { Qt::ForegroundRole });
+		}
+	}
+
+	int rowCount(QModelIndex const& parent = {}) const override
+	{
+		if (parent.isValid())
+		{
+			return 0;
+		}
+		return _sourceModel->rowCount() + 1;
+	}
+
+	QVariant data(QModelIndex const& index, int const role = Qt::DisplayRole) const override
+	{
+		if (!index.isValid())
+		{
+			return {};
+		}
+		if (index.row() == 0)
+		{
+			// The "None" sentinel
+			switch (role)
+			{
+				case Qt::DisplayRole:
+					return QStringLiteral("None");
+				case Qt::UserRole:
+					return QStringLiteral("None");
+				case Qt::DecorationRole:
+					return qtMate::material::helper::generateIcon("block", qtMate::material::color::foregroundColor());
+				default:
+					return {};
+			}
+		}
+		auto const sourceIndex = _sourceModel->index(index.row() - 1, 0);
+		// Override ForegroundRole to grey out disabled items
+		if (role == Qt::ForegroundRole && !_disabledId.isEmpty())
+		{
+			auto const itemId = _sourceModel->data(sourceIndex, Qt::UserRole).toString();
+			if (itemId == _disabledId)
+			{
+				return qtMate::material::color::disabledForegroundColor();
+			}
+		}
+		return _sourceModel->data(sourceIndex, role);
+	}
+
+	Qt::ItemFlags flags(QModelIndex const& index) const override
+	{
+		if (!index.isValid())
+		{
+			return Qt::NoItemFlags;
+		}
+		if (index.row() == 0)
+		{
+			return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+		}
+		auto const sourceIndex = _sourceModel->index(index.row() - 1, 0);
+		auto baseFlags = _sourceModel->flags(sourceIndex);
+		// Disable the entry that matches the primary interface
+		if (!_disabledId.isEmpty())
+		{
+			auto const itemId = _sourceModel->data(sourceIndex, Qt::UserRole).toString();
+			if (itemId == _disabledId)
+			{
+				baseFlags &= ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+			}
+		}
+		return baseFlags;
+	}
+
+private:
+	QAbstractItemModel* _sourceModel{ nullptr };
+	QString _disabledId{};
+};
+
+// Proxy model that sits between the ActiveNetworkInterfacesModel and the primary combo box,
+// allowing to disable (grey out) a specific interface ID (the one selected in secondary)
+class DisableEntryProxyModel final : public QIdentityProxyModel
+{
+public:
+	using QIdentityProxyModel::QIdentityProxyModel;
+
+	void setDisabledInterfaceId(QString const& id)
+	{
+		if (_disabledId != id)
+		{
+			_disabledId = id;
+			if (sourceModel())
+			{
+				emit dataChanged(index(0, 0), index(rowCount() - 1, 0), { Qt::ForegroundRole });
+			}
+		}
+	}
+
+	QVariant data(QModelIndex const& index, int const role = Qt::DisplayRole) const override
+	{
+		if (role == Qt::ForegroundRole && !_disabledId.isEmpty())
+		{
+			auto const itemId = QIdentityProxyModel::data(index, Qt::UserRole).toString();
+			if (itemId == _disabledId)
+			{
+				return qtMate::material::color::disabledForegroundColor();
+			}
+		}
+		return QIdentityProxyModel::data(index, role);
+	}
+
+	Qt::ItemFlags flags(QModelIndex const& index) const override
+	{
+		auto baseFlags = QIdentityProxyModel::flags(index);
+		if (!_disabledId.isEmpty())
+		{
+			auto const itemId = QIdentityProxyModel::data(index, Qt::UserRole).toString();
+			if (itemId == _disabledId)
+			{
+				baseFlags &= ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+			}
+		}
+		return baseFlags;
+	}
+
+private:
+	QString _disabledId{};
+};
 
 class MainWindowImpl final : public QObject, public Ui::MainWindow, public settings::SettingsManager::Observer, public QAbstractNativeEventFilter
 {
@@ -153,6 +321,8 @@ public:
 	void checkNpfStatus();
 	void loadSettings();
 	void connectSignals();
+	void updateSecondaryComboBoxExclusion();
+	void updatePrimaryComboBoxExclusion();
 	void setAppearance(Qt::ColorScheme const appearance);
 	void showChangeLog(QString const title, QString const versionString);
 	void showNewsFeed(QString const& news);
@@ -165,14 +335,19 @@ public:
 	// Private members
 	::MainWindow* _parent{ nullptr };
 	qtMate::widgets::ComboBox _interfaceComboBox{ _parent };
+	qtMate::widgets::ComboBox _secondaryInterfaceComboBox{ _parent };
 	ActiveNetworkInterfacesModel _activeNetworkInterfacesModel{ _parent };
-	QSortFilterProxyModel _networkInterfacesModelProxy{ _parent };
+	ActiveNetworkInterfacesModel _secondaryActiveNetworkInterfacesModel{ _parent, false };
+	DisableEntryProxyModel _primaryDisableProxy{ _parent };
+	NoneProxyModel _secondaryNoneProxyModel{ &_secondaryActiveNetworkInterfacesModel, _parent };
 	hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate _networkInterfaceModelItemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
+	hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate _secondaryNetworkInterfaceModelItemDelegate{ qtMate::material::color::Palette::name(qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>()->getValue(settings::General_ThemeColorIndex.name).toInt()), this };
 	qtMate::widgets::FlatIconButton _refreshControllerButton{ "Material Icons", "refresh", _parent };
 	qtMate::widgets::FlatIconButton _discoverButton{ "Hive", "radar", _parent };
 	qtMate::widgets::FlatIconButton _openMcmdDialogButton{ "Material Icons", "schedule", _parent };
 	qtMate::widgets::FlatIconButton _openMultiFirmwareUpdateDialogButton{ "Hive", "firmware_upload", _parent };
 	qtMate::widgets::FlatIconButton _openSettingsButton{ "Hive", "settings", _parent };
+	QLabel _controllerEntityIDTitleLabel{ "Controller ID: ", _parent };
 	QLabel _controllerEntityIDLabel{ _parent };
 	std::uint16_t _controllerSubID{ DEFAULT_SUB_ID };
 	std::optional<std::uint32_t> _advertisingDuration{ 10u };
@@ -220,6 +395,10 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 
 	// Connect all signals
 	connectSignals();
+
+	// Apply initial mutual exclusion state (signals were not yet connected during loadSettings)
+	updateSecondaryComboBoxExclusion();
+	updatePrimaryComboBoxExclusion();
 
 	// Create channel connection manager instance
 	avdecc::ChannelConnectionManager::getInstance();
@@ -469,7 +648,8 @@ void MainWindowImpl::currentControllerChanged()
 	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
 
 	auto protocolType = settings->getValue<la::avdecc::protocol::ProtocolInterface::Type>(settings::Network_ProtocolType.name);
-	auto const interfaceID = _interfaceComboBox.currentData().toString();
+	auto const primaryInterfaceID = _interfaceComboBox.currentData().toString();
+	auto const secondaryInterfaceID = _secondaryInterfaceComboBox.currentData().toString();
 
 	// Check for No ProtocolInterface
 	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::None || protocolType == la::avdecc::protocol::ProtocolInterface::Type::Virtual)
@@ -478,11 +658,16 @@ void MainWindowImpl::currentControllerChanged()
 		return;
 	}
 
-	// Check for special Offline Interface
-	if (interfaceID.toStdString() == hive::modelsLibrary::NetworkInterfacesModel::OfflineInterfaceName)
+	// Check for special Offline Interface on primary
+	auto const isOfflinePrimary = (primaryInterfaceID.toStdString() == hive::modelsLibrary::NetworkInterfacesModel::OfflineInterfaceName);
+	if (isOfflinePrimary)
 	{
 		protocolType = la::avdecc::protocol::ProtocolInterface::Type::Virtual;
 	}
+
+	// Determine if secondary is active (non-empty and not "None")
+	auto const hasSecondary = !secondaryInterfaceID.isEmpty() && secondaryInterfaceID != "None";
+	auto const isDualPiMode = hasSecondary && !isOfflinePrimary;
 
 	// Check for WinPcap driver
 	if (protocolType == la::avdecc::protocol::ProtocolInterface::Type::PCap && _shown)
@@ -494,25 +679,52 @@ void MainWindowImpl::currentControllerChanged()
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	manager.destroyController();
 	_controllerEntityIDLabel.clear();
+	_controllerEntityIDLabel.setToolTip({});
+	_controllerEntityIDTitleLabel.setToolTip({});
 
-	if (interfaceID.isEmpty())
+	if (primaryInterfaceID.isEmpty())
 	{
 		LOG_HIVE_WARN("No Network Interface selected. Please choose one.");
 		return;
 	}
 
-	settings->setValue(settings::InterfaceID, interfaceID);
+	// Save settings
+	settings->setValue(settings::PrimaryInterfaceID, primaryInterfaceID);
+	settings->setValue(settings::SecondaryInterfaceID, hasSecondary ? secondaryInterfaceID : QString{ "None" });
 
 	try
 	{
-		// Create a new Controller
-		manager.createController(protocolType, interfaceID, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
-		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
+		if (isDualPiMode)
+		{
+			// Dual-PI (redundant) mode
+			auto interfaceConfigurations = std::vector<la::avdecc::controller::Controller::InterfaceConfiguration>{};
+			interfaceConfigurations.push_back(la::avdecc::controller::Controller::InterfaceConfiguration{ protocolType, primaryInterfaceID.toStdString(), std::nullopt });
+			interfaceConfigurations.push_back(la::avdecc::controller::Controller::InterfaceConfiguration{ protocolType, secondaryInterfaceID.toStdString(), std::nullopt });
+
+			manager.createController(interfaceConfigurations, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
+		}
+		else
+		{
+			// Single-PI (legacy) mode
+			manager.createController(protocolType, primaryInterfaceID, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
+		}
+
+		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID(la::avdecc::controller::Controller::InterfaceType::Primary)));
+		if (isDualPiMode)
+		{
+			auto const secondaryEID = hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID(la::avdecc::controller::Controller::InterfaceType::Secondary));
+			_controllerEntityIDTitleLabel.setToolTip(tooltip);
+		}
+		else
+		{
+			_controllerEntityIDTitleLabel.setToolTip(_controllerEntityIDLabel.text());
+		}
 
 		// Attach context information to the event journal session (the recording started when the controller went online)
 		auto& eventJournal = hive::modelsLibrary::EventJournal::getInstance();
 		eventJournal.setSessionMetadata("interface_id", interfaceID);
 		eventJournal.setSessionMetadata("interface_name", _interfaceComboBox.currentText());
+
 		if (_advertisingDuration)
 		{
 			manager.enableEntityAdvertising(*_advertisingDuration);
@@ -601,10 +813,12 @@ void MainWindowImpl::createToolbars()
 
 	// Controller Toolbar
 	{
-		auto* interfaceLabel = new QLabel("Interface");
+		auto* interfaceLabel = new QLabel("Primary");
 		interfaceLabel->setMinimumWidth(50);
+		interfaceLabel->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
 		_interfaceComboBox.setMinimumWidth(100);
-		_interfaceComboBox.setModel(&_activeNetworkInterfacesModel);
+		_primaryDisableProxy.setSourceModel(&_activeNetworkInterfacesModel);
+		_interfaceComboBox.setModel(&_primaryDisableProxy);
 
 		// Set delegate for the entire table
 		_interfaceComboBox.setItemDelegate(&_networkInterfaceModelItemDelegate);
@@ -612,15 +826,28 @@ void MainWindowImpl::createToolbars()
 		// Connect the item delegates with theme color changes
 		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_networkInterfaceModelItemDelegate, &hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate::setThemeColorName);
 
-		auto* controllerEntityIDLabel = new QLabel("Controller ID: ");
-		controllerEntityIDLabel->setMinimumWidth(50);
+		auto* secondaryInterfaceLabel = new QLabel("Secondary");
+		secondaryInterfaceLabel->setMinimumWidth(50);
+		secondaryInterfaceLabel->setAlignment(Qt::AlignVCenter | Qt::AlignRight);
+		_secondaryInterfaceComboBox.setMinimumWidth(100);
+		_secondaryInterfaceComboBox.setModel(&_secondaryNoneProxyModel);
+		_secondaryInterfaceComboBox.setItemDelegate(&_secondaryNetworkInterfaceModelItemDelegate);
+
+		// Connect the secondary item delegate with theme color changes
+		connect(&_settingsSignaler, &SettingsSignaler::themeColorNameChanged, &_secondaryNetworkInterfaceModelItemDelegate, &hive::widgetModelsLibrary::NetworkInterfacesListItemDelegate::setThemeColorName);
+
+		_controllerEntityIDTitleLabel.setMinimumWidth(50);
+		_controllerEntityIDTitleLabel.setAlignment(Qt::AlignVCenter | Qt::AlignRight);
 		_controllerEntityIDLabel.setMinimumWidth(100);
 
 		controllerToolBar->setMinimumHeight(30);
 		controllerToolBar->addWidget(interfaceLabel);
 		controllerToolBar->addWidget(&_interfaceComboBox);
 		controllerToolBar->addSeparator();
-		controllerToolBar->addWidget(controllerEntityIDLabel);
+		controllerToolBar->addWidget(secondaryInterfaceLabel);
+		controllerToolBar->addWidget(&_secondaryInterfaceComboBox);
+		controllerToolBar->addSeparator();
+		controllerToolBar->addWidget(&_controllerEntityIDTitleLabel);
 		controllerToolBar->addWidget(&_controllerEntityIDLabel);
 	}
 
@@ -706,17 +933,50 @@ void MainWindowImpl::loadSettings()
 
 	LOG_HIVE_INFO("Settings location: " + settings->getFilePath());
 
-	auto const networkInterfaceId = settings->getValue(settings::InterfaceID).toString();
-	auto const networkInterfaceIndex = _interfaceComboBox.findData(networkInterfaceId);
+	// Settings migration: if old key "interfaceID" exists but new keys don't, migrate
+	auto primaryInterfaceId = settings->getValue(settings::PrimaryInterfaceID).toString();
+	auto secondaryInterfaceId = settings->getValue(settings::SecondaryInterfaceID).toString();
 
-	// Select the interface from the settings, if present and active
-	if (networkInterfaceIndex >= 0 && _activeNetworkInterfacesModel.isEnabled(networkInterfaceId))
+	if (primaryInterfaceId.isEmpty())
+	{
+		// Try legacy key
+		auto const legacyInterfaceId = settings->getValue(settings::InterfaceID).toString();
+		if (!legacyInterfaceId.isEmpty())
+		{
+			primaryInterfaceId = legacyInterfaceId;
+			secondaryInterfaceId = QStringLiteral("None");
+			settings->setValue(settings::PrimaryInterfaceID, primaryInterfaceId);
+			settings->setValue(settings::SecondaryInterfaceID, secondaryInterfaceId);
+		}
+	}
+
+	// Select the primary interface from the settings, if present and active
+	auto const networkInterfaceIndex = _interfaceComboBox.findData(primaryInterfaceId);
+	if (networkInterfaceIndex >= 0 && _activeNetworkInterfacesModel.isEnabled(primaryInterfaceId))
 	{
 		_interfaceComboBox.setCurrentIndex(networkInterfaceIndex);
 	}
 	else
 	{
 		_interfaceComboBox.setCurrentIndex(-1);
+	}
+
+	// Select the secondary interface from the settings
+	if (!secondaryInterfaceId.isEmpty() && secondaryInterfaceId != "None")
+	{
+		auto const secondaryIndex = _secondaryInterfaceComboBox.findData(secondaryInterfaceId);
+		if (secondaryIndex >= 0 && _secondaryActiveNetworkInterfacesModel.isEnabled(secondaryInterfaceId))
+		{
+			_secondaryInterfaceComboBox.setCurrentIndex(secondaryIndex);
+		}
+		else
+		{
+			_secondaryInterfaceComboBox.setCurrentIndex(0); // "None" sentinel
+		}
+	}
+	else
+	{
+		_secondaryInterfaceComboBox.setCurrentIndex(0); // "None" sentinel
 	}
 
 	// Check if currently saved ProtocolInterface is supported
@@ -789,7 +1049,21 @@ void MainWindowImpl::loadSettings()
 void MainWindowImpl::connectSignals()
 {
 	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
+	connect(&_secondaryInterfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindowImpl::currentControllerChanged);
 	connect(&_refreshControllerButton, &QPushButton::clicked, this, &MainWindowImpl::currentControllerChanged);
+
+	// Mutual exclusion: when primary changes, disable matching entry in secondary and vice-versa
+	connect(&_interfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+		[this](int const /*index*/)
+		{
+			updateSecondaryComboBoxExclusion();
+		});
+	connect(&_secondaryInterfaceComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+		[this](int const /*index*/)
+		{
+			updatePrimaryComboBoxExclusion();
+		});
+
 	connect(&_discoverButton, &QPushButton::clicked, this,
 		[]()
 		{
@@ -1183,6 +1457,33 @@ void MainWindowImpl::connectSignals()
 			auto const colorName = qtMate::material::color::Palette::name(themeColorIndex);
 			updateStyleSheet(colorName, ":/style.qss");
 		});
+}
+
+void MainWindowImpl::updateSecondaryComboBoxExclusion()
+{
+	auto const primaryID = _interfaceComboBox.currentData().toString();
+
+	// Grey out the primary interface in the secondary combo
+	_secondaryNoneProxyModel.setDisabledInterfaceId(primaryID);
+
+	// Disable secondary combo box entirely when primary is Offline
+	auto const isOffline = (primaryID.toStdString() == hive::modelsLibrary::NetworkInterfacesModel::OfflineInterfaceName);
+	_secondaryInterfaceComboBox.setEnabled(!isOffline);
+}
+
+void MainWindowImpl::updatePrimaryComboBoxExclusion()
+{
+	auto const secondaryID = _secondaryInterfaceComboBox.currentData().toString();
+
+	// Grey out the secondary interface in the primary combo (only if secondary is not "None")
+	if (secondaryID.isEmpty() || secondaryID == "None")
+	{
+		_primaryDisableProxy.setDisabledInterfaceId({});
+	}
+	else
+	{
+		_primaryDisableProxy.setDisabledInterfaceId(secondaryID);
+	}
 }
 
 void MainWindowImpl::setAppearance(Qt::ColorScheme const appearance)

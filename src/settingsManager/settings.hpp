@@ -71,7 +71,9 @@ static SettingsManager::SettingDefault Controller_ControllerSubID = { "avdecc/co
 #endif // DEBUG
 
 // Settings with no default initial value (no need to register with the SettingsManager) - Not allowed to call registerSettingObserver for those
-static SettingsManager::Setting InterfaceID = { "interfaceID" };
+static SettingsManager::Setting InterfaceID = { "interfaceID" }; // Legacy key, migrated to PrimaryInterfaceID
+static SettingsManager::Setting PrimaryInterfaceID = { "network/primaryInterface" };
+static SettingsManager::Setting SecondaryInterfaceID = { "network/secondaryInterface" };
 static SettingsManager::Setting ViewSettingsVersion = { "viewSettingsVersion" }; // Must match ViewSettingsCurrentVersion
 static SettingsManager::Setting ControllerDynamicHeaderViewState = { "controllerDynamicHeaderView/state" };
 static SettingsManager::Setting LoggerDynamicHeaderViewState = { "loggerDynamicHeaderView/state" };

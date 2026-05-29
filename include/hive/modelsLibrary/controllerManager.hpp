@@ -175,11 +175,27 @@ public:
 			*/
 	virtual void createController(la::avdecc::protocol::ProtocolInterface::Type const protocolInterfaceType, QString const& interfaceName, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale, la::avdecc::entity::model::EntityTree const* const entityModel) = 0;
 
+	/**
+			* @brief Creates a new redundant (dual-PI) controller, replacing previous one if any.
+			* @details Creates a new controller in dual-interface mode, first removing the previous one if any.
+			*          If an error occurs during the setup of the new controller, the previous one is NOT restored.
+			* @param[in] interfaceConfigurations Vector of one or two InterfaceConfiguration (Primary + Secondary).
+			* @param[in] progID ID used to generate the controller's UniqueIdentifier.
+			* @param[in] entityModelID EntityModelID to publish for this controller.
+			* @param[in] preferedLocale ISO 639-1 locale code of the prefered locale.
+			* @param[in] entityModel The entity model tree to use for this controller entity.
+			* @note Might throw la::avdecc::controller::Controller::Exception.
+			*/
+	virtual void createController(std::vector<la::avdecc::controller::Controller::InterfaceConfiguration> const& interfaceConfigurations, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale, la::avdecc::entity::model::EntityTree const* const entityModel) = 0;
+
 	/** Destroys the currently stored instance of the controller. */
 	virtual void destroyController() noexcept = 0;
 
 	/** Gets the controller's EID */
 	virtual la::avdecc::UniqueIdentifier getControllerEID() const noexcept = 0;
+
+	/** Gets the controller's EID for a specific interface type */
+	virtual la::avdecc::UniqueIdentifier getControllerEID(la::avdecc::controller::Controller::InterfaceType const interfaceType) const noexcept = 0;
 
 	/** Gets a ControlledEntity */
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
@@ -336,6 +352,7 @@ public:
 
 	/* Entity changed signals */
 	Q_SIGNAL void transportError();
+	Q_SIGNAL void redundantInterfaceTransportError(int const interfaceType); // la::avdecc::controller::Controller::InterfaceType cast to int
 	Q_SIGNAL void entityQueryError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::QueryCommandError const error);
 	Q_SIGNAL void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const enumerationTime);
 	Q_SIGNAL void entityOffline(la::avdecc::UniqueIdentifier const entityID);
