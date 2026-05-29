@@ -20,7 +20,7 @@ def main(output_file, csv_data):
 		"l-acoustics": "L-Acoustics",
 		"AudioScience": "AudioScience",
 		"Texas Instruments": "Texas Instruments",
-		"d&b audiotechnik GmbH": "d&b Audiotechnik",
+		"d&b audiotechnik GmbH": "d&b audiotechnik",
 		"Meyer Sound Laboratories, Inc.": "Meyer Sound",
 		"Apple, Inc.": "Apple",
 		"TEKNEMA, INC.": "TEKNEMA",
