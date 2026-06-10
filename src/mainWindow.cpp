@@ -69,6 +69,7 @@
 #include <QtMate/material/colorPalette.hpp>
 #include <QtMate/material/helper.hpp>
 #include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
+#include <la/avdecc/executor.hpp>
 #ifdef USE_SPARKLE
 #	include <sparkleHelper/sparkleHelper.hpp>
 #endif // USE_SPARKLE
@@ -697,9 +698,12 @@ void MainWindowImpl::currentControllerChanged()
 		if (isDualPiMode)
 		{
 			// Dual-PI (redundant) mode
+			static auto constexpr DefaultExecutorName = "avdecc::protocol::DualPI";
+			auto const executorWrapper = la::avdecc::ExecutorManager::getInstance().registerExecutor(DefaultExecutorName, la::avdecc::ExecutorWithDispatchQueue::create(DefaultExecutorName, la::avdecc::utils::ThreadPriority::Highest));
+
 			auto interfaceConfigurations = std::vector<la::avdecc::controller::Controller::InterfaceConfiguration>{};
-			interfaceConfigurations.push_back(la::avdecc::controller::Controller::InterfaceConfiguration{ protocolType, primaryInterfaceID.toStdString(), std::nullopt });
-			interfaceConfigurations.push_back(la::avdecc::controller::Controller::InterfaceConfiguration{ protocolType, secondaryInterfaceID.toStdString(), std::nullopt });
+			interfaceConfigurations.push_back(la::avdecc::controller::Controller::InterfaceConfiguration{ protocolType, primaryInterfaceID.toStdString(), DefaultExecutorName });
+			interfaceConfigurations.push_back(la::avdecc::controller::Controller::InterfaceConfiguration{ protocolType, secondaryInterfaceID.toStdString(), DefaultExecutorName });
 
 			manager.createController(interfaceConfigurations, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
 		}
