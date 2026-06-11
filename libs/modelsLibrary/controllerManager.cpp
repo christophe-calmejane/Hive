@@ -1054,6 +1054,21 @@ private:
 			destroyController();
 		}
 
+		// Create executors for the controller to use
+		for (auto const& interfaceConfiguration : interfaceConfigurations)
+		{
+			if (interfaceConfiguration.executorName)
+			{
+				auto const& executorName = *interfaceConfiguration.executorName;
+				// If it doesn't exist yet
+				if (_executorWrappers.count(executorName) == 0)
+				{
+					// Create and store the executor wrapper
+					_executorWrappers.emplace(executorName, la::avdecc::ExecutorManager::getInstance().registerExecutor(executorName, la::avdecc::ExecutorWithDispatchQueue::create(executorName, la::avdecc::utils::ThreadPriority::Highest)));
+				}
+			}
+		}
+
 		// Create a new virtual controller
 		_virtualController = VirtualController{ this };
 
@@ -1124,6 +1139,9 @@ private:
 				_entities.clear();
 				_entityDataCache.clear();
 			}
+
+			// Destroy executors
+			_executorWrappers.clear();
 
 			// Notify
 			emit controllerOffline();
@@ -2872,6 +2890,7 @@ private:
 #endif // HAVE_ATOMIC_SMART_POINTERS
 
 	mutable std::mutex _lock{}; // Data members exclusive access
+	std::unordered_map<std::string, la::avdecc::ExecutorManager::ExecutorWrapper::UniquePointer> _executorWrappers{};
 	std::set<la::avdecc::UniqueIdentifier> _entities; // Online entities
 	std::unordered_map<la::avdecc::UniqueIdentifier, EntityDataCache, la::avdecc::UniqueIdentifier::hash> _entityDataCache; // Entities cached data
 	std::unordered_map<CommandsExecutorImpl const*, std::unique_ptr<CommandsExecutorImpl>> _commandsExecutors{};

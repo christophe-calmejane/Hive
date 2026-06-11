@@ -21,6 +21,7 @@
 
 #include "commandsExecutor.hpp"
 #include <la/avdecc/controller/avdeccController.hpp>
+#include <la/avdecc/executor.hpp>
 
 #include <memory>
 #include <chrono>
