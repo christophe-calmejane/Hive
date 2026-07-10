@@ -205,6 +205,7 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 	entitiesDockWidget->setVisible(defaults.mainWindow_EntitiesList_Visible);
 	entityInspectorDockWidget->setVisible(defaults.mainWindow_Inspector_Visible);
 	loggerDockWidget->setVisible(defaults.mainWindow_Logger_Visible);
+	networkGraphDockWidget->setVisible(defaults.mainWindow_NetworkGraph_Visible);
 
 	// Load settings, overriding defaults
 	loadSettings();
@@ -224,17 +225,17 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 
 void MainWindowImpl::setupMatrixProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{ true, false, false, false, false, true, true, true, true, false, false, false, false, false, false, false, false, false, true, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, false, false, false, false, false, true, true, true, true, false, false, false, false, false, false, false, false, false, true, true, true });
 }
 
 void MainWindowImpl::setupStandardProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, false, false, true, true, true, true, false, false, true, false, false, false, false, false, true, false, true, true });
+	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, false, false, false, true, true, true, true, false, false, true, false, false, false, false, false, true, false, true, true });
 }
 
 void MainWindowImpl::setupDeveloperProfile()
 {
-	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, true, true, true, true, true, true, false });
+	setupAdvancedView(hive::VisibilityDefaults{ true, true, true, true, true, false, true, true, true, true, false });
 }
 
 void MainWindowImpl::setupProfile()
@@ -544,6 +545,7 @@ void MainWindowImpl::createViewMenu()
 	menuView->addAction(entitiesDockWidget->toggleViewAction());
 	menuView->addAction(entityInspectorDockWidget->toggleViewAction());
 	menuView->addAction(loggerDockWidget->toggleViewAction());
+	menuView->addAction(networkGraphDockWidget->toggleViewAction());
 	menuView->addSeparator();
 
 	// Appearance in a sub menu and exclusive action group

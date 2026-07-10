@@ -29,6 +29,7 @@ struct VisibilityDefaults
 	bool mainWindow_EntitiesList_Visible{ true };
 	bool mainWindow_Inspector_Visible{ true };
 	bool mainWindow_Logger_Visible{ true };
+	bool mainWindow_NetworkGraph_Visible{ false };
 
 	// Controller Table View
 	bool controllerTableView_EntityLogo_Visible{ true };
