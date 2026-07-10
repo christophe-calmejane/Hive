@@ -106,6 +106,14 @@ QRectF GraphEdgeItem::boundingRect() const
 	return QGraphicsPathItem::boundingRect().adjusted(-90.0, -10.0, 90.0, 10.0);
 }
 
+QPainterPath GraphEdgeItem::shape() const
+{
+	// Widen the interactive area (hover/click) around the line, a stroked thin curve would be nearly impossible to hit
+	auto stroker = QPainterPathStroker{};
+	stroker.setWidth(12.0);
+	return stroker.createStroke(path());
+}
+
 void GraphEdgeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
 {
 	painter->setRenderHint(QPainter::Antialiasing);

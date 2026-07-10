@@ -64,6 +64,7 @@ public:
 
 	virtual int type() const override;
 	virtual QRectF boundingRect() const override;
+	virtual QPainterPath shape() const override;
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget = nullptr) override;
 
 private:
