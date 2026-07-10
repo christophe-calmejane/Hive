@@ -82,6 +82,8 @@ public:
 		std::optional<std::uint32_t> propagationDelay{}; /**< Propagation delay (nsec) between this interface and its upstream neighbor */
 		bool hasAsPath{ false }; /**< True if the entity exposes a usable AsPath for this interface */
 		std::uint64_t errorCounter{ 0u }; /**< Aggregated entity level error counter (stream input errors + statistics errors), duplicated on each interface node of the entity */
+		bool isInterconnected{ false }; /**< True when this node reveals a likely interconnection between networks (severe cabling error for redundant networks) */
+		QString interconnectionError{}; /**< Human readable description of the interconnection issue (only set when isInterconnected) */
 	};
 
 	/** One edge of the topology, from a node to its upstream neighbor (towards the grandmaster). */
@@ -90,31 +92,57 @@ public:
 		std::size_t upstreamNodeIndex{ 0u };
 		std::size_t downstreamNodeIndex{ 0u };
 		EdgeKind kind{ EdgeKind::GptpPath };
-		std::uint32_t streamCount{ 0u }; /**< Number of established stream connections transiting through this edge (in either direction) */
-		std::uint64_t streamPayloadBandwidth{ 0u }; /**< Accumulated payload bitrate (bits per second) of the running streams transiting through this edge, transport overhead excluded */
-		std::vector<QString> streamDescriptions{}; /**< Human readable description of each stream connection transiting through this edge */
+		std::vector<std::size_t> streamIndices{}; /**< Indices (in Topology::streams) of the stream connections transiting through this edge */
 	};
 
-	/** Immutable snapshot of the network topology. */
+	/** One established stream connection and the path it transits through in the topology. */
+	struct Stream
+	{
+		la::avdecc::UniqueIdentifier talkerEntityID{};
+		la::avdecc::entity::model::StreamIndex talkerStreamIndex{ 0u };
+		la::avdecc::UniqueIdentifier listenerEntityID{};
+		la::avdecc::entity::model::StreamIndex listenerStreamIndex{ 0u };
+		QString description{}; /**< Human readable description of the connection (talker:stream -> listener:stream) */
+		bool isRunning{ true }; /**< False when the stream is connected but not streaming */
+		bool isClassB{ false }; /**< SR class of the stream: Class B if the stream only supports Class B, Class A otherwise (IEEE1722.1 default) */
+		std::uint64_t reservedBandwidth{ 0u }; /**< Estimated reserved bandwidth (bits per second) of the stream, transport overhead included, computed from the stream format and SR class (0 if unknown) */
+		std::vector<std::size_t> nodeIndices{}; /**< Path of the stream: nodes from talker to listener (both included) */
+		std::vector<std::size_t> edgeIndices{}; /**< Path of the stream: edges from talker to listener */
+	};
+
+	/** Immutable snapshot of the topology of one network. */
 	struct Topology
 	{
 		std::vector<Node> nodes{};
 		std::vector<Edge> edges{};
+		std::vector<Stream> streams{}; /**< Established stream connections whose path could be resolved on the topology */
+	};
+
+	/**
+	* @brief One network and its topology.
+	* @details Networks are identified by the AVB interface index of the entities: interfaces with the same index
+	*          belong to the same network (index 0 is the primary network, index 1 the secondary network of
+	*          Milan redundant devices). Each network gets its own independent topology.
+	*/
+	struct Network
+	{
+		la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
+		Topology topology{};
 	};
 
 	NetworkTopologyModel(QObject* parent = nullptr);
 	virtual ~NetworkTopologyModel() override;
 
-	/** Gets the current topology snapshot (valid until the next topologyChanged() signal). */
-	Topology const& topology() const noexcept;
+	/** Gets the current networks snapshot, ordered by AVB interface index (valid until the next topologyChanged() signal). */
+	std::vector<Network> const& networks() const noexcept;
 
-	/** Emitted every time a new topology snapshot has been computed. */
+	/** Emitted every time a new networks snapshot has been computed. */
 	Q_SIGNAL void topologyChanged();
 
 private:
 	void rebuild() noexcept;
 
-	Topology _topology{};
+	std::vector<Network> _networks{};
 	QTimer* _rebuildTimer{ nullptr };
 };
 
