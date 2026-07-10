@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- Network Graph window (View menu) displaying the network topology inferred from the gPTP information exposed by the entities (AsPath, grandmaster, propagation delay), with grandmaster and error indicators
+
 ### Changed
 - [Enhanced connection matrix red color with MSRP Failure status](https://github.com/christophe-calmejane/Hive/issues/149)
 
