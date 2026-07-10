@@ -18,314 +18,99 @@
 */
 
 #include "networkGraphView.hpp"
+#include "networkGraphPane.hpp"
 
-#include <hive/modelsLibrary/controllerManager.hpp>
-#include <hive/modelsLibrary/helper.hpp>
-#include <QtMate/graph/graphEdgeItem.hpp>
-#include <QtMate/graph/graphNodeItem.hpp>
-#include <QtMate/graph/treeLayout.hpp>
-
-#include <QFontMetricsF>
-#include <QGraphicsSceneContextMenuEvent>
 #include <QHBoxLayout>
-#include <QMenu>
-#include <QPainter>
-#include <QStringList>
+#include <QShortcut>
 #include <QVBoxLayout>
 
-#include <chrono>
-#include <unordered_map>
+#include <algorithm>
+#include <optional>
 
 namespace
 {
-using TopologyNode = hive::modelsLibrary::NetworkTopologyModel::Node;
-
-// Node dimensions and layout constants
-constexpr auto EntityNodeSize = QSizeF{ 190.0, 72.0 };
-constexpr auto BridgeNodeSize = QSizeF{ 190.0, 54.0 };
-constexpr auto HorizontalSpacing = 40.0;
-constexpr auto VerticalSpacing = 70.0;
-
-// Colors (fixed, readable on both light and dark application themes since nodes are self contained boxes)
-auto const EntityFillColor = QColor{ 0xFAFAFA };
-auto const BridgeFillColor = QColor{ 0xECEFF1 };
-auto const BorderColor = QColor{ 0x616161 };
-auto const SelectedBorderColor = QColor{ 0x1E88E5 };
-auto const TextColor = QColor{ 0x212121 };
-auto const SecondaryTextColor = QColor{ 0x757575 };
-auto const GrandmasterColor = QColor{ 0xFFC107 };
-auto const ErrorColor = QColor{ 0xD32F2F };
-auto const LinkUpColor = QColor{ 0x4CAF50 };
-auto const LinkDownColor = QColor{ 0xF44336 };
-auto const LinkUnknownColor = QColor{ 0x9E9E9E };
-auto const EdgeColor = QColor{ 0x90A4AE };
-auto const ActiveEdgeColor = QColor{ 0x1E88E5 };
-
-QString formatPropagationDelay(std::uint32_t const delayNsec)
+QString networkName(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
 {
-	if (delayNsec >= 1000u)
+	// Milan redundancy defines AVB interface index 0 as the primary network and index 1 as the secondary network
+	switch (avbInterfaceIndex)
 	{
-		return QString::number(delayNsec / 1000.0, 'f', 2) + QString::fromUtf8(" \xC2\xB5s");
-	}
-	return QString::number(delayNsec) + " ns";
-}
-
-QString formatBandwidth(std::uint64_t const bitsPerSecond)
-{
-	if (bitsPerSecond >= 1000000u)
-	{
-		return QString::number(bitsPerSecond / 1000000.0, 'f', 1) + " Mb/s";
-	}
-	return QString::number(bitsPerSecond / 1000.0, 'f', 1) + " kb/s";
-}
-
-QColor linkStatusColor(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
-{
-	switch (linkStatus)
-	{
-		case la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Up:
-			return LinkUpColor;
-		case la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down:
-			return LinkDownColor;
+		case 0u:
+			return "Primary";
+		case 1u:
+			return "Secondary";
 		default:
-			return LinkUnknownColor;
+			return QString{ "Network %1" }.arg(avbInterfaceIndex);
 	}
 }
-
-// Draws the 'GM' tag in the top-right corner of grandmaster nodes and the error badge in the top-left corner
-void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGrandmaster, std::uint64_t const errorCounter)
-{
-	if (isGrandmaster)
-	{
-		auto const tagRect = QRectF{ nodeSize.width() - 34.0, 4.0, 30.0, 15.0 };
-		painter->setPen(Qt::NoPen);
-		painter->setBrush(GrandmasterColor);
-		painter->drawRoundedRect(tagRect, 3.0, 3.0);
-		auto font = painter->font();
-		font.setPointSizeF(8.0);
-		font.setBold(true);
-		painter->setFont(font);
-		painter->setPen(TextColor);
-		painter->drawText(tagRect, Qt::AlignCenter, "GM");
-	}
-
-	if (errorCounter > 0u)
-	{
-		auto const text = errorCounter > 99u ? QStringLiteral("99+") : QString::number(errorCounter);
-		auto const badgeRect = QRectF{ 4.0, 4.0, 26.0, 15.0 };
-		painter->setPen(Qt::NoPen);
-		painter->setBrush(ErrorColor);
-		painter->drawRoundedRect(badgeRect, 7.0, 7.0);
-		auto font = painter->font();
-		font.setPointSizeF(8.0);
-		font.setBold(true);
-		painter->setFont(font);
-		painter->setPen(Qt::white);
-		painter->drawText(badgeRect, Qt::AlignCenter, text);
-	}
-}
-
-// Graph node displaying a discovered entity (one node per AVB interface)
-class EntityGraphNodeItem final : public qtMate::graph::GraphNodeItem
-{
-public:
-	EntityGraphNodeItem(TopologyNode const& node)
-		: GraphNodeItem{ node.name, EntityNodeSize }
-		, _node{ node }
-	{
-		auto tooltip = QString{ "<b>%1</b>" }.arg(node.name.toHtmlEscaped());
-		tooltip += "<br>Entity ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.entityID);
-		if (node.isMultiInterface || !node.avbInterfaceName.isEmpty())
-		{
-			tooltip += QString{ "<br>AVB Interface: %1 (index %2)" }.arg(node.avbInterfaceName.toHtmlEscaped()).arg(node.avbInterfaceIndex);
-		}
-		tooltip += "<br>Clock Identity: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity);
-		tooltip += "<br>Grandmaster ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.gptpGrandmasterID);
-		if (node.gptpDomainNumber)
-		{
-			tooltip += QString{ "<br>gPTP Domain: %1" }.arg(*node.gptpDomainNumber);
-		}
-		if (node.propagationDelay)
-		{
-			tooltip += QString{ "<br>Propagation Delay: %1" }.arg(formatPropagationDelay(*node.propagationDelay));
-		}
-		if (!node.hasAsPath)
-		{
-			tooltip += "<br><i>Entity does not expose its AsPath, physical path is unknown</i>";
-		}
-		if (node.errorCounter > 0u)
-		{
-			tooltip += QString{ "<br><font color=\"#D32F2F\">Errors: %1</font>" }.arg(node.errorCounter);
-		}
-		setToolTip(tooltip);
-	}
-
-	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/) override
-	{
-		auto const rect = QRectF{ QPointF{ 0.0, 0.0 }, size() };
-		painter->setRenderHint(QPainter::Antialiasing);
-		painter->setPen(QPen{ isSelected() ? SelectedBorderColor : BorderColor, isSelected() ? 2.0 : 1.0 });
-		painter->setBrush(EntityFillColor);
-		painter->drawRoundedRect(rect, 6.0, 6.0);
-
-		auto const textWidth = rect.width() - 16.0;
-
-		// Entity name (bold)
-		auto nameFont = painter->font();
-		nameFont.setBold(true);
-		painter->setFont(nameFont);
-		painter->setPen(TextColor);
-		painter->drawText(QRectF{ 8.0, 6.0, textWidth, 18.0 }, Qt::AlignLeft | Qt::AlignVCenter, QFontMetricsF{ nameFont }.elidedText(label(), Qt::ElideMiddle, textWidth));
-
-		// Entity ID
-		auto smallFont = painter->font();
-		smallFont.setBold(false);
-		smallFont.setPointSizeF(smallFont.pointSizeF() * 0.85);
-		painter->setFont(smallFont);
-		painter->setPen(SecondaryTextColor);
-		painter->drawText(QRectF{ 8.0, 24.0, textWidth, 16.0 }, Qt::AlignLeft | Qt::AlignVCenter, hive::modelsLibrary::helper::uniqueIdentifierToString(_node.entityID));
-
-		// AVB interface (only relevant when the entity has multiple interfaces, ie. multiple nodes)
-		if (_node.isMultiInterface)
-		{
-			auto const interfaceText = QString{ "%1 (index %2)" }.arg(_node.avbInterfaceName).arg(_node.avbInterfaceIndex);
-			painter->drawText(QRectF{ 8.0, 40.0, textWidth, 16.0 }, Qt::AlignLeft | Qt::AlignVCenter, QFontMetricsF{ smallFont }.elidedText(interfaceText, Qt::ElideRight, textWidth));
-		}
-
-		// Link status dot
-		painter->setPen(Qt::NoPen);
-		painter->setBrush(linkStatusColor(_node.linkStatus));
-		painter->drawEllipse(QRectF{ rect.width() - 14.0, rect.height() - 14.0, 8.0, 8.0 });
-
-		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter);
-	}
-
-protected:
-	virtual void contextMenuEvent(QGraphicsSceneContextMenuEvent* event) override
-	{
-		auto menu = QMenu{};
-		auto* const identifyAction = menu.addAction("Identify Entity (10 sec)");
-		if (auto* const action = menu.exec(event->screenPos()); action == identifyAction)
-		{
-			hive::modelsLibrary::ControllerManager::getInstance().identifyEntity(_node.entityID, std::chrono::seconds{ 10 });
-		}
-		event->accept();
-	}
-
-private:
-	TopologyNode _node{};
-};
-
-// Graph node displaying a bridge inferred from the discovery protocol (not an ATDECC entity)
-class BridgeGraphNodeItem final : public qtMate::graph::GraphNodeItem
-{
-public:
-	BridgeGraphNodeItem(TopologyNode const& node)
-		: GraphNodeItem{ node.name, BridgeNodeSize }
-		, _node{ node }
-	{
-		auto tooltip = QStringLiteral("<b>Network Bridge</b> (inferred from gPTP, not an ATDECC entity)");
-		if (!node.name.isEmpty())
-		{
-			tooltip += "<br>Vendor: " + node.name.toHtmlEscaped();
-		}
-		tooltip += "<br>Clock Identity: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity);
-		setToolTip(tooltip);
-	}
-
-	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/) override
-	{
-		auto const rect = QRectF{ QPointF{ 0.0, 0.0 }, size() };
-		painter->setRenderHint(QPainter::Antialiasing);
-		auto borderPen = QPen{ isSelected() ? SelectedBorderColor : BorderColor, isSelected() ? 2.0 : 1.0 };
-		borderPen.setStyle(Qt::DashLine);
-		painter->setPen(borderPen);
-		painter->setBrush(BridgeFillColor);
-		painter->drawRoundedRect(rect, 6.0, 6.0);
-
-		auto const textWidth = rect.width() - 16.0;
-
-		// Title: 'Bridge' with the vendor name when known
-		auto titleFont = painter->font();
-		titleFont.setItalic(true);
-		painter->setFont(titleFont);
-		painter->setPen(TextColor);
-		auto const title = _node.name.isEmpty() ? QStringLiteral("Bridge") : QString{ "Bridge - %1" }.arg(_node.name);
-		painter->drawText(QRectF{ 8.0, 6.0, textWidth, 18.0 }, Qt::AlignLeft | Qt::AlignVCenter, QFontMetricsF{ titleFont }.elidedText(title, Qt::ElideRight, textWidth));
-
-		// Clock identity
-		auto smallFont = painter->font();
-		smallFont.setItalic(false);
-		smallFont.setPointSizeF(smallFont.pointSizeF() * 0.85);
-		painter->setFont(smallFont);
-		painter->setPen(SecondaryTextColor);
-		painter->drawText(QRectF{ 8.0, 24.0, textWidth, 16.0 }, Qt::AlignLeft | Qt::AlignVCenter, hive::modelsLibrary::helper::uniqueIdentifierToString(_node.clockIdentity));
-
-		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u);
-	}
-
-private:
-	TopologyNode _node{};
-};
 } // namespace
 
 NetworkGraphView::NetworkGraphView(QWidget* parent)
 	: QWidget{ parent }
 {
-	_scene = new QGraphicsScene{ this };
-	_graphView = new qtMate::graph::GraphView{ this };
-	_graphView->setScene(_scene);
+	_tabWidget = new QTabWidget{ this };
+	_tabWidget->setDocumentMode(true);
 
 	_relayoutButton.setToolTip("Re-layout the graph");
 	_fitButton.setToolTip("Zoom to fit");
+	_clearHighlightButton.setToolTip("Clear stream highlight (Esc)");
 
 	auto* const toolbarLayout = new QHBoxLayout{};
 	toolbarLayout->setContentsMargins(2, 2, 2, 2);
 	toolbarLayout->addWidget(&_relayoutButton);
 	toolbarLayout->addWidget(&_fitButton);
+	toolbarLayout->addWidget(&_clearHighlightButton);
 	toolbarLayout->addStretch();
 	toolbarLayout->addWidget(&_statsLabel);
 
 	auto* const layout = new QVBoxLayout{ this };
 	layout->setContentsMargins(2, 2, 2, 2);
 	layout->addLayout(toolbarLayout);
-	layout->addWidget(_graphView);
+	layout->addWidget(_tabWidget);
 
 	connect(&_topologyModel, &hive::modelsLibrary::NetworkTopologyModel::topologyChanged, this,
 		[this]()
 		{
-			rebuildScene();
+			rebuildPanes();
 		});
-	connect(_scene, &QGraphicsScene::selectionChanged, this,
-		[this]()
+	connect(_tabWidget, &QTabWidget::currentChanged, this,
+		[this](int)
 		{
-			if (_changingSelection)
-			{
-				return;
-			}
-			// Only react when an entity node gets selected (clicking an empty area or a bridge keeps the application wide selection)
-			for (auto* const item : _scene->selectedItems())
-			{
-				if (auto const it = _entityForItem.find(item); it != _entityForItem.end())
-				{
-					if (it->second != _selectedEntityID)
-					{
-						_selectedEntityID = it->second;
-						emit entitySelectionChanged(_selectedEntityID);
-					}
-					break;
-				}
-			}
+			refreshStats();
 		});
 	connect(&_relayoutButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			rebuildScene();
+			if (auto* const pane = currentPane())
+			{
+				pane->relayout();
+			}
 		});
 	connect(&_fitButton, &QPushButton::clicked, this,
 		[this]()
 		{
-			_graphView->fitToContents();
+			if (auto* const pane = currentPane())
+			{
+				pane->fitToContents();
+			}
+		});
+	connect(&_clearHighlightButton, &QPushButton::clicked, this,
+		[this]()
+		{
+			if (auto* const pane = currentPane())
+			{
+				pane->clearHighlight();
+			}
+		});
+
+	auto* const escapeShortcut = new QShortcut{ QKeySequence{ Qt::Key_Escape }, this };
+	escapeShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+	connect(escapeShortcut, &QShortcut::activated, this,
+		[this]()
+		{
+			if (auto* const pane = currentPane())
+			{
+				pane->clearHighlight();
+			}
 		});
 }
 
@@ -336,134 +121,98 @@ void NetworkGraphView::selectEntity(la::avdecc::UniqueIdentifier const entityID)
 		return;
 	}
 	_selectedEntityID = entityID;
-	applySelectionToScene();
+	for (auto const& [avbInterfaceIndex, pane] : _panes)
+	{
+		pane->selectEntity(entityID);
+	}
 }
 
-void NetworkGraphView::applySelectionToScene()
+NetworkGraphPane* NetworkGraphView::currentPane() const
 {
-	_changingSelection = true;
-	_scene->clearSelection();
-	if (auto const it = _itemsForEntity.find(_selectedEntityID); it != _itemsForEntity.end())
+	auto const tabIndex = _tabWidget->currentIndex();
+	if (tabIndex >= 0 && static_cast<std::size_t>(tabIndex) < _panes.size())
 	{
-		for (auto* const item : it->second)
-		{
-			item->setSelected(true);
-		}
-		// Make sure the (first) selected node is visible
-		_graphView->ensureVisible(it->second.front(), 50, 50);
+		return _panes[static_cast<std::size_t>(tabIndex)].second;
 	}
-	_changingSelection = false;
+	return nullptr;
 }
 
-void NetworkGraphView::rebuildScene()
+void NetworkGraphView::refreshStats()
 {
-	auto const& topology = _topologyModel.topology();
-
-	_changingSelection = true;
-	_scene->clear();
-	_changingSelection = false;
-	_itemsForEntity.clear();
-	_entityForItem.clear();
-
-	// Compute the layout: parent of a node is its upstream neighbor (towards the grandmaster)
-	auto layoutItems = std::vector<qtMate::graph::TreeLayoutItem>(topology.nodes.size());
-	for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < topology.nodes.size(); ++nodeIndex)
+	if (auto* const pane = currentPane())
 	{
-		layoutItems[nodeIndex].size = topology.nodes[nodeIndex].type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity ? EntityNodeSize : BridgeNodeSize;
+		_statsLabel.setText(pane->statsText());
 	}
-	for (auto const& edge : topology.edges)
+	else
 	{
-		layoutItems[edge.downstreamNodeIndex].parentIndex = static_cast<int>(edge.upstreamNodeIndex);
+		_statsLabel.clear();
 	}
-	auto const positions = qtMate::graph::computeTreeLayout(layoutItems, HorizontalSpacing, VerticalSpacing);
+}
 
-	// Create node items
-	auto nodeItems = std::vector<qtMate::graph::GraphNodeItem*>(topology.nodes.size());
-	auto entityCount = 0;
-	auto bridgeCount = 0;
-	for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < topology.nodes.size(); ++nodeIndex)
+void NetworkGraphView::rebuildPanes()
+{
+	auto const& networks = _topologyModel.networks();
+	auto const previousNetworkIndex = currentPane() ? std::optional<la::avdecc::entity::model::AvbInterfaceIndex>{ _panes[static_cast<std::size_t>(_tabWidget->currentIndex())].first } : std::nullopt;
+
+	// Synchronize the tabs with the networks (networks are ordered by AVB interface index and rarely change)
+	// Remove panes whose network disappeared
+	for (auto paneIndex = static_cast<int>(_panes.size()) - 1; paneIndex >= 0; --paneIndex)
 	{
-		auto const& node = topology.nodes[nodeIndex];
-		qtMate::graph::GraphNodeItem* item = nullptr;
-		if (node.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity)
+		auto const avbInterfaceIndex = _panes[static_cast<std::size_t>(paneIndex)].first;
+		auto const stillExists = std::any_of(networks.begin(), networks.end(),
+			[avbInterfaceIndex](auto const& network)
+			{
+				return network.avbInterfaceIndex == avbInterfaceIndex;
+			});
+		if (!stillExists)
 		{
-			item = new EntityGraphNodeItem{ node };
-			_itemsForEntity[node.entityID].push_back(item);
-			_entityForItem.emplace(item, node.entityID);
-			++entityCount;
+			auto* const pane = _panes[static_cast<std::size_t>(paneIndex)].second;
+			_tabWidget->removeTab(paneIndex);
+			_panes.erase(_panes.begin() + paneIndex);
+			pane->deleteLater();
 		}
-		else
-		{
-			item = new BridgeGraphNodeItem{ node };
-			++bridgeCount;
-		}
-		item->setPos(positions[nodeIndex]);
-		_scene->addItem(item);
-		nodeItems[nodeIndex] = item;
 	}
 
-	// Create edge items
-	for (auto const& edge : topology.edges)
+	// Create/update panes, keeping them ordered by AVB interface index (same order than the networks vector)
+	for (auto networkIndex = std::size_t{ 0u }; networkIndex < networks.size(); ++networkIndex)
 	{
-		auto* const edgeItem = new qtMate::graph::GraphEdgeItem{ nodeItems[edge.upstreamNodeIndex], nodeItems[edge.downstreamNodeIndex] };
-		auto const hasStreams = edge.streamCount > 0u;
-		auto pen = QPen{ hasStreams ? ActiveEdgeColor : EdgeColor, hasStreams ? 2.5 : 1.5 };
-		auto labelParts = QStringList{};
-		auto tooltip = QString{};
-
-		if (edge.kind == hive::modelsLibrary::NetworkTopologyModel::EdgeKind::GptpGrandmasterOnly)
+		auto const& network = networks[networkIndex];
+		if (networkIndex >= _panes.size() || _panes[networkIndex].first != network.avbInterfaceIndex)
 		{
-			pen.setStyle(Qt::DashLine);
-			tooltip = "Physical path unknown (entity does not expose its AsPath), attached to its grandmaster";
-		}
-		else
-		{
-			// Show the propagation delay of the downstream entity on its upstream link
-			auto const& downstreamNode = topology.nodes[edge.downstreamNodeIndex];
-			if (downstreamNode.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity && downstreamNode.propagationDelay && *downstreamNode.propagationDelay > 0u)
-			{
-				labelParts += formatPropagationDelay(*downstreamNode.propagationDelay);
-			}
-		}
-
-		if (hasStreams)
-		{
-			auto streamsText = QString{ "%1 %2" }.arg(edge.streamCount).arg(edge.streamCount > 1 ? "streams" : "stream");
-			if (edge.streamPayloadBandwidth > 0u)
-			{
-				streamsText += QString{ " \xC2\xB7 %1" }.arg(formatBandwidth(edge.streamPayloadBandwidth));
-			}
-			labelParts += streamsText;
-
-			// List the transiting stream connections in the tooltip (capped to keep it readable)
-			constexpr auto MaxTooltipStreams = 15;
-			auto streamList = QStringList{};
-			for (auto const& description : edge.streamDescriptions)
-			{
-				if (streamList.size() >= MaxTooltipStreams)
+			auto* const pane = new NetworkGraphPane{ this };
+			connect(pane, &NetworkGraphPane::entitySelectionChanged, this,
+				[this](la::avdecc::UniqueIdentifier const entityID)
 				{
-					streamList += QString{ "... and %1 more" }.arg(edge.streamDescriptions.size() - MaxTooltipStreams);
-					break;
-				}
-				streamList += description.toHtmlEscaped();
-			}
-			if (!tooltip.isEmpty())
-			{
-				tooltip += "<br>";
-			}
-			tooltip += QString{ "<b>%1 (payload bitrate, transport overhead excluded)</b><br>%2" }.arg(streamsText.toHtmlEscaped(), streamList.join("<br>"));
+					if (entityID != _selectedEntityID)
+					{
+						_selectedEntityID = entityID;
+						// Propagate to the other panes so the same entity is selected everywhere
+						for (auto const& [avbInterfaceIndex, otherPane] : _panes)
+						{
+							otherPane->selectEntity(entityID);
+						}
+						emit entitySelectionChanged(entityID);
+					}
+				});
+			_panes.insert(_panes.begin() + static_cast<std::ptrdiff_t>(networkIndex), std::make_pair(network.avbInterfaceIndex, pane));
+			_tabWidget->insertTab(static_cast<int>(networkIndex), pane, networkName(network.avbInterfaceIndex));
+			pane->selectEntity(_selectedEntityID);
 		}
-
-		edgeItem->setLabel(labelParts.join(" | "));
-		edgeItem->setToolTip(tooltip);
-		edgeItem->setLinePen(pen);
-		_scene->addItem(edgeItem);
+		_panes[networkIndex].second->setTopology(network.topology);
 	}
 
-	_statsLabel.setText(QString{ "%1 %2 - %3 %4" }.arg(entityCount).arg(entityCount > 1 ? "entities" : "entity").arg(bridgeCount).arg(bridgeCount > 1 ? "bridges" : "bridge"));
+	// Restore the previously displayed network when possible
+	if (previousNetworkIndex)
+	{
+		for (auto paneIndex = std::size_t{ 0u }; paneIndex < _panes.size(); ++paneIndex)
+		{
+			if (_panes[paneIndex].first == *previousNetworkIndex)
+			{
+				_tabWidget->setCurrentIndex(static_cast<int>(paneIndex));
+				break;
+			}
+		}
+	}
 
-	// Restore the application wide entity selection on the freshly created items
-	applySelectionToScene();
-
-	_graphView->fitToContents();
+	refreshStats();
 }

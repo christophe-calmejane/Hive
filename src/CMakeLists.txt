@@ -135,6 +135,7 @@ set(HEADER_FILES_COMMON
 	mappingMatrix.hpp
 	activeNetworkInterfacesModel.hpp
 	latencyItemDelegate.hpp
+	networkGraph/networkGraphPane.hpp
 	networkGraph/networkGraphView.hpp
 	networkInterfaceTypeModel.hpp
 	nodeTreeWidget.hpp
@@ -185,6 +186,7 @@ set(SOURCE_FILES_COMMON
 	mediaClock/abstractTreeItem.cpp
 	mediaClock/domainTreeItem.cpp
 	mediaClock/entityTreeItem.cpp
+	networkGraph/networkGraphPane.cpp
 	networkGraph/networkGraphView.cpp
 	newsFeed/newsFeed.cpp
 	nodeTreeDynamicWidgets/milanDynamicStateTreeWidgetItem.cpp

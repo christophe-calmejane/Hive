@@ -20,22 +20,21 @@
 #pragma once
 
 #include <hive/modelsLibrary/networkTopologyModel.hpp>
-#include <QtMate/graph/graphView.hpp>
 #include <QtMate/widgets/flatIconButton.hpp>
 
-#include <QGraphicsScene>
 #include <QLabel>
+#include <QTabWidget>
 #include <QWidget>
 
-#include <unordered_map>
 #include <vector>
 
+class NetworkGraphPane;
+
 /**
-* @brief Dockable view displaying the network topology graph.
-* @details Renders the topology exposed by hive::modelsLibrary::NetworkTopologyModel as a forest of trees
-*          (grandmasters on top), using the generic qtMate::graph rendering classes.
-*          Entity nodes display gPTP and error information, inferred bridges are displayed with their
-*          vendor name (deduced from the OUI of their clock identity).
+* @brief Dockable view displaying the network topology graphs.
+* @details Displays one tab per network (Primary, Secondary, ... based on the AVB interface index of the
+*          entities, like Milan redundancy defines them), each tab rendering the topology of its network
+*          through a NetworkGraphPane.
 */
 class NetworkGraphView : public QWidget
 {
@@ -44,30 +43,26 @@ public:
 	NetworkGraphView(QWidget* parent = nullptr);
 
 	/**
-	* @brief Selects the node(s) of the given entity in the graph (all its interfaces) and makes them visible.
-	* @details Used to synchronize the graph with the application wide entity selection. Does nothing if the
-	*          entity is not part of the topology. Does not re-emit entitySelectionChanged().
-	* @param[in] entityID Entity to select, an invalid identifier clears the graph selection.
+	* @brief Selects the given entity in all the network graphs.
+	* @details Used to synchronize the graphs with the application wide entity selection.
+	* @param[in] entityID Entity to select, an invalid identifier clears the graphs selection.
 	*/
 	void selectEntity(la::avdecc::UniqueIdentifier const entityID);
 
-	/** Emitted when the user selects an entity node in the graph. */
+	/** Emitted when the user selects an entity node in one of the network graphs. */
 	Q_SIGNAL void entitySelectionChanged(la::avdecc::UniqueIdentifier const entityID);
 
 private:
-	void rebuildScene();
-	void applySelectionToScene();
+	void rebuildPanes();
+	NetworkGraphPane* currentPane() const;
+	void refreshStats();
 
 	hive::modelsLibrary::NetworkTopologyModel _topologyModel{ this };
-	QGraphicsScene* _scene{ nullptr };
-	qtMate::graph::GraphView* _graphView{ nullptr };
+	QTabWidget* _tabWidget{ nullptr };
+	std::vector<std::pair<la::avdecc::entity::model::AvbInterfaceIndex, NetworkGraphPane*>> _panes{}; // Aligned with the tab widget pages
 	qtMate::widgets::FlatIconButton _relayoutButton{ "Material Icons", "account_tree", this };
 	qtMate::widgets::FlatIconButton _fitButton{ "Material Icons", "zoom_out_map", this };
+	qtMate::widgets::FlatIconButton _clearHighlightButton{ "Material Icons", "highlight_off", this };
 	QLabel _statsLabel{ this };
-
-	// Selection synchronization state
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<QGraphicsItem*>, la::avdecc::UniqueIdentifier::hash> _itemsForEntity{};
-	std::unordered_map<QGraphicsItem*, la::avdecc::UniqueIdentifier> _entityForItem{};
 	la::avdecc::UniqueIdentifier _selectedEntityID{};
-	bool _changingSelection{ false };
 };
