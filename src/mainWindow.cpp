@@ -823,6 +823,14 @@ void MainWindowImpl::connectSignals()
 
 	connect(discoveredEntitiesView->entitiesTableView(), &discoveredEntities::View::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
 
+	// Synchronize entity selection between the entities list and the network graph
+	connect(discoveredEntitiesView->entitiesTableView(), &discoveredEntities::View::selectedControlledEntityChanged, networkGraphView, &NetworkGraphView::selectEntity);
+	connect(networkGraphView, &NetworkGraphView::entitySelectionChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			discoveredEntitiesView->entitiesTableView()->selectControlledEntity(entityID);
+		});
+
 	connect(discoveredEntitiesView, &DiscoveredEntitiesView::filterChanged, routingTableView,
 		[this](QString const& filter)
 		{

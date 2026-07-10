@@ -27,6 +27,9 @@
 #include <QLabel>
 #include <QWidget>
 
+#include <unordered_map>
+#include <vector>
+
 /**
 * @brief Dockable view displaying the network topology graph.
 * @details Renders the topology exposed by hive::modelsLibrary::NetworkTopologyModel as a forest of trees
@@ -40,8 +43,20 @@ class NetworkGraphView : public QWidget
 public:
 	NetworkGraphView(QWidget* parent = nullptr);
 
+	/**
+	* @brief Selects the node(s) of the given entity in the graph (all its interfaces) and makes them visible.
+	* @details Used to synchronize the graph with the application wide entity selection. Does nothing if the
+	*          entity is not part of the topology. Does not re-emit entitySelectionChanged().
+	* @param[in] entityID Entity to select, an invalid identifier clears the graph selection.
+	*/
+	void selectEntity(la::avdecc::UniqueIdentifier const entityID);
+
+	/** Emitted when the user selects an entity node in the graph. */
+	Q_SIGNAL void entitySelectionChanged(la::avdecc::UniqueIdentifier const entityID);
+
 private:
 	void rebuildScene();
+	void applySelectionToScene();
 
 	hive::modelsLibrary::NetworkTopologyModel _topologyModel{ this };
 	QGraphicsScene* _scene{ nullptr };
@@ -49,4 +64,10 @@ private:
 	qtMate::widgets::FlatIconButton _relayoutButton{ "Material Icons", "account_tree", this };
 	qtMate::widgets::FlatIconButton _fitButton{ "Material Icons", "zoom_out_map", this };
 	QLabel _statsLabel{ this };
+
+	// Selection synchronization state
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<QGraphicsItem*>, la::avdecc::UniqueIdentifier::hash> _itemsForEntity{};
+	std::unordered_map<QGraphicsItem*, la::avdecc::UniqueIdentifier> _entityForItem{};
+	la::avdecc::UniqueIdentifier _selectedEntityID{};
+	bool _changingSelection{ false };
 };

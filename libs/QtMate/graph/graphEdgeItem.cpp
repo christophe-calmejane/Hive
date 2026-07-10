@@ -103,7 +103,7 @@ int GraphEdgeItem::type() const
 QRectF GraphEdgeItem::boundingRect() const
 {
 	// Extend the path bounding rect so the label always fits
-	return QGraphicsPathItem::boundingRect().adjusted(-50.0, -10.0, 50.0, 10.0);
+	return QGraphicsPathItem::boundingRect().adjusted(-90.0, -10.0, 90.0, 10.0);
 }
 
 void GraphEdgeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget)
@@ -118,7 +118,7 @@ void GraphEdgeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* opt
 		font.setPointSizeF(font.pointSizeF() * 0.85);
 		painter->setFont(font);
 		painter->setPen(pen().color());
-		auto const textRect = QRectF{ center.x() - 50.0, center.y() - 8.0, 100.0, 16.0 };
+		auto const textRect = QRectF{ center.x() - 90.0, center.y() - 8.0, 180.0, 16.0 };
 		painter->drawText(textRect, Qt::AlignCenter, _label);
 	}
 }

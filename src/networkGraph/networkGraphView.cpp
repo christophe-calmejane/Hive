@@ -30,6 +30,7 @@
 #include <QHBoxLayout>
 #include <QMenu>
 #include <QPainter>
+#include <QStringList>
 #include <QVBoxLayout>
 
 #include <chrono>
@@ -58,6 +59,7 @@ auto const LinkUpColor = QColor{ 0x4CAF50 };
 auto const LinkDownColor = QColor{ 0xF44336 };
 auto const LinkUnknownColor = QColor{ 0x9E9E9E };
 auto const EdgeColor = QColor{ 0x90A4AE };
+auto const ActiveEdgeColor = QColor{ 0x1E88E5 };
 
 QString formatPropagationDelay(std::uint32_t const delayNsec)
 {
@@ -66,6 +68,15 @@ QString formatPropagationDelay(std::uint32_t const delayNsec)
 		return QString::number(delayNsec / 1000.0, 'f', 2) + QString::fromUtf8(" \xC2\xB5s");
 	}
 	return QString::number(delayNsec) + " ns";
+}
+
+QString formatBandwidth(std::uint64_t const bitsPerSecond)
+{
+	if (bitsPerSecond >= 1000000u)
+	{
+		return QString::number(bitsPerSecond / 1000000.0, 'f', 1) + " Mb/s";
+	}
+	return QString::number(bitsPerSecond / 1000.0, 'f', 1) + " kb/s";
 }
 
 QColor linkStatusColor(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
@@ -285,6 +296,27 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 		{
 			rebuildScene();
 		});
+	connect(_scene, &QGraphicsScene::selectionChanged, this,
+		[this]()
+		{
+			if (_changingSelection)
+			{
+				return;
+			}
+			// Only react when an entity node gets selected (clicking an empty area or a bridge keeps the application wide selection)
+			for (auto* const item : _scene->selectedItems())
+			{
+				if (auto const it = _entityForItem.find(item); it != _entityForItem.end())
+				{
+					if (it->second != _selectedEntityID)
+					{
+						_selectedEntityID = it->second;
+						emit entitySelectionChanged(_selectedEntityID);
+					}
+					break;
+				}
+			}
+		});
 	connect(&_relayoutButton, &QPushButton::clicked, this,
 		[this]()
 		{
@@ -297,11 +329,41 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 		});
 }
 
+void NetworkGraphView::selectEntity(la::avdecc::UniqueIdentifier const entityID)
+{
+	if (entityID == _selectedEntityID)
+	{
+		return;
+	}
+	_selectedEntityID = entityID;
+	applySelectionToScene();
+}
+
+void NetworkGraphView::applySelectionToScene()
+{
+	_changingSelection = true;
+	_scene->clearSelection();
+	if (auto const it = _itemsForEntity.find(_selectedEntityID); it != _itemsForEntity.end())
+	{
+		for (auto* const item : it->second)
+		{
+			item->setSelected(true);
+		}
+		// Make sure the (first) selected node is visible
+		_graphView->ensureVisible(it->second.front(), 50, 50);
+	}
+	_changingSelection = false;
+}
+
 void NetworkGraphView::rebuildScene()
 {
 	auto const& topology = _topologyModel.topology();
 
+	_changingSelection = true;
 	_scene->clear();
+	_changingSelection = false;
+	_itemsForEntity.clear();
+	_entityForItem.clear();
 
 	// Compute the layout: parent of a node is its upstream neighbor (towards the grandmaster)
 	auto layoutItems = std::vector<qtMate::graph::TreeLayoutItem>(topology.nodes.size());
@@ -326,6 +388,8 @@ void NetworkGraphView::rebuildScene()
 		if (node.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity)
 		{
 			item = new EntityGraphNodeItem{ node };
+			_itemsForEntity[node.entityID].push_back(item);
+			_entityForItem.emplace(item, node.entityID);
 			++entityCount;
 		}
 		else
@@ -342,11 +406,15 @@ void NetworkGraphView::rebuildScene()
 	for (auto const& edge : topology.edges)
 	{
 		auto* const edgeItem = new qtMate::graph::GraphEdgeItem{ nodeItems[edge.upstreamNodeIndex], nodeItems[edge.downstreamNodeIndex] };
-		auto pen = QPen{ EdgeColor, 1.5 };
+		auto const hasStreams = edge.streamCount > 0u;
+		auto pen = QPen{ hasStreams ? ActiveEdgeColor : EdgeColor, hasStreams ? 2.5 : 1.5 };
+		auto labelParts = QStringList{};
+		auto tooltip = QString{};
+
 		if (edge.kind == hive::modelsLibrary::NetworkTopologyModel::EdgeKind::GptpGrandmasterOnly)
 		{
 			pen.setStyle(Qt::DashLine);
-			edgeItem->setToolTip("Physical path unknown (entity does not expose its AsPath), attached to its grandmaster");
+			tooltip = "Physical path unknown (entity does not expose its AsPath), attached to its grandmaster";
 		}
 		else
 		{
@@ -354,14 +422,48 @@ void NetworkGraphView::rebuildScene()
 			auto const& downstreamNode = topology.nodes[edge.downstreamNodeIndex];
 			if (downstreamNode.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity && downstreamNode.propagationDelay && *downstreamNode.propagationDelay > 0u)
 			{
-				edgeItem->setLabel(formatPropagationDelay(*downstreamNode.propagationDelay));
+				labelParts += formatPropagationDelay(*downstreamNode.propagationDelay);
 			}
 		}
+
+		if (hasStreams)
+		{
+			auto streamsText = QString{ "%1 %2" }.arg(edge.streamCount).arg(edge.streamCount > 1 ? "streams" : "stream");
+			if (edge.streamPayloadBandwidth > 0u)
+			{
+				streamsText += QString{ " \xC2\xB7 %1" }.arg(formatBandwidth(edge.streamPayloadBandwidth));
+			}
+			labelParts += streamsText;
+
+			// List the transiting stream connections in the tooltip (capped to keep it readable)
+			constexpr auto MaxTooltipStreams = 15;
+			auto streamList = QStringList{};
+			for (auto const& description : edge.streamDescriptions)
+			{
+				if (streamList.size() >= MaxTooltipStreams)
+				{
+					streamList += QString{ "... and %1 more" }.arg(edge.streamDescriptions.size() - MaxTooltipStreams);
+					break;
+				}
+				streamList += description.toHtmlEscaped();
+			}
+			if (!tooltip.isEmpty())
+			{
+				tooltip += "<br>";
+			}
+			tooltip += QString{ "<b>%1 (payload bitrate, transport overhead excluded)</b><br>%2" }.arg(streamsText.toHtmlEscaped(), streamList.join("<br>"));
+		}
+
+		edgeItem->setLabel(labelParts.join(" | "));
+		edgeItem->setToolTip(tooltip);
 		edgeItem->setLinePen(pen);
 		_scene->addItem(edgeItem);
 	}
 
 	_statsLabel.setText(QString{ "%1 %2 - %3 %4" }.arg(entityCount).arg(entityCount > 1 ? "entities" : "entity").arg(bridgeCount).arg(bridgeCount > 1 ? "bridges" : "bridge"));
+
+	// Restore the application wide entity selection on the freshly created items
+	applySelectionToScene();
 
 	_graphView->fitToContents();
 }

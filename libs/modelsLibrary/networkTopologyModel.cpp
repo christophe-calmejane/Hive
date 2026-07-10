@@ -21,8 +21,11 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 
+#include <la/avdecc/internals/streamFormatInfo.hpp>
+
 #include <QTimer>
 
+#include <map>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -53,6 +56,40 @@ struct InterfaceInfo
 	la::avdecc::UniqueIdentifier internalBridgeClockIdentity{}; /**< Clock identity of the entity's internal bridge, for bridged endpoints (propagation delay == 0) */
 	std::uint64_t errorCounter{ 0u };
 };
+
+// Information collected for one connected stream output, input of the bandwidth accumulation
+struct StreamOutputInfo
+{
+	la::avdecc::UniqueIdentifier talkerEntityID{};
+	la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
+	QString talkerName{};
+	QString streamName{};
+	la::avdecc::entity::model::StreamFormat streamFormat{};
+	bool isRunning{ true };
+	std::vector<la::avdecc::entity::model::StreamIdentification> listeners{};
+};
+
+// Information collected for one stream input, used to resolve the listener side of a connection
+struct StreamInputInfo
+{
+	la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
+	QString listenerName{};
+	QString streamName{};
+};
+
+// Returns the payload bitrate (bits per second) of an audio stream format, transport overhead excluded (0 if unknown)
+std::uint64_t computeStreamPayloadBandwidth(la::avdecc::entity::model::StreamFormat const& streamFormat)
+{
+	auto const formatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
+	switch (formatInfo->getType())
+	{
+		case la::avdecc::entity::model::StreamFormatInfo::Type::AAF:
+		case la::avdecc::entity::model::StreamFormatInfo::Type::IEC_61883_6:
+			return static_cast<std::uint64_t>(formatInfo->getSamplingRate().getNominalSampleRate()) * formatInfo->getChannelsCount() * formatInfo->getSampleSize();
+		default:
+			return 0u;
+	}
+}
 } // namespace
 
 NetworkTopologyModel::NetworkTopologyModel(QObject* parent)
@@ -86,6 +123,9 @@ NetworkTopologyModel::NetworkTopologyModel(QObject* parent)
 	connect(&manager, &ControllerManager::avbInterfaceLinkStatusChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::streamInputErrorCounterChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::statisticsErrorCounterChanged, this, scheduleRebuild);
+	connect(&manager, &ControllerManager::streamOutputConnectionsChanged, this, scheduleRebuild);
+	connect(&manager, &ControllerManager::streamRunningChanged, this, scheduleRebuild);
+	connect(&manager, &ControllerManager::streamFormatChanged, this, scheduleRebuild);
 }
 
 NetworkTopologyModel::~NetworkTopologyModel() = default;
@@ -99,11 +139,14 @@ void NetworkTopologyModel::rebuild() noexcept
 {
 	auto topology = Topology{};
 
-	// Collect the gPTP information of every AVB interface of every discovered entity
+	// Collect the gPTP information of every AVB interface of every discovered entity, plus the established
+	// stream connections (talker side) and the stream inputs (to resolve the listener side of the connections)
 	auto interfaces = std::vector<InterfaceInfo>{};
+	auto streamOutputs = std::vector<StreamOutputInfo>{};
+	auto streamInputs = std::map<std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>, StreamInputInfo>{};
 	auto& manager = ControllerManager::getInstance();
 	manager.foreachEntity(
-		[&interfaces, &manager](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& entity)
+		[&interfaces, &streamOutputs, &streamInputs, &manager](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& entity)
 		{
 			try
 			{
@@ -123,6 +166,29 @@ void NetworkTopologyModel::rebuild() noexcept
 					{
 						errorCounter += value;
 					}
+					streamInputs.emplace(std::make_pair(entityID, streamIndex), StreamInputInfo{ streamNode.staticModel.avbInterfaceIndex, entityName, helper::objectName(&entity, streamNode) });
+				}
+
+				// Collect the established stream connections, from the talker side
+				for (auto const& [streamIndex, streamNode] : configurationNode.streamOutputs)
+				{
+					auto const& connections = streamNode.dynamicModel.connections;
+					if (connections.empty())
+					{
+						continue;
+					}
+					auto streamInfo = StreamOutputInfo{};
+					streamInfo.talkerEntityID = entityID;
+					streamInfo.avbInterfaceIndex = streamNode.staticModel.avbInterfaceIndex;
+					streamInfo.talkerName = entityName;
+					streamInfo.streamName = helper::objectName(&entity, streamNode);
+					streamInfo.streamFormat = streamNode.dynamicModel.streamFormat;
+					streamInfo.isRunning = streamNode.dynamicModel.isStreamRunning.value_or(true);
+					for (auto const& listenerStream : connections)
+					{
+						streamInfo.listeners.push_back(listenerStream);
+					}
+					streamOutputs.push_back(std::move(streamInfo));
 				}
 
 				for (auto const& [avbInterfaceIndex, avbInterfaceNode] : configurationNode.avbInterfaces)
@@ -305,6 +371,119 @@ void NetworkTopologyModel::rebuild() noexcept
 				if (auto const it = nodeIndexByClockIdentity.find(info.clockIdentity); it != nodeIndexByClockIdentity.end())
 				{
 					topology.nodes[it->second].isGrandmaster = true;
+				}
+			}
+		}
+	}
+
+	// Accumulate the established stream connections on the edges they transit through.
+	// The path between talker and listener is computed on the inferred tree (lowest common ancestor),
+	// like other AVB controllers do. Endpoints without a usable AsPath are skipped (their position is unknown).
+	{
+		// Lookup maps: (entityID, avbInterfaceIndex) -> node, parent of each node, (upstream, downstream) -> edge
+		auto nodeIndexByEntityInterface = std::map<std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::AvbInterfaceIndex>, std::size_t>{};
+		for (auto interfaceIndex = std::size_t{ 0u }; interfaceIndex < interfaces.size(); ++interfaceIndex)
+		{
+			nodeIndexByEntityInterface.emplace(std::make_pair(interfaces[interfaceIndex].entityID, interfaces[interfaceIndex].avbInterfaceIndex), interfaceIndex);
+		}
+		auto parentOf = std::vector<int>(topology.nodes.size(), -1);
+		auto edgeIndexByNodes = std::map<std::pair<std::size_t, std::size_t>, std::size_t>{};
+		for (auto edgeIndex = std::size_t{ 0u }; edgeIndex < topology.edges.size(); ++edgeIndex)
+		{
+			auto const& edge = topology.edges[edgeIndex];
+			parentOf[edge.downstreamNodeIndex] = static_cast<int>(edge.upstreamNodeIndex);
+			edgeIndexByNodes.emplace(std::make_pair(edge.upstreamNodeIndex, edge.downstreamNodeIndex), edgeIndex);
+		}
+
+		// Returns the indices of the edges on the tree path between two nodes (empty if they are in different trees)
+		auto const computePathEdges = [&topology, &parentOf, &edgeIndexByNodes](std::size_t const fromNodeIndex, std::size_t const toNodeIndex)
+		{
+			auto pathEdges = std::vector<std::size_t>{};
+
+			// Ancestors chain of 'from' (including itself), with their position in the chain
+			auto fromChain = std::vector<std::size_t>{};
+			auto fromChainPosition = std::unordered_map<std::size_t, std::size_t>{};
+			for (auto nodeIndex = static_cast<int>(fromNodeIndex); nodeIndex != -1 && fromChain.size() <= topology.nodes.size(); nodeIndex = parentOf[static_cast<std::size_t>(nodeIndex)])
+			{
+				fromChainPosition.emplace(static_cast<std::size_t>(nodeIndex), fromChain.size());
+				fromChain.push_back(static_cast<std::size_t>(nodeIndex));
+			}
+
+			// Walk up from 'to' until we reach a common ancestor
+			auto toChain = std::vector<std::size_t>{};
+			auto commonAncestorPosition = std::optional<std::size_t>{};
+			for (auto nodeIndex = static_cast<int>(toNodeIndex); nodeIndex != -1 && toChain.size() <= topology.nodes.size(); nodeIndex = parentOf[static_cast<std::size_t>(nodeIndex)])
+			{
+				if (auto const it = fromChainPosition.find(static_cast<std::size_t>(nodeIndex)); it != fromChainPosition.end())
+				{
+					commonAncestorPosition = it->second;
+					break;
+				}
+				toChain.push_back(static_cast<std::size_t>(nodeIndex));
+			}
+			if (!commonAncestorPosition)
+			{
+				return pathEdges;
+			}
+
+			// Upward part: from -> common ancestor
+			for (auto chainPosition = std::size_t{ 0u }; chainPosition < *commonAncestorPosition; ++chainPosition)
+			{
+				if (auto const it = edgeIndexByNodes.find(std::make_pair(fromChain[chainPosition + 1u], fromChain[chainPosition])); it != edgeIndexByNodes.end())
+				{
+					pathEdges.push_back(it->second);
+				}
+			}
+			// Downward part: common ancestor -> to
+			for (auto chainPosition = toChain.size(); chainPosition > 0u; --chainPosition)
+			{
+				auto const downstreamNodeIndex = toChain[chainPosition - 1u];
+				auto const upstreamNodeIndex = static_cast<std::size_t>(parentOf[downstreamNodeIndex]);
+				if (auto const it = edgeIndexByNodes.find(std::make_pair(upstreamNodeIndex, downstreamNodeIndex)); it != edgeIndexByNodes.end())
+				{
+					pathEdges.push_back(it->second);
+				}
+			}
+			return pathEdges;
+		};
+
+		for (auto const& streamInfo : streamOutputs)
+		{
+			auto const talkerIt = nodeIndexByEntityInterface.find(std::make_pair(streamInfo.talkerEntityID, streamInfo.avbInterfaceIndex));
+			if (talkerIt == nodeIndexByEntityInterface.end() || !topology.nodes[talkerIt->second].hasAsPath)
+			{
+				continue;
+			}
+			auto const payloadBandwidth = computeStreamPayloadBandwidth(streamInfo.streamFormat);
+
+			for (auto const& listenerStream : streamInfo.listeners)
+			{
+				// Resolve the listener node through the AVB interface of its stream input descriptor
+				auto const inputIt = streamInputs.find(std::make_pair(listenerStream.entityID, listenerStream.streamIndex));
+				if (inputIt == streamInputs.end())
+				{
+					continue;
+				}
+				auto const listenerIt = nodeIndexByEntityInterface.find(std::make_pair(listenerStream.entityID, inputIt->second.avbInterfaceIndex));
+				if (listenerIt == nodeIndexByEntityInterface.end() || !topology.nodes[listenerIt->second].hasAsPath)
+				{
+					continue;
+				}
+
+				auto description = QString{ "%1:%2 -> %3:%4" }.arg(streamInfo.talkerName, streamInfo.streamName, inputIt->second.listenerName, inputIt->second.streamName);
+				if (!streamInfo.isRunning)
+				{
+					description += " (stopped)";
+				}
+				for (auto const edgeIndex : computePathEdges(talkerIt->second, listenerIt->second))
+				{
+					auto& edge = topology.edges[edgeIndex];
+					++edge.streamCount;
+					if (streamInfo.isRunning)
+					{
+						edge.streamPayloadBandwidth += payloadBandwidth;
+					}
+					edge.streamDescriptions.push_back(description);
 				}
 			}
 		}

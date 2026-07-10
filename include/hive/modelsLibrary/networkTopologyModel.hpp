@@ -90,6 +90,9 @@ public:
 		std::size_t upstreamNodeIndex{ 0u };
 		std::size_t downstreamNodeIndex{ 0u };
 		EdgeKind kind{ EdgeKind::GptpPath };
+		std::uint32_t streamCount{ 0u }; /**< Number of established stream connections transiting through this edge (in either direction) */
+		std::uint64_t streamPayloadBandwidth{ 0u }; /**< Accumulated payload bitrate (bits per second) of the running streams transiting through this edge, transport overhead excluded */
+		std::vector<QString> streamDescriptions{}; /**< Human readable description of each stream connection transiting through this edge */
 	};
 
 	/** Immutable snapshot of the network topology. */

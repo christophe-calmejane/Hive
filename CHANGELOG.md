@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 ### Added
 - Network Graph window (View menu) displaying the network topology inferred from the gPTP information exposed by the entities (AsPath, grandmaster, propagation delay), with grandmaster and error indicators
+  - Entity selection synchronized with the Discovered Entities list
+  - Stream connections displayed on the edges they transit through, with accumulated payload bitrate
 
 ### Changed
 - [Enhanced connection matrix red color with MSRP Failure status](https://github.com/christophe-calmejane/Hive/issues/149)
