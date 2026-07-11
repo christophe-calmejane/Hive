@@ -47,10 +47,13 @@ struct InterfaceInfo
 	QString entityName{};
 	QString avbInterfaceName{};
 	bool isMultiInterface{ false };
+	bool isTalker{ false };
+	bool isListener{ false };
+	bool isStreaming{ false };
 	la::avdecc::UniqueIdentifier clockIdentity{};
 	la::avdecc::UniqueIdentifier gptpGrandmasterID{};
 	std::optional<std::uint8_t> gptpDomainNumber{};
-	la::avdecc::controller::ControlledEntity::InterfaceLinkStatus linkStatus{ la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown };
+	NetworkTopologyModel::ClockLockState clockLockState{ NetworkTopologyModel::ClockLockState::Unknown };
 	std::optional<std::uint32_t> propagationDelay{};
 	std::vector<la::avdecc::UniqueIdentifier> asPath{};
 	la::avdecc::UniqueIdentifier internalBridgeClockIdentity{}; /**< Clock identity of the entity's internal bridge, for bridged endpoints (propagation delay == 0) */
@@ -136,9 +139,12 @@ NetworkTopologyModel::Topology buildTopologyForNetwork(std::vector<InterfaceInfo
 		node.avbInterfaceIndex = info.avbInterfaceIndex;
 		node.avbInterfaceName = info.avbInterfaceName;
 		node.isMultiInterface = info.isMultiInterface;
+		node.isTalker = info.isTalker;
+		node.isListener = info.isListener;
+		node.isStreaming = info.isStreaming;
 		node.gptpGrandmasterID = info.gptpGrandmasterID;
 		node.gptpDomainNumber = info.gptpDomainNumber;
-		node.linkStatus = info.linkStatus;
+		node.clockLockState = info.clockLockState;
 		node.propagationDelay = info.propagationDelay;
 		node.hasAsPath = info.asPath.size() >= 2;
 		node.errorCounter = info.errorCounter;
@@ -422,18 +428,47 @@ NetworkTopologyModel::NetworkTopologyModel(QObject* parent)
 	connect(&manager, &ControllerManager::controllerOnline, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::controllerOffline, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::entityOnline, this, scheduleRebuild);
-	connect(&manager, &ControllerManager::entityOffline, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::entityNameChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::avbInterfaceNameChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::gptpChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::asPathChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::avbInterfaceInfoChanged, this, scheduleRebuild);
-	connect(&manager, &ControllerManager::avbInterfaceLinkStatusChanged, this, scheduleRebuild);
-	connect(&manager, &ControllerManager::streamInputErrorCounterChanged, this, scheduleRebuild);
-	connect(&manager, &ControllerManager::statisticsErrorCounterChanged, this, scheduleRebuild);
+	connect(&manager, &ControllerManager::clockDomainCountersChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::streamOutputConnectionsChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::streamRunningChanged, this, scheduleRebuild);
 	connect(&manager, &ControllerManager::streamFormatChanged, this, scheduleRebuild);
+
+	// Error counters are kept in incremental caches (querying the manager for every stream of every entity
+	// during a rebuild is too costly on large networks)
+	connect(&manager, &ControllerManager::entityOffline, this,
+		[this, scheduleRebuild](la::avdecc::UniqueIdentifier const entityID)
+		{
+			_streamInputErrorCounters.erase(entityID);
+			_statisticsErrorCounters.erase(entityID);
+			scheduleRebuild();
+		});
+	connect(&manager, &ControllerManager::streamInputErrorCounterChanged, this,
+		[this, scheduleRebuild](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, ControllerManager::StreamInputErrorCounters const& errorCounters)
+		{
+			auto counter = std::uint64_t{ 0u };
+			for (auto const& [flag, value] : errorCounters)
+			{
+				counter += value;
+			}
+			_streamInputErrorCounters[entityID][descriptorIndex] = counter;
+			scheduleRebuild();
+		});
+	connect(&manager, &ControllerManager::statisticsErrorCounterChanged, this,
+		[this, scheduleRebuild](la::avdecc::UniqueIdentifier const entityID, ControllerManager::StatisticsErrorCounters const& errorCounters)
+		{
+			auto counter = std::uint64_t{ 0u };
+			for (auto const& [flag, value] : errorCounters)
+			{
+				counter += value;
+			}
+			_statisticsErrorCounters[entityID] = counter;
+			scheduleRebuild();
+		});
 }
 
 NetworkTopologyModel::~NetworkTopologyModel() = default;
@@ -452,26 +487,48 @@ void NetworkTopologyModel::rebuild() noexcept
 	auto streamInputs = StreamInputInfos{};
 	auto& manager = ControllerManager::getInstance();
 	manager.foreachEntity(
-		[&interfaces, &streamOutputs, &streamInputs, &manager](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& entity)
+		[this, &interfaces, &streamOutputs, &streamInputs](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const& entity)
 		{
 			try
 			{
 				auto const& configurationNode = entity.getCurrentConfigurationNode();
 				auto const entityName = helper::smartEntityName(entity);
 				auto const isMultiInterface = configurationNode.avbInterfaces.size() > 1;
+				auto const isTalker = entity.getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty();
+				auto const isListener = entity.getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty();
 
-				// Aggregate entity level error counters (statistics + stream input errors)
-				auto errorCounter = std::uint64_t{ 0u };
-				for (auto const& [flag, value] : manager.getStatisticsCounters(entityID))
+				// Media clock lock state, from the counters of the first clock domain (same rule than the Discovered Entities list)
+				auto clockLockState = NetworkTopologyModel::ClockLockState::Unknown;
+				if (!configurationNode.clockDomains.empty())
 				{
-					errorCounter += value;
+					auto const& clockDomainNode = configurationNode.clockDomains.begin()->second;
+					if (clockDomainNode.dynamicModel.counters)
+					{
+						auto const& counters = *clockDomainNode.dynamicModel.counters;
+						auto const itLocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Locked);
+						auto const itUnlocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Unlocked);
+						if (itLocked != counters.end() && itUnlocked != counters.end())
+						{
+							clockLockState = itLocked->second > itUnlocked->second ? NetworkTopologyModel::ClockLockState::Locked : NetworkTopologyModel::ClockLockState::Unlocked;
+						}
+					}
+				}
+
+				// Aggregate entity level error counters (statistics + stream input errors) from the incremental caches
+				auto errorCounter = std::uint64_t{ 0u };
+				if (auto const statisticsIt = _statisticsErrorCounters.find(entityID); statisticsIt != _statisticsErrorCounters.end())
+				{
+					errorCounter += statisticsIt->second;
+				}
+				if (auto const streamsIt = _streamInputErrorCounters.find(entityID); streamsIt != _streamInputErrorCounters.end())
+				{
+					for (auto const& [streamIndex, counter] : streamsIt->second)
+					{
+						errorCounter += counter;
+					}
 				}
 				for (auto const& [streamIndex, streamNode] : configurationNode.streamInputs)
 				{
-					for (auto const& [flag, value] : manager.getStreamInputErrorCounters(entityID, streamIndex))
-					{
-						errorCounter += value;
-					}
 					streamInputs.emplace(std::make_pair(entityID, streamIndex), StreamInputInfo{ streamNode.staticModel.avbInterfaceIndex, entityName, helper::objectName(&entity, streamNode) });
 				}
 
@@ -508,11 +565,13 @@ void NetworkTopologyModel::rebuild() noexcept
 					info.entityName = entityName;
 					info.avbInterfaceName = helper::objectName(&entity, avbInterfaceNode);
 					info.isMultiInterface = isMultiInterface;
+					info.isTalker = isTalker;
+					info.isListener = isListener;
 					info.errorCounter = errorCounter;
 					info.clockIdentity = avbInterfaceNode.dynamicModel.clockIdentity;
 					info.gptpGrandmasterID = avbInterfaceNode.dynamicModel.gptpGrandmasterID;
 					info.gptpDomainNumber = avbInterfaceNode.dynamicModel.gptpDomainNumber;
-					info.linkStatus = entity.getAvbInterfaceLinkStatus(avbInterfaceIndex);
+					info.clockLockState = clockLockState;
 
 					if (avbInterfaceNode.dynamicModel.avbInterfaceInfo)
 					{
@@ -549,6 +608,22 @@ void NetworkTopologyModel::rebuild() noexcept
 				// Entity has no AEM support or no valid current configuration, it cannot appear in the topology
 			}
 		});
+
+	// Flag the interfaces currently sending at least one connected and running stream (visual cue on talkers)
+	{
+		auto streamingInterfaces = std::set<std::pair<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::AvbInterfaceIndex>>{};
+		for (auto const& streamInfo : streamOutputs)
+		{
+			if (streamInfo.isRunning && !streamInfo.listeners.empty())
+			{
+				streamingInterfaces.emplace(streamInfo.talkerEntityID, streamInfo.avbInterfaceIndex);
+			}
+		}
+		for (auto& info : interfaces)
+		{
+			info.isStreaming = streamingInterfaces.count(std::make_pair(info.entityID, info.avbInterfaceIndex)) > 0;
+		}
+	}
 
 	// Partition the interfaces by network (same AVB interface index = same network) and build one topology per network
 	auto interfacesByNetwork = std::map<la::avdecc::entity::model::AvbInterfaceIndex, std::vector<InterfaceInfo>>{};

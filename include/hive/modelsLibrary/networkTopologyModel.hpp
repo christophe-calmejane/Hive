@@ -26,6 +26,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 class QTimer;
@@ -64,6 +65,14 @@ public:
 		GptpGrandmasterOnly = 1, /**< Fallback edge for entities not exposing an AsPath: only the grandmaster is known, the physical path is unknown */
 	};
 
+	/** Media clock lock state of an entity (from its clock domain counters). */
+	enum class ClockLockState
+	{
+		Unknown = 0, /**< Not reported by the entity */
+		Unlocked = 1, /**< Clock domain is not locked */
+		Locked = 2, /**< Clock domain is locked on its media clock reference */
+	};
+
 	/** One node of the topology. */
 	struct Node
 	{
@@ -76,9 +85,12 @@ public:
 		la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
 		QString avbInterfaceName{};
 		bool isMultiInterface{ false }; /**< True if the entity has more than one AVB interface (each interface gets its own node) */
+		bool isTalker{ false }; /**< True if the entity implements a talker with at least one stream output */
+		bool isListener{ false }; /**< True if the entity implements a listener with at least one stream input */
+		bool isStreaming{ false }; /**< True if the entity currently has at least one connected and running stream output on this interface */
 		la::avdecc::UniqueIdentifier gptpGrandmasterID{};
 		std::optional<std::uint8_t> gptpDomainNumber{};
-		la::avdecc::controller::ControlledEntity::InterfaceLinkStatus linkStatus{ la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Unknown };
+		ClockLockState clockLockState{ ClockLockState::Unknown }; /**< Media clock lock state of the entity (entity level, duplicated on each interface node) */
 		std::optional<std::uint32_t> propagationDelay{}; /**< Propagation delay (nsec) between this interface and its upstream neighbor */
 		bool hasAsPath{ false }; /**< True if the entity exposes a usable AsPath for this interface */
 		std::uint64_t errorCounter{ 0u }; /**< Aggregated entity level error counter (stream input errors + statistics errors), duplicated on each interface node of the entity */
@@ -144,6 +156,11 @@ private:
 
 	std::vector<Network> _networks{};
 	QTimer* _rebuildTimer{ nullptr };
+
+	// Error counters are cached incrementally from the ControllerManager signals, so rebuilds don't have to
+	// query the manager for every stream of every entity (which is costly on large networks)
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::DescriptorIndex, std::uint64_t>, la::avdecc::UniqueIdentifier::hash> _streamInputErrorCounters{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::uint64_t, la::avdecc::UniqueIdentifier::hash> _statisticsErrorCounters{};
 };
 
 } // namespace modelsLibrary
