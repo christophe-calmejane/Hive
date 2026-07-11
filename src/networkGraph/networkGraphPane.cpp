@@ -43,9 +43,9 @@ namespace
 {
 using TopologyNode = hive::modelsLibrary::NetworkTopologyModel::Node;
 
-// Node dimensions and layout constants
-constexpr auto EntityNodeSize = QSizeF{ 190.0, 72.0 };
-constexpr auto BridgeNodeSize = QSizeF{ 190.0, 54.0 };
+// Node dimensions and layout constants (sized to fit an EntityID string plus the GM tag)
+constexpr auto EntityNodeSize = QSizeF{ 150.0, 56.0 };
+constexpr auto BridgeNodeSize = QSizeF{ 150.0, 44.0 };
 constexpr auto HorizontalSpacing = 40.0;
 constexpr auto VerticalSpacing = 70.0;
 
@@ -58,12 +58,13 @@ auto const TextColor = QColor{ 0x212121 };
 auto const SecondaryTextColor = QColor{ 0x757575 };
 auto const GrandmasterColor = QColor{ 0xFFC107 };
 auto const ErrorColor = QColor{ 0xD32F2F };
-auto const LinkUpColor = QColor{ 0x4CAF50 };
-auto const LinkDownColor = QColor{ 0xF44336 };
-auto const LinkUnknownColor = QColor{ 0x9E9E9E };
+auto const ClockLockedColor = QColor{ 0x4CAF50 };
+auto const ClockUnlockedColor = QColor{ 0xF44336 };
+auto const ClockUnknownColor = QColor{ 0x9E9E9E };
 auto const EdgeColor = QColor{ 0x90A4AE };
 auto const ActiveEdgeColor = QColor{ 0x1E88E5 };
 auto const HighlightEdgeColor = QColor{ 0xFB8C00 };
+auto const StreamingBorderColor = QColor{ 0x37474F };
 constexpr auto DimmedOpacity = 0.25;
 
 QString formatPropagationDelay(std::uint32_t const delayNsec)
@@ -84,16 +85,30 @@ QString formatBandwidth(std::uint64_t const bitsPerSecond)
 	return QString::number(bitsPerSecond / 1000.0, 'f', 1) + " kb/s";
 }
 
-QColor linkStatusColor(la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
+QColor clockLockStateColor(hive::modelsLibrary::NetworkTopologyModel::ClockLockState const clockLockState)
 {
-	switch (linkStatus)
+	switch (clockLockState)
 	{
-		case la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Up:
-			return LinkUpColor;
-		case la::avdecc::controller::ControlledEntity::InterfaceLinkStatus::Down:
-			return LinkDownColor;
+		case hive::modelsLibrary::NetworkTopologyModel::ClockLockState::Locked:
+			return ClockLockedColor;
+		case hive::modelsLibrary::NetworkTopologyModel::ClockLockState::Unlocked:
+			return ClockUnlockedColor;
 		default:
-			return LinkUnknownColor;
+			return ClockUnknownColor;
+	}
+}
+
+QString clockLockStateText(hive::modelsLibrary::NetworkTopologyModel::ClockLockState const clockLockState)
+{
+	// The state text is always displayed with the color of the dot shown on the tile
+	switch (clockLockState)
+	{
+		case hive::modelsLibrary::NetworkTopologyModel::ClockLockState::Locked:
+			return QStringLiteral("<font color=\"#4CAF50\">Locked</font> (green dot)");
+		case hive::modelsLibrary::NetworkTopologyModel::ClockLockState::Unlocked:
+			return QStringLiteral("<font color=\"#F44336\">Not locked</font> (red dot)");
+		default:
+			return QStringLiteral("<font color=\"#9E9E9E\">Not reported by the entity</font> (gray dot)");
 	}
 }
 
@@ -131,24 +146,68 @@ void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGra
 	}
 }
 
+// Base of the topology node items, allowing in-place refresh of the displayed information when the
+// topology structure didn't change (avoids a full scene rebuild on counters/status updates)
+class TopologyNodeItem : public qtMate::graph::GraphNodeItem
+{
+public:
+	TopologyNodeItem(TopologyNode const& node, QSizeF const& size)
+		: GraphNodeItem{ node.name, size }
+		, _node{ node }
+	{
+	}
+
+	void setNode(TopologyNode const& node)
+	{
+		_node = node;
+		setLabel(node.name);
+		setToolTip(buildTooltip());
+		update();
+	}
+
+protected:
+	virtual QString buildTooltip() const = 0;
+
+	TopologyNode _node{};
+};
+
 // Graph node displaying a discovered entity (one node per AVB interface)
-class EntityGraphNodeItem final : public qtMate::graph::GraphNodeItem
+class EntityGraphNodeItem final : public TopologyNodeItem
 {
 public:
 	EntityGraphNodeItem(TopologyNode const& node)
-		: GraphNodeItem{ node.name, EntityNodeSize }
-		, _node{ node }
+		: TopologyNodeItem{ node, EntityNodeSize }
 	{
+		setToolTip(buildTooltip());
+	}
+
+	virtual QString buildTooltip() const override
+	{
+		auto const& node = _node;
 		auto tooltip = QString{ "<b>%1</b>" }.arg(node.name.toHtmlEscaped());
 		if (node.isInterconnected)
 		{
 			tooltip += QString{ "<br><font color=\"#D32F2F\"><b>%1</b></font>" }.arg(node.interconnectionError.toHtmlEscaped());
 		}
 		tooltip += "<br>Entity ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.entityID);
+		if (node.isTalker || node.isListener)
+		{
+			auto roles = QStringList{};
+			if (node.isTalker)
+			{
+				roles += node.isStreaming ? "Talker (streaming)" : "Talker";
+			}
+			if (node.isListener)
+			{
+				roles += "Listener";
+			}
+			tooltip += "<br>Role: " + roles.join(" + ");
+		}
 		if (node.isMultiInterface || !node.avbInterfaceName.isEmpty())
 		{
 			tooltip += QString{ "<br>AVB Interface: %1 (index %2)" }.arg(node.avbInterfaceName.toHtmlEscaped()).arg(node.avbInterfaceIndex);
 		}
+		tooltip += "<br>Media Clock: " + clockLockStateText(node.clockLockState);
 		tooltip += "<br>Clock Identity: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity);
 		tooltip += "<br>Grandmaster ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.gptpGrandmasterID);
 		if (node.gptpDomainNumber)
@@ -167,15 +226,27 @@ public:
 		{
 			tooltip += QString{ "<br><font color=\"#D32F2F\">Errors: %1</font>" }.arg(node.errorCounter);
 		}
-		setToolTip(tooltip);
+		return tooltip;
 	}
 
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/) override
 	{
 		auto const rect = QRectF{ QPointF{ 0.0, 0.0 }, size() };
 		painter->setRenderHint(QPainter::Antialiasing);
-		// An interconnection error takes visual precedence over the selection
-		auto const borderPen = _node.isInterconnected ? QPen{ ErrorColor, 2.5 } : QPen{ isSelected() ? SelectedBorderColor : BorderColor, isSelected() ? 2.0 : 1.0 };
+		// Border precedence: interconnection error > selection > talker (bold contour as visual cue) > default
+		auto borderPen = QPen{ BorderColor, 1.0 };
+		if (_node.isInterconnected)
+		{
+			borderPen = QPen{ ErrorColor, 2.5 };
+		}
+		else if (isSelected())
+		{
+			borderPen = QPen{ SelectedBorderColor, 2.0 };
+		}
+		else if (_node.isStreaming)
+		{
+			borderPen = QPen{ StreamingBorderColor, 2.2 };
+		}
 		painter->setPen(borderPen);
 		painter->setBrush(EntityFillColor);
 		painter->drawRoundedRect(rect, 6.0, 6.0);
@@ -191,7 +262,7 @@ public:
 		painter->setPen(TextColor);
 		painter->drawText(QRectF{ 8.0, 4.0, nameWidth, 18.0 }, Qt::AlignLeft | Qt::AlignVCenter, QFontMetricsF{ nameFont }.elidedText(label(), Qt::ElideMiddle, nameWidth));
 
-		// Entity ID
+		// Entity ID (the bottom strip below it is reserved for the error badge, left, and the link status dot, right)
 		auto smallFont = painter->font();
 		smallFont.setBold(false);
 		smallFont.setPointSizeF(smallFont.pointSizeF() * 0.85);
@@ -199,17 +270,9 @@ public:
 		painter->setPen(SecondaryTextColor);
 		painter->drawText(QRectF{ 8.0, 22.0, textWidth, 14.0 }, Qt::AlignLeft | Qt::AlignVCenter, hive::modelsLibrary::helper::uniqueIdentifierToString(_node.entityID));
 
-		// AVB interface (only relevant when the entity has multiple interfaces, ie. multiple nodes)
-		// Text rows stop above the bottom strip, which is reserved for the error badge (left) and the link status dot (right)
-		if (_node.isMultiInterface)
-		{
-			auto const interfaceText = QString{ "%1 (index %2)" }.arg(_node.avbInterfaceName).arg(_node.avbInterfaceIndex);
-			painter->drawText(QRectF{ 8.0, 36.0, textWidth, 14.0 }, Qt::AlignLeft | Qt::AlignVCenter, QFontMetricsF{ smallFont }.elidedText(interfaceText, Qt::ElideRight, textWidth));
-		}
-
-		// Link status dot
+		// Media clock lock state dot
 		painter->setPen(Qt::NoPen);
-		painter->setBrush(linkStatusColor(_node.linkStatus));
+		painter->setBrush(clockLockStateColor(_node.clockLockState));
 		painter->drawEllipse(QRectF{ rect.width() - 14.0, rect.height() - 14.0, 8.0, 8.0 });
 
 		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter);
@@ -226,19 +289,22 @@ protected:
 		}
 		event->accept();
 	}
-
-private:
-	TopologyNode _node{};
 };
 
 // Graph node displaying a bridge inferred from the discovery protocol (not an ATDECC entity)
-class BridgeGraphNodeItem final : public qtMate::graph::GraphNodeItem
+class BridgeGraphNodeItem final : public TopologyNodeItem
 {
 public:
 	BridgeGraphNodeItem(TopologyNode const& node)
-		: GraphNodeItem{ node.name, BridgeNodeSize }
-		, _node{ node }
+		: TopologyNodeItem{ node, BridgeNodeSize }
 	{
+		setToolTip(buildTooltip());
+	}
+
+protected:
+	virtual QString buildTooltip() const override
+	{
+		auto const& node = _node;
 		auto tooltip = QStringLiteral("<b>Network Bridge</b> (inferred from gPTP, not an ATDECC entity)");
 		if (node.isInterconnected)
 		{
@@ -249,8 +315,10 @@ public:
 			tooltip += "<br>Vendor: " + node.name.toHtmlEscaped();
 		}
 		tooltip += "<br>Clock Identity: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity);
-		setToolTip(tooltip);
+		return tooltip;
 	}
+
+public:
 
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/) override
 	{
@@ -285,9 +353,6 @@ public:
 
 		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u);
 	}
-
-private:
-	TopologyNode _node{};
 };
 
 // Edge item with stream path highlight interactions (left-click highlights, right-click opens the streams menu)
@@ -364,10 +429,67 @@ NetworkGraphPane::NetworkGraphPane(QWidget* parent)
 		});
 }
 
+namespace
+{
+// Returns true when both topologies have the same graph structure (same nodes identity and same edges),
+// meaning the scene items can be refreshed in place instead of being rebuilt and re-laid out
+bool hasSameStructure(hive::modelsLibrary::NetworkTopologyModel::Topology const& lhs, hive::modelsLibrary::NetworkTopologyModel::Topology const& rhs)
+{
+	if (lhs.nodes.size() != rhs.nodes.size() || lhs.edges.size() != rhs.edges.size())
+	{
+		return false;
+	}
+	for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < lhs.nodes.size(); ++nodeIndex)
+	{
+		auto const& lhsNode = lhs.nodes[nodeIndex];
+		auto const& rhsNode = rhs.nodes[nodeIndex];
+		if (lhsNode.type != rhsNode.type || lhsNode.clockIdentity != rhsNode.clockIdentity || lhsNode.entityID != rhsNode.entityID || lhsNode.avbInterfaceIndex != rhsNode.avbInterfaceIndex)
+		{
+			return false;
+		}
+	}
+	for (auto edgeIndex = std::size_t{ 0u }; edgeIndex < lhs.edges.size(); ++edgeIndex)
+	{
+		auto const& lhsEdge = lhs.edges[edgeIndex];
+		auto const& rhsEdge = rhs.edges[edgeIndex];
+		if (lhsEdge.upstreamNodeIndex != rhsEdge.upstreamNodeIndex || lhsEdge.downstreamNodeIndex != rhsEdge.downstreamNodeIndex || lhsEdge.kind != rhsEdge.kind)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+} // namespace
+
 void NetworkGraphPane::setTopology(hive::modelsLibrary::NetworkTopologyModel::Topology const& topology)
 {
+	// When the structure didn't change (only counters, statuses, names or stream traffic did), refresh the
+	// existing items in place: much cheaper than a full rebuild, and it preserves the view zoom/pan and
+	// any manual node placement (frequent updates occur continuously on large networks)
+	auto const structureUnchanged = hasSameStructure(_topology, topology);
 	_topology = topology;
-	rebuildScene();
+	if (structureUnchanged)
+	{
+		refreshDecorations();
+	}
+	else
+	{
+		rebuildScene();
+	}
+}
+
+void NetworkGraphPane::refreshDecorations()
+{
+	for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < _nodeItems.size(); ++nodeIndex)
+	{
+		static_cast<TopologyNodeItem*>(_nodeItems[nodeIndex])->setNode(_topology.nodes[nodeIndex]);
+	}
+	for (auto edgeIndex = std::size_t{ 0u }; edgeIndex < _edgeItems.size(); ++edgeIndex)
+	{
+		applyEdgeDecorations(edgeIndex);
+	}
+	updateStatsText();
+	applyHighlightToScene();
 }
 
 void NetworkGraphPane::relayout()
@@ -419,6 +541,19 @@ void NetworkGraphPane::clearHighlight()
 	}
 }
 
+void NetworkGraphPane::setShowStreamInfo(bool const show)
+{
+	if (show != _showStreamInfo)
+	{
+		_showStreamInfo = show;
+		for (auto edgeIndex = std::size_t{ 0u }; edgeIndex < _edgeItems.size(); ++edgeIndex)
+		{
+			applyEdgeDecorations(edgeIndex);
+		}
+		applyHighlightToScene();
+	}
+}
+
 void NetworkGraphPane::showEdgeContextMenu(std::size_t const edgeIndex, QPoint const& screenPos)
 {
 	if (edgeIndex >= _topology.edges.size())
@@ -466,6 +601,109 @@ void NetworkGraphPane::showEdgeContextMenu(std::size_t const edgeIndex, QPoint c
 		{
 			highlightStream(it->second);
 		}
+	}
+}
+
+void NetworkGraphPane::applyEdgeDecorations(std::size_t const edgeIndex)
+{
+	auto const& edge = _topology.edges[edgeIndex];
+	auto* const edgeItem = _edgeItems[edgeIndex];
+	auto const streamCount = edge.streamIndices.size();
+	auto const hasStreams = streamCount > 0u;
+	auto pen = QPen{ hasStreams ? ActiveEdgeColor : EdgeColor, hasStreams ? 2.5 : 1.5 };
+	auto labelParts = QStringList{};
+	auto tooltip = QString{};
+
+	if (edge.kind == hive::modelsLibrary::NetworkTopologyModel::EdgeKind::GptpGrandmasterOnly)
+	{
+		pen.setStyle(Qt::DashLine);
+		tooltip = "Physical path unknown (entity does not expose its AsPath), attached to its grandmaster";
+	}
+	else
+	{
+		// Show the propagation delay of the downstream entity on its upstream link
+		auto const& downstreamNode = _topology.nodes[edge.downstreamNodeIndex];
+		if (downstreamNode.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity && downstreamNode.propagationDelay && *downstreamNode.propagationDelay > 0u)
+		{
+			labelParts += formatPropagationDelay(*downstreamNode.propagationDelay);
+		}
+	}
+
+	if (hasStreams)
+	{
+		// Accumulate the reserved bandwidth of the running streams transiting through this edge
+		auto reservedBandwidth = std::uint64_t{ 0u };
+		for (auto const streamIndex : edge.streamIndices)
+		{
+			auto const& stream = _topology.streams[streamIndex];
+			if (stream.isRunning)
+			{
+				reservedBandwidth += stream.reservedBandwidth;
+			}
+		}
+
+		auto streamsText = QString{ "%1 strm" }.arg(streamCount);
+		if (reservedBandwidth > 0u)
+		{
+			streamsText += QString{ " \xC2\xB7 %1" }.arg(formatBandwidth(reservedBandwidth));
+		}
+		labelParts += streamsText;
+
+		// List the transiting stream connections in the tooltip (capped to keep it readable)
+		constexpr auto MaxTooltipStreams = std::size_t{ 15u };
+		auto streamList = QStringList{};
+		for (auto const streamIndex : edge.streamIndices)
+		{
+			if (static_cast<std::size_t>(streamList.size()) >= MaxTooltipStreams)
+			{
+				streamList += QString{ "... and %1 more" }.arg(streamCount - MaxTooltipStreams);
+				break;
+			}
+			auto const& stream = _topology.streams[streamIndex];
+			auto description = stream.description.toHtmlEscaped();
+			if (!stream.isRunning)
+			{
+				description += " (stopped)";
+			}
+			streamList += description;
+		}
+		if (!tooltip.isEmpty())
+		{
+			tooltip += "<br>";
+		}
+		tooltip += QString{ "<b>%1 (estimated reserved bandwidth, transport overhead included)</b><br>%2<br><i>Left-click to highlight the stream paths, right-click for options</i>" }.arg(streamsText.toHtmlEscaped(), streamList.join("<br>"));
+	}
+
+	// Labels can be hidden to unclutter the graph, the tooltips remain available.
+	// Latency on the first line, stream count and bandwidth on the second one (better readability when edges are close to each other)
+	edgeItem->setLabel(_showStreamInfo ? labelParts.join('\n') : QString{});
+	edgeItem->setToolTip(tooltip);
+	edgeItem->setLinePen(pen);
+	_edgeBasePens[edgeIndex] = pen;
+}
+
+void NetworkGraphPane::updateStatsText()
+{
+	auto entityCount = 0;
+	auto bridgeCount = 0;
+	auto hasInterconnectionError = false;
+	for (auto const& node : _topology.nodes)
+	{
+		if (node.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity)
+		{
+			++entityCount;
+		}
+		else
+		{
+			++bridgeCount;
+		}
+		hasInterconnectionError |= node.isInterconnected;
+	}
+
+	_statsText = QString{ "%1 %2 - %3 %4" }.arg(entityCount).arg(entityCount > 1 ? "entities" : "entity").arg(bridgeCount).arg(bridgeCount > 1 ? "bridges" : "bridge");
+	if (hasInterconnectionError)
+	{
+		_statsText += QStringLiteral(" - <font color=\"#D32F2F\"><b>INTERCONNECTED NETWORKS</b></font>");
 	}
 }
 
@@ -555,8 +793,6 @@ void NetworkGraphPane::rebuildScene()
 
 	// Create node items
 	_nodeItems.resize(_topology.nodes.size());
-	auto entityCount = 0;
-	auto bridgeCount = 0;
 	for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < _topology.nodes.size(); ++nodeIndex)
 	{
 		auto const& node = _topology.nodes[nodeIndex];
@@ -566,12 +802,10 @@ void NetworkGraphPane::rebuildScene()
 			item = new EntityGraphNodeItem{ node };
 			_itemsForEntity[node.entityID].push_back(item);
 			_entityForItem.emplace(item, node.entityID);
-			++entityCount;
 		}
 		else
 		{
 			item = new BridgeGraphNodeItem{ node };
-			++bridgeCount;
 		}
 		item->setPos(positions[nodeIndex]);
 		_scene->addItem(item);
@@ -585,90 +819,12 @@ void NetworkGraphPane::rebuildScene()
 	{
 		auto const& edge = _topology.edges[edgeIndex];
 		auto* const edgeItem = new StreamEdgeItem{ this, edgeIndex, _nodeItems[edge.upstreamNodeIndex], _nodeItems[edge.downstreamNodeIndex] };
-		auto const streamCount = edge.streamIndices.size();
-		auto const hasStreams = streamCount > 0u;
-		auto pen = QPen{ hasStreams ? ActiveEdgeColor : EdgeColor, hasStreams ? 2.5 : 1.5 };
-		auto labelParts = QStringList{};
-		auto tooltip = QString{};
-
-		if (edge.kind == hive::modelsLibrary::NetworkTopologyModel::EdgeKind::GptpGrandmasterOnly)
-		{
-			pen.setStyle(Qt::DashLine);
-			tooltip = "Physical path unknown (entity does not expose its AsPath), attached to its grandmaster";
-		}
-		else
-		{
-			// Show the propagation delay of the downstream entity on its upstream link
-			auto const& downstreamNode = _topology.nodes[edge.downstreamNodeIndex];
-			if (downstreamNode.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity && downstreamNode.propagationDelay && *downstreamNode.propagationDelay > 0u)
-			{
-				labelParts += formatPropagationDelay(*downstreamNode.propagationDelay);
-			}
-		}
-
-		if (hasStreams)
-		{
-			// Accumulate the reserved bandwidth of the running streams transiting through this edge
-			auto reservedBandwidth = std::uint64_t{ 0u };
-			for (auto const streamIndex : edge.streamIndices)
-			{
-				auto const& stream = _topology.streams[streamIndex];
-				if (stream.isRunning)
-				{
-					reservedBandwidth += stream.reservedBandwidth;
-				}
-			}
-
-			auto streamsText = QString{ "%1 %2" }.arg(streamCount).arg(streamCount > 1 ? "streams" : "stream");
-			if (reservedBandwidth > 0u)
-			{
-				streamsText += QString{ " \xC2\xB7 %1" }.arg(formatBandwidth(reservedBandwidth));
-			}
-			labelParts += streamsText;
-
-			// List the transiting stream connections in the tooltip (capped to keep it readable)
-			constexpr auto MaxTooltipStreams = std::size_t{ 15u };
-			auto streamList = QStringList{};
-			for (auto const streamIndex : edge.streamIndices)
-			{
-				if (static_cast<std::size_t>(streamList.size()) >= MaxTooltipStreams)
-				{
-					streamList += QString{ "... and %1 more" }.arg(streamCount - MaxTooltipStreams);
-					break;
-				}
-				auto const& stream = _topology.streams[streamIndex];
-				auto description = stream.description.toHtmlEscaped();
-				if (!stream.isRunning)
-				{
-					description += " (stopped)";
-				}
-				streamList += description;
-			}
-			if (!tooltip.isEmpty())
-			{
-				tooltip += "<br>";
-			}
-			tooltip += QString{ "<b>%1 (estimated reserved bandwidth, transport overhead included)</b><br>%2<br><i>Left-click to highlight the stream paths, right-click for options</i>" }.arg(streamsText.toHtmlEscaped(), streamList.join("<br>"));
-		}
-
-		edgeItem->setLabel(labelParts.join(" | "));
-		edgeItem->setToolTip(tooltip);
-		edgeItem->setLinePen(pen);
 		_scene->addItem(edgeItem);
 		_edgeItems[edgeIndex] = edgeItem;
-		_edgeBasePens[edgeIndex] = pen;
+		applyEdgeDecorations(edgeIndex);
 	}
 
-	_statsText = QString{ "%1 %2 - %3 %4" }.arg(entityCount).arg(entityCount > 1 ? "entities" : "entity").arg(bridgeCount).arg(bridgeCount > 1 ? "bridges" : "bridge");
-	auto const hasInterconnectionError = std::any_of(_topology.nodes.begin(), _topology.nodes.end(),
-		[](auto const& node)
-		{
-			return node.isInterconnected;
-		});
-	if (hasInterconnectionError)
-	{
-		_statsText += QStringLiteral(" - <font color=\"#D32F2F\"><b>INTERCONNECTED NETWORKS</b></font>");
-	}
+	updateStatsText();
 
 	// Restore the application wide entity selection and the stream highlight on the freshly created items
 	applySelectionToScene();

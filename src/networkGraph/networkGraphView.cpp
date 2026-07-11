@@ -53,12 +53,16 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 	_relayoutButton.setToolTip("Re-layout the graph");
 	_fitButton.setToolTip("Zoom to fit");
 	_clearHighlightButton.setToolTip("Clear stream highlight (Esc)");
+	_streamInfoButton.setToolTip("Show/hide stream bandwidth and latency information");
+	_streamInfoButton.setCheckable(true);
+	_streamInfoButton.setChecked(true);
 
 	auto* const toolbarLayout = new QHBoxLayout{};
 	toolbarLayout->setContentsMargins(2, 2, 2, 2);
 	toolbarLayout->addWidget(&_relayoutButton);
 	toolbarLayout->addWidget(&_fitButton);
 	toolbarLayout->addWidget(&_clearHighlightButton);
+	toolbarLayout->addWidget(&_streamInfoButton);
 	toolbarLayout->addStretch();
 	toolbarLayout->addWidget(&_statsLabel);
 
@@ -99,6 +103,15 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 			if (auto* const pane = currentPane())
 			{
 				pane->clearHighlight();
+			}
+		});
+	connect(&_streamInfoButton, &QPushButton::toggled, this,
+		[this](bool const checked)
+		{
+			_streamInfoButton.setText(checked ? "label" : "label_off");
+			for (auto const& [avbInterfaceIndex, pane] : _panes)
+			{
+				pane->setShowStreamInfo(checked);
 			}
 		});
 
@@ -197,6 +210,7 @@ void NetworkGraphView::rebuildPanes()
 			_panes.insert(_panes.begin() + static_cast<std::ptrdiff_t>(networkIndex), std::make_pair(network.avbInterfaceIndex, pane));
 			_tabWidget->insertTab(static_cast<int>(networkIndex), pane, networkName(network.avbInterfaceIndex));
 			pane->selectEntity(_selectedEntityID);
+			pane->setShowStreamInfo(_streamInfoButton.isChecked());
 		}
 		_panes[networkIndex].second->setTopology(network.topology);
 	}

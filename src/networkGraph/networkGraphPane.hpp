@@ -77,6 +77,9 @@ public:
 	/** Clears the stream path highlight. */
 	void clearHighlight();
 
+	/** Shows/hides the stream bandwidth and latency labels on the edges (tooltips remain available). */
+	void setShowStreamInfo(bool const show);
+
 	/** Shows the context menu of an edge (stream highlight actions). */
 	void showEdgeContextMenu(std::size_t const edgeIndex, QPoint const& screenPos);
 
@@ -91,6 +94,9 @@ protected:
 
 private:
 	void rebuildScene();
+	void refreshDecorations();
+	void applyEdgeDecorations(std::size_t const edgeIndex);
+	void updateStatsText();
 	void applySelectionToScene();
 	void applyHighlightToScene();
 
@@ -110,6 +116,7 @@ private:
 	la::avdecc::UniqueIdentifier _selectedEntityID{};
 	bool _changingSelection{ false };
 	bool _pendingFit{ false }; // Fit deferred until the pane becomes visible (fitInView is a no-op on a hidden viewport)
+	bool _showStreamInfo{ true };
 
 	// Stream path highlight state
 	std::set<StreamKey> _highlightedStreamKeys{};
