@@ -20,10 +20,29 @@
 #include "QtMate/graph/treeLayout.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
+#include <vector>
 
 namespace qtMate::graph
 {
+namespace
+{
+// Precomputed placement information of one item and its subtree
+struct SubtreeMetrics
+{
+	std::vector<size_t> leafChildren{}; /**< Children without children of their own, packed in a near-square grid */
+	std::vector<size_t> branchChildren{}; /**< Children having children, laid out side by side next to the grid */
+	size_t gridColumns{ 0u };
+	qreal gridCellWidth{ 0.0 };
+	qreal gridCellHeight{ 0.0 };
+	qreal gridWidth{ 0.0 };
+	qreal gridHeight{ 0.0 };
+	qreal childrenWidth{ 0.0 }; /**< Total width of the children block (grid + branches) */
+	qreal subtreeWidth{ 0.0 };
+};
+} // namespace
+
 std::vector<QPointF> computeTreeLayout(std::vector<TreeLayoutItem> const& items, qreal const horizontalSpacing, qreal const verticalSpacing)
 {
 	auto const count = items.size();
@@ -73,80 +92,83 @@ std::vector<QPointF> computeTreeLayout(std::vector<TreeLayoutItem> const& items,
 		}
 	}
 
-	// Compute depth of each item and the height of each depth level
-	auto depths = std::vector<size_t>(count, 0u);
-	auto levelHeights = std::vector<qreal>{};
+	// Compute the metrics of each subtree, bottom-up.
+	// Children without children of their own (leaves) are packed in a near-square grid below their parent
+	// instead of a single row, to keep wide fan-outs (many devices on the same bridge) readable.
+	auto metrics = std::vector<SubtreeMetrics>(count);
 	{
-		std::function<void(size_t, size_t)> const computeDepth = [&](size_t const idx, size_t const depth)
+		std::function<void(size_t)> const computeMetrics = [&](size_t const idx)
 		{
-			depths[idx] = depth;
-			if (levelHeights.size() <= depth)
-			{
-				levelHeights.resize(depth + 1, 0.0);
-			}
-			levelHeights[depth] = std::max(levelHeights[depth], items[idx].size.height());
+			auto& m = metrics[idx];
 			for (auto const child : children[idx])
 			{
-				computeDepth(child, depth + 1);
+				if (children[child].empty())
+				{
+					m.leafChildren.push_back(child);
+					m.gridCellWidth = std::max(m.gridCellWidth, items[child].size.width());
+					m.gridCellHeight = std::max(m.gridCellHeight, items[child].size.height());
+				}
+				else
+				{
+					computeMetrics(child);
+					m.branchChildren.push_back(child);
+				}
 			}
+
+			if (!m.leafChildren.empty())
+			{
+				auto const leafCount = m.leafChildren.size();
+				m.gridColumns = static_cast<size_t>(std::ceil(std::sqrt(static_cast<double>(leafCount))));
+				auto const gridRows = (leafCount + m.gridColumns - 1u) / m.gridColumns;
+				m.gridWidth = static_cast<qreal>(m.gridColumns) * m.gridCellWidth + static_cast<qreal>(m.gridColumns - 1u) * horizontalSpacing;
+				m.gridHeight = static_cast<qreal>(gridRows) * m.gridCellHeight + static_cast<qreal>(gridRows - 1u) * verticalSpacing;
+			}
+
+			m.childrenWidth = m.gridWidth;
+			for (auto const branch : m.branchChildren)
+			{
+				if (m.childrenWidth > 0.0)
+				{
+					m.childrenWidth += horizontalSpacing;
+				}
+				m.childrenWidth += metrics[branch].subtreeWidth;
+			}
+			m.subtreeWidth = std::max(items[idx].size.width(), m.childrenWidth);
 		};
 		for (auto const root : roots)
 		{
-			computeDepth(root, 0u);
+			computeMetrics(root);
 		}
 	}
 
-	// Compute the y position of each depth level
-	auto levelY = std::vector<qreal>(levelHeights.size(), 0.0);
-	for (auto level = size_t{ 1u }; level < levelHeights.size(); ++level)
+	// Assign positions, top-down: each subtree is given a horizontal span, the item is centered in it,
+	// its leaf children grid and branch children share the span below it
 	{
-		levelY[level] = levelY[level - 1] + levelHeights[level - 1] + verticalSpacing;
-	}
-
-	// Compute the width required by each subtree
-	auto subtreeWidths = std::vector<qreal>(count, 0.0);
-	{
-		std::function<qreal(size_t)> const computeSubtreeWidth = [&](size_t const idx)
+		std::function<void(size_t, qreal, qreal)> const placeSubtree = [&](size_t const idx, qreal const left, qreal const top)
 		{
-			auto childrenWidth = qreal{ 0.0 };
-			for (auto const child : children[idx])
+			auto const& m = metrics[idx];
+			positions[idx] = QPointF{ left + (m.subtreeWidth - items[idx].size.width()) / 2.0, top };
+
+			auto const childrenTop = top + items[idx].size.height() + verticalSpacing;
+			auto childLeft = left + (m.subtreeWidth - m.childrenWidth) / 2.0;
+
+			// Leaf children grid, row-major
+			for (auto leafPosition = size_t{ 0u }; leafPosition < m.leafChildren.size(); ++leafPosition)
 			{
-				if (childrenWidth > 0.0)
-				{
-					childrenWidth += horizontalSpacing;
-				}
-				childrenWidth += computeSubtreeWidth(child);
+				auto const column = leafPosition % m.gridColumns;
+				auto const row = leafPosition / m.gridColumns;
+				positions[m.leafChildren[leafPosition]] = QPointF{ childLeft + static_cast<qreal>(column) * (m.gridCellWidth + horizontalSpacing), childrenTop + static_cast<qreal>(row) * (m.gridCellHeight + verticalSpacing) };
 			}
-			subtreeWidths[idx] = std::max(items[idx].size.width(), childrenWidth);
-			return subtreeWidths[idx];
-		};
-		for (auto const root : roots)
-		{
-			computeSubtreeWidth(root);
-		}
-	}
-
-	// Assign positions: each subtree is given a horizontal span, the item is centered in it and its children share it
-	{
-		std::function<void(size_t, qreal)> const placeSubtree = [&](size_t const idx, qreal const left)
-		{
-			positions[idx] = QPointF{ left + (subtreeWidths[idx] - items[idx].size.width()) / 2.0, levelY[depths[idx]] };
-
-			// Center the children group within the subtree span
-			auto childrenWidth = qreal{ 0.0 };
-			for (auto const child : children[idx])
+			if (m.gridWidth > 0.0)
 			{
-				if (childrenWidth > 0.0)
-				{
-					childrenWidth += horizontalSpacing;
-				}
-				childrenWidth += subtreeWidths[child];
+				childLeft += m.gridWidth + horizontalSpacing;
 			}
-			auto childLeft = left + (subtreeWidths[idx] - childrenWidth) / 2.0;
-			for (auto const child : children[idx])
+
+			// Branch children, side by side
+			for (auto const branch : m.branchChildren)
 			{
-				placeSubtree(child, childLeft);
-				childLeft += subtreeWidths[child] + horizontalSpacing;
+				placeSubtree(branch, childLeft, childrenTop);
+				childLeft += metrics[branch].subtreeWidth + horizontalSpacing;
 			}
 		};
 
@@ -154,8 +176,8 @@ std::vector<QPointF> computeTreeLayout(std::vector<TreeLayoutItem> const& items,
 		auto treeLeft = qreal{ 0.0 };
 		for (auto const root : roots)
 		{
-			placeSubtree(root, treeLeft);
-			treeLeft += subtreeWidths[root] + horizontalSpacing * 2.0;
+			placeSubtree(root, treeLeft, 0.0);
+			treeLeft += metrics[root].subtreeWidth + horizontalSpacing * 2.0;
 		}
 	}
 

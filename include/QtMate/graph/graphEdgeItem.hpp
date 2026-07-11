@@ -25,11 +25,15 @@
 namespace qtMate::graph
 {
 class GraphNodeItem;
+class GraphEdgeLabelItem;
 
 /**
 * @brief Edge connecting two GraphNodeItem in a QGraphicsScene.
 * @details Draws a vertical cubic curve from the bottom anchor of the upstream node
 *          to the top anchor of the downstream node, with an optional label at mid-path.
+*          The label is a separate scene item drawn above all the edge lines (so it is never covered
+*          by nearby edges), using the palette text color over a translucent background plate, which
+*          keeps it readable in both light and dark themes.
 *          The path is automatically updated when either node moves.
 */
 class GraphEdgeItem : public QGraphicsPathItem
@@ -50,7 +54,7 @@ public:
 	GraphEdgeItem(GraphNodeItem* upstreamNode, GraphNodeItem* downstreamNode, QGraphicsItem* parent = nullptr);
 	virtual ~GraphEdgeItem() override;
 
-	/** Sets the label displayed at mid-path (empty to hide). */
+	/** Sets the label displayed at mid-path, may contain multiple lines separated by '\n' (empty to hide). */
 	void setLabel(QString const& label);
 
 	/** Sets the pen used to draw the edge line. */
@@ -63,14 +67,18 @@ public:
 	void detachNode(GraphNodeItem* node);
 
 	virtual int type() const override;
-	virtual QRectF boundingRect() const override;
 	virtual QPainterPath shape() const override;
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* widget = nullptr) override;
 
+protected:
+	virtual QVariant itemChange(GraphicsItemChange change, QVariant const& value) override;
+
 private:
+	friend class GraphEdgeLabelItem;
+
 	GraphNodeItem* _upstreamNode{ nullptr };
 	GraphNodeItem* _downstreamNode{ nullptr };
-	QString _label{};
+	GraphEdgeLabelItem* _labelItem{ nullptr };
 };
 
 } // namespace qtMate::graph

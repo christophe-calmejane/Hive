@@ -20,17 +20,101 @@
 #include "QtMate/graph/graphEdgeItem.hpp"
 #include "QtMate/graph/graphNodeItem.hpp"
 
+#include <QFontMetricsF>
+#include <QGraphicsScene>
 #include <QPainter>
+#include <QStyleOptionGraphicsItem>
 
 namespace qtMate::graph
 {
+// Z ordering of the graph items: edge lines at the bottom, then edge labels, then nodes (default Z of 0)
+static constexpr auto EdgeLineZValue = -2.0;
+static constexpr auto EdgeLabelZValue = -1.0;
+
+/**
+* @brief Label of a GraphEdgeItem, as a dedicated top-level scene item.
+* @details Drawn above all the edge lines (see Z ordering) so the text is never covered by nearby edges.
+*          The text uses the palette text color over a translucent plate of the palette window color,
+*          making it readable over any line in both light and dark themes.
+*          Lifetime is managed by the owning GraphEdgeItem, with mutual detach notifications since a
+*          QGraphicsScene destroys its items in an undefined order.
+*/
+class GraphEdgeLabelItem : public QGraphicsItem
+{
+public:
+	GraphEdgeLabelItem(GraphEdgeItem* edge)
+		: _edge{ edge }
+	{
+		setZValue(EdgeLabelZValue);
+		// Let mouse interactions go through to the underlying items
+		setAcceptedMouseButtons(Qt::NoButton);
+	}
+
+	virtual ~GraphEdgeLabelItem() override
+	{
+		if (_edge)
+		{
+			_edge->_labelItem = nullptr;
+		}
+	}
+
+	void detachEdge()
+	{
+		_edge = nullptr;
+	}
+
+	void setText(QString const& text)
+	{
+		if (text != _text)
+		{
+			prepareGeometryChange();
+			_text = text;
+			update();
+		}
+	}
+
+	virtual QRectF boundingRect() const override
+	{
+		return QRectF{ -90.0, -18.0, 180.0, 36.0 };
+	}
+
+	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* option, QWidget* /*widget*/) override
+	{
+		if (_text.isEmpty())
+		{
+			return;
+		}
+
+		painter->setRenderHint(QPainter::Antialiasing);
+		auto font = painter->font();
+		font.setPointSizeF(font.pointSizeF() * 0.85);
+		painter->setFont(font);
+
+		// Translucent plate of the background color, so the text detaches from the lines it crosses
+		auto const textRect = QFontMetricsF{ font }.boundingRect(boundingRect(), Qt::AlignCenter, _text);
+		auto plateColor = option->palette.color(QPalette::Window);
+		plateColor.setAlpha(200);
+		painter->setPen(Qt::NoPen);
+		painter->setBrush(plateColor);
+		painter->drawRoundedRect(textRect.adjusted(-4.0, -1.0, 4.0, 1.0), 3.0, 3.0);
+
+		// Palette text color: black on light theme, white on dark theme
+		painter->setPen(option->palette.color(QPalette::WindowText));
+		painter->drawText(boundingRect(), Qt::AlignCenter, _text);
+	}
+
+private:
+	GraphEdgeItem* _edge{ nullptr };
+	QString _text{};
+};
+
 GraphEdgeItem::GraphEdgeItem(GraphNodeItem* upstreamNode, GraphNodeItem* downstreamNode, QGraphicsItem* parent)
 	: QGraphicsPathItem{ parent }
 	, _upstreamNode{ upstreamNode }
 	, _downstreamNode{ downstreamNode }
 {
-	// Draw edges behind nodes
-	setZValue(-1.0);
+	setZValue(EdgeLineZValue);
+	_labelItem = new GraphEdgeLabelItem{ this };
 
 	_upstreamNode->registerEdge(this);
 	_downstreamNode->registerEdge(this);
@@ -48,15 +132,19 @@ GraphEdgeItem::~GraphEdgeItem()
 	{
 		_downstreamNode->unregisterEdge(this);
 	}
+	// The label might already have been destroyed by the scene (items are destroyed in an undefined order)
+	if (_labelItem)
+	{
+		_labelItem->detachEdge();
+		delete _labelItem;
+	}
 }
 
 void GraphEdgeItem::setLabel(QString const& label)
 {
-	if (label != _label)
+	if (_labelItem)
 	{
-		prepareGeometryChange();
-		_label = label;
-		update();
+		_labelItem->setText(label);
 	}
 }
 
@@ -81,6 +169,11 @@ void GraphEdgeItem::updatePath()
 	path.cubicTo(QPointF{ start.x(), start.y() + dy }, QPointF{ end.x(), end.y() - dy }, end);
 
 	setPath(path);
+
+	if (_labelItem)
+	{
+		_labelItem->setPos(path.pointAtPercent(0.5));
+	}
 }
 
 void GraphEdgeItem::detachNode(GraphNodeItem* node)
@@ -100,12 +193,6 @@ int GraphEdgeItem::type() const
 	return Type;
 }
 
-QRectF GraphEdgeItem::boundingRect() const
-{
-	// Extend the path bounding rect so the label always fits
-	return QGraphicsPathItem::boundingRect().adjusted(-90.0, -10.0, 90.0, 10.0);
-}
-
 QPainterPath GraphEdgeItem::shape() const
 {
 	// Widen the interactive area (hover/click) around the line, a stroked thin curve would be nearly impossible to hit
@@ -118,17 +205,24 @@ void GraphEdgeItem::paint(QPainter* painter, QStyleOptionGraphicsItem const* opt
 {
 	painter->setRenderHint(QPainter::Antialiasing);
 	QGraphicsPathItem::paint(painter, option, widget);
+}
 
-	if (!_label.isEmpty())
+QVariant GraphEdgeItem::itemChange(GraphicsItemChange change, QVariant const& value)
+{
+	// The label is a top-level item, it must follow the edge in and out of the scene
+	if (change == QGraphicsItem::ItemSceneHasChanged && _labelItem)
 	{
-		auto const center = path().pointAtPercent(0.5);
-		auto font = painter->font();
-		font.setPointSizeF(font.pointSizeF() * 0.85);
-		painter->setFont(font);
-		painter->setPen(pen().color());
-		auto const textRect = QRectF{ center.x() - 90.0, center.y() - 8.0, 180.0, 16.0 };
-		painter->drawText(textRect, Qt::AlignCenter, _label);
+		if (auto* const currentScene = scene())
+		{
+			currentScene->addItem(_labelItem);
+			_labelItem->setPos(path().isEmpty() ? QPointF{} : path().pointAtPercent(0.5));
+		}
+		else if (auto* const labelScene = _labelItem->scene())
+		{
+			labelScene->removeItem(_labelItem);
+		}
 	}
+	return QGraphicsPathItem::itemChange(change, value);
 }
 
 } // namespace qtMate::graph
