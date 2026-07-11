@@ -116,6 +116,15 @@
    </attribute>
    <widget class="LoggerView" name="loggerView"/>
   </widget>
+  <widget class="QDockWidget" name="networkGraphDockWidget">
+   <property name="windowTitle">
+    <string>Network Graph</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="NetworkGraphView" name="networkGraphView"/>
+  </widget>
   <widget class="QDockWidget" name="entityInspectorDockWidget">
    <property name="windowTitle">
     <string>Entity Model Inspector</string>
@@ -266,6 +275,12 @@
    <class>EntityInspector</class>
    <extends>QWidget</extends>
    <header>entityInspector.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>NetworkGraphView</class>
+   <extends>QWidget</extends>
+   <header>networkGraph/networkGraphView.hpp</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

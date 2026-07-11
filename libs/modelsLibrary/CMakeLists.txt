@@ -44,6 +44,7 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkInterfacesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/discoveredEntitiesModel.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkTopologyModel.hpp
 )
 
 set(HEADER_FILES_COMMON
@@ -58,6 +59,7 @@ set(SOURCE_FILES_COMMON
 	controllerManager.cpp
 	networkInterfacesModel.cpp
 	discoveredEntitiesModel.cpp
+	networkTopologyModel.cpp
 	virtualController.cpp
 )
 

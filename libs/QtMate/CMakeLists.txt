@@ -29,6 +29,10 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/QtMate/flow/flowSocket.hpp
 	${CU_ROOT_DIR}/include/QtMate/flow/flowStyle.hpp
 	${CU_ROOT_DIR}/include/QtMate/flow/flowView.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/graphEdgeItem.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/graphNodeItem.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/graphView.hpp
+	${CU_ROOT_DIR}/include/QtMate/graph/treeLayout.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/autoSizeLabel.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/comboBox.hpp
 	${CU_ROOT_DIR}/include/QtMate/widgets/dynamicHeaderView.hpp
@@ -58,6 +62,10 @@ set(SOURCE_FILES_COMMON
 	flow/flowSocket.cpp
 	flow/flowStyle.cpp
 	flow/flowView.cpp
+	graph/graphEdgeItem.cpp
+	graph/graphNodeItem.cpp
+	graph/graphView.cpp
+	graph/treeLayout.cpp
 	widgets/autoSizeLabel.cpp
 	widgets/comboBox.cpp
 	widgets/dynamicHeaderView.cpp
