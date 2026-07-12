@@ -50,8 +50,9 @@ HiveApplication::HiveApplication(int& argc, char** argv)
 	// Process the events immediately so we can catch the FileOpen event before the MainWindow is created
 	processEvents();
 
-	// Remove the event filter, the main window will install its own
-	removeEventFilter(this);
+	// Note: the event filter is kept installed, so FileOpen events received before the MainWindow installs its own filter
+	// (eg. while the splashscreen is displayed) are buffered instead of being lost. Once the MainWindow filter is
+	// installed it is activated first (installed last) and consumes the events, so this filter no longer sees them.
 }
 
 void HiveApplication::addFileToLoad(QString const& filePath)
@@ -62,6 +63,13 @@ void HiveApplication::addFileToLoad(QString const& filePath)
 QStringList const& HiveApplication::getFilesToLoad() const
 {
 	return _filesToLoad;
+}
+
+QStringList HiveApplication::takeFilesToLoad()
+{
+	auto files = std::move(_filesToLoad);
+	_filesToLoad.clear();
+	return files;
 }
 
 bool HiveApplication::isDarkColorScheme() const noexcept

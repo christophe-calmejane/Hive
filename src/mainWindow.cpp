@@ -37,7 +37,7 @@
 #endif
 
 #if defined(Q_OS_WIN32)
-#include <Windows.h>
+#	include <Windows.h>
 #endif
 
 #include "avdecc/helper.hpp"
@@ -55,6 +55,7 @@
 #include "deviceDetailsDialog.hpp"
 #include "settingsDialog.hpp"
 #include "multiFirmwareUpdateDialog.hpp"
+#include "eventJournal/eventJournalView.hpp"
 #include "defaults.hpp"
 #include "windowsNpfHelper.hpp"
 #include "visibilitySettings.hpp"
@@ -206,6 +207,7 @@ void MainWindowImpl::setupAdvancedView(hive::VisibilityDefaults const& defaults)
 	entityInspectorDockWidget->setVisible(defaults.mainWindow_Inspector_Visible);
 	loggerDockWidget->setVisible(defaults.mainWindow_Logger_Visible);
 	networkGraphDockWidget->setVisible(defaults.mainWindow_NetworkGraph_Visible);
+	eventJournalDockWidget->setVisible(defaults.mainWindow_EventJournal_Visible);
 
 	// Load settings, overriding defaults
 	loadSettings();
@@ -404,6 +406,30 @@ void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
 		}
 	}
 
+	// Hive Event Journal
+	else if (ext == hive::modelsLibrary::EventJournal::JournalFileExtension)
+	{
+		auto session = hive::modelsLibrary::EventJournal::loadSession(fileName);
+		if (session)
+		{
+			auto* viewer = new EventJournalView{ std::move(*session), fileName };
+			viewer->setAttribute(Qt::WA_DeleteOnClose);
+			viewer->show();
+			viewer->raise();
+		}
+		else
+		{
+			if (silent)
+			{
+				LOG_HIVE_WARN(QString("[%1] Error loading event journal file").arg(fileName));
+			}
+			else
+			{
+				QMessageBox::warning(_parent, "Failed to load Event Journal", QString("Error loading event journal file '%1'").arg(fileName));
+			}
+		}
+	}
+
 	// Any kind of file, we have to autodetect
 	else if (ext == "json")
 	{
@@ -482,6 +508,11 @@ void MainWindowImpl::currentControllerChanged()
 		// Create a new Controller
 		manager.createController(protocolType, interfaceID, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
 		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID()));
+
+		// Attach context information to the event journal session (the recording started when the controller went online)
+		auto& eventJournal = hive::modelsLibrary::EventJournal::getInstance();
+		eventJournal.setSessionMetadata("interface_id", interfaceID);
+		eventJournal.setSessionMetadata("interface_name", _interfaceComboBox.currentText());
 		if (_advertisingDuration)
 		{
 			manager.enableEntityAdvertising(*_advertisingDuration);
@@ -546,6 +577,7 @@ void MainWindowImpl::createViewMenu()
 	menuView->addAction(entityInspectorDockWidget->toggleViewAction());
 	menuView->addAction(loggerDockWidget->toggleViewAction());
 	menuView->addAction(networkGraphDockWidget->toggleViewAction());
+	menuView->addAction(eventJournalDockWidget->toggleViewAction());
 	menuView->addSeparator();
 
 	// Appearance in a sub menu and exclusive action group
@@ -944,6 +976,41 @@ void MainWindowImpl::connectSignals()
 					}
 				}
 			}
+		});
+
+	connect(actionExportEventJournal, &QAction::triggered, this,
+		[this]()
+		{
+			auto& eventJournal = hive::modelsLibrary::EventJournal::getInstance();
+			if (!eventJournal.isRecording())
+			{
+				QMessageBox::warning(_parent, "", "No event journal is being recorded (the controller is not started).");
+				return;
+			}
+			auto const filename = QFileDialog::getSaveFileName(_parent, "Export Event Journal As...", QString("%1/EventJournal_%2.%3").arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")).arg(hive::modelsLibrary::EventJournal::JournalFileExtension), QString("Event Journal Files (*.%1)").arg(hive::modelsLibrary::EventJournal::JournalFileExtension));
+			if (!filename.isEmpty())
+			{
+				if (!eventJournal.exportCurrentSession(filename))
+				{
+					QMessageBox::warning(_parent, "", "Failed to export the event journal.");
+				}
+			}
+		});
+
+	connect(actionOpenEventJournal, &QAction::triggered, this,
+		[this]()
+		{
+			auto const filename = QFileDialog::getOpenFileName(_parent, "Open Event Journal", hive::modelsLibrary::EventJournal::journalsDirectory(), QString("Event Journal Files (*.%1)").arg(hive::modelsLibrary::EventJournal::JournalFileExtension));
+			if (!filename.isEmpty())
+			{
+				loadFile(filename, false);
+			}
+		});
+
+	connect(&hive::modelsLibrary::EventJournal::getInstance(), &hive::modelsLibrary::EventJournal::recordingFailed, this,
+		[](QString const& reason)
+		{
+			LOG_HIVE_WARN(QString("Event Journal recording failed: %1").arg(reason));
 		});
 
 	//

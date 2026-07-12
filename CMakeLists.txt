@@ -160,7 +160,7 @@ endif()
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake) # Required to find_package 3rd party modules that don't provide their CMake Config files
 
 # Find Qt dependencies
-find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Network;Sql REQUIRED)
 
 # Setup variables related to the project version
 cu_setup_project_version_variables(${HIVE_VERSION})

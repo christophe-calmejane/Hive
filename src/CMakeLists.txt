@@ -40,9 +40,11 @@ elseif(APPLE)
 	# Add icons for file associations
 	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_HEJ.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	list(APPEND RESOURCE_FILES
 		${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns
 		${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns
+		${HIVE_RESOURCES_FOLDER}/macOS/Icon_HEJ.icns
 	)
 endif()
 
@@ -81,6 +83,9 @@ set(HEADER_FILES_COMMON
 	counters/streamOutputCountersTreeWidgetItem.hpp
 	discoveredEntities/view.hpp
 	diagnostics/compatibilityChangeEventsDialog.hpp
+	eventJournal/eventJournalModel.hpp
+	eventJournal/eventJournalTimeline.hpp
+	eventJournal/eventJournalView.hpp
 	diagnostics/controlDiagnosticsTreeWidgetItem.hpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.hpp
 	diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp
@@ -120,6 +125,7 @@ set(HEADER_FILES_COMMON
 	deviceDetailsLatencyTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
+	autoScrollBar.hpp
 	discoveredEntitiesView.hpp
 	firmwareUploadDialog.hpp
 	multiFirmwareUpdateDialog.hpp
@@ -175,6 +181,9 @@ set(SOURCE_FILES_COMMON
 	counters/streamOutputCountersTreeWidgetItem.cpp
 	discoveredEntities/view.cpp
 	diagnostics/compatibilityChangeEventsDialog.cpp
+	eventJournal/eventJournalModel.cpp
+	eventJournal/eventJournalTimeline.cpp
+	eventJournal/eventJournalView.cpp
 	diagnostics/controlDiagnosticsTreeWidgetItem.cpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.cpp
 	diagnostics/streamInputDiagnosticsTreeWidgetItem.cpp

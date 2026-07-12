@@ -27,3 +27,4 @@ END
 IDI_ICON1 ICON "${CU_ROOT_DIR}/resources/win32/Icon.ico"
 IDI_ICON2 ICON "${CU_ROOT_DIR}/resources/win32/Icon_AVE.ico"
 IDI_ICON3 ICON "${CU_ROOT_DIR}/resources/win32/Icon_ANS.ico"
+IDI_ICON4 ICON "${CU_ROOT_DIR}/resources/win32/Icon_HEJ.ico"
