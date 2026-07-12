@@ -319,7 +319,6 @@ protected:
 	}
 
 public:
-
 	virtual void paint(QPainter* painter, QStyleOptionGraphicsItem const* /*option*/, QWidget* /*widget*/) override
 	{
 		auto const rect = QRectF{ QPointF{ 0.0, 0.0 }, size() };

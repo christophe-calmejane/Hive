@@ -339,7 +339,11 @@ void EventJournalView::refreshEntityFilterMenu()
 	_entityFilterMenu.addSeparator();
 
 	auto sortedNames = QStringList{ _knownEntityNames.cbegin(), _knownEntityNames.cend() };
-	std::sort(sortedNames.begin(), sortedNames.end(), [](QString const& lhs, QString const& rhs) { return lhs.compare(rhs, Qt::CaseInsensitive) < 0; });
+	std::sort(sortedNames.begin(), sortedNames.end(),
+		[](QString const& lhs, QString const& rhs)
+		{
+			return lhs.compare(rhs, Qt::CaseInsensitive) < 0;
+		});
 	for (auto const& name : sortedNames)
 	{
 		auto* action = _entityFilterMenu.addAction(name);

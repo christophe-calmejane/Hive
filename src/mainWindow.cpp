@@ -37,7 +37,7 @@
 #endif
 
 #if defined(Q_OS_WIN32)
-#include <Windows.h>
+#	include <Windows.h>
 #endif
 
 #include "avdecc/helper.hpp"
