@@ -47,7 +47,7 @@ CREATE TABLE events (
 );
 ```
 
-Metadata keys: `schema_version`, `hive_version`, `computer_name`, `started_utc`, `stopped_utc`, `interface_id`, `interface_name`.
+Metadata keys: `schema_version`, `hive_version`, `computer_name`, `started_utc`, `stopped_utc`, `interface_id`, `interface_name`, and in dual-PI (redundant controller) mode `secondary_interface_id`, `secondary_interface_name`.
 
 ### Recorded events
 
@@ -62,6 +62,8 @@ Metadata keys: `schema_version`, `hive_version`, `computer_name`, `started_utc`,
 | Link | `avbInterfaceLinkStatusChanged` | Error (down) / Recovered (up) |
 | Latency | `streamInputLatencyErrorChanged` | Error / Recovered |
 | Redundancy | `redundancyWarningChanged` | Error / Recovered |
+| Redundancy | `redundantInterfaceTransportError` (transport error on one controller interface in dual-PI mode, the other one still being operational) | Error |
+| Redundancy | `entityRedundantInterfaceOffline` / `entityRedundantInterfaceOnline` (entity lost/recovered on one of its redundant interfaces while remaining online on the other; the online notification is only journaled as a recovery, not during normal discovery) | Warning / Recovered |
 
 The `Recovered` severity marks the end of a previously reported error condition, so the duration of an incident (clock unlock, link down, ...) is directly visible in the journal.
 

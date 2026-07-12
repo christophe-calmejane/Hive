@@ -33,6 +33,7 @@
 #include <QStandardPaths>
 
 #include <atomic>
+#include <set>
 #include <unordered_map>
 #include <utility>
 
@@ -168,6 +169,19 @@ QString statisticsCounterName(ControllerManager::StatisticsErrorCounterFlag cons
 			return "MVU Unsolicited Response Losses";
 		default:
 			return helper::toHexQString(la::avdecc::utils::to_integral(flag), true);
+	}
+}
+
+QString interfaceTypeName(la::avdecc::controller::Controller::InterfaceType const interfaceType) noexcept
+{
+	switch (interfaceType)
+	{
+		case la::avdecc::controller::Controller::InterfaceType::Primary:
+			return "Primary";
+		case la::avdecc::controller::Controller::InterfaceType::Secondary:
+			return "Secondary";
+		default:
+			return "Unknown";
 	}
 }
 
@@ -351,6 +365,7 @@ public:
 		_statisticsErrorCounters.erase(entityID);
 		_redundancyWarnings.erase(entityID);
 		_latencyErrors.erase(entityID);
+		_lostRedundantInterfaces.erase(entityID);
 	}
 
 	void handleEntityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName) noexcept
@@ -559,6 +574,39 @@ public:
 		previousCounters = errorCounters;
 	}
 
+	void handleRedundantInterfaceTransportError(la::avdecc::controller::Controller::InterfaceType const interfaceType) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		auto const name = interfaceTypeName(interfaceType);
+		addEvent(Category::Redundancy, Severity::Error, {}, {}, QString{ "%1 Interface" }.arg(name), QString{ "Transport error on the controller %1 interface (the other redundant interface is still operational)" }.arg(name));
+	}
+
+	void handleEntityRedundantInterfaceOffline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		_lostRedundantInterfaces[entityID].insert(avbInterfaceIndex);
+		addEvent(Category::Redundancy, Severity::Warning, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Entity is offline on one redundant interface (still online on the other)");
+	}
+
+	void handleEntityRedundantInterfaceOnline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		// Only journal a recovery if that interface was previously reported lost (this notification is also part of the normal discovery sequence)
+		if (auto const it = _lostRedundantInterfaces.find(entityID); it != _lostRedundantInterfaces.end() && it->second.erase(avbInterfaceIndex) > 0)
+		{
+			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Entity is back online on the redundant interface");
+		}
+	}
+
 	void handleRedundancyWarningChanged(la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning) noexcept
 	{
 		if (!isRecording())
@@ -731,6 +779,7 @@ public:
 		_statisticsErrorCounters.clear();
 		_redundancyWarnings.clear();
 		_latencyErrors.clear();
+		_lostRedundantInterfaces.clear();
 	}
 
 	void cleanupOldJournals(QString const& dirPath) noexcept
@@ -766,6 +815,7 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, ControllerManager::StatisticsErrorCounters, la::avdecc::UniqueIdentifier::hash> _statisticsErrorCounters{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, bool, la::avdecc::UniqueIdentifier::hash> _redundancyWarnings{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, bool>, la::avdecc::UniqueIdentifier::hash> _latencyErrors{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::set<la::avdecc::entity::model::AvbInterfaceIndex>, la::avdecc::UniqueIdentifier::hash> _lostRedundantInterfaces{};
 };
 
 /* ************************************************************ */
@@ -846,6 +896,21 @@ EventJournal::EventJournal()
 		[this](la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning)
 		{
 			_pImpl->handleRedundancyWarningChanged(entityID, isRedundancyWarning);
+		});
+	connect(&manager, &ControllerManager::redundantInterfaceTransportError, this,
+		[this](int const interfaceType)
+		{
+			_pImpl->handleRedundantInterfaceTransportError(static_cast<la::avdecc::controller::Controller::InterfaceType>(interfaceType));
+		});
+	connect(&manager, &ControllerManager::entityRedundantInterfaceOffline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+		{
+			_pImpl->handleEntityRedundantInterfaceOffline(entityID, avbInterfaceIndex);
+		});
+	connect(&manager, &ControllerManager::entityRedundantInterfaceOnline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::Entity::InterfaceInformation const&)
+		{
+			_pImpl->handleEntityRedundantInterfaceOnline(entityID, avbInterfaceIndex);
 		});
 	connect(&manager, &ControllerManager::streamInputLatencyErrorChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError)

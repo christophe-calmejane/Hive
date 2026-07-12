@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Timeline strip plotting events per category over time (zoom/pan, hover details with time since previous occurrence, click to select in the table), making recurring problems and their spacing directly visible
   - CSV export from the viewer (all events or only the filtered ones)
   - `.hej` file association: double-clicking a journal file opens it in a Hive viewer window
+  - Redundant controller (dual-PI) events: transport error on one of the controller interfaces, and entities lost/recovered on one of their redundant interfaces
   - Journal files can be exported while recording (File > Export menu) and reopened later in standalone viewer windows (File > Open Event Journal)
 
 ### Changed

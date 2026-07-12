@@ -714,7 +714,7 @@ void MainWindowImpl::currentControllerChanged()
 		if (isDualPiMode)
 		{
 			auto const secondaryEID = hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID(la::avdecc::controller::Controller::InterfaceType::Secondary));
-			_controllerEntityIDTitleLabel.setToolTip(tooltip);
+			_controllerEntityIDTitleLabel.setToolTip(QString("Primary: %1\nSecondary: %2").arg(_controllerEntityIDLabel.text(), secondaryEID));
 		}
 		else
 		{
@@ -723,8 +723,13 @@ void MainWindowImpl::currentControllerChanged()
 
 		// Attach context information to the event journal session (the recording started when the controller went online)
 		auto& eventJournal = hive::modelsLibrary::EventJournal::getInstance();
-		eventJournal.setSessionMetadata("interface_id", interfaceID);
+		eventJournal.setSessionMetadata("interface_id", primaryInterfaceID);
 		eventJournal.setSessionMetadata("interface_name", _interfaceComboBox.currentText());
+		if (isDualPiMode)
+		{
+			eventJournal.setSessionMetadata("secondary_interface_id", secondaryInterfaceID);
+			eventJournal.setSessionMetadata("secondary_interface_name", _secondaryInterfaceComboBox.currentText());
+		}
 
 		if (_advertisingDuration)
 		{
