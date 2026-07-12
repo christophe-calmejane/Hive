@@ -81,6 +81,8 @@ set(HEADER_FILES_COMMON
 	counters/streamOutputCountersTreeWidgetItem.hpp
 	discoveredEntities/view.hpp
 	diagnostics/compatibilityChangeEventsDialog.hpp
+	eventJournal/eventJournalModel.hpp
+	eventJournal/eventJournalView.hpp
 	diagnostics/controlDiagnosticsTreeWidgetItem.hpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.hpp
 	diagnostics/streamInputDiagnosticsTreeWidgetItem.hpp
@@ -120,6 +122,7 @@ set(HEADER_FILES_COMMON
 	deviceDetailsLatencyTableModel.hpp
 	aboutDialog.hpp
 	loggerView.hpp
+	autoScrollBar.hpp
 	discoveredEntitiesView.hpp
 	firmwareUploadDialog.hpp
 	multiFirmwareUpdateDialog.hpp
@@ -175,6 +178,8 @@ set(SOURCE_FILES_COMMON
 	counters/streamOutputCountersTreeWidgetItem.cpp
 	discoveredEntities/view.cpp
 	diagnostics/compatibilityChangeEventsDialog.cpp
+	eventJournal/eventJournalModel.cpp
+	eventJournal/eventJournalView.cpp
 	diagnostics/controlDiagnosticsTreeWidgetItem.cpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.cpp
 	diagnostics/streamInputDiagnosticsTreeWidgetItem.cpp

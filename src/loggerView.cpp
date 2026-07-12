@@ -18,43 +18,14 @@
 */
 
 #include "loggerView.hpp"
+#include "autoScrollBar.hpp"
 #include "avdecc/helper.hpp"
 
-#include <QScrollBar>
 #include <QFileDialog>
 #include <QStandardPaths>
 #include <QShortcut>
 #include <QMessageBox>
 #include <QDateTime>
-
-class AutoScrollBar : public QScrollBar
-{
-public:
-	AutoScrollBar(QWidget* parent)
-		: AutoScrollBar(Qt::Vertical, parent)
-	{
-	}
-
-	AutoScrollBar(Qt::Orientation orientation, QWidget* parent)
-		: QScrollBar(orientation, parent)
-	{
-		_bufferedMaximum = maximum();
-
-		connect(this, &QScrollBar::rangeChanged, this,
-			[this](int, int max)
-			{
-				if (value() == _bufferedMaximum)
-				{
-					setValue(max);
-				}
-
-				_bufferedMaximum = max;
-			});
-	}
-
-private:
-	int _bufferedMaximum{ 0 };
-};
 
 const std::vector<la::avdecc::logger::Layer> loggerLayers{
 	la::avdecc::logger::Layer::Generic,

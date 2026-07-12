@@ -64,7 +64,9 @@
       <string>&amp;Export</string>
      </property>
      <addaction name="actionExportFullNetworkState"/>
+     <addaction name="actionExportEventJournal"/>
     </widget>
+    <addaction name="actionOpenEventJournal"/>
     <addaction name="menuExport"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -124,6 +126,15 @@
     <number>8</number>
    </attribute>
    <widget class="NetworkGraphView" name="networkGraphView"/>
+  </widget>
+  <widget class="QDockWidget" name="eventJournalDockWidget">
+   <property name="windowTitle">
+    <string>Event Journal</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="EventJournalView" name="eventJournalView"/>
   </widget>
   <widget class="QDockWidget" name="entityInspectorDockWidget">
    <property name="windowTitle">
@@ -198,6 +209,16 @@
     <string>Full Network State...</string>
    </property>
   </action>
+  <action name="actionExportEventJournal">
+   <property name="text">
+    <string>Event Journal...</string>
+   </property>
+  </action>
+  <action name="actionOpenEventJournal">
+   <property name="text">
+    <string>&amp;Open Event Journal...</string>
+   </property>
+  </action>
   <action name="actionSettings">
    <property name="text">
     <string>&amp;Settings...</string>
@@ -259,6 +280,12 @@
    <class>connectionMatrix::View</class>
    <extends>QTableView</extends>
    <header>connectionMatrix/view.hpp</header>
+  </customwidget>
+  <customwidget>
+   <class>EventJournalView</class>
+   <extends>QWidget</extends>
+   <header>eventJournal/eventJournalView.hpp</header>
+   <container>1</container>
   </customwidget>
   <customwidget>
    <class>LoggerView</class>

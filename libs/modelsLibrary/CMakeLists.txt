@@ -4,7 +4,7 @@
 cu_setup_project(${PROJECT_NAME}_models ${HIVE_VERSION} "Hive Models Library")
 
 # Find dependencies
-find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Widgets;Sql REQUIRED)
 
 # Configure files based on CMakeLists.txt version number
 configure_file(
@@ -42,6 +42,7 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/helper.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/commandsExecutor.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/eventJournal.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkInterfacesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/discoveredEntitiesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkTopologyModel.hpp
@@ -57,6 +58,7 @@ set(SOURCE_FILES_COMMON
 	helper.cpp
 	commandsExecutorImpl.cpp
 	controllerManager.cpp
+	eventJournal.cpp
 	networkInterfacesModel.cpp
 	discoveredEntitiesModel.cpp
 	networkTopologyModel.cpp
@@ -97,7 +99,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Core la_avdecc_controller_cxx)
+target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Core Qt${QT_MAJOR_VERSION}::Sql la_avdecc_controller_cxx)
 
 if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	# Define shared library
@@ -118,7 +120,7 @@ if(BUILD_HIVE_MODELS_SHARED_LIBRARY)
 	target_compile_definitions(${PROJECT_NAME}_shared PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 	# Link libraries
-	target_link_libraries(${PROJECT_NAME}_shared PUBLIC Qt${QT_MAJOR_VERSION}::Core la_avdecc_controller_cxx)
+	target_link_libraries(${PROJECT_NAME}_shared PUBLIC Qt${QT_MAJOR_VERSION}::Core Qt${QT_MAJOR_VERSION}::Sql la_avdecc_controller_cxx)
 
 endif()
 
