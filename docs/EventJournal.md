@@ -80,6 +80,12 @@ A timeline strip (`EventJournalTimeline`) is displayed above the table, plotting
 
 `File > Export > Event Journal...` exports a snapshot of the current session at any time while recording.
 
+The Export button of the viewer offers two formats: a journal file snapshot (live session only) and a CSV file (all events or only the currently filtered ones), for analysis in a spreadsheet.
+
+## File association
+
+The `.hej` extension is associated with Hive (macOS `Info.plist` document types, Windows installer file associations with the `Icon_HEJ` icon, Linux AppImage mime type), so double-clicking a journal file opens it in a viewer window: `MainWindowImpl::loadFile()` handles the extension like `.ave`/`.ans` files (command line arguments, macOS FileOpen events, and forwarding to the already running instance on Windows). On macOS, FileOpen events received before the MainWindow is created (eg. while the splashscreen is displayed) are buffered by `HiveApplication` and loaded once the window exists.
+
 ## Possible future improvements
 
 - Additional event types (entity renames, unsolicited notification losses, Milan compatibility changes, stream format changes).

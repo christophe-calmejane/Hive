@@ -70,6 +70,20 @@
 				<key>LSHandlerRank</key>
 				<string>Owner</string>
 			</dict>
+			<dict>
+				<key>CFBundleTypeExtensions</key>
+				<array>
+					<string>hej</string>
+				</array>
+				<key>CFBundleTypeName</key>
+				<string>Hive Event Journal</string>
+				<key>CFBundleTypeRole</key>
+				<string>Viewer</string>
+				<key>CFBundleTypeIconFile</key>
+				<string>Icon_HEJ.icns</string>
+				<key>LSHandlerRank</key>
+				<string>Owner</string>
+			</dict>
 		</array>
 	</dict>
 </plist>

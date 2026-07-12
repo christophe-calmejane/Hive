@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Event Journal recording important network events to a crash-safe database file for after-show analysis (entities online/offline, stream connections, error counters, media clock lock, gPTP changes, link status, latency and redundancy issues)
   - Event Journal window (View menu) displaying the live session with severity/category/entity/time filters, regex search and per-severity colors
   - Timeline strip plotting events per category over time (zoom/pan, hover details with time since previous occurrence, click to select in the table), making recurring problems and their spacing directly visible
+  - CSV export from the viewer (all events or only the filtered ones)
+  - `.hej` file association: double-clicking a journal file opens it in a Hive viewer window
   - Journal files can be exported while recording (File > Export menu) and reopened later in standalone viewer windows (File > Open Event Journal)
 
 ### Changed

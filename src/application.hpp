@@ -30,6 +30,9 @@ public:
 
 	QStringList const& getFilesToLoad() const;
 
+	/** Returns the buffered files to load, clearing the buffer. */
+	QStringList takeFilesToLoad();
+
 	bool isDarkColorScheme() const noexcept;
 
 	bool isDarkPaletteSupported() const noexcept;

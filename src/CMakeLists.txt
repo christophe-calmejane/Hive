@@ -40,9 +40,11 @@ elseif(APPLE)
 	# Add icons for file associations
 	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_HEJ.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	list(APPEND RESOURCE_FILES
 		${HIVE_RESOURCES_FOLDER}/macOS/Icon_AVE.icns
 		${HIVE_RESOURCES_FOLDER}/macOS/Icon_ANS.icns
+		${HIVE_RESOURCES_FOLDER}/macOS/Icon_HEJ.icns
 	)
 endif()
 

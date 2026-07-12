@@ -28,6 +28,7 @@
 #include <QDateTimeEdit>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMenu>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSplitter>
@@ -55,6 +56,7 @@ private:
 	void createSeverityFilterMenu();
 	void createCategoryFilterMenu();
 	void refreshEntityFilterMenu();
+	void exportAsCsv();
 	void updateTimeRangeFilter();
 	void updateStatusLabel();
 	void handleRowsInserted(int const firstRow, int const lastRow);
@@ -69,6 +71,8 @@ private:
 	QPushButton _entityFilterButton{ "Entity", this };
 	QLineEdit _searchLineEdit{ this };
 	QPushButton _exportButton{ "Export...", this };
+	QMenu _exportMenu{ this };
+	QAction* _exportJournalAction{ nullptr };
 	QCheckBox _fromCheckBox{ "From:", this };
 	QDateTimeEdit _fromDateTimeEdit{ this };
 	QCheckBox _toCheckBox{ "To:", this };

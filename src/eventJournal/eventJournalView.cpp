@@ -23,6 +23,7 @@
 #include <hive/modelsLibrary/helper.hpp>
 
 #include <QDateTime>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDatabase>
@@ -32,6 +33,7 @@
 #include <QMessageBox>
 #include <QSignalBlocker>
 #include <QStandardPaths>
+#include <QTextStream>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -93,18 +95,18 @@ EventJournalView::EventJournalView(QWidget* parent)
 
 	auto& journal = EventJournal::getInstance();
 
-	_exportButton.setEnabled(journal.isRecording());
+	_exportJournalAction->setEnabled(journal.isRecording());
 	connect(&journal, &EventJournal::recordingStarted, this,
 		[this](QString const&)
 		{
-			_exportButton.setEnabled(true);
+			_exportJournalAction->setEnabled(true);
 		});
 	connect(&journal, &EventJournal::recordingStopped, this,
 		[this]()
 		{
-			_exportButton.setEnabled(false);
+			_exportJournalAction->setEnabled(false);
 		});
-	connect(&_exportButton, &QPushButton::clicked, this,
+	connect(_exportJournalAction, &QAction::triggered, this,
 		[this]()
 		{
 			auto const filename = QFileDialog::getSaveFileName(this, "Export Event Journal As...", QString{ "%1/EventJournal_%2.%3" }.arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")).arg(EventJournal::JournalFileExtension), QString{ "Event Journal Files (*.%1)" }.arg(EventJournal::JournalFileExtension));
@@ -142,7 +144,18 @@ void EventJournalView::buildUi(bool const isLiveMode)
 	filterLayout->addWidget(&_entityFilterButton);
 	filterLayout->addWidget(&_searchLineEdit, 1);
 	filterLayout->addWidget(&_exportButton);
-	_exportButton.setVisible(isLiveMode);
+
+	if (isLiveMode)
+	{
+		_exportJournalAction = _exportMenu.addAction("Journal File...");
+	}
+	auto* exportCsvAction = _exportMenu.addAction("CSV File...");
+	connect(exportCsvAction, &QAction::triggered, this,
+		[this]()
+		{
+			exportAsCsv();
+		});
+	_exportButton.setMenu(&_exportMenu);
 
 	createSeverityFilterMenu();
 	createCategoryFilterMenu();
@@ -332,6 +345,51 @@ void EventJournalView::refreshEntityFilterMenu()
 		auto* action = _entityFilterMenu.addAction(name);
 		action->setCheckable(true);
 		action->setChecked(!_hiddenEntityNames.contains(name));
+	}
+}
+
+void EventJournalView::exportAsCsv()
+{
+	// If filters are currently reducing the displayed events, ask whether they should apply to the export
+	auto applyFilters = false;
+	if (_filterProxyModel.rowCount() != _model.rowCount())
+	{
+		applyFilters = QMessageBox::question(this, {}, "Apply the current filters to the exported CSV?", QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes;
+	}
+
+	auto const filename = QFileDialog::getSaveFileName(this, "Export CSV As...", QString{ "%1/EventJournal_%2.csv" }.arg(QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)).arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss")), "CSV Files (*.csv)");
+	if (filename.isEmpty())
+	{
+		return;
+	}
+
+	auto file = QFile{ filename };
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
+	{
+		QMessageBox::critical(this, {}, "Failed to write the CSV file.");
+		return;
+	}
+	auto stream = QTextStream{ &file };
+	stream.setGenerateByteOrderMark(true); // UTF-8 BOM, helps spreadsheet applications detect the encoding
+
+	auto const escape = [](QString field)
+	{
+		if (field.contains(',') || field.contains('"') || field.contains('\n'))
+		{
+			field.replace("\"", "\"\"");
+			field = '"' + field + '"';
+		}
+		return field;
+	};
+
+	stream << "Time,Severity,Category,Entity ID,Entity Name,Subject,Summary,Details\n";
+	auto const rowCount = applyFilters ? _filterProxyModel.rowCount() : _model.rowCount();
+	for (auto row = 0; row < rowCount; ++row)
+	{
+		auto const sourceRow = applyFilters ? _filterProxyModel.mapToSource(_filterProxyModel.index(row, 0)).row() : row;
+		auto const& event = _model.eventAtRow(sourceRow);
+		auto const entityID = event.entityID ? hive::modelsLibrary::helper::uniqueIdentifierToString(event.entityID) : QString{};
+		stream << QDateTime::fromMSecsSinceEpoch(event.timestamp).toString("yyyy-MM-dd HH:mm:ss.zzz") << ',' << EventJournal::severityToString(event.severity) << ',' << EventJournal::categoryToString(event.category) << ',' << entityID << ',' << escape(event.entityName) << ',' << escape(event.subject) << ',' << escape(event.summary) << ',' << escape(event.details) << '\n';
 	}
 }
 

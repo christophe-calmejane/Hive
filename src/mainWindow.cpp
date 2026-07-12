@@ -406,6 +406,30 @@ void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
 		}
 	}
 
+	// Hive Event Journal
+	else if (ext == hive::modelsLibrary::EventJournal::JournalFileExtension)
+	{
+		auto session = hive::modelsLibrary::EventJournal::loadSession(fileName);
+		if (session)
+		{
+			auto* viewer = new EventJournalView{ std::move(*session), fileName };
+			viewer->setAttribute(Qt::WA_DeleteOnClose);
+			viewer->show();
+			viewer->raise();
+		}
+		else
+		{
+			if (silent)
+			{
+				LOG_HIVE_WARN(QString("[%1] Error loading event journal file").arg(fileName));
+			}
+			else
+			{
+				QMessageBox::warning(_parent, "Failed to load Event Journal", QString("Error loading event journal file '%1'").arg(fileName));
+			}
+		}
+	}
+
 	// Any kind of file, we have to autodetect
 	else if (ext == "json")
 	{
@@ -979,17 +1003,7 @@ void MainWindowImpl::connectSignals()
 			auto const filename = QFileDialog::getOpenFileName(_parent, "Open Event Journal", hive::modelsLibrary::EventJournal::journalsDirectory(), QString("Event Journal Files (*.%1)").arg(hive::modelsLibrary::EventJournal::JournalFileExtension));
 			if (!filename.isEmpty())
 			{
-				auto session = hive::modelsLibrary::EventJournal::loadSession(filename);
-				if (session)
-				{
-					auto* viewer = new EventJournalView{ std::move(*session), filename };
-					viewer->setAttribute(Qt::WA_DeleteOnClose);
-					viewer->show();
-				}
-				else
-				{
-					QMessageBox::warning(_parent, "", "Failed to load the event journal file.");
-				}
+				loadFile(filename, false);
 			}
 		});
 

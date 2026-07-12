@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
 #endif // USE_SPARKLE
 
 	// Load main window (and all associated resources) while the splashscreen is displayed
-	auto window = MainWindow{ mustResetViewSettings, app.getFilesToLoad() };
+	auto window = MainWindow{ mustResetViewSettings, app.takeFilesToLoad() };
 
 #if defined(Q_OS_MACOS)
 	// The native window has to be created before the first processEvents() for the initial position and size to be correctly set.

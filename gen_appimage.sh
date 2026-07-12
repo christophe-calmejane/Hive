@@ -11,7 +11,7 @@ appimage_icon="resources/Hive.png"
 appimage_use_qt_plugin=1
 appimage_categories="AudioVideo;Audio;Network;"
 appimage_comment="ATDECC (IEEE Std 1722.1) controller for AVB/Milan networks"
-appimage_mime_types="application/x-hive-ans;application/x-hive-ave;"
+appimage_mime_types="application/x-hive-ans;application/x-hive-ave;application/x-hive-hej;"
 appimage_setcap_capability="cap_net_raw+ep"
 declare -a appimage_additional_libs=()
 
