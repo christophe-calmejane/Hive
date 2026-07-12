@@ -20,6 +20,7 @@
 #pragma once
 
 #include "eventJournalModel.hpp"
+#include "eventJournalTimeline.hpp"
 
 #include <QtMate/widgets/tickableMenu.hpp>
 
@@ -74,6 +75,7 @@ private:
 	QDateTimeEdit _toDateTimeEdit{ this };
 	QLabel _statusLabel{ this };
 	QSplitter _splitter{ Qt::Vertical, this };
+	EventJournalTimeline _timeline{ this };
 	QTableView _tableView{ this };
 	QPlainTextEdit _detailsTextEdit{ this };
 

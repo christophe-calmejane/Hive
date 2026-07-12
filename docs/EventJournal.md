@@ -76,11 +76,12 @@ To only record actual changes (and not the initial state of each entity being en
 
 Features: severity/category/entity filter menus, free text search (regular expression), time range filter, per-severity row colors (error/warning/recovered), details pane for the selected event, event counters. `EventJournalModel` + `EventJournalFilterProxyModel` (in the same directory) implement the table and filtering.
 
+A timeline strip (`EventJournalTimeline`) is displayed above the table, plotting the filtered events on a time axis with one lane per category, so recurring problems (eg. repeated gPTP grandmaster changes) and their spacing in time are directly visible. Markers are colored by severity; mouse wheel zooms around the cursor, left drag pans, double-click fits the whole session, hovering a marker shows its details (including the time elapsed since the previous event of the same category), and clicking a marker selects the event in the table (selection is synchronized both ways).
+
 `File > Export > Event Journal...` exports a snapshot of the current session at any time while recording.
 
 ## Possible future improvements
 
 - Additional event types (entity renames, unsolicited notification losses, Milan compatibility changes, stream format changes).
 - CSV export from the viewer.
-- Graphical timeline visualization.
 - Configurable retention policy (currently a fixed 50 session files).

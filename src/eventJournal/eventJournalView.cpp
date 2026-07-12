@@ -234,11 +234,23 @@ void EventJournalView::buildUi(bool const isLiveMode)
 	_detailsTextEdit.setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	_detailsTextEdit.setPlaceholderText("Select an event to display its details");
 
+	// Timeline (visualizes the filtered events, synchronized with the table selection)
+	_timeline.setModel(&_filterProxyModel);
+	connect(&_timeline, &EventJournalTimeline::eventClicked, this,
+		[this](int const row)
+		{
+			auto const index = _filterProxyModel.index(row, 0);
+			_tableView.setCurrentIndex(index);
+			_tableView.scrollTo(index);
+		});
+
+	_splitter.addWidget(&_timeline);
 	_splitter.addWidget(&_tableView);
 	_splitter.addWidget(&_detailsTextEdit);
-	_splitter.setStretchFactor(0, 4);
-	_splitter.setStretchFactor(1, 1);
-	_splitter.setCollapsible(0, false);
+	_splitter.setStretchFactor(0, 1);
+	_splitter.setStretchFactor(1, 4);
+	_splitter.setStretchFactor(2, 1);
+	_splitter.setCollapsible(1, false);
 
 	auto* layout = new QVBoxLayout{ this };
 	layout->setContentsMargins(2, 2, 2, 2);
@@ -398,8 +410,10 @@ void EventJournalView::handleSelectionChanged()
 	if (!currentIndex.isValid())
 	{
 		_detailsTextEdit.clear();
+		_timeline.setSelectedRow(std::nullopt);
 		return;
 	}
+	_timeline.setSelectedRow(currentIndex.row());
 	auto const sourceIndex = _filterProxyModel.mapToSource(currentIndex);
 	auto const& event = _model.eventAtRow(sourceIndex.row());
 

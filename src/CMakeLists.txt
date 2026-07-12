@@ -82,6 +82,7 @@ set(HEADER_FILES_COMMON
 	discoveredEntities/view.hpp
 	diagnostics/compatibilityChangeEventsDialog.hpp
 	eventJournal/eventJournalModel.hpp
+	eventJournal/eventJournalTimeline.hpp
 	eventJournal/eventJournalView.hpp
 	diagnostics/controlDiagnosticsTreeWidgetItem.hpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.hpp
@@ -179,6 +180,7 @@ set(SOURCE_FILES_COMMON
 	discoveredEntities/view.cpp
 	diagnostics/compatibilityChangeEventsDialog.cpp
 	eventJournal/eventJournalModel.cpp
+	eventJournal/eventJournalTimeline.cpp
 	eventJournal/eventJournalView.cpp
 	diagnostics/controlDiagnosticsTreeWidgetItem.cpp
 	diagnostics/entityDiagnosticsTreeWidgetItem.cpp
