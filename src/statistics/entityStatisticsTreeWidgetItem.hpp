@@ -55,24 +55,27 @@ private:
 class EntityStatisticsTreeWidgetItem : public QObject, public QTreeWidgetItem
 {
 public:
-	EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const aecpRetryCounter, std::uint64_t const aecpTimeoutCounter, std::uint64_t const aecpUnexpectedResponseCounter, std::chrono::milliseconds const& aecpResponseAverageTime, std::uint64_t const aemAecpUnsolicitedCounter, std::uint64_t const aemAecpUnsolicitedLossCounter, std::uint64_t const mvuAecpUnsolicitedCounter, std::uint64_t const mvuAecpUnsolicitedLossCounter, std::chrono::milliseconds const& enumerationTime, QTreeWidget* parent = nullptr);
+	EntityStatisticsTreeWidgetItem(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& enumerationTime, bool const showPerInterfaceStatistics, QTreeWidget* parent = nullptr);
 	virtual ~EntityStatisticsTreeWidgetItem() override
 	{
 		takeChildren();
 	}
 
 private:
-	void setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag const flag) noexcept;
+	std::uint64_t interfaceTotal(std::uint64_t hive::modelsLibrary::ControllerManager::InterfaceStatistics::*const interfaceField) const noexcept;
+	QString perInterfaceSuffix(std::uint64_t hive::modelsLibrary::ControllerManager::InterfaceStatistics::*const interfaceField) const noexcept;
+	void setWidgetTextAndColor(EntityStatisticTreeWidgetItem& widget, std::uint64_t const value, hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag const flag, std::uint64_t hive::modelsLibrary::ControllerManager::InterfaceStatistics::*const interfaceField) noexcept;
 	void updateAecpRetryCounter(std::uint64_t const value) noexcept;
 	void updateAecpTimeoutCounter(std::uint64_t const value) noexcept;
 	void updateAecpUnexpectedResponseCounter(std::uint64_t const value) noexcept;
-	void updateAecpResponseAverageTime(std::chrono::milliseconds const& value) noexcept;
+	void updateAecpResponseAverageTime() noexcept;
 	void updateAemAecpUnsolicitedCounter(std::uint64_t const value) noexcept;
 	void updateAemAecpUnsolicitedLossCounter(std::uint64_t const value) noexcept;
 	void updateMvuAecpUnsolicitedCounter(std::uint64_t const value) noexcept;
 	void updateMvuAecpUnsolicitedLossCounter(std::uint64_t const value) noexcept;
 
 	la::avdecc::UniqueIdentifier const _entityID{};
+	bool const _showPerInterfaceStatistics{ false };
 
 	// Statistics
 	EntityStatisticTreeWidgetItem _aecpRetryCounterItem{ hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpRetries, this };
@@ -86,4 +89,5 @@ private:
 	QTreeWidgetItem _enumerationTimeItem{ this };
 	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _counters{};
 	hive::modelsLibrary::ControllerManager::StatisticsErrorCounters _errorCounters{};
+	hive::modelsLibrary::ControllerManager::PerInterfaceStatistics _perInterfaceStatistics{};
 };

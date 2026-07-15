@@ -40,6 +40,19 @@ QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 	return toHexQString(identifier.getValue(), true, true);
 }
 
+QString interfaceTypeName(la::avdecc::controller::InterfaceType const interfaceType) noexcept
+{
+	switch (interfaceType)
+	{
+		case la::avdecc::controller::InterfaceType::Primary:
+			return "Primary";
+		case la::avdecc::controller::InterfaceType::Secondary:
+			return "Secondary";
+		default:
+			return "Unknown";
+	}
+}
+
 QString macAddressToString(la::networkInterface::MacAddress const& macAddress)
 {
 	return QString::fromStdString(la::networkInterface::NetworkInterfaceHelper::macAddressToString(macAddress));

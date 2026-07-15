@@ -710,10 +710,10 @@ void MainWindowImpl::currentControllerChanged()
 			manager.createController(protocolType, primaryInterfaceID, _controllerSubID, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", &_entityModel);
 		}
 
-		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID(la::avdecc::controller::Controller::InterfaceType::Primary)));
+		_controllerEntityIDLabel.setText(hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID(la::avdecc::controller::InterfaceType::Primary)));
 		if (isDualPiMode)
 		{
-			auto const secondaryEID = hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID(la::avdecc::controller::Controller::InterfaceType::Secondary));
+			auto const secondaryEID = hive::modelsLibrary::helper::uniqueIdentifierToString(manager.getControllerEID(la::avdecc::controller::InterfaceType::Secondary));
 			_controllerEntityIDTitleLabel.setToolTip(QString("Primary: %1\nSecondary: %2").arg(_controllerEntityIDLabel.text(), secondaryEID));
 		}
 		else
@@ -1191,8 +1191,27 @@ void MainWindowImpl::connectSignals()
 	connect(&manager, &hive::modelsLibrary::ControllerManager::transportError, this,
 		[this]()
 		{
-			LOG_HIVE_ERROR("Error reading from the active Network Interface");
-			QMessageBox::warning(_parent, "", "Error reading from the active Network Interface.<br>Check connection and click the <i>Reload Controller</i> button.");
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+			if (manager.isRedundantController())
+			{
+				LOG_HIVE_ERROR("Error reading from all active Network Interfaces");
+				QMessageBox::warning(_parent, "", "Error reading from all active Network Interfaces.<br>Check connections and click the <i>Reload Controller</i> button.");
+			}
+			else
+			{
+				LOG_HIVE_ERROR("Error reading from the active Network Interface");
+				QMessageBox::warning(_parent, "", "Error reading from the active Network Interface.<br>Check connection and click the <i>Reload Controller</i> button.");
+			}
+		});
+	connect(&manager, &hive::modelsLibrary::ControllerManager::interfaceTransportError, this,
+		[](la::avdecc::controller::InterfaceType const interfaceType)
+		{
+			// Only log for redundant controllers: in single interface mode the transportError signal already covers it (and pops a warning dialog)
+			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+			if (manager.isRedundantController())
+			{
+				LOG_HIVE_ERROR(QString{ "Error reading from the %1 Network Interface" }.arg(hive::modelsLibrary::helper::interfaceTypeName(interfaceType)));
+			}
 		});
 	connect(&manager, &hive::modelsLibrary::ControllerManager::endAecpCommand, this,
 		[this](la::avdecc::UniqueIdentifier const /*entityID*/, hive::modelsLibrary::ControllerManager::AecpCommandType commandType, la::avdecc::entity::model::DescriptorIndex /*descriptorIndex*/, la::avdecc::entity::ControllerEntity::AemCommandStatus const status)

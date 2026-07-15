@@ -23,6 +23,7 @@
 #include <la/avdecc/controller/avdeccController.hpp>
 #include <la/avdecc/executor.hpp>
 
+#include <array>
 #include <memory>
 #include <chrono>
 #include <unordered_map>
@@ -54,6 +55,24 @@ public:
 
 	using StreamInputErrorCounters = std::unordered_map<la::avdecc::entity::StreamInputCounterValidFlag, la::avdecc::entity::model::DescriptorCounter>;
 	using StatisticsErrorCounters = std::unordered_map<StatisticsErrorCounterFlag, std::uint64_t>;
+
+	/**
+	* @brief Statistics of an entity for a single controller interface.
+	* @details The library maintains statistics per controller interface: these are the values of a single interface (in single interface mode only the Primary values are populated).
+	*/
+	struct InterfaceStatistics
+	{
+		std::uint64_t aecpRetryCounter{ 0ull };
+		std::uint64_t aecpTimeoutCounter{ 0ull };
+		std::uint64_t aecpUnexpectedResponseCounter{ 0ull };
+		std::chrono::milliseconds aecpResponseAverageTime{};
+		std::uint64_t aemAecpUnsolicitedCounter{ 0ull };
+		std::uint64_t aemAecpUnsolicitedLossCounter{ 0ull };
+		std::uint64_t mvuAecpUnsolicitedCounter{ 0ull };
+		std::uint64_t mvuAecpUnsolicitedLossCounter{ 0ull };
+	};
+	using PerInterfaceStatistics = std::array<InterfaceStatistics, la::avdecc::controller::NumInterfaces>;
+	using PerInterfaceUnsolicitedRegistrations = std::array<bool, la::avdecc::controller::NumInterfaces>;
 
 	enum class AecpCommandType
 	{
@@ -196,7 +215,10 @@ public:
 	virtual la::avdecc::UniqueIdentifier getControllerEID() const noexcept = 0;
 
 	/** Gets the controller's EID for a specific interface type */
-	virtual la::avdecc::UniqueIdentifier getControllerEID(la::avdecc::controller::Controller::InterfaceType const interfaceType) const noexcept = 0;
+	virtual la::avdecc::UniqueIdentifier getControllerEID(la::avdecc::controller::InterfaceType const interfaceType) const noexcept = 0;
+
+	/** True if the current controller was created in redundant (dual interface) mode. */
+	virtual bool isRedundantController() const noexcept = 0;
 
 	/** Gets a ControlledEntity */
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
@@ -251,6 +273,10 @@ public:
 	virtual StatisticsErrorCounters getStatisticsCounters(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 	virtual void clearStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID, StatisticsErrorCounterFlag const flag) noexcept = 0;
 	virtual void clearAllStatisticsCounterValidFlags(la::avdecc::UniqueIdentifier const entityID) noexcept = 0;
+	/** Gets the per-interface statistics of the entity, as maintained by the library (only meaningful for the interfaces the controller was created with). */
+	virtual PerInterfaceStatistics getPerInterfaceStatistics(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
+	/** Gets the per-interface unsolicited notifications subscription state of the entity (only meaningful for the interfaces the controller was created with). */
+	virtual PerInterfaceUnsolicitedRegistrations getPerInterfaceUnsolicitedRegistrations(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 
 	/** Diagnostics */
 	virtual la::avdecc::controller::ControlledEntity::Diagnostics getDiagnostics(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
@@ -352,14 +378,15 @@ public:
 	Q_SIGNAL void controllerOffline();
 
 	/* Entity changed signals */
-	Q_SIGNAL void transportError();
-	Q_SIGNAL void redundantInterfaceTransportError(int const interfaceType); // la::avdecc::controller::Controller::InterfaceType cast to int
+	Q_SIGNAL void transportError(); // Fatal transport error on ALL the interfaces the controller was created with (the controller is no longer operational)
+	Q_SIGNAL void interfaceTransportError(la::avdecc::controller::InterfaceType const interfaceType); // Fatal transport error on one controller interface (always Primary in single interface mode)
 	Q_SIGNAL void entityQueryError(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::Controller::QueryCommandError const error);
 	Q_SIGNAL void entityOnline(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const enumerationTime);
 	Q_SIGNAL void entityOffline(la::avdecc::UniqueIdentifier const entityID);
 	Q_SIGNAL void entityRedundantInterfaceOnline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::Entity::InterfaceInformation const& interfaceInfo);
 	Q_SIGNAL void entityRedundantInterfaceOffline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex);
-	Q_SIGNAL void unsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const triggeredByEntity);
+	Q_SIGNAL void unsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const triggeredByEntity); // isSubscribed is the aggregated state: an entity is only unsubscribed when NO controller interface holds a subscription anymore
+	Q_SIGNAL void interfaceUnsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const triggeredByEntity, la::avdecc::controller::InterfaceType const interfaceType); // Per-interface subscription state change (always Primary in single interface mode)
 	Q_SIGNAL void compatibilityChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion);
 	Q_SIGNAL void entityCapabilitiesChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::EntityCapabilities const entityCapabilities);
 	Q_SIGNAL void associationIDChanged(la::avdecc::UniqueIdentifier const entityID, std::optional<la::avdecc::UniqueIdentifier> const associationID);
@@ -424,14 +451,15 @@ public:
 	Q_SIGNAL void streamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, hive::modelsLibrary::ControllerManager::StreamInputErrorCounters const& errorCounters);
 
 	/* Statistics signals */
-	Q_SIGNAL void aecpRetryCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
-	Q_SIGNAL void aecpTimeoutCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
-	Q_SIGNAL void aecpUnexpectedResponseCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
-	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value);
-	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
-	Q_SIGNAL void aemAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
-	Q_SIGNAL void mvuAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
-	Q_SIGNAL void mvuAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value);
+	/* value is the entity-wide total (sum of every controller interface), interfaceType is the interface the change occurred on (always Primary in single interface mode), interfaceValue is the value of that interface (as maintained by the library) */
+	Q_SIGNAL void aecpRetryCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
+	Q_SIGNAL void aecpTimeoutCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
+	Q_SIGNAL void aecpUnexpectedResponseCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
+	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value, la::avdecc::controller::InterfaceType const interfaceType); // value is the average response time of the given interface (each interface maintains its own average)
+	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
+	Q_SIGNAL void aemAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
+	Q_SIGNAL void mvuAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
+	Q_SIGNAL void mvuAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
 	Q_SIGNAL void statisticsErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, hive::modelsLibrary::ControllerManager::StatisticsErrorCounters const& errorCounters);
 
 	/* Diagnostics signals */

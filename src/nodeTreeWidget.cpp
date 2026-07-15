@@ -417,18 +417,28 @@ private:
 
 			{
 				auto* const subscribedLabel = addChangingTextItem(dynamicItem, "Subscribed to Unsol");
-				auto const updateSubscribedLabel = [this, subscribedLabel](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const /*triggeredByEntity*/)
+				// In redundant (dual interface) mode, each interface holds its own subscription: show the per-interface breakdown next to the aggregated state
+				auto const showPerInterfaceState = controllerManager.isRedundantController() && !entity.isVirtual();
+				auto const updateSubscribedLabel = [this, subscribedLabel, showPerInterfaceState](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const /*triggeredByEntity*/)
 				{
 					if (entityID == _controlledEntityID)
 					{
-						subscribedLabel->setText(isSubscribed ? "Yes" : "No");
+						auto text = QString{ isSubscribed ? "Yes" : "No" };
+						if (showPerInterfaceState)
+						{
+							auto const states = hive::modelsLibrary::ControllerManager::getInstance().getPerInterfaceUnsolicitedRegistrations(entityID);
+							auto const primarySubscribed = states[la::avdecc::utils::to_integral(la::avdecc::controller::InterfaceType::Primary)];
+							auto const secondarySubscribed = states[la::avdecc::utils::to_integral(la::avdecc::controller::InterfaceType::Secondary)];
+							text += QString{ " (Primary: %1, Secondary: %2)" }.arg(primarySubscribed ? "Yes" : "No", secondarySubscribed ? "Yes" : "No");
+						}
+						subscribedLabel->setText(text);
 					}
 				};
 
 				// Update text now
 				updateSubscribedLabel(_controlledEntityID, entity.isSubscribedToUnsolicitedNotifications(), false);
 
-				// Listen for changes
+				// Listen for changes (the aggregated signal is emitted for every per-interface change, the per-interface states are re-queried from the manager)
 				connect(&controllerManager, &hive::modelsLibrary::ControllerManager::unsolicitedRegistrationChanged, subscribedLabel, updateSubscribedLabel);
 			}
 
@@ -485,7 +495,9 @@ private:
 
 		// Statistics
 		{
-			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getAecpRetryCounter(), entity.getAecpTimeoutCounter(), entity.getAecpUnexpectedResponseCounter(), entity.getAecpResponseAverageTime(), entity.getAemAecpUnsolicitedCounter(), entity.getAemAecpUnsolicitedLossCounter(), entity.getMvuAecpUnsolicitedCounter(), entity.getMvuAecpUnsolicitedLossCounter(), entity.getEnumerationTime(), q);
+			// Per-interface breakdown is only relevant for physical entities monitored by a redundant (dual interface) controller
+			auto const showPerInterfaceStatistics = hive::modelsLibrary::ControllerManager::getInstance().isRedundantController() && !entity.isVirtual();
+			auto* statisticsItem = new EntityStatisticsTreeWidgetItem(_controlledEntityID, entity.getEnumerationTime(), showPerInterfaceStatistics, q);
 			statisticsItem->setText(0, "Statistics");
 		}
 
