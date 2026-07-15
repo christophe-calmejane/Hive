@@ -78,7 +78,6 @@ EventJournalTimeline::EventJournalTimeline(QWidget* parent)
 	: QWidget{ parent }
 {
 	setMouseTracking(true);
-	setToolTip("Mouse wheel: zoom - Left drag: pan - Double-click: fit");
 }
 
 void EventJournalTimeline::setModel(QAbstractItemModel* model)
