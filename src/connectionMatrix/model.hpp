@@ -38,8 +38,7 @@
 
 #include <QAbstractTableModel>
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
-#	include <QVariantAnimation>
-#	include <QColor>
+#	include <chrono>
 #endif
 
 #include <vector>
@@ -150,7 +149,7 @@ public:
 		std::vector<SmartConnectableStream> smartConnectableStreams{};
 
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
-		QVariantAnimation* animation{ nullptr };
+		std::chrono::steady_clock::time_point highlightTime{}; // Start of the highlight fade for this cell (epoch means no fade), animated by a single shared timer
 #endif
 	};
 
