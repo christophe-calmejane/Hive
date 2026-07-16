@@ -27,6 +27,7 @@
 #include <QWidget>
 #include <QLineEdit>
 #include <QCheckBox>
+#include <QLabel>
 
 class DiscoveredEntitiesView : public QWidget
 {
@@ -45,10 +46,13 @@ public:
 	Q_SIGNAL void filterLinkStateChanged(bool const isLinked, QString const& filter);
 
 private:
+	void updateEntitiesCount() noexcept;
+
 	discoveredEntities::View _entitiesView{ this };
 	QLineEdit _searchLineEdit{ this };
 	QSortFilterProxyModel _searchFilterProxyModel{ this };
 	QCheckBox _filterLinkedCheckbox{ "Link with Matrix Filter", this };
+	QLabel _entitiesCountLabel{ this };
 	qtMate::widgets::FlatIconButton _clearAllErrorsButton{ "Hive", "clear_errors", this };
 	QByteArray _inspectorGeometry{};
 };

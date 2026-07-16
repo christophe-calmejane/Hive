@@ -29,7 +29,7 @@ class ActiveNetworkInterfacesModel : public QSortFilterProxyModel
 	using QSortFilterProxyModel::setSourceModel;
 
 public:
-	ActiveNetworkInterfacesModel(QObject* parent = nullptr);
+	ActiveNetworkInterfacesModel(QObject* parent = nullptr, bool const addOfflineInterface = true);
 	virtual ~ActiveNetworkInterfacesModel();
 
 	bool isEnabled(QString const& id) const noexcept;

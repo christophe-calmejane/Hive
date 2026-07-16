@@ -24,9 +24,16 @@
 #include <QObject>
 #include <QString>
 
+#include <condition_variable>
 #include <cstdint>
+#include <deque>
+#include <map>
+#include <mutex>
 #include <optional>
+#include <set>
+#include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 class QTimer;
@@ -43,8 +50,12 @@ namespace modelsLibrary
 *          The graph is currently inferred from the gPTP information exposed through ATDECC
 *          (AsPath, grandmaster ID, propagation delay), but the topology representation itself is protocol
 *          agnostic so other discovery sources (eg. LLDP) may be added later without changing consumers.
-*          The model automatically rebuilds itself (debounced) when relevant entity information changes,
-*          and emits topologyChanged() when a new topology snapshot is available.
+*          The information the topology is inferred from is cached per entity: a full snapshot of the entity is
+*          captured when it comes online (on a dedicated thread, so the model thread never waits on an entity
+*          guard), then the cache is updated incrementally from the ControllerManager change signals (only the
+*          data carried by each event is updated, without any entity access). Recomputing the topology therefore
+*          never queries (nor locks) the controlled entities. The recomputation itself is throttled, and
+*          topologyChanged() is emitted when a new topology snapshot is available.
 * @note All methods and signals must be used from the thread the model lives in.
 */
 class NetworkTopologyModel : public QObject
@@ -107,19 +118,24 @@ public:
 		std::vector<std::size_t> streamIndices{}; /**< Indices (in Topology::streams) of the stream connections transiting through this edge */
 	};
 
-	/** One established stream connection and the path it transits through in the topology. */
+	/**
+	* @brief One connected stream output and the path it transits through in the topology.
+	* @details A stream is multicast: whatever the number of listeners, a single stream transits on the network
+	*          (and reserves bandwidth once per traversed link). The stream path is therefore the multicast tree
+	*          covering all its resolved listeners, not one path per connection.
+	*/
 	struct Stream
 	{
 		la::avdecc::UniqueIdentifier talkerEntityID{};
 		la::avdecc::entity::model::StreamIndex talkerStreamIndex{ 0u };
-		la::avdecc::UniqueIdentifier listenerEntityID{};
-		la::avdecc::entity::model::StreamIndex listenerStreamIndex{ 0u };
-		QString description{}; /**< Human readable description of the connection (talker:stream -> listener:stream) */
+		QString description{}; /**< Human readable description of the stream (talker:stream -> listener:stream, or listeners count when more than one) */
+		std::size_t listenerCount{ 0u }; /**< Number of listeners whose path could be resolved on the topology */
 		bool isRunning{ true }; /**< False when the stream is connected but not streaming */
 		bool isClassB{ false }; /**< SR class of the stream: Class B if the stream only supports Class B, Class A otherwise (IEEE1722.1 default) */
 		std::uint64_t reservedBandwidth{ 0u }; /**< Estimated reserved bandwidth (bits per second) of the stream, transport overhead included, computed from the stream format and SR class (0 if unknown) */
-		std::vector<std::size_t> nodeIndices{}; /**< Path of the stream: nodes from talker to listener (both included) */
-		std::vector<std::size_t> edgeIndices{}; /**< Path of the stream: edges from talker to listener */
+		std::size_t talkerNodeIndex{ 0u }; /**< Node of the talker interface the stream originates from */
+		std::vector<std::size_t> nodeIndices{}; /**< Multicast tree of the stream: all the nodes it transits through (talker, listeners and intermediates) */
+		std::vector<std::size_t> edgeIndices{}; /**< Multicast tree of the stream: all the edges it transits through (each edge carries the stream exactly once) */
 	};
 
 	/** Immutable snapshot of the topology of one network. */
@@ -127,7 +143,7 @@ public:
 	{
 		std::vector<Node> nodes{};
 		std::vector<Edge> edges{};
-		std::vector<Stream> streams{}; /**< Established stream connections whose path could be resolved on the topology */
+		std::vector<Stream> streams{}; /**< Connected stream outputs whose multicast tree could be resolved on the topology */
 	};
 
 	/**
@@ -139,6 +155,7 @@ public:
 	struct Network
 	{
 		la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
+		la::avdecc::entity::model::MilanVersion milanVersion{}; /**< Highest Milan compatibility version among the entities of this network (used to name the redundant Primary/Secondary networks) */
 		Topology topology{};
 	};
 
@@ -152,13 +169,84 @@ public:
 	Q_SIGNAL void topologyChanged();
 
 private:
-	void rebuild() noexcept;
+	// Cached information of one AVB interface of one entity, updated incrementally from the ControllerManager signals
+	struct InterfaceCache
+	{
+		QString name{};
+		QString fallbackName{}; /**< Localized default name, used when the object name is cleared (cached so rename events never have to query the entity) */
+		la::avdecc::UniqueIdentifier clockIdentity{};
+		la::avdecc::UniqueIdentifier gptpGrandmasterID{};
+		std::optional<std::uint8_t> gptpDomainNumber{};
+		std::optional<std::uint32_t> propagationDelay{};
+		std::vector<la::avdecc::UniqueIdentifier> asPath{};
+	};
+	// Cached information of one stream output of one entity
+	struct StreamOutputCache
+	{
+		la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
+		QString name{};
+		QString fallbackName{}; /**< Localized default name, used when the object name is cleared */
+		la::avdecc::entity::model::StreamFormat streamFormat{};
+		bool isRunning{ true };
+		bool isClassB{ false }; /**< SR class of the stream: Class B if the stream only supports Class B, Class A otherwise (IEEE1722.1 default) */
+		la::avdecc::entity::model::StreamConnections connections{};
+	};
+	// Cached information of one stream input of one entity
+	struct StreamInputCache
+	{
+		la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
+		QString name{};
+		QString fallbackName{}; /**< Localized default name, used when the object name is cleared */
+	};
+	// All the information the topology is inferred from, for one entity. Fully read once when the entity comes
+	// online (a single entity lock), then updated field by field from the change signals (no lock at all), so
+	// topology recomputations never have to query the ControllerManager (which locks every queried entity, way
+	// too costly on large networks)
+	struct EntityCache
+	{
+		QString entityName{};
+		bool isTalker{ false };
+		bool isListener{ false };
+		la::avdecc::entity::model::MilanVersion milanVersion{};
+		la::avdecc::entity::model::ConfigurationIndex currentConfigurationIndex{ 0u };
+		std::map<la::avdecc::entity::model::ClockDomainIndex, ClockLockState> clockLockStates{}; /**< Lock state of each clock domain, the first one is the entity level state (same rule than the Discovered Entities list) */
+		std::map<la::avdecc::entity::model::AvbInterfaceIndex, InterfaceCache> interfaces{};
+		std::map<la::avdecc::entity::model::StreamIndex, StreamOutputCache> streamOutputs{};
+		std::map<la::avdecc::entity::model::StreamIndex, StreamInputCache> streamInputs{};
+	};
+
+	/**
+	* @brief Reads all the topology related information of a single entity (one entity guard).
+	* @details Runs on the snapshot thread: acquiring a ControlledEntityGuard can block for a long time while
+	*          the controller is busy (typically during the enumeration of a large network), and the guard
+	*          itself is watchdogged, so the model (UI) thread must never wait on it.
+	* @return The entity cache, or std::nullopt if the entity is gone or cannot appear in the topology (no AEM).
+	*/
+	static std::optional<EntityCache> buildEntityCache(la::avdecc::UniqueIdentifier const entityID) noexcept;
+	/** Queues an asynchronous snapshot of the given entity on the snapshot thread (coalesced if one is already queued). */
+	void requestEntitySnapshot(la::avdecc::UniqueIdentifier const entityID) noexcept;
+	/** Gets the cache of an entity, or nullptr if not (yet) available. A snapshot is automatically (re)requested when the entity is online but its snapshot is still in flight, so no event is ever lost. */
+	EntityCache* findCache(la::avdecc::UniqueIdentifier const entityID) noexcept;
+	/** Starts the throttled topology recomputation timer (no-op if already running, so a continuous event stream cannot starve the recomputation). */
+	void scheduleRecompute() noexcept;
+	/** Recomputes the networks topology snapshot from the entity caches (no ControllerManager access) and emits topologyChanged(). */
+	void recompute() noexcept;
 
 	std::vector<Network> _networks{};
-	QTimer* _rebuildTimer{ nullptr };
+	QTimer* _recomputeTimer{ nullptr };
 
-	// Error counters are cached incrementally from the ControllerManager signals, so rebuilds don't have to
-	// query the manager for every stream of every entity (which is costly on large networks)
+	std::unordered_map<la::avdecc::UniqueIdentifier, EntityCache, la::avdecc::UniqueIdentifier::hash> _entityCaches{};
+	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _onlineEntities{}; /**< Entities currently online (their snapshot may still be in flight on the snapshot thread) */
+
+	// Snapshot thread state (see buildEntityCache)
+	std::thread _snapshotThread{};
+	std::mutex _snapshotMutex{};
+	std::condition_variable _snapshotCondition{};
+	std::deque<la::avdecc::UniqueIdentifier> _snapshotQueue{};
+	std::set<la::avdecc::UniqueIdentifier> _snapshotQueuedIDs{}; /**< IDs currently in _snapshotQueue, to coalesce requests */
+	bool _snapshotThreadExit{ false };
+
+	// Error counters are aggregated incrementally from their dedicated signals (they change very frequently)
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::DescriptorIndex, std::uint64_t>, la::avdecc::UniqueIdentifier::hash> _streamInputErrorCounters{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::uint64_t, la::avdecc::UniqueIdentifier::hash> _statisticsErrorCounters{};
 };

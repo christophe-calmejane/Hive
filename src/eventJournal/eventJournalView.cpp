@@ -96,15 +96,18 @@ EventJournalView::EventJournalView(QWidget* parent)
 	auto& journal = EventJournal::getInstance();
 
 	_exportJournalAction->setEnabled(journal.isRecording());
+	_clearButton.setEnabled(journal.isRecording());
 	connect(&journal, &EventJournal::recordingStarted, this,
 		[this](QString const&)
 		{
 			_exportJournalAction->setEnabled(true);
+			_clearButton.setEnabled(true);
 		});
 	connect(&journal, &EventJournal::recordingStopped, this,
 		[this]()
 		{
 			_exportJournalAction->setEnabled(false);
+			_clearButton.setEnabled(false);
 		});
 	connect(_exportJournalAction, &QAction::triggered, this,
 		[this]()
@@ -144,6 +147,24 @@ void EventJournalView::buildUi(bool const isLiveMode)
 	filterLayout->addWidget(&_entityFilterButton);
 	filterLayout->addWidget(&_searchLineEdit, 1);
 	filterLayout->addWidget(&_exportButton);
+
+	// Clearing only makes sense while recording the live session (the standalone viewer displays a read-only loaded file)
+	if (isLiveMode)
+	{
+		filterLayout->addWidget(&_clearButton);
+		connect(&_clearButton, &QPushButton::clicked, this,
+			[this]()
+			{
+				if (QMessageBox::question(this, {}, "Clear all events from the current journal? This cannot be undone (export the journal first if you need to keep it).", QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+				{
+					EventJournal::getInstance().clearCurrentSession();
+				}
+			});
+	}
+	else
+	{
+		_clearButton.hide();
+	}
 
 	if (isLiveMode)
 	{
@@ -240,6 +261,11 @@ void EventJournalView::buildUi(bool const isLiveMode)
 		[this](QModelIndex const&, QModelIndex const&)
 		{
 			handleSelectionChanged();
+		});
+	connect(&_tableView, &QTableView::doubleClicked, this,
+		[this](QModelIndex const& index)
+		{
+			handleEventDoubleClicked(index);
 		});
 
 	// Details pane
@@ -476,6 +502,8 @@ void EventJournalView::handleSelectionChanged()
 		return;
 	}
 	_timeline.setSelectedRow(currentIndex.row());
+	// Pan the timeline (if needed) so the selected event's marker is visible
+	_timeline.ensureRowVisible(currentIndex.row());
 	auto const sourceIndex = _filterProxyModel.mapToSource(currentIndex);
 	auto const& event = _model.eventAtRow(sourceIndex.row());
 
@@ -498,4 +526,19 @@ void EventJournalView::handleSelectionChanged()
 		text += QString{ "Details:   %1" }.arg(QString::fromUtf8(document.toJson(QJsonDocument::Indented)));
 	}
 	_detailsTextEdit.setPlainText(text);
+}
+
+void EventJournalView::handleEventDoubleClicked(QModelIndex const& index)
+{
+	if (!index.isValid())
+	{
+		return;
+	}
+	auto const sourceIndex = _filterProxyModel.mapToSource(index);
+	auto const& event = _model.eventAtRow(sourceIndex.row());
+	// Requesting the selection of the entity activates it in the entities list, which in turn activates it in the inspector
+	if (event.entityID)
+	{
+		emit selectEntityRequested(event.entityID);
+	}
 }

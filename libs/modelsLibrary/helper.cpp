@@ -26,6 +26,7 @@
 #include <QFile>
 
 #include <cctype>
+#include <thread>
 
 using json = nlohmann::json;
 
@@ -38,6 +39,37 @@ namespace helper
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier)
 {
 	return toHexQString(identifier.getValue(), true, true);
+}
+
+QString interfaceTypeName(la::avdecc::controller::InterfaceType const interfaceType) noexcept
+{
+	switch (interfaceType)
+	{
+		case la::avdecc::controller::InterfaceType::Primary:
+			return "Primary";
+		case la::avdecc::controller::InterfaceType::Secondary:
+			return "Secondary";
+		default:
+			return "Unknown";
+	}
+}
+
+std::optional<la::avdecc::controller::InterfaceType> redundantInterfaceType(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
+{
+	// Milan redundancy (Milan 1.0+) defines AVB interface index 0 as the primary network and index 1 as the secondary network
+	if (milanVersion >= la::avdecc::entity::model::MilanVersion{ 1u, 0u })
+	{
+		switch (avbInterfaceIndex)
+		{
+			case 0u:
+				return la::avdecc::controller::InterfaceType::Primary;
+			case 1u:
+				return la::avdecc::controller::InterfaceType::Secondary;
+			default:
+				break;
+		}
+	}
+	return std::nullopt;
 }
 
 QString macAddressToString(la::networkInterface::MacAddress const& macAddress)
@@ -223,17 +255,21 @@ QString toUpperCamelCase(std::string const& text) noexcept
 	return QString::fromStdString(output);
 }
 
-QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
+namespace
 {
-	static auto s_fileLoaded = false;
-	static auto s_oui24ToName = std::unordered_map<std::uint32_t, QString>{};
-	static auto s_oui36ToName = std::unordered_map<std::uint64_t, QString>{};
+struct VendorNameMaps
+{
+	std::unordered_map<std::uint32_t, QString> oui24ToName{};
+	std::unordered_map<std::uint64_t, QString> oui36ToName{};
+};
 
-	// If file not loaded, load it
-	if (!s_fileLoaded)
+// Loads the OUI database on first call (thread-safe magic static, concurrent callers block until loaded).
+// The maps are immutable once built, so lookups require no synchronization.
+VendorNameMaps const& getVendorNameMaps() noexcept
+{
+	static auto const s_maps = []()
 	{
-		s_fileLoaded = true;
-
+		auto maps = VendorNameMaps{};
 		auto jsonFile = QFile{ ":/oui.json" };
 		if (jsonFile.open(QIODevice::ReadOnly | QIODevice::Text))
 		{
@@ -250,7 +286,7 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 					{
 						auto const oui24 = la::avdecc::utils::convertFromString<std::uint32_t>(key.c_str());
 						auto const& vendorName = value.get<std::string>();
-						s_oui24ToName.emplace(std::make_pair(oui24, QString::fromStdString(vendorName)));
+						maps.oui24ToName.emplace(std::make_pair(oui24, QString::fromStdString(vendorName)));
 					}
 				}
 			}
@@ -259,12 +295,32 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 				// Ignore exception
 			}
 		}
-	}
+		return maps;
+	}();
+	return s_maps;
+}
+} // namespace
+
+void warmUpVendorNamesCache() noexcept
+{
+	// Parsing the OUI database is slow enough to cause a noticeable main thread freeze (especially in debug
+	// builds), warm the cache up front from a background thread so the first getVendorName() caller,
+	// whichever thread it is on, doesn't pay for it
+	std::thread{ []()
+		{
+			getVendorNameMaps();
+		} }
+		.detach();
+}
+
+QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
+{
+	auto const& maps = getVendorNameMaps();
 
 	// First search in OUI-24
 	{
-		auto const nameIt = s_oui24ToName.find(entityID.getVendorID<std::uint32_t>());
-		if (nameIt != s_oui24ToName.end())
+		auto const nameIt = maps.oui24ToName.find(entityID.getVendorID<std::uint32_t>());
+		if (nameIt != maps.oui24ToName.end())
 		{
 			return nameIt->second;
 		}
@@ -272,8 +328,8 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 
 	// Then search in OUI-36
 	{
-		auto const nameIt = s_oui36ToName.find(entityID.getVendorID<std::uint64_t>());
-		if (nameIt != s_oui36ToName.end())
+		auto const nameIt = maps.oui36ToName.find(entityID.getVendorID<std::uint64_t>());
+		if (nameIt != maps.oui36ToName.end())
 		{
 			return nameIt->second;
 		}

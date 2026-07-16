@@ -5,6 +5,9 @@
 # Signing identity to be used, run './gen_cmake.sh -ids' to get the list of valid identities on this computer (copy the printed identity without adding quotes)
 #identity=
 
+# Windows signing tool to use, supported values are "signtool" and "azuresigntool". Default is "signtool"
+#signing_tool=signtool
+
 # Windows signtool options (defaults to '/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com /td sha256')
 #signtool_options=/a /sm /q /fd sha256 /tr http://timestamp.sectigo.com /td sha256
 

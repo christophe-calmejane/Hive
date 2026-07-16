@@ -34,6 +34,17 @@ namespace hive
 {
 namespace modelsLibrary
 {
+// Computes the entity-wide total of a per-interface statistics counter (the caller must guarantee the entity stays valid)
+static std::uint64_t computeStatisticsTotal(la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t (la::avdecc::controller::ControlledEntity::*const getter)(la::avdecc::controller::InterfaceType) const noexcept) noexcept
+{
+	auto total = std::uint64_t{ 0ull };
+	for (auto const interfaceType : la::avdecc::controller::AllInterfaceTypes)
+	{
+		total += (entity->*getter)(interfaceType);
+	}
+	return total;
+}
+
 class ControllerManagerImpl final : public ControllerManager, private la::avdecc::controller::Controller::Observer
 {
 public:
@@ -54,25 +65,25 @@ public:
 			// la::avdecc::controller::model::DefaultedEntityModelVisitor overrides
 			virtual void visit(la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::EntityNode const& /*node*/) noexcept override
 			{
-				// Initialize internal counter value, always setting lastClearCount to 0 (Statistics counters always start at 0 in the Controller, contrary to endpoint Counters) so that we directly see any error during enumeration
+				// Initialize internal counter value (entity-wide total), always setting lastClearCount to 0 (Statistics counters always start at 0 in the Controller, contrary to endpoint Counters) so that we directly see any error during enumeration
 				{
-					auto const counter = entity->getAecpRetryCounter();
+					auto const counter = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAecpRetryCounter);
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpRetries] = StatisticsCounterInfo{ counter, 0u };
 				}
 				{
-					auto const counter = entity->getAecpTimeoutCounter();
+					auto const counter = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAecpTimeoutCounter);
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpTimeouts] = StatisticsCounterInfo{ counter, 0u };
 				}
 				{
-					auto const counter = entity->getAecpUnexpectedResponseCounter();
+					auto const counter = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAecpUnexpectedResponseCounter);
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AecpUnexpectedResponses] = StatisticsCounterInfo{ counter, 0u };
 				}
 				{
-					auto const counter = entity->getAemAecpUnsolicitedLossCounter();
+					auto const counter = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAemAecpUnsolicitedLossCounter);
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses] = StatisticsCounterInfo{ counter, 0u };
 				}
 				{
-					auto const counter = entity->getMvuAecpUnsolicitedLossCounter();
+					auto const counter = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getMvuAecpUnsolicitedLossCounter);
 					_entityCache._statisticsCounters[StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses] = StatisticsCounterInfo{ counter, 0u };
 				}
 
@@ -246,7 +257,7 @@ public:
 			return counters;
 		}
 
-		// Set the new counter value, returns true if the counter has changed, false otherwise
+		// Set the new counter value (entity-wide total), returns true if the counter has changed, false otherwise
 		bool setStatisticsCounter(StatisticsErrorCounterFlag const flag, std::uint64_t const counter)
 		{
 			// Get or create StatisticsCounterInfo
@@ -412,6 +423,7 @@ public:
 		qRegisterMetaType<la::avdecc::entity::model::MediaClockReferenceInfo>("la::avdecc::entity::model::MediaClockReferenceInfo");
 		qRegisterMetaType<la::avdecc::entity::model::SignalPresenceChannels>("la::avdecc::entity::model::SignalPresenceChannels");
 		qRegisterMetaType<la::avdecc::controller::Controller::QueryCommandError>("la::avdecc::controller::Controller::QueryCommandError");
+		qRegisterMetaType<la::avdecc::controller::InterfaceType>("la::avdecc::controller::InterfaceType");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>("la::avdecc::controller::ControlledEntity::InterfaceLinkStatus");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::CompatibilityFlags>("la::avdecc::controller::ControlledEntity::CompatibilityFlags");
 		qRegisterMetaType<la::avdecc::controller::ControlledEntity::Diagnostics>("la::avdecc::controller::ControlledEntity::Diagnostics");
@@ -443,9 +455,21 @@ public:
 private:
 	// la::avdecc::controller::Controller::Observer overrides
 	// Global controller notifications
-	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/) noexcept override
+	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
-		emit transportError();
+		// Invoke to the main thread so the per-interface error tracking is only manipulated from a single thread
+		QMetaObject::invokeMethod(this,
+			[this, interfaceType]()
+			{
+				emit interfaceTransportError(interfaceType);
+
+				// Only consider the controller dead when every interface it was created with got a fatal transport error
+				_interfacesWithTransportError.insert(interfaceType);
+				if (_interfacesWithTransportError.size() >= _numControllerInterfaces)
+				{
+					emit transportError();
+				}
+			});
 	}
 	virtual void onEntityQueryError(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::Controller::QueryCommandError const error) noexcept override
 	{
@@ -516,9 +540,18 @@ private:
 		emit gptpChanged(e.getEntityID(), avbInterfaceIndex, grandMasterID, grandMasterDomain);
 	}
 	// Global entity notifications
-	virtual void onUnsolicitedRegistrationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, bool const isSubscribed, bool const triggeredByEntity) noexcept override
+	virtual void onUnsolicitedRegistrationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, bool const isSubscribed, bool const triggeredByEntity, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
-		emit unsolicitedRegistrationChanged(entity->getEntity().getEntityID(), isSubscribed, triggeredByEntity);
+		// The event is per-interface: get the aggregated state right now (the entity is still locked), the entity is only out-of-sync when NO interface is subscribed anymore
+		auto const entityID = entity->getEntity().getEntityID();
+		auto const isSubscribedAggregated = entity->isSubscribedToUnsolicitedNotifications();
+
+		QMetaObject::invokeMethod(this,
+			[this, entityID, isSubscribed, triggeredByEntity, interfaceType, isSubscribedAggregated]()
+			{
+				emit interfaceUnsolicitedRegistrationChanged(entityID, isSubscribed, triggeredByEntity, interfaceType);
+				emit unsolicitedRegistrationChanged(entityID, isSubscribedAggregated, triggeredByEntity);
+			});
 	}
 	virtual void onCompatibilityChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion) noexcept override
 	{
@@ -809,106 +842,127 @@ private:
 	}
 
 	// Statistics
-	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	virtual void onAecpRetryCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
+		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
+		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAecpRetryCounter);
+
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), value]()
+			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType]()
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpRetries, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpRetries, total))
 					{
 						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
-				emit aecpRetryCounterChanged(entityID, value);
+				emit aecpRetryCounterChanged(entityID, total, interfaceType, value);
 			});
 	}
-	virtual void onAecpTimeoutCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	virtual void onAecpTimeoutCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
+		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
+		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAecpTimeoutCounter);
+
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), value]()
+			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType]()
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpTimeouts, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpTimeouts, total))
 					{
 						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
-				emit aecpTimeoutCounterChanged(entityID, value);
+				emit aecpTimeoutCounterChanged(entityID, total, interfaceType, value);
 			});
 	}
-	virtual void onAecpUnexpectedResponseCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	virtual void onAecpUnexpectedResponseCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
+		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
+		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAecpUnexpectedResponseCounter);
+
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), value]()
+			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType]()
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpUnexpectedResponses, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AecpUnexpectedResponses, total))
 					{
 						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
-				emit aecpUnexpectedResponseCounterChanged(entityID, value);
+				emit aecpUnexpectedResponseCounterChanged(entityID, total, interfaceType, value);
 			});
 	}
-	virtual void onAecpResponseAverageTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::chrono::milliseconds const& value) noexcept override
+	virtual void onAecpResponseAverageTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::chrono::milliseconds const& value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
-		emit aecpResponseAverageTimeChanged(entity->getEntity().getEntityID(), value);
+		emit aecpResponseAverageTimeChanged(entity->getEntity().getEntityID(), value, interfaceType);
 	}
-	virtual void onAemAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	virtual void onAemAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
-		emit aemAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), value);
+		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
+		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAemAecpUnsolicitedCounter);
+
+		emit aemAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), total, interfaceType, value);
 	}
-	virtual void onAemAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	virtual void onAemAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
+		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
+		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAemAecpUnsolicitedLossCounter);
+
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), value]()
+			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType]()
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses, total))
 					{
 						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
-				emit aemAecpUnsolicitedLossCounterChanged(entityID, value);
+				emit aemAecpUnsolicitedLossCounterChanged(entityID, total, interfaceType, value);
 			});
 	}
-	virtual void onMvuAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	virtual void onMvuAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
-		emit mvuAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), value);
+		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
+		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getMvuAecpUnsolicitedCounter);
+
+		emit mvuAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), total, interfaceType, value);
 	}
-	virtual void onMvuAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value) noexcept override
+	virtual void onMvuAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
+		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
+		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getMvuAecpUnsolicitedLossCounter);
+
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), value]()
+			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType]()
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
-					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, value))
+					if (entityCache->setStatisticsCounter(StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, total))
 					{
 						emit statisticsErrorCounterChanged(entityID, entityCache->getStatisticsErrorCounters());
 					}
 				}
 
-				emit mvuAecpUnsolicitedLossCounterChanged(entityID, value);
+				emit mvuAecpUnsolicitedLossCounterChanged(entityID, total, interfaceType, value);
 			});
 	}
 	// Diagnostics
@@ -992,11 +1046,91 @@ private:
 			destroyController();
 		}
 
+		// Single interface mode
+		_numControllerInterfaces = 1u;
+		_interfacesWithTransportError.clear();
+
 		// Create a new virtual controller
 		_virtualController = VirtualController{ this };
 
 		// Create a new controller and store it
 		SharedController controller = la::avdecc::controller::Controller::create(protocolInterfaceType, interfaceName.toStdString(), progID, entityModelID, preferedLocale.toStdString(), entityModel, std::nullopt, &_virtualController);
+
+#if HAVE_ATOMIC_SMART_POINTERS
+		_controller = std::move(controller);
+#else // !HAVE_ATOMIC_SMART_POINTERS
+		std::atomic_store(&_controller, std::move(controller));
+#endif // HAVE_ATOMIC_SMART_POINTERS
+
+		// Re-get the controller, just in case another thread changed the controller at the same moment
+		auto ctrl = getController();
+		if (ctrl)
+		{
+			emit controllerOnline();
+			ctrl->registerObserver(this);
+
+			ctrl->setAutomaticDiscoveryDelay(_discoveryDelay);
+
+			if (_enableAemCache)
+			{
+				ctrl->enableEntityModelCache();
+			}
+			else
+			{
+				ctrl->disableEntityModelCache();
+			}
+
+			if (_enableFastEnumeration)
+			{
+				ctrl->enableFastEnumeration();
+			}
+			else
+			{
+				ctrl->disableFastEnumeration();
+			}
+
+			if (_fullAemEnumeration)
+			{
+				ctrl->enableFullStaticEntityModelEnumeration();
+			}
+			else
+			{
+				ctrl->disableFullStaticEntityModelEnumeration();
+			}
+		}
+	}
+
+	virtual void createController(std::vector<la::avdecc::controller::Controller::InterfaceConfiguration> const& interfaceConfigurations, std::uint16_t const progID, la::avdecc::UniqueIdentifier const entityModelID, QString const& preferedLocale, la::avdecc::entity::model::EntityTree const* const entityModel) override
+	{
+		// If we have a previous controller, remove it
+		if (_controller)
+		{
+			destroyController();
+		}
+
+		_numControllerInterfaces = static_cast<std::uint32_t>(interfaceConfigurations.size());
+		_interfacesWithTransportError.clear();
+
+		// Create executors for the controller to use
+		for (auto const& interfaceConfiguration : interfaceConfigurations)
+		{
+			if (interfaceConfiguration.executorName)
+			{
+				auto const& executorName = *interfaceConfiguration.executorName;
+				// If it doesn't exist yet
+				if (_executorWrappers.count(executorName) == 0)
+				{
+					// Create and store the executor wrapper
+					_executorWrappers.emplace(executorName, la::avdecc::ExecutorManager::getInstance().registerExecutor(executorName, la::avdecc::ExecutorWithDispatchQueue::create(executorName, la::avdecc::utils::ThreadPriority::Highest)));
+				}
+			}
+		}
+
+		// Create a new virtual controller
+		_virtualController = VirtualController{ this };
+
+		// Create a new redundant controller and store it
+		SharedController controller = la::avdecc::controller::Controller::create(interfaceConfigurations, progID, entityModelID, preferedLocale.toStdString(), entityModel, &_virtualController);
 
 #if HAVE_ATOMIC_SMART_POINTERS
 		_controller = std::move(controller);
@@ -1063,6 +1197,13 @@ private:
 				_entityDataCache.clear();
 			}
 
+			// Destroy executors
+			_executorWrappers.clear();
+
+			// Reset interfaces state
+			_numControllerInterfaces = 1u;
+			_interfacesWithTransportError.clear();
+
 			// Notify
 			emit controllerOffline();
 		}
@@ -1076,6 +1217,21 @@ private:
 			return controller->getControllerEID();
 		}
 		return la::avdecc::UniqueIdentifier{};
+	}
+
+	virtual la::avdecc::UniqueIdentifier getControllerEID(la::avdecc::controller::InterfaceType const interfaceType) const noexcept override
+	{
+		auto controller = getController();
+		if (controller)
+		{
+			return controller->getControllerEID(interfaceType);
+		}
+		return la::avdecc::UniqueIdentifier{};
+	}
+
+	virtual bool isRedundantController() const noexcept override
+	{
+		return _numControllerInterfaces > 1u;
 	}
 
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept override
@@ -1286,6 +1442,44 @@ private:
 		{
 			entityCache->clearAllStatisticsCounters();
 		}
+	}
+
+	virtual PerInterfaceStatistics getPerInterfaceStatistics(la::avdecc::UniqueIdentifier const entityID) const noexcept override
+	{
+		auto statistics = PerInterfaceStatistics{};
+
+		if (auto entity = getControlledEntity(entityID))
+		{
+			for (auto const interfaceType : la::avdecc::controller::AllInterfaceTypes)
+			{
+				auto& interfaceStatistics = statistics[la::avdecc::utils::to_integral(interfaceType)];
+				interfaceStatistics.aecpRetryCounter = entity->getAecpRetryCounter(interfaceType);
+				interfaceStatistics.aecpTimeoutCounter = entity->getAecpTimeoutCounter(interfaceType);
+				interfaceStatistics.aecpUnexpectedResponseCounter = entity->getAecpUnexpectedResponseCounter(interfaceType);
+				interfaceStatistics.aecpResponseAverageTime = entity->getAecpResponseAverageTime(interfaceType);
+				interfaceStatistics.aemAecpUnsolicitedCounter = entity->getAemAecpUnsolicitedCounter(interfaceType);
+				interfaceStatistics.aemAecpUnsolicitedLossCounter = entity->getAemAecpUnsolicitedLossCounter(interfaceType);
+				interfaceStatistics.mvuAecpUnsolicitedCounter = entity->getMvuAecpUnsolicitedCounter(interfaceType);
+				interfaceStatistics.mvuAecpUnsolicitedLossCounter = entity->getMvuAecpUnsolicitedLossCounter(interfaceType);
+			}
+		}
+
+		return statistics;
+	}
+
+	virtual PerInterfaceUnsolicitedRegistrations getPerInterfaceUnsolicitedRegistrations(la::avdecc::UniqueIdentifier const entityID) const noexcept override
+	{
+		auto registrations = PerInterfaceUnsolicitedRegistrations{};
+
+		if (auto entity = getControlledEntity(entityID))
+		{
+			for (auto const interfaceType : la::avdecc::controller::AllInterfaceTypes)
+			{
+				registrations[la::avdecc::utils::to_integral(interfaceType)] = entity->isSubscribedToUnsolicitedNotifications(interfaceType);
+			}
+		}
+
+		return registrations;
 	}
 
 	virtual la::avdecc::controller::ControlledEntity::Diagnostics getDiagnostics(la::avdecc::UniqueIdentifier const entityID) const noexcept override
@@ -2759,7 +2953,10 @@ private:
 				for (auto& entityID : _entities)
 				{
 					auto ceg = getControlledEntity(entityID);
-					if (AVDECC_ASSERT_WITH_RET(!!ceg, "ControllerManager model not up-to-date with avdecc::controller"))
+					// The entity may already be gone from the avdecc::controller while its offline event is still queued for
+					// the UI thread (_entities is transiently ahead of the controller, especially when the UI thread is busy),
+					// simply skip it: the pending offline event will remove it from _entities
+					if (!!ceg)
 					{
 						controlledEntities.push_back(std::move(ceg));
 					}
@@ -2800,8 +2997,11 @@ private:
 #endif // HAVE_ATOMIC_SMART_POINTERS
 
 	mutable std::mutex _lock{}; // Data members exclusive access
+	std::unordered_map<std::string, la::avdecc::ExecutorManager::ExecutorWrapper::UniquePointer> _executorWrappers{};
 	std::set<la::avdecc::UniqueIdentifier> _entities; // Online entities
 	std::unordered_map<la::avdecc::UniqueIdentifier, EntityDataCache, la::avdecc::UniqueIdentifier::hash> _entityDataCache; // Entities cached data
+	std::atomic<std::uint32_t> _numControllerInterfaces{ 1u }; // Number of interfaces the current controller was created with (set on the main thread before the controller notifies any observer)
+	std::set<la::avdecc::controller::InterfaceType> _interfacesWithTransportError{}; // Interfaces having received a fatal transport error (only accessed from the main thread)
 	std::unordered_map<CommandsExecutorImpl const*, std::unique_ptr<CommandsExecutorImpl>> _commandsExecutors{};
 	std::chrono::milliseconds _discoveryDelay{};
 	bool _enableAemCache{ false };

@@ -17,7 +17,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Timeline strip plotting events per category over time (zoom/pan, hover details with time since previous occurrence, click to select in the table), making recurring problems and their spacing directly visible
   - CSV export from the viewer (all events or only the filtered ones)
   - `.hej` file association: double-clicking a journal file opens it in a Hive viewer window
+  - Redundant controller (dual-PI) events: transport error on one of the controller interfaces, and entities lost/recovered on one of their redundant interfaces
+  - Unsolicited notifications subscription events: per-interface subscription lost/recovered in redundant (dual-PI) mode, and entity out-of-sync (no interface subscribed anymore)
+  - In redundant (dual-PI) mode, statistics error counter increases (AECP retries/timeouts/unexpected responses, unsolicited losses) are attributed to the network interface they occurred on
   - Journal files can be exported while recording (File > Export menu) and reopened later in standalone viewer windows (File > Open Event Journal)
+- Redundant controller (dual-PI) mode
+  - Secondary network interface selection in the toolbar, creating a controller operating on both networks at once (automatic command failover, per-interface unsolicited notifications subscriptions)
+  - Entity statistics (Entity Descriptor) additionally displayed per network interface (Primary/Secondary), each interface maintaining its own counters and AECP average response time
+  - Per-interface 'Subscribed to Unsol' state in the Entity Descriptor
+  - An entity is only flagged as unsubscribed from unsolicited notifications (hatched in the Discovered Entities list) when no interface holds a subscription anymore, and a controller transport error is only fatal when both interfaces failed
 
 ### Changed
 - [Enhanced connection matrix red color with MSRP Failure status](https://github.com/christophe-calmejane/Hive/issues/149)

@@ -56,6 +56,15 @@ void EventJournalModel::followLiveSession()
 			_metadata = journal.currentSessionMetadata();
 			endResetModel();
 		});
+	connect(&journal, &EventJournal::sessionCleared, this,
+		[this]()
+		{
+			auto& journal = EventJournal::getInstance();
+			beginResetModel();
+			_events = journal.currentSessionEvents();
+			_metadata = journal.currentSessionMetadata();
+			endResetModel();
+		});
 
 	beginResetModel();
 	_events = journal.currentSessionEvents();

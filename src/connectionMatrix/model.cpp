@@ -33,6 +33,8 @@
 
 #if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
 #	include <QtMate/material/color.hpp>
+#	include <QTimer>
+#	include <QColor>
 #endif
 
 #ifndef ENABLE_AVDECC_FEATURE_REDUNDANCY
@@ -519,6 +521,23 @@ QString clusterChannelName(QString const& clusterName, std::uint16_t const chann
 	return clusterName;
 }
 
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
+static constexpr auto HighlightFadeDuration = std::chrono::milliseconds{ 1000 };
+static constexpr auto HighlightFadeTickInterval = std::chrono::milliseconds{ 30 };
+
+// Returns the fade color (Red to transparent) for the given progress in [0.0, 1.0[
+static QColor highlightFadeColor(qreal const progress)
+{
+	static auto const startColor = qtMate::material::color::value(qtMate::material::color::Name::Red);
+	static auto const endColor = QColor{ Qt::transparent };
+	auto const lerp = [progress](int const from, int const to)
+	{
+		return from + static_cast<int>((to - from) * progress);
+	};
+	return QColor{ lerp(startColor.red(), endColor.red()), lerp(startColor.green(), endColor.green()), lerp(startColor.blue(), endColor.blue()), lerp(startColor.alpha(), endColor.alpha()) };
+}
+#endif
+
 } // namespace priv
 
 class ModelPrivate : public QObject
@@ -553,6 +572,11 @@ public:
 		// Channel Mode specific signals
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::audioClusterNameChanged, this, &ModelPrivate::handleAudioClusterNameChanged);
 		connect(&controllerManager, &hive::modelsLibrary::ControllerManager::channelInputConnectionChanged, this, &ModelPrivate::handleChannelInputConnectionChanged);
+
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
+		_highlightFadeTimer.setInterval(priv::HighlightFadeTickInterval);
+		connect(&_highlightFadeTimer, &QTimer::timeout, this, &ModelPrivate::handleHighlightFadeTick);
+#endif
 	}
 
 	// Returns talker header orientation
@@ -623,25 +647,35 @@ public:
 			return;
 		}
 
-		auto& intersectionData = _intersectionData[talkerSection][listenerSection];
+		// Only store the fade start time in the cell (Model::data computes the color from it on demand), the shared timer drives the repaints.
+		// The cell is repainted right away by the dataChanged just emitted from intersectionDataChanged.
+		auto const now = std::chrono::steady_clock::now();
+		_intersectionData[talkerSection][listenerSection].highlightTime = now;
+		_highlightFadeEnd = now + priv::HighlightFadeDuration;
 
-		if (!intersectionData.animation)
+		if (!_highlightFadeTimer.isActive())
 		{
-			intersectionData.animation = new QVariantAnimation{ this };
+			_highlightFadeTimer.start();
+		}
+	}
+
+	void handleHighlightFadeTick()
+	{
+		Q_Q(Model);
+
+		// A single coalesced dataChanged per tick for all fading cells: per-cell emissions don't scale (each one may rebuild
+		// the whole macOS accessibility table), and cell coordinates may shift between ticks anyway
+		auto const rows = q->rowCount();
+		auto const columns = q->columnCount();
+		if (rows > 0 && columns > 0)
+		{
+			emit q->dataChanged(q->index(0, 0), q->index(rows - 1, columns - 1), { Qt::BackgroundRole });
 		}
 
-		intersectionData.animation->setStartValue(qtMate::material::color::value(qtMate::material::color::Name::Red));
-		intersectionData.animation->setEndValue(QColor{ Qt::transparent });
-		intersectionData.animation->setDuration(1000);
-		intersectionData.animation->start();
-
-		connect(intersectionData.animation, &QVariantAnimation::valueChanged,
-			[this, talkerSection, listenerSection](QVariant const& /*value*/)
-			{
-				Q_Q(Model);
-				auto const index = q->index(talkerSection, listenerSection);
-				emit q->dataChanged(index, index);
-			});
+		if (std::chrono::steady_clock::now() >= _highlightFadeEnd)
+		{
+			_highlightFadeTimer.stop();
+		}
 	}
 #endif
 
@@ -3058,48 +3092,61 @@ public:
 	{
 		try
 		{
-			auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-			auto controlledEntity = manager.getControlledEntity(entityID);
-			if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
+			auto* talkerNode = static_cast<EntityNode*>(nullptr);
+			auto* listenerNode = static_cast<EntityNode*>(nullptr);
+
+			// Scope the entity guard to the node building only: the insertion below recomputes whole rows/columns
+			// of intersections (plus repaints and accessibility updates), far too long to hold an entity lock
+			// (guards are watchdogged at 500 msec, and the protocol threads compete for the lock during enumeration)
 			{
-				auto const entityCapabilities = controlledEntity->getEntity().getEntityCapabilities();
-
-				if (!entityCapabilities.test(la::avdecc::entity::EntityCapability::AemSupported) || !controlledEntity->hasAnyConfiguration())
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				auto controlledEntity = manager.getControlledEntity(entityID);
+				if (controlledEntity && AVDECC_ASSERT_WITH_RET(!controlledEntity->gotFatalEnumerationError(), "An entity should not be set online if it had an enumeration error"))
 				{
-					return;
-				}
+					auto const entityCapabilities = controlledEntity->getEntity().getEntityCapabilities();
 
-				auto const& entityNode = controlledEntity->getEntityNode();
-				auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel.currentConfiguration);
-
-				// Talker
-				if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
-				{
-					if (auto* node = buildTalkerNode(*controlledEntity, entityID, configurationNode))
+					if (!entityCapabilities.test(la::avdecc::entity::EntityCapability::AemSupported) || !controlledEntity->hasAnyConfiguration())
 					{
-						_talkerNodeMap.insert(std::make_pair(entityID, node));
+						return;
+					}
 
-						priv::insertStreamNodes(_talkerStreamNodeMap, node);
-						priv::insertChannelNodes(_talkerChannelNodeMap, node);
+					auto const& entityNode = controlledEntity->getEntityNode();
+					auto const& configurationNode = controlledEntity->getConfigurationNode(entityNode.dynamicModel.currentConfiguration);
 
-						insertTalkerNode(node);
+					// Talker
+					if (controlledEntity->getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty())
+					{
+						talkerNode = buildTalkerNode(*controlledEntity, entityID, configurationNode);
+					}
+
+					// Listener
+					if (controlledEntity->getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty())
+					{
+						listenerNode = buildListenerNode(*controlledEntity, entityID, configurationNode);
 					}
 				}
+			}
 
-				// Listener
-				if (controlledEntity->getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty())
-				{
-					if (auto* node = buildListenerNode(*controlledEntity, entityID, configurationNode))
-					{
-						// Insert nodes in cache for quick access
-						_listenerNodeMap.insert(std::make_pair(entityID, node));
+			if (talkerNode)
+			{
+				// Insert nodes in cache for quick access
+				_talkerNodeMap.insert(std::make_pair(entityID, talkerNode));
 
-						priv::insertStreamNodes(_listenerStreamNodeMap, node);
-						priv::insertChannelNodes(_listenerChannelNodeMap, node);
+				priv::insertStreamNodes(_talkerStreamNodeMap, talkerNode);
+				priv::insertChannelNodes(_talkerChannelNodeMap, talkerNode);
 
-						insertListenerNode(node);
-					}
-				}
+				insertTalkerNode(talkerNode);
+			}
+
+			if (listenerNode)
+			{
+				// Insert nodes in cache for quick access
+				_listenerNodeMap.insert(std::make_pair(entityID, listenerNode));
+
+				priv::insertStreamNodes(_listenerStreamNodeMap, listenerNode);
+				priv::insertChannelNodes(_listenerChannelNodeMap, listenerNode);
+
+				insertListenerNode(listenerNode);
 			}
 
 			// Trigger "special offline streams" intersection update
@@ -4466,6 +4513,12 @@ private:
 
 	// Talker major intersection data matrix (cache)
 	std::deque<std::deque<Model::IntersectionData>> _intersectionData;
+
+#if ENABLE_CONNECTION_MATRIX_HIGHLIGHT_DATA_CHANGED
+	// Shared highlight fade timer, running only while at least one cell is still fading
+	QTimer _highlightFadeTimer{};
+	std::chrono::steady_clock::time_point _highlightFadeEnd{};
+#endif
 };
 
 Model::Model(QObject* parent)
@@ -4510,9 +4563,10 @@ QVariant Model::data([[maybe_unused]] QModelIndex const& index, [[maybe_unused]]
 	if (role == Qt::BackgroundRole)
 	{
 		auto const& intersectionData = this->intersectionData(index);
-		if (intersectionData.animation)
+		auto const elapsed = std::chrono::steady_clock::now() - intersectionData.highlightTime;
+		if (elapsed < priv::HighlightFadeDuration)
 		{
-			return intersectionData.animation->currentValue();
+			return priv::highlightFadeColor(std::chrono::duration_cast<std::chrono::duration<qreal, std::milli>>(elapsed).count() / priv::HighlightFadeDuration.count());
 		}
 	}
 #endif

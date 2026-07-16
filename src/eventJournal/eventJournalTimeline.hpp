@@ -48,6 +48,9 @@ public:
 	/** Highlights the marker of the given model row (pass std::nullopt to clear the highlight). */
 	void setSelectedRow(std::optional<int> const& row);
 
+	/** Pans the view (if needed) so the marker of the given model row becomes visible on the timeline. */
+	void ensureRowVisible(int const row);
+
 	/* Signals */
 	Q_SIGNAL void eventClicked(int row);
 

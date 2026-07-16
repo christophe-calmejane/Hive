@@ -47,21 +47,25 @@ CREATE TABLE events (
 );
 ```
 
-Metadata keys: `schema_version`, `hive_version`, `computer_name`, `started_utc`, `stopped_utc`, `interface_id`, `interface_name`.
+Metadata keys: `schema_version`, `hive_version`, `computer_name`, `started_utc`, `stopped_utc`, `interface_id`, `interface_name`, and in dual-PI (redundant controller) mode `secondary_interface_id`, `secondary_interface_name`.
 
 ### Recorded events
 
-| Category | Source signals | Severity |
-|---|---|---|
-| Session | `controllerOnline` / `controllerOffline` / `transportError` | Info / Error |
-| Entity | `entityOnline` / `entityOffline` | Info / Warning |
-| Connection | `streamInputConnectionChanged` (listener side) | Info |
-| Counters | `streamInputErrorCounterChanged`, `statisticsErrorCounterChanged` (the counters Hive flags as errors) | Error |
-| Media Clock | `clockDomainCountersChanged` (Locked/Unlocked transitions, same rule as the Discovered Entities list) | Error / Recovered |
-| gPTP | `gptpChanged` (grandmaster or domain change) | Warning |
-| Link | `avbInterfaceLinkStatusChanged` | Error (down) / Recovered (up) |
-| Latency | `streamInputLatencyErrorChanged` | Error / Recovered |
-| Redundancy | `redundancyWarningChanged` | Error / Recovered |
+| Category    | Source signals                                                                                                                                                                                                                                                              | Severity                      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| Session     | `controllerOnline` / `controllerOffline` / `transportError` (fatal transport error on every controller interface)                                                                                                                                                           | Info / Error                  |
+| Entity      | `entityOnline` / `entityOffline`                                                                                                                                                                                                                                            | Info / Warning                |
+| Entity      | `unsolicitedRegistrationChanged` (aggregated state: the entity is only out-of-sync when no controller interface is subscribed anymore)                                                                                                                                      | Error / Recovered             |
+| Connection  | `streamInputConnectionChanged` (listener side)                                                                                                                                                                                                                              | Info                          |
+| Counters    | `streamInputErrorCounterChanged`, `statisticsErrorCounterChanged` (the counters Hive flags as errors); in dual-PI mode the statistics error counter increases are journaled from the per-counter signals instead, attributing each increase to the interface it occurred on | Error                         |
+| Media Clock | `clockDomainCountersChanged` (Locked/Unlocked transitions, same rule as the Discovered Entities list)                                                                                                                                                                       | Error / Recovered             |
+| gPTP        | `gptpChanged` (grandmaster or domain change)                                                                                                                                                                                                                                | Warning                       |
+| Link        | `avbInterfaceLinkStatusChanged`                                                                                                                                                                                                                                             | Error (down) / Recovered (up) |
+| Latency     | `streamInputLatencyErrorChanged`                                                                                                                                                                                                                                            | Error / Recovered             |
+| Redundancy  | `redundancyWarningChanged`                                                                                                                                                                                                                                                  | Error / Recovered             |
+| Redundancy  | `interfaceTransportError` (transport error on one controller interface in dual-PI mode; the event tells whether the other interface is still operational)                                                                                                                   | Error                         |
+| Redundancy  | `interfaceUnsolicitedRegistrationChanged` (dual-PI mode only: one controller interface lost/recovered its unsolicited notifications subscription for an entity, key sign of per-network instability)                                                                        | Warning / Recovered           |
+| Redundancy  | `entityRedundantInterfaceOffline` / `entityRedundantInterfaceOnline` (entity lost/recovered on one of its redundant interfaces while remaining online on the other; the online notification is only journaled as a recovery, not during normal discovery)                   | Warning / Recovered           |
 
 The `Recovered` severity marks the end of a previously reported error condition, so the duration of an incident (clock unlock, link down, ...) is directly visible in the journal.
 
@@ -88,6 +92,5 @@ The `.hej` extension is associated with Hive (macOS `Info.plist` document types,
 
 ## Possible future improvements
 
-- Additional event types (entity renames, unsolicited notification losses, Milan compatibility changes, stream format changes).
-- CSV export from the viewer.
+- Additional event types (entity renames, Milan compatibility changes, stream format changes).
 - Configurable retention policy (currently a fixed 50 session files).

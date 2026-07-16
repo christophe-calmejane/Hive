@@ -33,6 +33,7 @@
 #include <QStandardPaths>
 
 #include <atomic>
+#include <set>
 #include <unordered_map>
 #include <utility>
 
@@ -45,6 +46,16 @@ namespace
 constexpr auto SchemaVersion = 1;
 constexpr auto MaxJournalFiles = 50; // Maximum number of automatically created session files kept on disk
 constexpr auto WriterConnectionName = "HiveEventJournalWriter";
+
+/** Builds the subject for an event about one of an entity's redundant AVB interfaces (eg. "Primary Interface" for a Milan redundant device, "AVB Interface 2" otherwise). */
+QString redundantInterfaceSubject(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
+{
+	if (auto const interfaceType = helper::redundantInterfaceType(avbInterfaceIndex, milanVersion))
+	{
+		return QString{ "%1 Interface" }.arg(helper::interfaceTypeName(*interfaceType));
+	}
+	return QString{ "AVB Interface %1" }.arg(avbInterfaceIndex);
+}
 
 QString categoryToKey(EventJournal::Category const category) noexcept
 {
@@ -279,6 +290,28 @@ public:
 		clearTrackingState();
 	}
 
+	void handleControllerOnline() noexcept
+	{
+		// Reloading the controller (eg. an interface change) must NOT clear the journal, the user would lose the whole session: keep the current session if one is already recording, only note that the controller restarted
+		if (isRecording())
+		{
+			addEvent(Category::Session, Severity::Info, {}, {}, {}, "Controller restarted");
+		}
+		else
+		{
+			startSession();
+		}
+	}
+
+	void handleControllerOffline() noexcept
+	{
+		// Do NOT stop the session when the controller goes offline (eg. a reload): the session is only closed when the application exits (destructor), so the journal survives a controller reload. Just note that the controller stopped.
+		if (isRecording())
+		{
+			addEvent(Category::Session, Severity::Info, {}, {}, {}, "Controller stopped");
+		}
+	}
+
 	void setMetadata(QString const& key, QString const& value) noexcept
 	{
 		if (!isRecording())
@@ -306,6 +339,21 @@ public:
 		escapedPath.replace("'", "''");
 		auto query = QSqlQuery{ _db };
 		return query.exec(QString{ "VACUUM INTO '%1'" }.arg(escapedPath));
+	}
+
+	void clearCurrentSession() noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		// Wipe the persisted and in-memory events (the tracking baselines and known entity names are kept, so ongoing states are not re-reported)
+		auto query = QSqlQuery{ _db };
+		query.exec("DELETE FROM events");
+		_events.clear();
+		emit _q->sessionCleared();
+		// Record a marker so the cleared session is not completely empty
+		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Journal cleared");
 	}
 
 	/* ************************************************************ */
@@ -351,6 +399,9 @@ public:
 		_statisticsErrorCounters.erase(entityID);
 		_redundancyWarnings.erase(entityID);
 		_latencyErrors.erase(entityID);
+		_lostRedundantInterfaces.erase(entityID);
+		_unsolRegistrationStates.erase(entityID);
+		_lostUnsolInterfaces.erase(entityID);
 	}
 
 	void handleEntityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName) noexcept
@@ -541,6 +592,12 @@ public:
 			return;
 		}
 
+		// In redundant (dual interface) mode, statistics error counter increases are journaled from the per-counter signals (handleStatisticsCounterIncreased) so they carry the interface they occurred on
+		if (ControllerManager::getInstance().isRedundantController())
+		{
+			return;
+		}
+
 		auto& previousCounters = _statisticsErrorCounters[entityID];
 		for (auto const& [flag, value] : errorCounters)
 		{
@@ -557,6 +614,77 @@ public:
 		}
 		// Counters disappearing from the map means the user acknowledged them in the UI: silently forget them
 		previousCounters = errorCounters;
+	}
+
+	void handleStatisticsCounterIncreased(la::avdecc::UniqueIdentifier const entityID, ControllerManager::StatisticsErrorCounterFlag const flag, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		// Only used in redundant (dual interface) mode, to attribute each error counter increase to the interface it occurred on (single interface mode uses handleStatisticsErrorCounterChanged)
+		if (!ControllerManager::getInstance().isRedundantController())
+		{
+			return;
+		}
+
+		auto const interfaceName = helper::interfaceTypeName(interfaceType);
+		auto details = QJsonObject{};
+		details["counter"] = statisticsCounterName(flag);
+		details["interface"] = interfaceName;
+		details["interface_value"] = static_cast<qint64>(interfaceValue);
+		details["value"] = static_cast<qint64>(value);
+		addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), "Statistics", QString{ "'%1' error counter increased on the %2 interface (interface total: %3)" }.arg(statisticsCounterName(flag)).arg(interfaceName).arg(interfaceValue), details);
+	}
+
+	void handleInterfaceTransportError(la::avdecc::controller::InterfaceType const interfaceType) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		// In single interface mode this event is already covered by the session-wide transport error event
+		if (!ControllerManager::getInstance().isRedundantController())
+		{
+			return;
+		}
+
+		auto const name = helper::interfaceTypeName(interfaceType);
+		auto const isFirstError = _controllerTransportErrors.empty();
+		_controllerTransportErrors.insert(interfaceType);
+		if (isFirstError)
+		{
+			addEvent(Category::Redundancy, Severity::Error, {}, {}, QString{ "%1 Interface" }.arg(name), QString{ "Transport error on the controller %1 interface (the other redundant interface is still operational)" }.arg(name));
+		}
+		else
+		{
+			addEvent(Category::Redundancy, Severity::Error, {}, {}, QString{ "%1 Interface" }.arg(name), QString{ "Transport error on the controller %1 interface" }.arg(name));
+		}
+	}
+
+	void handleEntityRedundantInterfaceOffline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		_lostRedundantInterfaces[entityID].insert(avbInterfaceIndex);
+		addEvent(Category::Redundancy, Severity::Warning, entityID, entityNameFor(entityID), redundantInterfaceSubject(avbInterfaceIndex, milanVersionFor(entityID)), "Entity is offline on one redundant interface (still online on the other)");
+	}
+
+	void handleEntityRedundantInterfaceOnline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		// Only journal a recovery if that interface was previously reported lost (this notification is also part of the normal discovery sequence)
+		if (auto const it = _lostRedundantInterfaces.find(entityID); it != _lostRedundantInterfaces.end() && it->second.erase(avbInterfaceIndex) > 0)
+		{
+			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), redundantInterfaceSubject(avbInterfaceIndex, milanVersionFor(entityID)), "Entity is back online on the redundant interface");
+		}
 	}
 
 	void handleRedundancyWarningChanged(la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning) noexcept
@@ -608,7 +736,99 @@ public:
 		{
 			return;
 		}
-		addEvent(Category::Session, Severity::Error, {}, {}, {}, "Network transport error (the network interface may have gone down)");
+		if (ControllerManager::getInstance().isRedundantController())
+		{
+			addEvent(Category::Session, Severity::Error, {}, {}, {}, "Network transport error on all controller interfaces (the controller is no longer operational)");
+		}
+		else
+		{
+			addEvent(Category::Session, Severity::Error, {}, {}, {}, "Network transport error (the network interface may have gone down)");
+		}
+	}
+
+	void handleUnsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const triggeredByEntity) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		// isSubscribed is the aggregated state: only journal actual transitions (the signal is emitted for every per-interface change)
+		auto const it = _unsolRegistrationStates.find(entityID);
+		if (it == _unsolRegistrationStates.end())
+		{
+			// No baseline for that entity (should not happen, baselines are seeded when the entity comes online): silently store
+			_unsolRegistrationStates[entityID] = isSubscribed;
+			return;
+		}
+		if (it->second == isSubscribed)
+		{
+			return;
+		}
+		it->second = isSubscribed;
+
+		if (!isSubscribed)
+		{
+			auto details = QJsonObject{};
+			details["triggered_by_entity"] = triggeredByEntity;
+			auto const summary = ControllerManager::getInstance().isRedundantController() ? QString{ "No longer subscribed to unsolicited notifications on any interface (entity updates may be missed, consider refreshing the entity)" } : QString{ "No longer subscribed to unsolicited notifications (entity updates may be missed, consider refreshing the entity)" };
+			addEvent(Category::Entity, Severity::Error, entityID, entityNameFor(entityID), {}, summary, details);
+		}
+		else
+		{
+			addEvent(Category::Entity, Severity::Recovered, entityID, entityNameFor(entityID), {}, "Subscribed to unsolicited notifications again");
+		}
+	}
+
+	void handleInterfaceUnsolicitedRegistrationChanged(la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const triggeredByEntity, la::avdecc::controller::InterfaceType const interfaceType) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		// Per-interface events are only relevant in redundant (dual interface) mode: in single interface mode they duplicate the aggregated event
+		if (!ControllerManager::getInstance().isRedundantController())
+		{
+			return;
+		}
+
+		auto const name = helper::interfaceTypeName(interfaceType);
+		auto& lostInterfaces = _lostUnsolInterfaces[entityID];
+
+		if (!isSubscribed)
+		{
+			// If the entity is currently offline on this redundant interface, the "Entity is offline on one redundant interface" event journaled just before already covers the situation: do not journal a redundant unsolicited-notifications-lost event
+			auto const avbInterfaceIndex = static_cast<la::avdecc::entity::model::AvbInterfaceIndex>(interfaceType);
+			if (auto const it = _lostRedundantInterfaces.find(entityID); it != _lostRedundantInterfaces.end() && it->second.count(avbInterfaceIndex) > 0)
+			{
+				return;
+			}
+			// Only journal (and track) the first transition to unsubscribed
+			if (!lostInterfaces.insert(interfaceType).second)
+			{
+				return;
+			}
+			auto details = QJsonObject{};
+			details["triggered_by_entity"] = triggeredByEntity;
+			auto summary = QString{ "No longer receiving unsolicited notifications on the %1 interface" }.arg(name);
+			if (triggeredByEntity)
+			{
+				summary += " (unregistered by the entity)";
+			}
+			addEvent(Category::Redundancy, Severity::Warning, entityID, entityNameFor(entityID), QString{ "%1 Interface" }.arg(name), summary, details);
+		}
+		else
+		{
+			// Only journal a recovery if this interface was previously reported as lost: the first subscription on an interface (eg. the lazy registration on the Secondary interface during the initial discovery sequence) is normal and must not be reported as a recovery
+			if (lostInterfaces.erase(interfaceType) == 0)
+			{
+				return;
+			}
+			auto details = QJsonObject{};
+			details["triggered_by_entity"] = triggeredByEntity;
+			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "%1 Interface" }.arg(name), QString{ "Receiving unsolicited notifications again on the %1 interface" }.arg(name), details);
+		}
 	}
 
 	/* ************************************************************ */
@@ -661,6 +881,17 @@ public:
 		return helper::uniqueIdentifierToString(entityID);
 	}
 
+	/** Returns the Milan compatibility version of the given entity (default constructed if the entity is not currently known). */
+	la::avdecc::entity::model::MilanVersion milanVersionFor(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto& manager = ControllerManager::getInstance();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			return controlledEntity->getMilanCompatibilityVersion();
+		}
+		return {};
+	}
+
 	/** Returns a designation for the given input stream, including its name if resolvable. */
 	QString inputStreamSubject(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
 	{
@@ -692,6 +923,9 @@ public:
 	/** Seeds the change-detection baselines from the current entity model state, so only actual changes occurring after the entity came online are journaled. */
 	void seedBaselines(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
 	{
+		// Aggregated unsolicited notifications subscription state (does not depend on the entity having a configuration)
+		_unsolRegistrationStates[entityID] = controlledEntity.isSubscribedToUnsolicitedNotifications();
+
 		try
 		{
 			auto const& configurationNode = controlledEntity.getCurrentConfigurationNode();
@@ -731,6 +965,10 @@ public:
 		_statisticsErrorCounters.clear();
 		_redundancyWarnings.clear();
 		_latencyErrors.clear();
+		_lostRedundantInterfaces.clear();
+		_unsolRegistrationStates.clear();
+		_lostUnsolInterfaces.clear();
+		_controllerTransportErrors.clear();
 	}
 
 	void cleanupOldJournals(QString const& dirPath) noexcept
@@ -766,6 +1004,10 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, ControllerManager::StatisticsErrorCounters, la::avdecc::UniqueIdentifier::hash> _statisticsErrorCounters{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, bool, la::avdecc::UniqueIdentifier::hash> _redundancyWarnings{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, bool>, la::avdecc::UniqueIdentifier::hash> _latencyErrors{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::set<la::avdecc::entity::model::AvbInterfaceIndex>, la::avdecc::UniqueIdentifier::hash> _lostRedundantInterfaces{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, bool, la::avdecc::UniqueIdentifier::hash> _unsolRegistrationStates{}; // Aggregated subscription state
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::set<la::avdecc::controller::InterfaceType>, la::avdecc::UniqueIdentifier::hash> _lostUnsolInterfaces{}; // Redundant interfaces currently reported as no longer receiving unsolicited notifications
+	std::set<la::avdecc::controller::InterfaceType> _controllerTransportErrors{}; // Controller interfaces having received a fatal transport error
 };
 
 /* ************************************************************ */
@@ -785,12 +1027,12 @@ EventJournal::EventJournal()
 	connect(&manager, &ControllerManager::controllerOnline, this,
 		[this]()
 		{
-			_pImpl->startSession();
+			_pImpl->handleControllerOnline();
 		});
 	connect(&manager, &ControllerManager::controllerOffline, this,
 		[this]()
 		{
-			_pImpl->stopSession();
+			_pImpl->handleControllerOffline();
 		});
 	connect(&manager, &ControllerManager::transportError, this,
 		[this]()
@@ -846,6 +1088,57 @@ EventJournal::EventJournal()
 		[this](la::avdecc::UniqueIdentifier const entityID, bool const isRedundancyWarning)
 		{
 			_pImpl->handleRedundancyWarningChanged(entityID, isRedundancyWarning);
+		});
+	connect(&manager, &ControllerManager::interfaceTransportError, this,
+		[this](la::avdecc::controller::InterfaceType const interfaceType)
+		{
+			_pImpl->handleInterfaceTransportError(interfaceType);
+		});
+	connect(&manager, &ControllerManager::unsolicitedRegistrationChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const triggeredByEntity)
+		{
+			_pImpl->handleUnsolicitedRegistrationChanged(entityID, isSubscribed, triggeredByEntity);
+		});
+	connect(&manager, &ControllerManager::interfaceUnsolicitedRegistrationChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const triggeredByEntity, la::avdecc::controller::InterfaceType const interfaceType)
+		{
+			_pImpl->handleInterfaceUnsolicitedRegistrationChanged(entityID, isSubscribed, triggeredByEntity, interfaceType);
+		});
+	// Per-counter statistics signals, used in redundant (dual interface) mode to attribute error counter increases to the interface they occurred on
+	connect(&manager, &ControllerManager::aecpRetryCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue)
+		{
+			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::AecpRetries, value, interfaceType, interfaceValue);
+		});
+	connect(&manager, &ControllerManager::aecpTimeoutCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue)
+		{
+			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts, value, interfaceType, interfaceValue);
+		});
+	connect(&manager, &ControllerManager::aecpUnexpectedResponseCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue)
+		{
+			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses, value, interfaceType, interfaceValue);
+		});
+	connect(&manager, &ControllerManager::aemAecpUnsolicitedLossCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue)
+		{
+			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses, value, interfaceType, interfaceValue);
+		});
+	connect(&manager, &ControllerManager::mvuAecpUnsolicitedLossCounterChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue)
+		{
+			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, value, interfaceType, interfaceValue);
+		});
+	connect(&manager, &ControllerManager::entityRedundantInterfaceOffline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+		{
+			_pImpl->handleEntityRedundantInterfaceOffline(entityID, avbInterfaceIndex);
+		});
+	connect(&manager, &ControllerManager::entityRedundantInterfaceOnline, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::Entity::InterfaceInformation const&)
+		{
+			_pImpl->handleEntityRedundantInterfaceOnline(entityID, avbInterfaceIndex);
 		});
 	connect(&manager, &ControllerManager::streamInputLatencyErrorChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isLatencyError)
@@ -1007,6 +1300,11 @@ void EventJournal::setSessionMetadata(QString const& key, QString const& value) 
 bool EventJournal::exportCurrentSession(QString const& filePath) noexcept
 {
 	return _pImpl->exportSession(filePath);
+}
+
+void EventJournal::clearCurrentSession() noexcept
+{
+	_pImpl->clearCurrentSession();
 }
 
 } // namespace modelsLibrary

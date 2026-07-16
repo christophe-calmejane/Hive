@@ -20,6 +20,8 @@
 #include "networkGraphView.hpp"
 #include "networkGraphPane.hpp"
 
+#include <hive/modelsLibrary/helper.hpp>
+
 #include <QHBoxLayout>
 #include <QShortcut>
 #include <QVBoxLayout>
@@ -29,18 +31,13 @@
 
 namespace
 {
-QString networkName(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)
+QString networkName(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion)
 {
-	// Milan redundancy defines AVB interface index 0 as the primary network and index 1 as the secondary network
-	switch (avbInterfaceIndex)
+	if (auto const interfaceType = hive::modelsLibrary::helper::redundantInterfaceType(avbInterfaceIndex, milanVersion))
 	{
-		case 0u:
-			return "Primary";
-		case 1u:
-			return "Secondary";
-		default:
-			return QString{ "Network %1" }.arg(avbInterfaceIndex);
+		return hive::modelsLibrary::helper::interfaceTypeName(*interfaceType);
 	}
+	return QString{ "Network %1" }.arg(avbInterfaceIndex);
 }
 } // namespace
 
@@ -208,7 +205,7 @@ void NetworkGraphView::rebuildPanes()
 					}
 				});
 			_panes.insert(_panes.begin() + static_cast<std::ptrdiff_t>(networkIndex), std::make_pair(network.avbInterfaceIndex, pane));
-			_tabWidget->insertTab(static_cast<int>(networkIndex), pane, networkName(network.avbInterfaceIndex));
+			_tabWidget->insertTab(static_cast<int>(networkIndex), pane, networkName(network.avbInterfaceIndex, network.milanVersion));
 			pane->selectEntity(_selectedEntityID);
 			pane->setShowStreamInfo(_streamInfoButton.isChecked());
 		}
