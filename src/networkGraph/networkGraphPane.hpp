@@ -86,8 +86,8 @@ public:
 	/** Gets a short description of the graph content (entities and bridges count). */
 	QString statsText() const;
 
-	/** A highlighted stream connection is identified by its endpoints, so the highlight survives topology rebuilds. */
-	using StreamKey = std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex, la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
+	/** A highlighted stream is identified by its talker endpoint (streams are multicast), so the highlight survives topology rebuilds. */
+	using StreamKey = std::tuple<la::avdecc::UniqueIdentifier, la::avdecc::entity::model::StreamIndex>;
 
 protected:
 	virtual void showEvent(QShowEvent* event) override;
@@ -99,6 +99,7 @@ private:
 	void updateStatsText();
 	void applySelectionToScene();
 	void applyHighlightToScene();
+	void scheduleFit();
 
 	hive::modelsLibrary::NetworkTopologyModel::Topology _topology{};
 	QGraphicsScene* _scene{ nullptr };
@@ -115,7 +116,12 @@ private:
 	std::unordered_map<QGraphicsItem*, la::avdecc::UniqueIdentifier> _entityForItem{};
 	la::avdecc::UniqueIdentifier _selectedEntityID{};
 	bool _changingSelection{ false };
-	bool _pendingFit{ false }; // Fit deferred until the pane becomes visible (fitInView is a no-op on a hidden viewport)
+	// Expensive operations are deferred while the pane is hidden (non current tab, or hidden window) and
+	// performed once when it becomes visible: scene rebuild + layout, items decoration refresh, and view fit
+	// (which also requires the viewport geometry to be final, hence the deferred single-shot in scheduleFit())
+	bool _pendingSceneRebuild{ false };
+	bool _pendingDecorationRefresh{ false };
+	bool _pendingFit{ false };
 	bool _showStreamInfo{ true };
 
 	// Stream path highlight state

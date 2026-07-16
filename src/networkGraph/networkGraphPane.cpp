@@ -165,10 +165,21 @@ public:
 		update();
 	}
 
+	// Emphasizes the node as the talker of at least one highlighted stream (strong visual cue to spot the stream sources)
+	void setTalkerHighlighted(bool const talkerHighlighted)
+	{
+		if (talkerHighlighted != _talkerHighlighted)
+		{
+			_talkerHighlighted = talkerHighlighted;
+			update();
+		}
+	}
+
 protected:
 	virtual QString buildTooltip() const = 0;
 
 	TopologyNode _node{};
+	bool _talkerHighlighted{ false };
 };
 
 // Graph node displaying a discovered entity (one node per AVB interface)
@@ -233,11 +244,16 @@ public:
 	{
 		auto const rect = QRectF{ QPointF{ 0.0, 0.0 }, size() };
 		painter->setRenderHint(QPainter::Antialiasing);
-		// Border precedence: interconnection error > selection > talker (bold contour as visual cue) > default
+		// Border precedence: interconnection error > talker of a highlighted stream > selection > streaming talker > default
 		auto borderPen = QPen{ BorderColor, 1.0 };
 		if (_node.isInterconnected)
 		{
 			borderPen = QPen{ ErrorColor, 2.5 };
+		}
+		else if (_talkerHighlighted)
+		{
+			// Same color than the highlighted stream paths, so the stream sources are immediately identifiable
+			borderPen = QPen{ HighlightEdgeColor, 3.0 };
 		}
 		else if (isSelected())
 		{
@@ -390,7 +406,7 @@ private:
 
 NetworkGraphPane::StreamKey makeStreamKey(hive::modelsLibrary::NetworkTopologyModel::Stream const& stream)
 {
-	return { stream.talkerEntityID, stream.talkerStreamIndex, stream.listenerEntityID, stream.listenerStreamIndex };
+	return { stream.talkerEntityID, stream.talkerStreamIndex };
 }
 } // namespace
 
@@ -465,15 +481,33 @@ void NetworkGraphPane::setTopology(hive::modelsLibrary::NetworkTopologyModel::To
 	// When the structure didn't change (only counters, statuses, names or stream traffic did), refresh the
 	// existing items in place: much cheaper than a full rebuild, and it preserves the view zoom/pan and
 	// any manual node placement (frequent updates occur continuously on large networks)
-	auto const structureUnchanged = hasSameStructure(_topology, topology);
+	auto const structureUnchanged = !_pendingSceneRebuild && hasSameStructure(_topology, topology);
 	_topology = topology;
+	updateStatsText();
+
+	// A hidden pane (non current tab, or hidden window) defers all the scene work until it becomes visible:
+	// laying out (or even redecorating) a graph nobody sees is wasted work, especially on large networks
 	if (structureUnchanged)
 	{
-		refreshDecorations();
+		if (isVisible())
+		{
+			refreshDecorations();
+		}
+		else
+		{
+			_pendingDecorationRefresh = true;
+		}
 	}
 	else
 	{
-		rebuildScene();
+		if (isVisible())
+		{
+			rebuildScene();
+		}
+		else
+		{
+			_pendingSceneRebuild = true;
+		}
 	}
 }
 
@@ -487,7 +521,6 @@ void NetworkGraphPane::refreshDecorations()
 	{
 		applyEdgeDecorations(edgeIndex);
 	}
-	updateStatsText();
 	applyHighlightToScene();
 }
 
@@ -711,6 +744,7 @@ void NetworkGraphPane::applyHighlightToScene()
 	// Resolve the highlighted stream keys against the current topology
 	auto involvedNodes = std::unordered_set<std::size_t>{};
 	auto involvedEdges = std::unordered_set<std::size_t>{};
+	auto talkerNodes = std::unordered_set<std::size_t>{};
 	auto hasHighlight = false;
 	for (auto const& stream : _topology.streams)
 	{
@@ -719,13 +753,15 @@ void NetworkGraphPane::applyHighlightToScene()
 			hasHighlight = true;
 			involvedNodes.insert(stream.nodeIndices.begin(), stream.nodeIndices.end());
 			involvedEdges.insert(stream.edgeIndices.begin(), stream.edgeIndices.end());
+			talkerNodes.insert(stream.talkerNodeIndex);
 		}
 	}
 
-	// Dim everything that is not part of the highlighted paths
+	// Dim everything that is not part of the highlighted paths, and emphasize the talkers of the highlighted streams
 	for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < _nodeItems.size(); ++nodeIndex)
 	{
 		_nodeItems[nodeIndex]->setOpacity(!hasHighlight || involvedNodes.count(nodeIndex) > 0 ? 1.0 : DimmedOpacity);
+		static_cast<TopologyNodeItem*>(_nodeItems[nodeIndex])->setTalkerHighlighted(talkerNodes.count(nodeIndex) > 0);
 	}
 	for (auto edgeIndex = std::size_t{ 0u }; edgeIndex < _edgeItems.size(); ++edgeIndex)
 	{
@@ -823,34 +859,49 @@ void NetworkGraphPane::rebuildScene()
 		applyEdgeDecorations(edgeIndex);
 	}
 
-	updateStatsText();
-
 	// Restore the application wide entity selection and the stream highlight on the freshly created items
 	applySelectionToScene();
 	applyHighlightToScene();
 
-	// A hidden pane (non current tab) has no valid viewport geometry yet, defer the fit until it becomes visible
-	if (isVisible())
-	{
-		_graphView->fitToContents();
-	}
-	else
-	{
-		_pendingFit = true;
-	}
+	// Never fit synchronously: right after the pane creation (or a tab insertion) the viewport geometry is not
+	// final yet, and fitting on a stale geometry computes a wrong zoom/center that is never corrected afterwards
+	// (in place refreshes purposely don't re-fit)
+	_pendingFit = true;
+	scheduleFit();
+}
+
+void NetworkGraphPane::scheduleFit()
+{
+	// Postpone until the pending layout events have been processed, so the viewport geometry is final.
+	// Nothing to do on a hidden pane: the fit stays pending and showEvent() will reschedule it.
+	QTimer::singleShot(0, this,
+		[this]()
+		{
+			if (_pendingFit && isVisible())
+			{
+				_pendingFit = false;
+				_graphView->fitToContents();
+			}
+		});
 }
 
 void NetworkGraphPane::showEvent(QShowEvent* event)
 {
 	QWidget::showEvent(event);
+	// Perform the work deferred while the pane was hidden
+	if (_pendingSceneRebuild)
+	{
+		_pendingSceneRebuild = false;
+		_pendingDecorationRefresh = false;
+		rebuildScene(); // Ends by scheduling a fit
+	}
+	else if (_pendingDecorationRefresh)
+	{
+		_pendingDecorationRefresh = false;
+		refreshDecorations();
+	}
 	if (_pendingFit)
 	{
-		_pendingFit = false;
-		// Postpone until the layout pass completed, the viewport geometry might not be final yet
-		QTimer::singleShot(0, this,
-			[this]()
-			{
-				_graphView->fitToContents();
-			});
+		scheduleFit();
 	}
 }
