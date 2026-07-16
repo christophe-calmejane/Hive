@@ -29,6 +29,7 @@
 #	include <sparkleHelper/sparkleHelper.hpp>
 #endif // USE_SPARKLE
 #include <hive/modelsLibrary/controllerManager.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 
 #include <QFontDatabase>
 #include <QSharedMemory>
@@ -364,6 +365,9 @@ int main(int argc, char* argv[])
 
 	/* Load everything we need */
 	std::chrono::time_point<std::chrono::system_clock> start{ std::chrono::system_clock::now() };
+
+	// Warm the OUI vendor names cache up in the background, so the first lookup (eg. from the network graph) doesn't freeze the main thread
+	hive::modelsLibrary::helper::warmUpVendorNamesCache();
 
 #ifdef USE_SPARKLE
 	// Initialize Sparkle

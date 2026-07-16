@@ -59,6 +59,8 @@ inline QString toHexQString(T const v, bool const zeroFilled = false, bool const
 }
 
 QString toUpperCamelCase(std::string const& text) noexcept;
+/** Warms the getVendorName() OUI database cache up from a background thread (the parse is slow enough to noticeably freeze the caller otherwise). Call once at application startup. */
+void warmUpVendorNamesCache() noexcept;
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
 QString interfaceTypeName(la::avdecc::controller::InterfaceType const interfaceType) noexcept;
