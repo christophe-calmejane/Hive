@@ -2953,7 +2953,10 @@ private:
 				for (auto& entityID : _entities)
 				{
 					auto ceg = getControlledEntity(entityID);
-					if (AVDECC_ASSERT_WITH_RET(!!ceg, "ControllerManager model not up-to-date with avdecc::controller"))
+					// The entity may already be gone from the avdecc::controller while its offline event is still queued for
+					// the UI thread (_entities is transiently ahead of the controller, especially when the UI thread is busy),
+					// simply skip it: the pending offline event will remove it from _entities
+					if (!!ceg)
 					{
 						controlledEntities.push_back(std::move(ceg));
 					}
