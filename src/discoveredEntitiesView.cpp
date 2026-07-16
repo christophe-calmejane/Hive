@@ -61,6 +61,10 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 			horizontalLayout->addItem(horizontalSpacer);
 		}
 		{
+			horizontalLayout->addWidget(&_entitiesCountLabel);
+			_entitiesCountLabel.setToolTip(QCoreApplication::translate("DiscoveredEntitiesView", "Number of discovered entities (visible/total when a filter is active)", nullptr));
+		}
+		{
 			horizontalLayout->addWidget(&_clearAllErrorsButton);
 			_clearAllErrorsButton.setToolTip(QCoreApplication::translate("DiscoveredEntitiesView", "Clear all error counters", nullptr));
 		}
@@ -81,8 +85,20 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 			_searchFilterProxyModel.setFilterKeyColumn(discoveredEntities::View::ControllerModelEntityColumn_Name);
 			_searchFilterProxyModel.setFilterRegularExpression(pattern);
 			_searchFilterProxyModel.setFilterCaseSensitivity(Qt::CaseInsensitive);
+			updateEntitiesCount();
 			emit filterChanged(text);
 		});
+
+	// Update the entities count whenever entities are added/removed, either from the source model (total count) or from the filter proxy (visible count)
+	auto const connectEntitiesCountUpdate = [this](QAbstractItemModel* const model)
+	{
+		connect(model, &QAbstractItemModel::rowsInserted, this, &DiscoveredEntitiesView::updateEntitiesCount);
+		connect(model, &QAbstractItemModel::rowsRemoved, this, &DiscoveredEntitiesView::updateEntitiesCount);
+		connect(model, &QAbstractItemModel::modelReset, this, &DiscoveredEntitiesView::updateEntitiesCount);
+	};
+	connectEntitiesCountUpdate(_searchFilterProxyModel.sourceModel());
+	connectEntitiesCountUpdate(&_searchFilterProxyModel);
+	updateEntitiesCount();
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 	connect(&_filterLinkedCheckbox, &QCheckBox::checkStateChanged, &_filterLinkedCheckbox,
@@ -410,6 +426,23 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 			_searchLineEdit.setFocus(Qt::MouseFocusReason);
 			_searchLineEdit.selectAll();
 		});
+}
+
+void DiscoveredEntitiesView::updateEntitiesCount() noexcept
+{
+	auto const totalCount = _searchFilterProxyModel.sourceModel()->rowCount();
+	auto const visibleCount = _searchFilterProxyModel.rowCount();
+	auto const unit = totalCount == 1 ? QCoreApplication::translate("DiscoveredEntitiesView", "entity", nullptr) : QCoreApplication::translate("DiscoveredEntitiesView", "entities", nullptr);
+
+	// Also display the visible count when the filter hides some entities
+	if (visibleCount == totalCount)
+	{
+		_entitiesCountLabel.setText(QString{ "%1 %2" }.arg(totalCount).arg(unit));
+	}
+	else
+	{
+		_entitiesCountLabel.setText(QString{ "%1/%2 %3" }.arg(visibleCount).arg(totalCount).arg(unit));
+	}
 }
 
 void DiscoveredEntitiesView::setupView(hive::VisibilityDefaults const& defaults, bool const firstSetup) noexcept
