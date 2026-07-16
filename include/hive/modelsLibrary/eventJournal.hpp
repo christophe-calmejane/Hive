@@ -146,11 +146,20 @@ public:
 	*/
 	bool exportCurrentSession(QString const& filePath) noexcept;
 
+	/**
+	* @brief Clears all events recorded so far in the current session.
+	* @details Wipes the events from the session file and from memory, then records a "Journal cleared" marker event.
+	*          The tracking baselines are kept, so ongoing states are not re-reported. The session keeps recording.
+	*          No-op if not recording.
+	*/
+	void clearCurrentSession() noexcept;
+
 	/* Signals */
 	Q_SIGNAL void recordingStarted(QString const& filePath);
 	Q_SIGNAL void recordingStopped();
 	Q_SIGNAL void recordingFailed(QString const& reason);
 	Q_SIGNAL void eventAdded(hive::modelsLibrary::EventJournal::Event const& event);
+	Q_SIGNAL void sessionCleared();
 
 private:
 	EventJournal();

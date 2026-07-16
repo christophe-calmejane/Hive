@@ -107,6 +107,41 @@ void EventJournalTimeline::setSelectedRow(std::optional<int> const& row)
 	update();
 }
 
+void EventJournalTimeline::ensureRowVisible(int const row)
+{
+	// Find the marker of that model row
+	auto const it = std::find_if(_markers.begin(), _markers.end(),
+		[row](Marker const& marker)
+		{
+			return marker.row == row;
+		});
+	if (it == _markers.end())
+	{
+		return;
+	}
+
+	auto const timestamp = it->timestamp;
+	auto const span = _viewEnd - _viewStart;
+	auto const margin = span / 10; // Keep the marker slightly away from the edges
+	auto shift = qint64{ 0 };
+	if (timestamp < _viewStart + margin)
+	{
+		shift = timestamp - (_viewStart + margin);
+	}
+	else if (timestamp > _viewEnd - margin)
+	{
+		shift = timestamp - (_viewEnd - margin);
+	}
+	if (shift != 0)
+	{
+		_viewStart += shift;
+		_viewEnd += shift;
+		_autoFit = false;
+		clampView();
+		update();
+	}
+}
+
 QSize EventJournalTimeline::sizeHint() const
 {
 	return QSize{ 400, 140 };

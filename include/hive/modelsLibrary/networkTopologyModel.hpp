@@ -139,6 +139,7 @@ public:
 	struct Network
 	{
 		la::avdecc::entity::model::AvbInterfaceIndex avbInterfaceIndex{ 0u };
+		la::avdecc::entity::model::MilanVersion milanVersion{}; /**< Highest Milan compatibility version among the entities of this network (used to name the redundant Primary/Secondary networks) */
 		Topology topology{};
 	};
 

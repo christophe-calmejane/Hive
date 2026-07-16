@@ -51,6 +51,10 @@ public:
 	/** Creates a standalone viewer window for a session loaded from the given file. */
 	EventJournalView(hive::modelsLibrary::EventJournal::Session&& session, QString const& filePath);
 
+	/* Signals */
+	/** Emitted when the user requests to select an entity (eg. by double-clicking one of its events). */
+	Q_SIGNAL void selectEntityRequested(la::avdecc::UniqueIdentifier const entityID);
+
 private:
 	void buildUi(bool const isLiveMode);
 	void createSeverityFilterMenu();
@@ -62,6 +66,7 @@ private:
 	void handleRowsInserted(int const firstRow, int const lastRow);
 	void handleModelReset();
 	void handleSelectionChanged();
+	void handleEventDoubleClicked(QModelIndex const& index);
 
 	EventJournalModel _model{ this };
 	EventJournalFilterProxyModel _filterProxyModel{ this };
@@ -71,6 +76,7 @@ private:
 	QPushButton _entityFilterButton{ "Entity", this };
 	QLineEdit _searchLineEdit{ this };
 	QPushButton _exportButton{ "Export...", this };
+	QPushButton _clearButton{ "Clear", this };
 	QMenu _exportMenu{ this };
 	QAction* _exportJournalAction{ nullptr };
 	QCheckBox _fromCheckBox{ "From:", this };

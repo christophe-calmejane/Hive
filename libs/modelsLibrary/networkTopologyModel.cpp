@@ -58,6 +58,7 @@ struct InterfaceInfo
 	std::vector<la::avdecc::UniqueIdentifier> asPath{};
 	la::avdecc::UniqueIdentifier internalBridgeClockIdentity{}; /**< Clock identity of the entity's internal bridge, for bridged endpoints (propagation delay == 0) */
 	std::uint64_t errorCounter{ 0u };
+	la::avdecc::entity::model::MilanVersion milanVersion{};
 };
 
 // Information collected for one connected stream output, input of the bandwidth accumulation
@@ -496,6 +497,7 @@ void NetworkTopologyModel::rebuild() noexcept
 				auto const isMultiInterface = configurationNode.avbInterfaces.size() > 1;
 				auto const isTalker = entity.getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty();
 				auto const isListener = entity.getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty();
+				auto const milanVersion = entity.getMilanCompatibilityVersion();
 
 				// Media clock lock state, from the counters of the first clock domain (same rule than the Discovered Entities list)
 				auto clockLockState = NetworkTopologyModel::ClockLockState::Unknown;
@@ -572,6 +574,7 @@ void NetworkTopologyModel::rebuild() noexcept
 					info.gptpGrandmasterID = avbInterfaceNode.dynamicModel.gptpGrandmasterID;
 					info.gptpDomainNumber = avbInterfaceNode.dynamicModel.gptpDomainNumber;
 					info.clockLockState = clockLockState;
+					info.milanVersion = milanVersion;
 
 					if (avbInterfaceNode.dynamicModel.avbInterfaceInfo)
 					{
@@ -635,7 +638,13 @@ void NetworkTopologyModel::rebuild() noexcept
 	auto networks = std::vector<Network>{};
 	for (auto const& [avbInterfaceIndex, networkInterfaces] : interfacesByNetwork)
 	{
-		networks.push_back(Network{ avbInterfaceIndex, buildTopologyForNetwork(networkInterfaces, streamOutputs, streamInputs) });
+		// A network is a redundant Primary/Secondary network as soon as one Milan redundant device sits on it: keep the highest Milan version among its entities to name it
+		auto networkMilanVersion = la::avdecc::entity::model::MilanVersion{};
+		for (auto const& info : networkInterfaces)
+		{
+			networkMilanVersion = std::max(networkMilanVersion, info.milanVersion);
+		}
+		networks.push_back(Network{ avbInterfaceIndex, networkMilanVersion, buildTopologyForNetwork(networkInterfaces, streamOutputs, streamInputs) });
 	}
 
 	// Cross network interconnection detection (severe cabling error for redundant networks):

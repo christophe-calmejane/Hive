@@ -1135,6 +1135,13 @@ void MainWindowImpl::connectSignals()
 
 	connect(discoveredEntitiesView->entitiesTableView(), &discoveredEntities::View::selectedControlledEntityChanged, entityInspector, &EntityInspector::setControlledEntityID);
 
+	// Double-clicking an event in the Event Journal selects its entity in the entities list (which activates it in the inspector)
+	connect(eventJournalView, &EventJournalView::selectEntityRequested, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			discoveredEntitiesView->entitiesTableView()->selectControlledEntity(entityID);
+		});
+
 	// Synchronize entity selection between the entities list and the network graph
 	connect(discoveredEntitiesView->entitiesTableView(), &discoveredEntities::View::selectedControlledEntityChanged, networkGraphView, &NetworkGraphView::selectEntity);
 	connect(networkGraphView, &NetworkGraphView::entitySelectionChanged, this,

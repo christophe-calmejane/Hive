@@ -53,6 +53,24 @@ QString interfaceTypeName(la::avdecc::controller::InterfaceType const interfaceT
 	}
 }
 
+std::optional<la::avdecc::controller::InterfaceType> redundantInterfaceType(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
+{
+	// Milan redundancy (Milan 1.0+) defines AVB interface index 0 as the primary network and index 1 as the secondary network
+	if (milanVersion >= la::avdecc::entity::model::MilanVersion{ 1u, 0u })
+	{
+		switch (avbInterfaceIndex)
+		{
+			case 0u:
+				return la::avdecc::controller::InterfaceType::Primary;
+			case 1u:
+				return la::avdecc::controller::InterfaceType::Secondary;
+			default:
+				break;
+		}
+	}
+	return std::nullopt;
+}
+
 QString macAddressToString(la::networkInterface::MacAddress const& macAddress)
 {
 	return QString::fromStdString(la::networkInterface::NetworkInterfaceHelper::macAddressToString(macAddress));

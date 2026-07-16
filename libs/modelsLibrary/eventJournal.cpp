@@ -47,6 +47,16 @@ constexpr auto SchemaVersion = 1;
 constexpr auto MaxJournalFiles = 50; // Maximum number of automatically created session files kept on disk
 constexpr auto WriterConnectionName = "HiveEventJournalWriter";
 
+/** Builds the subject for an event about one of an entity's redundant AVB interfaces (eg. "Primary Interface" for a Milan redundant device, "AVB Interface 2" otherwise). */
+QString redundantInterfaceSubject(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
+{
+	if (auto const interfaceType = helper::redundantInterfaceType(avbInterfaceIndex, milanVersion))
+	{
+		return QString{ "%1 Interface" }.arg(helper::interfaceTypeName(*interfaceType));
+	}
+	return QString{ "AVB Interface %1" }.arg(avbInterfaceIndex);
+}
+
 QString categoryToKey(EventJournal::Category const category) noexcept
 {
 	switch (category)
@@ -280,6 +290,28 @@ public:
 		clearTrackingState();
 	}
 
+	void handleControllerOnline() noexcept
+	{
+		// Reloading the controller (eg. an interface change) must NOT clear the journal, the user would lose the whole session: keep the current session if one is already recording, only note that the controller restarted
+		if (isRecording())
+		{
+			addEvent(Category::Session, Severity::Info, {}, {}, {}, "Controller restarted");
+		}
+		else
+		{
+			startSession();
+		}
+	}
+
+	void handleControllerOffline() noexcept
+	{
+		// Do NOT stop the session when the controller goes offline (eg. a reload): the session is only closed when the application exits (destructor), so the journal survives a controller reload. Just note that the controller stopped.
+		if (isRecording())
+		{
+			addEvent(Category::Session, Severity::Info, {}, {}, {}, "Controller stopped");
+		}
+	}
+
 	void setMetadata(QString const& key, QString const& value) noexcept
 	{
 		if (!isRecording())
@@ -307,6 +339,21 @@ public:
 		escapedPath.replace("'", "''");
 		auto query = QSqlQuery{ _db };
 		return query.exec(QString{ "VACUUM INTO '%1'" }.arg(escapedPath));
+	}
+
+	void clearCurrentSession() noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		// Wipe the persisted and in-memory events (the tracking baselines and known entity names are kept, so ongoing states are not re-reported)
+		auto query = QSqlQuery{ _db };
+		query.exec("DELETE FROM events");
+		_events.clear();
+		emit _q->sessionCleared();
+		// Record a marker so the cleared session is not completely empty
+		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Journal cleared");
 	}
 
 	/* ************************************************************ */
@@ -354,6 +401,7 @@ public:
 		_latencyErrors.erase(entityID);
 		_lostRedundantInterfaces.erase(entityID);
 		_unsolRegistrationStates.erase(entityID);
+		_lostUnsolInterfaces.erase(entityID);
 	}
 
 	void handleEntityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName) noexcept
@@ -623,7 +671,7 @@ public:
 			return;
 		}
 		_lostRedundantInterfaces[entityID].insert(avbInterfaceIndex);
-		addEvent(Category::Redundancy, Severity::Warning, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Entity is offline on one redundant interface (still online on the other)");
+		addEvent(Category::Redundancy, Severity::Warning, entityID, entityNameFor(entityID), redundantInterfaceSubject(avbInterfaceIndex, milanVersionFor(entityID)), "Entity is offline on one redundant interface (still online on the other)");
 	}
 
 	void handleEntityRedundantInterfaceOnline(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
@@ -635,7 +683,7 @@ public:
 		// Only journal a recovery if that interface was previously reported lost (this notification is also part of the normal discovery sequence)
 		if (auto const it = _lostRedundantInterfaces.find(entityID); it != _lostRedundantInterfaces.end() && it->second.erase(avbInterfaceIndex) > 0)
 		{
-			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Entity is back online on the redundant interface");
+			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), redundantInterfaceSubject(avbInterfaceIndex, milanVersionFor(entityID)), "Entity is back online on the redundant interface");
 		}
 	}
 
@@ -746,10 +794,23 @@ public:
 		}
 
 		auto const name = helper::interfaceTypeName(interfaceType);
-		auto details = QJsonObject{};
-		details["triggered_by_entity"] = triggeredByEntity;
+		auto& lostInterfaces = _lostUnsolInterfaces[entityID];
+
 		if (!isSubscribed)
 		{
+			// If the entity is currently offline on this redundant interface, the "Entity is offline on one redundant interface" event journaled just before already covers the situation: do not journal a redundant unsolicited-notifications-lost event
+			auto const avbInterfaceIndex = static_cast<la::avdecc::entity::model::AvbInterfaceIndex>(interfaceType);
+			if (auto const it = _lostRedundantInterfaces.find(entityID); it != _lostRedundantInterfaces.end() && it->second.count(avbInterfaceIndex) > 0)
+			{
+				return;
+			}
+			// Only journal (and track) the first transition to unsubscribed
+			if (!lostInterfaces.insert(interfaceType).second)
+			{
+				return;
+			}
+			auto details = QJsonObject{};
+			details["triggered_by_entity"] = triggeredByEntity;
 			auto summary = QString{ "No longer receiving unsolicited notifications on the %1 interface" }.arg(name);
 			if (triggeredByEntity)
 			{
@@ -759,6 +820,13 @@ public:
 		}
 		else
 		{
+			// Only journal a recovery if this interface was previously reported as lost: the first subscription on an interface (eg. the lazy registration on the Secondary interface during the initial discovery sequence) is normal and must not be reported as a recovery
+			if (lostInterfaces.erase(interfaceType) == 0)
+			{
+				return;
+			}
+			auto details = QJsonObject{};
+			details["triggered_by_entity"] = triggeredByEntity;
 			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "%1 Interface" }.arg(name), QString{ "Receiving unsolicited notifications again on the %1 interface" }.arg(name), details);
 		}
 	}
@@ -811,6 +879,17 @@ public:
 			return it->second;
 		}
 		return helper::uniqueIdentifierToString(entityID);
+	}
+
+	/** Returns the Milan compatibility version of the given entity (default constructed if the entity is not currently known). */
+	la::avdecc::entity::model::MilanVersion milanVersionFor(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto& manager = ControllerManager::getInstance();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			return controlledEntity->getMilanCompatibilityVersion();
+		}
+		return {};
 	}
 
 	/** Returns a designation for the given input stream, including its name if resolvable. */
@@ -888,6 +967,7 @@ public:
 		_latencyErrors.clear();
 		_lostRedundantInterfaces.clear();
 		_unsolRegistrationStates.clear();
+		_lostUnsolInterfaces.clear();
 		_controllerTransportErrors.clear();
 	}
 
@@ -926,6 +1006,7 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, bool>, la::avdecc::UniqueIdentifier::hash> _latencyErrors{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::set<la::avdecc::entity::model::AvbInterfaceIndex>, la::avdecc::UniqueIdentifier::hash> _lostRedundantInterfaces{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, bool, la::avdecc::UniqueIdentifier::hash> _unsolRegistrationStates{}; // Aggregated subscription state
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::set<la::avdecc::controller::InterfaceType>, la::avdecc::UniqueIdentifier::hash> _lostUnsolInterfaces{}; // Redundant interfaces currently reported as no longer receiving unsolicited notifications
 	std::set<la::avdecc::controller::InterfaceType> _controllerTransportErrors{}; // Controller interfaces having received a fatal transport error
 };
 
@@ -946,12 +1027,12 @@ EventJournal::EventJournal()
 	connect(&manager, &ControllerManager::controllerOnline, this,
 		[this]()
 		{
-			_pImpl->startSession();
+			_pImpl->handleControllerOnline();
 		});
 	connect(&manager, &ControllerManager::controllerOffline, this,
 		[this]()
 		{
-			_pImpl->stopSession();
+			_pImpl->handleControllerOffline();
 		});
 	connect(&manager, &ControllerManager::transportError, this,
 		[this]()
@@ -1219,6 +1300,11 @@ void EventJournal::setSessionMetadata(QString const& key, QString const& value) 
 bool EventJournal::exportCurrentSession(QString const& filePath) noexcept
 {
 	return _pImpl->exportSession(filePath);
+}
+
+void EventJournal::clearCurrentSession() noexcept
+{
+	_pImpl->clearCurrentSession();
 }
 
 } // namespace modelsLibrary

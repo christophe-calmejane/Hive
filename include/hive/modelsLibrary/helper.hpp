@@ -28,6 +28,7 @@
 #include <functional>
 #include <ios>
 #include <iomanip>
+#include <optional>
 
 namespace hive
 {
@@ -61,6 +62,8 @@ QString toUpperCamelCase(std::string const& text) noexcept;
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept;
 QString uniqueIdentifierToString(la::avdecc::UniqueIdentifier const& identifier);
 QString interfaceTypeName(la::avdecc::controller::InterfaceType const interfaceType) noexcept;
+/** Maps an entity's AVB interface index to the redundant controller interface type (Primary/Secondary). Milan redundancy (Milan 1.0+) defines AVB interface index 0 as the primary network and index 1 as the secondary network; returns std::nullopt for any other case (non-Milan entity or non-redundant interface index). */
+std::optional<la::avdecc::controller::InterfaceType> redundantInterfaceType(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept;
 QString macAddressToString(la::networkInterface::MacAddress const& macAddress);
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
