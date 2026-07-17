@@ -48,6 +48,9 @@ constexpr auto EntityNodeSize = QSizeF{ 150.0, 56.0 };
 constexpr auto BridgeNodeSize = QSizeF{ 150.0, 44.0 };
 constexpr auto HorizontalSpacing = 40.0;
 constexpr auto VerticalSpacing = 70.0;
+// The dashed border is the only cue telling a bridge from an entity, it deserves to be slightly thicker than a default one
+constexpr auto DefaultBorderWidth = 1.0;
+constexpr auto BridgeBorderWidth = 1.5;
 
 // Colors (fixed, readable on both light and dark application themes since nodes are self contained boxes)
 auto const EntityFillColor = QColor{ 0xFAFAFA };
@@ -66,6 +69,17 @@ auto const ActiveEdgeColor = QColor{ 0x1E88E5 };
 auto const HighlightEdgeColor = QColor{ 0xFB8C00 };
 auto const StreamingBorderColor = QColor{ 0x37474F };
 constexpr auto DimmedOpacity = 0.25;
+
+// Returns the rounded rect on which the border of a node must be stroked, so the whole pen width lies inside the box.
+// The nodes are opaque boxes drawn over the application background: a border centered on the box edge has half of its
+// width blending into that background, which makes it nearly invisible on a dark theme (and, for the bridges, makes the
+// dashes indistinguishable from the plain border of an entity). The outer edge of the stroke, hence the visible size of
+// the box, is left unchanged.
+QRectF borderRect(QSizeF const& nodeSize, QPen const& pen)
+{
+	auto const halfWidth = pen.widthF() / 2.0;
+	return QRectF{ QPointF{ 0.0, 0.0 }, nodeSize }.adjusted(halfWidth, halfWidth, -halfWidth, -halfWidth);
+}
 
 QString formatPropagationDelay(std::uint32_t const delayNsec)
 {
@@ -245,7 +259,7 @@ public:
 		auto const rect = QRectF{ QPointF{ 0.0, 0.0 }, size() };
 		painter->setRenderHint(QPainter::Antialiasing);
 		// Border precedence: interconnection error > talker of a highlighted stream > selection > streaming talker > default
-		auto borderPen = QPen{ BorderColor, 1.0 };
+		auto borderPen = QPen{ BorderColor, DefaultBorderWidth };
 		if (_node.isInterconnected)
 		{
 			borderPen = QPen{ ErrorColor, 2.5 };
@@ -265,7 +279,7 @@ public:
 		}
 		painter->setPen(borderPen);
 		painter->setBrush(EntityFillColor);
-		painter->drawRoundedRect(rect, 6.0, 6.0);
+		painter->drawRoundedRect(borderRect(size(), borderPen), 6.0, 6.0);
 
 		auto const textWidth = rect.width() - 16.0;
 		// Keep the top-right corner free of text when the GM tag is displayed
@@ -340,22 +354,22 @@ public:
 		auto const rect = QRectF{ QPointF{ 0.0, 0.0 }, size() };
 		painter->setRenderHint(QPainter::Antialiasing);
 		// An interconnection error takes visual precedence over the selection
-		auto borderPen = _node.isInterconnected ? QPen{ ErrorColor, 2.5 } : QPen{ isSelected() ? SelectedBorderColor : BorderColor, isSelected() ? 2.0 : 1.0 };
+		auto borderPen = _node.isInterconnected ? QPen{ ErrorColor, 2.5 } : QPen{ isSelected() ? SelectedBorderColor : BorderColor, isSelected() ? 2.0 : BridgeBorderWidth };
 		borderPen.setStyle(Qt::DashLine);
 		painter->setPen(borderPen);
 		painter->setBrush(BridgeFillColor);
-		painter->drawRoundedRect(rect, 6.0, 6.0);
+		painter->drawRoundedRect(borderRect(size(), borderPen), 6.0, 6.0);
 
 		auto const textWidth = rect.width() - 16.0;
 		// Keep the top-right corner free of text when the GM tag is displayed
 		auto const titleWidth = _node.isGrandmaster ? textWidth - 34.0 : textWidth;
 
-		// Title: 'Bridge' with the vendor name when known
+		// Title: the vendor name when known, the dashed border being enough to tell it's a bridge
 		auto titleFont = painter->font();
 		titleFont.setItalic(true);
 		painter->setFont(titleFont);
 		painter->setPen(TextColor);
-		auto const title = _node.name.isEmpty() ? QStringLiteral("Bridge") : QString{ "Bridge - %1" }.arg(_node.name);
+		auto const title = _node.name.isEmpty() ? QStringLiteral("Bridge") : _node.name;
 		painter->drawText(QRectF{ 8.0, 6.0, titleWidth, 18.0 }, Qt::AlignLeft | Qt::AlignVCenter, QFontMetricsF{ titleFont }.elidedText(title, Qt::ElideRight, titleWidth));
 
 		// Clock identity
