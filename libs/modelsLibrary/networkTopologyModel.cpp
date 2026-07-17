@@ -97,12 +97,40 @@ NetworkTopologyModel::ClockLockState computeClockLockState(la::avdecc::entity::m
 	return NetworkTopologyModel::ClockLockState::Unknown;
 }
 
-// Returns the estimated reserved bandwidth (bits per second) of an audio stream, transport overhead included (0 if unknown).
-// Class A streams send 8000 packets per second, Class B streams 4000 (IEEE 802.1Q SR classes).
+// Ethernet wire overhead per frame: preamble(7) + SFD(1) + MACs(12) + VLAN(4) + EtherType(2) + FCS(4) + IFG(12)
+constexpr auto EthernetOverheadBytes = std::uint64_t{ 42u };
+
+// Returns the estimated reserved bandwidth (bits per second) of a media clock stream, transport overhead included (0 if unknown).
+// Contrary to an audio stream, the packet rate of a CRF stream is defined by the format itself and not by the SR class:
+// a timestamp is generated every 'timestamp interval' events of the base frequency, and 'timestamps per pdu' of them are
+// packed in each AVTPDU.
+std::uint64_t computeCRFReservedBandwidth(la::avdecc::entity::model::StreamFormatInfoCRF const& formatInfo)
+{
+	auto const baseFrequency = static_cast<std::uint64_t>(formatInfo.getSamplingRate().getNominalSampleRate());
+	auto const timestampsPerPacket = std::uint64_t{ formatInfo.getTimestampsPerPdu() };
+	auto const eventsPerPacket = std::uint64_t{ formatInfo.getTimestampInterval() } * timestampsPerPacket;
+	if (baseFrequency == 0u || eventsPerPacket == 0u)
+	{
+		return 0u;
+	}
+
+	auto const packetRate = (baseFrequency + eventsPerPacket - 1u) / eventsPerPacket;
+	// CRF AVTPDU header is 20 bytes, followed by the 64 bits timestamps
+	auto const payloadBytes = std::uint64_t{ 20u } + timestampsPerPacket * 8u;
+
+	return (EthernetOverheadBytes + payloadBytes) * 8u * packetRate;
+}
+
+// Returns the estimated reserved bandwidth (bits per second) of a stream, transport overhead included (0 if unknown).
+// Class A audio streams send 8000 packets per second, Class B ones 4000 (IEEE 802.1Q SR classes).
 std::uint64_t computeStreamReservedBandwidth(la::avdecc::entity::model::StreamFormat const& streamFormat, bool const isClassB)
 {
 	auto const formatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamFormat);
 	auto const type = formatInfo->getType();
+	if (type == la::avdecc::entity::model::StreamFormatInfo::Type::ClockReference)
+	{
+		return computeCRFReservedBandwidth(static_cast<la::avdecc::entity::model::StreamFormatInfoCRF const&>(*formatInfo));
+	}
 	if (type != la::avdecc::entity::model::StreamFormatInfo::Type::AAF && type != la::avdecc::entity::model::StreamFormatInfo::Type::IEC_61883_6)
 	{
 		return 0u;
@@ -120,10 +148,8 @@ std::uint64_t computeStreamReservedBandwidth(la::avdecc::entity::model::StreamFo
 	auto const payloadBytes = samplesPerPacket * formatInfo->getChannelsCount() * bytesPerSample;
 	// AVTP common stream header is 24 bytes, IEC 61883 adds a 8 bytes CIP header
 	auto const avtpHeaderBytes = std::uint64_t{ type == la::avdecc::entity::model::StreamFormatInfo::Type::IEC_61883_6 ? 32u : 24u };
-	// Ethernet wire overhead per frame: preamble(7) + SFD(1) + MACs(12) + VLAN(4) + EtherType(2) + FCS(4) + IFG(12)
-	constexpr auto ethernetOverheadBytes = std::uint64_t{ 42u };
 
-	return (ethernetOverheadBytes + avtpHeaderBytes + payloadBytes) * 8u * packetRate;
+	return (EthernetOverheadBytes + avtpHeaderBytes + payloadBytes) * 8u * packetRate;
 }
 
 // Builds the topology of one network from the interfaces belonging to it.
