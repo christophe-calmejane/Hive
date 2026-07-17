@@ -39,6 +39,7 @@ public:
 
 private:
 	void editMappingsButtonClicked();
+	void setIdentityMappingsButtonClicked();
 	void clearMappingsButtonClicked();
 	void updateMappings();
 

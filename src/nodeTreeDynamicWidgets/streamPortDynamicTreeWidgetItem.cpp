@@ -24,6 +24,7 @@
 #include "streamPortDynamicTreeWidgetItem.hpp"
 #include "mappingMatrix.hpp"
 #include "avdecc/mappingsHelper.hpp"
+#include <algorithm>
 #include <vector>
 #include <set>
 #include <utility>
@@ -62,6 +63,13 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		// Update info right now
 		updateMappings();
 
+		auto* setIdentityMappings = new QTreeWidgetItem(this);
+		setIdentityMappings->setText(0, "Set Identity Dynamic Mappings");
+		auto* setIdentityMappingsButton = new QPushButton("Set Identity");
+		setIdentityMappingsButton->setToolTip("Set the Dynamic Mappings so each stream channel is mapped to the cluster channel at the same position");
+		connect(setIdentityMappingsButton, &QPushButton::clicked, this, &StreamPortDynamicTreeWidgetItem::setIdentityMappingsButtonClicked);
+		parent->setItemWidget(setIdentityMappings, 1, setIdentityMappingsButton);
+
 		auto* clearMappings = new QTreeWidgetItem(this);
 		clearMappings->setText(0, "Clear All Dynamic Mappings");
 		auto* clearMappingsButton = new QPushButton("Clear");
@@ -86,6 +94,98 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 void StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked()
 {
 	avdecc::mappingsHelper::showMappingsEditor(this, _entityID, _audioUnitIndex, _streamPortType, _streamPortIndex, la::avdecc::entity::model::getInvalidDescriptorIndex());
+}
+
+void StreamPortDynamicTreeWidgetItem::setIdentityMappingsButtonClicked()
+{
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto controlledEntity = manager.getControlledEntity(_entityID);
+	if (controlledEntity)
+	{
+		auto& entity = *controlledEntity;
+		auto smartName = hive::modelsLibrary::helper::smartEntityName(entity);
+
+		// Check there is something to map before requesting the exclusive access
+		if (avdecc::mappingsHelper::buildIdentityAudioMappings(entity, _audioUnitIndex, _streamPortType, _streamPortIndex).empty())
+		{
+			QMessageBox::warning(nullptr, QString(""), QString("No Identity channel mappings can be built for AUDIO_UNIT.%1").arg(_audioUnitIndex));
+			return;
+		}
+
+		// Release the controlled entity before starting a long operation
+		controlledEntity.reset();
+
+		// Get exclusive access
+		manager.requestExclusiveAccess(_entityID, la::avdecc::controller::Controller::ExclusiveAccessToken::AccessType::Lock,
+			[smartName, audioUnitIndex = _audioUnitIndex, streamPortType = _streamPortType, streamPortIndex = _streamPortIndex](auto const entityID, auto const status, auto&& token)
+			{
+				// Failed to get the exclusive access
+				if (!status || !token)
+				{
+					// If the device does not support the exclusive access, still proceed
+					if (status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotImplemented && status != la::avdecc::entity::ControllerEntity::AemCommandStatus::NotSupported)
+					{
+						QMessageBox::warning(nullptr, QString(""), QString("Failed to get Exclusive Access on %1:<br>%2").arg(smartName).arg(QString::fromStdString(la::avdecc::entity::ControllerEntity::statusToString(status))));
+						return;
+					}
+				}
+
+				auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+				auto controlledEntity = manager.getControlledEntity(entityID);
+				if (controlledEntity)
+				{
+					// Batch send the remove and add commands, and let the Exclusive Access Token go out of scope so the entity is unlocked right after (commands are sequentially sent)
+					try
+					{
+						auto& entity = *controlledEntity;
+
+						// Rebuild the mappings now the entity is locked, in case the model changed in the meantime
+						auto const identityMappings = avdecc::mappingsHelper::buildIdentityAudioMappings(entity, audioUnitIndex, streamPortType, streamPortIndex);
+
+						// Nothing to map, don't touch the current mappings
+						if (identityMappings.empty())
+						{
+							return;
+						}
+
+						// Only compare with the non-redundant mappings, as the Identity mappings only use primary streams (a Milan device automatically handles the secondary ones)
+						auto const currentMappings = streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput ? entity.getStreamPortInputNonRedundantAudioMappings(streamPortIndex) : entity.getStreamPortOutputNonRedundantAudioMappings(streamPortIndex);
+
+						// Only change what has to be changed, so we keep short payloads if we can
+						auto toRemove = la::avdecc::entity::model::AudioMappings{};
+						for (auto const& mapping : currentMappings)
+						{
+							if (std::find(identityMappings.begin(), identityMappings.end(), mapping) == identityMappings.end())
+							{
+								toRemove.push_back(mapping);
+							}
+						}
+						auto toAdd = la::avdecc::entity::model::AudioMappings{};
+						for (auto const& mapping : identityMappings)
+						{
+							if (std::find(currentMappings.begin(), currentMappings.end(), mapping) == currentMappings.end())
+							{
+								toAdd.push_back(mapping);
+							}
+						}
+
+						if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+						{
+							avdecc::mappingsHelper::batchRemoveInputAudioMappings(entityID, streamPortIndex, toRemove);
+							avdecc::mappingsHelper::batchAddInputAudioMappings(entityID, streamPortIndex, toAdd);
+						}
+						else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+						{
+							avdecc::mappingsHelper::batchRemoveOutputAudioMappings(entityID, streamPortIndex, toRemove);
+							avdecc::mappingsHelper::batchAddOutputAudioMappings(entityID, streamPortIndex, toAdd);
+						}
+					}
+					catch (...)
+					{
+					}
+				}
+			});
+	}
 }
 
 void StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked()

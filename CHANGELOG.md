@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
+- [Button to set 'Identity' dynamic mappings](https://github.com/christophe-calmejane/Hive/issues/148)
 - Network Graph window (View menu) displaying the network topology inferred from the gPTP information exposed by the entities (AsPath, grandmaster, propagation delay), with grandmaster and error indicators
   - One tab per network (Primary/Secondary, following Milan redundancy AVB interface indices)
   - Entity selection synchronized with the Discovered Entities list

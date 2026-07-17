@@ -735,6 +735,89 @@ void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityI
 	}
 }
 
+la::avdecc::entity::model::AudioMappings buildIdentityAudioMappings(la::avdecc::controller::ControlledEntity const& entity, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept
+{
+	AVDECC_ASSERT(audioUnitIndex != la::avdecc::entity::model::getInvalidDescriptorIndex(), "Invalid AudioUnitIndex");
+
+	try
+	{
+		auto const& entityNode = entity.getEntityNode();
+		auto const currentConfigurationIndex = entityNode.dynamicModel.currentConfiguration;
+		auto const& configurationNode = entity.getConfigurationNode(currentConfigurationIndex);
+		auto const& audioUnitNode = entity.getAudioUnitNode(currentConfigurationIndex, audioUnitIndex);
+		auto const clockDomainIndex = audioUnitNode.staticModel.clockDomainIndex;
+		auto streamMappings = StreamNodeMappings{};
+		auto clusterMappings = ClusterNodeMappings{};
+		auto unusedMatrixNodes = mappingMatrix::Nodes{}; // Not needed, we only want the mappings
+
+		if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+		{
+			auto const& streamPortNode = entity.getStreamPortInputNode(currentConfigurationIndex, streamPortIndex);
+			if (streamPortNode.staticModel.clockDomainIndex != clockDomainIndex)
+			{
+				return {};
+			}
+			auto const streamNodes = buildStreamsListToDisplay(&entity, la::avdecc::entity::model::getInvalidDescriptorIndex(), configurationNode.streamInputs, configurationNode.redundantStreamInputs, clockDomainIndex);
+
+			buildStreamMappings(&entity, streamNodes, streamMappings, unusedMatrixNodes);
+			buildClusterMappings(&entity, streamPortNode, clusterMappings, unusedMatrixNodes);
+		}
+		else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+		{
+			auto const& streamPortNode = entity.getStreamPortOutputNode(currentConfigurationIndex, streamPortIndex);
+			if (streamPortNode.staticModel.clockDomainIndex != clockDomainIndex)
+			{
+				return {};
+			}
+			auto const streamNodes = buildStreamsListToDisplay(&entity, la::avdecc::entity::model::getInvalidDescriptorIndex(), configurationNode.streamOutputs, configurationNode.redundantStreamOutputs, clockDomainIndex);
+
+			buildStreamMappings(&entity, streamNodes, streamMappings, unusedMatrixNodes);
+			buildClusterMappings(&entity, streamPortNode, clusterMappings, unusedMatrixNodes);
+		}
+		else
+		{
+			AVDECC_ASSERT(false, "Unsupported StreamPort type");
+			return {};
+		}
+
+		// Flatten the stream channels and the cluster channels, so they can be paired one to one
+		auto streamChannels = std::vector<std::pair<la::avdecc::entity::model::StreamIndex, std::uint16_t>>{};
+		for (auto const& streamMapping : streamMappings)
+		{
+			for (auto const channel : streamMapping.channels)
+			{
+				streamChannels.emplace_back(streamMapping.streamIndex, channel);
+			}
+		}
+		auto clusterChannels = std::vector<std::pair<la::avdecc::entity::model::ClusterIndex, std::uint16_t>>{};
+		for (auto const& clusterMapping : clusterMappings)
+		{
+			for (auto const channel : clusterMapping.channels)
+			{
+				clusterChannels.emplace_back(clusterMapping.clusterOffset, channel);
+			}
+		}
+
+		// Pair them until one of the 2 lists is exhausted
+		auto const countMappings = std::min(streamChannels.size(), clusterChannels.size());
+		auto mappings = la::avdecc::entity::model::AudioMappings{};
+		mappings.reserve(countMappings);
+		for (auto pos = decltype(countMappings){ 0u }; pos < countMappings; ++pos)
+		{
+			auto const& [streamIndex, streamChannel] = streamChannels[pos];
+			auto const& [clusterOffset, clusterChannel] = clusterChannels[pos];
+			mappings.push_back(la::avdecc::entity::model::AudioMapping{ streamIndex, streamChannel, clusterOffset, clusterChannel });
+		}
+
+		return mappings;
+	}
+	catch (...)
+	{
+	}
+
+	return {};
+}
+
 la::avdecc::entity::model::AudioMappings getMaximumAudioMappings(la::avdecc::entity::model::AudioMappings const& mappings, size_t const offset) noexcept
 {
 	auto const nbMappings = mappings.size();
