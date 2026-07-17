@@ -842,8 +842,8 @@ std::optional<NetworkTopologyModel::EntityCache> NetworkTopologyModel::buildEnti
 		for (auto const& [avbInterfaceIndex, avbInterfaceNode] : configurationNode.avbInterfaces)
 		{
 			auto interfaceCache = InterfaceCache{};
-			interfaceCache.name = helper::objectName(&entity, avbInterfaceNode);
-			interfaceCache.fallbackName = helper::localizedString(entity, avbInterfaceNode.staticModel.localizedDescription);
+			interfaceCache.name = helper::objectName(&entity, configurationNode.descriptorIndex, avbInterfaceNode);
+			interfaceCache.fallbackName = helper::localizedString(entity, configurationNode.descriptorIndex, avbInterfaceNode.staticModel.localizedDescription);
 			interfaceCache.clockIdentity = avbInterfaceNode.dynamicModel.clockIdentity;
 			interfaceCache.gptpGrandmasterID = avbInterfaceNode.dynamicModel.gptpGrandmasterID;
 			interfaceCache.gptpDomainNumber = avbInterfaceNode.dynamicModel.gptpDomainNumber;
@@ -862,8 +862,8 @@ std::optional<NetworkTopologyModel::EntityCache> NetworkTopologyModel::buildEnti
 		{
 			auto outputCache = StreamOutputCache{};
 			outputCache.avbInterfaceIndex = streamNode.staticModel.avbInterfaceIndex;
-			outputCache.name = helper::objectName(&entity, streamNode);
-			outputCache.fallbackName = helper::localizedString(entity, streamNode.staticModel.localizedDescription);
+			outputCache.name = helper::objectName(&entity, configurationNode.descriptorIndex, streamNode);
+			outputCache.fallbackName = helper::localizedString(entity, configurationNode.descriptorIndex, streamNode.staticModel.localizedDescription);
 			outputCache.streamFormat = streamNode.dynamicModel.streamFormat;
 			outputCache.isRunning = streamNode.dynamicModel.isStreamRunning.value_or(true);
 			// IEEE1722.1 default SR class is Class A, only consider Class B when the stream doesn't support Class A
@@ -874,7 +874,7 @@ std::optional<NetworkTopologyModel::EntityCache> NetworkTopologyModel::buildEnti
 
 		for (auto const& [streamIndex, streamNode] : configurationNode.streamInputs)
 		{
-			cache.streamInputs.emplace(streamIndex, StreamInputCache{ streamNode.staticModel.avbInterfaceIndex, helper::objectName(&entity, streamNode), helper::localizedString(entity, streamNode.staticModel.localizedDescription) });
+			cache.streamInputs.emplace(streamIndex, StreamInputCache{ streamNode.staticModel.avbInterfaceIndex, helper::objectName(&entity, configurationNode.descriptorIndex, streamNode), helper::localizedString(entity, configurationNode.descriptorIndex, streamNode.staticModel.localizedDescription) });
 		}
 
 		return cache;

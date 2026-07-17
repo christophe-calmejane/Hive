@@ -2670,7 +2670,7 @@ public:
 								auto const clusterIdentification = la::avdecc::controller::model::ClusterIdentification{ clusterIndex, channel };
 
 								auto* outputChannel = ChannelNode::createOutputNode(*entity, clusterIdentification, channelIdentification_old);
-								auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
+								auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, configurationNode.descriptorIndex, streamPortNode.audioClusters.at(clusterIndex));
 								auto const channelName = priv::clusterChannelName(clusterName, channel);
 								outputChannel->setName(channelName);
 							}
@@ -2825,7 +2825,7 @@ public:
 									if (auto const channelIdentIt = configurationNode.channelConnections.find(clusterIdentification); channelIdentIt != configurationNode.channelConnections.end())
 									{
 										auto* inputChannel = ChannelNode::createInputNode(*entity, clusterIdentification, channelIdentification_old, channelIdentIt->second);
-										auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, streamPortNode.audioClusters.at(clusterIndex));
+										auto const clusterName = hive::modelsLibrary::helper::objectName(&controlledEntity, configurationNode.descriptorIndex, streamPortNode.audioClusters.at(clusterIndex));
 										auto const channelName = priv::clusterChannelName(clusterName, channel);
 										inputChannel->setName(channelName);
 									}
@@ -3899,7 +3899,7 @@ public:
 				if (auto* channelNode = talkerChannelNode(entityID, audioClusterIndex))
 				{
 					auto const& clusterNode = controlledEntity->getAudioClusterNode(configurationIndex, channelNode->clusterIdentification().clusterIndex);
-					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), clusterNode);
+					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), configurationIndex, clusterNode);
 					auto const channelName = priv::clusterChannelName(clusterName, channelNode->clusterIdentification().clusterChannel);
 					channelNode->setName(channelName);
 
@@ -3913,7 +3913,7 @@ public:
 				if (auto* channelNode = listenerChannelNode(entityID, audioClusterIndex))
 				{
 					auto const& clusterNode = controlledEntity->getAudioClusterNode(configurationIndex, channelNode->clusterIdentification().clusterIndex);
-					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), clusterNode);
+					auto const clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), configurationIndex, clusterNode);
 					auto const channelName = priv::clusterChannelName(clusterName, channelNode->clusterIdentification().clusterChannel);
 					channelNode->setName(channelName);
 

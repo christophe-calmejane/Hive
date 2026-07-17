@@ -221,7 +221,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 							if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamOutput)
 							{
 								auto const& streamOutput = controlledEntity->getStreamOutputNode(configurationIndex, streamFormatData.streamIndex);
-								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamOutput.staticModel.localizedDescription);
+								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, configurationIndex, streamOutput.staticModel.localizedDescription);
 
 								if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !streamOutput.dynamicModel.objectName.empty())
 									streamName = QString::fromStdString(streamOutput.dynamicModel.objectName);
@@ -229,7 +229,7 @@ QVariant DeviceDetailsStreamFormatTableModelPrivate::data(QModelIndex const& ind
 							else if (streamFormatData.streamType == la::avdecc::entity::model::DescriptorType::StreamInput)
 							{
 								auto const& streamInput = controlledEntity->getStreamInputNode(configurationIndex, streamFormatData.streamIndex);
-								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, streamInput.staticModel.localizedDescription);
+								streamName = hive::modelsLibrary::helper::localizedString(*controlledEntity, configurationIndex, streamInput.staticModel.localizedDescription);
 
 								if (configurationIndex == controlledEntity->getEntityNode().dynamicModel.currentConfiguration && !streamInput.dynamicModel.objectName.empty())
 									streamName = QString::fromStdString(streamInput.dynamicModel.objectName);

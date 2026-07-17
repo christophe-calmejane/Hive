@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - User feedback when failing to save the log file
+- [Localized strings now fetched from the configuration being inspected instead of the active one](https://github.com/christophe-calmejane/Hive/issues/178)
 
 ## [1.4.0] - 2025-12-19
 ### Added

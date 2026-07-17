@@ -220,8 +220,8 @@ public:
 				auto const& dynamicModel = entityNode.dynamicModel;
 
 				labelEntityIdValue->setText(hive::modelsLibrary::helper::toHexQString(_entityID.getValue(), true, true));
-				labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.vendorNameString));
-				labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, staticModel.modelNameString));
+				labelVendorNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, dynamicModel.currentConfiguration, staticModel.vendorNameString));
+				labelModelNameValue->setText(hive::modelsLibrary::helper::localizedString(*controlledEntity, dynamicModel.currentConfiguration, staticModel.modelNameString));
 				labelFirmwareVersionValue->setText(QString::fromStdString(dynamicModel.firmwareVersion));
 				labelSerialNumberValue->setText(QString::fromStdString(dynamicModel.serialNumber));
 

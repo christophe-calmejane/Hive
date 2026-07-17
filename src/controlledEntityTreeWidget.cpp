@@ -615,6 +615,7 @@ private:
 		auto const anyNode = AnyNode(node);
 		item->setData(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::NodeType), QVariant::fromValue(anyNode));
 		item->setData(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::IsActiveConfiguration), isActiveConfiguration);
+		item->setData(0, la::avdecc::utils::to_integral(hive::entityInspector::RoleInfo::ConfigurationIndex), configurationIndex);
 
 		if (parent)
 		{

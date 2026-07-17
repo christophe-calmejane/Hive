@@ -27,6 +27,7 @@ enum class RoleInfo
 {
 	NodeType = Qt::UserRole,
 	IsActiveConfiguration,
+	ConfigurationIndex,
 	AudioUnitIndex,
 };
 } // namespace hive::entityInspector

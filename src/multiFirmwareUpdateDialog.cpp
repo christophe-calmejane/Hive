@@ -404,7 +404,7 @@ void MultiFirmwareUpdateDialog::onItemSelectionChanged(QItemSelection const&, QI
 		auto const controlledEntity = manager.getControlledEntity(entityID);
 		auto const& entityNode = controlledEntity->getEntityNode();
 
-		auto const rowModelName = hive::modelsLibrary::helper::localizedString(*controlledEntity, entityNode.staticModel.modelNameString);
+		auto const rowModelName = hive::modelsLibrary::helper::localizedString(*controlledEntity, entityNode.dynamicModel.currentConfiguration, entityNode.staticModel.modelNameString);
 
 		if (modelName.isEmpty())
 		{

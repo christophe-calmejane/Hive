@@ -93,17 +93,6 @@ QString localizedString(la::avdecc::controller::ControlledEntity const& controll
 	return QString::fromStdString(localizedName);
 }
 
-QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept
-{
-	auto const& localizedName = controlledEntity.getLocalizedString(stringReference);
-
-	if (localizedName.empty())
-	{
-		return "(No Localization)";
-	}
-	return QString::fromStdString(localizedName);
-}
-
 QString entityName(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
 {
 	try
@@ -184,7 +173,7 @@ QString outputStreamName(la::avdecc::controller::ControlledEntity const& control
 	{
 		auto const& entityNode = controlledEntity.getEntityNode();
 		auto const& streamNode = controlledEntity.getStreamOutputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
-		return objectName(&controlledEntity, streamNode);
+		return objectName(&controlledEntity, entityNode.dynamicModel.currentConfiguration, streamNode);
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
 	{
@@ -204,7 +193,7 @@ QString inputStreamName(la::avdecc::controller::ControlledEntity const& controll
 	{
 		auto const& entityNode = controlledEntity.getEntityNode();
 		auto const& streamNode = controlledEntity.getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex);
-		return objectName(&controlledEntity, streamNode);
+		return objectName(&controlledEntity, entityNode.dynamicModel.currentConfiguration, streamNode);
 	}
 	catch (la::avdecc::controller::ControlledEntity::Exception const&)
 	{

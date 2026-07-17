@@ -308,11 +308,25 @@ public:
 						data.insert(option);
 					}
 					widget->setAllData(data,
-						[controlledEntity](auto const& value)
+						[entityID](auto const& value)
 						{
 							if constexpr (std::is_same_v<ValueType, la::avdecc::entity::model::LocalizedStringReference>)
 							{
-								return hive::modelsLibrary::helper::localizedString(*controlledEntity, value);
+								// The handler is stored and called back later, we cannot capture the ControlledEntity guard: get a fresh one
+								auto const controlledEntity = hive::modelsLibrary::ControllerManager::getInstance().getControlledEntity(entityID);
+								if (controlledEntity)
+								{
+									try
+									{
+										// Dynamic values are only displayed for the active configuration
+										return hive::modelsLibrary::helper::localizedString(*controlledEntity, controlledEntity->getCurrentConfigurationIndex(), value);
+									}
+									catch (...)
+									{
+										// Ignore exception
+									}
+								}
+								return QString{ "(No Localization)" };
 							}
 							else
 							{

@@ -68,7 +68,6 @@ QString interfaceTypeName(la::avdecc::controller::InterfaceType const interfaceT
 std::optional<la::avdecc::controller::InterfaceType> redundantInterfaceType(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept;
 QString macAddressToString(la::networkInterface::MacAddress const& macAddress);
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
-QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept;
 
 template<class NodeType>
@@ -77,17 +76,6 @@ QString objectName(la::avdecc::controller::ControlledEntity const* const control
 	if (node.dynamicModel.objectName.empty())
 	{
 		return localizedString(*controlledEntity, configurationIndex, node.staticModel.localizedDescription);
-	}
-
-	return QString::fromStdString(node.dynamicModel.objectName);
-}
-
-template<class NodeType>
-QString objectName(la::avdecc::controller::ControlledEntity const* const controlledEntity, NodeType const& node) noexcept
-{
-	if (node.dynamicModel.objectName.empty())
-	{
-		return localizedString(*controlledEntity, node.staticModel.localizedDescription);
 	}
 
 	return QString::fromStdString(node.dynamicModel.objectName);

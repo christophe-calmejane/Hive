@@ -427,7 +427,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), audioClusterIt->second);
+										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), configurationIndex, audioClusterIt->second);
 									}
 								}
 							}
@@ -440,7 +440,7 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 									auto audioClusterIt = audioClusters.find(clusterIndex);
 									if (audioClusterIt != audioClusters.end())
 									{
-										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), audioClusterIt->second);
+										return hive::modelsLibrary::helper::objectName(controlledEntity.get(), configurationIndex, audioClusterIt->second);
 									}
 								}
 							}
@@ -479,11 +479,11 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 							QString clusterName;
 							if (connectionInfo->sourceClusterChannelInfo->direction == avdecc::ChannelConnectionDirection::OutputToInput)
 							{
-								clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+								clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), configurationNode.descriptorIndex, (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortInputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 							}
 							else
 							{
-								clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
+								clusterName = hive::modelsLibrary::helper::objectName(controlledEntity.get(), configurationNode.descriptorIndex, (configurationNode.audioUnits.at(connection->targetAudioUnitIndex).streamPortOutputs.at(connection->targetStreamPortIndex).audioClusters.at(clusterKV.first + connection->targetBaseCluster)));
 							}
 
 							if (connection->isSourceRedundant && connection->isTargetRedundant)

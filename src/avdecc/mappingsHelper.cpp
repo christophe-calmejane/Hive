@@ -485,13 +485,16 @@ void processNewConnections(la::avdecc::UniqueIdentifier const entityID, StreamNo
 
 void buildClusterMappings(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::StreamPortNode const& streamPortNode, ClusterNodeMappings& clusterMappings, mappingMatrix::Nodes& clusterMatrixNodes)
 {
+	// Mappings edition only applies to the active configuration
+	auto const currentConfigurationIndex = controlledEntity->getCurrentConfigurationIndex();
+
 	// Build list of cluster mappings
 	for (auto const& clusterKV : streamPortNode.audioClusters)
 	{
 		auto const clusterOffset = static_cast<la::avdecc::entity::model::ClusterIndex>(clusterKV.first - streamPortNode.staticModel.baseCluster); // Mappings use relative index (see IEEE1722.1 Table 7.33)
 		AVDECC_ASSERT(clusterOffset < streamPortNode.staticModel.numberOfClusters, "ClusterOffset invalid");
 		auto const& clusterNode = clusterKV.second;
-		auto clusterName = hive::modelsLibrary::helper::objectName(controlledEntity, clusterNode).toStdString();
+		auto clusterName = hive::modelsLibrary::helper::objectName(controlledEntity, currentConfigurationIndex, clusterNode).toStdString();
 		ClusterNodeMapping nodeMapping{ streamPortNode.descriptorIndex, clusterOffset };
 		mappingMatrix::Node node{ clusterName };
 
@@ -510,6 +513,9 @@ std::vector<std::pair<std::string, StreamNodeType const*>> buildStreamsListToDis
 {
 	auto streamNodesToDisplay = std::vector<std::pair<std::string, StreamNodeType const*>>{};
 
+	// Mappings edition only applies to the active configuration
+	auto const currentConfigurationIndex = controlledEntity->getCurrentConfigurationIndex();
+
 	auto const isValidClockDomain = [](auto const clockDomainIndex, auto const& streamNode)
 	{
 		return clockDomainIndex == streamNode.staticModel.clockDomainIndex;
@@ -522,14 +528,14 @@ std::vector<std::pair<std::string, StreamNodeType const*>> buildStreamsListToDis
 		return sfi->getChannelsCount() > 0;
 	};
 
-	auto const checkAddStream = [&controlledEntity, &isValidClockDomain, &isValidStreamFormat, &streamNodesToDisplay](auto const streamIndex, auto const clockDomainIndex, auto const& streamNode, auto const& redundantStreamNodes)
+	auto const checkAddStream = [&controlledEntity, currentConfigurationIndex, &isValidClockDomain, &isValidStreamFormat, &streamNodesToDisplay](auto const streamIndex, auto const clockDomainIndex, auto const& streamNode, auto const& redundantStreamNodes)
 	{
 		if (isValidStreamFormat(streamNode) && isValidClockDomain(clockDomainIndex, streamNode))
 		{
 			// Add single Stream
 			if (!streamNode.isRedundant)
 			{
-				auto streamName = hive::modelsLibrary::helper::objectName(controlledEntity, streamNode).toStdString();
+				auto streamName = hive::modelsLibrary::helper::objectName(controlledEntity, currentConfigurationIndex, streamNode).toStdString();
 				streamNodesToDisplay.push_back(std::make_pair(streamName, &streamNode));
 			}
 			else
