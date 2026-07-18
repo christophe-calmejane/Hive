@@ -20,8 +20,13 @@
 #include "networkGraphView.hpp"
 #include "networkGraphPane.hpp"
 
+#include "settingsManager/settings.hpp"
+
 #include <hive/modelsLibrary/helper.hpp>
 
+#include <QApplication>
+#include <QButtonGroup>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QShortcut>
 #include <QVBoxLayout>
@@ -39,6 +44,26 @@ QString networkName(la::avdecc::entity::model::AvbInterfaceIndex const avbInterf
 	}
 	return QString{ "Network %1" }.arg(avbInterfaceIndex);
 }
+
+NetworkGraphPane::LayoutMode layoutModeFromAggregated(bool const aggregated)
+{
+	return aggregated ? NetworkGraphPane::LayoutMode::AggregatedBySwitch : NetworkGraphPane::LayoutMode::Detailed;
+}
+
+// The native flat style paints no background for the checked state, making it impossible to tell which
+// checkable button is active: use an explicit palette driven style (valid in both light and dark themes)
+auto const ToolbarButtonStyle = QStringLiteral("QPushButton { border: none; background: transparent; padding: 3px; }"
+																							 "QPushButton:hover { background-color: palette(midlight); border-radius: 4px; }"
+																							 "QPushButton:pressed { background-color: palette(mid); border-radius: 4px; }"
+																							 "QPushButton:checked { background-color: palette(highlight); color: palette(highlighted-text); border-radius: 4px; }");
+
+QFrame* createToolbarSeparator(QWidget* parent)
+{
+	auto* const separator = new QFrame{ parent };
+	separator->setFrameShape(QFrame::VLine);
+	separator->setFrameShadow(QFrame::Sunken);
+	return separator;
+}
 } // namespace
 
 NetworkGraphView::NetworkGraphView(QWidget* parent)
@@ -47,18 +72,44 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 	_tabWidget = new QTabWidget{ this };
 	_tabWidget->setDocumentMode(true);
 
+	// Layout choice (radio like buttons), persisted in the settings
+	auto const* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	auto const aggregatedLayout = settings->getValue(settings::NetworkGraph_AggregatedLayout.name).toBool();
+	_detailedLayoutButton.setToolTip("Detailed layout: one node per device");
+	_aggregatedLayoutButton.setToolTip("Aggregated layout: entities grouped inside the bridge they are attached to");
+	_detailedLayoutButton.setCheckable(true);
+	_aggregatedLayoutButton.setCheckable(true);
+	auto* const layoutModeGroup = new QButtonGroup{ this };
+	layoutModeGroup->addButton(&_detailedLayoutButton);
+	layoutModeGroup->addButton(&_aggregatedLayoutButton);
+	_detailedLayoutButton.setChecked(!aggregatedLayout);
+	_aggregatedLayoutButton.setChecked(aggregatedLayout);
+
 	_relayoutButton.setToolTip("Re-layout the graph");
 	_fitButton.setToolTip("Zoom to fit");
 	_clearHighlightButton.setToolTip("Clear stream highlight (Esc)");
-	_streamInfoButton.setToolTip("Show/hide stream bandwidth and latency information");
+	// Highlighted (checked) when a stream highlight is active, showing the button has an effect. The checked
+	// state is entirely driven by the panes highlightChanged signal, the click toggle is always overridden.
+	_clearHighlightButton.setCheckable(true);
+	_streamInfoButton.setToolTip("Show/Hide link information");
 	_streamInfoButton.setCheckable(true);
 	_streamInfoButton.setChecked(true);
 
+	for (auto* const button : { &_relayoutButton, &_fitButton, &_clearHighlightButton, &_detailedLayoutButton, &_aggregatedLayoutButton, &_streamInfoButton })
+	{
+		button->setStyleSheet(ToolbarButtonStyle);
+	}
+
+	// Three sections: graph actions, layout choice, link information visibility
 	auto* const toolbarLayout = new QHBoxLayout{};
 	toolbarLayout->setContentsMargins(2, 2, 2, 2);
 	toolbarLayout->addWidget(&_relayoutButton);
 	toolbarLayout->addWidget(&_fitButton);
 	toolbarLayout->addWidget(&_clearHighlightButton);
+	toolbarLayout->addWidget(createToolbarSeparator(this));
+	toolbarLayout->addWidget(&_detailedLayoutButton);
+	toolbarLayout->addWidget(&_aggregatedLayoutButton);
+	toolbarLayout->addWidget(createToolbarSeparator(this));
 	toolbarLayout->addWidget(&_streamInfoButton);
 	toolbarLayout->addStretch();
 	toolbarLayout->addWidget(&_statsLabel);
@@ -77,6 +128,7 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 		[this](int)
 		{
 			refreshStats();
+			refreshClearHighlightButton();
 		});
 	connect(&_relayoutButton, &QPushButton::clicked, this,
 		[this]()
@@ -101,6 +153,8 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 			{
 				pane->clearHighlight();
 			}
+			// Cancel the click toggle: the checked state only reflects the actual highlight state
+			refreshClearHighlightButton();
 		});
 	connect(&_streamInfoButton, &QPushButton::toggled, this,
 		[this](bool const checked)
@@ -109,6 +163,17 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 			for (auto const& [avbInterfaceIndex, pane] : _panes)
 			{
 				pane->setShowStreamInfo(checked);
+			}
+		});
+	// The two layout buttons being mutually exclusive, observing the 'aggregated' one is enough
+	connect(&_aggregatedLayoutButton, &QPushButton::toggled, this,
+		[this](bool const checked)
+		{
+			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->setValue(settings::NetworkGraph_AggregatedLayout.name, checked);
+			for (auto const& [avbInterfaceIndex, pane] : _panes)
+			{
+				pane->setLayoutMode(layoutModeFromAggregated(checked));
 			}
 		});
 
@@ -159,6 +224,12 @@ void NetworkGraphView::refreshStats()
 	}
 }
 
+void NetworkGraphView::refreshClearHighlightButton()
+{
+	auto* const pane = currentPane();
+	_clearHighlightButton.setChecked(pane != nullptr && pane->hasHighlight());
+}
+
 void NetworkGraphView::rebuildPanes()
 {
 	auto const& networks = _topologyModel.networks();
@@ -190,6 +261,11 @@ void NetworkGraphView::rebuildPanes()
 		if (networkIndex >= _panes.size() || _panes[networkIndex].first != network.avbInterfaceIndex)
 		{
 			auto* const pane = new NetworkGraphPane{ this };
+			connect(pane, &NetworkGraphPane::highlightChanged, this,
+				[this](bool const)
+				{
+					refreshClearHighlightButton();
+				});
 			connect(pane, &NetworkGraphPane::entitySelectionChanged, this,
 				[this](la::avdecc::UniqueIdentifier const entityID)
 				{
@@ -208,6 +284,7 @@ void NetworkGraphView::rebuildPanes()
 			_tabWidget->insertTab(static_cast<int>(networkIndex), pane, networkName(network.avbInterfaceIndex, network.milanVersion));
 			pane->selectEntity(_selectedEntityID);
 			pane->setShowStreamInfo(_streamInfoButton.isChecked());
+			pane->setLayoutMode(layoutModeFromAggregated(_aggregatedLayoutButton.isChecked()));
 		}
 		_panes[networkIndex].second->setTopology(network.topology);
 	}
@@ -226,4 +303,5 @@ void NetworkGraphView::rebuildPanes()
 	}
 
 	refreshStats();
+	refreshClearHighlightButton();
 }

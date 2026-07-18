@@ -56,10 +56,13 @@ private:
 	void rebuildPanes();
 	NetworkGraphPane* currentPane() const;
 	void refreshStats();
+	void refreshClearHighlightButton();
 
 	hive::modelsLibrary::NetworkTopologyModel _topologyModel{ this };
 	QTabWidget* _tabWidget{ nullptr };
 	std::vector<std::pair<la::avdecc::entity::model::AvbInterfaceIndex, NetworkGraphPane*>> _panes{}; // Aligned with the tab widget pages
+	qtMate::widgets::FlatIconButton _detailedLayoutButton{ "Material Icons", "device_hub", this };
+	qtMate::widgets::FlatIconButton _aggregatedLayoutButton{ "Material Icons", "dns", this };
 	qtMate::widgets::FlatIconButton _relayoutButton{ "Material Icons", "account_tree", this };
 	qtMate::widgets::FlatIconButton _fitButton{ "Material Icons", "zoom_out_map", this };
 	qtMate::widgets::FlatIconButton _clearHighlightButton{ "Material Icons", "highlight_off", this };

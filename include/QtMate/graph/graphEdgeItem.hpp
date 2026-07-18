@@ -30,7 +30,7 @@ class GraphEdgeLabelItem;
 /**
 * @brief Edge connecting two GraphNodeItem in a QGraphicsScene.
 * @details Draws a vertical cubic curve from the bottom anchor of the upstream node
-*          to the top anchor of the downstream node, with an optional label at mid-path.
+*          to the top anchor of the downstream node, with an optional label near the downstream end.
 *          The label is a separate scene item drawn above all the edge lines (so it is never covered
 *          by nearby edges), using the palette text color over a translucent background plate, which
 *          keeps it readable in both light and dark themes.
@@ -54,7 +54,7 @@ public:
 	GraphEdgeItem(GraphNodeItem* upstreamNode, GraphNodeItem* downstreamNode, QGraphicsItem* parent = nullptr);
 	virtual ~GraphEdgeItem() override;
 
-	/** Sets the label displayed at mid-path, may contain multiple lines separated by '\n' (empty to hide). */
+	/** Sets the label displayed near the downstream end of the edge, may contain multiple lines separated by '\n' (empty to hide). */
 	void setLabel(QString const& label);
 
 	/** Sets the pen used to draw the edge line. */
@@ -75,6 +75,9 @@ protected:
 
 private:
 	friend class GraphEdgeLabelItem;
+
+	// Computes the scene position of the label along the current path (near the downstream end)
+	QPointF labelScenePos() const;
 
 	GraphNodeItem* _upstreamNode{ nullptr };
 	GraphNodeItem* _downstreamNode{ nullptr };

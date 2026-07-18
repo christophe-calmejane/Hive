@@ -25,11 +25,15 @@
 #include <QPainter>
 #include <QStyleOptionGraphicsItem>
 
+#include <algorithm>
+
 namespace qtMate::graph
 {
 // Z ordering of the graph items: edge lines at the bottom, then edge labels, then nodes (default Z of 0)
 static constexpr auto EdgeLineZValue = -2.0;
 static constexpr auto EdgeLabelZValue = -1.0;
+// Distance (along the path) between the label and the downstream end of the edge
+static constexpr auto LabelDistanceFromEnd = 30.0;
 
 /**
 * @brief Label of a GraphEdgeItem, as a dedicated top-level scene item.
@@ -172,8 +176,23 @@ void GraphEdgeItem::updatePath()
 
 	if (_labelItem)
 	{
-		_labelItem->setPos(path.pointAtPercent(0.5));
+		_labelItem->setPos(labelScenePos());
 	}
+}
+
+QPointF GraphEdgeItem::labelScenePos() const
+{
+	auto const& currentPath = path();
+	if (currentPath.isEmpty())
+	{
+		return {};
+	}
+	// Near the downstream node: each node has a single incoming edge, so this spot is unique to this label
+	// (mid-path labels collide at fan-outs, where all the edges start from the same anchor, and may end up
+	// hidden under a node the line passes behind). Clamped to mid-path so the label of a short edge doesn't
+	// get pushed back onto the upstream node.
+	auto const length = currentPath.length();
+	return currentPath.pointAtPercent(currentPath.percentAtLength(std::max(length - LabelDistanceFromEnd, length / 2.0)));
 }
 
 void GraphEdgeItem::detachNode(GraphNodeItem* node)
@@ -215,7 +234,7 @@ QVariant GraphEdgeItem::itemChange(GraphicsItemChange change, QVariant const& va
 		if (auto* const currentScene = scene())
 		{
 			currentScene->addItem(_labelItem);
-			_labelItem->setPos(path().isEmpty() ? QPointF{} : path().pointAtPercent(0.5));
+			_labelItem->setPos(labelScenePos());
 		}
 		else if (auto* const labelScene = _labelItem->scene())
 		{

@@ -53,6 +53,9 @@ static SettingsManager::SettingDefault ConnectionMatrix_AllowCRFAudioConnection 
 static SettingsManager::SettingDefault ConnectionMatrix_CollapsedByDefault = { "avdecc/connectionMatrix/collapsedByDefault", true };
 static SettingsManager::SettingDefault ConnectionMatrix_ShowEntitySummary = { "avdecc/connectionMatrix/showEntitySummary", true };
 
+// Network graph settings
+static SettingsManager::SettingDefault NetworkGraph_AggregatedLayout = { "avdecc/networkGraph/aggregatedLayout", false };
+
 // Network settings
 static SettingsManager::SettingDefault Network_ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
 static SettingsManager::SettingDefault Network_InterfaceTypeEthernet = { "avdecc/network/interfaceType/ethernet", true };

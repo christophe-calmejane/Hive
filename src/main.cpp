@@ -308,6 +308,9 @@ int main(int argc, char* argv[])
 	settings.registerSetting(settings::ConnectionMatrix_CollapsedByDefault);
 	settings.registerSetting(settings::ConnectionMatrix_ShowEntitySummary);
 
+	// Network graph
+	settings.registerSetting(settings::NetworkGraph_AggregatedLayout);
+
 	// Network
 	settings.registerSetting(settings::Network_ProtocolType);
 	settings.registerSetting(settings::Network_InterfaceTypeEthernet);

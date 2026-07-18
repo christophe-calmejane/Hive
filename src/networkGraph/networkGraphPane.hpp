@@ -26,6 +26,7 @@
 #include <QPen>
 #include <QWidget>
 
+#include <optional>
 #include <set>
 #include <tuple>
 #include <unordered_map>
@@ -46,10 +47,20 @@ class NetworkGraphPane : public QWidget
 {
 	Q_OBJECT
 public:
+	/** Available layouts of the graph. */
+	enum class LayoutMode
+	{
+		Detailed = 0, /**< One node per device (entity interface or bridge), the full topology is visible */
+		AggregatedBySwitch = 1, /**< Entities are aggregated inside the node of the bridge they are attached to (daisy chained entities are indented), much more compact on large networks */
+	};
+
 	NetworkGraphPane(QWidget* parent = nullptr);
 
 	/** Sets the topology to display (copied) and rebuilds the scene. */
 	void setTopology(hive::modelsLibrary::NetworkTopologyModel::Topology const& topology);
+
+	/** Sets the layout of the graph and rebuilds the scene when it changed. */
+	void setLayoutMode(LayoutMode const mode);
 
 	/**
 	* @brief Selects the node(s) of the given entity (all its interfaces) and makes them visible.
@@ -77,11 +88,26 @@ public:
 	/** Clears the stream path highlight. */
 	void clearHighlight();
 
+	/** Gets whether a stream highlight is currently active (ie. clearHighlight() would have an effect). */
+	bool hasHighlight() const noexcept;
+
+	/** Emitted when the stream highlight switches between active and inactive. */
+	Q_SIGNAL void highlightChanged(bool const hasHighlight);
+
 	/** Shows/hides the stream bandwidth and latency labels on the edges (tooltips remain available). */
 	void setShowStreamInfo(bool const show);
 
 	/** Shows the context menu of an edge (stream highlight actions). */
 	void showEdgeContextMenu(std::size_t const edgeIndex, QPoint const& screenPos);
+
+	/** Called by the scene items when the user clicks a graphical element representing an entity (aggregated row of a switch group node), to update the application wide selection. */
+	void notifyEntityItemClicked(la::avdecc::UniqueIdentifier const entityID);
+
+	/** Highlights the path of all the streams transiting through the uplink of an aggregated entity (the edge itself has no scene item inside a switch group). */
+	void highlightRowUplink(std::size_t const nodeIndex);
+
+	/** Shows the context menu of an aggregated row: entity actions plus the stream highlight actions of its uplink. */
+	void showRowContextMenu(std::size_t const nodeIndex, QPoint const& screenPos);
 
 	/** Gets a short description of the graph content (entities and bridges count). */
 	QString statsText() const;
@@ -93,9 +119,34 @@ protected:
 	virtual void showEvent(QShowEvent* event) override;
 
 private:
+	/**
+	* @brief How one topology node is represented in the scene.
+	* @details In detailed layout every node has its own item. In aggregated layout the bridges and the
+	*          standalone entities have their own item, while an aggregated entity is a row of the switch
+	*          group item it belongs to (several nodes then share the same item pointer).
+	*/
+	struct NodeRepresentation
+	{
+		qtMate::graph::GraphNodeItem* item{ nullptr };
+		std::optional<std::size_t> row{}; /**< Set when the node is an aggregated row of a switch group item */
+	};
+
+	/** Displayable information of a link (an edge of the topology): shared by the edge labels and the aggregated rows. */
+	struct EdgeLinkInfo
+	{
+		QStringList labelParts{}; /**< Propagation delay, then stream count and bandwidth (only the available parts) */
+		QString tooltip{}; /**< Path discovery note and transiting streams list (without any interaction hint) */
+		bool hasStreams{ false };
+	};
+
 	void rebuildScene();
+	void rebuildDetailedScene();
+	void rebuildAggregatedScene();
 	void refreshDecorations();
+	EdgeLinkInfo buildEdgeLinkInfo(std::size_t const edgeIndex) const;
 	void applyEdgeDecorations(std::size_t const edgeIndex);
+	void applyRowLinkDecorations(std::size_t const nodeIndex);
+	void showLinkContextMenu(std::optional<la::avdecc::UniqueIdentifier> const identifyEntityID, std::optional<std::size_t> const edgeIndex, QPoint const& screenPos);
 	void updateStatsText();
 	void applySelectionToScene();
 	void applyHighlightToScene();
@@ -105,14 +156,20 @@ private:
 	QGraphicsScene* _scene{ nullptr };
 	qtMate::graph::GraphView* _graphView{ nullptr };
 	QString _statsText{};
+	LayoutMode _layoutMode{ LayoutMode::Detailed };
 
-	// Scene items, aligned with the topology snapshot vectors
-	std::vector<qtMate::graph::GraphNodeItem*> _nodeItems{};
+	// Scene representation of each topology node, aligned with the topology nodes vector
+	std::vector<NodeRepresentation> _nodeRepresentations{};
+	// Edge items, aligned with the topology edges vector (null for the edges internal to a switch group in aggregated layout)
 	std::vector<qtMate::graph::GraphEdgeItem*> _edgeItems{};
 	std::vector<QPen> _edgeBasePens{};
+	// Switch group items of the aggregated layout (subset of the _nodeRepresentations items, for row level operations)
+	std::vector<qtMate::graph::GraphNodeItem*> _switchGroupItems{};
+	// Edge going to the upstream neighbor of each node (aggregated layout only: source of the link information of the rows)
+	std::vector<std::optional<std::size_t>> _uplinkEdgeForNode{};
 
 	// Selection synchronization state
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<QGraphicsItem*>, la::avdecc::UniqueIdentifier::hash> _itemsForEntity{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::vector<NodeRepresentation>, la::avdecc::UniqueIdentifier::hash> _itemsForEntity{};
 	std::unordered_map<QGraphicsItem*, la::avdecc::UniqueIdentifier> _entityForItem{};
 	la::avdecc::UniqueIdentifier _selectedEntityID{};
 	bool _changingSelection{ false };
