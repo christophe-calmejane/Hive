@@ -97,6 +97,9 @@ public:
 	/** Shows/hides the stream bandwidth and latency labels on the edges (tooltips remain available). */
 	void setShowStreamInfo(bool const show);
 
+	/** Displays the propagation delay labels of the graph (edges and aggregated rows) as an estimated cable length instead of a time (the entity tooltips always show both). */
+	void setShowDelayAsDistance(bool const show);
+
 	/** Shows the context menu of an edge (stream highlight actions). */
 	void showEdgeContextMenu(std::size_t const edgeIndex, QPoint const& screenPos);
 
@@ -143,6 +146,7 @@ private:
 	void rebuildDetailedScene();
 	void rebuildAggregatedScene();
 	void refreshDecorations();
+	void refreshLinkDecorations();
 	EdgeLinkInfo buildEdgeLinkInfo(std::size_t const edgeIndex) const;
 	void applyEdgeDecorations(std::size_t const edgeIndex);
 	void applyRowLinkDecorations(std::size_t const nodeIndex);
@@ -180,6 +184,7 @@ private:
 	bool _pendingDecorationRefresh{ false };
 	bool _pendingFit{ false };
 	bool _showStreamInfo{ true };
+	bool _showDelayAsDistance{ false };
 
 	// Stream path highlight state
 	std::set<StreamKey> _highlightedStreamKeys{};

@@ -29,6 +29,7 @@
 #include <ios>
 #include <iomanip>
 #include <optional>
+#include <cstdint>
 
 namespace hive
 {
@@ -67,6 +68,10 @@ QString interfaceTypeName(la::avdecc::controller::InterfaceType const interfaceT
 /** Maps an entity's AVB interface index to the redundant controller interface type (Primary/Secondary). Milan redundancy (Milan 1.0+) defines AVB interface index 0 as the primary network and index 1 as the secondary network; returns std::nullopt for any other case (non-Milan entity or non-redundant interface index). */
 std::optional<la::avdecc::controller::InterfaceType> redundantInterfaceType(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept;
 QString macAddressToString(la::networkInterface::MacAddress const& macAddress);
+/** Converts a propagation delay (in nanoseconds) to a displayable string, either as a time ("530 ns", "1.23 microseconds") or as the estimated attached cable length based on the signal propagation speed in a copper cable (530 ns per 100 m), displayed as "< 5 m" below 5 meters (the estimate is too coarse there to show a value). */
+QString propagationDelayToString(std::uint32_t const delayNsec, bool const asDistance) noexcept;
+/** Converts a propagation delay (in nanoseconds) to a displayable string showing both the time and the estimated attached cable length, eg. "530 ns (100 m)". */
+QString propagationDelayWithDistanceToString(std::uint32_t const delayNsec) noexcept;
 QString localizedString(la::avdecc::controller::ControlledEntity const& controlledEntity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::LocalizedStringReference const stringReference) noexcept;
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept;
 

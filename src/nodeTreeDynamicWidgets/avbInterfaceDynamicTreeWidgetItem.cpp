@@ -195,7 +195,7 @@ void AvbInterfaceDynamicTreeWidgetItem::updateGptpInfo(la::avdecc::UniqueIdentif
 
 void AvbInterfaceDynamicTreeWidgetItem::updateAvbInterfaceInfo(la::avdecc::entity::model::AvbInterfaceInfo const& avbInfo)
 {
-	_propagationDelay->setText(1, QString("%1 nsec").arg(avbInfo.propagationDelay));
+	_propagationDelay->setText(1, hive::modelsLibrary::helper::propagationDelayWithDistanceToString(avbInfo.propagationDelay));
 	setFlagsItemText(_flags, la::avdecc::utils::forceNumeric(avbInfo.flags.value()), avdecc::helper::flagsToString(avbInfo.flags));
 }
 

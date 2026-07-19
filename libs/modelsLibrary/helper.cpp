@@ -77,6 +77,30 @@ QString macAddressToString(la::networkInterface::MacAddress const& macAddress)
 	return QString::fromStdString(la::networkInterface::NetworkInterfaceHelper::macAddressToString(macAddress));
 }
 
+QString propagationDelayToString(std::uint32_t const delayNsec, bool const asDistance) noexcept
+{
+	if (asDistance)
+	{
+		// Signal propagation speed in a copper cable: 530 ns per 100 m (the estimate is too coarse below 5 meters to show a value)
+		auto const meters = delayNsec * (100.0 / 530.0);
+		if (meters < 5.0)
+		{
+			return QStringLiteral("< 5 m");
+		}
+		return QString::number(meters, 'f', 0) + " m";
+	}
+	if (delayNsec >= 1000u)
+	{
+		return QString::number(delayNsec / 1000.0, 'f', 2) + QString::fromUtf8(" \xC2\xB5s");
+	}
+	return QString::number(delayNsec) + " ns";
+}
+
+QString propagationDelayWithDistanceToString(std::uint32_t const delayNsec) noexcept
+{
+	return QString{ "%1 (%2)" }.arg(propagationDelayToString(delayNsec, false), propagationDelayToString(delayNsec, true));
+}
+
 QString configurationName(la::avdecc::controller::ControlledEntity const* const controlledEntity, la::avdecc::controller::model::ConfigurationNode const& node) noexcept
 {
 	return objectName(controlledEntity, node.descriptorIndex, node);

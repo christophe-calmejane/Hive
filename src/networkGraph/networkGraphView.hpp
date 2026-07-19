@@ -67,6 +67,7 @@ private:
 	qtMate::widgets::FlatIconButton _fitButton{ "Material Icons", "zoom_out_map", this };
 	qtMate::widgets::FlatIconButton _clearHighlightButton{ "Material Icons", "highlight_off", this };
 	qtMate::widgets::FlatIconButton _streamInfoButton{ "Material Icons", "label", this };
+	qtMate::widgets::FlatIconButton _delayAsDistanceButton{ "Material Icons", "straighten", this };
 	QLabel _statsLabel{ this };
 	la::avdecc::UniqueIdentifier _selectedEntityID{};
 };

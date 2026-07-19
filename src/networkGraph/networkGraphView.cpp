@@ -51,11 +51,14 @@ NetworkGraphPane::LayoutMode layoutModeFromAggregated(bool const aggregated)
 }
 
 // The native flat style paints no background for the checked state, making it impossible to tell which
-// checkable button is active: use an explicit palette driven style (valid in both light and dark themes)
+// checkable button is active: use an explicit palette driven style (valid in both light and dark themes).
+// The disabled states are dimmed by hand for the same reason (the checked highlight would otherwise show unchanged).
 auto const ToolbarButtonStyle = QStringLiteral("QPushButton { border: none; background: transparent; padding: 3px; }"
 																							 "QPushButton:hover { background-color: palette(midlight); border-radius: 4px; }"
 																							 "QPushButton:pressed { background-color: palette(mid); border-radius: 4px; }"
-																							 "QPushButton:checked { background-color: palette(highlight); color: palette(highlighted-text); border-radius: 4px; }");
+																							 "QPushButton:checked { background-color: palette(highlight); color: palette(highlighted-text); border-radius: 4px; }"
+																							 "QPushButton:disabled { color: palette(mid); background: transparent; }"
+																							 "QPushButton:checked:disabled { background-color: palette(mid); color: palette(window); border-radius: 4px; }");
 
 QFrame* createToolbarSeparator(QWidget* parent)
 {
@@ -94,8 +97,12 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 	_streamInfoButton.setToolTip("Show/Hide link information");
 	_streamInfoButton.setCheckable(true);
 	_streamInfoButton.setChecked(true);
+	// Sub-option of the link information display, only meaningful when it is visible
+	_delayAsDistanceButton.setToolTip("Show propagation delay in meters");
+	_delayAsDistanceButton.setCheckable(true);
+	_delayAsDistanceButton.setEnabled(_streamInfoButton.isChecked());
 
-	for (auto* const button : { &_relayoutButton, &_fitButton, &_clearHighlightButton, &_detailedLayoutButton, &_aggregatedLayoutButton, &_streamInfoButton })
+	for (auto* const button : { &_relayoutButton, &_fitButton, &_clearHighlightButton, &_detailedLayoutButton, &_aggregatedLayoutButton, &_streamInfoButton, &_delayAsDistanceButton })
 	{
 		button->setStyleSheet(ToolbarButtonStyle);
 	}
@@ -111,6 +118,7 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 	toolbarLayout->addWidget(&_aggregatedLayoutButton);
 	toolbarLayout->addWidget(createToolbarSeparator(this));
 	toolbarLayout->addWidget(&_streamInfoButton);
+	toolbarLayout->addWidget(&_delayAsDistanceButton);
 	toolbarLayout->addStretch();
 	toolbarLayout->addWidget(&_statsLabel);
 
@@ -160,9 +168,19 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 		[this](bool const checked)
 		{
 			_streamInfoButton.setText(checked ? "label" : "label_off");
+			// The delay display unit only matters when the link information is visible
+			_delayAsDistanceButton.setEnabled(checked);
 			for (auto const& [avbInterfaceIndex, pane] : _panes)
 			{
 				pane->setShowStreamInfo(checked);
+			}
+		});
+	connect(&_delayAsDistanceButton, &QPushButton::toggled, this,
+		[this](bool const checked)
+		{
+			for (auto const& [avbInterfaceIndex, pane] : _panes)
+			{
+				pane->setShowDelayAsDistance(checked);
 			}
 		});
 	// The two layout buttons being mutually exclusive, observing the 'aggregated' one is enough
@@ -284,6 +302,7 @@ void NetworkGraphView::rebuildPanes()
 			_tabWidget->insertTab(static_cast<int>(networkIndex), pane, networkName(network.avbInterfaceIndex, network.milanVersion));
 			pane->selectEntity(_selectedEntityID);
 			pane->setShowStreamInfo(_streamInfoButton.isChecked());
+			pane->setShowDelayAsDistance(_delayAsDistanceButton.isChecked());
 			pane->setLayoutMode(layoutModeFromAggregated(_aggregatedLayoutButton.isChecked()));
 		}
 		_panes[networkIndex].second->setTopology(network.topology);

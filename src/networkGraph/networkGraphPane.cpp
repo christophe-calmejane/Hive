@@ -93,15 +93,6 @@ QRectF borderRect(QSizeF const& nodeSize, QPen const& pen)
 	return QRectF{ QPointF{ 0.0, 0.0 }, nodeSize }.adjusted(halfWidth, halfWidth, -halfWidth, -halfWidth);
 }
 
-QString formatPropagationDelay(std::uint32_t const delayNsec)
-{
-	if (delayNsec >= 1000u)
-	{
-		return QString::number(delayNsec / 1000.0, 'f', 2) + QString::fromUtf8(" \xC2\xB5s");
-	}
-	return QString::number(delayNsec) + " ns";
-}
-
 QString formatBandwidth(std::uint64_t const bitsPerSecond)
 {
 	if (bitsPerSecond >= 1000000u)
@@ -173,7 +164,8 @@ QString buildEntityNodeTooltip(TopologyNode const& node)
 	}
 	if (node.propagationDelay)
 	{
-		tooltip += QString{ "<br>Propagation Delay: %1" }.arg(formatPropagationDelay(*node.propagationDelay));
+		// Escaped because of the '<' of the too-short distance display
+		tooltip += QString{ "<br>Propagation Delay: %1" }.arg(hive::modelsLibrary::helper::propagationDelayWithDistanceToString(*node.propagationDelay).toHtmlEscaped());
 	}
 	if (!node.hasAsPath)
 	{
@@ -1176,16 +1168,36 @@ void NetworkGraphPane::setShowStreamInfo(bool const show)
 	if (show != _showStreamInfo)
 	{
 		_showStreamInfo = show;
-		for (auto edgeIndex = std::size_t{ 0u }; edgeIndex < _edgeItems.size(); ++edgeIndex)
-		{
-			applyEdgeDecorations(edgeIndex);
-		}
-		for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < _nodeRepresentations.size(); ++nodeIndex)
-		{
-			applyRowLinkDecorations(nodeIndex);
-		}
-		applyHighlightToScene();
+		refreshLinkDecorations();
 	}
+}
+
+void NetworkGraphPane::setShowDelayAsDistance(bool const show)
+{
+	if (show != _showDelayAsDistance)
+	{
+		_showDelayAsDistance = show;
+		refreshLinkDecorations();
+	}
+}
+
+void NetworkGraphPane::refreshLinkDecorations()
+{
+	// Don't touch the items when a scene rebuild is pending: they may not match the already updated
+	// topology anymore, and the rebuild will directly create them with the new display modes
+	if (_pendingSceneRebuild)
+	{
+		return;
+	}
+	for (auto edgeIndex = std::size_t{ 0u }; edgeIndex < _edgeItems.size(); ++edgeIndex)
+	{
+		applyEdgeDecorations(edgeIndex);
+	}
+	for (auto nodeIndex = std::size_t{ 0u }; nodeIndex < _nodeRepresentations.size(); ++nodeIndex)
+	{
+		applyRowLinkDecorations(nodeIndex);
+	}
+	applyHighlightToScene();
 }
 
 void NetworkGraphPane::showEdgeContextMenu(std::size_t const edgeIndex, QPoint const& screenPos)
@@ -1281,7 +1293,7 @@ NetworkGraphPane::EdgeLinkInfo NetworkGraphPane::buildEdgeLinkInfo(std::size_t c
 		auto const& downstreamNode = _topology.nodes[edge.downstreamNodeIndex];
 		if (downstreamNode.type == hive::modelsLibrary::NetworkTopologyModel::NodeType::Entity && downstreamNode.propagationDelay && *downstreamNode.propagationDelay > 0u)
 		{
-			info.labelParts += formatPropagationDelay(*downstreamNode.propagationDelay);
+			info.labelParts += hive::modelsLibrary::helper::propagationDelayToString(*downstreamNode.propagationDelay, _showDelayAsDistance);
 		}
 	}
 
