@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - [Enhanced connection matrix red color with MSRP Failure status](https://github.com/christophe-calmejane/Hive/issues/149)
+- Vendor names now also resolved from the IEEE MA-M (OUI-28) and MA-S/IAB (OUI-36) registries, not just MA-L (OUI-24)
 
 ### Fixed
 - User feedback when failing to save the log file

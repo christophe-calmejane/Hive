@@ -1045,7 +1045,8 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 
 QString controlTypeToString(la::avdecc::entity::model::ControlType const& controlType) noexcept
 {
-	auto const vendorID = controlType.getVendorID();
+	// A ControlType is an EUI-64 built from an OUI-24 (IEEE1722.1-2021 Clause 7.3.5)
+	auto const vendorID = controlType.getVendorID<la::avdecc::OuiType::Oui24>();
 	if (vendorID == la::avdecc::entity::model::StandardControlTypeVendorID)
 	{
 		switch (static_cast<la::avdecc::entity::model::StandardControlType>(controlType.getValue()))
@@ -1175,7 +1176,7 @@ QString controlTypeToString(la::avdecc::entity::model::ControlType const& contro
 	}
 	else
 	{
-		return "Vendor: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint32_t, 6>(vendorID, true, true)) + " Value: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint64_t, 10>(controlType.getVendorValue(), true, true));
+		return "Vendor: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint32_t, 6>(vendorID, true, true)) + " Value: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint64_t, 10>(controlType.getVendorValue<la::avdecc::OuiType::Oui24>(), true, true));
 	}
 }
 

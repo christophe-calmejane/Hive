@@ -27,6 +27,7 @@
 
 #include <cctype>
 #include <thread>
+#include <type_traits>
 
 using json = nlohmann::json;
 
@@ -273,6 +274,7 @@ namespace
 struct VendorNameMaps
 {
 	std::unordered_map<std::uint32_t, QString> oui24ToName{};
+	std::unordered_map<std::uint32_t, QString> oui28ToName{};
 	std::unordered_map<std::uint64_t, QString> oui36ToName{};
 };
 
@@ -291,17 +293,24 @@ VendorNameMaps const& getVendorNameMaps() noexcept
 			{
 				auto const jsonContent = json::parse(jsonFile.readAll().toStdString());
 
-				// Read oui_24 key, if present
-				if (auto it = jsonContent.find("oui_24"); it != jsonContent.end())
+				// Reads the given table, if present, converting each "key" to hex and each "value" to string
+				auto const loadTable = [&jsonContent](auto& ouiToName, char const* const tableName)
 				{
-					// Read each entry, converting "key" to hex and "value" to string
-					for (auto const& [key, value] : it->items())
+					using KeyType = typename std::decay_t<decltype(ouiToName)>::key_type;
+					if (auto const it = jsonContent.find(tableName); it != jsonContent.end())
 					{
-						auto const oui24 = la::avdecc::utils::convertFromString<std::uint32_t>(key.c_str());
-						auto const& vendorName = value.get<std::string>();
-						maps.oui24ToName.emplace(std::make_pair(oui24, QString::fromStdString(vendorName)));
+						for (auto const& [key, value] : it->items())
+						{
+							auto const oui = la::avdecc::utils::convertFromString<KeyType>(key.c_str());
+							auto const& vendorName = value.get<std::string>();
+							ouiToName.emplace(std::make_pair(oui, QString::fromStdString(vendorName)));
+						}
 					}
-				}
+				};
+
+				loadTable(maps.oui24ToName, "oui_24");
+				loadTable(maps.oui28ToName, "oui_28");
+				loadTable(maps.oui36ToName, "oui_36");
 			}
 			catch (...)
 			{
@@ -312,13 +321,20 @@ VendorNameMaps const& getVendorNameMaps() noexcept
 	}();
 	return s_maps;
 }
+
+// Returns the vendor name registered in the given table for the OUI of the given identifier, or nullptr if not found.
+// The returned pointer is valid for the whole lifetime of the program, the tables being immutable statics.
+template<la::avdecc::OuiType Type, typename MapType>
+QString const* findVendorName(MapType const& ouiToName, la::avdecc::UniqueIdentifier const entityID) noexcept
+{
+	auto const nameIt = ouiToName.find(entityID.getVendorID<Type>());
+	return nameIt == ouiToName.end() ? nullptr : &nameIt->second;
+}
 } // namespace
 
 void warmUpVendorNamesCache() noexcept
 {
-	// Parsing the OUI database is slow enough to cause a noticeable main thread freeze (especially in debug
-	// builds), warm the cache up front from a background thread so the first getVendorName() caller,
-	// whichever thread it is on, doesn't pay for it
+	// Parsing the OUI database is slow enough to cause a noticeable main thread freeze (especially in debug builds), warm the cache up front from a background thread so the first getVendorName() caller, whichever thread it is on, doesn't pay for it
 	std::thread{ []()
 		{
 			getVendorNameMaps();
@@ -330,26 +346,22 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 {
 	auto const& maps = getVendorNameMaps();
 
-	// First search in OUI-24
+	// Search each OUI size in turn. The IEEE never assigns overlapping blocks (a 24 bits block is either assigned as a whole, or subdivided into smaller ones), so at most one table can match.
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui24>(maps.oui24ToName, entityID); name != nullptr)
 	{
-		auto const nameIt = maps.oui24ToName.find(entityID.getVendorID<std::uint32_t>());
-		if (nameIt != maps.oui24ToName.end())
-		{
-			return nameIt->second;
-		}
+		return *name;
 	}
-
-	// Then search in OUI-36
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui28>(maps.oui28ToName, entityID); name != nullptr)
 	{
-		auto const nameIt = maps.oui36ToName.find(entityID.getVendorID<std::uint64_t>());
-		if (nameIt != maps.oui36ToName.end())
-		{
-			return nameIt->second;
-		}
+		return *name;
+	}
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui36>(maps.oui36ToName, entityID); name != nullptr)
+	{
+		return *name;
 	}
 
 	// If not found, convert to hex string
-	return toHexQString(entityID.getVendorID<std::uint32_t>(), true, true);
+	return toHexQString(entityID.getVendorID<la::avdecc::OuiType::Oui24>(), true, true);
 }
 
 } // namespace helper
