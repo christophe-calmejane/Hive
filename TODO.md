@@ -1,9 +1,15 @@
 # TODO
+
+## Network Graph
+- [FAIT - A VERIFIER] Affiche incorrectement le nombre de streams d'un lien. 1 talker vers 50 listeners ne fait qu'un seul stream, pas 50
+- Ajouter un toggle button pour afficher ou non les streams de media clock
+- Trouver un moyen de layout+render uniquement une portion du graphe pour améliorer la lisibilité, par exemple quand on sélectionne un stream, on pourrait carément (temporairement) retirer du graphe toutes les entités/bridges qui ne font pas partie du stream (au lieu de simplement les fade out comme c'est le cas actuellement), peut etre via un bouton "Focus on selected stream" (ou simplement avec un double-clic sur un trait au lieu d'un clic simple). On conserve ESC (ou le bouton "clear stream highlight") pour revenir à l'affichage normal du graphe.
+
+## EventJournal
+
+## DiscoveredEntities
+
 ## Global
-- Support multiple eth interfaces at the same time to support redundancy (Hive being connected to multiple interfaces at the same time and aggregating information on both interfaces)
-  - Have to properly split dynamic/static model in Hive (not only relying on la_avdecc_controller)
-  - For each descriptor that have dynamic information, find a way to display them separately in Hive
-  - The Entities list will have to properly aggregate entities with the same EID on different networks (and display all possible gptpt and interface index)
 - Auto save the log file in case of a crash
 
 ## Menu
@@ -14,10 +20,6 @@
   - Move the right click menu "Clear all ghost connections" from item to the list itself, and implement it
 
 ## Connection Matrix
-- Better display error information:
-  - When there is a "mismatch connection" error (listener thinks it's connected but is not in the connections list of the talker), maybe add a new color code?
-  - Display when there is a SRP error as well
-  - Maybe just use only one new color code (purple) or a new form (triangle?) for when the avdecc connection is established, but there is an error (for all cases above) that we display with a tooltip
 - Separate the connection matrix in 2 matrices, one for normal streams and one for CRF?
 - Add feature "Start all Streams" and "Stop all Streams" when right clicking on the header of a entity
 
