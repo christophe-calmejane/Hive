@@ -95,6 +95,7 @@ def main(output_file, csv_data_list):
 		"JOYNED": "JOYNED",
 		"M2Lab Ltd.": "M2Lab",
 		"JBL Professional": "JBL Professional",
+		"DirectOut GmbH": "DirectOut"
 	}
 
 	# Initialize the result dictionary with one empty table per supported prefix length

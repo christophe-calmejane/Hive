@@ -3388,7 +3388,8 @@
     "0xFCFC48": "Apple"
   },
   "oui_28": {
-    "0x480BB2D": "M2Lab"
+    "0x480BB2D": "M2Lab",
+    "0xA0BB3E2": "DirectOut"
   },
   "oui_36": {
     "0x0050C29C9": "Luminex"
