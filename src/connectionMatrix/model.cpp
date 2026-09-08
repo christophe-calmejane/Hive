@@ -2327,39 +2327,50 @@ public:
 
 				case Model::IntersectionData::Type::SingleChannel_SingleChannel:
 				{
-					//auto const* const talkerChannelNode = static_cast<ChannelNode*>(intersectionData.talker);
+					auto const* const talkerChannelNode = static_cast<ChannelNode*>(intersectionData.talker);
 					auto const* const listenerChannelNode = static_cast<ChannelNode*>(intersectionData.listener);
 
 					if (dirtyFlags.test(IntersectionDirtyFlag::UpdateConnected))
 					{
+						// The ChannelIdentification of a Listener Channel describes the Talker it is connected to, so we have to check it actually designates the Talker Channel this intersection stands for
+						auto const& talkerClusterIdentification = talkerChannelNode->clusterIdentification();
 						auto const& channelIdentification = listenerChannelNode->channelIdentification();
 						auto combinedFlags = Model::IntersectionData::Flags{};
 						auto atLeastOneConnected = false;
 						auto allConnected = true;
-						// Check primary connection
+
+						// Processes a single (primary or secondary) ChannelConnection of the Listener Channel, against the Talker Channel this intersection stands for
+						auto const processChannelConnection = [&talkerEntityID, &talkerClusterIdentification, &combinedFlags, &atLeastOneConnected, &allConnected](auto const& channelConnectionIdentification, auto const noTalkerMappingsFlag)
 						{
-							// Are we only missing talker mappings (ie. stream connection but no talker mappings)?
-							if (channelIdentification.channelConnectionIdentification.streamIdentification.entityID.isValid() && !channelIdentification.channelConnectionIdentification.talkerClusterIdentification.isValid())
+							auto connected = false;
+
+							// The Listener Channel is connected to the Talker Entity this intersection stands for
+							if (channelConnectionIdentification.streamIdentification.entityID == talkerEntityID)
 							{
-								combinedFlags.set(Model::IntersectionData::Flag::NoTalkerPrimaryMappings);
+								// Are we only missing talker mappings (ie. stream connection but no talker mappings)?
+								// In that case we don't know which Talker Channel the connection would use, so we flag all the Channels of that Talker Entity as candidates
+								if (!channelConnectionIdentification.talkerClusterIdentification.isValid())
+								{
+									combinedFlags.set(noTalkerMappingsFlag);
+								}
+								// Is it fully connected (listener mappings + stream connection + talker mappings) to this exact Talker Channel?
+								else if (channelConnectionIdentification.talkerClusterIdentification == talkerClusterIdentification)
+								{
+									connected = channelConnectionIdentification.isConnected();
+								}
 							}
-							// Is it fully connected (listener mappings + stream connection + talker mappings)?
-							auto const connected = channelIdentification.channelConnectionIdentification.isConnected();
+
 							allConnected &= connected;
 							atLeastOneConnected |= connected;
-						}
+						};
+
+						// Check primary connection
+						processChannelConnection(channelIdentification.channelConnectionIdentification, Model::IntersectionData::Flag::NoTalkerPrimaryMappings);
+
 						// Check redundant connection
 						if (channelIdentification.secondaryChannelConnectionIdentification)
 						{
-							// Are we only missing talker mappings (ie. stream connection but no talker mappings)?
-							if (channelIdentification.secondaryChannelConnectionIdentification->streamIdentification.entityID.isValid() && !channelIdentification.secondaryChannelConnectionIdentification->talkerClusterIdentification.isValid())
-							{
-								combinedFlags.set(Model::IntersectionData::Flag::NoTalkerSecondaryMappings);
-							}
-							// Is it fully connected (listener mappings + stream connection + talker mappings)?
-							auto const connected = channelIdentification.secondaryChannelConnectionIdentification->isConnected();
-							allConnected &= connected;
-							atLeastOneConnected |= connected;
+							processChannelConnection(*channelIdentification.secondaryChannelConnectionIdentification, Model::IntersectionData::Flag::NoTalkerSecondaryMappings);
 						}
 
 						intersectionData.flags = combinedFlags;

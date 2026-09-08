@@ -2130,3 +2130,61 @@ TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalNormal_ConnectedMsrpFailure
 	}
 	validateIntersectionData(5, 0, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::MediaLocked, connectionMatrix::Model::IntersectionData::Flag::MsrpFailure });
 }
+
+/* *********************************
+   Channel Based Routing
+*/
+TEST_F(ConnectionMatrix_F, SingleChannelSingleChannel_NormalNormal_ConnectedNoError_ConnectedNoError)
+{
+	getModel().setMode(connectionMatrix::Model::Mode::Channel);
+	loadNetworkState("data/connectionMatrix/9-Normal_Normal-ConnectedNoError_ConnectedNoError.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Each Channel of the Talker is connected to the Channel of the same index of the Listener, and to that one only
+	for (auto talkerChannel = 1; talkerChannel <= 8; ++talkerChannel)
+	{
+		for (auto listenerChannel = 1; listenerChannel <= 8; ++listenerChannel)
+		{
+			auto const expectedState = talkerChannel == listenerChannel ? connectionMatrix::Model::IntersectionData::State::Connected : connectionMatrix::Model::IntersectionData::State::NotConnected;
+			validateIntersectionData(9 + talkerChannel, listenerChannel, connectionMatrix::Model::IntersectionData::Type::SingleChannel_SingleChannel, expectedState, connectionMatrix::Model::IntersectionData::Flags{});
+		}
+	}
+}
+
+TEST_F(ConnectionMatrix_F, SingleChannelSingleChannel_RedundantRedundant_ConnectedNoError_LinkDown)
+{
+	getModel().setMode(connectionMatrix::Model::Mode::Channel);
+	loadNetworkState("data/connectionMatrix/16-Redundant_Redundant-ConnectedNoError_LinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Only the primary Stream is connected, so each Channel of the Talker is partially connected to the Channel of the same index of the Listener, and to that one only
+	for (auto talkerChannel = 1; talkerChannel <= 8; ++talkerChannel)
+	{
+		for (auto listenerChannel = 1; listenerChannel <= 8; ++listenerChannel)
+		{
+			auto const expectedState = talkerChannel == listenerChannel ? connectionMatrix::Model::IntersectionData::State::PartiallyConnected : connectionMatrix::Model::IntersectionData::State::NotConnected;
+			validateIntersectionData(9 + talkerChannel, listenerChannel, connectionMatrix::Model::IntersectionData::Type::SingleChannel_SingleChannel, expectedState, connectionMatrix::Model::IntersectionData::Flags{});
+		}
+	}
+}
+
+TEST_F(ConnectionMatrix_F, SingleChannelSingleChannel_NormalRedundant_ConnectedNoError_ConnectedLinkDown)
+{
+	getModel().setMode(connectionMatrix::Model::Mode::Channel);
+	loadNetworkState("data/connectionMatrix/26-Normal_Redundant-ConnectedNoError_ConnectedLinkDown.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// The Talker only has a dynamic mapping for its first Channel, connected to the first Channel of the Listener
+	validateIntersectionData(1, 10, connectionMatrix::Model::IntersectionData::Type::SingleChannel_SingleChannel, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{});
+	validateIntersectionData(2, 10, connectionMatrix::Model::IntersectionData::Type::SingleChannel_SingleChannel, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+	// The Streams are connected but the Talker has no dynamic mapping for the other Channels of the Listener, so all the Channels of that Talker are flagged as candidates
+	validateIntersectionData(1, 11, connectionMatrix::Model::IntersectionData::Type::SingleChannel_SingleChannel, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::NoTalkerPrimaryMappings, connectionMatrix::Model::IntersectionData::Flag::NoTalkerSecondaryMappings });
+	// The last Channel of the Listener has no dynamic mapping at all, so it's not connected to any Stream and must not be flagged
+	validateIntersectionData(1, 17, connectionMatrix::Model::IntersectionData::Type::SingleChannel_SingleChannel, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{});
+}

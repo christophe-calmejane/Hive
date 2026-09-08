@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Vendor names now also resolved from the IEEE MA-M (OUI-28) and MA-S/IAB (OUI-36) registries, not just MA-L (OUI-24)
 
 ### Fixed
+- Channel Based Routing matrix displaying a Listener Channel as connected to every Channel of the Talker Entity, instead of the Talker Channel it is actually connected to
 - User feedback when failing to save the log file
 - [Localized strings now fetched from the configuration being inspected instead of the active one](https://github.com/christophe-calmejane/Hive/issues/178)
 
