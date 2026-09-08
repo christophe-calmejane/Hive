@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Per-interface 'Subscribed to Unsol' state in the Entity Descriptor
   - An entity is only flagged as unsubscribed from unsolicited notifications (hatched in the Discovered Entities list) when no interface holds a subscription anymore, and a controller transport error is only fatal when both interfaces failed
 - [Display cable length estimation based on prop delay](https://github.com/christophe-calmejane/Hive/issues/181)
+- Missing EntityCapabilities flags
 
 ### Changed
 - [Enhanced connection matrix red color with MSRP Failure status](https://github.com/christophe-calmejane/Hive/issues/149)

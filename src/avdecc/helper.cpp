@@ -762,6 +762,9 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) 
 			case la::avdecc::entity::EntityCapability::AssociationIDSupported:
 				concatenateFlags(str, "AssociationIDSupported");
 				break;
+			case la::avdecc::entity::EntityCapability::AssociationIDValid:
+				concatenateFlags(str, "AssociationIDValid");
+				break;
 			case la::avdecc::entity::EntityCapability::VendorUniqueSupported:
 				concatenateFlags(str, "VendorUniqueSupported");
 				break;
@@ -794,6 +797,30 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) 
 				break;
 			case la::avdecc::entity::EntityCapability::EntityNotReady:
 				concatenateFlags(str, "EntityNotReady");
+				break;
+			case la::avdecc::entity::EntityCapability::AcmpAcquireWithAem:
+				concatenateFlags(str, "AcmpAcquireWithAem");
+				break;
+			case la::avdecc::entity::EntityCapability::AcmpAuthenticateWithAem:
+				concatenateFlags(str, "AcmpAuthenticateWithAem");
+				break;
+			case la::avdecc::entity::EntityCapability::SupportsUdpv4Atdecc:
+				concatenateFlags(str, "SupportsUdpv4Atdecc");
+				break;
+			case la::avdecc::entity::EntityCapability::SupportsUdpv4Streaming:
+				concatenateFlags(str, "SupportsUdpv4Streaming");
+				break;
+			case la::avdecc::entity::EntityCapability::SupportsUdpv6Atdecc:
+				concatenateFlags(str, "SupportsUdpv6Atdecc");
+				break;
+			case la::avdecc::entity::EntityCapability::SupportsUdpv6Streaming:
+				concatenateFlags(str, "SupportsUdpv6Streaming");
+				break;
+			case la::avdecc::entity::EntityCapability::MultiplePtpInstances:
+				concatenateFlags(str, "MultiplePtpInstances");
+				break;
+			case la::avdecc::entity::EntityCapability::AemConfigurationIndexValid:
+				concatenateFlags(str, "AemConfigurationIndexValid");
 				break;
 			default:
 				concatenateFlags(str, "Unknown");
