@@ -174,6 +174,8 @@ QVariant EventJournalModel::data(QModelIndex const& index, int role) const
 			return static_cast<int>(event.severity);
 		case CategoryRole:
 			return static_cast<int>(event.category);
+		case LevelRole:
+			return static_cast<int>(event.level);
 		default:
 			return {};
 	}
@@ -210,6 +212,12 @@ QVariant EventJournalModel::headerData(int section, Qt::Orientation orientation,
 EventJournalFilterProxyModel::EventJournalFilterProxyModel(QObject* parent)
 	: QSortFilterProxyModel{ parent }
 {
+}
+
+void EventJournalFilterProxyModel::setDiagnosticEventsVisible(bool const visible)
+{
+	_diagnosticEventsVisible = visible;
+	invalidateFilter();
 }
 
 void EventJournalFilterProxyModel::setHiddenSeverities(QSet<int> const& severities)
@@ -253,6 +261,10 @@ bool EventJournalFilterProxyModel::filterAcceptsRow(int sourceRow, QModelIndex c
 		return false;
 	}
 	if (_hiddenCategories.contains(model->data(index, EventJournalModel::CategoryRole).toInt()))
+	{
+		return false;
+	}
+	if (!_diagnosticEventsVisible && model->data(index, EventJournalModel::LevelRole).toInt() == static_cast<int>(EventJournal::Level::Diagnostic))
 	{
 		return false;
 	}

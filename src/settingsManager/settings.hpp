@@ -56,6 +56,9 @@ static SettingsManager::SettingDefault ConnectionMatrix_ShowEntitySummary = { "a
 // Network graph settings
 static SettingsManager::SettingDefault NetworkGraph_AggregatedLayout = { "avdecc/networkGraph/aggregatedLayout", false };
 
+// Event journal settings
+static SettingsManager::SettingDefault EventJournal_DiagnosticLevel = { "avdecc/eventJournal/diagnosticLevel", false }; // Record the diagnostic level events (toggled from the Event Journal dock, not from the preferences)
+
 // Network settings
 static SettingsManager::SettingDefault Network_ProtocolType = { "avdecc/network/protocolType", la::avdecc::utils::to_integral(la::avdecc::protocol::ProtocolInterface::Type::None) };
 static SettingsManager::SettingDefault Network_InterfaceTypeEthernet = { "avdecc/network/interfaceType/ethernet", true };

@@ -28,8 +28,12 @@
 
 #include <QApplication>
 #include <QDeadlineTimer>
+#include <QDir>
+#include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSqlDatabase>
+#include <QSqlQuery>
 #include <QStandardPaths>
 #include <QString>
 #ifdef _WIN32
@@ -60,6 +64,10 @@ constexpr auto TestStreamIndex = la::avdecc::entity::model::StreamIndex{ 0u };
 constexpr auto FramesPerSecond = la::avdecc::entity::model::DescriptorCounter{ 8000u }; // One second worth of frames of the simulated stream (AAF class A)
 constexpr auto OneSecond = std::chrono::milliseconds{ 1000 };
 constexpr auto LearningSamples = std::size_t{ 10u }; // Number of increments the rule needs before evaluating a stream
+
+// Journal files of every schema version, recorded (and anonymized) by the version of Hive that introduced the schema
+constexpr auto SchemaV1FixturePath = "data/eventJournal/schema_v1.hej"; // 31 events of a real dual interface session recorded by Hive 1.5.0-beta1
+constexpr auto SchemaV2FixturePath = "data/eventJournal/schema_v2.hej"; // Session recorded by this test suite (EventJournal_F.Session_WriterRoundTrip) when schema version 2 was introduced
 
 /** Stream data event as journaled, reduced to what the tests check. */
 struct StreamDataEvent
@@ -98,6 +106,8 @@ public:
 
 		// The journal must exist before the controller is created, so it catches the controllerOnline signal that starts the recording session
 		auto& journal = hive::modelsLibrary::EventJournal::getInstance();
+		// The diagnostic level events are part of what the tests check (the level persists across sessions, so this is a no-op after the first test)
+		journal.setRecordingLevel(hive::modelsLibrary::EventJournal::Level::Diagnostic);
 
 		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
 		try
@@ -242,6 +252,21 @@ public:
 									 }),
 			events.end());
 		return events;
+	}
+
+	/** Gets the summaries of the events of the given category journaled since the fixture was loaded (all entities), in journal order. */
+	QStringList summariesSince(hive::modelsLibrary::EventJournal::Category const category) const noexcept
+	{
+		auto summaries = QStringList{};
+		auto const sessionEvents = hive::modelsLibrary::EventJournal::getInstance().currentSessionEvents();
+		for (auto index = _fixtureEventsOffset; index < sessionEvents.size(); ++index)
+		{
+			if (sessionEvents[index].category == category)
+			{
+				summaries.push_back(sessionEvents[index].summary);
+			}
+		}
+		return summaries;
 	}
 
 	/** Counts the "Entity is online" events journaled so far (all entities). */
@@ -711,4 +736,182 @@ TEST_F(EventJournal_F, StreamData_NotificationWithoutFramesRx_IsIgnored)
 	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = 1u;
 	emit hive::modelsLibrary::ControllerManager::getInstance().streamInputCountersChanged(entityID, TestStreamIndex, counters);
 	EXPECT_TRUE(streamDataLossEvents(entityID).empty());
+}
+
+/* *********************************
+   Recording level
+*/
+// Diagnostic level events are only written while diagnostic recording is enabled, the switches are journaled at user level, and enabling it re-announces the covered streams
+TEST_F(EventJournal_F, RecordingLevel_DiagnosticEventsFollowTheLevel)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto& journal = EventJournal::getInstance();
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+
+	loadConnectedFixture();
+	journal.setRecordingLevel(EventJournal::Level::User);
+	EXPECT_EQ(EventJournal::Level::User, journal.recordingLevel());
+	EXPECT_EQ(QStringList{ "Diagnostic recording disabled" }, summariesSince(EventJournal::Category::Session));
+
+	// The end of the learning phase is a diagnostic event: not written at user level
+	auto framesRx = streamSteadily(entityID, seededFramesRx(entityID, TestStreamIndex), LearningSamples + 2u);
+	EXPECT_TRUE(streamDataEvents(entityID).empty());
+
+	// Enabling diagnostic recording is journaled, and the stream announces its coverage again at its next notification
+	journal.setRecordingLevel(EventJournal::Level::Diagnostic);
+	journal.setRecordingLevel(EventJournal::Level::Diagnostic); // No-op
+	EXPECT_EQ((QStringList{ "Diagnostic recording disabled", "Diagnostic recording enabled" }), summariesSince(EventJournal::Category::Session));
+	framesRx = streamSteadily(entityID, framesRx, 1u);
+	auto const events = streamDataEvents(entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Stream data monitoring started" }, events[0].summary);
+	for (auto const& event : journal.currentSessionEvents())
+	{
+		if (event.summary == "Stream data monitoring started")
+		{
+			EXPECT_EQ(EventJournal::Level::Diagnostic, event.level);
+		}
+		else
+		{
+			EXPECT_EQ(EventJournal::Level::User, event.level) << event.summary.toStdString();
+		}
+	}
+
+	// Losses are user level events: written whatever the level
+	journal.setRecordingLevel(EventJournal::Level::User);
+	notifyFramesRx(entityID, framesRx + FramesPerSecond * 4u / 10u, OneSecond);
+	EXPECT_EQ(std::size_t{ 1u }, streamDataLossEvents(entityID).size());
+	journal.setRecordingLevel(EventJournal::Level::Diagnostic);
+}
+
+/* *********************************
+   Schema compatibility
+*/
+// A version 1 file (no level column, no snapshots table) loads with every event at user level
+TEST_F(EventJournal_F, Session_SchemaV1Fixture_Loads)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const session = EventJournal::loadSession(SchemaV1FixturePath);
+	ASSERT_TRUE(session.has_value());
+	EXPECT_EQ(1, session->schemaVersion());
+	EXPECT_FALSE(session->isNewerThanReader());
+	EXPECT_EQ(std::size_t{ 31u }, session->events.size());
+	EXPECT_EQ(QString{ "1.5.0-beta1" }, session->metadata.value("hive_version"));
+	EXPECT_EQ(QString{ "Test Secondary" }, session->metadata.value("secondary_interface_name"));
+	auto categories = QSet<int>{};
+	for (auto const& event : session->events)
+	{
+		EXPECT_EQ(EventJournal::Level::User, event.level);
+		categories.insert(static_cast<int>(event.category));
+	}
+	EXPECT_EQ((QSet<int>{ static_cast<int>(EventJournal::Category::Session), static_cast<int>(EventJournal::Category::Entity), static_cast<int>(EventJournal::Category::Counters), static_cast<int>(EventJournal::Category::MediaClock) }), categories);
+	EXPECT_EQ(QString{ "Recording started" }, session->events.front().summary);
+	EXPECT_EQ(EventJournal::Severity::Warning, session->events.back().severity);
+	EXPECT_EQ(QString{ "Entity went offline" }, session->events.back().summary);
+	EXPECT_EQ(6, std::count_if(session->events.begin(), session->events.end(),
+								 [](EventJournal::Event const& event)
+								 {
+									 return event.severity == EventJournal::Severity::Recovered && event.summary == "Media clock locked";
+								 }));
+}
+
+// A version 2 file loads with the level of every event and the new metadata keys
+TEST_F(EventJournal_F, Session_SchemaV2Fixture_Loads)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const session = EventJournal::loadSession(SchemaV2FixturePath);
+	ASSERT_TRUE(session.has_value());
+	EXPECT_EQ(2, session->schemaVersion());
+	EXPECT_FALSE(session->isNewerThanReader());
+	EXPECT_EQ(QString{ "diagnostic" }, session->metadata.value("recording_level_at_start"));
+	EXPECT_FALSE(session->metadata.value("la_avdecc_version").isEmpty());
+	EXPECT_FALSE(session->metadata.value("os").isEmpty());
+	auto userCount = std::size_t{ 0u };
+	auto diagnosticCount = std::size_t{ 0u };
+	for (auto const& event : session->events)
+	{
+		if (event.level == EventJournal::Level::Diagnostic)
+		{
+			++diagnosticCount;
+			EXPECT_EQ(QString{ "Stream data monitoring started" }, event.summary);
+		}
+		else
+		{
+			++userCount;
+		}
+	}
+	EXPECT_EQ(std::size_t{ 1u }, diagnosticCount);
+	EXPECT_GT(userCount, std::size_t{ 3u });
+}
+
+// A file written by a newer schema still loads (degraded mode): unknown categories and levels fall back, and the session reports it is newer than the reader
+TEST_F(EventJournal_F, Session_NewerSchema_LoadsInDegradedMode)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const filePath = QDir::temp().filePath("HiveEventJournalTests_schema_v99.hej");
+	QFile::remove(filePath);
+	ASSERT_TRUE(QFile::copy(SchemaV2FixturePath, filePath));
+	{
+		auto db = QSqlDatabase::addDatabase("QSQLITE", "SchemaV99Writer");
+		db.setDatabaseName(filePath);
+		ASSERT_TRUE(db.open());
+		auto query = QSqlQuery{ db };
+		ASSERT_TRUE(query.exec("UPDATE metadata SET value = '99' WHERE key = 'schema_version'"));
+		ASSERT_TRUE(query.exec("ALTER TABLE events ADD COLUMN future_column TEXT"));
+		ASSERT_TRUE(query.exec("INSERT INTO events (timestamp, category, severity, entity_id, entity_name, subject, summary, details, level, future_column) VALUES (9999999999999, 'future_category', 'future_severity', '', '', '', 'Future event', '', 'future_level', 'x')"));
+		db.close();
+	}
+	QSqlDatabase::removeDatabase("SchemaV99Writer");
+
+	auto const session = EventJournal::loadSession(filePath);
+	ASSERT_TRUE(session.has_value());
+	EXPECT_EQ(99, session->schemaVersion());
+	EXPECT_TRUE(session->isNewerThanReader());
+	ASSERT_FALSE(session->events.empty());
+	auto const& futureEvent = session->events.back();
+	EXPECT_EQ(QString{ "Future event" }, futureEvent.summary);
+	EXPECT_EQ(EventJournal::Category::Session, futureEvent.category);
+	EXPECT_EQ(EventJournal::Severity::Info, futureEvent.severity);
+	EXPECT_EQ(EventJournal::Level::User, futureEvent.level);
+	QFile::remove(filePath);
+}
+
+// The live writer produces a file this reader loads back identically (levels and metadata included); the exported file of this test is the committed schema_v2.hej fixture
+TEST_F(EventJournal_F, Session_WriterRoundTrip)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto& journal = EventJournal::getInstance();
+
+	// A few events of both levels
+	journal.setRecordingLevel(EventJournal::Level::Diagnostic);
+	learnConnectedStream();
+	notifyCounters(5u, 4u);
+	notifyCounters(5u, 5u);
+
+	auto const filePath = QDir::temp().filePath("HiveEventJournalTests_schema_v2.hej");
+	QFile::remove(filePath);
+	ASSERT_TRUE(journal.exportCurrentSession(filePath));
+
+	auto const session = EventJournal::loadSession(filePath);
+	ASSERT_TRUE(session.has_value());
+	EXPECT_EQ(EventJournal::CurrentSchemaVersion, session->schemaVersion());
+	EXPECT_EQ(journal.currentSessionMetadata(), session->metadata);
+	auto const liveEvents = journal.currentSessionEvents();
+	ASSERT_EQ(liveEvents.size(), session->events.size());
+	for (auto index = std::size_t{ 0u }; index < liveEvents.size(); ++index)
+	{
+		EXPECT_EQ(liveEvents[index].timestamp, session->events[index].timestamp);
+		EXPECT_EQ(liveEvents[index].category, session->events[index].category);
+		EXPECT_EQ(liveEvents[index].severity, session->events[index].severity);
+		EXPECT_EQ(liveEvents[index].level, session->events[index].level);
+		EXPECT_EQ(liveEvents[index].entityID, session->events[index].entityID);
+		EXPECT_EQ(liveEvents[index].summary, session->events[index].summary);
+		EXPECT_EQ(liveEvents[index].details, session->events[index].details);
+	}
+	EXPECT_TRUE(std::any_of(session->events.begin(), session->events.end(),
+		[](EventJournal::Event const& event)
+		{
+			return event.level == EventJournal::Level::Diagnostic;
+		}));
+	EXPECT_EQ(QString{ "diagnostic" }, session->metadata.value("recording_level_at_start"));
 }

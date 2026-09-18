@@ -53,6 +53,9 @@ public:
 	/** File extension used by journal session files (without the leading dot). */
 	static constexpr auto JournalFileExtension = "hej";
 
+	/** Schema version written by this version of the journal (see docs/EventJournal.md for the compatibility rules). */
+	static constexpr auto CurrentSchemaVersion = 2;
+
 	/** Functional category of a journaled event, used for filtering. */
 	enum class Category
 	{
@@ -77,12 +80,20 @@ public:
 		Recovered = 3, /**< End of a previously reported error condition */
 	};
 
+	/** Recording level of a journaled event: who the event is for. The recording level of the session decides which events are written. */
+	enum class Level
+	{
+		User = 0, /**< What the sound engineer needs (the only level recorded unless diagnostic recording is enabled) */
+		Diagnostic = 1, /**< Everything needed for deep analysis and for rebuilding the state of the network (much larger files) */
+	};
+
 	/** A single journaled event. */
 	struct Event
 	{
 		qint64 timestamp{ 0 }; /**< Milliseconds since Unix epoch, UTC */
 		Category category{ Category::Session };
 		Severity severity{ Severity::Info };
+		Level level{ Level::User };
 		la::avdecc::UniqueIdentifier entityID{}; /**< May be invalid for session-wide events */
 		QString entityName{}; /**< Name of the entity at the time of the event (may be empty) */
 		QString subject{}; /**< Sub-object designation (stream, interface, clock domain, ...) (may be empty) */
@@ -95,6 +106,12 @@ public:
 	{
 		QMap<QString, QString> metadata{}; /**< Session metadata (schema_version, hive_version, started_utc, ...) */
 		std::vector<Event> events{}; /**< All events, ordered by ascending timestamp */
+
+		/** Returns the schema version the file was written with (1 when the file predates the schema_version metadata key). */
+		int schemaVersion() const noexcept;
+
+		/** Returns true if the file was written with a newer schema than this reader understands (its events are loaded anyway, in degraded mode). */
+		bool isNewerThanReader() const noexcept;
 	};
 
 	/**
@@ -114,6 +131,9 @@ public:
 	/** Returns a human readable name for the given severity. */
 	static QString severityToString(Severity const severity) noexcept;
 
+	/** Returns a human readable name for the given level. */
+	static QString levelToString(Level const level) noexcept;
+
 	/**
 	* @brief Loads a journal session file.
 	* @param[in] filePath Path of the session file to load.
@@ -123,6 +143,16 @@ public:
 
 	/** Returns true if a session is currently being recorded. */
 	bool isRecording() const noexcept;
+
+	/** Returns the recording level applied to the events being journaled. */
+	Level recordingLevel() const noexcept;
+
+	/**
+	* @brief Sets the recording level.
+	* @details Diagnostic events are only written while the level is Diagnostic, user events are always written. Switching during a session journals a session event, so the analyser knows which periods carry diagnostic data. The level is not persisted by the journal itself (the application restores it from its settings before the controller starts).
+	* @param[in] level The recording level to apply from now on.
+	*/
+	void setRecordingLevel(Level const level) noexcept;
 
 	/** Returns the path of the session file currently being recorded (empty if not recording). */
 	QString currentSessionFilePath() const noexcept;
@@ -170,6 +200,7 @@ public:
 	Q_SIGNAL void recordingFailed(QString const& reason);
 	Q_SIGNAL void eventAdded(hive::modelsLibrary::EventJournal::Event const& event);
 	Q_SIGNAL void sessionCleared();
+	Q_SIGNAL void recordingLevelChanged(hive::modelsLibrary::EventJournal::Level const level);
 
 private:
 	EventJournal();

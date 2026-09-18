@@ -311,6 +311,9 @@ int main(int argc, char* argv[])
 	// Network graph
 	settings.registerSetting(settings::NetworkGraph_AggregatedLayout);
 
+	// Event journal
+	settings.registerSetting(settings::EventJournal_DiagnosticLevel);
+
 	// Network
 	settings.registerSetting(settings::Network_ProtocolType);
 	settings.registerSetting(settings::Network_InterfaceTypeEthernet);

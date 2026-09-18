@@ -21,6 +21,8 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 
+#include <la/avdecc/avdecc.hpp>
+
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
@@ -31,6 +33,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
+#include <QSysInfo>
 
 #include <algorithm>
 #include <atomic>
@@ -48,7 +51,6 @@ namespace modelsLibrary
 {
 namespace
 {
-constexpr auto SchemaVersion = 1;
 constexpr auto MaxJournalFiles = 50; // Maximum number of automatically created session files kept on disk
 constexpr auto WriterConnectionName = "HiveEventJournalWriter";
 
@@ -144,6 +146,32 @@ std::optional<EventJournal::Severity> severityFromKey(QString const& key) noexce
 		{ "warning", EventJournal::Severity::Warning },
 		{ "error", EventJournal::Severity::Error },
 		{ "recovered", EventJournal::Severity::Recovered },
+	};
+	if (auto const it = s_map.find(key); it != s_map.end())
+	{
+		return it->second;
+	}
+	return std::nullopt;
+}
+
+QString levelToKey(EventJournal::Level const level) noexcept
+{
+	switch (level)
+	{
+		case EventJournal::Level::User:
+			return "user";
+		case EventJournal::Level::Diagnostic:
+			return "diagnostic";
+		default:
+			return "user";
+	}
+}
+
+std::optional<EventJournal::Level> levelFromKey(QString const& key) noexcept
+{
+	static auto const s_map = std::unordered_map<QString, EventJournal::Level>{
+		{ "user", EventJournal::Level::User },
+		{ "diagnostic", EventJournal::Level::Diagnostic },
 	};
 	if (auto const it = s_map.find(key); it != s_map.end())
 	{
@@ -262,20 +290,27 @@ public:
 		query.exec("PRAGMA synchronous=NORMAL");
 		query.exec("CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY NOT NULL, value TEXT)");
 		query.exec("CREATE TABLE IF NOT EXISTS entities (entity_id TEXT PRIMARY KEY NOT NULL, name TEXT)");
-		query.exec("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, category TEXT NOT NULL, severity TEXT NOT NULL, entity_id TEXT, entity_name TEXT, subject TEXT, summary TEXT NOT NULL, details TEXT)");
+		// Schema version 2 (see docs/EventJournal.md): schema changes are additive only, a reader must accept any older file and open a newer one in degraded mode
+		query.exec("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, category TEXT NOT NULL, severity TEXT NOT NULL, entity_id TEXT, entity_name TEXT, subject TEXT, summary TEXT NOT NULL, details TEXT, level TEXT NOT NULL DEFAULT 'user')");
 		query.exec("CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events (timestamp)");
+		// Entity snapshots (serialized entity models), written from schema version 2 on
+		query.exec("CREATE TABLE IF NOT EXISTS snapshots (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp INTEGER NOT NULL, entity_id TEXT NOT NULL, reason TEXT NOT NULL, format TEXT NOT NULL, data BLOB NOT NULL, uncompressed_size INTEGER NOT NULL)");
+		query.exec("CREATE INDEX IF NOT EXISTS idx_snapshots_entity ON snapshots (entity_id, timestamp)");
 
 		_insertEventQuery = QSqlQuery{ _db };
-		_insertEventQuery.prepare("INSERT INTO events (timestamp, category, severity, entity_id, entity_name, subject, summary, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+		_insertEventQuery.prepare("INSERT INTO events (timestamp, category, severity, entity_id, entity_name, subject, summary, details, level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		_upsertEntityQuery = QSqlQuery{ _db };
 		_upsertEntityQuery.prepare("INSERT OR REPLACE INTO entities (entity_id, name) VALUES (?, ?)");
 		_upsertMetadataQuery = QSqlQuery{ _db };
 		_upsertMetadataQuery.prepare("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)");
 
-		setMetadata("schema_version", QString::number(SchemaVersion));
+		setMetadata("schema_version", QString::number(EventJournal::CurrentSchemaVersion));
 		setMetadata("hive_version", QCoreApplication::applicationVersion());
+		setMetadata("la_avdecc_version", QString::fromStdString(la::avdecc::getVersion()));
+		setMetadata("os", QSysInfo::prettyProductName());
 		setMetadata("computer_name", helper::getComputerName());
 		setMetadata("started_utc", QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+		setMetadata("recording_level_at_start", levelToKey(_recordingLevel));
 
 		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Recording started");
 		emit _q->recordingStarted(_sessionFilePath);
@@ -376,6 +411,32 @@ public:
 		emit _q->sessionCleared();
 		// Record a marker so the cleared session is not completely empty
 		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Journal cleared");
+	}
+
+	void setRecordingLevel(Level const level) noexcept
+	{
+		if (level == _recordingLevel)
+		{
+			return;
+		}
+		_recordingLevel = level;
+		if (isRecording())
+		{
+			// Journaled at user level, so any viewer can tell which periods of the session carry diagnostic data
+			addEvent(Category::Session, Severity::Info, {}, {}, {}, level == Level::Diagnostic ? "Diagnostic recording enabled" : "Diagnostic recording disabled");
+			if (level == Level::Diagnostic)
+			{
+				// The streams already monitored announce their coverage again at their next notification, so the diagnostic period starts with the reference of every covered stream
+				for (auto& [entityID, states] : _streamDataStates)
+				{
+					for (auto& [streamIndex, state] : states)
+					{
+						state.isMonitored = false;
+					}
+				}
+			}
+		}
+		emit _q->recordingLevelChanged(level);
 	}
 
 	/* ************************************************************ */
@@ -732,7 +793,7 @@ public:
 				state.isMonitored = true;
 				auto details = streamDataDetails(*connectionInfo, *reference);
 				details["samples"] = static_cast<qint64>(state.increments.size());
-				addEvent(Category::Streaming, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream data monitoring started", details);
+				addEvent(Category::Streaming, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream data monitoring started", details, Level::Diagnostic);
 			}
 		}
 	}
@@ -1011,12 +1072,19 @@ public:
 	/* ************************************************************ */
 	/* Internal helpers                                             */
 	/* ************************************************************ */
-	void addEvent(Category const category, Severity const severity, la::avdecc::UniqueIdentifier const entityID, QString const& entityName, QString const& subject, QString const& summary, QJsonObject const& details = {}) noexcept
+	void addEvent(Category const category, Severity const severity, la::avdecc::UniqueIdentifier const entityID, QString const& entityName, QString const& subject, QString const& summary, QJsonObject const& details = {}, Level const level = Level::User) noexcept
 	{
+		// Diagnostic events are only written while diagnostic recording is enabled
+		if (level == Level::Diagnostic && _recordingLevel != Level::Diagnostic)
+		{
+			return;
+		}
+
 		auto event = Event{};
 		event.timestamp = QDateTime::currentMSecsSinceEpoch();
 		event.category = category;
 		event.severity = severity;
+		event.level = level;
 		event.entityID = entityID;
 		event.entityName = entityName;
 		event.subject = subject;
@@ -1031,6 +1099,7 @@ public:
 		_insertEventQuery.addBindValue(event.subject);
 		_insertEventQuery.addBindValue(event.summary);
 		_insertEventQuery.addBindValue(event.details);
+		_insertEventQuery.addBindValue(levelToKey(level));
 		_insertEventQuery.exec();
 
 		_events.push_back(event);
@@ -1260,6 +1329,7 @@ public:
 	QString _sessionFilePath{};
 	std::vector<Event> _events{};
 	QMap<QString, QString> _metadata{};
+	Level _recordingLevel{ Level::User };
 
 	// Change-detection state
 	std::unordered_map<la::avdecc::UniqueIdentifier, QString, la::avdecc::UniqueIdentifier::hash> _entityNames{};
@@ -1482,6 +1552,31 @@ QString EventJournal::severityToString(Severity const severity) noexcept
 	}
 }
 
+QString EventJournal::levelToString(Level const level) noexcept
+{
+	switch (level)
+	{
+		case Level::User:
+			return "User";
+		case Level::Diagnostic:
+			return "Diagnostic";
+		default:
+			return "Unknown";
+	}
+}
+
+int EventJournal::Session::schemaVersion() const noexcept
+{
+	auto ok = false;
+	auto const version = metadata.value("schema_version", "1").toInt(&ok);
+	return ok ? version : 1;
+}
+
+bool EventJournal::Session::isNewerThanReader() const noexcept
+{
+	return schemaVersion() > CurrentSchemaVersion;
+}
+
 std::optional<EventJournal::Session> EventJournal::loadSession(QString const& filePath) noexcept
 {
 	static auto s_readerCount = std::atomic_uint{ 0u };
@@ -1515,7 +1610,17 @@ std::optional<EventJournal::Session> EventJournal::loadSession(QString const& fi
 					session.metadata[query.value(0).toString()] = query.value(1).toString();
 				}
 			}
-			if (query.exec("SELECT timestamp, category, severity, entity_id, entity_name, subject, summary, details FROM events ORDER BY timestamp, id"))
+			// The level column only exists from schema version 2 on (a version 1 file only holds user level events)
+			auto hasLevelColumn = false;
+			if (query.exec("PRAGMA table_info(events)"))
+			{
+				while (query.next())
+				{
+					hasLevelColumn |= query.value(1).toString() == "level";
+				}
+			}
+			auto const eventsQuery = hasLevelColumn ? QString{ "SELECT timestamp, category, severity, entity_id, entity_name, subject, summary, details, level FROM events ORDER BY timestamp, id" } : QString{ "SELECT timestamp, category, severity, entity_id, entity_name, subject, summary, details FROM events ORDER BY timestamp, id" };
+			if (query.exec(eventsQuery))
 			{
 				success = true;
 				while (query.next())
@@ -1524,6 +1629,10 @@ std::optional<EventJournal::Session> EventJournal::loadSession(QString const& fi
 					event.timestamp = query.value(0).toLongLong();
 					event.category = categoryFromKey(query.value(1).toString()).value_or(Category::Session);
 					event.severity = severityFromKey(query.value(2).toString()).value_or(Severity::Info);
+					if (hasLevelColumn)
+					{
+						event.level = levelFromKey(query.value(8).toString()).value_or(Level::User);
+					}
 					auto const entityIDString = query.value(3).toString();
 					if (!entityIDString.isEmpty())
 					{
@@ -1556,6 +1665,16 @@ std::optional<EventJournal::Session> EventJournal::loadSession(QString const& fi
 bool EventJournal::isRecording() const noexcept
 {
 	return _pImpl->isRecording();
+}
+
+EventJournal::Level EventJournal::recordingLevel() const noexcept
+{
+	return _pImpl->_recordingLevel;
+}
+
+void EventJournal::setRecordingLevel(Level const level) noexcept
+{
+	_pImpl->setRecordingLevel(level);
 }
 
 QString EventJournal::currentSessionFilePath() const noexcept

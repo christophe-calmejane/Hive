@@ -29,25 +29,62 @@ File extension: `.hej` (Hive Event Journal). Writing details:
 - Live export uses `VACUUM INTO`, which produces a consistent, self-contained snapshot without interrupting the recording.
 - `EventJournal::loadSession()` opens files read-only, and falls back to read-write open (which performs WAL recovery) for sessions that were interrupted by a crash.
 
-### Schema (version 1)
+### Recording levels
+
+Every event has a level, telling who it is for:
+
+- `user` (default): what the sound engineer needs, the only level recorded unless diagnostic recording is enabled;
+- `diagnostic`: everything needed for deep analysis and, later, for rebuilding the state of the network (much larger files).
+
+Diagnostic recording is toggled from the Event Journal dock ("Record Diagnostic" button, not from the preferences), the choice is persisted (`settings::EventJournal_DiagnosticLevel`) so the next session starts in the same mode, and the current mode is shown in the dock status label. `EventJournal::setRecordingLevel()` applies it: user events are always written, diagnostic events only while the level is `Diagnostic`, and a switch during a session writes a user level `session` event (`Diagnostic recording enabled` / `Diagnostic recording disabled`) so any reader knows which periods carry diagnostic data (`metadata.recording_level_at_start` gives the initial mode). Enabling it also makes every monitored stream announce its `Stream data monitoring started` again at its next notification, so the diagnostic period starts with the coverage information.
+
+Viewers hide the diagnostic events by default ("Show Diagnostic" button), so a diagnostic journal stays readable by a sound engineer; the Journal Analyser shows them by default.
+
+### Schema (version 2)
 
 ```sql
 CREATE TABLE metadata (key TEXT PRIMARY KEY NOT NULL, value TEXT);
 CREATE TABLE entities (entity_id TEXT PRIMARY KEY NOT NULL, name TEXT);
 CREATE TABLE events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp INTEGER NOT NULL, -- milliseconds since Unix epoch, UTC
-    category TEXT NOT NULL,     -- session, entity, connection, counters, media_clock, gptp, link, latency, redundancy, streaming
-    severity TEXT NOT NULL,     -- info, warning, error, recovered
-    entity_id TEXT,             -- hex EID, empty for session-wide events
-    entity_name TEXT,           -- entity name at the time of the event (denormalized, so the file is self-contained)
-    subject TEXT,               -- sub-object designation (stream, interface, clock domain, ...)
-    summary TEXT NOT NULL,      -- human readable description
-    details TEXT                -- additional details, JSON object
+    timestamp INTEGER NOT NULL,          -- milliseconds since Unix epoch, UTC
+    category TEXT NOT NULL,              -- session, entity, connection, counters, media_clock, gptp, link, latency, redundancy, streaming
+    severity TEXT NOT NULL,              -- info, warning, error, recovered
+    entity_id TEXT,                      -- hex EID, empty for session-wide events
+    entity_name TEXT,                    -- entity name at the time of the event (denormalized, so the file is self-contained)
+    subject TEXT,                        -- sub-object designation (stream, interface, clock domain, ...)
+    summary TEXT NOT NULL,               -- human readable description
+    details TEXT,                        -- additional details, JSON object
+    level TEXT NOT NULL DEFAULT 'user'   -- user, diagnostic (version 2)
 );
+CREATE TABLE snapshots (                 -- version 2, serialized entity models (empty until the snapshots are recorded, see the evolution plan)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp INTEGER NOT NULL,
+    entity_id TEXT NOT NULL,
+    reason TEXT NOT NULL,                -- online, session_start, manual
+    format TEXT NOT NULL,                -- serialization format identifier
+    data BLOB NOT NULL,
+    uncompressed_size INTEGER NOT NULL
+);
+CREATE INDEX idx_events_timestamp ON events (timestamp);
+CREATE INDEX idx_snapshots_entity ON snapshots (entity_id, timestamp);
 ```
 
-Metadata keys: `schema_version`, `hive_version`, `computer_name`, `started_utc`, `stopped_utc`, `interface_id`, `interface_name`, and in dual-PI (redundant controller) mode `secondary_interface_id`, `secondary_interface_name`.
+Metadata keys: `schema_version`, `hive_version`, `hive_build`, `la_avdecc_version`, `os`, `computer_name`, `started_utc`, `stopped_utc` (written on clean stop only: a file without it was interrupted), `recording_level_at_start`, `interface_id`, `interface_name`, and in dual-PI (redundant controller) mode `secondary_interface_id`, `secondary_interface_name`.
+
+#### Compatibility rules
+
+`metadata.schema_version` is the contract between writers and readers (`EventJournal::CurrentSchemaVersion`):
+
+- schema changes are additive only: new tables, new columns with a default, new `details` keys, new `category` / `severity` / `level` values; a column is never renamed or dropped, the meaning of an existing value never changes, and an existing `summary` string is never changed (new information goes in `details`);
+- a reader accepts any file whose version is lower than or equal to its own, and opens a higher version file in degraded mode rather than refusing it: the events are loaded, unknown `category` values fall back to `session`, unknown `severity` to `info`, unknown `level` to `user`, and the viewer shows a non blocking banner (`Session::isNewerThanReader()`);
+- old files are never rewritten (no migration);
+- every schema bump gets a row below and a fixture file of the previous version in `tests/data/eventJournal/` (`schema_v1.hej`, `schema_v2.hej`, ...), loaded by the `EventJournal_F.Session_*` unit tests.
+
+| Version | Introduced by       | Changes                                                                                                                                      | Reader behavior on older files                                     |
+| ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 1       | Hive 1.5.0-beta1    | Initial schema (`metadata`, `entities`, `events`)                                                                                            | n/a                                                                |
+| 2       | Hive 1.5.0 (2026-09) | `events.level` column, `snapshots` table, metadata `recording_level_at_start`, `hive_build`, `la_avdecc_version`, `os`; `streaming` category | `level` read when the column exists (`PRAGMA table_info`), else `user` |
 
 ### Recorded events
 
@@ -66,7 +103,9 @@ Metadata keys: `schema_version`, `hive_version`, `computer_name`, `started_utc`,
 | Redundancy  | `interfaceTransportError` (transport error on one controller interface in dual-PI mode; the event tells whether the other interface is still operational)                                                                                                                   | Error                         |
 | Redundancy  | `interfaceUnsolicitedRegistrationChanged` (dual-PI mode only: one controller interface lost/recovered its unsolicited notifications subscription for an entity, key sign of per-network instability)                                                                        | Warning / Recovered           |
 | Redundancy  | `entityRedundantInterfaceOffline` / `entityRedundantInterfaceOnline` (entity lost/recovered on one of its redundant interfaces while remaining online on the other; the online notification is only journaled as a recovery, not during normal discovery)                   | Warning / Recovered           |
-| Streaming   | `streamInputCountersChanged` (`FRAMES_RX` increments of the connected stream inputs: `Stream data loss` when frames were missing during the interval, `Stream data monitoring started` when the reference of a stream is learned, see below)                                | Error / Info                  |
+| Streaming   | `streamInputCountersChanged` (`FRAMES_RX` increments of the connected stream inputs: `Stream data loss` when frames were missing during the interval, `Stream data monitoring started` (diagnostic level) when the reference of a stream is learned, see below)             | Error / Info                  |
+
+All the events of this table are `user` level, except `Stream data monitoring started` (`diagnostic`).
 
 The `Recovered` severity marks the end of a previously reported error condition, so the duration of an incident (clock unlock, link down, ...) is directly visible in the journal.
 
@@ -91,7 +130,7 @@ An input stream that stops receiving data is only reported by the device itself 
 - `d > 10 x e` is a counter reset (rebind) or a value jump: the reference sample is resynchronized, nothing is journaled, the learned increments are kept;
 - `d < 0.5 x e`: one `Stream data loss: about N ms of frames missing` event (category `streaming`, severity `error`, subject = the input stream), with `details.frames_rx`, `increment`, `expected_increment`, `elapsed_ms`, `missing_ms` (`(e - d) / e x 1000`, the estimate assumes a one second device cadence), `talker_id` and `talker_stream_index` (so listener and talker events can be joined without a network state dump). The alerted increment is not learned, so repeated partial losses keep being reported against the same reference.
 
-The learning restarts when the connection of the stream changes (the counters are reset by a rebind and the first increment after a connection is partial) and when its stream format changes (the frame rate may change). The baseline of a connected stream is seeded from the entity model when the entity comes online. The end of the learning phase is journaled once per stream as `Stream data monitoring started` (severity `info`, `details.expected_increment`, `samples`, `talker_id`, `talker_stream_index`): a stream without that event is not monitored (no `FRAMES_RX`, not connected, no frames received so far, or a device counting once per observation interval of one second, for which `e = 1` and the threshold is never crossed).
+The learning restarts when the connection of the stream changes (the counters are reset by a rebind and the first increment after a connection is partial) and when its stream format changes (the frame rate may change). The baseline of a connected stream is seeded from the entity model when the entity comes online. The end of the learning phase is journaled once per stream as `Stream data monitoring started` (severity `info`, level `diagnostic`, so only with diagnostic recording enabled; `details.expected_increment`, `samples`, `talker_id`, `talker_stream_index`): a stream without that event is not monitored (no `FRAMES_RX`, not connected, no frames received so far, or a device counting once per observation interval of one second, for which `e = 1` and the threshold is never crossed).
 
 **Why it produces no false positive** (the guarantee the journal must keep): every controller side problem makes the increment larger or delays it, never smaller. A lost unsolicited notification doubles the next increment; an expired subscription or a controller interface down stops the notifications, then delivers a large increment; a stalled main thread delivers the queued notifications in a burst with normal increments and no elapsed time (not evaluated); a counter reset or a wrap goes through the modular arithmetic and the `10 x e` rule; a stream the user just disconnected is already seen as not connected when its last partial second is processed (la_avdecc updates its model before the queued notification reaches the main thread). Only a stream that really received less than half a second worth of frames in an interval of at least 900 ms is reported, which includes a talker deliberately stopped (`STOP_STREAMING`) or gone offline: a true positive, explained by the other events. In exchange the rule only sees an interruption at its edges: a long silence gives an event at its start (when the cut falls in the first half of the device interval), nothing during the silence (the device has nothing to report) and an event at the resume, whose `elapsed_ms` is the duration of the silence. Events of the two members of a redundant stream within the same second are the "both planes" signal; they are correlated at analysis time, not at recording time.
 
@@ -106,13 +145,13 @@ Deliberately not done: a timer based watchdog on the absence of notifications (i
 - **Live**: embedded in the `MainWindow` "Event Journal" dock (View menu, hidden by default), following the current recording session, with auto-scroll and an Export button.
 - **File**: `File > Open Event Journal...` opens any journal file in a standalone viewer window (multiple windows can be opened, eg. to compare with the live session).
 
-Features: severity/category/entity filter menus, free text search (regular expression), time range filter, per-severity row colors (error/warning/recovered), details pane for the selected event, event counters. `EventJournalModel` + `EventJournalFilterProxyModel` (in the same directory) implement the table and filtering.
+Features: severity/category/entity filter menus, diagnostic level events toggle, free text search (regular expression), time range filter, per-severity row colors (error/warning/recovered), details pane for the selected event, event counters, degraded mode banner for files written by a newer schema. `EventJournalModel` + `EventJournalFilterProxyModel` (in the same directory) implement the table and filtering.
 
 A timeline strip (`EventJournalTimeline`) is displayed above the table, plotting the filtered events on a time axis with one lane per category, so recurring problems (eg. repeated gPTP grandmaster changes) and their spacing in time are directly visible. Markers are colored by severity; mouse wheel zooms around the cursor, left drag pans, double-click fits the whole session, hovering a marker shows its details (including the time elapsed since the previous event of the same category), and clicking a marker selects the event in the table (selection is synchronized both ways).
 
 `File > Export > Event Journal...` exports a snapshot of the current session at any time while recording.
 
-The Export button of the viewer offers two formats: a journal file snapshot (live session only) and a CSV file (all events or only the currently filtered ones), for analysis in a spreadsheet.
+The Export button of the viewer offers two formats: a journal file snapshot (live session only) and a CSV file (all events or only the currently filtered ones, with a Level column), for analysis in a spreadsheet.
 
 ## Journal Analyser
 

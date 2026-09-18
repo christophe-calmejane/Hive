@@ -55,6 +55,7 @@ public:
 		TimestampRole = Qt::UserRole + 1, /**< qint64, milliseconds since Unix epoch */
 		SeverityRole, /**< int, hive::modelsLibrary::EventJournal::Severity */
 		CategoryRole, /**< int, hive::modelsLibrary::EventJournal::Category */
+		LevelRole, /**< int, hive::modelsLibrary::EventJournal::Level */
 	};
 
 	EventJournalModel(QObject* parent = nullptr);
@@ -87,7 +88,7 @@ private:
 
 /**
 * @brief Filter proxy for EventJournalModel.
-* @details Combines severity, category, entity, time range and free text (regex) filters.
+* @details Combines severity, category, entity, level, time range and free text (regex) filters.
 */
 class EventJournalFilterProxyModel : public QSortFilterProxyModel
 {
@@ -95,6 +96,8 @@ class EventJournalFilterProxyModel : public QSortFilterProxyModel
 public:
 	EventJournalFilterProxyModel(QObject* parent = nullptr);
 
+	/** Shows or hides the diagnostic level events (hidden by default, so a diagnostic journal stays readable by a sound engineer). */
+	void setDiagnosticEventsVisible(bool const visible);
 	void setHiddenSeverities(QSet<int> const& severities);
 	void setHiddenCategories(QSet<int> const& categories);
 	void setHiddenEntities(QSet<QString> const& entityNames);
@@ -105,6 +108,7 @@ public:
 	virtual bool filterAcceptsRow(int sourceRow, QModelIndex const& sourceParent) const override;
 
 private:
+	bool _diagnosticEventsVisible{ false };
 	QSet<int> _hiddenSeverities{};
 	QSet<int> _hiddenCategories{};
 	QSet<QString> _hiddenEntities{};

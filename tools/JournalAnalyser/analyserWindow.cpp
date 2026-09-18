@@ -372,6 +372,7 @@ bool AnalyserWindow::loadJournal(QString const& filePath)
 
 	_journalFilePath = filePath;
 	_journalView = new EventJournalView{ std::move(*session), filePath };
+	_journalView->setDiagnosticEventsVisible(true); // The analyser is for deep analysis: everything is shown by default
 	connect(_journalView, &EventJournalView::selectEntityRequested, this, &AnalyserWindow::openInspector);
 	setCentralWidget(_journalView); // Deletes the placeholder
 	_placeholderLabel = nullptr;

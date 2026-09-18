@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Unsolicited notifications subscription events: per-interface subscription lost/recovered in redundant (dual-PI) mode, and entity out-of-sync (no interface subscribed anymore)
   - In redundant (dual-PI) mode, statistics error counter increases (AECP retries/timeouts/unexpected responses, unsolicited losses) are attributed to the network interface they occurred on
   - Journal files can be exported while recording (File > Export menu) and reopened later in standalone viewer windows (File > Open Event Journal)
+  - Stream data loss detection from the `FRAMES_RX` counter increments of the connected stream inputs (frames missing during an interval, independently of what the device reports through `Stream Interrupted`)
+  - Diagnostic recording level (toggle in the Event Journal window, remembered across sessions) adding the events needed for deep analysis, hidden by default in the viewers
 - Journal Analyser tool (`tools/JournalAnalyser`): standalone application analyzing an Event Journal file without running Hive, with the journal viewer and timeline, standalone Entity Inspector windows opened by double-clicking an event, and the Network Graph, the entities being loaded from a network state file into a virtual controller
 - Redundant controller (dual-PI) mode
   - Secondary network interface selection in the toolbar, creating a controller operating on both networks at once (automatic command failover, per-interface unsolicited notifications subscriptions)

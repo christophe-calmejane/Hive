@@ -51,6 +51,9 @@ public:
 	/** Creates a standalone viewer window for a session loaded from the given file. */
 	EventJournalView(hive::modelsLibrary::EventJournal::Session&& session, QString const& filePath);
 
+	/** Shows or hides the diagnostic level events (hidden by default, the analyser shows them by default). */
+	void setDiagnosticEventsVisible(bool const visible);
+
 	/* Signals */
 	/** Emitted when the user requests to select an entity (eg. by double-clicking one of its events). */
 	Q_SIGNAL void selectEntityRequested(la::avdecc::UniqueIdentifier const entityID);
@@ -75,8 +78,11 @@ private:
 	QPushButton _categoryFilterButton{ "Category", this };
 	QPushButton _entityFilterButton{ "Entity", this };
 	QLineEdit _searchLineEdit{ this };
+	QPushButton _showDiagnosticButton{ "Show Diagnostic", this };
 	QPushButton _exportButton{ "Export...", this };
 	QPushButton _clearButton{ "Clear", this };
+	QPushButton _recordDiagnosticButton{ "Record Diagnostic", this };
+	QLabel _schemaBannerLabel{ this };
 	QMenu _exportMenu{ this };
 	QAction* _exportJournalAction{ nullptr };
 	QCheckBox _fromCheckBox{ "From:", this };
@@ -97,4 +103,5 @@ private:
 	QSet<QString> _hiddenEntityNames{};
 	quint64 _errorCount{ 0u };
 	quint64 _warningCount{ 0u };
+	bool _isLiveMode{ false };
 };

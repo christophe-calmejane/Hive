@@ -723,6 +723,7 @@ void MainWindowImpl::currentControllerChanged()
 
 		// Attach context information to the event journal session (the recording started when the controller went online)
 		auto& eventJournal = hive::modelsLibrary::EventJournal::getInstance();
+		eventJournal.setSessionMetadata("hive_build", hive::internals::buildNumber);
 		eventJournal.setSessionMetadata("interface_id", primaryInterfaceID);
 		eventJournal.setSessionMetadata("interface_name", _interfaceComboBox.currentText());
 		if (isDualPiMode)

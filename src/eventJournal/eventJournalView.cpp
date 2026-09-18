@@ -19,6 +19,7 @@
 
 #include "eventJournalView.hpp"
 #include "autoScrollBar.hpp"
+#include "settingsManager/settings.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>
 
@@ -95,6 +96,25 @@ EventJournalView::EventJournalView(QWidget* parent)
 
 	auto& journal = EventJournal::getInstance();
 
+	// The recording level is restored from the settings before the controller starts (this view is created with the main window), so the first session starts in the mode of the previous one
+	auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+	journal.setRecordingLevel(settings->getValue(settings::EventJournal_DiagnosticLevel.name).toBool() ? EventJournal::Level::Diagnostic : EventJournal::Level::User);
+	_recordDiagnosticButton.setChecked(journal.recordingLevel() == EventJournal::Level::Diagnostic);
+	connect(&_recordDiagnosticButton, &QPushButton::toggled, this,
+		[this](bool const checked)
+		{
+			auto* const settings = qApp->property(settings::SettingsManager::PropertyName).value<settings::SettingsManager*>();
+			settings->setValue(settings::EventJournal_DiagnosticLevel.name, checked);
+			EventJournal::getInstance().setRecordingLevel(checked ? EventJournal::Level::Diagnostic : EventJournal::Level::User);
+		});
+	connect(&journal, &EventJournal::recordingLevelChanged, this,
+		[this](EventJournal::Level const level)
+		{
+			auto const lock = QSignalBlocker{ &_recordDiagnosticButton };
+			_recordDiagnosticButton.setChecked(level == EventJournal::Level::Diagnostic);
+			updateStatusLabel();
+		});
+
 	_exportJournalAction->setEnabled(journal.isRecording());
 	_clearButton.setEnabled(journal.isRecording());
 	connect(&journal, &EventJournal::recordingStarted, this,
@@ -133,11 +153,24 @@ EventJournalView::EventJournalView(EventJournal::Session&& session, QString cons
 	setWindowTitle(QString{ "Event Journal - %1" }.arg(QFileInfo{ filePath }.fileName()));
 	resize(1024, 600);
 
+	// A file written by a newer schema is opened in degraded mode: say so, without blocking
+	if (session.isNewerThanReader())
+	{
+		_schemaBannerLabel.setText(QString{ "This journal was recorded with a newer version (schema version %1, this viewer understands version %2): the events it does not know are displayed as Session events, and some information may be missing." }.arg(session.schemaVersion()).arg(EventJournal::CurrentSchemaVersion));
+		_schemaBannerLabel.show();
+	}
+
 	_model.setSession(std::move(session));
+}
+
+void EventJournalView::setDiagnosticEventsVisible(bool const visible)
+{
+	_showDiagnosticButton.setChecked(visible);
 }
 
 void EventJournalView::buildUi(bool const isLiveMode)
 {
+	_isLiveMode = isLiveMode;
 	_filterProxyModel.setSourceModel(&_model);
 
 	// Filters row
@@ -146,9 +179,20 @@ void EventJournalView::buildUi(bool const isLiveMode)
 	filterLayout->addWidget(&_categoryFilterButton);
 	filterLayout->addWidget(&_entityFilterButton);
 	filterLayout->addWidget(&_searchLineEdit, 1);
+	filterLayout->addWidget(&_showDiagnosticButton);
 	filterLayout->addWidget(&_exportButton);
 
-	// Clearing only makes sense while recording the live session (the standalone viewer displays a read-only loaded file)
+	// Diagnostic level events are hidden by default, so a diagnostic journal stays readable by a sound engineer
+	_showDiagnosticButton.setCheckable(true);
+	_showDiagnosticButton.setToolTip("Display the diagnostic level events (recorded when diagnostic recording is enabled)");
+	connect(&_showDiagnosticButton, &QPushButton::toggled, this,
+		[this](bool const checked)
+		{
+			_filterProxyModel.setDiagnosticEventsVisible(checked);
+			updateStatusLabel();
+		});
+
+	// Clearing and the recording level only make sense while recording the live session (the standalone viewer displays a read-only loaded file)
 	if (isLiveMode)
 	{
 		filterLayout->addWidget(&_clearButton);
@@ -160,11 +204,20 @@ void EventJournalView::buildUi(bool const isLiveMode)
 					EventJournal::getInstance().clearCurrentSession();
 				}
 			});
+		filterLayout->addWidget(&_recordDiagnosticButton);
+		_recordDiagnosticButton.setCheckable(true);
+		_recordDiagnosticButton.setToolTip("Also record the diagnostic level events (everything needed for deep analysis, much larger journal files). The choice is remembered for the next sessions.");
 	}
 	else
 	{
 		_clearButton.hide();
+		_recordDiagnosticButton.hide();
 	}
+
+	// Degraded mode banner (file mode, journal written by a newer schema)
+	_schemaBannerLabel.setWordWrap(true);
+	_schemaBannerLabel.setStyleSheet("QLabel { background-color: #f0ad4e; color: #212121; padding: 4px; }");
+	_schemaBannerLabel.hide();
 
 	if (isLiveMode)
 	{
@@ -293,6 +346,7 @@ void EventJournalView::buildUi(bool const isLiveMode)
 
 	auto* layout = new QVBoxLayout{ this };
 	layout->setContentsMargins(2, 2, 2, 2);
+	layout->addWidget(&_schemaBannerLabel);
 	layout->addLayout(filterLayout);
 	layout->addLayout(timeLayout);
 	layout->addWidget(&_splitter, 1);
@@ -412,14 +466,14 @@ void EventJournalView::exportAsCsv()
 		return field;
 	};
 
-	stream << "Time,Severity,Category,Entity ID,Entity Name,Subject,Summary,Details\n";
+	stream << "Time,Severity,Category,Level,Entity ID,Entity Name,Subject,Summary,Details\n";
 	auto const rowCount = applyFilters ? _filterProxyModel.rowCount() : _model.rowCount();
 	for (auto row = 0; row < rowCount; ++row)
 	{
 		auto const sourceRow = applyFilters ? _filterProxyModel.mapToSource(_filterProxyModel.index(row, 0)).row() : row;
 		auto const& event = _model.eventAtRow(sourceRow);
 		auto const entityID = event.entityID ? hive::modelsLibrary::helper::uniqueIdentifierToString(event.entityID) : QString{};
-		stream << QDateTime::fromMSecsSinceEpoch(event.timestamp).toString("yyyy-MM-dd HH:mm:ss.zzz") << ',' << EventJournal::severityToString(event.severity) << ',' << EventJournal::categoryToString(event.category) << ',' << entityID << ',' << escape(event.entityName) << ',' << escape(event.subject) << ',' << escape(event.summary) << ',' << escape(event.details) << '\n';
+		stream << QDateTime::fromMSecsSinceEpoch(event.timestamp).toString("yyyy-MM-dd HH:mm:ss.zzz") << ',' << EventJournal::severityToString(event.severity) << ',' << EventJournal::categoryToString(event.category) << ',' << EventJournal::levelToString(event.level) << ',' << entityID << ',' << escape(event.entityName) << ',' << escape(event.subject) << ',' << escape(event.summary) << ',' << escape(event.details) << '\n';
 	}
 }
 
@@ -442,7 +496,12 @@ void EventJournalView::updateTimeRangeFilter()
 
 void EventJournalView::updateStatusLabel()
 {
-	_statusLabel.setText(QString{ "%1 / %2 events - %3 errors, %4 warnings" }.arg(_filterProxyModel.rowCount()).arg(_model.rowCount()).arg(_errorCount).arg(_warningCount));
+	auto text = QString{ "%1 / %2 events - %3 errors, %4 warnings" }.arg(_filterProxyModel.rowCount()).arg(_model.rowCount()).arg(_errorCount).arg(_warningCount);
+	if (_isLiveMode && EventJournal::getInstance().recordingLevel() == EventJournal::Level::Diagnostic)
+	{
+		text += " - Diagnostic recording";
+	}
+	_statusLabel.setText(text);
 }
 
 void EventJournalView::handleRowsInserted(int const firstRow, int const lastRow)
@@ -511,6 +570,10 @@ void EventJournalView::handleSelectionChanged()
 	text += QString{ "Time:      %1\n" }.arg(QDateTime::fromMSecsSinceEpoch(event.timestamp).toString("yyyy-MM-dd HH:mm:ss.zzz"));
 	text += QString{ "Severity:  %1\n" }.arg(EventJournal::severityToString(event.severity));
 	text += QString{ "Category:  %1\n" }.arg(EventJournal::categoryToString(event.category));
+	if (event.level != EventJournal::Level::User)
+	{
+		text += QString{ "Level:     %1\n" }.arg(EventJournal::levelToString(event.level));
+	}
 	if (event.entityID)
 	{
 		text += QString{ "Entity:    %1 (%2)\n" }.arg(EventJournalModel::entityDisplayName(event), hive::modelsLibrary::helper::uniqueIdentifierToString(event.entityID));
