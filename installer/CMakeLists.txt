@@ -58,7 +58,7 @@ macro(configure_NSIS_extra_commands)
 	# Add file associations
 	add_installer_file_association("ave" "Hive.ave" "ATDECC Virtual Entity" "bin/${PROJECT_NAME}.exe,1" "bin/${PROJECT_NAME}.exe")
 	add_installer_file_association("ans" "Hive.ans" "ATDECC Network State" "bin/${PROJECT_NAME}.exe,2" "bin/${PROJECT_NAME}.exe")
-	add_installer_file_association("hej" "Hive.hej" "Hive Event Journal" "bin/${PROJECT_NAME}.exe,3" "bin/${PROJECT_NAME}.exe")
+	add_installer_file_association("hej" "Hive.hej" "Hive Event Journal" "bin/JournalAnalyser.exe,0" "bin/JournalAnalyser.exe") # Journal files open in the Journal Analyser, not in Hive
 
 	# Refresh icons related to the file associations
 	add_installer_refresh_associations()

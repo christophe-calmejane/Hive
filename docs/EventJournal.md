@@ -90,9 +90,23 @@ A timeline strip (`EventJournalTimeline`) is displayed above the table, plotting
 
 The Export button of the viewer offers two formats: a journal file snapshot (live session only) and a CSV file (all events or only the currently filtered ones), for analysis in a spreadsheet.
 
+## Journal Analyser
+
+`JournalAnalyser` (in `tools/JournalAnalyser/`) is a standalone application dedicated to the offline analysis of journal files, so a show can be analyzed without running Hive (and without a network interface). It links the `Hive_static` library to reuse the Hive widgets as they are:
+
+- the journal viewer (`EventJournalView` in file mode, with its filters, search and timeline) as central widget;
+- standalone `EntityInspector` windows, opened by double-clicking an event (one window per entity, raised when already open);
+- the `NetworkGraphView` in a dock widget.
+
+The entities are hosted by a **virtual controller** (`ProtocolInterface::Type::Virtual`, no network access), populated from a network state file (`File > Load Network State`, or `.ans`/`.ave` files given on the command line or dropped on the window). The inspector and the graph therefore display the state captured in that file, until journals embed their own entity snapshots (see the evolution plan). Double-clicking an event whose entity is not loaded shows a hint in the status bar.
+
+The application runs **one instance per journal**: journal files are given as positional command line arguments, and a journal opened while one is already loaded (File > Open, drag and drop, or a macOS FileOpen event, which Launch Services always routes to the running instance) is started in a new process (`QProcess::startDetached` on the application executable). The analyser keeps its own settings file (`KikiSoft/JournalAnalyser.ini`, same location scheme as Hive) for the theme color, appearance and graph layout, so Hive's preferences are never touched.
+
 ## File association
 
-The `.hej` extension is associated with Hive (macOS `Info.plist` document types, Windows installer file associations with the `Icon_HEJ` icon, Linux AppImage mime type), so double-clicking a journal file opens it in a viewer window: `MainWindowImpl::loadFile()` handles the extension like `.ave`/`.ans` files (command line arguments, macOS FileOpen events, and forwarding to the already running instance on Windows). On macOS, FileOpen events received before the MainWindow is created (eg. while the splashscreen is displayed) are buffered by `HiveApplication` and loaded once the window exists.
+The `.hej` extension is associated with the Journal Analyser on macOS (`JournalAnalyser.plist.in` document type, `Owner` rank, Hive no longer declares it) and on Windows (installer file association pointing to `bin/JournalAnalyser.exe`, whose first icon is `Icon_HEJ.ico`), so double-clicking a journal file opens it in the analyser, in a new instance. On Linux the AppImage only bundles Hive, so the `application/x-hive-hej` mime type keeps opening journals in Hive until the analyser gets its own package.
+
+Hive itself still opens journal files through `File > Open Event Journal` (standalone viewer window in the running Hive): `MainWindowImpl::loadFile()` handles the extension like `.ave`/`.ans` files (command line arguments, macOS FileOpen events, and forwarding to the already running instance on Windows). On macOS, FileOpen events received before the MainWindow is created (eg. while the splashscreen is displayed) are buffered by `HiveApplication` and loaded once the window exists.
 
 ## Possible future improvements
 

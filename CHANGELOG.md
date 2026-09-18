@@ -17,11 +17,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Event Journal window (View menu) displaying the live session with severity/category/entity/time filters, regex search and per-severity colors
   - Timeline strip plotting events per category over time (zoom/pan, hover details with time since previous occurrence, click to select in the table), making recurring problems and their spacing directly visible
   - CSV export from the viewer (all events or only the filtered ones)
-  - `.hej` file association: double-clicking a journal file opens it in a Hive viewer window
+  - `.hej` file association: double-clicking a journal file opens it in the Journal Analyser (one instance per journal)
   - Redundant controller (dual-PI) events: transport error on one of the controller interfaces, and entities lost/recovered on one of their redundant interfaces
   - Unsolicited notifications subscription events: per-interface subscription lost/recovered in redundant (dual-PI) mode, and entity out-of-sync (no interface subscribed anymore)
   - In redundant (dual-PI) mode, statistics error counter increases (AECP retries/timeouts/unexpected responses, unsolicited losses) are attributed to the network interface they occurred on
   - Journal files can be exported while recording (File > Export menu) and reopened later in standalone viewer windows (File > Open Event Journal)
+- Journal Analyser tool (`tools/JournalAnalyser`): standalone application analyzing an Event Journal file without running Hive, with the journal viewer and timeline, standalone Entity Inspector windows opened by double-clicking an event, and the Network Graph, the entities being loaded from a network state file into a virtual controller
 - Redundant controller (dual-PI) mode
   - Secondary network interface selection in the toolbar, creating a controller operating on both networks at once (automatic command failover, per-interface unsolicited notifications subscriptions)
   - Entity statistics (Entity Descriptor) additionally displayed per network interface (Primary/Secondary), each interface maintaining its own counters and AECP average response time

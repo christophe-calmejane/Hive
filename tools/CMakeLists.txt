@@ -3,6 +3,9 @@
 ######## AEM Dumper
 add_subdirectory(AEMDumper)
 
+######## Journal Analyser
+add_subdirectory(JournalAnalyser)
+
 ######## MsgPack2Json
 # Declare project
 cu_setup_project(msgPack2json "1.0.0" "Message Pack To JSON Converter")

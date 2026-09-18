@@ -1,0 +1,51 @@
+/*
+* Copyright (C) 2017-2026, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#pragma once
+
+#include <QString>
+#include <string>
+
+namespace journalAnalyser
+{
+namespace internals
+{
+QString const projectURL{ "@CU_PROJECT_URLABOUTINFO@" };
+QString const authors{ "@CU_COPYRIGHT_HOLDER@" };
+QString const applicationShortName{ "@PROJECT_NAME@" };
+QString const applicationLongName{ "@CU_PROJECT_FULL_NAME@" };
+QString const companyName{ "@CU_COMPANY_NAME@" };
+QString const companyDomain{ "@CU_COMPANY_DOMAIN@" };
+QString const companyURL{ "@CU_COMPANY_URL@" };
+QString const projectContact{ "@CU_PROJECT_CONTACT@" };
+QString const versionString{ "@CU_PROJECT_FRIENDLY_VERSION@" }; // Friendly version (3 digits for release, 3 digits and beta postfix for beta)
+QString const marketingVersion{ "@CU_PROJECT_MARKETING_VERSION@" }; // Marketing version
+QString const cmakeVersionString{ "@CU_PROJECT_CMAKEVERSION_STRING@" }; // CMake version (3 digits for a release, 4 digits for a beta)
+QString const legalCopyright{ "@CU_PROJECT_LEGALCOPYRIGHT@" };
+QString const readableCopyright{ "@CU_PROJECT_READABLE_COPYRIGHT@" };
+QString const buildArchitecture{ "@CU_TARGET_ARCH@" };
+QString const buildNumber{ "@CU_BUILD_NUMBER@" };
+#ifdef DEBUG
+QString const buildConfiguration{ "Debug" };
+#else // !DEBUG
+QString const buildConfiguration{ "Release" };
+#endif // DEBUG
+
+} // namespace internals
+} // namespace journalAnalyser

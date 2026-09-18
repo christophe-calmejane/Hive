@@ -12,6 +12,7 @@ cmake_minimum_required(VERSION 3.29)
 # Example: 1.5.0 is the upcoming release version (main branch) of current 1.5.0.3 devel version (dev/task) which will be labelled 1.5.0-beta3
 set(HIVE_VERSION 1.5.0.2)
 set(AEMDUMPER_VERSION 1.5.0.2)
+set(JOURNALANALYSER_VERSION 1.5.0.2)
 
 ############ Override from command line "CMake -D<OPTION>=TRUE/FALSE/0/1/ON/OFF"
 
