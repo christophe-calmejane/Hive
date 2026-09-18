@@ -44,7 +44,7 @@ constexpr auto MarkerHitDistance = 6;
 constexpr auto MinimumViewSpan = qint64{ 1000 }; // 1 second
 
 /** All categories, in display order (defines the lanes order) */
-constexpr std::array<EventJournal::Category, 10> AllCategories{ EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy, EventJournal::Category::Streaming };
+constexpr std::array<EventJournal::Category, 12> AllCategories{ EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy, EventJournal::Category::Streaming, EventJournal::Category::Configuration, EventJournal::Category::Control };
 
 /** Formats a duration in a human readable way (eg. "2 min 13 s") */
 QString formatDuration(qint64 const milliseconds)

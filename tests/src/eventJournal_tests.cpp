@@ -25,6 +25,12 @@
 #include <gtest/gtest.h>
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/modelsLibrary/eventJournal.hpp>
+#include <hive/modelsLibrary/helper.hpp>
+
+#include <la/avdecc/internals/entityModelControlValues.hpp>
+#include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <QApplication>
 #include <QDeadlineTimer>
@@ -50,6 +56,7 @@
 #include <chrono>
 #include <cstddef>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -335,6 +342,178 @@ public:
 			}
 		}
 		return count;
+	}
+
+	/** Gets the AVB interface information stored in the entity model for the given interface (default constructed if not available). */
+	static la::avdecc::entity::model::AvbInterfaceInfo avbInterfaceInfo(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex) noexcept
+	{
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+		if (auto controlledEntity = controllerManager.getControlledEntity(entityID))
+		{
+			try
+			{
+				auto const& info = controlledEntity->getAvbInterfaceNode(controlledEntity->getCurrentConfigurationIndex(), avbInterfaceIndex).dynamicModel.avbInterfaceInfo;
+				if (info)
+				{
+					return *info;
+				}
+			}
+			catch (...)
+			{
+			}
+		}
+		return {};
+	}
+
+	/** Gets the patch of an event (an empty array if the event has none). */
+	static nlohmann::json eventPatch(hive::modelsLibrary::EventJournal::Event const& event) noexcept
+	{
+		try
+		{
+			auto const details = nlohmann::json::parse(event.details.toStdString());
+			if (details.contains(hive::modelsLibrary::EventJournal::PatchDetailsKey))
+			{
+				return details.at(hive::modelsLibrary::EventJournal::PatchDetailsKey);
+			}
+		}
+		catch (...)
+		{
+		}
+		return nlohmann::json::array();
+	}
+
+	/** Gets the value of the patch operation of an event whose path ends with the given suffix (null if none), and checks the operation is a 'replace'. */
+	static nlohmann::json patchValue(hive::modelsLibrary::EventJournal::Event const& event, std::string const& pathSuffix) noexcept
+	{
+		for (auto const& operation : eventPatch(event))
+		{
+			auto const path = operation.value("path", std::string{});
+			if (path.size() >= pathSuffix.size() && path.compare(path.size() - pathSuffix.size(), pathSuffix.size(), pathSuffix) == 0)
+			{
+				EXPECT_EQ(std::string{ "replace" }, operation.value("op", std::string{}));
+				return operation.value("value", nlohmann::json{});
+			}
+		}
+		ADD_FAILURE() << "No patch operation ending with " << pathSuffix << " in event '" << event.summary.toStdString() << "': " << event.details.toStdString();
+		return {};
+	}
+
+	/** Applies the patches of the given events (in order) to an AVE document, failing the test if one does not apply. */
+	static nlohmann::json applyPatches(nlohmann::json document, std::vector<hive::modelsLibrary::EventJournal::Event> const& events) noexcept
+	{
+		for (auto const& event : events)
+		{
+			auto const patch = eventPatch(event);
+			if (patch.empty())
+			{
+				continue;
+			}
+			try
+			{
+				document = document.patch(patch);
+			}
+			catch (std::exception const& e)
+			{
+				ADD_FAILURE() << "The patch of event '" << event.summary.toStdString() << "' does not apply: " << e.what() << " (" << patch.dump() << ")";
+			}
+		}
+		return document;
+	}
+
+	/** Serialization flags of the snapshots (a full entity export in the .ave binary format). */
+	static la::avdecc::entity::model::jsonSerializer::Flags snapshotFlags() noexcept
+	{
+		auto flags = fixtureLoadFlags();
+		flags.set(la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics);
+		flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+		return flags;
+	}
+
+	/** Gets the AVE document of the latest snapshot of the given entity in the current session (exported to a temporary file to read it back). */
+	static nlohmann::json snapshotDocument(la::avdecc::UniqueIdentifier const entityID) noexcept
+	{
+		using EventJournal = hive::modelsLibrary::EventJournal;
+		auto const filePath = QDir::temp().filePath("HiveEventJournalTests_changeTracking.hej");
+		QFile::remove(filePath);
+		if (!EventJournal::getInstance().exportCurrentSession(filePath))
+		{
+			ADD_FAILURE() << "Cannot export the session";
+			return {};
+		}
+		auto snapshotID = std::optional<qint64>{};
+		for (auto const& info : EventJournal::loadSnapshotsIndex(filePath))
+		{
+			if (info.entityID == entityID)
+			{
+				snapshotID = info.id;
+			}
+		}
+		auto document = nlohmann::json{};
+		if (snapshotID)
+		{
+			auto const data = EventJournal::loadSnapshotData(filePath, *snapshotID);
+			document = nlohmann::json::from_msgpack(data.begin(), data.end());
+		}
+		else
+		{
+			ADD_FAILURE() << "No snapshot of the entity";
+		}
+		QFile::remove(filePath);
+		return document;
+	}
+
+	/** Gets the AVE document of the given entity as the controller sees it now. */
+	static nlohmann::json currentDocument(la::avdecc::UniqueIdentifier const entityID) noexcept
+	{
+		auto const filePath = QDir::temp().filePath("HiveEventJournalTests_changeTracking.ave");
+		QFile::remove(filePath);
+		auto const [error, message] = hive::modelsLibrary::ControllerManager::getInstance().serializeControlledEntityAsJson(entityID, filePath, snapshotFlags(), "Unit Tests");
+		if (!!error)
+		{
+			ADD_FAILURE() << "Cannot serialize the entity: " << message;
+			return {};
+		}
+		auto file = QFile{ filePath };
+		if (!file.open(QIODevice::ReadOnly))
+		{
+			ADD_FAILURE() << "Cannot read the serialized entity";
+			return {};
+		}
+		auto const data = file.readAll();
+		file.close();
+		QFile::remove(filePath);
+		return nlohmann::json::from_msgpack(data.begin(), data.end());
+	}
+
+	/** Waits until the given number of events of the given category were journaled since the fixture was loaded for the given entity. */
+	std::vector<hive::modelsLibrary::EventJournal::Event> waitForEvents(hive::modelsLibrary::EventJournal::Category const category, la::avdecc::UniqueIdentifier const entityID, std::size_t const count) const noexcept
+	{
+		auto const deadline = QDeadlineTimer{ 5000 };
+		while (!deadline.hasExpired() && eventsSince(category, entityID).size() < count)
+		{
+			QTest::qWait(10);
+		}
+		auto const events = eventsSince(category, entityID);
+		EXPECT_EQ(count, events.size()) << "Unexpected number of " << hive::modelsLibrary::EventJournal::categoryToString(category).toStdString() << " events";
+		return events;
+	}
+
+	/** Expects the AVE document rebuilt from the snapshot and the given events to match the entity as the controller sees it now (entity model, state and diagnostics; the statistics change with every command and are not compared). */
+	static void expectReplayMatches(la::avdecc::UniqueIdentifier const entityID, nlohmann::json const& snapshot, std::vector<hive::modelsLibrary::EventJournal::Event> const& events) noexcept
+	{
+		auto const replayed = applyPatches(snapshot, events);
+		auto const current = currentDocument(entityID);
+		for (auto const* const key : { "entity_model", "state", "diagnostics", "compatibility_flags" })
+		{
+			auto const diff = nlohmann::json::diff(replayed.value(key, nlohmann::json{}), current.value(key, nlohmann::json{}));
+			EXPECT_TRUE(diff.empty()) << "The replayed '" << key << "' differs from the current entity: " << diff.dump();
+		}
+	}
+
+	/** Advances the simulated clock. */
+	void advanceClock(std::chrono::milliseconds const elapsed) noexcept
+	{
+		_now += elapsed;
 	}
 
 	/** Simulates a clock domain counters notification for the test entity. */
@@ -825,7 +1004,7 @@ TEST_F(EventJournal_F, RecordingLevel_DiagnosticEventsFollowTheLevel)
 		{
 			EXPECT_EQ(EventJournal::Level::Diagnostic, event.level);
 		}
-		else
+		else if (event.category == EventJournal::Category::Session || event.category == EventJournal::Category::Streaming)
 		{
 			EXPECT_EQ(EventJournal::Level::User, event.level) << event.summary.toStdString();
 		}
@@ -1114,9 +1293,9 @@ TEST_F(EventJournal_F, Gptp_AsPathAndPropagationDelayChanges_AreJournaled)
 	ASSERT_EQ(3, details.value("new_as_path").toArray().size());
 	EXPECT_EQ(QString{ "0x001122FFFE0000D0" }, details.value("new_as_path").toArray()[1].toString());
 
-	// Propagation delay: same value silent, new value journaled at diagnostic level
-	auto info = la::avdecc::entity::model::AvbInterfaceInfo{};
-	info.propagationDelay = 20u;
+	// Propagation delay: same information silent, new delay journaled at diagnostic level
+	auto info = avbInterfaceInfo(entityID, 0u);
+	ASSERT_EQ(20u, info.propagationDelay);
 	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
 	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Gptp, entityID).size());
 	info.propagationDelay = 25u;
@@ -1128,6 +1307,22 @@ TEST_F(EventJournal_F, Gptp_AsPathAndPropagationDelayChanges_AreJournaled)
 	details = QJsonDocument::fromJson(events[1].details.toUtf8()).object();
 	EXPECT_EQ(20, details.value("previous_propagation_delay").toInt());
 	EXPECT_EQ(25, details.value("new_propagation_delay").toInt());
+	EXPECT_EQ(25, patchValue(events[1], "/avb_interface_descriptors/0/dynamic/avb_interface_info").value("propagation_delay", 0));
+
+	// Another field of the information (the flags) changed without the delay: a generic event
+	if (info.flags.test(la::avdecc::entity::AvbInfoFlag::AvtpDown))
+	{
+		info.flags.reset(la::avdecc::entity::AvbInfoFlag::AvtpDown);
+	}
+	else
+	{
+		info.flags.set(la::avdecc::entity::AvbInfoFlag::AvtpDown);
+	}
+	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
+	events = eventsSince(EventJournal::Category::Gptp, entityID);
+	ASSERT_EQ(std::size_t{ 3u }, events.size());
+	EXPECT_EQ(QString{ "AVB interface info changed" }, events[2].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[2].level);
 }
 
 // A manual snapshot stores every online entity and journals a session event
@@ -1151,4 +1346,322 @@ TEST_F(EventJournal_F, Snapshots_Manual_StoresEveryOnlineEntity)
 									 return info.reason == "manual";
 								 }));
 	QFile::remove(filePath);
+}
+
+/* *********************************
+   Change tracking events (phase 4a)
+*/
+// Object name changes are journaled with a patch of the AVE document, including for the descriptors nested under their parent (the position is the index minus the base of the parent)
+TEST_F(EventJournal_F, ChangeTracking_NameChanges_ReplayOntoTheSnapshot)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto const snapshot = snapshotDocument(entityID);
+	ASSERT_FALSE(snapshot.empty());
+
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	controllerManager.setEntityName(entityID, "Renamed listener");
+	controllerManager.setEntityGroupName(entityID, "Stage left");
+	controllerManager.setConfigurationName(entityID, 0u, "Main configuration");
+	controllerManager.setStreamInputName(entityID, 0u, 1u, "Second input");
+	controllerManager.setStreamOutputName(entityID, 0u, 2u, "Third output");
+	controllerManager.setAvbInterfaceName(entityID, 0u, 0u, "Primary port");
+	controllerManager.setClockDomainName(entityID, 0u, 0u, "House clock");
+	controllerManager.setClockSourceName(entityID, 0u, 1u, "Stream clock");
+	controllerManager.setAudioUnitName(entityID, 0u, 0u, "DSP");
+	controllerManager.setControlName(entityID, 0u, 0u, "Mute");
+	controllerManager.setAudioClusterName(entityID, 0u, 9u, "Output cluster 2"); // Second cluster of the output stream port (base cluster 8)
+	controllerManager.setMemoryObjectName(entityID, 0u, 1u, "Firmware");
+	auto const events = waitForEvents(EventJournal::Category::Configuration, entityID, 12u);
+	ASSERT_EQ(std::size_t{ 12u }, events.size());
+
+	EXPECT_EQ(QString{ "Entity name changed to 'Renamed listener'" }, events[0].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	EXPECT_EQ(QString{ "Renamed listener" }, events[0].entityName);
+	EXPECT_EQ(std::string{ "Renamed listener" }, patchValue(events[0], "/entity_model/entity_descriptor/dynamic/entity_name").get<std::string>());
+	EXPECT_EQ(std::string{ "Stage left" }, patchValue(events[1], "/entity_model/entity_descriptor/dynamic/group_name").get<std::string>());
+	EXPECT_EQ(QString{ "Configuration 0" }, events[2].subject);
+	EXPECT_EQ(std::string{ "Main configuration" }, patchValue(events[2], "/configuration_descriptors/0/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(QString{ "Input Stream 1" }, events[3].subject);
+	EXPECT_EQ(QString{ "Input Stream name changed to 'Second input'" }, events[3].summary);
+	EXPECT_EQ(std::string{ "Second input" }, patchValue(events[3], "/configuration_descriptors/0/stream_input_descriptors/1/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(std::string{ "Third output" }, patchValue(events[4], "/configuration_descriptors/0/stream_output_descriptors/2/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(std::string{ "Primary port" }, patchValue(events[5], "/configuration_descriptors/0/avb_interface_descriptors/0/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(std::string{ "House clock" }, patchValue(events[6], "/configuration_descriptors/0/clock_domain_descriptors/0/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(std::string{ "Stream clock" }, patchValue(events[7], "/configuration_descriptors/0/clock_source_descriptors/1/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(std::string{ "DSP" }, patchValue(events[8], "/configuration_descriptors/0/audio_unit_descriptors/0/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(std::string{ "Mute" }, patchValue(events[9], "/configuration_descriptors/0/control_descriptors/0/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(QString{ "Audio Cluster 9" }, events[10].subject);
+	EXPECT_EQ(std::string{ "Output cluster 2" }, patchValue(events[10], "/configuration_descriptors/0/audio_unit_descriptors/0/stream_port_output_descriptors/0/audio_cluster_descriptors/1/dynamic/object_name").get<std::string>());
+	EXPECT_EQ(std::string{ "Firmware" }, patchValue(events[11], "/configuration_descriptors/0/memory_object_descriptors/1/dynamic/object_name").get<std::string>());
+
+	// The replay of the events onto the snapshot gives the entity as the controller sees it
+	expectReplayMatches(entityID, snapshot, events);
+}
+
+// Configuration changes (stream format, sampling rate, clock source, stream running) and control actions (lock) are journaled with their patch
+TEST_F(EventJournal_F, ChangeTracking_ConfigurationAndControlChanges_ReplayOntoTheSnapshot)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto const snapshot = snapshotDocument(entityID);
+	ASSERT_FALSE(snapshot.empty());
+
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto newFormat = la::avdecc::entity::model::StreamFormat{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& streamNode = controlledEntity->getStreamInputNode(0u, 0u);
+		ASSERT_GE(streamNode.staticModel.formats.size(), std::size_t{ 2u });
+		for (auto const& format : streamNode.staticModel.formats)
+		{
+			if (format != streamNode.dynamicModel.streamFormat)
+			{
+				newFormat = format;
+				break;
+			}
+		}
+	}
+	controllerManager.setStreamInputFormat(entityID, 0u, newFormat);
+	controllerManager.setAudioUnitSamplingRate(entityID, 0u, la::avdecc::entity::model::SamplingRate{ 0u, 48000u });
+	controllerManager.setClockSource(entityID, 0u, 1u);
+	controllerManager.stopStreamInput(entityID, 2u);
+	auto events = waitForEvents(EventJournal::Category::Configuration, entityID, 4u);
+	ASSERT_EQ(std::size_t{ 4u }, events.size());
+
+	EXPECT_EQ(QString{ "Stream format changed to %1" }.arg(hive::modelsLibrary::helper::toHexQString(newFormat.getValue(), true, true)), events[0].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	EXPECT_TRUE(events[0].subject.startsWith("Input Stream 0"));
+	EXPECT_EQ(hive::modelsLibrary::helper::toHexQString(newFormat.getValue(), true, true).toStdString(), patchValue(events[0], "/stream_input_descriptors/0/dynamic/stream_format").get<std::string>());
+	EXPECT_EQ(QString{ "Sampling rate changed to 48000 Hz" }, events[1].summary);
+	EXPECT_EQ(QString{ "Audio Unit 0" }, events[1].subject);
+	EXPECT_EQ(std::string{ "0x0000BB80" }, patchValue(events[1], "/audio_unit_descriptors/0/dynamic/current_sampling_rate").get<std::string>());
+	EXPECT_TRUE(events[2].summary.startsWith("Clock source changed to Clock Source 1")) << events[2].summary.toStdString();
+	EXPECT_EQ(QString{ "Clock Domain 0" }, events[2].subject);
+	EXPECT_EQ(1, patchValue(events[2], "/clock_domain_descriptors/0/dynamic/clock_source_index").get<int>());
+	EXPECT_EQ(QString{ "Stream stopped" }, events[3].summary);
+	EXPECT_TRUE(events[3].subject.startsWith("Input Stream 2"));
+	EXPECT_FALSE(patchValue(events[3], "/stream_input_descriptors/2/dynamic/stream_running").get<bool>());
+
+	// Lock and unlock (the virtual controller answers with the controller EID)
+	controllerManager.lockEntity(entityID);
+	auto controlEvents = waitForEvents(EventJournal::Category::Control, entityID, 1u);
+	ASSERT_EQ(std::size_t{ 1u }, controlEvents.size());
+	EXPECT_EQ(QString{ "Entity locked by this controller" }, controlEvents[0].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, controlEvents[0].level);
+	EXPECT_EQ(std::string{ "LOCKED" }, patchValue(controlEvents[0], "/state/lock_state").get<std::string>());
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(controllerManager.getControllerEID()).toStdString(), patchValue(controlEvents[0], "/state/locking_controller_id").get<std::string>());
+	auto const lockedDocument = applyPatches(snapshot, controlEvents);
+	EXPECT_EQ(nlohmann::json::diff(lockedDocument.at("state"), currentDocument(entityID).at("state")).dump(), std::string{ "[]" });
+	controllerManager.unlockEntity(entityID);
+	controlEvents = waitForEvents(EventJournal::Category::Control, entityID, 2u);
+	ASSERT_EQ(std::size_t{ 2u }, controlEvents.size());
+	EXPECT_EQ(QString{ "Entity unlocked" }, controlEvents[1].summary);
+	EXPECT_EQ(std::string{ "NOT_LOCKED" }, patchValue(controlEvents[1], "/state/lock_state").get<std::string>());
+
+	// The replay of every event onto the snapshot gives the entity as the controller sees it
+	events.insert(events.end(), controlEvents.begin(), controlEvents.end());
+	expectReplayMatches(entityID, snapshot, events);
+}
+
+// Control value changes are rate limited per control: the first change is journaled at once, the following ones within the interval are coalesced into one event carrying the last value
+TEST_F(EventJournal_F, ChangeTracking_ControlValues_AreRateLimited)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	using LinearValues = la::avdecc::entity::model::LinearValues<la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>>;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto const snapshot = snapshotDocument(entityID);
+	ASSERT_FALSE(snapshot.empty());
+
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto const notifyValue = [&controllerManager, entityID](std::uint8_t const value)
+	{
+		emit controllerManager.controlValuesChanged(entityID, 0u, la::avdecc::entity::model::ControlValues{ LinearValues{ { la::avdecc::entity::model::LinearValueDynamic<std::uint8_t>{ value } } } });
+	};
+
+	// First change: journaled at once, with the patch of the values serialized like the AVE document
+	notifyValue(10u);
+	auto events = eventsSince(EventJournal::Category::Configuration, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Control value changed" }, events[0].summary);
+	EXPECT_EQ(QString{ "Control 0" }, events[0].subject);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	auto const values = patchValue(events[0], "/configuration_descriptors/0/control_descriptors/0/dynamic/values");
+	EXPECT_EQ(std::string{ "CONTROL_LINEAR_UINT8" }, values.value("type", std::string{}));
+	EXPECT_EQ(nlohmann::json::array({ 10 }), values.value("values", nlohmann::json{}));
+	auto const replayed = applyPatches(snapshot, events);
+	EXPECT_EQ(values, replayed.at(nlohmann::json::json_pointer{ "/entity_model/entity_descriptor/configuration_descriptors/0/control_descriptors/0/dynamic/values" }));
+
+	// Changes within the interval are coalesced (the same value again is not a change)
+	advanceClock(std::chrono::milliseconds{ 100 });
+	notifyValue(11u);
+	notifyValue(12u);
+	notifyValue(13u);
+	notifyValue(13u);
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Configuration, entityID).size());
+
+	// The flush timer journals the last value once the interval elapsed
+	advanceClock(std::chrono::milliseconds{ 1000 });
+	auto const deadline = QDeadlineTimer{ 3000 };
+	while (!deadline.hasExpired() && eventsSince(EventJournal::Category::Configuration, entityID).size() < 2u)
+	{
+		QTest::qWait(50);
+	}
+	events = eventsSince(EventJournal::Category::Configuration, entityID);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "Control value changed (3 changes coalesced)" }, events[1].summary);
+	EXPECT_EQ(nlohmann::json::array({ 13 }), patchValue(events[1], "/control_descriptors/0/dynamic/values").value("values", nlohmann::json{}));
+	EXPECT_EQ(3, QJsonDocument::fromJson(events[1].details.toUtf8()).object().value("coalesced").toInt());
+
+	// A change after the interval is journaled at once again, the same value is not
+	advanceClock(std::chrono::milliseconds{ 1500 });
+	notifyValue(13u);
+	notifyValue(14u);
+	events = eventsSince(EventJournal::Category::Configuration, entityID);
+	ASSERT_EQ(std::size_t{ 3u }, events.size());
+	EXPECT_EQ(QString{ "Control value changed" }, events[2].summary);
+	EXPECT_EQ(nlohmann::json::array({ 14 }), patchValue(events[2], "/control_descriptors/0/dynamic/values").value("values", nlohmann::json{}));
+}
+
+// Raw counters are journaled at diagnostic level with the changed values and a patch, but not when only the liveness counters moved, nor for a duplicate notification
+TEST_F(EventJournal_F, ChangeTracking_RawCounters_SkipLivenessAndDuplicates)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto const snapshot = snapshotDocument(entityID);
+	ASSERT_FALSE(snapshot.empty());
+
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto counters = la::avdecc::entity::model::StreamInputCounters{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& modelCounters = controlledEntity->getStreamInputNode(0u, TestStreamIndex).dynamicModel.counters;
+		ASSERT_TRUE(!!modelCounters);
+		counters = *modelCounters;
+	}
+	auto const countersEvents = [this, entityID]()
+	{
+		auto events = eventsSince(EventJournal::Category::Counters, entityID);
+		events.erase(std::remove_if(events.begin(), events.end(),
+									 [](EventJournal::Event const& event)
+									 {
+										 return event.summary != "Counters updated";
+									 }),
+			events.end());
+		return events;
+	};
+
+	// Same values as the baseline: nothing
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EXPECT_TRUE(countersEvents().empty());
+
+	// Only FRAMES_RX moved: nothing (the increments feed the stream data loss rule)
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::FramesRx] += FramesPerSecond;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EXPECT_TRUE(countersEvents().empty());
+
+	// An informative counter moved: journaled with the changed values (FRAMES_RX included, it moved since the last journaled set) and the patch of the whole set
+	auto const previousMediaUnlocked = counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked];
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = previousMediaUnlocked + 1u;
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::FramesRx] += FramesPerSecond;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	auto events = countersEvents();
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	EXPECT_TRUE(events[0].subject.startsWith("Input Stream 0"));
+	auto const details = nlohmann::json::parse(events[0].details.toStdString());
+	auto changedNames = std::vector<std::string>{};
+	for (auto const& changed : details.at("changed"))
+	{
+		changedNames.push_back(changed.value("counter", std::string{}));
+		if (changedNames.back() == "MEDIA_UNLOCKED")
+		{
+			EXPECT_EQ(previousMediaUnlocked, changed.value("previous_value", 0u));
+			EXPECT_EQ(previousMediaUnlocked + 1u, changed.value("value", 0u));
+		}
+	}
+	EXPECT_EQ((std::vector<std::string>{ "FRAMES_RX", "MEDIA_UNLOCKED" }), changedNames);
+	auto const patched = applyPatches(snapshot, events);
+	EXPECT_EQ(previousMediaUnlocked + 1u, patched.at(nlohmann::json::json_pointer{ "/entity_model/entity_descriptor/configuration_descriptors/0/stream_input_descriptors/0/dynamic/counters/MEDIA_UNLOCKED" }).get<std::uint32_t>());
+	EXPECT_EQ(counters[la::avdecc::entity::StreamInputCounterValidFlag::FramesRx], patched.at(nlohmann::json::json_pointer{ "/entity_model/entity_descriptor/configuration_descriptors/0/stream_input_descriptors/0/dynamic/counters/FRAMES_RX" }).get<std::uint32_t>());
+
+	// The same notification again (the other interface of a redundant controller): nothing
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EXPECT_EQ(std::size_t{ 1u }, countersEvents().size());
+
+	// Not journaled at user level
+	EventJournal::getInstance().setRecordingLevel(EventJournal::Level::User);
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] += 1u;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EXPECT_EQ(std::size_t{ 1u }, countersEvents().size());
+	EventJournal::getInstance().setRecordingLevel(EventJournal::Level::Diagnostic);
+
+	// Clock domain and AVB interface counters go through the same rule
+	auto clockDomainCounters = la::avdecc::entity::model::ClockDomainCounters{};
+	clockDomainCounters[la::avdecc::entity::ClockDomainCounterValidFlag::Locked] = 100u;
+	clockDomainCounters[la::avdecc::entity::ClockDomainCounterValidFlag::Unlocked] = 99u;
+	emit controllerManager.clockDomainCountersChanged(entityID, 0u, clockDomainCounters);
+	events = countersEvents();
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "Clock Domain 0" }, events[1].subject);
+	EXPECT_EQ(100u, patchValue(events[1], "/clock_domain_descriptors/0/dynamic/counters").value("LOCKED", 0u));
+}
+
+// The connection, gPTP and talker connections events carry their patch, and a talker connections notification is only journaled when the listeners changed
+TEST_F(EventJournal_F, ChangeTracking_ConnectionAndGptpEvents_CarryTheirPatch)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	auto const talkerID = la::avdecc::UniqueIdentifier{ TalkerEntityID };
+	loadConnectedFixture();
+	auto const snapshot = snapshotDocument(entityID);
+	ASSERT_FALSE(snapshot.empty());
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// Listener side: the disconnection patches the connected talker and the connection state
+	auto info = la::avdecc::entity::model::StreamInputConnectionInfo{};
+	info.state = la::avdecc::entity::model::StreamInputConnectionInfo::State::NotConnected;
+	emit controllerManager.streamInputConnectionChanged({ entityID, TestStreamIndex }, info);
+	auto events = eventsSince(EventJournal::Category::Connection, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_TRUE(events[0].summary.startsWith("Disconnected from talker"));
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	EXPECT_EQ(std::string{ "NOT_CONNECTED" }, patchValue(events[0], "/stream_input_descriptors/0/dynamic/connection_state").get<std::string>());
+	EXPECT_EQ(std::string{ "0xFFFFFFFFFFFFFFFF" }, patchValue(events[0], "/stream_input_descriptors/0/dynamic/connected_talker").value("entity_id", std::string{})); // Null identifier
+	auto patched = applyPatches(snapshot, events);
+	EXPECT_EQ(std::string{ "NOT_CONNECTED" }, patched.at(nlohmann::json::json_pointer{ "/entity_model/entity_descriptor/configuration_descriptors/0/stream_input_descriptors/0/dynamic/connection_state" }).get<std::string>());
+
+	// gPTP: grandmaster and domain
+	auto const newGrandmasterID = la::avdecc::UniqueIdentifier{ 0x001122FFFE00AAAAu };
+	emit controllerManager.gptpChanged(entityID, 0u, newGrandmasterID, 3u);
+	auto gptpEvents = eventsSince(EventJournal::Category::Gptp, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, gptpEvents.size());
+	EXPECT_EQ(std::string{ "0x001122FFFE00AAAA" }, patchValue(gptpEvents[0], "/avb_interface_descriptors/0/dynamic/gptp_grandmaster_id").get<std::string>());
+	EXPECT_EQ(3, patchValue(gptpEvents[0], "/avb_interface_descriptors/0/dynamic/gptp_domain_number").get<int>());
+	patched = applyPatches(patched, gptpEvents);
+	EXPECT_EQ(std::string{ "0x001122FFFE00AAAA" }, patched.at(nlohmann::json::json_pointer{ "/entity_model/entity_descriptor/configuration_descriptors/0/avb_interface_descriptors/0/dynamic/gptp_grandmaster_id" }).get<std::string>());
+
+	// Talker side: the listeners list is journaled at diagnostic level without a patch (not part of the AVE document), the same list again (the fixture connections, then a duplicate notification) is dropped
+	auto connections = la::avdecc::entity::model::StreamConnections{};
+	connections.insert({ entityID, TestStreamIndex });
+	emit controllerManager.streamOutputConnectionsChanged({ talkerID, TestStreamIndex }, connections);
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Connection, talkerID).empty());
+	connections.insert({ entityID, la::avdecc::entity::model::StreamIndex{ 2u } });
+	emit controllerManager.streamOutputConnectionsChanged({ talkerID, TestStreamIndex }, connections);
+	emit controllerManager.streamOutputConnectionsChanged({ talkerID, TestStreamIndex }, connections);
+	auto talkerEvents = eventsSince(EventJournal::Category::Connection, talkerID);
+	ASSERT_EQ(std::size_t{ 1u }, talkerEvents.size());
+	EXPECT_EQ(QString{ "Talker connections changed (2 listeners)" }, talkerEvents[0].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, talkerEvents[0].level);
+	EXPECT_TRUE(talkerEvents[0].subject.startsWith("Output Stream 0"));
+	EXPECT_TRUE(eventPatch(talkerEvents[0]).empty());
+	auto const listeners = QJsonDocument::fromJson(talkerEvents[0].details.toUtf8()).object().value("listeners").toArray();
+	ASSERT_EQ(2, listeners.size());
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID), listeners[0].toObject().value("entity_id").toString());
 }

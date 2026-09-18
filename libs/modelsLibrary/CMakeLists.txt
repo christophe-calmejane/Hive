@@ -49,6 +49,7 @@ set(HEADER_FILES_PUBLIC
 )
 
 set(HEADER_FILES_COMMON
+	avePatch.hpp
 	commandsExecutorImpl.hpp
 	virtualController.hpp
 )
@@ -56,6 +57,7 @@ set(HEADER_FILES_COMMON
 set(SOURCE_FILES_COMMON
 	modelsLibrary.cpp
 	helper.cpp
+	avePatch.cpp
 	commandsExecutorImpl.cpp
 	controllerManager.cpp
 	eventJournal.cpp

@@ -21,7 +21,10 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 
+#include "avePatch.hpp"
+
 #include <la/avdecc/avdecc.hpp>
+#include <la/avdecc/internals/jsonTypes.hpp>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -31,18 +34,23 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonValue>
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
 #include <QSysInfo>
+#include <QTimer>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -100,6 +108,210 @@ constexpr auto StreamDataLossThreshold = 0.5; // An increment below this fractio
 constexpr auto StreamDataMinEvaluationInterval = std::chrono::milliseconds{ 900 }; // Notifications closer than this to the previous one (queued burst, other interface of a redundant controller, non compliant device) are neither evaluated nor learned
 constexpr auto StreamDataResyncFactor = std::uint64_t{ 10u }; // An increment above this multiple of the expected increment (counter reset by a rebind, value jump) only resynchronizes the reference sample
 
+// Change tracking events (see docs/EventJournal.md): every dynamic model change is journaled at diagnostic level with a JSON Patch, so the analyser can rebuild the state of an entity at any time of the session from its last snapshot
+constexpr auto ControlValuesRateLimitInterval = std::chrono::milliseconds{ 1000 }; // A control journals at most one value change per interval (faders and meters can be very chatty): the last value wins, the coalesced changes are counted
+constexpr auto LivenessCounterNames = std::array<char const*, 3>{ "FRAMES_RX", "FRAMES_TX", "TIMESTAMP_VALID" }; // Counters moving on every notification of a streaming device (about 300 notifications per second on the field rig): a notification where only those moved is never journaled as a raw counters event, the FRAMES_RX increments feed the stream data loss rule instead
+
+/** Converts a la_avdecc JSON value to its Qt counterpart (QJsonDocument only parses objects and arrays, so the value is wrapped in an array). */
+QJsonValue toQJsonValue(json const& value) noexcept
+{
+	return QJsonDocument::fromJson(QByteArray::fromStdString(json::array({ value }).dump())).array().at(0);
+}
+
+/**
+* @brief JSON Patch (RFC 6902) of a change tracking event: the operations applying the change to the AVE document of the entity (stored in the EventJournal::PatchDetailsKey details key).
+* @details Only 'replace' operations are used: the la_avdecc serializer always writes the targeted keys (an unset optional is written as null), so a replay applies the same operation whatever the previous value. The values are serialized by la_avdecc itself, so they match the snapshots byte for byte.
+*/
+class Patch
+{
+public:
+	/** Adds a 'replace' operation of the value at the given pointer (no operation if la_avdecc cannot serialize the value). */
+	template<typename ValueType>
+	void replace(QString const& pointer, ValueType const& value) noexcept
+	{
+		try
+		{
+			json const serialized = value; // Must use operator= instead of constructor to force usage of the to_json overload
+			auto operation = QJsonObject{};
+			operation["op"] = "replace";
+			operation["path"] = pointer;
+			operation["value"] = toQJsonValue(serialized);
+			_operations.push_back(operation);
+		}
+		catch (...)
+		{
+			// Unsupported value (eg. stream output counters of an unknown type)
+		}
+	}
+
+	/** Same as above for a pointer that may not have been resolved (no operation in that case, the event is journaled without a patch). */
+	template<typename ValueType>
+	void replace(std::optional<QString> const& pointer, ValueType const& value) noexcept
+	{
+		if (pointer)
+		{
+			replace(*pointer, value);
+		}
+	}
+
+	/** Stores the operations in the details of an event (nothing when the patch is empty, so the analyser can tell a change it cannot replay). */
+	void storeIn(QJsonObject& details) const noexcept
+	{
+		if (!_operations.isEmpty())
+		{
+			details[EventJournal::PatchDetailsKey] = _operations;
+		}
+	}
+
+private:
+	QJsonArray _operations{};
+};
+
+/** Serializes a set of counters (any descriptor type) the way the AVE document stores them, flattened to a "counter name to value" object (the stream output counters are nested under their counter type in the AVE document). Returns an empty object if la_avdecc cannot serialize them. */
+template<typename CountersType>
+json countersToJson(CountersType const& counters) noexcept
+{
+	try
+	{
+		json const serialized = counters; // Must use operator= instead of constructor to force usage of the to_json overload
+		if (serialized.is_object() && serialized.contains("counters"))
+		{
+			return serialized.at("counters");
+		}
+		return serialized;
+	}
+	catch (...)
+	{
+		// Stream output counters of an unknown type
+		return json::object();
+	}
+}
+
+/** Names of the acquire states, as written by the la_avdecc controller serializer (avdeccControllerJsonTypes.hpp, not part of the public API). */
+QString acquireStateToKey(la::avdecc::controller::model::AcquireState const state) noexcept
+{
+	using AcquireState = la::avdecc::controller::model::AcquireState;
+	switch (state)
+	{
+		case AcquireState::NotSupported:
+			return "NOT_SUPPORTED";
+		case AcquireState::NotAcquired:
+			return "NOT_ACQUIRED";
+		case AcquireState::AcquireInProgress:
+			return "ACQUIRE_IN_PROGRESS";
+		case AcquireState::Acquired:
+			return "ACQUIRED";
+		case AcquireState::AcquiredByOther:
+			return "ACQUIRED_BY_OTHER";
+		case AcquireState::ReleaseInProgress:
+			return "RELEASE_IN_PROGRESS";
+		default:
+			return "UNKNOWN";
+	}
+}
+
+/** Names of the lock states, as written by the la_avdecc controller serializer. */
+QString lockStateToKey(la::avdecc::controller::model::LockState const state) noexcept
+{
+	using LockState = la::avdecc::controller::model::LockState;
+	switch (state)
+	{
+		case LockState::NotSupported:
+			return "NOT_SUPPORTED";
+		case LockState::NotLocked:
+			return "NOT_LOCKED";
+		case LockState::LockInProgress:
+			return "LOCK_IN_PROGRESS";
+		case LockState::Locked:
+			return "LOCKED";
+		case LockState::LockedByOther:
+			return "LOCKED_BY_OTHER";
+		case LockState::UnlockInProgress:
+			return "UNLOCK_IN_PROGRESS";
+		default:
+			return "UNKNOWN";
+	}
+}
+
+/** Names of the compatibility flags, as written by the la_avdecc controller serializer. */
+QJsonArray compatibilityFlagsToJson(la::avdecc::controller::ControlledEntity::CompatibilityFlags const flags) noexcept
+{
+	using CompatibilityFlag = la::avdecc::controller::ControlledEntity::CompatibilityFlag;
+	auto array = QJsonArray{};
+	for (auto const flag : flags)
+	{
+		switch (flag)
+		{
+			case CompatibilityFlag::IEEE17221:
+				array.push_back("IEEE17221");
+				break;
+			case CompatibilityFlag::Milan:
+				array.push_back("MILAN");
+				break;
+			case CompatibilityFlag::IEEE17221Warning:
+				array.push_back("IEEE17221WARNING");
+				break;
+			case CompatibilityFlag::MilanWarning:
+				array.push_back("MILANWARNING");
+				break;
+			case CompatibilityFlag::Misbehaving:
+				array.push_back("MISBEHAVING");
+				break;
+			default:
+				array.push_back("UNKNOWN");
+				break;
+		}
+	}
+	return array;
+}
+
+/** Returns the display name of a descriptor type, used to build the subject of the change tracking events (eg. "Input Stream 2"). */
+QString descriptorTypeName(la::avdecc::entity::model::DescriptorType const descriptorType) noexcept
+{
+	using DescriptorType = la::avdecc::entity::model::DescriptorType;
+	switch (descriptorType)
+	{
+		case DescriptorType::Configuration:
+			return "Configuration";
+		case DescriptorType::AudioUnit:
+			return "Audio Unit";
+		case DescriptorType::StreamInput:
+			return "Input Stream";
+		case DescriptorType::StreamOutput:
+			return "Output Stream";
+		case DescriptorType::JackInput:
+			return "Input Jack";
+		case DescriptorType::JackOutput:
+			return "Output Jack";
+		case DescriptorType::AvbInterface:
+			return "AVB Interface";
+		case DescriptorType::ClockSource:
+			return "Clock Source";
+		case DescriptorType::MemoryObject:
+			return "Memory Object";
+		case DescriptorType::StreamPortInput:
+			return "Input Stream Port";
+		case DescriptorType::StreamPortOutput:
+			return "Output Stream Port";
+		case DescriptorType::AudioCluster:
+			return "Audio Cluster";
+		case DescriptorType::AudioMap:
+			return "Audio Map";
+		case DescriptorType::Control:
+			return "Control";
+		case DescriptorType::ClockDomain:
+			return "Clock Domain";
+		case DescriptorType::Timing:
+			return "Timing";
+		case DescriptorType::PtpInstance:
+			return "PTP Instance";
+		case DescriptorType::PtpPort:
+			return "PTP Port";
+		default:
+			return QString::fromStdString(la::avdecc::entity::model::descriptorTypeToString(descriptorType));
+	}
+}
+
 /** Builds the subject for an event about one of an entity's redundant AVB interfaces (eg. "Primary Interface" for a Milan redundant device, "AVB Interface 2" otherwise). */
 QString redundantInterfaceSubject(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
 {
@@ -134,6 +346,10 @@ QString categoryToKey(EventJournal::Category const category) noexcept
 			return "redundancy";
 		case EventJournal::Category::Streaming:
 			return "streaming";
+		case EventJournal::Category::Configuration:
+			return "configuration";
+		case EventJournal::Category::Control:
+			return "control";
 		default:
 			return "unknown";
 	}
@@ -152,6 +368,8 @@ std::optional<EventJournal::Category> categoryFromKey(QString const& key) noexce
 		{ "latency", EventJournal::Category::Latency },
 		{ "redundancy", EventJournal::Category::Redundancy },
 		{ "streaming", EventJournal::Category::Streaming },
+		{ "configuration", EventJournal::Category::Configuration },
+		{ "control", EventJournal::Category::Control },
 	};
 	if (auto const it = s_map.find(key); it != s_map.end())
 	{
@@ -296,6 +514,12 @@ public:
 		return _db.isValid() && _db.isOpen();
 	}
 
+	/** Returns true when the diagnostic events are written: the change tracking handlers skip the patch computation (entity lookup, serialization) otherwise, their baselines are still tracked. */
+	bool isDiagnosticRecording() const noexcept
+	{
+		return _recordingLevel == Level::Diagnostic;
+	}
+
 	void startSession() noexcept
 	{
 		stopSession();
@@ -370,6 +594,7 @@ public:
 	{
 		if (isRecording())
 		{
+			flushPendingControlValues(true);
 			addEvent(Category::Session, Severity::Info, {}, {}, {}, "Recording stopped");
 			setMetadata("stopped_utc", QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
 
@@ -553,7 +778,7 @@ public:
 		// Remove all tracked state for that entity (states will be re-seeded if it comes back online), but keep its name for future references (eg. as talker of a connection)
 		_gptpStates.erase(entityID);
 		_asPaths.erase(entityID);
-		_propagationDelays.erase(entityID);
+		_avbInterfaceInfos.erase(entityID);
 		_linkStatuses.erase(entityID);
 		_clockLockStates.erase(entityID);
 		_streamConnections.erase(entityID);
@@ -565,6 +790,19 @@ public:
 		_lostRedundantInterfaces.erase(entityID);
 		_unsolRegistrationStates.erase(entityID);
 		_lostUnsolInterfaces.erase(entityID);
+		_streamOutputConnections.erase(entityID);
+		_streamFormats.erase(entityID);
+		_streamDynamicInfos.erase(entityID);
+		_streamRunningStates.erase(entityID);
+		_samplingRates.erase(entityID);
+		_clockSources.erase(entityID);
+		_mediaClockReferenceInfos.erase(entityID);
+		_acquireStates.erase(entityID);
+		_lockStates.erase(entityID);
+		_compatibilities.erase(entityID);
+		_entityCapabilities.erase(entityID);
+		_rawCounters.erase(entityID);
+		_controlValuesStates.erase(entityID);
 	}
 
 	void handleEntityNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& entityName) noexcept
@@ -573,8 +811,52 @@ public:
 		{
 			return;
 		}
+		auto const previousName = entityNameFor(entityID);
 		_entityNames[entityID] = entityName;
 		upsertEntity(entityID, entityName);
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+
+		auto patch = Patch{};
+		patch.replace(QString{ "%1/dynamic/entity_name" }.arg(avePatch::entityDescriptorPointer()), la::avdecc::entity::model::AvdeccFixedString{ entityName.toStdString() });
+		auto details = QJsonObject{};
+		details["previous_name"] = previousName;
+		details["new_name"] = entityName;
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), {}, QString{ "Entity name changed to '%1'" }.arg(entityName), details, Level::Diagnostic);
+	}
+
+	void handleEntityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& groupName) noexcept
+	{
+		if (!isRecording() || !isDiagnosticRecording())
+		{
+			return;
+		}
+		auto patch = Patch{};
+		patch.replace(QString{ "%1/dynamic/group_name" }.arg(avePatch::entityDescriptorPointer()), la::avdecc::entity::model::AvdeccFixedString{ groupName.toStdString() });
+		auto details = QJsonObject{};
+		details["new_name"] = groupName;
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), {}, QString{ "Entity group name changed to '%1'" }.arg(groupName), details, Level::Diagnostic);
+	}
+
+	/** Journals the name change of any descriptor (la_avdecc only notifies actual changes, so no value dedup is needed here). */
+	void handleObjectNameChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& name) noexcept
+	{
+		if (!isRecording() || !isDiagnosticRecording())
+		{
+			return;
+		}
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, descriptorType, descriptorIndex, "object_name", configurationIndex), la::avdecc::entity::model::AvdeccFixedString{ name.toStdString() });
+		auto details = QJsonObject{};
+		details["configuration_index"] = static_cast<int>(configurationIndex);
+		details["new_name"] = name;
+		patch.storeIn(details);
+		auto const subject = descriptorType == la::avdecc::entity::model::DescriptorType::Configuration ? QString{ "Configuration %1" }.arg(descriptorIndex) : QString{ "%1 %2" }.arg(descriptorTypeName(descriptorType)).arg(descriptorIndex);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), subject, QString{ "%1 name changed to '%2'" }.arg(descriptorTypeName(descriptorType), name), details, Level::Diagnostic);
 	}
 
 	void handleStreamInputConnectionChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamInputConnectionInfo const& info) noexcept
@@ -605,12 +887,17 @@ public:
 
 		auto const wasConnected = previousInfo->state == State::Connected;
 		auto const isConnected = info.state == State::Connected;
+		// The patch carries the new connection information, so the twin follows the listener side of the connections
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, "connected_talker"), info.talkerStream);
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, "connection_state"), info.state);
 		// FastConnecting is a transient state, only report actual Connected/NotConnected transitions
 		if (isConnected && (!wasConnected || !(previousInfo->talkerStream == info.talkerStream)))
 		{
 			auto details = QJsonObject{};
 			details["talker_id"] = helper::uniqueIdentifierToString(info.talkerStream.entityID);
 			details["talker_stream_index"] = static_cast<int>(info.talkerStream.streamIndex);
+			patch.storeIn(details);
 			addEvent(Category::Connection, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), QString{ "Connected to talker %1 (output stream %2)" }.arg(entityNameFor(info.talkerStream.entityID)).arg(info.talkerStream.streamIndex), details);
 		}
 		else if (!isConnected && wasConnected && info.state == State::NotConnected)
@@ -618,8 +905,38 @@ public:
 			auto details = QJsonObject{};
 			details["talker_id"] = helper::uniqueIdentifierToString(previousInfo->talkerStream.entityID);
 			details["talker_stream_index"] = static_cast<int>(previousInfo->talkerStream.streamIndex);
+			patch.storeIn(details);
 			addEvent(Category::Connection, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), QString{ "Disconnected from talker %1 (output stream %2)" }.arg(entityNameFor(previousInfo->talkerStream.entityID)).arg(previousInfo->talkerStream.streamIndex), details);
 		}
+	}
+
+	void handleStreamOutputConnectionsChanged(la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		auto const entityID = stream.entityID;
+		if (!trackChange(_streamOutputConnections[entityID], stream.streamIndex, connections))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		// The talker side of the connections is not part of the AVE document (la_avdecc rebuilds it from the listener side when loading a network state), so this event carries no patch: it is the talker's view, useful when a listener is not in the journal
+		auto listeners = QJsonArray{};
+		for (auto const& listener : connections)
+		{
+			auto object = QJsonObject{};
+			object["entity_id"] = helper::uniqueIdentifierToString(listener.entityID);
+			object["stream_index"] = static_cast<int>(listener.streamIndex);
+			listeners.push_back(object);
+		}
+		auto details = QJsonObject{};
+		details["listeners"] = listeners;
+		addEvent(Category::Connection, Severity::Info, entityID, entityNameFor(entityID), outputStreamSubject(entityID, stream.streamIndex), QString{ "Talker connections changed (%1 listeners)" }.arg(connections.size()), details, Level::Diagnostic);
 	}
 
 	void handleGptpChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain) noexcept
@@ -649,6 +966,10 @@ public:
 		details["new_grandmaster_id"] = helper::uniqueIdentifierToString(grandMasterID);
 		details["previous_domain"] = static_cast<int>(previous.second);
 		details["new_domain"] = static_cast<int>(grandMasterDomain);
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, "gptp_grandmaster_id"), grandMasterID);
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, "gptp_domain_number"), grandMasterDomain);
+		patch.storeIn(details);
 
 		auto summary = QString{};
 		if (previous.first != grandMasterID)
@@ -688,6 +1009,9 @@ public:
 		auto details = QJsonObject{};
 		details["previous_as_path"] = asPathToJson(previous);
 		details["new_as_path"] = asPathToJson(asPath);
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, "as_path"), asPath);
+		patch.storeIn(details);
 		addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "gPTP AsPath changed", details);
 	}
 
@@ -698,26 +1022,37 @@ public:
 			return;
 		}
 
-		auto& states = _propagationDelays[entityID];
+		auto& states = _avbInterfaceInfos[entityID];
 		auto const it = states.find(avbInterfaceIndex);
 		if (it == states.end())
 		{
 			// No baseline (entity without AVB interface info at enumeration time): silently store
-			states[avbInterfaceIndex] = info.propagationDelay;
+			states[avbInterfaceIndex] = info;
 			return;
 		}
-		if (it->second == info.propagationDelay)
+		if (it->second == info)
 		{
 			return;
 		}
 		auto const previous = it->second;
-		it->second = info.propagationDelay;
+		it->second = info;
 
-		// The propagation delay of a link jitters by a few nanoseconds between measurements (5 to 16 ns on the field rig), so its changes are diagnostic material rather than user events
+		// The whole information (propagation delay, flags, MSRP mappings) is patched, the summary names what changed
 		auto details = QJsonObject{};
-		details["previous_propagation_delay"] = static_cast<qint64>(previous);
-		details["new_propagation_delay"] = static_cast<qint64>(info.propagationDelay);
-		addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "gPTP propagation delay changed", details, Level::Diagnostic);
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, "avb_interface_info"), info);
+		patch.storeIn(details);
+		if (previous.propagationDelay != info.propagationDelay)
+		{
+			// The propagation delay of a link jitters by a few nanoseconds between measurements (5 to 16 ns on the field rig), so its changes are diagnostic material rather than user events
+			details["previous_propagation_delay"] = static_cast<qint64>(previous.propagationDelay);
+			details["new_propagation_delay"] = static_cast<qint64>(info.propagationDelay);
+			addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "gPTP propagation delay changed", details, Level::Diagnostic);
+		}
+		else
+		{
+			addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "AVB interface info changed", details, Level::Diagnostic);
+		}
 	}
 
 	void handleAvbInterfaceLinkStatusChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus) noexcept
@@ -754,6 +1089,8 @@ public:
 		{
 			return;
 		}
+
+		journalRawCounters(entityID, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex, QString{ "Clock Domain %1" }.arg(clockDomainIndex), counters);
 
 		auto const newState = makeClockLockState(counters);
 		if (!newState)
@@ -832,7 +1169,7 @@ public:
 		}
 	}
 
-	void handleStreamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+	void handleStreamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept
 	{
 		if (!isRecording())
 		{
@@ -843,6 +1180,412 @@ public:
 		{
 			resetStreamDataState(entityID, streamIndex);
 		}
+		if (!trackChange(_streamFormats[entityID], StreamKey{ descriptorType, streamIndex }, streamFormat))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		details["stream_format"] = helper::toHexQString(streamFormat.getValue(), true, true);
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, descriptorType, streamIndex, "stream_format"), streamFormat);
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), streamSubject(entityID, descriptorType, streamIndex), QString{ "Stream format changed to %1" }.arg(details["stream_format"].toString()), details, Level::Diagnostic);
+	}
+
+	void handleStreamDynamicInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		if (!trackChange(_streamDynamicInfos[entityID], StreamKey{ descriptorType, streamIndex }, info))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		details["stream_id"] = info.streamID ? QJsonValue{ helper::uniqueIdentifierToString(*info.streamID) } : QJsonValue{};
+		details["msrp_accumulated_latency"] = info.msrpAccumulatedLatency ? QJsonValue{ static_cast<qint64>(*info.msrpAccumulatedLatency) } : QJsonValue{};
+		details["stream_vlan_id"] = info.streamVlanID ? QJsonValue{ static_cast<int>(*info.streamVlanID) } : QJsonValue{};
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, descriptorType, streamIndex, "stream_dynamic_info"), info);
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), streamSubject(entityID, descriptorType, streamIndex), "Stream dynamic info changed", details, Level::Diagnostic);
+	}
+
+	void handleStreamRunningChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		if (!trackChange(_streamRunningStates[entityID], StreamKey{ descriptorType, streamIndex }, isRunning))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, descriptorType, streamIndex, "stream_running"), isRunning);
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), streamSubject(entityID, descriptorType, streamIndex), isRunning ? "Stream started" : "Stream stopped", details, Level::Diagnostic);
+	}
+
+	void handleAudioUnitSamplingRateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		if (!trackChange(_samplingRates[entityID], audioUnitIndex, samplingRate))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		auto const nominalSampleRate = static_cast<qint64>(samplingRate.getNominalSampleRate());
+		details["sampling_rate"] = nominalSampleRate;
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex, "current_sampling_rate"), samplingRate);
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Audio Unit %1" }.arg(audioUnitIndex), QString{ "Sampling rate changed to %1 Hz" }.arg(nominalSampleRate), details, Level::Diagnostic);
+	}
+
+	void handleClockSourceChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		if (!trackChange(_clockSources[entityID], clockDomainIndex, clockSourceIndex))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		details["clock_source_index"] = static_cast<int>(clockSourceIndex);
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex, "clock_source_index"), clockSourceIndex);
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), QString{ "Clock source changed to %1" }.arg(clockSourceSubject(entityID, clockSourceIndex)), details, Level::Diagnostic);
+	}
+
+	void handleMediaClockReferenceInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& info) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		if (!trackChange(_mediaClockReferenceInfos[entityID], clockDomainIndex, info))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		if (info.userMediaClockPriority)
+		{
+			details["user_media_clock_priority"] = static_cast<int>(*info.userMediaClockPriority);
+		}
+		if (info.mediaClockDomainName)
+		{
+			details["media_clock_domain_name"] = QString::fromStdString(info.mediaClockDomainName->str());
+		}
+		auto patch = Patch{};
+		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex, "media_clock_reference_info"), info);
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), "Media clock reference changed", details, Level::Diagnostic);
+	}
+
+	void handleStreamPortAudioMappingsChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept
+	{
+		if (!isRecording() || !isDiagnosticRecording())
+		{
+			return;
+		}
+		// The signal does not carry the mappings: they are read from the entity model (already updated when the queued signal reaches the main thread)
+		auto mappings = std::optional<la::avdecc::entity::model::AudioMappings>{};
+		auto pointer = std::optional<QString>{};
+		if (auto controlledEntity = ControllerManager::getInstance().getControlledEntity(entityID))
+		{
+			try
+			{
+				auto const configurationIndex = controlledEntity->getCurrentConfigurationIndex();
+				auto const& streamPortNode = descriptorType == la::avdecc::entity::model::DescriptorType::StreamPortInput ? controlledEntity->getStreamPortInputNode(configurationIndex, streamPortIndex) : controlledEntity->getStreamPortOutputNode(configurationIndex, streamPortIndex);
+				mappings = streamPortNode.dynamicModel.dynamicAudioMap;
+				pointer = avePatch::dynamicModelPointer(*controlledEntity, configurationIndex, descriptorType, streamPortIndex, "dynamic_mappings");
+			}
+			catch (...)
+			{
+				// Entity without a current configuration, or unknown stream port
+			}
+		}
+		if (!mappings)
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		details["mappings"] = static_cast<qint64>(mappings->size());
+		auto patch = Patch{};
+		patch.replace(pointer, *mappings);
+		patch.storeIn(details);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "%1 %2" }.arg(descriptorTypeName(descriptorType)).arg(streamPortIndex), QString{ "Audio mappings changed (%1 mappings)" }.arg(mappings->size()), details, Level::Diagnostic);
+	}
+
+	void handleControlValuesChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues) noexcept
+	{
+		if (!isRecording() || !isDiagnosticRecording())
+		{
+			return;
+		}
+		// Serialized the way the AVE document stores the values, through the dynamic model serializer (which dispatches on the value type)
+		auto dynamicModel = la::avdecc::entity::model::ControlNodeDynamicModel{};
+		dynamicModel.values = controlValues;
+		auto values = json{};
+		try
+		{
+			json const serialized = dynamicModel; // Must use operator= instead of constructor to force usage of the to_json overload
+			values = serialized.at("values");
+		}
+		catch (...)
+		{
+			// Unsupported control value type
+			return;
+		}
+
+		auto& state = _controlValuesStates[entityID][controlIndex];
+		auto const now = _monotonicClock();
+		if (state.hasJournaled && state.journaledValues == values && !state.hasPending)
+		{
+			return;
+		}
+		// Rate limiting: a control journals at most one change per interval, the following ones are kept pending (last value wins) and flushed by the timer
+		if (state.hasJournaled && now - state.journaledAt < ControlValuesRateLimitInterval)
+		{
+			if (state.hasPending && state.pendingValues == values)
+			{
+				return;
+			}
+			state.hasPending = true;
+			state.pendingValues = std::move(values);
+			++state.coalesced;
+			if (!_controlValuesFlushTimer.isActive())
+			{
+				_controlValuesFlushTimer.start(static_cast<int>(ControlValuesRateLimitInterval.count()));
+			}
+			return;
+		}
+		journalControlValues(entityID, controlIndex, state, std::move(values), now);
+	}
+
+	/** Journals the pending control values whose rate limiting interval elapsed (all of them when forced, eg. at the end of the session), and re-arms the timer if some remain. */
+	void flushPendingControlValues(bool const force) noexcept
+	{
+		auto const now = _monotonicClock();
+		auto remaining = false;
+		for (auto& [entityID, states] : _controlValuesStates)
+		{
+			for (auto& [controlIndex, state] : states)
+			{
+				if (!state.hasPending)
+				{
+					continue;
+				}
+				if (force || now - state.journaledAt >= ControlValuesRateLimitInterval)
+				{
+					journalControlValues(entityID, controlIndex, state, std::move(state.pendingValues), now);
+				}
+				else
+				{
+					remaining = true;
+				}
+			}
+		}
+		if (remaining && isRecording())
+		{
+			_controlValuesFlushTimer.start(static_cast<int>(ControlValuesRateLimitInterval.count()));
+		}
+	}
+
+	void handleAcquireStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		using AcquireState = la::avdecc::controller::model::AcquireState;
+		// The in progress states are our own commands in flight: only the resulting states are journaled
+		if (acquireState == AcquireState::AcquireInProgress || acquireState == AcquireState::ReleaseInProgress)
+		{
+			return;
+		}
+		if (!trackChange(_acquireStates, entityID, std::make_pair(acquireState, owningEntity)))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		details["acquire_state"] = acquireStateToKey(acquireState);
+		details["owning_controller_id"] = helper::uniqueIdentifierToString(owningEntity);
+		auto patch = Patch{};
+		patch.replace(QString{ "%1/acquire_state" }.arg(avePatch::statePointer()), acquireStateToKey(acquireState).toStdString());
+		patch.replace(QString{ "%1/owning_controller_id" }.arg(avePatch::statePointer()), owningEntity);
+		patch.storeIn(details);
+		auto summary = QString{};
+		switch (acquireState)
+		{
+			case AcquireState::Acquired:
+				summary = "Entity acquired by this controller";
+				break;
+			case AcquireState::AcquiredByOther:
+				summary = QString{ "Entity acquired by another controller (%1)" }.arg(entityNameFor(owningEntity));
+				break;
+			case AcquireState::NotAcquired:
+				summary = "Entity released";
+				break;
+			default:
+				summary = QString{ "Entity acquire state changed to %1" }.arg(acquireStateToKey(acquireState));
+				break;
+		}
+		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, summary, details, Level::Diagnostic);
+	}
+
+	void handleLockStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		using LockState = la::avdecc::controller::model::LockState;
+		if (lockState == LockState::LockInProgress || lockState == LockState::UnlockInProgress)
+		{
+			return;
+		}
+		if (!trackChange(_lockStates, entityID, std::make_pair(lockState, lockingEntity)))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		details["lock_state"] = lockStateToKey(lockState);
+		details["locking_controller_id"] = helper::uniqueIdentifierToString(lockingEntity);
+		auto patch = Patch{};
+		patch.replace(QString{ "%1/lock_state" }.arg(avePatch::statePointer()), lockStateToKey(lockState).toStdString());
+		patch.replace(QString{ "%1/locking_controller_id" }.arg(avePatch::statePointer()), lockingEntity);
+		patch.storeIn(details);
+		auto summary = QString{};
+		switch (lockState)
+		{
+			case LockState::Locked:
+				summary = "Entity locked by this controller";
+				break;
+			case LockState::LockedByOther:
+				summary = QString{ "Entity locked by another controller (%1)" }.arg(entityNameFor(lockingEntity));
+				break;
+			case LockState::NotLocked:
+				summary = "Entity unlocked";
+				break;
+			default:
+				summary = QString{ "Entity lock state changed to %1" }.arg(lockStateToKey(lockState));
+				break;
+		}
+		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, summary, details, Level::Diagnostic);
+	}
+
+	void handleCompatibilityChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		if (!trackChange(_compatibilities, entityID, std::make_pair(compatibilityFlags, milanVersion)))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto const flagsJson = compatibilityFlagsToJson(compatibilityFlags);
+		auto const versionString = QString::fromStdString(static_cast<std::string>(milanVersion));
+		auto details = QJsonObject{};
+		details["compatibility_flags"] = flagsJson;
+		details["milan_version"] = versionString;
+		// The compatibility flags are serialized by the controller's private serializer: same names, rebuilt here
+		auto patchOperations = QJsonArray{};
+		{
+			auto operation = QJsonObject{};
+			operation["op"] = "replace";
+			operation["path"] = avePatch::compatibilityFlagsPointer();
+			operation["value"] = flagsJson;
+			patchOperations.push_back(operation);
+		}
+		{
+			auto operation = QJsonObject{};
+			operation["op"] = "replace";
+			operation["path"] = avePatch::milanCompatibilityVersionPointer();
+			operation["value"] = versionString;
+			patchOperations.push_back(operation);
+		}
+		details[EventJournal::PatchDetailsKey] = patchOperations;
+		auto flagNames = QStringList{};
+		for (auto const& value : flagsJson)
+		{
+			flagNames.push_back(value.toString());
+		}
+		auto summary = QString{ "Compatibility changed to %1" }.arg(flagNames.isEmpty() ? QString{ "none" } : flagNames.join(", "));
+		if (compatibilityFlags.test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			summary += QString{ " (Milan %1)" }.arg(versionString);
+		}
+		addEvent(Category::Entity, Severity::Info, entityID, entityNameFor(entityID), {}, summary, details, Level::Diagnostic);
+	}
+
+	void handleEntityCapabilitiesChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::EntityCapabilities const entityCapabilities) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		if (!trackChange(_entityCapabilities, entityID, entityCapabilities))
+		{
+			return;
+		}
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		json const serializedCapabilities = entityCapabilities; // Must use operator= instead of constructor to force usage of the to_json overload
+		auto details = QJsonObject{};
+		details["entity_capabilities"] = toQJsonValue(serializedCapabilities);
+		auto patch = Patch{};
+		patch.replace(avePatch::entityCapabilitiesPointer(), entityCapabilities);
+		patch.storeIn(details);
+		addEvent(Category::Entity, Severity::Info, entityID, entityNameFor(entityID), {}, "Entity capabilities changed", details, Level::Diagnostic);
 	}
 
 	void handleStreamInputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept
@@ -851,6 +1594,8 @@ public:
 		{
 			return;
 		}
+
+		journalRawCounters(entityID, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, inputStreamSubject(entityID, streamIndex), counters);
 
 		auto const framesRxIt = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::FramesRx);
 		if (framesRxIt == counters.end())
@@ -933,6 +1678,33 @@ public:
 				addEvent(Category::Streaming, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream data monitoring started", details, Level::Diagnostic);
 			}
 		}
+	}
+
+	void handleEntityCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::EntityCounters const& counters) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		journalRawCounters(entityID, la::avdecc::entity::model::DescriptorType::Entity, 0u, {}, counters);
+	}
+
+	void handleAvbInterfaceCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		journalRawCounters(entityID, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), counters);
+	}
+
+	void handleStreamOutputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		journalRawCounters(entityID, la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, outputStreamSubject(entityID, streamIndex), counters);
 	}
 
 	void handleStreamInputErrorCounterChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, ControllerManager::StreamInputErrorCounters const& errorCounters) noexcept
@@ -1073,13 +1845,17 @@ public:
 		auto const previousWarning = (it != _redundancyWarnings.end()) ? it->second : false;
 		_redundancyWarnings[entityID] = isRedundancyWarning;
 
+		auto details = QJsonObject{};
+		auto patch = Patch{};
+		patch.replace(QString{ "%1/redundancy_warning" }.arg(avePatch::diagnosticsPointer()), isRedundancyWarning);
+		patch.storeIn(details);
 		if (isRedundancyWarning && !previousWarning)
 		{
-			addEvent(Category::Redundancy, Severity::Error, entityID, entityNameFor(entityID), {}, "Redundancy warning: redundant interfaces appear to be connected to the same network");
+			addEvent(Category::Redundancy, Severity::Error, entityID, entityNameFor(entityID), {}, "Redundancy warning: redundant interfaces appear to be connected to the same network", details);
 		}
 		else if (!isRedundancyWarning && previousWarning)
 		{
-			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), {}, "Redundancy warning cleared");
+			addEvent(Category::Redundancy, Severity::Recovered, entityID, entityNameFor(entityID), {}, "Redundancy warning cleared", details);
 		}
 	}
 
@@ -1095,13 +1871,21 @@ public:
 		auto const previousError = (it != states.end()) ? it->second : false;
 		states[streamIndex] = isLatencyError;
 
+		// The AVE document stores the set of streams in error: patched from the entity diagnostics (already updated when the queued signal reaches the main thread)
+		auto details = QJsonObject{};
+		if (auto controlledEntity = ControllerManager::getInstance().getControlledEntity(entityID))
+		{
+			auto patch = Patch{};
+			patch.replace(QString{ "%1/stream_input_latency_errors" }.arg(avePatch::diagnosticsPointer()), controlledEntity->getDiagnostics().streamInputOverLatency);
+			patch.storeIn(details);
+		}
 		if (isLatencyError && !previousError)
 		{
-			addEvent(Category::Latency, Severity::Error, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream latency error detected");
+			addEvent(Category::Latency, Severity::Error, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream latency error detected", details);
 		}
 		else if (!isLatencyError && previousError)
 		{
-			addEvent(Category::Latency, Severity::Recovered, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream latency error cleared");
+			addEvent(Category::Latency, Severity::Recovered, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream latency error cleared", details);
 		}
 	}
 
@@ -1142,16 +1926,19 @@ public:
 		}
 		it->second = isSubscribed;
 
+		auto details = QJsonObject{};
+		auto patch = Patch{};
+		patch.replace(QString{ "%1/subscribed_unsol" }.arg(avePatch::statePointer()), isSubscribed);
+		patch.storeIn(details);
 		if (!isSubscribed)
 		{
-			auto details = QJsonObject{};
 			details["triggered_by_entity"] = triggeredByEntity;
 			auto const summary = ControllerManager::getInstance().isRedundantController() ? QString{ "No longer subscribed to unsolicited notifications on any interface (entity updates may be missed, consider refreshing the entity)" } : QString{ "No longer subscribed to unsolicited notifications (entity updates may be missed, consider refreshing the entity)" };
 			addEvent(Category::Entity, Severity::Error, entityID, entityNameFor(entityID), {}, summary, details);
 		}
 		else
 		{
-			addEvent(Category::Entity, Severity::Recovered, entityID, entityNameFor(entityID), {}, "Subscribed to unsolicited notifications again");
+			addEvent(Category::Entity, Severity::Recovered, entityID, entityNameFor(entityID), {}, "Subscribed to unsolicited notifications again", details);
 		}
 	}
 
@@ -1289,6 +2076,163 @@ public:
 			}
 		}
 		return subject;
+	}
+
+	/** Returns a designation for the given output stream, including its name if resolvable. */
+	QString outputStreamSubject(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+	{
+		auto subject = QString{ "Output Stream %1" }.arg(streamIndex);
+		auto& manager = ControllerManager::getInstance();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			auto const name = helper::outputStreamName(*controlledEntity, streamIndex);
+			if (!name.isEmpty())
+			{
+				subject += QString{ " (%1)" }.arg(name);
+			}
+		}
+		return subject;
+	}
+
+	/** Returns a designation for the given stream (input or output). */
+	QString streamSubject(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept
+	{
+		return descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput ? inputStreamSubject(entityID, streamIndex) : outputStreamSubject(entityID, streamIndex);
+	}
+
+	/** Returns a designation for the given clock source, including its name if resolvable. */
+	QString clockSourceSubject(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex) const noexcept
+	{
+		auto subject = QString{ "Clock Source %1" }.arg(clockSourceIndex);
+		auto& manager = ControllerManager::getInstance();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			try
+			{
+				auto const configurationIndex = controlledEntity->getCurrentConfigurationIndex();
+				auto const name = helper::objectName(controlledEntity.get(), configurationIndex, controlledEntity->getClockSourceNode(configurationIndex, clockSourceIndex));
+				if (!name.isEmpty())
+				{
+					subject += QString{ " (%1)" }.arg(name);
+				}
+			}
+			catch (...)
+			{
+				// Entity without a current configuration, or unknown clock source
+			}
+		}
+		return subject;
+	}
+
+	/** Returns the pointer of a key of the dynamic model of a descriptor of the given entity, in the given configuration (the current one by default), or std::nullopt if the entity is offline or the descriptor unknown. */
+	static std::optional<QString> dynamicPointer(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, char const* const key, std::optional<la::avdecc::entity::model::ConfigurationIndex> const configurationIndex = std::nullopt) noexcept
+	{
+		if (auto controlledEntity = ControllerManager::getInstance().getControlledEntity(entityID))
+		{
+			try
+			{
+				return avePatch::dynamicModelPointer(*controlledEntity, configurationIndex ? *configurationIndex : controlledEntity->getCurrentConfigurationIndex(), descriptorType, descriptorIndex, key);
+			}
+			catch (...)
+			{
+				// Entity without a current configuration
+			}
+		}
+		return std::nullopt;
+	}
+
+	/** Stores the new value of a tracked item and returns true when it differs from the previous one (or when there was none): the value dedup that makes the change tracking immune to the duplicate notifications a redundant controller receives (one per interface). */
+	template<typename MapType, typename KeyType, typename ValueType>
+	static bool trackChange(MapType& map, KeyType const& key, ValueType const& value) noexcept
+	{
+		auto const it = map.find(key);
+		if (it != map.end() && it->second == value)
+		{
+			return false;
+		}
+		map.insert_or_assign(key, value);
+		return true;
+	}
+
+	/** Journals a raw counters notification at diagnostic level: the values that changed and a patch of the whole set, skipping the notifications that changed nothing (duplicates) or only the liveness counters (FRAMES_RX and the like, see LivenessCounterNames). */
+	template<typename CountersType>
+	void journalRawCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& subject, CountersType const& counters) noexcept
+	{
+		// Nothing to compute unless the event would be written
+		if (!isDiagnosticRecording())
+		{
+			return;
+		}
+		auto const values = countersToJson(counters);
+		auto& previousValues = _rawCounters[entityID][CounterKey{ descriptorType, descriptorIndex }];
+		auto changed = QJsonArray{};
+		auto onlyLiveness = true;
+		for (auto const& [name, value] : values.items())
+		{
+			auto const previousIt = previousValues.find(name);
+			if (previousIt != previousValues.end() && *previousIt == value)
+			{
+				continue;
+			}
+			auto object = QJsonObject{};
+			object["counter"] = QString::fromStdString(name);
+			object["previous_value"] = previousIt != previousValues.end() ? toQJsonValue(*previousIt) : QJsonValue{};
+			object["value"] = toQJsonValue(value);
+			changed.push_back(object);
+			onlyLiveness &= std::find(std::begin(LivenessCounterNames), std::end(LivenessCounterNames), name) != std::end(LivenessCounterNames);
+		}
+		// The liveness counters are tracked too, so the first informative change after a long streaming period reports the previous values correctly
+		previousValues = values;
+		if (changed.isEmpty() || onlyLiveness)
+		{
+			return;
+		}
+		auto details = QJsonObject{};
+		details["changed"] = changed;
+		auto patch = Patch{};
+		patch.replace(descriptorType == la::avdecc::entity::model::DescriptorType::Entity ? std::optional<QString>{ QString{ "%1/dynamic/counters" }.arg(avePatch::entityDescriptorPointer()) } : dynamicPointer(entityID, descriptorType, descriptorIndex, "counters"), counters);
+		patch.storeIn(details);
+		addEvent(Category::Counters, Severity::Info, entityID, entityNameFor(entityID), subject, "Counters updated", details, Level::Diagnostic);
+	}
+
+	/** Control values rate limiting state of a control: the last journaled values and time, and the pending values coalesced since. */
+	struct ControlValuesState
+	{
+		bool hasJournaled{ false };
+		json journaledValues{};
+		std::chrono::steady_clock::time_point journaledAt{};
+		bool hasPending{ false };
+		json pendingValues{};
+		std::size_t coalesced{ 0u }; // Number of changes coalesced into the pending values
+	};
+
+	/** Journals the given control values (the coalesced count tells how many changes were skipped since the previous event of that control). */
+	void journalControlValues(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, ControlValuesState& state, json values, std::chrono::steady_clock::time_point const now) noexcept
+	{
+		auto details = QJsonObject{};
+		details["values"] = toQJsonValue(values);
+		if (state.coalesced > 0u)
+		{
+			details["coalesced"] = static_cast<qint64>(state.coalesced);
+		}
+		auto patchOperations = QJsonArray{};
+		if (auto const pointer = dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::Control, controlIndex, "values"))
+		{
+			auto operation = QJsonObject{};
+			operation["op"] = "replace";
+			operation["path"] = *pointer;
+			operation["value"] = details["values"];
+			patchOperations.push_back(operation);
+			details[EventJournal::PatchDetailsKey] = patchOperations;
+		}
+		auto const summary = state.coalesced > 0u ? QString{ "Control value changed (%1 changes coalesced)" }.arg(state.coalesced) : QString{ "Control value changed" };
+		state.hasJournaled = true;
+		state.journaledValues = std::move(values);
+		state.journaledAt = now;
+		state.hasPending = false;
+		state.pendingValues = json{};
+		state.coalesced = 0u;
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Control %1" }.arg(controlIndex), summary, details, Level::Diagnostic);
 	}
 
 	/** Media clock lock tracking state of a clock domain: the lock state derived from the counters, and the counter values it was derived from. */
@@ -1526,11 +2470,24 @@ public:
 	/** Seeds the change-detection baselines from the current entity model state, so only actual changes occurring after the entity came online are journaled. */
 	void seedBaselines(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
 	{
-		// Aggregated unsolicited notifications subscription state (does not depend on the entity having a configuration)
+		using DescriptorType = la::avdecc::entity::model::DescriptorType;
+
+		// Entity wide states (do not depend on the entity having a configuration)
 		_unsolRegistrationStates[entityID] = controlledEntity.isSubscribedToUnsolicitedNotifications();
+		_acquireStates[entityID] = std::make_pair(controlledEntity.getAcquireState(), controlledEntity.getOwningControllerID());
+		_lockStates[entityID] = std::make_pair(controlledEntity.getLockState(), controlledEntity.getLockingControllerID());
+		_compatibilities[entityID] = std::make_pair(controlledEntity.getCompatibilityFlags(), controlledEntity.getMilanCompatibilityVersion());
+		_entityCapabilities[entityID] = controlledEntity.getEntity().getEntityCapabilities();
+		_rawCounters.erase(entityID);
+		_controlValuesStates.erase(entityID);
 
 		try
 		{
+			auto const& entityNode = controlledEntity.getEntityNode();
+			if (entityNode.dynamicModel.counters)
+			{
+				_rawCounters[entityID][CounterKey{ DescriptorType::Entity, 0u }] = countersToJson(*entityNode.dynamicModel.counters);
+			}
 			auto const& configurationNode = controlledEntity.getCurrentConfigurationNode();
 			for (auto const& [avbInterfaceIndex, avbInterfaceNode] : configurationNode.avbInterfaces)
 			{
@@ -1542,7 +2499,11 @@ public:
 				}
 				if (avbInterfaceNode.dynamicModel.avbInterfaceInfo)
 				{
-					_propagationDelays[entityID][avbInterfaceIndex] = avbInterfaceNode.dynamicModel.avbInterfaceInfo->propagationDelay;
+					_avbInterfaceInfos[entityID][avbInterfaceIndex] = *avbInterfaceNode.dynamicModel.avbInterfaceInfo;
+				}
+				if (avbInterfaceNode.dynamicModel.counters)
+				{
+					_rawCounters[entityID][CounterKey{ DescriptorType::AvbInterface, avbInterfaceIndex }] = countersToJson(*avbInterfaceNode.dynamicModel.counters);
 				}
 			}
 			for (auto const& [clockDomainIndex, clockDomainNode] : configurationNode.clockDomains)
@@ -1553,7 +2514,14 @@ public:
 					{
 						_clockLockStates[entityID][clockDomainIndex] = *lockState;
 					}
+					_rawCounters[entityID][CounterKey{ DescriptorType::ClockDomain, clockDomainIndex }] = countersToJson(*clockDomainNode.dynamicModel.counters);
 				}
+				_clockSources[entityID][clockDomainIndex] = clockDomainNode.dynamicModel.clockSourceIndex;
+				_mediaClockReferenceInfos[entityID][clockDomainIndex] = clockDomainNode.dynamicModel.mediaClockReferenceInfo;
+			}
+			for (auto const& [audioUnitIndex, audioUnitNode] : configurationNode.audioUnits)
+			{
+				_samplingRates[entityID][audioUnitIndex] = audioUnitNode.dynamicModel.currentSamplingRate;
 			}
 			// An entity coming online again starts the stream data loss learning from scratch (its counters may have been reset)
 			_streamDataStates.erase(entityID);
@@ -1561,6 +2529,19 @@ public:
 			for (auto const& [streamIndex, streamNode] : configurationNode.streamInputs)
 			{
 				_streamConnections[entityID][streamIndex] = streamNode.dynamicModel.connectionInfo;
+				_streamFormats[entityID][StreamKey{ DescriptorType::StreamInput, streamIndex }] = streamNode.dynamicModel.streamFormat;
+				if (streamNode.dynamicModel.streamDynamicInfo)
+				{
+					_streamDynamicInfos[entityID][StreamKey{ DescriptorType::StreamInput, streamIndex }] = *streamNode.dynamicModel.streamDynamicInfo;
+				}
+				if (streamNode.dynamicModel.isStreamRunning)
+				{
+					_streamRunningStates[entityID][StreamKey{ DescriptorType::StreamInput, streamIndex }] = *streamNode.dynamicModel.isStreamRunning;
+				}
+				if (streamNode.dynamicModel.counters)
+				{
+					_rawCounters[entityID][CounterKey{ DescriptorType::StreamInput, streamIndex }] = countersToJson(*streamNode.dynamicModel.counters);
+				}
 				// The FRAMES_RX value of a connected stream is the first reference sample of the stream data loss rule (only the increments matter, so a stale value at most makes the first learned increment larger)
 				if (streamNode.dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected && streamNode.dynamicModel.counters)
 				{
@@ -1571,6 +2552,23 @@ public:
 						state.previousFramesRx = framesRxIt->second;
 						state.previousArrival = arrival;
 					}
+				}
+			}
+			for (auto const& [streamIndex, streamNode] : configurationNode.streamOutputs)
+			{
+				_streamOutputConnections[entityID][streamIndex] = streamNode.dynamicModel.connections;
+				_streamFormats[entityID][StreamKey{ DescriptorType::StreamOutput, streamIndex }] = streamNode.dynamicModel.streamFormat;
+				if (streamNode.dynamicModel.streamDynamicInfo)
+				{
+					_streamDynamicInfos[entityID][StreamKey{ DescriptorType::StreamOutput, streamIndex }] = *streamNode.dynamicModel.streamDynamicInfo;
+				}
+				if (streamNode.dynamicModel.isStreamRunning)
+				{
+					_streamRunningStates[entityID][StreamKey{ DescriptorType::StreamOutput, streamIndex }] = *streamNode.dynamicModel.isStreamRunning;
+				}
+				if (streamNode.dynamicModel.counters)
+				{
+					_rawCounters[entityID][CounterKey{ DescriptorType::StreamOutput, streamIndex }] = countersToJson(*streamNode.dynamicModel.counters);
 				}
 			}
 		}
@@ -1584,7 +2582,7 @@ public:
 	{
 		_gptpStates.clear();
 		_asPaths.clear();
-		_propagationDelays.clear();
+		_avbInterfaceInfos.clear();
 		_linkStatuses.clear();
 		_clockLockStates.clear();
 		_streamConnections.clear();
@@ -1597,6 +2595,20 @@ public:
 		_unsolRegistrationStates.clear();
 		_lostUnsolInterfaces.clear();
 		_controllerTransportErrors.clear();
+		_streamOutputConnections.clear();
+		_streamFormats.clear();
+		_streamDynamicInfos.clear();
+		_streamRunningStates.clear();
+		_samplingRates.clear();
+		_clockSources.clear();
+		_mediaClockReferenceInfos.clear();
+		_acquireStates.clear();
+		_lockStates.clear();
+		_compatibilities.clear();
+		_entityCapabilities.clear();
+		_rawCounters.clear();
+		_controlValuesStates.clear();
+		_controlValuesFlushTimer.stop();
 	}
 
 	void cleanupOldJournals(QString const& dirPath) noexcept
@@ -1631,7 +2643,7 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, QString, la::avdecc::UniqueIdentifier::hash> _entityNames{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::pair<la::avdecc::UniqueIdentifier, std::uint8_t>>, la::avdecc::UniqueIdentifier::hash> _gptpStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::model::AsPath>, la::avdecc::UniqueIdentifier::hash> _asPaths{};
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::uint32_t>, la::avdecc::UniqueIdentifier::hash> _propagationDelays{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo>, la::avdecc::UniqueIdentifier::hash> _avbInterfaceInfos{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>, la::avdecc::UniqueIdentifier::hash> _linkStatuses{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, ClockLockState>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamInputConnectionInfo>, la::avdecc::UniqueIdentifier::hash> _streamConnections{};
@@ -1645,6 +2657,24 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, bool, la::avdecc::UniqueIdentifier::hash> _unsolRegistrationStates{}; // Aggregated subscription state
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::set<la::avdecc::controller::InterfaceType>, la::avdecc::UniqueIdentifier::hash> _lostUnsolInterfaces{}; // Redundant interfaces currently reported as no longer receiving unsolicited notifications
 	std::set<la::avdecc::controller::InterfaceType> _controllerTransportErrors{}; // Controller interfaces having received a fatal transport error
+
+	// Change tracking state (the twin of every entity, see docs/EventJournal.md): the last journaled value of every tracked item, so duplicates and unchanged notifications are dropped
+	using StreamKey = std::pair<la::avdecc::entity::model::DescriptorType, la::avdecc::entity::model::StreamIndex>; // Input or output stream
+	using CounterKey = std::pair<la::avdecc::entity::model::DescriptorType, la::avdecc::entity::model::DescriptorIndex>; // Descriptor holding counters (Entity with index 0 for the entity counters)
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamConnections>, la::avdecc::UniqueIdentifier::hash> _streamOutputConnections{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<StreamKey, la::avdecc::entity::model::StreamFormat>, la::avdecc::UniqueIdentifier::hash> _streamFormats{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<StreamKey, la::avdecc::entity::model::StreamDynamicInfo>, la::avdecc::UniqueIdentifier::hash> _streamDynamicInfos{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<StreamKey, bool>, la::avdecc::UniqueIdentifier::hash> _streamRunningStates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::entity::model::AudioUnitIndex, la::avdecc::entity::model::SamplingRate>, la::avdecc::UniqueIdentifier::hash> _samplingRates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::entity::model::ClockDomainIndex, la::avdecc::entity::model::ClockSourceIndex>, la::avdecc::UniqueIdentifier::hash> _clockSources{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::entity::model::ClockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo>, la::avdecc::UniqueIdentifier::hash> _mediaClockReferenceInfos{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::pair<la::avdecc::controller::model::AcquireState, la::avdecc::UniqueIdentifier>, la::avdecc::UniqueIdentifier::hash> _acquireStates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::pair<la::avdecc::controller::model::LockState, la::avdecc::UniqueIdentifier>, la::avdecc::UniqueIdentifier::hash> _lockStates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::pair<la::avdecc::controller::ControlledEntity::CompatibilityFlags, la::avdecc::entity::model::MilanVersion>, la::avdecc::UniqueIdentifier::hash> _compatibilities{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, la::avdecc::entity::EntityCapabilities, la::avdecc::UniqueIdentifier::hash> _entityCapabilities{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<CounterKey, json>, la::avdecc::UniqueIdentifier::hash> _rawCounters{}; // Last journaled raw counters of every descriptor, as serialized in the AVE document
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::entity::model::ControlIndex, ControlValuesState>, la::avdecc::UniqueIdentifier::hash> _controlValuesStates{};
+	QTimer _controlValuesFlushTimer{}; // Single shot, journals the pending control values once their rate limiting interval elapsed
 };
 
 /* ************************************************************ */
@@ -1660,6 +2690,13 @@ EventJournal::EventJournal()
 	: _pImpl{ std::make_unique<Private>(this) }
 {
 	auto& manager = ControllerManager::getInstance();
+
+	_pImpl->_controlValuesFlushTimer.setSingleShot(true);
+	connect(&_pImpl->_controlValuesFlushTimer, &QTimer::timeout, this,
+		[this]()
+		{
+			_pImpl->flushPendingControlValues(false);
+		});
 
 	connect(&manager, &ControllerManager::controllerOnline, this,
 		[this]()
@@ -1727,9 +2764,156 @@ EventJournal::EventJournal()
 			_pImpl->handleStreamInputCountersChanged(entityID, streamIndex, counters);
 		});
 	connect(&manager, &ControllerManager::streamFormatChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const)
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat)
 		{
-			_pImpl->handleStreamFormatChanged(entityID, descriptorType, streamIndex);
+			_pImpl->handleStreamFormatChanged(entityID, descriptorType, streamIndex, streamFormat);
+		});
+	// Change tracking events (diagnostic level), so the analyser can rebuild the state of every entity at any time of the session
+	connect(&manager, &ControllerManager::streamOutputConnectionsChanged, this,
+		[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections)
+		{
+			_pImpl->handleStreamOutputConnectionsChanged(stream, connections);
+		});
+	connect(&manager, &ControllerManager::streamDynamicInfoChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info)
+		{
+			_pImpl->handleStreamDynamicInfoChanged(entityID, descriptorType, streamIndex, info);
+		});
+	connect(&manager, &ControllerManager::streamRunningChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, bool const isRunning)
+		{
+			_pImpl->handleStreamRunningChanged(entityID, descriptorType, streamIndex, isRunning);
+		});
+	connect(&manager, &ControllerManager::audioUnitSamplingRateChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate)
+		{
+			_pImpl->handleAudioUnitSamplingRateChanged(entityID, audioUnitIndex, samplingRate);
+		});
+	connect(&manager, &ControllerManager::clockSourceChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex)
+		{
+			_pImpl->handleClockSourceChanged(entityID, clockDomainIndex, clockSourceIndex);
+		});
+	connect(&manager, &ControllerManager::mediaClockReferenceInfoChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& info)
+		{
+			_pImpl->handleMediaClockReferenceInfoChanged(entityID, clockDomainIndex, info);
+		});
+	connect(&manager, &ControllerManager::streamPortAudioMappingsChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
+		{
+			_pImpl->handleStreamPortAudioMappingsChanged(entityID, descriptorType, streamPortIndex);
+		});
+	connect(&manager, &ControllerManager::controlValuesChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues)
+		{
+			_pImpl->handleControlValuesChanged(entityID, controlIndex, controlValues);
+		});
+	connect(&manager, &ControllerManager::acquireStateChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity)
+		{
+			_pImpl->handleAcquireStateChanged(entityID, acquireState, owningEntity);
+		});
+	connect(&manager, &ControllerManager::lockStateChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity)
+		{
+			_pImpl->handleLockStateChanged(entityID, lockState, lockingEntity);
+		});
+	connect(&manager, &ControllerManager::compatibilityChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion)
+		{
+			_pImpl->handleCompatibilityChanged(entityID, compatibilityFlags, milanCompatibleVersion);
+		});
+	connect(&manager, &ControllerManager::entityCapabilitiesChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::EntityCapabilities const entityCapabilities)
+		{
+			_pImpl->handleEntityCapabilitiesChanged(entityID, entityCapabilities);
+		});
+	connect(&manager, &ControllerManager::entityCountersChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::EntityCounters const& counters)
+		{
+			_pImpl->handleEntityCountersChanged(entityID, counters);
+		});
+	connect(&manager, &ControllerManager::avbInterfaceCountersChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters)
+		{
+			_pImpl->handleAvbInterfaceCountersChanged(entityID, avbInterfaceIndex, counters);
+		});
+	connect(&manager, &ControllerManager::streamOutputCountersChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters)
+		{
+			_pImpl->handleStreamOutputCountersChanged(entityID, streamIndex, counters);
+		});
+	// Object names
+	connect(&manager, &ControllerManager::entityGroupNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, QString const& entityGroupName)
+		{
+			_pImpl->handleEntityGroupNameChanged(entityID, entityGroupName);
+		});
+	connect(&manager, &ControllerManager::configurationNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Configuration, configurationIndex, name);
+		});
+	connect(&manager, &ControllerManager::audioUnitNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex, name);
+		});
+	connect(&manager, &ControllerManager::streamNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, descriptorType, streamIndex, name);
+		});
+	connect(&manager, &ControllerManager::jackNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::JackIndex const jackIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, descriptorType, jackIndex, name);
+		});
+	connect(&manager, &ControllerManager::avbInterfaceNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, name);
+		});
+	connect(&manager, &ControllerManager::clockSourceNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockSource, clockSourceIndex, name);
+		});
+	connect(&manager, &ControllerManager::memoryObjectNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::MemoryObject, memoryObjectIndex, name);
+		});
+	connect(&manager, &ControllerManager::audioClusterNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::AudioCluster, audioClusterIndex, name);
+		});
+	connect(&manager, &ControllerManager::controlNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Control, controlIndex, name);
+		});
+	connect(&manager, &ControllerManager::clockDomainNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex, name);
+		});
+	connect(&manager, &ControllerManager::timingNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::Timing, timingIndex, name);
+		});
+	connect(&manager, &ControllerManager::ptpInstanceNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::PtpInstance, ptpInstanceIndex, name);
+		});
+	connect(&manager, &ControllerManager::ptpPortNameChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, QString const& name)
+		{
+			_pImpl->handleObjectNameChanged(entityID, configurationIndex, la::avdecc::entity::model::DescriptorType::PtpPort, ptpPortIndex, name);
 		});
 	connect(&manager, &ControllerManager::streamInputErrorCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, ControllerManager::StreamInputErrorCounters const& errorCounters)
@@ -1838,6 +3022,10 @@ QString EventJournal::categoryToString(Category const category) noexcept
 			return "Redundancy";
 		case Category::Streaming:
 			return "Streaming";
+		case Category::Configuration:
+			return "Configuration";
+		case Category::Control:
+			return "Control";
 		default:
 			return "Unknown";
 	}

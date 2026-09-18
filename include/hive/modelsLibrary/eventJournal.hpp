@@ -60,6 +60,9 @@ public:
 	/** Format identifier of the entity snapshots written by this version: la_avdecc JSON serializer output encoded as MessagePack (the .ave binary format) then zlib compressed (qCompress). */
 	static constexpr auto SnapshotFormat = "ave-msgpack-zlib";
 
+	/** Details key of the change tracking events holding the JSON Patch (RFC 6902, 'replace' operations only) that applies the change to the AVE document of the entity (the format of the snapshots, see docs/EventJournal.md). */
+	static constexpr auto PatchDetailsKey = "patch";
+
 	/** Functional category of a journaled event, used for filtering. */
 	enum class Category
 	{
@@ -73,6 +76,8 @@ public:
 		Latency = 7, /**< Stream latency errors */
 		Redundancy = 8, /**< Milan redundancy warnings */
 		Streaming = 9, /**< Stream data reception (frames missing, detected from the FRAMES_RX counter increments) */
+		Configuration = 10, /**< Entity configuration changes (names, stream formats, sampling rates, clock sources, control values, audio mappings, ...), diagnostic level */
+		Control = 11, /**< Controller actions on an entity (acquire, lock) */
 	};
 
 	/** Severity of a journaled event. */
