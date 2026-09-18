@@ -336,7 +336,7 @@ void EventJournalView::createSeverityFilterMenu()
 
 void EventJournalView::createCategoryFilterMenu()
 {
-	for (auto const category : { EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy })
+	for (auto const category : { EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy, EventJournal::Category::Streaming })
 	{
 		auto* action = _categoryFilterMenu.addAction(EventJournal::categoryToString(category));
 		action->setCheckable(true);

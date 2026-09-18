@@ -26,6 +26,8 @@
 #include <QString>
 #include <QMap>
 
+#include <chrono>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -63,6 +65,7 @@ public:
 		Link = 6, /**< Physical link status changes */
 		Latency = 7, /**< Stream latency errors */
 		Redundancy = 8, /**< Milan redundancy warnings */
+		Streaming = 9, /**< Stream data reception (frames missing, detected from the FRAMES_RX counter increments) */
 	};
 
 	/** Severity of a journaled event. */
@@ -145,6 +148,13 @@ public:
 	* @return True if the export succeeded. Always fails if not recording.
 	*/
 	bool exportCurrentSession(QString const& filePath) noexcept;
+
+	/**
+	* @brief Overrides the monotonic clock used to timestamp the arrival of the counter notifications (stream data loss rule).
+	* @details Only meant for unit tests, which drive the notifications synchronously and need to control the time elapsed between them.
+	* @param[in] clock Function returning the current monotonic time, or an empty function to restore std::chrono::steady_clock.
+	*/
+	void setMonotonicClock(std::function<std::chrono::steady_clock::time_point()> clock) noexcept;
 
 	/**
 	* @brief Clears all events recorded so far in the current session.

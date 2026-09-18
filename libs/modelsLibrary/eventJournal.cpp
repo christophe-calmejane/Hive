@@ -32,7 +32,11 @@
 #include <QSqlQuery>
 #include <QStandardPaths>
 
+#include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -47,6 +51,14 @@ namespace
 constexpr auto SchemaVersion = 1;
 constexpr auto MaxJournalFiles = 50; // Maximum number of automatically created session files kept on disk
 constexpr auto WriterConnectionName = "HiveEventJournalWriter";
+
+// Stream data loss rule (see docs/EventJournal.md): a bound Stream Input receiving data increments FRAMES_RX at least once per second and is notified at most once per second (Milan 1.2 tables 5.6 and 5.22), so between two notifications the increment is at least one second worth of frames unless frames were missing
+constexpr auto StreamDataLearningWindow = std::size_t{ 30u }; // Number of increments kept per stream to learn the expected increment
+constexpr auto StreamDataMinLearningSamples = std::size_t{ 10u }; // Number of learned increments required before a stream is evaluated
+constexpr auto StreamDataReferencePercentile = std::size_t{ 10u }; // Percentile of the learned increments used as the expected increment (the low end is the one second worth reference, a device whose notification cadence varies produces larger increments, and a single undetected partial loss must not lower the reference)
+constexpr auto StreamDataLossThreshold = 0.5; // An increment below this fraction of the expected increment means frames were missing during the interval
+constexpr auto StreamDataMinEvaluationInterval = std::chrono::milliseconds{ 900 }; // Notifications closer than this to the previous one (queued burst, other interface of a redundant controller, non compliant device) are neither evaluated nor learned
+constexpr auto StreamDataResyncFactor = std::uint64_t{ 10u }; // An increment above this multiple of the expected increment (counter reset by a rebind, value jump) only resynchronizes the reference sample
 
 /** Builds the subject for an event about one of an entity's redundant AVB interfaces (eg. "Primary Interface" for a Milan redundant device, "AVB Interface 2" otherwise). */
 QString redundantInterfaceSubject(la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
@@ -80,6 +92,8 @@ QString categoryToKey(EventJournal::Category const category) noexcept
 			return "latency";
 		case EventJournal::Category::Redundancy:
 			return "redundancy";
+		case EventJournal::Category::Streaming:
+			return "streaming";
 		default:
 			return "unknown";
 	}
@@ -97,6 +111,7 @@ std::optional<EventJournal::Category> categoryFromKey(QString const& key) noexce
 		{ "link", EventJournal::Category::Link },
 		{ "latency", EventJournal::Category::Latency },
 		{ "redundancy", EventJournal::Category::Redundancy },
+		{ "streaming", EventJournal::Category::Streaming },
 	};
 	if (auto const it = s_map.find(key); it != s_map.end())
 	{
@@ -181,6 +196,12 @@ QString statisticsCounterName(ControllerManager::StatisticsErrorCounterFlag cons
 		default:
 			return helper::toHexQString(la::avdecc::utils::to_integral(flag), true);
 	}
+}
+
+/** Default arrival time source of the counter notifications (the unit tests substitute a simulated clock). */
+std::chrono::steady_clock::time_point steadyClockNow() noexcept
+{
+	return std::chrono::steady_clock::now();
 }
 
 QString jsonToString(QJsonObject const& object) noexcept
@@ -397,6 +418,7 @@ public:
 		_clockLockStates.erase(entityID);
 		_streamConnections.erase(entityID);
 		_streamInputErrorCounters.erase(entityID);
+		_streamDataStates.erase(entityID);
 		_statisticsErrorCounters.erase(entityID);
 		_redundancyWarnings.erase(entityID);
 		_latencyErrors.erase(entityID);
@@ -426,6 +448,10 @@ public:
 
 		auto const entityID = stream.entityID;
 		auto const streamIndex = stream.streamIndex;
+
+		// The stream input counters are reset by a rebind and the first increment after a connection is partial: the stream data loss rule restarts its learning
+		resetStreamDataState(entityID, streamIndex);
+
 		auto& states = _streamConnections[entityID];
 		auto const it = states.find(streamIndex);
 		auto const previousInfo = (it != states.end()) ? std::optional<la::avdecc::entity::model::StreamInputConnectionInfo>{ it->second } : std::nullopt;
@@ -604,6 +630,109 @@ public:
 			else
 			{
 				addEvent(Category::MediaClock, Severity::Error, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), "Media clock unlocked", details);
+			}
+		}
+	}
+
+	void handleStreamFormatChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		// The frame rate may change with the format: the stream data loss rule restarts its learning
+		if (descriptorType == la::avdecc::entity::model::DescriptorType::StreamInput)
+		{
+			resetStreamDataState(entityID, streamIndex);
+		}
+	}
+
+	void handleStreamInputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		auto const framesRxIt = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::FramesRx);
+		if (framesRxIt == counters.end())
+		{
+			return;
+		}
+		auto const framesRx = framesRxIt->second;
+		auto const arrival = _monotonicClock();
+
+		// Only a bound stream receives data: the connection state is read live from the entity model (which la_avdecc updates before the queued notification reaches the main thread), so the last partial second of a stream the user just disconnected is never evaluated
+		auto const connectionInfo = liveStreamInputConnectionInfo(entityID, streamIndex);
+		if (!connectionInfo || connectionInfo->state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
+		{
+			return;
+		}
+
+		auto& state = _streamDataStates[entityID][streamIndex];
+		if (!state.hasPrevious)
+		{
+			state.hasPrevious = true;
+			state.previousFramesRx = framesRx;
+			state.previousArrival = arrival;
+			return;
+		}
+		// DescriptorCounter is 32 bits and wraps every few days at 8000 frames per second, so the increment is computed modulo 2^32
+		auto const increment = static_cast<la::avdecc::entity::model::DescriptorCounter>(framesRx - state.previousFramesRx);
+		// The same value again is not a new observation: a redundant controller receives every notification once per interface (same payload a few ms apart, or seconds apart when the main thread stalled in between), and a notification triggered by another counter while no frame arrived tells nothing the next one will not tell with a longer elapsed time
+		if (increment == 0u)
+		{
+			return;
+		}
+		auto const elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(arrival - state.previousArrival);
+		state.previousFramesRx = framesRx;
+		state.previousArrival = arrival;
+
+		// Notifications closer than the minimum interval (a queued burst after a main thread stall, the other interface of a redundant controller having re-read the counter, a non compliant device) only move the reference sample: they are neither evaluated nor learned, so they can neither raise an event nor lower the reference
+		if (elapsed < StreamDataMinEvaluationInterval)
+		{
+			return;
+		}
+
+		auto const expected = expectedStreamDataIncrement(state.increments);
+		if (expected)
+		{
+			// Counter reset by a rebind or value jump: the reference sample is resynchronized, the learned increments are kept (the device cadence did not change)
+			if (static_cast<std::uint64_t>(increment) > StreamDataResyncFactor * static_cast<std::uint64_t>(*expected))
+			{
+				return;
+			}
+			// Every controller side problem (lost notification, stalled main thread, expired subscription) makes the increment larger or delays it, never smaller: an increment clearly below one second worth of frames means frames were missing during the interval, whatever happened on the controller side
+			if (static_cast<double>(increment) < StreamDataLossThreshold * static_cast<double>(*expected))
+			{
+				// The estimate assumes a one second device cadence (the interval may be longer, but the frames of at most one second of it are counted)
+				auto const missingMs = static_cast<qint64>((static_cast<std::uint64_t>(*expected) - static_cast<std::uint64_t>(increment)) * 1000u / static_cast<std::uint64_t>(*expected));
+				auto details = streamDataDetails(*connectionInfo, *expected);
+				details["frames_rx"] = static_cast<qint64>(framesRx);
+				details["increment"] = static_cast<qint64>(increment);
+				details["elapsed_ms"] = static_cast<qint64>(elapsed.count());
+				details["missing_ms"] = missingMs;
+				addEvent(Category::Streaming, Severity::Error, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), QString{ "Stream data loss: about %1 ms of frames missing" }.arg(missingMs), details);
+				// The alerted sample is not learned, so repeated partial losses do not lower the reference
+				return;
+			}
+		}
+
+		if (state.increments.size() >= StreamDataLearningWindow)
+		{
+			state.increments.erase(state.increments.begin());
+		}
+		state.increments.push_back(increment);
+
+		// End of the learning phase: tell which streams are covered and with which reference (a stream never reaching this point is not monitored, eg. a device counting once per observation interval of one second)
+		if (!state.isMonitored)
+		{
+			if (auto const reference = expectedStreamDataIncrement(state.increments))
+			{
+				state.isMonitored = true;
+				auto details = streamDataDetails(*connectionInfo, *reference);
+				details["samples"] = static_cast<qint64>(state.increments.size());
+				addEvent(Category::Streaming, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Stream data monitoring started", details);
 			}
 		}
 	}
@@ -976,6 +1105,73 @@ public:
 		return std::nullopt;
 	}
 
+	/** Stream data reception tracking state of a stream input: the FRAMES_RX value and arrival time of the previous notification, and the learned increments. */
+	struct StreamDataState
+	{
+		bool hasPrevious{ false }; // False until the first notification (or the baseline seeded at entity online) provides a previous value
+		la::avdecc::entity::model::DescriptorCounter previousFramesRx{ 0u };
+		std::chrono::steady_clock::time_point previousArrival{};
+		std::vector<la::avdecc::entity::model::DescriptorCounter> increments{}; // Last StreamDataLearningWindow increments, oldest first
+		bool isMonitored{ false }; // True once the end of the learning phase has been journaled
+	};
+
+	/** Returns the expected one second worth of frames of a stream from its learned increments (the StreamDataReferencePercentile-th percentile), or std::nullopt while the stream is still learning (not enough increments, or the stream received nothing so far). */
+	static std::optional<la::avdecc::entity::model::DescriptorCounter> expectedStreamDataIncrement(std::vector<la::avdecc::entity::model::DescriptorCounter> const& increments) noexcept
+	{
+		if (increments.size() < StreamDataMinLearningSamples)
+		{
+			return std::nullopt;
+		}
+		auto sorted = increments;
+		auto const rank = (sorted.size() - 1u) * StreamDataReferencePercentile / 100u;
+		std::nth_element(sorted.begin(), sorted.begin() + static_cast<std::ptrdiff_t>(rank), sorted.end());
+		auto const reference = sorted[rank];
+		// A null reference means the stream received nothing while learning (talker stopped): keep learning until frames flow
+		if (reference == 0u)
+		{
+			return std::nullopt;
+		}
+		return reference;
+	}
+
+	/** Returns the connection information of the given input stream as currently stored in the entity model, or std::nullopt if the entity is offline or has no such stream. */
+	static std::optional<la::avdecc::entity::model::StreamInputConnectionInfo> liveStreamInputConnectionInfo(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+	{
+		auto& manager = ControllerManager::getInstance();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			try
+			{
+				auto const& entityNode = controlledEntity->getEntityNode();
+				return controlledEntity->getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex).dynamicModel.connectionInfo;
+			}
+			catch (...)
+			{
+				// Entity without a current configuration, or unknown stream index
+			}
+		}
+		return std::nullopt;
+	}
+
+	/** Restarts the stream data loss learning of the given input stream (the next notification only provides the previous value). */
+	void resetStreamDataState(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+	{
+		if (auto const it = _streamDataStates.find(entityID); it != _streamDataStates.end())
+		{
+			it->second.erase(streamIndex);
+		}
+	}
+
+	/** Builds the details common to the stream data events: the talker (so the analyser joins listener and talker events without a network state dump) and the expected increment. */
+	static QJsonObject streamDataDetails(la::avdecc::entity::model::StreamInputConnectionInfo const& connectionInfo, la::avdecc::entity::model::DescriptorCounter const expectedIncrement) noexcept
+	{
+		auto details = QJsonObject{};
+		details["expected_increment"] = static_cast<qint64>(expectedIncrement);
+		details["talker_id"] = helper::uniqueIdentifierToString(connectionInfo.talkerStream.entityID);
+		details["talker_stream_index"] = static_cast<int>(connectionInfo.talkerStream.streamIndex);
+		return details;
+	}
+
 	/** Seeds the change-detection baselines from the current entity model state, so only actual changes occurring after the entity came online are journaled. */
 	void seedBaselines(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
 	{
@@ -1000,9 +1196,23 @@ public:
 					}
 				}
 			}
+			// An entity coming online again starts the stream data loss learning from scratch (its counters may have been reset)
+			_streamDataStates.erase(entityID);
+			auto const arrival = _monotonicClock();
 			for (auto const& [streamIndex, streamNode] : configurationNode.streamInputs)
 			{
 				_streamConnections[entityID][streamIndex] = streamNode.dynamicModel.connectionInfo;
+				// The FRAMES_RX value of a connected stream is the first reference sample of the stream data loss rule (only the increments matter, so a stale value at most makes the first learned increment larger)
+				if (streamNode.dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected && streamNode.dynamicModel.counters)
+				{
+					if (auto const framesRxIt = streamNode.dynamicModel.counters->find(la::avdecc::entity::StreamInputCounterValidFlag::FramesRx); framesRxIt != streamNode.dynamicModel.counters->end())
+					{
+						auto& state = _streamDataStates[entityID][streamIndex];
+						state.hasPrevious = true;
+						state.previousFramesRx = framesRxIt->second;
+						state.previousArrival = arrival;
+					}
+				}
 			}
 		}
 		catch (...)
@@ -1018,6 +1228,7 @@ public:
 		_clockLockStates.clear();
 		_streamConnections.clear();
 		_streamInputErrorCounters.clear();
+		_streamDataStates.clear();
 		_statisticsErrorCounters.clear();
 		_redundancyWarnings.clear();
 		_latencyErrors.clear();
@@ -1057,6 +1268,8 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, ClockLockState>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamInputConnectionInfo>, la::avdecc::UniqueIdentifier::hash> _streamConnections{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::DescriptorIndex, ControllerManager::StreamInputErrorCounters>, la::avdecc::UniqueIdentifier::hash> _streamInputErrorCounters{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, StreamDataState>, la::avdecc::UniqueIdentifier::hash> _streamDataStates{}; // Stream data loss rule state, connected streams with a FRAMES_RX counter only
+	std::function<std::chrono::steady_clock::time_point()> _monotonicClock{ &steadyClockNow }; // Arrival time source of the counter notifications (overridden by the unit tests)
 	std::unordered_map<la::avdecc::UniqueIdentifier, ControllerManager::StatisticsErrorCounters, la::avdecc::UniqueIdentifier::hash> _statisticsErrorCounters{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, bool, la::avdecc::UniqueIdentifier::hash> _redundancyWarnings{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, bool>, la::avdecc::UniqueIdentifier::hash> _latencyErrors{};
@@ -1129,6 +1342,16 @@ EventJournal::EventJournal()
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters)
 		{
 			_pImpl->handleClockDomainCountersChanged(entityID, clockDomainIndex, counters);
+		});
+	connect(&manager, &ControllerManager::streamInputCountersChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters)
+		{
+			_pImpl->handleStreamInputCountersChanged(entityID, streamIndex, counters);
+		});
+	connect(&manager, &ControllerManager::streamFormatChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const)
+		{
+			_pImpl->handleStreamFormatChanged(entityID, descriptorType, streamIndex);
 		});
 	connect(&manager, &ControllerManager::streamInputErrorCounterChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, ControllerManager::StreamInputErrorCounters const& errorCounters)
@@ -1235,6 +1458,8 @@ QString EventJournal::categoryToString(Category const category) noexcept
 			return "Latency";
 		case Category::Redundancy:
 			return "Redundancy";
+		case Category::Streaming:
+			return "Streaming";
 		default:
 			return "Unknown";
 	}
@@ -1356,6 +1581,11 @@ void EventJournal::setSessionMetadata(QString const& key, QString const& value) 
 bool EventJournal::exportCurrentSession(QString const& filePath) noexcept
 {
 	return _pImpl->exportSession(filePath);
+}
+
+void EventJournal::setMonotonicClock(std::function<std::chrono::steady_clock::time_point()> clock) noexcept
+{
+	_pImpl->_monotonicClock = clock ? std::move(clock) : std::function<std::chrono::steady_clock::time_point()>{ &steadyClockNow };
 }
 
 void EventJournal::clearCurrentSession() noexcept
