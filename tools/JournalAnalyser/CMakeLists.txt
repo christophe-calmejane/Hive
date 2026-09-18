@@ -66,10 +66,6 @@ add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE ${HEADER_FILES_COMMON} ${HEAD
 # Setup common options
 cu_setup_executable_options(${PROJECT_NAME})
 
-if(ENABLE_HIVE_FEATURE_SPARKLE)
-	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
-endif()
-
 # Link libraries (the Hive static library provides the Event Journal viewer, the Entity Inspector, the Network Graph and the application/settings plumbing)
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt${QT_MAJOR_VERSION}::Widgets Hive_static)
 

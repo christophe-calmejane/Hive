@@ -19,10 +19,6 @@
 
 #pragma once
 
-#ifdef USE_SPARKLE
-#	include "sparkleHelper/sparkleHelper.hpp"
-#endif // USE_SPARKLE
-
 // QtMate Library
 #include <QtMate/flow/flowConnection.hpp>
 #include <QtMate/flow/flowDefs.hpp>

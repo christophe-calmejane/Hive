@@ -127,7 +127,6 @@ set(HEADER_FILES_COMMON
 	discoveredEntitiesView.hpp
 	firmwareUploadDialog.hpp
 	multiFirmwareUpdateDialog.hpp
-	mainWindow.hpp
 	aecpCommandComboBox.hpp
 	aecpCommandSlider.hpp
 	aecpCommandSpinBox.hpp
@@ -220,7 +219,6 @@ set(SOURCE_FILES_COMMON
 	multiFirmwareUpdateDialog.cpp
 	loggerView.cpp
 	discoveredEntitiesView.cpp
-	mainWindow.cpp
 	settingsDialog.cpp
 	controlledEntityTreeWidget.cpp
 	controlledEntityTreeWidgetItemDelegate.cpp
@@ -246,11 +244,20 @@ set(UI_FILES_COMMON
 	loggerView.ui
 	firmwareUploadDialog.ui
 	multiFirmwareUpdateDialog.ui
-	mainWindow.ui
+)
+
+# Application only files: the main window (and its update check through SparkleHelper) belongs to Hive itself, not to the static library reused by the tools and the unit tests
+set(HEADER_FILES_APP
+	mainWindow.hpp
 )
 
 set(SOURCE_FILES_APP
 	main.cpp
+	mainWindow.cpp
+)
+
+set(UI_FILES_APP
+	mainWindow.ui
 )
 
 # OS-specific files and options
@@ -266,11 +273,11 @@ else()
 endif()
 
 # Group source files
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON} ${HEADER_FILES_APP})
 source_group("Header Files\\\\Generated" FILES ${HEADER_FILES_GENERATED})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files" FILES ${SOURCE_FILES_COMMON} ${SOURCE_FILES_APP})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Source Files\\OS-Dep Files" FILES ${OSDEP_SOURCE_FILES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "UI Files" FILES ${UI_FILES_COMMON} ${UI_FILES_APP})
 source_group(TREE ${HIVE_RESOURCES_FOLDER} PREFIX "Resource Files" FILES ${RESOURCE_FILES})
 source_group("Resource Files\\\\Generated" FILES ${RESOURCE_FILES_GENERATED})
 source_group("Configure Input Files" FILES ${CONFIGURE_IN_FILES})
@@ -298,13 +305,6 @@ target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widge
 if(ADD_LINK_LIBS)
 	target_link_libraries(${PROJECT_NAME}_static PUBLIC ${ADD_LINK_LIBS})
 endif()
-if(ENABLE_HIVE_FEATURE_SPARKLE)
-	target_compile_definitions(${PROJECT_NAME}_static PUBLIC USE_SPARKLE)
-	# Link with SparkleHelper
-	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
-	target_link_libraries(${PROJECT_NAME}_static PUBLIC SparkleHelper::lib)
-endif()
-
 # Include directories
 target_include_directories(${PROJECT_NAME}_static
 	PUBLIC
@@ -314,7 +314,7 @@ target_include_directories(${PROJECT_NAME}_static
 
 # Application
 if(BUILD_HIVE_APPLICATION)
-	add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE ${HEADER_FILES_GENERATED} ${SOURCE_FILES_APP} ${RESOURCE_FILES} ${RESOURCE_FILES_GENERATED})
+	add_executable(${PROJECT_NAME} WIN32 MACOSX_BUNDLE ${HEADER_FILES_GENERATED} ${HEADER_FILES_APP} ${SOURCE_FILES_APP} ${UI_FILES_APP} ${RESOURCE_FILES} ${RESOURCE_FILES_GENERATED})
 
 	# Setup common options
 	cu_setup_executable_options(${PROJECT_NAME})
@@ -327,8 +327,24 @@ if(BUILD_HIVE_APPLICATION)
 	# Link libraries
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_static)
 
-	# Set auto RCC
+	# The main window includes the widgets of the static library, whose uic generated headers live in the autogen directory of that library (per configuration with multi-config generators)
+	if(CMAKE_CONFIGURATION_TYPES)
+		target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_static_autogen/include_$<CONFIG>")
+	else()
+		target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}_static_autogen/include")
+	endif()
+
+	# Update check: only the main application detects the updates of the installed package, so only it links SparkleHelper (and ships the Sparkle framework in its bundle)
+	if(ENABLE_HIVE_FEATURE_SPARKLE)
+		target_compile_definitions(${PROJECT_NAME} PRIVATE USE_SPARKLE)
+		fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
+		target_link_libraries(${PROJECT_NAME} PRIVATE SparkleHelper::lib)
+	endif()
+
+	# Automatically generate MOC, UI and RCC
 	set_target_properties(${PROJECT_NAME} PROPERTIES
+		AUTOMOC ON
+		AUTOUIC ON
 		AUTORCC ON
 	)
 
@@ -356,15 +372,24 @@ endif()
 ################
 ################
 ################
-# Temporarily reduce warning level
+# Temporarily reduce warning level (the application target compiles the main window, which was written under the reduced level of the static library)
+set(REDUCED_WARNING_TARGETS ${PROJECT_NAME}_static)
+if(BUILD_HIVE_APPLICATION)
+	list(APPEND REDUCED_WARNING_TARGETS ${PROJECT_NAME})
+endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang") # Clang and AppleClang
-	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-everything)
+	foreach(REDUCED_WARNING_TARGET ${REDUCED_WARNING_TARGETS})
+		target_compile_options(${REDUCED_WARNING_TARGET} PRIVATE -W -Wno-everything)
+	endforeach()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	target_compile_options(${PROJECT_NAME}_static PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-unused-parameter -Wno-maybe-uninitialized)
+	foreach(REDUCED_WARNING_TARGET ${REDUCED_WARNING_TARGETS})
+		target_compile_options(${REDUCED_WARNING_TARGET} PRIVATE -W -Wno-unused-variable -Wno-unused-but-set-variable -Wno-ignored-qualifiers -Wno-sign-compare -Wno-unused-parameter -Wno-maybe-uninitialized)
+	endforeach()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	# Don't use Wall on MSVC, it prints too many stupid warnings
-	target_compile_options(${PROJECT_NAME}_static PRIVATE /W3)
-	target_compile_options(${PROJECT_NAME} PRIVATE /W3)
+	foreach(REDUCED_WARNING_TARGET ${REDUCED_WARNING_TARGETS})
+		target_compile_options(${REDUCED_WARNING_TARGET} PRIVATE /W3)
+	endforeach()
 else()
 	message(FATAL_ERROR "Unsupported Compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()

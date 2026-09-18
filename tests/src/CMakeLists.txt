@@ -20,10 +20,6 @@ set(TESTS_SOURCE
 # Define target
 add_executable(Tests MACOSX_BUNDLE ${TESTS_SOURCE})
 
-if(ENABLE_HIVE_FEATURE_SPARKLE)
-	fixup_sparkleHelper_dependencies() # Temporary fix to resolve SparkleHelper transitive dependencies
-endif()
-
 # Setup common options
 cu_setup_executable_options(Tests)
 
