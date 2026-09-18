@@ -36,6 +36,7 @@
 #include <set>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace hive
 {
@@ -530,8 +531,8 @@ public:
 			return;
 		}
 
-		auto const lockState = computeClockLockState(counters);
-		if (!lockState)
+		auto const newState = makeClockLockState(counters);
+		if (!newState)
 		{
 			return;
 		}
@@ -541,22 +542,69 @@ public:
 		if (it == states.end())
 		{
 			// No baseline (entity without counters at enumeration time): silently store
-			states[clockDomainIndex] = *lockState;
+			states[clockDomainIndex] = *newState;
 			return;
 		}
-		if (it->second == *lockState)
-		{
-			return;
-		}
-		it->second = *lockState;
+		auto const previousState = it->second;
+		it->second = *newState;
 
-		if (*lockState)
+		// A counter going backwards means the device rebooted or its counters were reset: the increments are meaningless, only the resulting lock state can be compared
+		auto const countersReset = newState->lockedCounter < previousState.lockedCounter || newState->unlockedCounter < previousState.unlockedCounter;
+		auto const lockedIncrement = countersReset ? la::avdecc::entity::model::DescriptorCounter{ 0u } : newState->lockedCounter - previousState.lockedCounter;
+		auto const unlockedIncrement = countersReset ? la::avdecc::entity::model::DescriptorCounter{ 0u } : newState->unlockedCounter - previousState.unlockedCounter;
+
+		// The counters are only notified once in a while, so the clock may have unlocked and relocked (possibly several times) between two notifications without the derived lock state ever changing.
+		// Replay the transitions implied by the increments, in the only order consistent with an alternating unlock/lock sequence starting from the previous state, so every unlock the device counted ends up in the journal.
+		auto transitions = std::vector<bool>{}; // Lock state resulting from each transition, in order
+		auto isLocked = previousState.isLocked;
+		auto remainingLocks = lockedIncrement;
+		auto remainingUnlocks = unlockedIncrement;
+		while ((isLocked && remainingUnlocks > 0u) || (!isLocked && remainingLocks > 0u))
 		{
-			addEvent(Category::MediaClock, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), "Media clock locked");
+			if (isLocked)
+			{
+				--remainingUnlocks;
+			}
+			else
+			{
+				--remainingLocks;
+			}
+			isLocked = !isLocked;
+			transitions.push_back(isLocked);
 		}
-		else
+		// Whatever the increments said, the journaled state must end on the lock state derived from the counters (same rule as the Discovered Entities list)
+		if (isLocked != newState->isLocked)
 		{
-			addEvent(Category::MediaClock, Severity::Error, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), "Media clock unlocked");
+			isLocked = newState->isLocked;
+			transitions.push_back(isLocked);
+		}
+		if (transitions.empty())
+		{
+			return;
+		}
+
+		// A transition is inferred when it could not have been observed by comparing the lock states before and after the notification: all of them when the state did not change, all but the last one otherwise
+		auto const stateChanged = previousState.isLocked != newState->isLocked;
+		for (auto index = std::size_t{ 0u }; index < transitions.size(); ++index)
+		{
+			auto const isInferred = !stateChanged || index + 1u < transitions.size();
+			auto details = QJsonObject{};
+			details["locked_counter"] = static_cast<qint64>(newState->lockedCounter);
+			details["unlocked_counter"] = static_cast<qint64>(newState->unlockedCounter);
+			details["locked_increment"] = static_cast<qint64>(lockedIncrement);
+			details["unlocked_increment"] = static_cast<qint64>(unlockedIncrement);
+			if (isInferred)
+			{
+				details["inferred"] = true;
+			}
+			if (transitions[index])
+			{
+				addEvent(Category::MediaClock, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), "Media clock locked", details);
+			}
+			else
+			{
+				addEvent(Category::MediaClock, Severity::Error, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), "Media clock unlocked", details);
+			}
 		}
 	}
 
@@ -908,14 +956,22 @@ public:
 		return subject;
 	}
 
-	/** Computes the media clock lock state from clock domain counters (same rule as the Discovered Entities list). Returns std::nullopt if the counters are not available. */
-	static std::optional<bool> computeClockLockState(la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept
+	/** Media clock lock tracking state of a clock domain: the lock state derived from the counters, and the counter values it was derived from. */
+	struct ClockLockState
+	{
+		bool isLocked{ false };
+		la::avdecc::entity::model::DescriptorCounter lockedCounter{ 0u };
+		la::avdecc::entity::model::DescriptorCounter unlockedCounter{ 0u };
+	};
+
+	/** Builds the media clock lock tracking state from clock domain counters (the domain is locked when it locked more times than it unlocked, same rule as the Discovered Entities list). Returns std::nullopt if the counters are not available. */
+	static std::optional<ClockLockState> makeClockLockState(la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept
 	{
 		auto const itLocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Locked);
 		auto const itUnlocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Unlocked);
 		if (itLocked != counters.end() && itUnlocked != counters.end())
 		{
-			return itLocked->second > itUnlocked->second;
+			return ClockLockState{ itLocked->second > itUnlocked->second, itLocked->second, itUnlocked->second };
 		}
 		return std::nullopt;
 	}
@@ -938,7 +994,7 @@ public:
 			{
 				if (clockDomainNode.dynamicModel.counters)
 				{
-					if (auto const lockState = computeClockLockState(*clockDomainNode.dynamicModel.counters))
+					if (auto const lockState = makeClockLockState(*clockDomainNode.dynamicModel.counters))
 					{
 						_clockLockStates[entityID][clockDomainIndex] = *lockState;
 					}
@@ -998,7 +1054,7 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, QString, la::avdecc::UniqueIdentifier::hash> _entityNames{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::pair<la::avdecc::UniqueIdentifier, std::uint8_t>>, la::avdecc::UniqueIdentifier::hash> _gptpStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>, la::avdecc::UniqueIdentifier::hash> _linkStatuses{};
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, bool>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, ClockLockState>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamInputConnectionInfo>, la::avdecc::UniqueIdentifier::hash> _streamConnections{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::DescriptorIndex, ControllerManager::StreamInputErrorCounters>, la::avdecc::UniqueIdentifier::hash> _streamInputErrorCounters{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, ControllerManager::StatisticsErrorCounters, la::avdecc::UniqueIdentifier::hash> _statisticsErrorCounters{};

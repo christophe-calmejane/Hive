@@ -13,6 +13,7 @@ find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Test REQUIRED)
 set(TESTS_SOURCE
 	main.cpp
 	connectionMatrix_tests.cpp
+	eventJournal_tests.cpp
 	networkTopology_tests.cpp
 )
 
