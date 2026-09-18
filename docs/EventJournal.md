@@ -57,20 +57,20 @@ CREATE TABLE events (
     details TEXT,                        -- additional details, JSON object
     level TEXT NOT NULL DEFAULT 'user'   -- user, diagnostic (version 2)
 );
-CREATE TABLE snapshots (                 -- version 2, serialized entity models (empty until the snapshots are recorded, see the evolution plan)
+CREATE TABLE snapshots (                 -- version 2, serialized entity models (see "Entity snapshots" below)
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp INTEGER NOT NULL,
     entity_id TEXT NOT NULL,
     reason TEXT NOT NULL,                -- online, session_start, manual
-    format TEXT NOT NULL,                -- serialization format identifier
-    data BLOB NOT NULL,
+    format TEXT NOT NULL,                -- ave-msgpack-zlib
+    data BLOB NOT NULL,                  -- the serialized entity, compressed
     uncompressed_size INTEGER NOT NULL
 );
 CREATE INDEX idx_events_timestamp ON events (timestamp);
 CREATE INDEX idx_snapshots_entity ON snapshots (entity_id, timestamp);
 ```
 
-Metadata keys: `schema_version`, `hive_version`, `hive_build`, `la_avdecc_version`, `os`, `computer_name`, `started_utc`, `stopped_utc` (written on clean stop only: a file without it was interrupted), `recording_level_at_start`, `interface_id`, `interface_name`, and in dual-PI (redundant controller) mode `secondary_interface_id`, `secondary_interface_name`.
+Metadata keys: `schema_version`, `hive_version`, `hive_build`, `la_avdecc_version`, `os`, `computer_name`, `started_utc`, `stopped_utc` (written on clean stop only: a file without it was interrupted), `recording_level_at_start`, `snapshot_format`, `snapshots_count`, `snapshots_bytes`, `snapshots_serialization_ms` (size and cost figures of the snapshots, updated as they are written), `interface_id`, `interface_name`, and in dual-PI (redundant controller) mode `secondary_interface_id`, `secondary_interface_name`.
 
 #### Compatibility rules
 
@@ -84,7 +84,17 @@ Metadata keys: `schema_version`, `hive_version`, `hive_build`, `la_avdecc_versio
 | Version | Introduced by       | Changes                                                                                                                                      | Reader behavior on older files                                     |
 | ------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 1       | Hive 1.5.0-beta1    | Initial schema (`metadata`, `entities`, `events`)                                                                                            | n/a                                                                |
-| 2       | Hive 1.5.0 (2026-09) | `events.level` column, `snapshots` table, metadata `recording_level_at_start`, `hive_build`, `la_avdecc_version`, `os`; `streaming` category | `level` read when the column exists (`PRAGMA table_info`), else `user` |
+| 2       | Hive 1.5.0 (2026-09) | `events.level` column, `snapshots` table, metadata `recording_level_at_start`, `hive_build`, `la_avdecc_version`, `os`, `snapshot_*`; `streaming` category; `Entity is online` details describe the entity; `gPTP AsPath changed` / `gPTP propagation delay changed` events | `level` read when the column exists (`PRAGMA table_info`), else `user`; no snapshots |
+
+### Entity snapshots
+
+A journal is self-contained: the full entity model of every entity is stored in the `snapshots` table when the entity comes online (`reason = online`, right after its baselines are seeded, the row id is referenced by the `snapshot_id` details key of the `Entity is online` event), for the entities already online when a recording starts (`session_start`), and on demand ("Snapshot Now" button of the dock, diagnostic recording only, `manual`, journaled as a `Snapshot of N entities taken` session event). Snapshots are written at both recording levels: they are what makes a journal usable without a network state dump.
+
+Format `ave-msgpack-zlib` (`EventJournal::SnapshotFormat`): the la_avdecc JSON serializer output with the flags of a full entity export (ADP, compatibility, dynamic and static models, Milan, state, statistics, diagnostics) in the `.ave` binary encoding (MessagePack), compressed with `qCompress` (zlib). la_avdecc only serializes to files, so the writer goes through a temporary file in the system temporary directory. Measured on the field rig dump (77 entities loaded in a virtual controller, release build): 5.84 MB serialized, 410 KB stored (max 9 KB per entity), 103 ms of total serialization time on the GUI thread (1.3 ms per entity), so no worker thread is needed. `EventJournal::loadSnapshotsIndex()` reads the index without the blobs and `loadSnapshotData()` returns one decompressed entity, ready for `ControllerManager::loadVirtualEntityFromJson()` with the `BinaryFormat` flag (through a temporary file again).
+
+The `Entity is online` event carries, in its `details`, the static description the analysis scripts need without decoding the snapshot: `entity_model_id`, `vendor` (OUI database), `firmware_version`, `milan_version` (Milan entities only), `avb_interfaces` (array of `{index, mac, clock_identity, grandmaster_id, priority1, as_path, propagation_delay}`, so the rack and branch of every plane is in the journal), `clock_domains` (array of `{index, clock_source_index, clock_source_stream_index}`, the last one only when the clock source is an input stream), `stream_inputs` (connected streams only, `{index, name, talker_entity_id, talker_stream_index}`), `snapshot_id` and `enumeration_time_ms`.
+
+The gPTP AsPath of an interface is journaled on change (`gPTP AsPath changed`, category `gptp`, severity `info`, user level, `details.previous_as_path` / `new_as_path`): a topology event. The propagation delay of a link jitters by a few nanoseconds between measurements (5 to 16 ns on the field rig), so its changes are journaled at diagnostic level only (`gPTP propagation delay changed`, `details.previous_propagation_delay` / `new_propagation_delay`).
 
 ### Recorded events
 
@@ -97,6 +107,7 @@ Metadata keys: `schema_version`, `hive_version`, `hive_build`, `la_avdecc_versio
 | Counters    | `streamInputErrorCounterChanged`, `statisticsErrorCounterChanged` (the counters Hive flags as errors); in dual-PI mode the statistics error counter increases are journaled from the per-counter signals instead, attributing each increase to the interface it occurred on | Error                         |
 | Media Clock | `clockDomainCountersChanged` (Locked/Unlocked transitions, same rule as the Discovered Entities list, including the transitions inferred from the counter increments, see below)                                                                                         | Error / Recovered             |
 | gPTP        | `gptpChanged` (grandmaster or domain change)                                                                                                                                                                                                                                | Warning                       |
+| gPTP        | `asPathChanged` (topology change, user level), `avbInterfaceInfoChanged` (propagation delay change, diagnostic level)                                                                                                                                                       | Info                          |
 | Link        | `avbInterfaceLinkStatusChanged`                                                                                                                                                                                                                                             | Error (down) / Recovered (up) |
 | Latency     | `streamInputLatencyErrorChanged`                                                                                                                                                                                                                                            | Error / Recovered             |
 | Redundancy  | `redundancyWarningChanged`                                                                                                                                                                                                                                                  | Error / Recovered             |
@@ -105,7 +116,7 @@ Metadata keys: `schema_version`, `hive_version`, `hive_build`, `la_avdecc_versio
 | Redundancy  | `entityRedundantInterfaceOffline` / `entityRedundantInterfaceOnline` (entity lost/recovered on one of its redundant interfaces while remaining online on the other; the online notification is only journaled as a recovery, not during normal discovery)                   | Warning / Recovered           |
 | Streaming   | `streamInputCountersChanged` (`FRAMES_RX` increments of the connected stream inputs: `Stream data loss` when frames were missing during the interval, `Stream data monitoring started` (diagnostic level) when the reference of a stream is learned, see below)             | Error / Info                  |
 
-All the events of this table are `user` level, except `Stream data monitoring started` (`diagnostic`).
+All the events of this table are `user` level, except `Stream data monitoring started` and `gPTP propagation delay changed` (`diagnostic`).
 
 The `Recovered` severity marks the end of a previously reported error condition, so the duration of an incident (clock unlock, link down, ...) is directly visible in the journal.
 
@@ -161,7 +172,7 @@ The Export button of the viewer offers two formats: a journal file snapshot (liv
 - standalone `EntityInspector` windows, opened by double-clicking an event (one window per entity, raised when already open);
 - the `NetworkGraphView` in a dock widget.
 
-The entities are hosted by a **virtual controller** (`ProtocolInterface::Type::Virtual`, no network access), populated from a network state file (`File > Load Network State`, or `.ans`/`.ave` files given on the command line or dropped on the window). The inspector and the graph therefore display the state captured in that file, until journals embed their own entity snapshots (see the evolution plan). Double-clicking an event whose entity is not loaded shows a hint in the status bar.
+The entities are hosted by a **virtual controller** (`ProtocolInterface::Type::Virtual`, no network access), populated from the entity snapshots stored in the journal (the last snapshot of every entity, so the inspector and the graph show the network as last seen during the session; the replay at the time of a selected event is the next step of the evolution plan). A network state file (`File > Load Network State`, or `.ans`/`.ave` files given on the command line or dropped on the window) replaces the snapshot entities, as an explicit override, and is the only source for journals predating the snapshots (schema version 1). Double-clicking an event whose entity is not loaded shows a hint in the status bar.
 
 The application runs **one instance per journal**: journal files are given as positional command line arguments, and a journal opened while one is already loaded (File > Open, drag and drop, or a macOS FileOpen event, which Launch Services always routes to the running instance) is started in a new process (`QProcess::startDetached` on the application executable). The analyser keeps its own settings file (`KikiSoft/JournalAnalyser.ini`, same location scheme as Hive) for the theme color, appearance and graph layout, so Hive's preferences are never touched.
 

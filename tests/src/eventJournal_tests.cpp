@@ -30,6 +30,7 @@
 #include <QDeadlineTimer>
 #include <QDir>
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSqlDatabase>
@@ -48,7 +49,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
-#include <optional>
+#include <iostream>
+#include <string>
 #include <vector>
 
 namespace
@@ -64,6 +66,12 @@ constexpr auto TestStreamIndex = la::avdecc::entity::model::StreamIndex{ 0u };
 constexpr auto FramesPerSecond = la::avdecc::entity::model::DescriptorCounter{ 8000u }; // One second worth of frames of the simulated stream (AAF class A)
 constexpr auto OneSecond = std::chrono::milliseconds{ 1000 };
 constexpr auto LearningSamples = std::size_t{ 10u }; // Number of increments the rule needs before evaluating a stream
+
+// Identities of the 'data/networkTopology/1-ZeroPropagationDelay_GrandmasterAdjacency.json' test file (five entities with an AsPath and a propagation delay)
+constexpr auto TopologyFixturePath = "data/networkTopology/1-ZeroPropagationDelay_GrandmasterAdjacency.json";
+constexpr auto TopologyFixtureEntityCount = std::size_t{ 5u };
+constexpr auto TopologyGrandmasterClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000FFu };
+constexpr auto TopologyEntityA = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000001u }; // Attached to the grandmaster, 20 ns propagation delay
 
 // Journal files of every schema version, recorded (and anonymized) by the version of Hive that introduced the schema
 constexpr auto SchemaV1FixturePath = "data/eventJournal/schema_v1.hej"; // 31 events of a real dual interface session recorded by Hive 1.5.0-beta1
@@ -136,6 +144,12 @@ public:
 	/** Loads the connected fixture in the virtual controller, with the simulated clock installed, and waits until the journal has seeded the baselines of both entities. */
 	void loadConnectedFixture()
 	{
+		loadFixture(ConnectedFixturePath, 2u);
+	}
+
+	/** Loads a network state fixture in the virtual controller, with the simulated clock installed, and waits until the journal has processed the online event of every entity. */
+	void loadFixture(QString const& filePath, std::size_t const entityCount)
+	{
 		auto& journal = hive::modelsLibrary::EventJournal::getInstance();
 		journal.setMonotonicClock(
 			[this]()
@@ -148,17 +162,57 @@ public:
 
 		auto const onlineCountBefore = entityOnlineCount();
 		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
-		auto const flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
-		auto const [err, msg] = controllerManager.loadVirtualEntitiesFromJsonNetworkState(ConnectedFixturePath, flags);
+		auto const [err, msg] = controllerManager.loadVirtualEntitiesFromJsonNetworkState(filePath, fixtureLoadFlags());
 		ASSERT_EQ(la::avdecc::jsonSerializer::DeserializationError::NoError, err) << "Failed to load NetworkState file: " << msg;
+		waitForEntitiesOnline(onlineCountBefore + entityCount);
+	}
 
-		// The entities come online through queued signals: wait until the journal has processed both
+	/** Waits until the journal has processed the given total number of "Entity is online" events. */
+	void waitForEntitiesOnline(std::size_t const expectedCount)
+	{
 		auto const deadline = QDeadlineTimer{ 5000 };
-		while (!deadline.hasExpired() && entityOnlineCount() < onlineCountBefore + 2u)
+		while (!deadline.hasExpired() && entityOnlineCount() < expectedCount)
 		{
 			QTest::qWait(10);
 		}
-		ASSERT_EQ(onlineCountBefore + 2u, entityOnlineCount()) << "The fixture entities did not come online";
+		ASSERT_EQ(expectedCount, entityOnlineCount()) << "The fixture entities did not come online";
+	}
+
+	/** Flags used to load the fixtures (the same as Hive's network state import, text format). */
+	static la::avdecc::entity::model::jsonSerializer::Flags fixtureLoadFlags() noexcept
+	{
+		return la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics };
+	}
+
+	/** Gets the details of the last "Entity is online" event journaled since the fixture was loaded for the given entity (an empty object if none). */
+	QJsonObject entityOnlineDetails(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto details = QJsonObject{};
+		auto const sessionEvents = hive::modelsLibrary::EventJournal::getInstance().currentSessionEvents();
+		for (auto index = _fixtureEventsOffset; index < sessionEvents.size(); ++index)
+		{
+			auto const& event = sessionEvents[index];
+			if (event.category == hive::modelsLibrary::EventJournal::Category::Entity && event.entityID == entityID && event.summary == "Entity is online")
+			{
+				details = QJsonDocument::fromJson(event.details.toUtf8()).object();
+			}
+		}
+		return details;
+	}
+
+	/** Gets the events of the given category journaled since the fixture was loaded for the given entity, in journal order. */
+	std::vector<hive::modelsLibrary::EventJournal::Event> eventsSince(hive::modelsLibrary::EventJournal::Category const category, la::avdecc::UniqueIdentifier const entityID) const noexcept
+	{
+		auto events = std::vector<hive::modelsLibrary::EventJournal::Event>{};
+		auto const sessionEvents = hive::modelsLibrary::EventJournal::getInstance().currentSessionEvents();
+		for (auto index = _fixtureEventsOffset; index < sessionEvents.size(); ++index)
+		{
+			if (sessionEvents[index].category == category && sessionEvents[index].entityID == entityID)
+			{
+				events.push_back(sessionEvents[index]);
+			}
+		}
+		return events;
 	}
 
 	/** Gets the FRAMES_RX value the journal seeded as baseline for the given stream (the value stored in the fixture). */
@@ -914,4 +968,187 @@ TEST_F(EventJournal_F, Session_WriterRoundTrip)
 			return event.level == EventJournal::Level::Diagnostic;
 		}));
 	EXPECT_EQ(QString{ "diagnostic" }, session->metadata.value("recording_level_at_start"));
+}
+
+/* *********************************
+   Snapshots and entity description
+*/
+// Every entity coming online gets a snapshot referenced by its 'Entity is online' event, which loads back as the same virtual entity
+TEST_F(EventJournal_F, Snapshots_WrittenAtEntityOnline_AndLoadBack)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto& journal = EventJournal::getInstance();
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+
+	auto const details = entityOnlineDetails(entityID);
+	ASSERT_TRUE(details.contains("snapshot_id"));
+	auto const snapshotID = details.value("snapshot_id").toVariant().toLongLong();
+	EXPECT_GT(snapshotID, 0);
+
+	auto const filePath = QDir::temp().filePath("HiveEventJournalTests_snapshots.hej");
+	QFile::remove(filePath);
+	ASSERT_TRUE(journal.exportCurrentSession(filePath));
+
+	auto const index = EventJournal::loadSnapshotsIndex(filePath);
+	auto const it = std::find_if(index.begin(), index.end(),
+		[snapshotID](EventJournal::SnapshotInfo const& info)
+		{
+			return info.id == snapshotID;
+		});
+	ASSERT_NE(index.end(), it);
+	EXPECT_EQ(entityID, it->entityID);
+	EXPECT_EQ(QString{ "online" }, it->reason);
+	EXPECT_EQ(QString{ EventJournal::SnapshotFormat }, it->format);
+	EXPECT_GT(it->uncompressedSize, 0);
+	EXPECT_GT(it->compressedSize, 0);
+	EXPECT_LT(it->compressedSize, it->uncompressedSize);
+	std::cout << "Snapshot of " << details.value("entity_model_id").toString().toStdString() << ": " << it->uncompressedSize << " bytes serialized, " << it->compressedSize << " bytes stored, session serialization time " << journal.currentSessionMetadata().value("snapshots_serialization_ms").toStdString() << " ms for " << journal.currentSessionMetadata().value("snapshots_count").toStdString() << " snapshots" << std::endl;
+
+	auto const data = EventJournal::loadSnapshotData(filePath, snapshotID);
+	ASSERT_EQ(it->uncompressedSize, data.size());
+	EXPECT_TRUE(EventJournal::loadSnapshotData(filePath, snapshotID + 1000).isEmpty());
+
+	// Replace the live entity with the one restored from the snapshot
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	ASSERT_TRUE(controllerManager.unloadVirtualEntity(entityID));
+	auto const deadline = QDeadlineTimer{ 5000 };
+	while (!deadline.hasExpired() && !!controllerManager.getControlledEntity(entityID))
+	{
+		QTest::qWait(10);
+	}
+	auto const snapshotFilePath = QDir::temp().filePath("HiveEventJournalTests_snapshot.ave");
+	{
+		auto file = QFile{ snapshotFilePath };
+		ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+		ASSERT_EQ(data.size(), file.write(data));
+	}
+	auto flags = fixtureLoadFlags();
+	flags.set(la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat);
+	flags.set(la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics);
+	auto const onlineCountBefore = entityOnlineCount();
+	auto const [err, msg] = controllerManager.loadVirtualEntityFromJson(snapshotFilePath, flags);
+	ASSERT_EQ(la::avdecc::jsonSerializer::DeserializationError::NoError, err) << "Failed to load the snapshot back: " << msg;
+	waitForEntitiesOnline(onlineCountBefore + 1u);
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		EXPECT_EQ(std::string{ "P1 152" }, controlledEntity->getEntityNode().dynamicModel.entityName.str());
+		EXPECT_EQ(la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected, controlledEntity->getStreamInputNode(0u, TestStreamIndex).dynamicModel.connectionInfo.state);
+	}
+	QFile::remove(snapshotFilePath);
+	QFile::remove(filePath);
+}
+
+// The 'Entity is online' details describe the entity (identity, firmware, interfaces, clock sources, connected streams), so the analysis needs no network state dump
+TEST_F(EventJournal_F, EntityOnline_DetailsDescribeTheEntity)
+{
+	loadConnectedFixture();
+	auto const details = entityOnlineDetails(la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID });
+	EXPECT_EQ(QString{ "0x001B9200030A0000" }, details.value("entity_model_id").toString());
+	EXPECT_FALSE(details.value("vendor").toString().isEmpty());
+	EXPECT_EQ(QString{ "2.12.0.48" }, details.value("firmware_version").toString());
+	EXPECT_TRUE(details.contains("enumeration_time_ms"));
+
+	auto const avbInterfaces = details.value("avb_interfaces").toArray();
+	ASSERT_EQ(1, avbInterfaces.size());
+	EXPECT_EQ(0, avbInterfaces[0].toObject().value("index").toInt());
+	EXPECT_FALSE(avbInterfaces[0].toObject().value("mac").toString().isEmpty());
+	EXPECT_FALSE(avbInterfaces[0].toObject().value("clock_identity").toString().isEmpty());
+	EXPECT_FALSE(avbInterfaces[0].toObject().value("grandmaster_id").toString().isEmpty());
+
+	auto const clockDomains = details.value("clock_domains").toArray();
+	ASSERT_EQ(1, clockDomains.size());
+	EXPECT_TRUE(clockDomains[0].toObject().contains("clock_source_index"));
+
+	auto const streamInputs = details.value("stream_inputs").toArray();
+	ASSERT_EQ(3, streamInputs.size());
+	for (auto const& value : streamInputs)
+	{
+		auto const stream = value.toObject();
+		EXPECT_EQ(QString{ "0x001B92FFFE02233B" }, stream.value("talker_entity_id").toString());
+		EXPECT_EQ(stream.value("index").toInt(), stream.value("talker_stream_index").toInt());
+		EXPECT_FALSE(stream.value("name").toString().isEmpty());
+	}
+	// The talker entity has no connected input
+	EXPECT_EQ(0, entityOnlineDetails(la::avdecc::UniqueIdentifier{ TalkerEntityID }).value("stream_inputs").toArray().size());
+
+	// AsPath and propagation delay come from the gPTP state of the interfaces
+	loadFixture(TopologyFixturePath, TopologyFixtureEntityCount);
+	auto const topologyDetails = entityOnlineDetails(la::avdecc::UniqueIdentifier{ TopologyEntityA });
+	auto const topologyInterfaces = topologyDetails.value("avb_interfaces").toArray();
+	ASSERT_EQ(1, topologyInterfaces.size());
+	auto const asPath = topologyInterfaces[0].toObject().value("as_path").toArray();
+	ASSERT_EQ(2, asPath.size());
+	EXPECT_EQ(QString{ "0x001122FFFE0000FF" }, asPath[0].toString());
+	EXPECT_EQ(QString{ "0x001122FFFE000001" }, asPath[1].toString());
+	EXPECT_EQ(20, topologyInterfaces[0].toObject().value("propagation_delay").toInt());
+}
+
+// An AsPath change is a user level topology event carrying the previous and new paths; a propagation delay change is a diagnostic event
+TEST_F(EventJournal_F, Gptp_AsPathAndPropagationDelayChanges_AreJournaled)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ TopologyEntityA };
+	loadFixture(TopologyFixturePath, TopologyFixtureEntityCount);
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// Same path as the baseline: silent
+	auto samePath = la::avdecc::entity::model::AsPath{};
+	samePath.sequence = { la::avdecc::UniqueIdentifier{ TopologyGrandmasterClockIdentity }, la::avdecc::UniqueIdentifier{ TopologyEntityA } };
+	emit controllerManager.asPathChanged(entityID, 0u, samePath);
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Gptp, entityID).empty());
+
+	// A new hop appeared between the grandmaster and the entity
+	auto newPath = la::avdecc::entity::model::AsPath{};
+	newPath.sequence = { la::avdecc::UniqueIdentifier{ TopologyGrandmasterClockIdentity }, la::avdecc::UniqueIdentifier{ 0x001122FFFE0000D0u }, la::avdecc::UniqueIdentifier{ TopologyEntityA } };
+	emit controllerManager.asPathChanged(entityID, 0u, newPath);
+	auto events = eventsSince(EventJournal::Category::Gptp, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "gPTP AsPath changed" }, events[0].summary);
+	EXPECT_EQ(EventJournal::Severity::Info, events[0].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	EXPECT_EQ(QString{ "AVB Interface 0" }, events[0].subject);
+	auto details = QJsonDocument::fromJson(events[0].details.toUtf8()).object();
+	EXPECT_EQ(2, details.value("previous_as_path").toArray().size());
+	ASSERT_EQ(3, details.value("new_as_path").toArray().size());
+	EXPECT_EQ(QString{ "0x001122FFFE0000D0" }, details.value("new_as_path").toArray()[1].toString());
+
+	// Propagation delay: same value silent, new value journaled at diagnostic level
+	auto info = la::avdecc::entity::model::AvbInterfaceInfo{};
+	info.propagationDelay = 20u;
+	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Gptp, entityID).size());
+	info.propagationDelay = 25u;
+	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
+	events = eventsSince(EventJournal::Category::Gptp, entityID);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "gPTP propagation delay changed" }, events[1].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[1].level);
+	details = QJsonDocument::fromJson(events[1].details.toUtf8()).object();
+	EXPECT_EQ(20, details.value("previous_propagation_delay").toInt());
+	EXPECT_EQ(25, details.value("new_propagation_delay").toInt());
+}
+
+// A manual snapshot stores every online entity and journals a session event
+TEST_F(EventJournal_F, Snapshots_Manual_StoresEveryOnlineEntity)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto& journal = EventJournal::getInstance();
+	loadConnectedFixture();
+	auto const countBefore = journal.currentSessionMetadata().value("snapshots_count").toULongLong();
+	EXPECT_EQ(std::size_t{ 2u }, journal.snapshotAllEntities());
+	EXPECT_EQ(countBefore + 2u, journal.currentSessionMetadata().value("snapshots_count").toULongLong());
+	EXPECT_EQ(QStringList{ "Snapshot of 2 entities taken" }, summariesSince(EventJournal::Category::Session));
+
+	auto const filePath = QDir::temp().filePath("HiveEventJournalTests_manualSnapshots.hej");
+	QFile::remove(filePath);
+	ASSERT_TRUE(journal.exportCurrentSession(filePath));
+	auto const index = EventJournal::loadSnapshotsIndex(filePath);
+	EXPECT_EQ(2, std::count_if(index.begin(), index.end(),
+								 [](EventJournal::SnapshotInfo const& info)
+								 {
+									 return info.reason == "manual";
+								 }));
+	QFile::remove(filePath);
 }

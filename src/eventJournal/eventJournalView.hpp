@@ -66,6 +66,7 @@ private:
 	void exportAsCsv();
 	void updateTimeRangeFilter();
 	void updateStatusLabel();
+	void updateSnapshotButton();
 	void handleRowsInserted(int const firstRow, int const lastRow);
 	void handleModelReset();
 	void handleSelectionChanged();
@@ -82,6 +83,7 @@ private:
 	QPushButton _exportButton{ "Export...", this };
 	QPushButton _clearButton{ "Clear", this };
 	QPushButton _recordDiagnosticButton{ "Record Diagnostic", this };
+	QPushButton _snapshotButton{ "Snapshot Now", this };
 	QLabel _schemaBannerLabel{ this };
 	QMenu _exportMenu{ this };
 	QAction* _exportJournalAction{ nullptr };

@@ -400,15 +400,98 @@ bool AnalyserWindow::loadJournal(QString const& filePath)
 	summary += QString{ ", schema version %1" }.arg(schemaVersion);
 	_journalSummaryLabel->setText(summary);
 
+	// The entity snapshots stored in the journal make it self-contained: they populate the virtual controller unless a network state file was already loaded (an explicit choice, kept as an override)
 	if (!_hasLoadedNetworkState)
 	{
-		statusBar()->showMessage("Load a network state file (File > Load Network State) to inspect the entities and display the Network Graph", 10000);
+		loadSnapshotEntities();
+	}
+	if (!_hasLoadedNetworkState)
+	{
+		statusBar()->showMessage("This journal has no entity snapshots: load a network state file (File > Load Network State) to inspect the entities and display the Network Graph", 10000);
 	}
 	return true;
 }
 
+void AnalyserWindow::loadSnapshotEntities()
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+
+	// The last snapshot of every entity gives the state of the network as last seen during the session (the replay at a given instant comes with the time cursor of the evolution plan)
+	auto latestSnapshots = std::unordered_map<la::avdecc::UniqueIdentifier, EventJournal::SnapshotInfo, la::avdecc::UniqueIdentifier::hash>{};
+	for (auto const& snapshot : EventJournal::loadSnapshotsIndex(_journalFilePath))
+	{
+		if (snapshot.format != EventJournal::SnapshotFormat)
+		{
+			continue;
+		}
+		auto const it = latestSnapshots.find(snapshot.entityID);
+		if (it == latestSnapshots.end() || it->second.timestamp <= snapshot.timestamp)
+		{
+			latestSnapshots[snapshot.entityID] = snapshot;
+		}
+	}
+	if (latestSnapshots.empty())
+	{
+		return;
+	}
+
+	// la_avdecc only loads virtual entities from files: go through a temporary file
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto const tempFilePath = QDir::temp().filePath(QString{ "JournalAnalyserSnapshot_%1.ave" }.arg(QCoreApplication::applicationPid()));
+	auto loadedCount = std::size_t{ 0u };
+	for (auto const& [entityID, snapshot] : latestSnapshots)
+	{
+		auto const data = EventJournal::loadSnapshotData(_journalFilePath, snapshot.id);
+		if (data.isEmpty())
+		{
+			continue;
+		}
+		{
+			auto file = QFile{ tempFilePath };
+			if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(data) != data.size())
+			{
+				continue;
+			}
+		}
+		auto flags = loadFlags();
+		auto [error, message] = manager.loadVirtualEntityFromJson(tempFilePath, flags);
+		if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+		{
+			// The snapshot is what the device exposed on the network: load it as it is
+			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+			std::tie(error, message) = manager.loadVirtualEntityFromJson(tempFilePath, flags);
+		}
+		if (!error)
+		{
+			_snapshotEntityIDs.push_back(entityID);
+			++loadedCount;
+		}
+	}
+	QFile::remove(tempFilePath);
+
+	if (loadedCount > 0u)
+	{
+		_hasLoadedNetworkState = true;
+		showNetworkGraph();
+		statusBar()->showMessage(QString{ "%1 entities loaded from the journal snapshots (%2 in the journal)" }.arg(loadedCount).arg(latestSnapshots.size()), 10000);
+		updatePlaceholder();
+	}
+}
+
+void AnalyserWindow::unloadSnapshotEntities()
+{
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	for (auto const entityID : _snapshotEntityIDs)
+	{
+		manager.unloadVirtualEntity(entityID);
+	}
+	_snapshotEntityIDs.clear();
+}
+
 void AnalyserWindow::loadNetworkState(QString const& filePath)
 {
+	// A network state file is an explicit override of the journal snapshots (the same entities cannot be loaded twice)
+	unloadSnapshotEntities();
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(filePath, loadFlags());
 	if (!!error)
@@ -424,6 +507,7 @@ void AnalyserWindow::loadNetworkState(QString const& filePath)
 
 void AnalyserWindow::loadVirtualEntity(QString const& filePath)
 {
+	unloadSnapshotEntities();
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto flags = loadFlags();
 	auto [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);

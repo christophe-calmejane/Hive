@@ -32,6 +32,7 @@
 #include <QStringList>
 
 #include <unordered_map>
+#include <vector>
 
 class EntityInspector;
 class EventJournalView;
@@ -40,7 +41,7 @@ class NetworkGraphView;
 /**
 * @brief Main window of the Journal Analyser: one Event Journal file, standalone Entity Inspectors and the Network Graph.
 * @details The window analyzes a single journal file (the application runs one instance per journal).
-*          The entities of the journal are inspected through a virtual controller populated from a network state file (File > Load Network State), which also feeds the Network Graph.
+*          The entities of the journal are inspected through a virtual controller populated from the entity snapshots stored in the journal (or from a network state file, File > Load Network State, which replaces them), which also feeds the Network Graph.
 */
 class AnalyserWindow : public QMainWindow
 {
@@ -79,6 +80,8 @@ private:
 	void applyAppearance(Qt::ColorScheme const appearance);
 	void updateStyleSheet();
 	bool loadJournal(QString const& filePath);
+	void loadSnapshotEntities();
+	void unloadSnapshotEntities();
 	void loadNetworkState(QString const& filePath);
 	void loadVirtualEntity(QString const& filePath);
 	void showNetworkGraph();
@@ -96,5 +99,6 @@ private:
 	QAction* _schemeLightAction{ nullptr };
 	QAction* _schemeDarkAction{ nullptr };
 	std::unordered_map<la::avdecc::UniqueIdentifier, EntityInspector*, la::avdecc::UniqueIdentifier::hash> _inspectors{};
+	std::vector<la::avdecc::UniqueIdentifier> _snapshotEntityIDs{}; // Entities loaded from the journal snapshots (unloaded when a network state file replaces them)
 	bool _hasLoadedNetworkState{ false };
 };

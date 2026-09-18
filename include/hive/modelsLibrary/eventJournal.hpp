@@ -22,6 +22,7 @@
 #include <la/avdecc/utils.hpp>
 #include <la/avdecc/internals/uniqueIdentifier.hpp>
 
+#include <QByteArray>
 #include <QObject>
 #include <QString>
 #include <QMap>
@@ -55,6 +56,9 @@ public:
 
 	/** Schema version written by this version of the journal (see docs/EventJournal.md for the compatibility rules). */
 	static constexpr auto CurrentSchemaVersion = 2;
+
+	/** Format identifier of the entity snapshots written by this version: la_avdecc JSON serializer output encoded as MessagePack (the .ave binary format) then zlib compressed (qCompress). */
+	static constexpr auto SnapshotFormat = "ave-msgpack-zlib";
 
 	/** Functional category of a journaled event, used for filtering. */
 	enum class Category
@@ -114,6 +118,18 @@ public:
 		bool isNewerThanReader() const noexcept;
 	};
 
+	/** Index entry of an entity snapshot stored in a journal file (the serialized entity is loaded separately, see loadSnapshotData()). */
+	struct SnapshotInfo
+	{
+		qint64 id{ 0 }; /**< Row id, referenced by the 'snapshot_id' details key of the 'Entity is online' event */
+		qint64 timestamp{ 0 }; /**< Milliseconds since Unix epoch, UTC */
+		la::avdecc::UniqueIdentifier entityID{};
+		QString reason{}; /**< online, session_start or manual */
+		QString format{}; /**< Serialization format (see SnapshotFormat) */
+		qint64 uncompressedSize{ 0 }; /**< Size of the serialized entity before compression */
+		qint64 compressedSize{ 0 }; /**< Size of the stored blob */
+	};
+
 	/**
 	* @brief Gets the EventJournal singleton.
 	* @details The first call instantiates the journal and connects it to the ControllerManager, so this must be
@@ -140,6 +156,21 @@ public:
 	* @return The loaded session, or std::nullopt if the file could not be read.
 	*/
 	static std::optional<Session> loadSession(QString const& filePath) noexcept;
+
+	/**
+	* @brief Loads the index of the entity snapshots stored in a journal file, without their data.
+	* @param[in] filePath Path of the session file to read.
+	* @return The snapshots ordered by ascending timestamp (empty for files predating schema version 2, or without snapshots).
+	*/
+	static std::vector<SnapshotInfo> loadSnapshotsIndex(QString const& filePath) noexcept;
+
+	/**
+	* @brief Loads and decompresses the serialized entity of a snapshot.
+	* @param[in] filePath Path of the session file to read.
+	* @param[in] snapshotID Row id of the snapshot (SnapshotInfo::id).
+	* @return The serialized entity in the .ave binary format (MessagePack), ready for ControllerManager::loadVirtualEntityFromJson with the BinaryFormat flag, or an empty array on error.
+	*/
+	static QByteArray loadSnapshotData(QString const& filePath, qint64 const snapshotID) noexcept;
 
 	/** Returns true if a session is currently being recorded. */
 	bool isRecording() const noexcept;
@@ -178,6 +209,13 @@ public:
 	* @return True if the export succeeded. Always fails if not recording.
 	*/
 	bool exportCurrentSession(QString const& filePath) noexcept;
+
+	/**
+	* @brief Stores a snapshot of every online entity in the current session (reason 'manual').
+	* @details Gives the replay a fresh anchor on demand. Journals a session event with the number of entities snapshotted. No-op if not recording.
+	* @return The number of entities snapshotted.
+	*/
+	std::size_t snapshotAllEntities() noexcept;
 
 	/**
 	* @brief Overrides the monotonic clock used to timestamp the arrival of the counter notifications (stream data loss rule).

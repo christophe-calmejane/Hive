@@ -26,7 +26,9 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSqlDatabase>
@@ -53,6 +55,42 @@ namespace
 {
 constexpr auto MaxJournalFiles = 50; // Maximum number of automatically created session files kept on disk
 constexpr auto WriterConnectionName = "HiveEventJournalWriter";
+
+/** Serialization flags of the entity snapshots: the whole entity (same content as a full entity export), in the .ave binary format. */
+la::avdecc::entity::model::jsonSerializer::Flags snapshotSerializationFlags() noexcept
+{
+	return la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics, la::avdecc::entity::model::jsonSerializer::Flag::BinaryFormat };
+}
+
+/** Builds the JSON representation of a gPTP AsPath (the clock identities from the grandmaster down to the entity). */
+QJsonArray asPathToJson(la::avdecc::entity::model::AsPath const& asPath) noexcept
+{
+	auto array = QJsonArray{};
+	for (auto const& clockIdentity : asPath.sequence)
+	{
+		array.push_back(helper::uniqueIdentifierToString(clockIdentity));
+	}
+	return array;
+}
+
+/** Opens a journal file for reading on the given connection, falling back to a read-write open (which performs WAL recovery) for sessions that were interrupted by a crash. */
+bool openJournalForReading(QSqlDatabase& db, QString const& filePath) noexcept
+{
+	db.setDatabaseName(filePath);
+	db.setConnectOptions("QSQLITE_OPEN_READONLY");
+	auto isOpen = QFile::exists(filePath) && db.open();
+	if (isOpen && !QSqlQuery{ db }.exec("SELECT count(*) FROM events"))
+	{
+		db.close();
+		isOpen = false;
+	}
+	if (!isOpen)
+	{
+		db.setConnectOptions();
+		isOpen = QFile::exists(filePath) && db.open();
+	}
+	return isOpen;
+}
 
 // Stream data loss rule (see docs/EventJournal.md): a bound Stream Input receiving data increments FRAMES_RX at least once per second and is notified at most once per second (Milan 1.2 tables 5.6 and 5.22), so between two notifications the increment is at least one second worth of frames unless frames were missing
 constexpr auto StreamDataLearningWindow = std::size_t{ 30u }; // Number of increments kept per stream to learn the expected increment
@@ -303,6 +341,11 @@ public:
 		_upsertEntityQuery.prepare("INSERT OR REPLACE INTO entities (entity_id, name) VALUES (?, ?)");
 		_upsertMetadataQuery = QSqlQuery{ _db };
 		_upsertMetadataQuery.prepare("INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)");
+		_insertSnapshotQuery = QSqlQuery{ _db };
+		_insertSnapshotQuery.prepare("INSERT INTO snapshots (timestamp, entity_id, reason, format, data, uncompressed_size) VALUES (?, ?, ?, ?, ?, ?)");
+		_snapshotsCount = 0u;
+		_snapshotsBytes = 0u;
+		_snapshotsSerializationMs = 0;
 
 		setMetadata("schema_version", QString::number(EventJournal::CurrentSchemaVersion));
 		setMetadata("hive_version", QCoreApplication::applicationVersion());
@@ -311,9 +354,16 @@ public:
 		setMetadata("computer_name", helper::getComputerName());
 		setMetadata("started_utc", QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
 		setMetadata("recording_level_at_start", levelToKey(_recordingLevel));
+		setMetadata("snapshot_format", EventJournal::SnapshotFormat);
 
 		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Recording started");
 		emit _q->recordingStarted(_sessionFilePath);
+
+		// Entities already online when the recording starts get a snapshot too, so the journal is self-contained whatever the startup order
+		for (auto const entityID : onlineEntities())
+		{
+			writeSnapshot(entityID, "session_start");
+		}
 	}
 
 	void stopSession() noexcept
@@ -333,6 +383,7 @@ public:
 			_insertEventQuery = QSqlQuery{};
 			_upsertEntityQuery = QSqlQuery{};
 			_upsertMetadataQuery = QSqlQuery{};
+			_insertSnapshotQuery = QSqlQuery{};
 			_db.close();
 			_db = QSqlDatabase{};
 			QSqlDatabase::removeDatabase(WriterConnectionName);
@@ -439,6 +490,26 @@ public:
 		emit _q->recordingLevelChanged(level);
 	}
 
+	std::size_t snapshotAllEntities() noexcept
+	{
+		if (!isRecording())
+		{
+			return 0u;
+		}
+		auto count = std::size_t{ 0u };
+		for (auto const entityID : onlineEntities())
+		{
+			if (writeSnapshot(entityID, "manual"))
+			{
+				++count;
+			}
+		}
+		auto details = QJsonObject{};
+		details["entities"] = static_cast<qint64>(count);
+		addEvent(Category::Session, Severity::Info, {}, {}, {}, QString{ "Snapshot of %1 entities taken" }.arg(count), details);
+		return count;
+	}
+
 	/* ************************************************************ */
 	/* ControllerManager events handlers                            */
 	/* ************************************************************ */
@@ -450,17 +521,23 @@ public:
 		}
 
 		auto entityName = QString{};
+		auto details = QJsonObject{};
 		auto& manager = ControllerManager::getInstance();
 		if (auto controlledEntity = manager.getControlledEntity(entityID))
 		{
 			entityName = helper::smartEntityName(*controlledEntity);
 			seedBaselines(entityID, *controlledEntity);
+			details = entityDescription(*controlledEntity);
 		}
 		_entityNames[entityID] = entityName;
 		upsertEntity(entityID, entityName);
 
-		auto details = QJsonObject{};
 		details["enumeration_time_ms"] = static_cast<qint64>(enumerationTime.count());
+		// The snapshot is written once the entity guard above is released (the serializer takes its own)
+		if (auto const snapshotID = writeSnapshot(entityID, "online"))
+		{
+			details["snapshot_id"] = *snapshotID;
+		}
 		addEvent(Category::Entity, Severity::Info, entityID, entityName, {}, "Entity is online", details);
 	}
 
@@ -475,6 +552,8 @@ public:
 
 		// Remove all tracked state for that entity (states will be re-seeded if it comes back online), but keep its name for future references (eg. as talker of a connection)
 		_gptpStates.erase(entityID);
+		_asPaths.erase(entityID);
+		_propagationDelays.erase(entityID);
 		_linkStatuses.erase(entityID);
 		_clockLockStates.erase(entityID);
 		_streamConnections.erase(entityID);
@@ -581,6 +660,64 @@ public:
 			summary = QString{ "gPTP domain changed from %1 to %2" }.arg(previous.second).arg(grandMasterDomain);
 		}
 		addEvent(Category::Gptp, Severity::Warning, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), summary, details);
+	}
+
+	void handleAsPathChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		auto& states = _asPaths[entityID];
+		auto const it = states.find(avbInterfaceIndex);
+		if (it == states.end())
+		{
+			// No baseline (entity without AsPath at enumeration time): silently store
+			states[avbInterfaceIndex] = asPath;
+			return;
+		}
+		if (it->second == asPath)
+		{
+			return;
+		}
+		auto const previous = it->second;
+		it->second = asPath;
+
+		// The AsPath is the rack and branch mapping of the entity: a change is a topology event, journaled for every reader
+		auto details = QJsonObject{};
+		details["previous_as_path"] = asPathToJson(previous);
+		details["new_as_path"] = asPathToJson(asPath);
+		addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "gPTP AsPath changed", details);
+	}
+
+	void handleAvbInterfaceInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		auto& states = _propagationDelays[entityID];
+		auto const it = states.find(avbInterfaceIndex);
+		if (it == states.end())
+		{
+			// No baseline (entity without AVB interface info at enumeration time): silently store
+			states[avbInterfaceIndex] = info.propagationDelay;
+			return;
+		}
+		if (it->second == info.propagationDelay)
+		{
+			return;
+		}
+		auto const previous = it->second;
+		it->second = info.propagationDelay;
+
+		// The propagation delay of a link jitters by a few nanoseconds between measurements (5 to 16 ns on the field rig), so its changes are diagnostic material rather than user events
+		auto details = QJsonObject{};
+		details["previous_propagation_delay"] = static_cast<qint64>(previous);
+		details["new_propagation_delay"] = static_cast<qint64>(info.propagationDelay);
+		addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "gPTP propagation delay changed", details, Level::Diagnostic);
 	}
 
 	void handleAvbInterfaceLinkStatusChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus) noexcept
@@ -1241,6 +1378,151 @@ public:
 		return details;
 	}
 
+	/** Builds the static description of an entity for the details of its 'Entity is online' event (identity, firmware, interfaces with their gPTP state, clock sources, connected streams), so the analysis of a journal needs no external network state dump. */
+	static QJsonObject entityDescription(la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
+	{
+		auto details = QJsonObject{};
+		auto const& entity = controlledEntity.getEntity();
+		details["entity_model_id"] = helper::uniqueIdentifierToString(entity.getEntityModelID());
+		details["vendor"] = helper::getVendorName(entity.getEntityID());
+		if (controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
+		{
+			auto const milanVersion = controlledEntity.getMilanCompatibilityVersion();
+			details["milan_version"] = QString{ "%1.%2" }.arg(milanVersion.getMajorVersion()).arg(milanVersion.getMinorVersion());
+		}
+		try
+		{
+			auto const& entityNode = controlledEntity.getEntityNode();
+			details["firmware_version"] = QString::fromStdString(entityNode.dynamicModel.firmwareVersion.str());
+
+			auto const& configurationNode = controlledEntity.getCurrentConfigurationNode();
+			auto avbInterfaces = QJsonArray{};
+			for (auto const& [avbInterfaceIndex, avbInterfaceNode] : configurationNode.avbInterfaces)
+			{
+				auto const& dynamicModel = avbInterfaceNode.dynamicModel;
+				auto object = QJsonObject{};
+				object["index"] = static_cast<int>(avbInterfaceIndex);
+				object["mac"] = helper::macAddressToString(dynamicModel.macAddress);
+				object["clock_identity"] = helper::uniqueIdentifierToString(dynamicModel.clockIdentity);
+				object["grandmaster_id"] = helper::uniqueIdentifierToString(dynamicModel.gptpGrandmasterID);
+				object["priority1"] = static_cast<int>(dynamicModel.priority1);
+				if (dynamicModel.asPath)
+				{
+					object["as_path"] = asPathToJson(*dynamicModel.asPath);
+				}
+				if (dynamicModel.avbInterfaceInfo)
+				{
+					object["propagation_delay"] = static_cast<qint64>(dynamicModel.avbInterfaceInfo->propagationDelay);
+				}
+				avbInterfaces.push_back(object);
+			}
+			details["avb_interfaces"] = avbInterfaces;
+
+			auto clockDomains = QJsonArray{};
+			for (auto const& [clockDomainIndex, clockDomainNode] : configurationNode.clockDomains)
+			{
+				auto object = QJsonObject{};
+				object["index"] = static_cast<int>(clockDomainIndex);
+				object["clock_source_index"] = static_cast<int>(clockDomainNode.dynamicModel.clockSourceIndex);
+				// The clock source of a media clock domain is usually an input stream: name it, so the analyser knows which stream carries the clock without decoding the snapshot
+				if (auto const clockSourceIt = configurationNode.clockSources.find(clockDomainNode.dynamicModel.clockSourceIndex); clockSourceIt != configurationNode.clockSources.end() && clockSourceIt->second.staticModel.clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput)
+				{
+					object["clock_source_stream_index"] = static_cast<int>(clockSourceIt->second.staticModel.clockSourceLocationIndex);
+				}
+				clockDomains.push_back(object);
+			}
+			details["clock_domains"] = clockDomains;
+
+			auto streamInputs = QJsonArray{};
+			for (auto const& [streamIndex, streamNode] : configurationNode.streamInputs)
+			{
+				auto const& connectionInfo = streamNode.dynamicModel.connectionInfo;
+				if (connectionInfo.state != la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
+				{
+					continue;
+				}
+				auto object = QJsonObject{};
+				object["index"] = static_cast<int>(streamIndex);
+				object["name"] = helper::inputStreamName(controlledEntity, streamIndex);
+				object["talker_entity_id"] = helper::uniqueIdentifierToString(connectionInfo.talkerStream.entityID);
+				object["talker_stream_index"] = static_cast<int>(connectionInfo.talkerStream.streamIndex);
+				streamInputs.push_back(object);
+			}
+			details["stream_inputs"] = streamInputs;
+		}
+		catch (...)
+		{
+			// Entity without a current configuration (or model enumeration error): the identity keys are enough
+		}
+		return details;
+	}
+
+	/** Returns the entities currently online in the controller (their guards are released before returning, so the caller can serialize them). */
+	static std::vector<la::avdecc::UniqueIdentifier> onlineEntities() noexcept
+	{
+		auto entityIDs = std::vector<la::avdecc::UniqueIdentifier>{};
+		ControllerManager::getInstance().foreachEntity(
+			[&entityIDs](la::avdecc::UniqueIdentifier const& entityID, la::avdecc::controller::ControlledEntity const&)
+			{
+				entityIDs.push_back(entityID);
+			});
+		return entityIDs;
+	}
+
+	/** Serializes the given entity into the snapshots table (see EventJournal::SnapshotFormat). Returns the row id of the snapshot, or std::nullopt if the entity could not be serialized. */
+	std::optional<qint64> writeSnapshot(la::avdecc::UniqueIdentifier const entityID, QString const& reason) noexcept
+	{
+		if (!isRecording())
+		{
+			return std::nullopt;
+		}
+
+		auto timer = QElapsedTimer{};
+		timer.start();
+		auto const timestamp = QDateTime::currentMSecsSinceEpoch();
+
+		// la_avdecc only serializes to a file: go through a temporary file (a few milliseconds per entity, measured in the snapshots_serialization_ms metadata)
+		auto const tempFilePath = QDir::temp().filePath(QString{ "HiveEventJournalSnapshot_%1.ave" }.arg(QCoreApplication::applicationPid()));
+		auto const dumpSource = QString{ "%1 %2 (Event Journal snapshot)" }.arg(QCoreApplication::applicationName(), QCoreApplication::applicationVersion());
+		auto const [error, message] = ControllerManager::getInstance().serializeControlledEntityAsJson(entityID, tempFilePath, snapshotSerializationFlags(), dumpSource);
+		auto uncompressed = QByteArray{};
+		if (!error)
+		{
+			auto file = QFile{ tempFilePath };
+			if (file.open(QIODevice::ReadOnly))
+			{
+				uncompressed = file.readAll();
+			}
+		}
+		QFile::remove(tempFilePath);
+		if (uncompressed.isEmpty())
+		{
+			return std::nullopt;
+		}
+		auto const compressed = qCompress(uncompressed);
+
+		_insertSnapshotQuery.addBindValue(timestamp);
+		_insertSnapshotQuery.addBindValue(helper::uniqueIdentifierToString(entityID));
+		_insertSnapshotQuery.addBindValue(reason);
+		_insertSnapshotQuery.addBindValue(QString{ EventJournal::SnapshotFormat });
+		_insertSnapshotQuery.addBindValue(compressed);
+		_insertSnapshotQuery.addBindValue(static_cast<qint64>(uncompressed.size()));
+		if (!_insertSnapshotQuery.exec())
+		{
+			return std::nullopt;
+		}
+		auto const snapshotID = _insertSnapshotQuery.lastInsertId().toLongLong();
+
+		// Size and time figures, so the cost of the snapshots can be judged on a real session
+		++_snapshotsCount;
+		_snapshotsBytes += static_cast<std::uint64_t>(compressed.size());
+		_snapshotsSerializationMs += timer.elapsed();
+		setMetadata("snapshots_count", QString::number(_snapshotsCount));
+		setMetadata("snapshots_bytes", QString::number(_snapshotsBytes));
+		setMetadata("snapshots_serialization_ms", QString::number(_snapshotsSerializationMs));
+		return snapshotID;
+	}
+
 	/** Seeds the change-detection baselines from the current entity model state, so only actual changes occurring after the entity came online are journaled. */
 	void seedBaselines(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity const& controlledEntity) noexcept
 	{
@@ -1254,6 +1536,14 @@ public:
 			{
 				_gptpStates[entityID][avbInterfaceIndex] = std::make_pair(avbInterfaceNode.dynamicModel.gptpGrandmasterID, avbInterfaceNode.dynamicModel.gptpDomainNumber);
 				_linkStatuses[entityID][avbInterfaceIndex] = controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex);
+				if (avbInterfaceNode.dynamicModel.asPath)
+				{
+					_asPaths[entityID][avbInterfaceIndex] = *avbInterfaceNode.dynamicModel.asPath;
+				}
+				if (avbInterfaceNode.dynamicModel.avbInterfaceInfo)
+				{
+					_propagationDelays[entityID][avbInterfaceIndex] = avbInterfaceNode.dynamicModel.avbInterfaceInfo->propagationDelay;
+				}
 			}
 			for (auto const& [clockDomainIndex, clockDomainNode] : configurationNode.clockDomains)
 			{
@@ -1293,6 +1583,8 @@ public:
 	void clearTrackingState() noexcept
 	{
 		_gptpStates.clear();
+		_asPaths.clear();
+		_propagationDelays.clear();
 		_linkStatuses.clear();
 		_clockLockStates.clear();
 		_streamConnections.clear();
@@ -1326,6 +1618,10 @@ public:
 	QSqlQuery _insertEventQuery{};
 	QSqlQuery _upsertEntityQuery{};
 	QSqlQuery _upsertMetadataQuery{};
+	QSqlQuery _insertSnapshotQuery{};
+	std::uint64_t _snapshotsCount{ 0u };
+	std::uint64_t _snapshotsBytes{ 0u };
+	qint64 _snapshotsSerializationMs{ 0 };
 	QString _sessionFilePath{};
 	std::vector<Event> _events{};
 	QMap<QString, QString> _metadata{};
@@ -1334,6 +1630,8 @@ public:
 	// Change-detection state
 	std::unordered_map<la::avdecc::UniqueIdentifier, QString, la::avdecc::UniqueIdentifier::hash> _entityNames{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::pair<la::avdecc::UniqueIdentifier, std::uint8_t>>, la::avdecc::UniqueIdentifier::hash> _gptpStates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::model::AsPath>, la::avdecc::UniqueIdentifier::hash> _asPaths{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::uint32_t>, la::avdecc::UniqueIdentifier::hash> _propagationDelays{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>, la::avdecc::UniqueIdentifier::hash> _linkStatuses{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, ClockLockState>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamInputConnectionInfo>, la::avdecc::UniqueIdentifier::hash> _streamConnections{};
@@ -1402,6 +1700,16 @@ EventJournal::EventJournal()
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain)
 		{
 			_pImpl->handleGptpChanged(entityID, avbInterfaceIndex, grandMasterID, grandMasterDomain);
+		});
+	connect(&manager, &ControllerManager::asPathChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath)
+		{
+			_pImpl->handleAsPathChanged(entityID, avbInterfaceIndex, asPath);
+		});
+	connect(&manager, &ControllerManager::avbInterfaceInfoChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info)
+		{
+			_pImpl->handleAvbInterfaceInfoChanged(entityID, avbInterfaceIndex, info);
 		});
 	connect(&manager, &ControllerManager::avbInterfaceLinkStatusChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
@@ -1586,21 +1894,7 @@ std::optional<EventJournal::Session> EventJournal::loadSession(QString const& fi
 	auto const connectionName = QString{ "HiveEventJournalReader_%1" }.arg(++s_readerCount);
 	{
 		auto db = QSqlDatabase::addDatabase("QSQLITE", connectionName);
-		db.setDatabaseName(filePath);
-		db.setConnectOptions("QSQLITE_OPEN_READONLY");
-		auto isOpen = QFile::exists(filePath) && db.open();
-		if (isOpen && !QSqlQuery{ db }.exec("SELECT count(*) FROM events"))
-		{
-			// Read-only access to a WAL session file (eg. Hive crashed while recording it) may fail: retry in read-write mode, which performs WAL recovery
-			db.close();
-			isOpen = false;
-		}
-		if (!isOpen)
-		{
-			db.setConnectOptions();
-			isOpen = QFile::exists(filePath) && db.open();
-		}
-		if (isOpen)
+		if (openJournalForReading(db, filePath))
 		{
 			auto query = QSqlQuery{ db };
 			if (query.exec("SELECT key, value FROM metadata"))
@@ -1662,9 +1956,77 @@ std::optional<EventJournal::Session> EventJournal::loadSession(QString const& fi
 	return session;
 }
 
+std::vector<EventJournal::SnapshotInfo> EventJournal::loadSnapshotsIndex(QString const& filePath) noexcept
+{
+	static auto s_readerCount = std::atomic_uint{ 0u };
+
+	auto snapshots = std::vector<SnapshotInfo>{};
+	auto const connectionName = QString{ "HiveEventJournalSnapshotsReader_%1" }.arg(++s_readerCount);
+	{
+		auto db = QSqlDatabase::addDatabase("QSQLITE", connectionName);
+		if (openJournalForReading(db, filePath))
+		{
+			auto query = QSqlQuery{ db };
+			// Files predating schema version 2 have no snapshots table: the query fails and the index stays empty
+			if (query.exec("SELECT id, timestamp, entity_id, reason, format, uncompressed_size, length(data) FROM snapshots ORDER BY timestamp, id"))
+			{
+				while (query.next())
+				{
+					auto info = SnapshotInfo{};
+					info.id = query.value(0).toLongLong();
+					info.timestamp = query.value(1).toLongLong();
+					auto ok = false;
+					auto const eid = query.value(2).toString().toULongLong(&ok, 16);
+					if (ok)
+					{
+						info.entityID = la::avdecc::UniqueIdentifier{ eid };
+					}
+					info.reason = query.value(3).toString();
+					info.format = query.value(4).toString();
+					info.uncompressedSize = query.value(5).toLongLong();
+					info.compressedSize = query.value(6).toLongLong();
+					snapshots.push_back(std::move(info));
+				}
+			}
+			db.close();
+		}
+	}
+	QSqlDatabase::removeDatabase(connectionName);
+	return snapshots;
+}
+
+QByteArray EventJournal::loadSnapshotData(QString const& filePath, qint64 const snapshotID) noexcept
+{
+	static auto s_readerCount = std::atomic_uint{ 0u };
+
+	auto data = QByteArray{};
+	auto const connectionName = QString{ "HiveEventJournalSnapshotDataReader_%1" }.arg(++s_readerCount);
+	{
+		auto db = QSqlDatabase::addDatabase("QSQLITE", connectionName);
+		if (openJournalForReading(db, filePath))
+		{
+			auto query = QSqlQuery{ db };
+			query.prepare("SELECT format, data FROM snapshots WHERE id = ?");
+			query.addBindValue(snapshotID);
+			if (query.exec() && query.next() && query.value(0).toString() == SnapshotFormat)
+			{
+				data = qUncompress(query.value(1).toByteArray());
+			}
+			db.close();
+		}
+	}
+	QSqlDatabase::removeDatabase(connectionName);
+	return data;
+}
+
 bool EventJournal::isRecording() const noexcept
 {
 	return _pImpl->isRecording();
+}
+
+std::size_t EventJournal::snapshotAllEntities() noexcept
+{
+	return _pImpl->snapshotAllEntities();
 }
 
 EventJournal::Level EventJournal::recordingLevel() const noexcept

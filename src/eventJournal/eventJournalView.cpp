@@ -113,21 +113,31 @@ EventJournalView::EventJournalView(QWidget* parent)
 			auto const lock = QSignalBlocker{ &_recordDiagnosticButton };
 			_recordDiagnosticButton.setChecked(level == EventJournal::Level::Diagnostic);
 			updateStatusLabel();
+			updateSnapshotButton();
+		});
+	connect(&_snapshotButton, &QPushButton::clicked, this,
+		[this]()
+		{
+			auto const count = EventJournal::getInstance().snapshotAllEntities();
+			_statusLabel.setText(QString{ "Snapshot of %1 entities taken" }.arg(count));
 		});
 
 	_exportJournalAction->setEnabled(journal.isRecording());
 	_clearButton.setEnabled(journal.isRecording());
+	updateSnapshotButton();
 	connect(&journal, &EventJournal::recordingStarted, this,
 		[this](QString const&)
 		{
 			_exportJournalAction->setEnabled(true);
 			_clearButton.setEnabled(true);
+			updateSnapshotButton();
 		});
 	connect(&journal, &EventJournal::recordingStopped, this,
 		[this]()
 		{
 			_exportJournalAction->setEnabled(false);
 			_clearButton.setEnabled(false);
+			updateSnapshotButton();
 		});
 	connect(_exportJournalAction, &QAction::triggered, this,
 		[this]()
@@ -207,11 +217,14 @@ void EventJournalView::buildUi(bool const isLiveMode)
 		filterLayout->addWidget(&_recordDiagnosticButton);
 		_recordDiagnosticButton.setCheckable(true);
 		_recordDiagnosticButton.setToolTip("Also record the diagnostic level events (everything needed for deep analysis, much larger journal files). The choice is remembered for the next sessions.");
+		filterLayout->addWidget(&_snapshotButton);
+		_snapshotButton.setToolTip("Store a snapshot of every online entity in the journal now (diagnostic recording only), as a fresh reference point for the analysis");
 	}
 	else
 	{
 		_clearButton.hide();
 		_recordDiagnosticButton.hide();
+		_snapshotButton.hide();
 	}
 
 	// Degraded mode banner (file mode, journal written by a newer schema)
@@ -502,6 +515,12 @@ void EventJournalView::updateStatusLabel()
 		text += " - Diagnostic recording";
 	}
 	_statusLabel.setText(text);
+}
+
+void EventJournalView::updateSnapshotButton()
+{
+	auto const& journal = EventJournal::getInstance();
+	_snapshotButton.setEnabled(journal.isRecording() && journal.recordingLevel() == EventJournal::Level::Diagnostic);
 }
 
 void EventJournalView::handleRowsInserted(int const firstRow, int const lastRow)
