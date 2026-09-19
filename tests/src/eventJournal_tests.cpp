@@ -56,6 +56,7 @@
 #include <chrono>
 #include <cstddef>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -313,6 +314,25 @@ public:
 									 }),
 			events.end());
 		return events;
+	}
+
+	/** Gets the events of the given category and summary journaled since the fixture was loaded for the given entity, in journal order. */
+	std::vector<hive::modelsLibrary::EventJournal::Event> eventsSince(hive::modelsLibrary::EventJournal::Category const category, la::avdecc::UniqueIdentifier const entityID, QString const& summary) const noexcept
+	{
+		auto events = eventsSince(category, entityID);
+		events.erase(std::remove_if(events.begin(), events.end(),
+									 [&summary](hive::modelsLibrary::EventJournal::Event const& event)
+									 {
+										 return event.summary != summary;
+									 }),
+			events.end());
+		return events;
+	}
+
+	/** Gets the details of an event as a JSON object. */
+	static QJsonObject eventDetails(hive::modelsLibrary::EventJournal::Event const& event) noexcept
+	{
+		return QJsonDocument::fromJson(event.details.toUtf8()).object();
 	}
 
 	/** Gets the summaries of the events of the given category journaled since the fixture was loaded (all entities), in journal order. */
@@ -1664,4 +1684,387 @@ TEST_F(EventJournal_F, ChangeTracking_ConnectionAndGptpEvents_CarryTheirPatch)
 	auto const listeners = QJsonDocument::fromJson(talkerEvents[0].details.toUtf8()).object().value("listeners").toArray();
 	ASSERT_EQ(2, listeners.size());
 	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID), listeners[0].toObject().value("entity_id").toString());
+}
+
+/* *********************************
+   Counters: per stream media clock lock, link, gPTP grandmaster changes, informational counters
+*/
+// The MEDIA_LOCKED / MEDIA_UNLOCKED counters of a connected stream drive 'Media unlocked' errors closed by 'Media locked' recoveries, with the transitions inferred from the increments like the clock domains
+TEST_F(EventJournal_F, StreamLock_UnlockAndRelock_AreJournaledPerStream)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// The fixture stream is connected and locked (MEDIA_LOCKED 1, MEDIA_UNLOCKED 0)
+	auto counters = la::avdecc::entity::model::StreamInputCounters{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& modelCounters = controlledEntity->getStreamInputNode(0u, TestStreamIndex).dynamicModel.counters;
+		ASSERT_TRUE(!!modelCounters);
+		counters = *modelCounters;
+	}
+	ASSERT_EQ(1u, counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked]);
+	ASSERT_EQ(0u, counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked]);
+	auto const lockEvents = [this, entityID]()
+	{
+		auto events = eventsSince(EventJournal::Category::Counters, entityID);
+		events.erase(std::remove_if(events.begin(), events.end(),
+									 [](EventJournal::Event const& event)
+									 {
+										 return event.summary != "Media unlocked" && event.summary != "Media locked";
+									 }),
+			events.end());
+		return events;
+	};
+
+	// Same values as the baseline: nothing
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EXPECT_TRUE(lockEvents().empty());
+
+	// Observed unlock: an error carrying the raw values and the talker
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = 1u;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	auto events = lockEvents();
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Media unlocked" }, events[0].summary);
+	EXPECT_EQ(EventJournal::Severity::Error, events[0].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	EXPECT_TRUE(events[0].subject.startsWith("Input Stream 0"));
+	auto details = eventDetails(events[0]);
+	EXPECT_EQ(1, details.value("media_locked_counter").toInt());
+	EXPECT_EQ(1, details.value("media_unlocked_counter").toInt());
+	EXPECT_EQ(1, details.value("media_unlocked_increment").toInt());
+	EXPECT_FALSE(details.contains("inferred"));
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(la::avdecc::UniqueIdentifier{ TalkerEntityID }), details.value("talker_id").toString());
+
+	// The same notification again (the other interface of a redundant controller): nothing
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EXPECT_EQ(std::size_t{ 1u }, lockEvents().size());
+
+	// Observed relock: the recovery closing the error
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked] = 2u;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	events = lockEvents();
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "Media locked" }, events[1].summary);
+	EXPECT_EQ(EventJournal::Severity::Recovered, events[1].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[1].level);
+	EXPECT_FALSE(eventDetails(events[1]).contains("inferred"));
+
+	// Unlock and relock between two notifications: both transitions are journaled, flagged as inferred
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked] = 3u;
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = 2u;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	events = lockEvents();
+	ASSERT_EQ(std::size_t{ 4u }, events.size());
+	EXPECT_EQ(QString{ "Media unlocked" }, events[2].summary);
+	EXPECT_EQ(EventJournal::Severity::Error, events[2].severity);
+	EXPECT_TRUE(eventDetails(events[2]).value("inferred").toBool());
+	EXPECT_EQ(QString{ "Media locked" }, events[3].summary);
+	EXPECT_EQ(EventJournal::Severity::Recovered, events[3].severity);
+	details = eventDetails(events[3]);
+	EXPECT_TRUE(details.value("inferred").toBool());
+	EXPECT_EQ(3, details.value("media_locked_counter").toInt());
+	EXPECT_EQ(2, details.value("media_unlocked_counter").toInt());
+	EXPECT_EQ(1, details.value("media_locked_increment").toInt());
+	EXPECT_EQ(1, details.value("media_unlocked_increment").toInt());
+
+	// The error counters of the UI no longer journal MEDIA_UNLOCKED for that stream (the other error counters are unchanged)
+	auto errorCounters = hive::modelsLibrary::ControllerManager::StreamInputErrorCounters{};
+	errorCounters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = 2u;
+	errorCounters[la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted] = 1u;
+	emit controllerManager.streamInputErrorCounterChanged(entityID, TestStreamIndex, errorCounters);
+	auto const errorCounterEvents = eventsSince(EventJournal::Category::Counters, entityID, "'Stream Interrupted' error counter increased to 1");
+	EXPECT_EQ(std::size_t{ 1u }, errorCounterEvents.size());
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Counters, entityID, "'Media Unlocked' error counter increased to 2").empty());
+}
+
+// A stream that is not connected unlocks silently, and a lock closing no journaled unlock is diagnostic information rather than a recovery
+TEST_F(EventJournal_F, StreamLock_NotConnectedStream_UnlockIsSilent_LockIsInformation)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ TalkerEntityID }; // Its stream inputs are not connected
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// The fixture stream is not connected and never locked (MEDIA_LOCKED 0, MEDIA_UNLOCKED 0)
+	auto counters = la::avdecc::entity::model::StreamInputCounters{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& modelCounters = controlledEntity->getStreamInputNode(0u, TestStreamIndex).dynamicModel.counters;
+		ASSERT_TRUE(!!modelCounters);
+		counters = *modelCounters;
+	}
+	ASSERT_EQ(0u, counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked]);
+	ASSERT_EQ(0u, counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked]);
+
+	// Lock: information (diagnostic level), no talker
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked] = 1u;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	auto events = eventsSince(EventJournal::Category::Counters, entityID, "Media locked");
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(EventJournal::Severity::Info, events[0].severity);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	EXPECT_FALSE(eventDetails(events[0]).contains("talker_id"));
+
+	// Unlock: not an error for a stream that is not connected
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = 1u;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Counters, entityID, "Media unlocked").empty());
+
+	// The same at user level: nothing at all
+	EventJournal::getInstance().setRecordingLevel(EventJournal::Level::User);
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked] = 2u;
+	counters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = 2u;
+	emit controllerManager.streamInputCountersChanged(entityID, TestStreamIndex, counters);
+	EventJournal::getInstance().setRecordingLevel(EventJournal::Level::Diagnostic);
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Counters, entityID, "Media locked").size());
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Counters, entityID, "Media unlocked").empty());
+}
+
+// The LINK_UP / LINK_DOWN counters drive the link events, so a link that went down and came back between two notifications is journaled as an inferred pair
+TEST_F(EventJournal_F, Link_CountersDriveTheLinkEvents_WithInferredFlaps)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// The fixture interface is up (LINK_UP 1, LINK_DOWN 0)
+	auto counters = la::avdecc::entity::model::AvbInterfaceCounters{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& modelCounters = controlledEntity->getAvbInterfaceNode(0u, 0u).dynamicModel.counters;
+		ASSERT_TRUE(!!modelCounters);
+		counters = *modelCounters;
+	}
+	ASSERT_EQ(1u, counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkUp]);
+	ASSERT_EQ(0u, counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkDown]);
+
+	// Same values as the baseline: nothing
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Link, entityID).empty());
+
+	// Observed link down, then the duplicate notification of the other interface
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkDown] = 1u;
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	auto events = eventsSince(EventJournal::Category::Link, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Link down" }, events[0].summary);
+	EXPECT_EQ(EventJournal::Severity::Error, events[0].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	EXPECT_EQ(QString{ "AVB Interface 0" }, events[0].subject);
+	auto details = eventDetails(events[0]);
+	EXPECT_EQ(1, details.value("link_up_counter").toInt());
+	EXPECT_EQ(1, details.value("link_down_counter").toInt());
+	EXPECT_EQ(1, details.value("link_down_increment").toInt());
+	EXPECT_FALSE(details.contains("inferred"));
+
+	// Observed link up
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkUp] = 2u;
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	events = eventsSince(EventJournal::Category::Link, entityID);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "Link up" }, events[1].summary);
+	EXPECT_EQ(EventJournal::Severity::Recovered, events[1].severity);
+	EXPECT_FALSE(eventDetails(events[1]).contains("inferred"));
+
+	// Down and up between two notifications: the flap is journaled as an inferred pair
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkUp] = 3u;
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkDown] = 2u;
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	events = eventsSince(EventJournal::Category::Link, entityID);
+	ASSERT_EQ(std::size_t{ 4u }, events.size());
+	EXPECT_EQ(QString{ "Link down" }, events[2].summary);
+	EXPECT_TRUE(eventDetails(events[2]).value("inferred").toBool());
+	EXPECT_EQ(QString{ "Link up" }, events[3].summary);
+	details = eventDetails(events[3]);
+	EXPECT_TRUE(details.value("inferred").toBool());
+	EXPECT_EQ(3, details.value("link_up_counter").toInt());
+	EXPECT_EQ(2, details.value("link_down_counter").toInt());
+	EXPECT_EQ(1, details.value("link_up_increment").toInt());
+	EXPECT_EQ(1, details.value("link_down_increment").toInt());
+
+	// Counters reset into the same state: nothing
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkUp] = 1u;
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkDown] = 0u;
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	EXPECT_EQ(std::size_t{ 4u }, eventsSince(EventJournal::Category::Link, entityID).size());
+}
+
+// Every increase of the GPTP_GM_CHANGED counter is journaled with the raw values and the grandmaster known before and after, so a grandmaster that changed and came back between two notifications is visible
+TEST_F(EventJournal_F, Gptp_GmChangedCounter_IsJournaledWithTheGrandmasters)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	auto counters = la::avdecc::entity::model::AvbInterfaceCounters{};
+	auto grandmasterID = la::avdecc::UniqueIdentifier{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& avbInterfaceNode = controlledEntity->getAvbInterfaceNode(0u, 0u);
+		ASSERT_TRUE(!!avbInterfaceNode.dynamicModel.counters);
+		counters = *avbInterfaceNode.dynamicModel.counters;
+		grandmasterID = avbInterfaceNode.dynamicModel.gptpGrandmasterID;
+	}
+	auto const baseline = counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::GptpGmChanged];
+	auto const gmChangedEvents = [this, entityID]()
+	{
+		auto events = eventsSince(EventJournal::Category::Gptp, entityID);
+		events.erase(std::remove_if(events.begin(), events.end(),
+									 [](EventJournal::Event const& event)
+									 {
+										 return !event.summary.startsWith("'GPTP GM Changed' counter increased");
+									 }),
+			events.end());
+		return events;
+	};
+
+	// Two changes counted while the grandmaster is the same before and after: the flip and back is visible from the details
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::GptpGmChanged] = baseline + 2u;
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters); // Duplicate
+	auto events = gmChangedEvents();
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "'GPTP GM Changed' counter increased to %1" }.arg(baseline + 2u), events[0].summary);
+	EXPECT_EQ(EventJournal::Severity::Info, events[0].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	EXPECT_EQ(QString{ "AVB Interface 0" }, events[0].subject);
+	auto details = eventDetails(events[0]);
+	EXPECT_EQ(static_cast<int>(baseline), details.value("previous_value").toInt());
+	EXPECT_EQ(static_cast<int>(baseline + 2u), details.value("value").toInt());
+	EXPECT_EQ(2, details.value("increment").toInt());
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(grandmasterID), details.value("previous_grandmaster_id").toString());
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(grandmasterID), details.value("grandmaster_id").toString());
+
+	// A change the controller observed: the event names the grandmasters before and after
+	auto const newGrandmasterID = la::avdecc::UniqueIdentifier{ 0x001122FFFE00BBBBu };
+	emit controllerManager.gptpChanged(entityID, 0u, newGrandmasterID, 0u);
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::GptpGmChanged] = baseline + 3u;
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	events = gmChangedEvents();
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	details = eventDetails(events[1]);
+	EXPECT_EQ(1, details.value("increment").toInt());
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(grandmasterID), details.value("previous_grandmaster_id").toString());
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(newGrandmasterID), details.value("grandmaster_id").toString());
+
+	// Counters reset: not an increase
+	counters[la::avdecc::entity::AvbInterfaceCounterValidFlag::GptpGmChanged] = 0u;
+	emit controllerManager.avbInterfaceCountersChanged(entityID, 0u, counters);
+	EXPECT_EQ(std::size_t{ 2u }, gmChangedEvents().size());
+}
+
+// The informational counters of the streams get a readable diagnostic event per increase (never an error), next to the raw counters event
+TEST_F(EventJournal_F, InformationalCounters_GetReadableDiagnosticEvents)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const talkerID = la::avdecc::UniqueIdentifier{ TalkerEntityID };
+	auto const listenerID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// Stream output 0 of the talker (Milan 1.2 counters of the fixture: STREAM_START 6, STREAM_STOP 5, FRAMES_TX 32988, the rest at 0)
+	auto outputCounters = std::map<la::avdecc::entity::StreamOutputCounterValidFlagMilan12, la::avdecc::entity::model::DescriptorCounter>{};
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::StreamStart] = 6u;
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::StreamStop] = 5u;
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::MediaReset] = 0u;
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::TimestampUncertain] = 0u;
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::FramesTx] = 32988u;
+	emit controllerManager.streamOutputCountersChanged(talkerID, TestStreamIndex, la::avdecc::entity::model::StreamOutputCounters{ outputCounters });
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Counters, talkerID).empty()) << "The fixture values should match the baseline";
+
+	// The talker stopped and restarted its stream: one readable event per counter, after the raw counters event
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::StreamStart] = 7u;
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::StreamStop] = 6u;
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::FramesTx] = 40000u;
+	emit controllerManager.streamOutputCountersChanged(talkerID, TestStreamIndex, la::avdecc::entity::model::StreamOutputCounters{ outputCounters });
+	auto events = eventsSince(EventJournal::Category::Counters, talkerID);
+	ASSERT_EQ(std::size_t{ 3u }, events.size());
+	EXPECT_EQ(QString{ "Counters updated" }, events[0].summary);
+	EXPECT_EQ(QString{ "'Stream Start' counter increased to 7" }, events[1].summary);
+	EXPECT_EQ(QString{ "'Stream Stop' counter increased to 6" }, events[2].summary);
+	for (auto const& event : events)
+	{
+		EXPECT_EQ(EventJournal::Severity::Info, event.severity);
+		EXPECT_EQ(EventJournal::Level::Diagnostic, event.level);
+		EXPECT_TRUE(event.subject.startsWith("Output Stream 0"));
+	}
+	auto const details = eventDetails(events[2]);
+	EXPECT_EQ(QString{ "Stream Stop" }, details.value("counter").toString());
+	EXPECT_EQ(5, details.value("previous_value").toInt());
+	EXPECT_EQ(6, details.value("value").toInt());
+	EXPECT_EQ(1, details.value("increment").toInt());
+
+	// A counters reset is not an increase (the raw counters event is still written)
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::StreamStart] = 1u;
+	outputCounters[la::avdecc::entity::StreamOutputCounterValidFlagMilan12::StreamStop] = 0u;
+	emit controllerManager.streamOutputCountersChanged(talkerID, TestStreamIndex, la::avdecc::entity::model::StreamOutputCounters{ outputCounters });
+	events = eventsSince(EventJournal::Category::Counters, talkerID);
+	ASSERT_EQ(std::size_t{ 4u }, events.size());
+	EXPECT_EQ(QString{ "Counters updated" }, events[3].summary);
+
+	// Stream input: MEDIA_RESET and TIMESTAMP_UNCERTAIN
+	auto inputCounters = la::avdecc::entity::model::StreamInputCounters{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(listenerID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& modelCounters = controlledEntity->getStreamInputNode(0u, TestStreamIndex).dynamicModel.counters;
+		ASSERT_TRUE(!!modelCounters);
+		inputCounters = *modelCounters;
+	}
+	inputCounters[la::avdecc::entity::StreamInputCounterValidFlag::MediaReset] += 1u;
+	inputCounters[la::avdecc::entity::StreamInputCounterValidFlag::TimestampUncertain] += 3u;
+	emit controllerManager.streamInputCountersChanged(listenerID, TestStreamIndex, inputCounters);
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Counters, listenerID, "'Media Reset' counter increased to 1").size());
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Counters, listenerID, "'Timestamp Uncertain' counter increased to 3").size());
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Counters, listenerID, "Counters updated").size());
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Counters, listenerID, "Media unlocked").empty());
+}
+
+// The media clock events name the clock source the domain follows, with the input stream and its talker when the source is a stream
+TEST_F(EventJournal_F, MediaClock_EventsCarryTheClockSource)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// The fixture domain follows clock source 3, an input stream clock source on stream input 2, connected to the talker
+	auto counters = la::avdecc::entity::model::ClockDomainCounters{};
+	auto expectedTalkerStreamIndex = int{ -1 };
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		auto const& configurationNode = controlledEntity->getCurrentConfigurationNode();
+		auto const& clockDomainNode = configurationNode.clockDomains.at(TestClockDomainIndex);
+		ASSERT_TRUE(!!clockDomainNode.dynamicModel.counters);
+		counters = *clockDomainNode.dynamicModel.counters;
+		ASSERT_EQ(3u, clockDomainNode.dynamicModel.clockSourceIndex);
+		auto const& clockSourceStaticModel = configurationNode.clockSources.at(3u).staticModel;
+		ASSERT_EQ(la::avdecc::entity::model::DescriptorType::StreamInput, clockSourceStaticModel.clockSourceLocationType);
+		ASSERT_EQ(2u, clockSourceStaticModel.clockSourceLocationIndex);
+		expectedTalkerStreamIndex = static_cast<int>(configurationNode.streamInputs.at(2u).dynamicModel.connectionInfo.talkerStream.streamIndex);
+	}
+
+	counters[la::avdecc::entity::ClockDomainCounterValidFlag::Unlocked] += 1u;
+	emit controllerManager.clockDomainCountersChanged(entityID, TestClockDomainIndex, counters);
+	auto const events = eventsSince(EventJournal::Category::MediaClock, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Media clock unlocked" }, events[0].summary);
+	auto const details = eventDetails(events[0]);
+	EXPECT_EQ(3, details.value("clock_source_index").toInt());
+	EXPECT_EQ(QString{ "INPUT_STREAM" }, details.value("clock_source_type").toString());
+	EXPECT_EQ(2, details.value("clock_source_stream_index").toInt());
+	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(la::avdecc::UniqueIdentifier{ TalkerEntityID }), details.value("clock_source_talker_id").toString());
+	EXPECT_EQ(expectedTalkerStreamIndex, details.value("clock_source_talker_stream_index").toInt());
 }

@@ -112,6 +112,41 @@ constexpr auto StreamDataResyncFactor = std::uint64_t{ 10u }; // An increment ab
 constexpr auto ControlValuesRateLimitInterval = std::chrono::milliseconds{ 1000 }; // A control journals at most one value change per interval (faders and meters can be very chatty): the last value wins, the coalesced changes are counted
 constexpr auto LivenessCounterNames = std::array<char const*, 3>{ "FRAMES_RX", "FRAMES_TX", "TIMESTAMP_VALID" }; // Counters moving on every notification of a streaming device (about 300 notifications per second on the field rig): a notification where only those moved is never journaled as a raw counters event, the FRAMES_RX increments feed the stream data loss rule instead
 
+/** Informational counter (Milan 1.2 Tables 5.6 and 5.7): its serialized name (the la_avdecc JSON name, as in the raw counters events) and its display name. */
+struct InformationalCounter
+{
+	char const* serializedName{ nullptr };
+	char const* displayName{ nullptr };
+};
+// The informational counters get their own readable diagnostic event when they increase (they tell what a talker or a listener did, without being errors): the stream input ones and the stream output ones
+constexpr auto StreamInputInformationalCounters = std::array<InformationalCounter, 2>{ { { "MEDIA_RESET", "Media Reset" }, { "TIMESTAMP_UNCERTAIN", "Timestamp Uncertain" } } };
+constexpr auto StreamOutputInformationalCounters = std::array<InformationalCounter, 4>{ { { "STREAM_START", "Stream Start" }, { "STREAM_STOP", "Stream Stop" }, { "MEDIA_RESET", "Media Reset" }, { "TIMESTAMP_UNCERTAIN", "Timestamp Uncertain" } } };
+
+/** Returns the display name of an informational counter of the given descriptor type, or nullptr if the counter is not one. */
+char const* informationalCounterDisplayName(la::avdecc::entity::model::DescriptorType const descriptorType, std::string const& serializedName) noexcept
+{
+	auto const find = [&serializedName](auto const& counters) -> char const*
+	{
+		for (auto const& counter : counters)
+		{
+			if (serializedName == counter.serializedName)
+			{
+				return counter.displayName;
+			}
+		}
+		return nullptr;
+	};
+	switch (descriptorType)
+	{
+		case la::avdecc::entity::model::DescriptorType::StreamInput:
+			return find(StreamInputInformationalCounters);
+		case la::avdecc::entity::model::DescriptorType::StreamOutput:
+			return find(StreamOutputInformationalCounters);
+		default:
+			return nullptr;
+	}
+}
+
 /** Converts a la_avdecc JSON value to its Qt counterpart (QJsonDocument only parses objects and arrays, so the value is wrapped in an array). */
 QJsonValue toQJsonValue(json const& value) noexcept
 {
@@ -779,8 +814,10 @@ public:
 		_gptpStates.erase(entityID);
 		_asPaths.erase(entityID);
 		_avbInterfaceInfos.erase(entityID);
-		_linkStatuses.erase(entityID);
+		_linkStates.erase(entityID);
+		_gptpGmChangedStates.erase(entityID);
 		_clockLockStates.erase(entityID);
+		_streamLockStates.erase(entityID);
 		_streamConnections.erase(entityID);
 		_streamInputErrorCounters.erase(entityID);
 		_streamDataStates.erase(entityID);
@@ -1055,34 +1092,6 @@ public:
 		}
 	}
 
-	void handleAvbInterfaceLinkStatusChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus) noexcept
-	{
-		if (!isRecording())
-		{
-			return;
-		}
-
-		using LinkStatus = la::avdecc::controller::ControlledEntity::InterfaceLinkStatus;
-
-		auto& states = _linkStatuses[entityID];
-		auto const it = states.find(avbInterfaceIndex);
-		auto const previousStatus = (it != states.end()) ? it->second : LinkStatus::Unknown;
-		states[avbInterfaceIndex] = linkStatus;
-
-		if (linkStatus == previousStatus)
-		{
-			return;
-		}
-		if (linkStatus == LinkStatus::Down)
-		{
-			addEvent(Category::Link, Severity::Error, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Link down");
-		}
-		else if (linkStatus == LinkStatus::Up && previousStatus == LinkStatus::Down)
-		{
-			addEvent(Category::Link, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Link up");
-		}
-	}
-
 	void handleClockDomainCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept
 	{
 		if (!isRecording())
@@ -1106,59 +1115,27 @@ public:
 			states[clockDomainIndex] = *newState;
 			return;
 		}
-		auto const previousState = it->second;
+		auto const replay = replayCounterPairTransitions(it->second, *newState);
 		it->second = *newState;
-
-		// A counter going backwards means the device rebooted or its counters were reset: the increments are meaningless, only the resulting lock state can be compared
-		auto const countersReset = newState->lockedCounter < previousState.lockedCounter || newState->unlockedCounter < previousState.unlockedCounter;
-		auto const lockedIncrement = countersReset ? la::avdecc::entity::model::DescriptorCounter{ 0u } : newState->lockedCounter - previousState.lockedCounter;
-		auto const unlockedIncrement = countersReset ? la::avdecc::entity::model::DescriptorCounter{ 0u } : newState->unlockedCounter - previousState.unlockedCounter;
-
-		// The counters are only notified once in a while, so the clock may have unlocked and relocked (possibly several times) between two notifications without the derived lock state ever changing.
-		// Replay the transitions implied by the increments, in the only order consistent with an alternating unlock/lock sequence starting from the previous state, so every unlock the device counted ends up in the journal.
-		auto transitions = std::vector<bool>{}; // Lock state resulting from each transition, in order
-		auto isLocked = previousState.isLocked;
-		auto remainingLocks = lockedIncrement;
-		auto remainingUnlocks = unlockedIncrement;
-		while ((isLocked && remainingUnlocks > 0u) || (!isLocked && remainingLocks > 0u))
-		{
-			if (isLocked)
-			{
-				--remainingUnlocks;
-			}
-			else
-			{
-				--remainingLocks;
-			}
-			isLocked = !isLocked;
-			transitions.push_back(isLocked);
-		}
-		// Whatever the increments said, the journaled state must end on the lock state derived from the counters (same rule as the Discovered Entities list)
-		if (isLocked != newState->isLocked)
-		{
-			isLocked = newState->isLocked;
-			transitions.push_back(isLocked);
-		}
-		if (transitions.empty())
+		if (replay.transitions.empty())
 		{
 			return;
 		}
 
-		// A transition is inferred when it could not have been observed by comparing the lock states before and after the notification: all of them when the state did not change, all but the last one otherwise
-		auto const stateChanged = previousState.isLocked != newState->isLocked;
-		for (auto index = std::size_t{ 0u }; index < transitions.size(); ++index)
+		// The clock source the domain follows at the time of the event (and the input stream and talker behind it), so the analyser can tell which stream a system wide unlock started from
+		auto const sourceDetails = clockSourceDetails(entityID, clockDomainIndex);
+		for (auto const& transition : replay.transitions)
 		{
-			auto const isInferred = !stateChanged || index + 1u < transitions.size();
-			auto details = QJsonObject{};
-			details["locked_counter"] = static_cast<qint64>(newState->lockedCounter);
-			details["unlocked_counter"] = static_cast<qint64>(newState->unlockedCounter);
-			details["locked_increment"] = static_cast<qint64>(lockedIncrement);
-			details["unlocked_increment"] = static_cast<qint64>(unlockedIncrement);
-			if (isInferred)
+			auto details = sourceDetails;
+			details["locked_counter"] = static_cast<qint64>(newState->activeCounter);
+			details["unlocked_counter"] = static_cast<qint64>(newState->inactiveCounter);
+			details["locked_increment"] = static_cast<qint64>(replay.activeIncrement);
+			details["unlocked_increment"] = static_cast<qint64>(replay.inactiveIncrement);
+			if (transition.isInferred)
 			{
 				details["inferred"] = true;
 			}
-			if (transitions[index])
+			if (transition.isActive)
 			{
 				addEvent(Category::MediaClock, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), "Media clock locked", details);
 			}
@@ -1596,6 +1573,7 @@ public:
 		}
 
 		journalRawCounters(entityID, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, inputStreamSubject(entityID, streamIndex), counters);
+		trackStreamInputLock(entityID, streamIndex, counters);
 
 		auto const framesRxIt = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::FramesRx);
 		if (framesRxIt == counters.end())
@@ -1680,6 +1658,75 @@ public:
 		}
 	}
 
+	/**
+	* @brief Media clock lock tracking of a stream input from its MEDIA_LOCKED / MEDIA_UNLOCKED counters.
+	* @details Same rule as the clock domains (derived state, transitions replayed from the increments, inferred flags), per stream: 'Media unlocked' is an error for a connected stream only (a stream being disconnected unlocks, that is not an error), closed by the 'Media locked' recovery of the same stream.
+	*          A lock closing no journaled unlock (the stream was just connected, or its talker just started streaming) is diagnostic information rather than a recovery.
+	*/
+	void trackStreamInputLock(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept
+	{
+		auto const newState = makeStreamLockState(counters);
+		if (!newState)
+		{
+			return;
+		}
+
+		auto& states = _streamLockStates[entityID];
+		auto const it = states.find(streamIndex);
+		if (it == states.end())
+		{
+			// No baseline (entity without counters at enumeration time): silently store
+			states[streamIndex] = StreamLockState{ *newState, false };
+			return;
+		}
+		auto& state = it->second;
+		auto const replay = replayCounterPairTransitions(state.lock, *newState);
+		state.lock = *newState;
+		if (replay.transitions.empty())
+		{
+			return;
+		}
+
+		// The connection state is read live from the entity model (which la_avdecc updates before the queued notification reaches the main thread), the same source as the stream data loss rule and the error counters of the UI
+		auto const connectionInfo = liveStreamInputConnectionInfo(entityID, streamIndex);
+		auto const isConnected = connectionInfo && connectionInfo->state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected;
+		for (auto const& transition : replay.transitions)
+		{
+			auto details = QJsonObject{};
+			details["media_locked_counter"] = static_cast<qint64>(newState->activeCounter);
+			details["media_unlocked_counter"] = static_cast<qint64>(newState->inactiveCounter);
+			details["media_locked_increment"] = static_cast<qint64>(replay.activeIncrement);
+			details["media_unlocked_increment"] = static_cast<qint64>(replay.inactiveIncrement);
+			if (transition.isInferred)
+			{
+				details["inferred"] = true;
+			}
+			if (isConnected)
+			{
+				details["talker_id"] = helper::uniqueIdentifierToString(connectionInfo->talkerStream.entityID);
+				details["talker_stream_index"] = static_cast<int>(connectionInfo->talkerStream.streamIndex);
+			}
+			if (!transition.isActive)
+			{
+				if (!isConnected)
+				{
+					continue;
+				}
+				state.hasOpenUnlock = true;
+				addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Media unlocked", details);
+			}
+			else if (state.hasOpenUnlock)
+			{
+				state.hasOpenUnlock = false;
+				addEvent(Category::Counters, Severity::Recovered, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Media locked", details);
+			}
+			else
+			{
+				addEvent(Category::Counters, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), "Media locked", details, Level::Diagnostic);
+			}
+		}
+	}
+
 	void handleEntityCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::EntityCounters const& counters) noexcept
 	{
 		if (!isRecording())
@@ -1696,6 +1743,107 @@ public:
 			return;
 		}
 		journalRawCounters(entityID, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), counters);
+		trackLinkState(entityID, avbInterfaceIndex, counters);
+		trackGptpGmChanged(entityID, avbInterfaceIndex, counters);
+	}
+
+	/**
+	* @brief Link tracking of an AVB interface from its LINK_UP / LINK_DOWN counters.
+	* @details la_avdecc derives the link status it notifies from the same counters, so the journal tracks them directly: same rule as the clock domains (derived state, transitions replayed from the increments, inferred flags), so a link that went down and came back between two notifications is journaled as an inferred 'Link down' / 'Link up' pair instead of being lost.
+	*/
+	void trackLinkState(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters) noexcept
+	{
+		auto const newState = makeLinkState(counters);
+		if (!newState)
+		{
+			return;
+		}
+
+		auto& states = _linkStates[entityID];
+		auto const it = states.find(avbInterfaceIndex);
+		if (it == states.end())
+		{
+			// No baseline (entity without counters at enumeration time): silently store
+			states[avbInterfaceIndex] = *newState;
+			return;
+		}
+		auto const replay = replayCounterPairTransitions(it->second, *newState);
+		it->second = *newState;
+
+		for (auto const& transition : replay.transitions)
+		{
+			auto details = QJsonObject{};
+			details["link_up_counter"] = static_cast<qint64>(newState->activeCounter);
+			details["link_down_counter"] = static_cast<qint64>(newState->inactiveCounter);
+			details["link_up_increment"] = static_cast<qint64>(replay.activeIncrement);
+			details["link_down_increment"] = static_cast<qint64>(replay.inactiveIncrement);
+			if (transition.isInferred)
+			{
+				details["inferred"] = true;
+			}
+			if (transition.isActive)
+			{
+				addEvent(Category::Link, Severity::Recovered, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Link up", details);
+			}
+			else
+			{
+				addEvent(Category::Link, Severity::Error, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "Link down", details);
+			}
+		}
+	}
+
+	/**
+	* @brief GPTP_GM_CHANGED tracking of an AVB interface: every increase is journaled with the raw values and the grandmaster known before and after.
+	* @details A grandmaster change the controller observed is already journaled from the AVB interface information (handleGptpChanged), this event adds the count: an increase while the grandmaster is the same before and after (an even increment, typically) means the grandmaster changed and came back between two notifications.
+	*          The counters and the AVB interface information are notified separately (in no defined order), so the journal states the facts and leaves the flip and back conclusion to the analysis.
+	*/
+	void trackGptpGmChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters) noexcept
+	{
+		auto const counterIt = counters.find(la::avdecc::entity::AvbInterfaceCounterValidFlag::GptpGmChanged);
+		if (counterIt == counters.end())
+		{
+			return;
+		}
+		auto const value = counterIt->second;
+		auto grandmasterID = std::optional<la::avdecc::UniqueIdentifier>{};
+		if (auto const entityIt = _gptpStates.find(entityID); entityIt != _gptpStates.end())
+		{
+			if (auto const interfaceIt = entityIt->second.find(avbInterfaceIndex); interfaceIt != entityIt->second.end())
+			{
+				grandmasterID = interfaceIt->second.first;
+			}
+		}
+
+		auto& states = _gptpGmChangedStates[entityID];
+		auto const it = states.find(avbInterfaceIndex);
+		if (it == states.end())
+		{
+			// No baseline (entity without counters at enumeration time): silently store
+			states[avbInterfaceIndex] = GptpGmChangedState{ value, grandmasterID };
+			return;
+		}
+		auto const previousState = it->second;
+		it->second = GptpGmChangedState{ value, grandmasterID };
+		// The same value again is a duplicate notification, a lower value a counters reset: neither is an increase
+		if (value <= previousState.counter)
+		{
+			return;
+		}
+
+		auto details = QJsonObject{};
+		details["counter"] = "GPTP GM Changed";
+		details["previous_value"] = static_cast<qint64>(previousState.counter);
+		details["value"] = static_cast<qint64>(value);
+		details["increment"] = static_cast<qint64>(value - previousState.counter);
+		if (previousState.grandmasterID)
+		{
+			details["previous_grandmaster_id"] = helper::uniqueIdentifierToString(*previousState.grandmasterID);
+		}
+		if (grandmasterID)
+		{
+			details["grandmaster_id"] = helper::uniqueIdentifierToString(*grandmasterID);
+		}
+		addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), QString{ "'GPTP GM Changed' counter increased to %1" }.arg(value), details);
 	}
 
 	void handleStreamOutputCountersChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters) noexcept
@@ -1714,9 +1862,20 @@ public:
 			return;
 		}
 
+		// The MEDIA_UNLOCKED increases of a stream whose lock state is tracked from its counters are journaled by the stream lock rule (trackStreamInputLock), as 'Media unlocked' errors closed by the 'Media locked' recoveries
+		auto const isLockTracked = [this, entityID, descriptorIndex]()
+		{
+			auto const entityIt = _streamLockStates.find(entityID);
+			return entityIt != _streamLockStates.end() && entityIt->second.count(descriptorIndex) > 0u;
+		}();
+
 		auto& previousCounters = _streamInputErrorCounters[entityID][descriptorIndex];
 		for (auto const& [flag, value] : errorCounters)
 		{
+			if (flag == la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked && isLockTracked)
+			{
+				continue;
+			}
 			auto const previousIt = previousCounters.find(flag);
 			auto const previousValue = (previousIt != previousCounters.end()) ? previousIt->second : la::avdecc::entity::model::DescriptorCounter{ 0u };
 			if (previousIt == previousCounters.end() || value > previousValue)
@@ -2124,6 +2283,40 @@ public:
 		return subject;
 	}
 
+	/** Builds the details describing the clock source a clock domain currently follows (index and type, then the input stream and its talker when the source is an input stream), empty if the entity is offline or the model incomplete. */
+	static QJsonObject clockSourceDetails(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex) noexcept
+	{
+		auto details = QJsonObject{};
+		auto& manager = ControllerManager::getInstance();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			try
+			{
+				auto const& configurationNode = controlledEntity->getCurrentConfigurationNode();
+				auto const clockSourceIndex = configurationNode.clockDomains.at(clockDomainIndex).dynamicModel.clockSourceIndex;
+				details["clock_source_index"] = static_cast<int>(clockSourceIndex);
+				auto const& clockSourceStaticModel = configurationNode.clockSources.at(clockSourceIndex).staticModel;
+				json const serializedType = clockSourceStaticModel.clockSourceType; // Must use operator= instead of constructor to force usage of the to_json overload
+				details["clock_source_type"] = toQJsonValue(serializedType);
+				if (clockSourceStaticModel.clockSourceLocationType == la::avdecc::entity::model::DescriptorType::StreamInput)
+				{
+					details["clock_source_stream_index"] = static_cast<int>(clockSourceStaticModel.clockSourceLocationIndex);
+					auto const& connectionInfo = configurationNode.streamInputs.at(clockSourceStaticModel.clockSourceLocationIndex).dynamicModel.connectionInfo;
+					if (connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected)
+					{
+						details["clock_source_talker_id"] = helper::uniqueIdentifierToString(connectionInfo.talkerStream.entityID);
+						details["clock_source_talker_stream_index"] = static_cast<int>(connectionInfo.talkerStream.streamIndex);
+					}
+				}
+			}
+			catch (...)
+			{
+				// Entity without a current configuration, or clock source not in the model: the details stay partial
+			}
+		}
+		return details;
+	}
+
 	/** Returns the pointer of a key of the dynamic model of a descriptor of the given entity, in the given configuration (the current one by default), or std::nullopt if the entity is offline or the descriptor unknown. */
 	static std::optional<QString> dynamicPointer(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, char const* const key, std::optional<la::avdecc::entity::model::ConfigurationIndex> const configurationIndex = std::nullopt) noexcept
 	{
@@ -2154,7 +2347,25 @@ public:
 		return true;
 	}
 
-	/** Journals a raw counters notification at diagnostic level: the values that changed and a patch of the whole set, skipping the notifications that changed nothing (duplicates) or only the liveness counters (FRAMES_RX and the like, see LivenessCounterNames). */
+	/** Returns the value of a serialized counter, or std::nullopt if the JSON value is not an unsigned number. */
+	static std::optional<std::uint64_t> counterValue(json const& value) noexcept
+	{
+		if (value.is_number_unsigned())
+		{
+			return value.get<std::uint64_t>();
+		}
+		return std::nullopt;
+	}
+
+	/** Increase of an informational counter found while journaling a raw counters notification (see journalRawCounters). */
+	struct InformationalCounterIncrease
+	{
+		char const* displayName{ nullptr };
+		std::uint64_t previousValue{ 0u };
+		std::uint64_t value{ 0u };
+	};
+
+	/** Journals a raw counters notification at diagnostic level: the values that changed and a patch of the whole set, skipping the notifications that changed nothing (duplicates) or only the liveness counters (FRAMES_RX and the like, see LivenessCounterNames). The informational counters that increased (StreamInputInformationalCounters, StreamOutputInformationalCounters) get an additional readable event each. */
 	template<typename CountersType>
 	void journalRawCounters(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, QString const& subject, CountersType const& counters) noexcept
 	{
@@ -2167,6 +2378,7 @@ public:
 		auto& previousValues = _rawCounters[entityID][CounterKey{ descriptorType, descriptorIndex }];
 		auto changed = QJsonArray{};
 		auto onlyLiveness = true;
+		auto increases = std::vector<InformationalCounterIncrease>{};
 		for (auto const& [name, value] : values.items())
 		{
 			auto const previousIt = previousValues.find(name);
@@ -2180,8 +2392,18 @@ public:
 			object["value"] = toQJsonValue(value);
 			changed.push_back(object);
 			onlyLiveness &= std::find(std::begin(LivenessCounterNames), std::end(LivenessCounterNames), name) != std::end(LivenessCounterNames);
+			// Only an increase over a known value is informative (a counter going backwards means the device rebooted or its counters were reset)
+			if (auto const* const displayName = informationalCounterDisplayName(descriptorType, name))
+			{
+				auto const previousValue = previousIt != previousValues.end() ? counterValue(*previousIt) : std::nullopt;
+				auto const newValue = counterValue(value);
+				if (previousValue && newValue && *newValue > *previousValue)
+				{
+					increases.push_back(InformationalCounterIncrease{ displayName, *previousValue, *newValue });
+				}
+			}
 		}
-		// The liveness counters are tracked too, so the first informative change after a long streaming period reports the previous values correctly
+		// The liveness counters are tracked too, so the first informative change after a long streaming period reports their previous values correctly
 		previousValues = values;
 		if (changed.isEmpty() || onlyLiveness)
 		{
@@ -2193,6 +2415,17 @@ public:
 		patch.replace(descriptorType == la::avdecc::entity::model::DescriptorType::Entity ? std::optional<QString>{ QString{ "%1/dynamic/counters" }.arg(avePatch::entityDescriptorPointer()) } : dynamicPointer(entityID, descriptorType, descriptorIndex, "counters"), counters);
 		patch.storeIn(details);
 		addEvent(Category::Counters, Severity::Info, entityID, entityNameFor(entityID), subject, "Counters updated", details, Level::Diagnostic);
+
+		// The readable events of the informational counters (the raw event above already carries the whole change, these are the ones to search for)
+		for (auto const& increase : increases)
+		{
+			auto increaseDetails = QJsonObject{};
+			increaseDetails["counter"] = increase.displayName;
+			increaseDetails["previous_value"] = static_cast<qint64>(increase.previousValue);
+			increaseDetails["value"] = static_cast<qint64>(increase.value);
+			increaseDetails["increment"] = static_cast<qint64>(increase.value - increase.previousValue);
+			addEvent(Category::Counters, Severity::Info, entityID, entityNameFor(entityID), subject, QString{ "'%1' counter increased to %2" }.arg(increase.displayName).arg(increase.value), increaseDetails, Level::Diagnostic);
+		}
 	}
 
 	/** Control values rate limiting state of a control: the last journaled values and time, and the pending values coalesced since. */
@@ -2235,25 +2468,122 @@ public:
 		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Control %1" }.arg(controlIndex), summary, details, Level::Diagnostic);
 	}
 
-	/** Media clock lock tracking state of a clock domain: the lock state derived from the counters, and the counter values it was derived from. */
-	struct ClockLockState
+	/** State derived from a pair of counters counting the entries into and the exits from a state (LOCKED / UNLOCKED of a clock domain, MEDIA_LOCKED / MEDIA_UNLOCKED of a stream input, LINK_UP / LINK_DOWN of an AVB interface), and the counter values it was derived from. */
+	struct CounterPairState
 	{
-		bool isLocked{ false };
-		la::avdecc::entity::model::DescriptorCounter lockedCounter{ 0u };
-		la::avdecc::entity::model::DescriptorCounter unlockedCounter{ 0u };
+		bool isActive{ false }; // Locked, or link up
+		la::avdecc::entity::model::DescriptorCounter activeCounter{ 0u }; // Entries into the state (LOCKED, MEDIA_LOCKED, LINK_UP)
+		la::avdecc::entity::model::DescriptorCounter inactiveCounter{ 0u }; // Exits from the state (UNLOCKED, MEDIA_UNLOCKED, LINK_DOWN)
 	};
 
-	/** Builds the media clock lock tracking state from clock domain counters (the domain is locked when it locked more times than it unlocked, same rule as the Discovered Entities list). Returns std::nullopt if the counters are not available. */
-	static std::optional<ClockLockState> makeClockLockState(la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept
+	/** A transition replayed from the counter increments between two notifications (see replayCounterPairTransitions). */
+	struct CounterPairTransition
+	{
+		bool isActive{ false }; // State resulting from the transition
+		bool isInferred{ false }; // True when the transition could not have been observed by comparing the states before and after the notification
+	};
+
+	/** The transitions replayed from the counter increments between two notifications, with the increments themselves (zero when the counters went backwards). */
+	struct CounterPairReplay
+	{
+		la::avdecc::entity::model::DescriptorCounter activeIncrement{ 0u };
+		la::avdecc::entity::model::DescriptorCounter inactiveIncrement{ 0u };
+		std::vector<CounterPairTransition> transitions{}; // In order
+	};
+
+	/**
+	* @brief Replays the transitions implied by the counter increments between two notifications.
+	* @details The counters are only notified once in a while, so the state may have flipped and come back (possibly several times) between two notifications without the derived state ever changing.
+	*          The transitions are replayed in the only order consistent with an alternating sequence starting from the previous state, and the replay always ends on the state derived from the counters (same rule as the Discovered Entities list), so every exit the device counted ends up in the journal.
+	*          A counter going backwards means the device rebooted or its counters were reset: the increments are meaningless, only the resulting state is compared.
+	*          A transition is inferred when it could not have been observed by comparing the states before and after the notification: all of them when the state did not change, all but the last one otherwise.
+	*/
+	static CounterPairReplay replayCounterPairTransitions(CounterPairState const& previousState, CounterPairState const& newState) noexcept
+	{
+		auto replay = CounterPairReplay{};
+		auto const countersReset = newState.activeCounter < previousState.activeCounter || newState.inactiveCounter < previousState.inactiveCounter;
+		replay.activeIncrement = countersReset ? la::avdecc::entity::model::DescriptorCounter{ 0u } : newState.activeCounter - previousState.activeCounter;
+		replay.inactiveIncrement = countersReset ? la::avdecc::entity::model::DescriptorCounter{ 0u } : newState.inactiveCounter - previousState.inactiveCounter;
+
+		auto isActive = previousState.isActive;
+		auto remainingActivations = replay.activeIncrement;
+		auto remainingDeactivations = replay.inactiveIncrement;
+		while ((isActive && remainingDeactivations > 0u) || (!isActive && remainingActivations > 0u))
+		{
+			if (isActive)
+			{
+				--remainingDeactivations;
+			}
+			else
+			{
+				--remainingActivations;
+			}
+			isActive = !isActive;
+			replay.transitions.push_back(CounterPairTransition{ isActive, false });
+		}
+		// Whatever the increments said, the journaled state must end on the state derived from the counters
+		if (isActive != newState.isActive)
+		{
+			isActive = newState.isActive;
+			replay.transitions.push_back(CounterPairTransition{ isActive, false });
+		}
+		auto const stateChanged = previousState.isActive != newState.isActive;
+		for (auto index = std::size_t{ 0u }; index < replay.transitions.size(); ++index)
+		{
+			replay.transitions[index].isInferred = !stateChanged || index + 1u < replay.transitions.size();
+		}
+		return replay;
+	}
+
+	/** Builds the media clock lock state of a clock domain from its counters (the domain is locked when it locked more times than it unlocked, same rule as the Discovered Entities list). Returns std::nullopt if the counters are not available. */
+	static std::optional<CounterPairState> makeClockLockState(la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept
 	{
 		auto const itLocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Locked);
 		auto const itUnlocked = counters.find(la::avdecc::entity::ClockDomainCounterValidFlag::Unlocked);
 		if (itLocked != counters.end() && itUnlocked != counters.end())
 		{
-			return ClockLockState{ itLocked->second > itUnlocked->second, itLocked->second, itUnlocked->second };
+			return CounterPairState{ itLocked->second > itUnlocked->second, itLocked->second, itUnlocked->second };
 		}
 		return std::nullopt;
 	}
+
+	/** Builds the media clock lock state of a stream input from its MEDIA_LOCKED / MEDIA_UNLOCKED counters (same rule as the clock domains). Returns std::nullopt if either counter is not available. */
+	static std::optional<CounterPairState> makeStreamLockState(la::avdecc::entity::model::StreamInputCounters const& counters) noexcept
+	{
+		auto const itLocked = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::MediaLocked);
+		auto const itUnlocked = counters.find(la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked);
+		if (itLocked != counters.end() && itUnlocked != counters.end())
+		{
+			return CounterPairState{ itLocked->second > itUnlocked->second, itLocked->second, itUnlocked->second };
+		}
+		return std::nullopt;
+	}
+
+	/** Builds the link state of an AVB interface from its LINK_UP / LINK_DOWN counters (up when LINK_UP is exactly LINK_DOWN plus one, the rule la_avdecc derives the link status from, Milan 1.3 Clause 5.3.6.3). Returns std::nullopt if either counter is not available. */
+	static std::optional<CounterPairState> makeLinkState(la::avdecc::entity::model::AvbInterfaceCounters const& counters) noexcept
+	{
+		auto const itUp = counters.find(la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkUp);
+		auto const itDown = counters.find(la::avdecc::entity::AvbInterfaceCounterValidFlag::LinkDown);
+		if (itUp != counters.end() && itDown != counters.end())
+		{
+			return CounterPairState{ itUp->second == itDown->second + 1u, itUp->second, itDown->second };
+		}
+		return std::nullopt;
+	}
+
+	/** Media clock lock tracking state of a stream input: the lock state derived from its counters, and whether an unlock error is open (journaled and not closed by a relock yet). */
+	struct StreamLockState
+	{
+		CounterPairState lock{};
+		bool hasOpenUnlock{ false };
+	};
+
+	/** GPTP_GM_CHANGED tracking state of an AVB interface: the counter value and the grandmaster known at the previous counters notification. */
+	struct GptpGmChangedState
+	{
+		la::avdecc::entity::model::DescriptorCounter counter{ 0u };
+		std::optional<la::avdecc::UniqueIdentifier> grandmasterID{};
+	};
 
 	/** Stream data reception tracking state of a stream input: the FRAMES_RX value and arrival time of the previous notification, and the learned increments. */
 	struct StreamDataState
@@ -2492,7 +2822,17 @@ public:
 			for (auto const& [avbInterfaceIndex, avbInterfaceNode] : configurationNode.avbInterfaces)
 			{
 				_gptpStates[entityID][avbInterfaceIndex] = std::make_pair(avbInterfaceNode.dynamicModel.gptpGrandmasterID, avbInterfaceNode.dynamicModel.gptpDomainNumber);
-				_linkStatuses[entityID][avbInterfaceIndex] = controlledEntity.getAvbInterfaceLinkStatus(avbInterfaceIndex);
+				if (avbInterfaceNode.dynamicModel.counters)
+				{
+					if (auto const linkState = makeLinkState(*avbInterfaceNode.dynamicModel.counters))
+					{
+						_linkStates[entityID][avbInterfaceIndex] = *linkState;
+					}
+					if (auto const counterIt = avbInterfaceNode.dynamicModel.counters->find(la::avdecc::entity::AvbInterfaceCounterValidFlag::GptpGmChanged); counterIt != avbInterfaceNode.dynamicModel.counters->end())
+					{
+						_gptpGmChangedStates[entityID][avbInterfaceIndex] = GptpGmChangedState{ counterIt->second, avbInterfaceNode.dynamicModel.gptpGrandmasterID };
+					}
+				}
 				if (avbInterfaceNode.dynamicModel.asPath)
 				{
 					_asPaths[entityID][avbInterfaceIndex] = *avbInterfaceNode.dynamicModel.asPath;
@@ -2541,6 +2881,10 @@ public:
 				if (streamNode.dynamicModel.counters)
 				{
 					_rawCounters[entityID][CounterKey{ DescriptorType::StreamInput, streamIndex }] = countersToJson(*streamNode.dynamicModel.counters);
+					if (auto const lockState = makeStreamLockState(*streamNode.dynamicModel.counters))
+					{
+						_streamLockStates[entityID][streamIndex] = StreamLockState{ *lockState, false };
+					}
 				}
 				// The FRAMES_RX value of a connected stream is the first reference sample of the stream data loss rule (only the increments matter, so a stale value at most makes the first learned increment larger)
 				if (streamNode.dynamicModel.connectionInfo.state == la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected && streamNode.dynamicModel.counters)
@@ -2583,8 +2927,10 @@ public:
 		_gptpStates.clear();
 		_asPaths.clear();
 		_avbInterfaceInfos.clear();
-		_linkStatuses.clear();
+		_linkStates.clear();
+		_gptpGmChangedStates.clear();
 		_clockLockStates.clear();
+		_streamLockStates.clear();
 		_streamConnections.clear();
 		_streamInputErrorCounters.clear();
 		_streamDataStates.clear();
@@ -2644,8 +2990,10 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::pair<la::avdecc::UniqueIdentifier, std::uint8_t>>, la::avdecc::UniqueIdentifier::hash> _gptpStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::model::AsPath>, la::avdecc::UniqueIdentifier::hash> _asPaths{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo>, la::avdecc::UniqueIdentifier::hash> _avbInterfaceInfos{};
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus>, la::avdecc::UniqueIdentifier::hash> _linkStatuses{};
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, ClockLockState>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, CounterPairState>, la::avdecc::UniqueIdentifier::hash> _linkStates{}; // Link state of the AVB interfaces, derived from their LINK_UP / LINK_DOWN counters
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, GptpGmChangedState>, la::avdecc::UniqueIdentifier::hash> _gptpGmChangedStates{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, CounterPairState>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{}; // Media clock lock state of the clock domains, derived from their LOCKED / UNLOCKED counters
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, StreamLockState>, la::avdecc::UniqueIdentifier::hash> _streamLockStates{}; // Media clock lock state of the stream inputs, derived from their MEDIA_LOCKED / MEDIA_UNLOCKED counters
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, la::avdecc::entity::model::StreamInputConnectionInfo>, la::avdecc::UniqueIdentifier::hash> _streamConnections{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::DescriptorIndex, ControllerManager::StreamInputErrorCounters>, la::avdecc::UniqueIdentifier::hash> _streamInputErrorCounters{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::StreamIndex, StreamDataState>, la::avdecc::UniqueIdentifier::hash> _streamDataStates{}; // Stream data loss rule state, connected streams with a FRAMES_RX counter only
@@ -2747,11 +3095,6 @@ EventJournal::EventJournal()
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info)
 		{
 			_pImpl->handleAvbInterfaceInfoChanged(entityID, avbInterfaceIndex, info);
-		});
-	connect(&manager, &ControllerManager::avbInterfaceLinkStatusChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus)
-		{
-			_pImpl->handleAvbInterfaceLinkStatusChanged(entityID, avbInterfaceIndex, linkStatus);
 		});
 	connect(&manager, &ControllerManager::clockDomainCountersChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters)
