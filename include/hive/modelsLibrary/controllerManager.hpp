@@ -220,6 +220,13 @@ public:
 	/** True if the current controller was created in redundant (dual interface) mode. */
 	virtual bool isRedundantController() const noexcept = 0;
 
+	/**
+	* @brief Gets the origin of the la_avdecc notification the signal being emitted comes from.
+	* @details Meant to be called from a slot connected to an entity change signal (counters, names, formats, connections, gPTP, acquire and lock, capabilities, ...) and executed on the main thread: tells whether the change was carried by an unsolicited notification of the entity or by the response to a command of this controller (an enumeration, a refresh or a command of the application), and on which interface it was received. The source is Unknown outside of these signals (eg. the entity online and offline signals, the statistics signals, or a signal emitted by the application itself).
+	* @return The origin of the notification.
+	*/
+	virtual la::avdecc::controller::NotificationOrigin currentNotificationOrigin() const noexcept = 0;
+
 	/** Gets a ControlledEntity */
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept = 0;
 

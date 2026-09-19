@@ -25,6 +25,9 @@
 
 #include <atomic>
 #include <thread>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 #if __cpp_lib_experimental_atomic_smart_pointers
 #	define HAVE_ATOMIC_SMART_POINTERS
@@ -453,6 +456,52 @@ public:
 	}
 
 private:
+	/** Sets the origin of the notification being delivered for the duration of a signal emission (main thread only), restoring the previous one afterwards. */
+	class NotificationOriginScope final
+	{
+	public:
+		NotificationOriginScope(la::avdecc::controller::NotificationOrigin& current, la::avdecc::controller::NotificationOrigin const& origin) noexcept
+			: _current{ current }
+			, _previous{ std::exchange(current, origin) }
+		{
+		}
+		~NotificationOriginScope() noexcept
+		{
+			_current = _previous;
+		}
+
+		// Deleted compiler auto-generated methods
+		NotificationOriginScope(NotificationOriginScope const&) = delete;
+		NotificationOriginScope(NotificationOriginScope&&) = delete;
+		NotificationOriginScope& operator=(NotificationOriginScope const&) = delete;
+		NotificationOriginScope& operator=(NotificationOriginScope&&) = delete;
+
+	private:
+		la::avdecc::controller::NotificationOrigin& _current;
+		la::avdecc::controller::NotificationOrigin _previous{};
+	};
+
+	/**
+	* @brief Emits an entity change signal on the main thread, with the origin of the la_avdecc notification being processed available to the slots through currentNotificationOrigin().
+	* @details The origin is read on the calling thread (the one la_avdecc invokes the observer on, where it is known) and the emission is queued to the main thread, where the slots run anyway. The arguments are copied, as a queued signal would.
+	*/
+	template<typename... SignalArgs, typename... Args>
+	void emitWithOrigin(la::avdecc::controller::Controller const* const controller, void (ControllerManager::*signal)(SignalArgs...), Args const&... args) noexcept
+	{
+		auto arguments = std::tuple<std::decay_t<SignalArgs>...>{ args... };
+		QMetaObject::invokeMethod(this,
+			[this, origin = controller->getCurrentNotificationOrigin(), signal, arguments = std::move(arguments)]()
+			{
+				auto const scope = NotificationOriginScope{ _currentNotificationOrigin, origin };
+				std::apply(
+					[this, signal](auto const&... signalArguments)
+					{
+						emit(this->*signal)(signalArguments...);
+					},
+					arguments);
+			});
+	}
+
 	// la::avdecc::controller::Controller::Observer overrides
 	// Global controller notifications
 	virtual void onTransportError(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
@@ -523,10 +572,10 @@ private:
 		auto const& e = entity->getEntity();
 		emit entityRedundantInterfaceOffline(e.getEntityID(), avbInterfaceIndex);
 	}
-	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
+	virtual void onEntityCapabilitiesChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
 		auto const& e = entity->getEntity();
-		emit entityCapabilitiesChanged(e.getEntityID(), e.getEntityCapabilities());
+		emitWithOrigin(controller, &ControllerManager::entityCapabilitiesChanged, e.getEntityID(), e.getEntityCapabilities());
 	}
 	virtual void onEntityAssociationIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
@@ -534,28 +583,29 @@ private:
 		auto const associationID = e.getAssociationID();
 		emit associationIDChanged(e.getEntityID(), associationID);
 	}
-	virtual void onGptpChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain) noexcept override
+	virtual void onGptpChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::UniqueIdentifier const grandMasterID, std::uint8_t const grandMasterDomain) noexcept override
 	{
 		auto const& e = entity->getEntity();
-		emit gptpChanged(e.getEntityID(), avbInterfaceIndex, grandMasterID, grandMasterDomain);
+		emitWithOrigin(controller, &ControllerManager::gptpChanged, e.getEntityID(), avbInterfaceIndex, grandMasterID, grandMasterDomain);
 	}
 	// Global entity notifications
-	virtual void onUnsolicitedRegistrationChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, bool const isSubscribed, bool const triggeredByEntity, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
+	virtual void onUnsolicitedRegistrationChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, bool const isSubscribed, bool const triggeredByEntity, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
 		// The event is per-interface: get the aggregated state right now (the entity is still locked), the entity is only out-of-sync when NO interface is subscribed anymore
 		auto const entityID = entity->getEntity().getEntityID();
 		auto const isSubscribedAggregated = entity->isSubscribedToUnsolicitedNotifications();
 
 		QMetaObject::invokeMethod(this,
-			[this, entityID, isSubscribed, triggeredByEntity, interfaceType, isSubscribedAggregated]()
+			[this, origin = controller->getCurrentNotificationOrigin(), entityID, isSubscribed, triggeredByEntity, interfaceType, isSubscribedAggregated]()
 			{
+				auto const originScope = NotificationOriginScope{ _currentNotificationOrigin, origin };
 				emit interfaceUnsolicitedRegistrationChanged(entityID, isSubscribed, triggeredByEntity, interfaceType);
 				emit unsolicitedRegistrationChanged(entityID, isSubscribedAggregated, triggeredByEntity);
 			});
 	}
-	virtual void onCompatibilityChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion) noexcept override
+	virtual void onCompatibilityChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanCompatibleVersion) noexcept override
 	{
-		emit compatibilityChanged(entity->getEntity().getEntityID(), compatibilityFlags, milanCompatibleVersion);
+		emitWithOrigin(controller, &ControllerManager::compatibilityChanged, entity->getEntity().getEntityID(), compatibilityFlags, milanCompatibleVersion);
 	}
 	virtual void onIdentificationStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity) noexcept override
 	{
@@ -566,168 +616,168 @@ private:
 		emit identificationStopped(entity->getEntity().getEntityID());
 	}
 	// Connection notifications (sniffed ACMP)
-	virtual void onStreamInputConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputConnectionInfo const& info, bool const /*changedByOther*/) noexcept override
+	virtual void onStreamInputConnectionChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputConnectionInfo const& info, bool const /*changedByOther*/) noexcept override
 	{
-		emit streamInputConnectionChanged({ entity->getEntity().getEntityID(), streamIndex }, info);
+		emitWithOrigin(controller, &ControllerManager::streamInputConnectionChanged, la::avdecc::entity::model::StreamIdentification{ entity->getEntity().getEntityID(), streamIndex }, info);
 	}
-	virtual void onStreamOutputConnectionsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamConnections const& connections) noexcept override
+	virtual void onStreamOutputConnectionsChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamConnections const& connections) noexcept override
 	{
-		emit streamOutputConnectionsChanged({ entity->getEntity().getEntityID(), streamIndex }, connections);
+		emitWithOrigin(controller, &ControllerManager::streamOutputConnectionsChanged, la::avdecc::entity::model::StreamIdentification{ entity->getEntity().getEntityID(), streamIndex }, connections);
 	}
 	virtual void onChannelInputConnectionChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::ClusterIdentification const& clusterIdentification, la::avdecc::controller::model::ChannelIdentification const& channeIdentification) noexcept override
 	{
 		emit channelInputConnectionChanged(entity->getEntity().getEntityID(), clusterIdentification, channeIdentification);
 	}
 	// Entity model notifications (unsolicited AECP or changes this controller sent)
-	virtual void onAcquireStateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity) noexcept override
+	virtual void onAcquireStateChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::AcquireState const acquireState, la::avdecc::UniqueIdentifier const owningEntity) noexcept override
 	{
-		emit acquireStateChanged(entity->getEntity().getEntityID(), acquireState, owningEntity);
+		emitWithOrigin(controller, &ControllerManager::acquireStateChanged, entity->getEntity().getEntityID(), acquireState, owningEntity);
 	}
-	virtual void onLockStateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity) noexcept override
+	virtual void onLockStateChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity) noexcept override
 	{
-		emit lockStateChanged(entity->getEntity().getEntityID(), lockState, lockingEntity);
+		emitWithOrigin(controller, &ControllerManager::lockStateChanged, entity->getEntity().getEntityID(), lockState, lockingEntity);
 	}
-	virtual void onStreamInputFormatChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
+	virtual void onStreamInputFormatChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
 	{
-		emit streamFormatChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, streamFormat);
+		emitWithOrigin(controller, &ControllerManager::streamFormatChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, streamFormat);
 	}
-	virtual void onStreamOutputFormatChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
+	virtual void onStreamOutputFormatChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamFormat const streamFormat) noexcept override
 	{
-		emit streamFormatChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, streamFormat);
+		emitWithOrigin(controller, &ControllerManager::streamFormatChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, streamFormat);
 	}
-	virtual void onStreamInputDynamicInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info) noexcept override
+	virtual void onStreamInputDynamicInfoChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info) noexcept override
 	{
-		emit streamDynamicInfoChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, info);
+		emitWithOrigin(controller, &ControllerManager::streamDynamicInfoChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, info);
 	}
-	virtual void onStreamOutputDynamicInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info) noexcept override
+	virtual void onStreamOutputDynamicInfoChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info) noexcept override
 	{
-		emit streamDynamicInfoChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, info);
+		emitWithOrigin(controller, &ControllerManager::streamDynamicInfoChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, info);
 	}
-	virtual void onEntityNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvdeccFixedString const& entityName) noexcept override
+	virtual void onEntityNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvdeccFixedString const& entityName) noexcept override
 	{
-		emit entityNameChanged(entity->getEntity().getEntityID(), QString::fromStdString(entityName));
+		emitWithOrigin(controller, &ControllerManager::entityNameChanged, entity->getEntity().getEntityID(), QString::fromStdString(entityName));
 	}
-	virtual void onEntityGroupNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvdeccFixedString const& entityGroupName) noexcept override
+	virtual void onEntityGroupNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvdeccFixedString const& entityGroupName) noexcept override
 	{
-		emit entityGroupNameChanged(entity->getEntity().getEntityID(), QString::fromStdString(entityGroupName));
+		emitWithOrigin(controller, &ControllerManager::entityGroupNameChanged, entity->getEntity().getEntityID(), QString::fromStdString(entityGroupName));
 	}
-	virtual void onConfigurationNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvdeccFixedString const& configurationName) noexcept override
+	virtual void onConfigurationNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvdeccFixedString const& configurationName) noexcept override
 	{
-		emit configurationNameChanged(entity->getEntity().getEntityID(), configurationIndex, QString::fromStdString(configurationName));
+		emitWithOrigin(controller, &ControllerManager::configurationNameChanged, entity->getEntity().getEntityID(), configurationIndex, QString::fromStdString(configurationName));
 	}
-	virtual void onAudioUnitNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::AvdeccFixedString const& audioUnitName) noexcept override
+	virtual void onAudioUnitNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::AvdeccFixedString const& audioUnitName) noexcept override
 	{
-		emit audioUnitNameChanged(entity->getEntity().getEntityID(), configurationIndex, audioUnitIndex, QString::fromStdString(audioUnitName));
+		emitWithOrigin(controller, &ControllerManager::audioUnitNameChanged, entity->getEntity().getEntityID(), configurationIndex, audioUnitIndex, QString::fromStdString(audioUnitName));
 	}
-	virtual void onStreamInputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvdeccFixedString const& streamName) noexcept override
+	virtual void onStreamInputNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvdeccFixedString const& streamName) noexcept override
 	{
-		emit streamNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, QString::fromStdString(streamName));
+		emitWithOrigin(controller, &ControllerManager::streamNameChanged, entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, QString::fromStdString(streamName));
 	}
-	virtual void onStreamOutputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvdeccFixedString const& streamName) noexcept override
+	virtual void onStreamOutputNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::AvdeccFixedString const& streamName) noexcept override
 	{
-		emit streamNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, QString::fromStdString(streamName));
+		emitWithOrigin(controller, &ControllerManager::streamNameChanged, entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, QString::fromStdString(streamName));
 	}
-	virtual void onJackInputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
+	virtual void onJackInputNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
 	{
-		emit jackNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackInput, jackIndex, QString::fromStdString(jackName));
+		emitWithOrigin(controller, &ControllerManager::jackNameChanged, entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackInput, jackIndex, QString::fromStdString(jackName));
 	}
-	virtual void onJackOutputNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
+	virtual void onJackOutputNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::JackIndex const jackIndex, la::avdecc::entity::model::AvdeccFixedString const& jackName) noexcept override
 	{
-		emit jackNameChanged(entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackOutput, jackIndex, QString::fromStdString(jackName));
+		emitWithOrigin(controller, &ControllerManager::jackNameChanged, entity->getEntity().getEntityID(), configurationIndex, la::avdecc::entity::model::DescriptorType::JackOutput, jackIndex, QString::fromStdString(jackName));
 	}
-	virtual void onAvbInterfaceNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvdeccFixedString const& avbInterfaceName) noexcept override
+	virtual void onAvbInterfaceNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvdeccFixedString const& avbInterfaceName) noexcept override
 	{
-		emit avbInterfaceNameChanged(entity->getEntity().getEntityID(), configurationIndex, avbInterfaceIndex, QString::fromStdString(avbInterfaceName));
+		emitWithOrigin(controller, &ControllerManager::avbInterfaceNameChanged, entity->getEntity().getEntityID(), configurationIndex, avbInterfaceIndex, QString::fromStdString(avbInterfaceName));
 	}
-	virtual void onClockSourceNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, la::avdecc::entity::model::AvdeccFixedString const& clockSourceName) noexcept override
+	virtual void onClockSourceNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex, la::avdecc::entity::model::AvdeccFixedString const& clockSourceName) noexcept override
 	{
-		emit clockSourceNameChanged(entity->getEntity().getEntityID(), configurationIndex, clockSourceIndex, QString::fromStdString(clockSourceName));
+		emitWithOrigin(controller, &ControllerManager::clockSourceNameChanged, entity->getEntity().getEntityID(), configurationIndex, clockSourceIndex, QString::fromStdString(clockSourceName));
 	}
-	virtual void onMemoryObjectNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::entity::model::AvdeccFixedString const& memoryObjectName) noexcept override
+	virtual void onMemoryObjectNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::MemoryObjectIndex const memoryObjectIndex, la::avdecc::entity::model::AvdeccFixedString const& memoryObjectName) noexcept override
 	{
-		emit memoryObjectNameChanged(entity->getEntity().getEntityID(), configurationIndex, memoryObjectIndex, QString::fromStdString(memoryObjectName));
+		emitWithOrigin(controller, &ControllerManager::memoryObjectNameChanged, entity->getEntity().getEntityID(), configurationIndex, memoryObjectIndex, QString::fromStdString(memoryObjectName));
 	}
-	virtual void onAudioClusterNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, la::avdecc::entity::model::AvdeccFixedString const& audioClusterName) noexcept override
+	virtual void onAudioClusterNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClusterIndex const audioClusterIndex, la::avdecc::entity::model::AvdeccFixedString const& audioClusterName) noexcept override
 	{
-		emit audioClusterNameChanged(entity->getEntity().getEntityID(), configurationIndex, audioClusterIndex, QString::fromStdString(audioClusterName));
+		emitWithOrigin(controller, &ControllerManager::audioClusterNameChanged, entity->getEntity().getEntityID(), configurationIndex, audioClusterIndex, QString::fromStdString(audioClusterName));
 	}
-	virtual void onControlNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::AvdeccFixedString const& controlName) noexcept override
+	virtual void onControlNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::AvdeccFixedString const& controlName) noexcept override
 	{
-		emit controlNameChanged(entity->getEntity().getEntityID(), configurationIndex, controlIndex, QString::fromStdString(controlName));
+		emitWithOrigin(controller, &ControllerManager::controlNameChanged, entity->getEntity().getEntityID(), configurationIndex, controlIndex, QString::fromStdString(controlName));
 	}
-	virtual void onClockDomainNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::AvdeccFixedString const& clockDomainName) noexcept override
+	virtual void onClockDomainNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::AvdeccFixedString const& clockDomainName) noexcept override
 	{
-		emit clockDomainNameChanged(entity->getEntity().getEntityID(), configurationIndex, clockDomainIndex, QString::fromStdString(clockDomainName));
+		emitWithOrigin(controller, &ControllerManager::clockDomainNameChanged, entity->getEntity().getEntityID(), configurationIndex, clockDomainIndex, QString::fromStdString(clockDomainName));
 	}
-	virtual void onTimingNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, la::avdecc::entity::model::AvdeccFixedString const& timingName) noexcept override
+	virtual void onTimingNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::TimingIndex const timingIndex, la::avdecc::entity::model::AvdeccFixedString const& timingName) noexcept override
 	{
-		emit timingNameChanged(entity->getEntity().getEntityID(), configurationIndex, timingIndex, QString::fromStdString(timingName));
+		emitWithOrigin(controller, &ControllerManager::timingNameChanged, entity->getEntity().getEntityID(), configurationIndex, timingIndex, QString::fromStdString(timingName));
 	}
-	virtual void onPtpInstanceNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpInstanceName) noexcept override
+	virtual void onPtpInstanceNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpInstanceIndex const ptpInstanceIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpInstanceName) noexcept override
 	{
-		emit ptpInstanceNameChanged(entity->getEntity().getEntityID(), configurationIndex, ptpInstanceIndex, QString::fromStdString(ptpInstanceName));
+		emitWithOrigin(controller, &ControllerManager::ptpInstanceNameChanged, entity->getEntity().getEntityID(), configurationIndex, ptpInstanceIndex, QString::fromStdString(ptpInstanceName));
 	}
-	virtual void onPtpPortNameChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpPortName) noexcept override
+	virtual void onPtpPortNameChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ConfigurationIndex const configurationIndex, la::avdecc::entity::model::PtpPortIndex const ptpPortIndex, la::avdecc::entity::model::AvdeccFixedString const& ptpPortName) noexcept override
 	{
-		emit ptpPortNameChanged(entity->getEntity().getEntityID(), configurationIndex, ptpPortIndex, QString::fromStdString(ptpPortName));
+		emitWithOrigin(controller, &ControllerManager::ptpPortNameChanged, entity->getEntity().getEntityID(), configurationIndex, ptpPortIndex, QString::fromStdString(ptpPortName));
 	}
 	virtual void onAssociationIDChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::optional<la::avdecc::UniqueIdentifier> const associationID) noexcept override
 	{
 		emit associationIDChanged(entity->getEntity().getEntityID(), associationID);
 	}
-	virtual void onAudioUnitSamplingRateChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept override
+	virtual void onAudioUnitSamplingRateChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept override
 	{
-		emit audioUnitSamplingRateChanged(entity->getEntity().getEntityID(), audioUnitIndex, samplingRate);
+		emitWithOrigin(controller, &ControllerManager::audioUnitSamplingRateChanged, entity->getEntity().getEntityID(), audioUnitIndex, samplingRate);
 	}
-	virtual void onClockSourceChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex) noexcept override
+	virtual void onClockSourceChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex) noexcept override
 	{
-		emit clockSourceChanged(entity->getEntity().getEntityID(), clockDomainIndex, clockSourceIndex);
+		emitWithOrigin(controller, &ControllerManager::clockSourceChanged, entity->getEntity().getEntityID(), clockDomainIndex, clockSourceIndex);
 	}
-	virtual void onControlValuesChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues) noexcept override
+	virtual void onControlValuesChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ControlIndex const controlIndex, la::avdecc::entity::model::ControlValues const& controlValues) noexcept override
 	{
-		emit controlValuesChanged(entity->getEntity().getEntityID(), controlIndex, controlValues);
+		emitWithOrigin(controller, &ControllerManager::controlValuesChanged, entity->getEntity().getEntityID(), controlIndex, controlValues);
 	}
-	virtual void onStreamInputStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void onStreamInputStarted(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
 	{
-		emit streamRunningChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, true);
+		emitWithOrigin(controller, &ControllerManager::streamRunningChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, true);
 	}
-	virtual void onStreamOutputStarted(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void onStreamOutputStarted(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
 	{
-		emit streamRunningChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, true);
+		emitWithOrigin(controller, &ControllerManager::streamRunningChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, true);
 	}
-	virtual void onStreamInputStopped(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void onStreamInputStopped(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
 	{
-		emit streamRunningChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, false);
+		emitWithOrigin(controller, &ControllerManager::streamRunningChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamInput, streamIndex, false);
 	}
-	virtual void onStreamOutputStopped(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
+	virtual void onStreamOutputStopped(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept override
 	{
-		emit streamRunningChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, false);
+		emitWithOrigin(controller, &ControllerManager::streamRunningChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamOutput, streamIndex, false);
 	}
-	virtual void onAvbInterfaceInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info) noexcept override
+	virtual void onAvbInterfaceInfoChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo const& info) noexcept override
 	{
-		emit avbInterfaceInfoChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, info);
+		emitWithOrigin(controller, &ControllerManager::avbInterfaceInfoChanged, entity->getEntity().getEntityID(), avbInterfaceIndex, info);
 	}
-	virtual void onAsPathChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath) noexcept override
+	virtual void onAsPathChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AsPath const& asPath) noexcept override
 	{
-		emit asPathChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, asPath);
+		emitWithOrigin(controller, &ControllerManager::asPathChanged, entity->getEntity().getEntityID(), avbInterfaceIndex, asPath);
 	}
-	virtual void onAvbInterfaceLinkStatusChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus) noexcept override
+	virtual void onAvbInterfaceLinkStatusChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::controller::ControlledEntity::InterfaceLinkStatus const linkStatus) noexcept override
 	{
-		emit avbInterfaceLinkStatusChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, linkStatus);
+		emitWithOrigin(controller, &ControllerManager::avbInterfaceLinkStatusChanged, entity->getEntity().getEntityID(), avbInterfaceIndex, linkStatus);
 	}
-	virtual void onEntityCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::EntityCounters const& counters) noexcept override
+	virtual void onEntityCountersChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::EntityCounters const& counters) noexcept override
 	{
-		emit entityCountersChanged(entity->getEntity().getEntityID(), counters);
+		emitWithOrigin(controller, &ControllerManager::entityCountersChanged, entity->getEntity().getEntityID(), counters);
 	}
-	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters) noexcept override
+	virtual void onAvbInterfaceCountersChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceCounters const& counters) noexcept override
 	{
-		emit avbInterfaceCountersChanged(entity->getEntity().getEntityID(), avbInterfaceIndex, counters);
+		emitWithOrigin(controller, &ControllerManager::avbInterfaceCountersChanged, entity->getEntity().getEntityID(), avbInterfaceIndex, counters);
 	}
-	virtual void onClockDomainCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept override
+	virtual void onClockDomainCountersChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockDomainCounters const& counters) noexcept override
 	{
-		emit clockDomainCountersChanged(entity->getEntity().getEntityID(), clockDomainIndex, counters);
+		emitWithOrigin(controller, &ControllerManager::clockDomainCountersChanged, entity->getEntity().getEntityID(), clockDomainIndex, counters);
 	}
-	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept override
+	virtual void onStreamInputCountersChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamInputCounters const& counters) noexcept override
 	{
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
@@ -778,8 +828,9 @@ private:
 		}
 
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), streamIndex, counters, checkForChange = std::move(checkForChange)]()
+			[this, origin = controller->getCurrentNotificationOrigin(), entityID = entity->getEntity().getEntityID(), streamIndex, counters, checkForChange = std::move(checkForChange)]()
 			{
+				auto const originScope = NotificationOriginScope{ _currentNotificationOrigin, origin };
 				if (auto* entityCache = entityCachedData(entityID))
 				{
 					auto changed = false;
@@ -796,9 +847,9 @@ private:
 				emit streamInputCountersChanged(entityID, streamIndex, counters);
 			});
 	}
-	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters) noexcept override
+	virtual void onStreamOutputCountersChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamOutputCounters const& counters) noexcept override
 	{
-		emit streamOutputCountersChanged(entity->getEntity().getEntityID(), streamIndex, counters);
+		emitWithOrigin(controller, &ControllerManager::streamOutputCountersChanged, entity->getEntity().getEntityID(), streamIndex, counters);
 	}
 	virtual void onStreamOutputSignalPresenceChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::SignalPresenceChannels const& signalPresence) noexcept override
 	{
@@ -808,13 +859,13 @@ private:
 	{
 		emit memoryObjectLengthChanged(entity->getEntity().getEntityID(), configurationIndex, memoryObjectIndex, length);
 	}
-	virtual void onStreamPortInputAudioMappingsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
+	virtual void onStreamPortInputAudioMappingsChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
 	{
-		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortInput, streamPortIndex);
+		emitWithOrigin(controller, &ControllerManager::streamPortAudioMappingsChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortInput, streamPortIndex);
 	}
-	virtual void onStreamPortOutputAudioMappingsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
+	virtual void onStreamPortOutputAudioMappingsChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept override
 	{
-		emit streamPortAudioMappingsChanged(entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortOutput, streamPortIndex);
+		emitWithOrigin(controller, &ControllerManager::streamPortAudioMappingsChanged, entity->getEntity().getEntityID(), la::avdecc::entity::model::DescriptorType::StreamPortOutput, streamPortIndex);
 	}
 	virtual void onOperationProgress(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::DescriptorIndex const descriptorIndex, la::avdecc::entity::model::OperationID const operationID, float const percentComplete) noexcept override
 	{
@@ -836,9 +887,9 @@ private:
 	{
 		emit systemUniqueIDChanged(entity->getEntity().getEntityID(), systemUniqueID, QString::fromStdString(systemName));
 	}
-	virtual void onMediaClockReferenceInfoChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& mcrInfo) noexcept override
+	virtual void onMediaClockReferenceInfoChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& mcrInfo) noexcept override
 	{
-		emit mediaClockReferenceInfoChanged(entity->getEntity().getEntityID(), clockDomainIndex, mcrInfo);
+		emitWithOrigin(controller, &ControllerManager::mediaClockReferenceInfoChanged, entity->getEntity().getEntityID(), clockDomainIndex, mcrInfo);
 	}
 
 	// Statistics
@@ -966,13 +1017,14 @@ private:
 			});
 	}
 	// Diagnostics
-	virtual void onDiagnosticsChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::Diagnostics const& diags) noexcept override
+	virtual void onDiagnosticsChanged(la::avdecc::controller::Controller const* const controller, la::avdecc::controller::ControlledEntity const* const entity, la::avdecc::controller::ControlledEntity::Diagnostics const& diags) noexcept override
 	{
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), diags]()
+			[this, origin = controller->getCurrentNotificationOrigin(), entityID = entity->getEntity().getEntityID(), diags]()
 			{
+				auto const originScope = NotificationOriginScope{ _currentNotificationOrigin, origin };
 				if (auto* entityCache = entityCachedData(entityID))
 				{
 					// Check for Redundancy Warning change
@@ -1232,6 +1284,11 @@ private:
 	virtual bool isRedundantController() const noexcept override
 	{
 		return _numControllerInterfaces > 1u;
+	}
+
+	virtual la::avdecc::controller::NotificationOrigin currentNotificationOrigin() const noexcept override
+	{
+		return _currentNotificationOrigin;
 	}
 
 	virtual la::avdecc::controller::ControlledEntityGuard getControlledEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept override
@@ -3013,6 +3070,7 @@ private:
 	bool _enableFastEnumeration{ false };
 	bool _fullAemEnumeration{ false };
 	VirtualController _virtualController{ nullptr };
+	la::avdecc::controller::NotificationOrigin _currentNotificationOrigin{}; // Origin of the notification whose signal is being emitted (only accessed from the main thread, see emitWithOrigin)
 };
 
 QString ControllerManager::typeToString(AecpCommandType const type) noexcept

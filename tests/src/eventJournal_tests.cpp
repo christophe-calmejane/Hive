@@ -28,8 +28,13 @@
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/journalReplay.hpp>
 
+#include <la/avdecc/executor.hpp>
 #include <la/avdecc/internals/entityModelControlValues.hpp>
 #include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
+#include <la/avdecc/internals/protocolAemAecpdu.hpp>
+#include <la/avdecc/internals/protocolAemPayloadSizes.hpp>
+#include <la/avdecc/internals/protocolInterface.hpp>
+#include <la/avdecc/internals/serialization.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -2440,9 +2445,11 @@ TEST_F(EventJournal_F, Replay_StateFollowsTheCursor)
 		EXPECT_EQ(replay->entities().end(), replay->entities().find(talkerID));
 	}
 
-	// At the online event of the listener: the bare snapshot, and the talker is still there
+	// At the online event of the listener: the bare snapshot
 	auto const onlineIndex = lastEventIndex(events, entityID, "Entity is online");
 	ASSERT_TRUE(onlineIndex.has_value());
+	auto const talkerOnlineIndex = lastEventIndex(events, talkerID, "Entity is online");
+	ASSERT_TRUE(talkerOnlineIndex.has_value());
 	auto const renameIndex = lastEventIndex(events, entityID, "Entity name changed to 'Replayed listener'");
 	ASSERT_TRUE(renameIndex.has_value());
 	auto const talkerOfflineIndex = lastEventIndex(events, talkerID, "Entity went offline");
@@ -2451,14 +2458,21 @@ TEST_F(EventJournal_F, Replay_StateFollowsTheCursor)
 	{
 		auto const changes = replay->seekToEvent(*onlineIndex);
 		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), entityID));
-		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), talkerID));
 		auto const* const state = replay->entityState(entityID);
 		ASSERT_NE(nullptr, state);
 		EXPECT_EQ(snapshotID, state->snapshotID);
 		EXPECT_EQ(std::size_t{ 0u }, state->appliedPatches);
 		EXPECT_EQ(std::string{ "P1 152" }, state->document.at("entity_model").at("entity_descriptor").at("dynamic").at("entity_name").get<std::string>());
 		snapshotDocument = state->document;
+	}
+	// Once both are online (the fixture entities come online in no particular order), the talker is there too
+	auto const bothOnlineIndex = std::max(*onlineIndex, *talkerOnlineIndex);
+	{
+		replay->seekToEvent(bothOnlineIndex);
 		EXPECT_NE(nullptr, replay->entityState(talkerID));
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(std::size_t{ 0u }, state->appliedPatches);
 	}
 
 	// Moving forward from the same snapshot applies only the patches in between (the rename, then the rest)
@@ -2489,7 +2503,6 @@ TEST_F(EventJournal_F, Replay_StateFollowsTheCursor)
 	{
 		auto const changes = replay->seekToEvent(*onlineIndex);
 		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), entityID));
-		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), talkerID));
 		auto const* const state = replay->entityState(entityID);
 		ASSERT_NE(nullptr, state);
 		EXPECT_EQ(snapshotDocument, state->document);
@@ -2504,7 +2517,7 @@ TEST_F(EventJournal_F, Replay_StateFollowsTheCursor)
 			{
 				EXPECT_EQ(nullptr, replay->entityState(talkerID));
 			}
-			else if (index < *talkerOfflineIndex)
+			else if (index >= bothOnlineIndex && index < *talkerOfflineIndex)
 			{
 				EXPECT_NE(nullptr, replay->entityState(talkerID));
 			}
@@ -2697,4 +2710,58 @@ TEST_F(EventJournal_F, Session_Clear_RenewsTheSnapshots)
 	EXPECT_EQ(std::string{ "Named before the clear" }, state->document.at("entity_model").at("entity_descriptor").at("dynamic").at("entity_name").get<std::string>());
 	EXPECT_NE(nullptr, replay->entityState(talkerID));
 	QFile::remove(filePath);
+}
+
+/* *********************************
+   Notification origin (phase 8)
+*/
+// The events journaled from a notification of la_avdecc carry its origin: an AEM unsolicited notification received on the interface of the controller gives details.origin 'unsolicited' and details.interface 'Primary', while a change made through the virtual controller (no message received) carries no origin
+TEST_F(EventJournal_F, NotificationOrigin_IsJournaledWithTheEvent)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// A device on the virtual bus of the controller (same bus name, same executor), sending an unsolicited SET_NAME response about the fixture entity to the controller: the fixture entities are virtual, but the controller processes a notification received about them like any other
+	auto const controllerEID = controllerManager.getControllerEID(la::avdecc::controller::InterfaceType::Primary);
+	ASSERT_TRUE(!!controllerEID);
+	auto const executorName = std::string{ "avdecc::protocol::PI" }; // The default executor of la_avdecc, registered by the end station of the controller (created without an explicit executor)
+	ASSERT_TRUE(la::avdecc::ExecutorManager::getInstance().isExecutorRegistered(executorName));
+	auto device = la::avdecc::protocol::ProtocolInterface::create(la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Unit Tests", executorName);
+	ASSERT_TRUE(!!device);
+	{
+		auto payload = la::avdecc::Serializer<la::avdecc::protocol::aemPayload::AecpAemSetNameResponsePayloadSize>{};
+		payload << la::avdecc::entity::model::DescriptorType::Entity << la::avdecc::entity::model::DescriptorIndex{ 0u };
+		payload << std::uint16_t{ 0u } << la::avdecc::entity::model::ConfigurationIndex{ 0u };
+		payload << la::avdecc::entity::model::AvdeccFixedString{ "Unsolicited name" };
+		auto unsolicited = la::avdecc::protocol::AemAecpdu{ true };
+		unsolicited.setSrcAddress(device->getMacAddress());
+		unsolicited.setDestAddress(device->getMacAddress()); // The virtual protocol interfaces created through the public factory share the same MAC address, the one of the controller included
+		unsolicited.setStatus(la::avdecc::protocol::AecpStatus::Success);
+		unsolicited.setTargetEntityID(entityID);
+		unsolicited.setControllerEntityID(controllerEID);
+		unsolicited.setSequenceID(0u);
+		unsolicited.setCommandType(la::avdecc::protocol::AemCommandType::SetName);
+		unsolicited.setUnsolicited(true);
+		unsolicited.setCommandSpecificData(payload.data(), payload.usedBytes());
+		ASSERT_FALSE(!!device->sendAecpMessage(unsolicited));
+	}
+	auto events = waitForEvents(EventJournal::Category::Configuration, entityID, 1u);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Entity name changed to 'Unsolicited name'" }, events[0].summary);
+	auto details = eventDetails(events[0]);
+	EXPECT_EQ(QString{ "unsolicited" }, details.value("origin").toString());
+	EXPECT_EQ(QString{ "Primary" }, details.value("interface").toString());
+
+	// A change made through the virtual controller is not carried by a message: no origin
+	controllerManager.setEntityName(entityID, "Renamed by the test");
+	events = waitForEvents(EventJournal::Category::Configuration, entityID, 2u);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	details = eventDetails(events[1]);
+	EXPECT_FALSE(details.contains("origin"));
+	EXPECT_FALSE(details.contains("interface"));
+
+	// Outside of a signal of the controller, nothing is known either
+	EXPECT_EQ(la::avdecc::controller::NotificationOrigin::Source::Unknown, controllerManager.currentNotificationOrigin().source);
 }

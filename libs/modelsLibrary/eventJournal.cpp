@@ -540,6 +540,39 @@ QString jsonToString(QJsonObject const& object) noexcept
 	}
 	return QString::fromUtf8(QJsonDocument{ object }.toJson(QJsonDocument::Compact));
 }
+
+/** Returns the details key value of a notification origin source. */
+QString notificationOriginKey(la::avdecc::controller::NotificationOrigin::Source const source) noexcept
+{
+	switch (source)
+	{
+		case la::avdecc::controller::NotificationOrigin::Source::Unsolicited:
+			return "unsolicited";
+		case la::avdecc::controller::NotificationOrigin::Source::CommandResponse:
+			return "response";
+		case la::avdecc::controller::NotificationOrigin::Source::Sniffed:
+			return "sniffed";
+		default:
+			return {};
+	}
+}
+
+/** Adds to the details of an event the origin of the la_avdecc notification it is journaled from, when there is one (see ControllerManager::currentNotificationOrigin): which kind of message carried the change (details.origin) and on which interface it was received (details.interface, kept when the event already tells it). */
+QJsonObject withNotificationOrigin(QJsonObject details) noexcept
+{
+	auto const origin = ControllerManager::getInstance().currentNotificationOrigin();
+	auto const key = notificationOriginKey(origin.source);
+	if (key.isEmpty())
+	{
+		return details;
+	}
+	details["origin"] = key;
+	if (origin.interfaceType && !details.contains("interface"))
+	{
+		details["interface"] = helper::interfaceTypeName(*origin.interfaceType);
+	}
+	return details;
+}
 } // namespace
 
 class EventJournal::Private
@@ -2506,7 +2539,7 @@ public:
 		event.entityName = entityName;
 		event.subject = subject;
 		event.summary = summary;
-		event.details = jsonToString(details);
+		event.details = jsonToString(withNotificationOrigin(details));
 
 		_insertEventQuery.addBindValue(event.timestamp);
 		_insertEventQuery.addBindValue(categoryToKey(category));
