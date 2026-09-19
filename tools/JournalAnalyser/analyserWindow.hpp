@@ -19,7 +19,11 @@
 
 #pragma once
 
+#include <hive/modelsLibrary/journalReplay.hpp>
+
 #include <la/avdecc/internals/uniqueIdentifier.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <QAction>
 #include <QCloseEvent>
@@ -30,8 +34,12 @@
 #include <QMainWindow>
 #include <QString>
 #include <QStringList>
+#include <QToolBar>
 
+#include <cstddef>
+#include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 class EntityInspector;
@@ -41,7 +49,7 @@ class NetworkGraphView;
 /**
 * @brief Main window of the Journal Analyser: one Event Journal file, standalone Entity Inspectors and the Network Graph.
 * @details The window analyzes a single journal file (the application runs one instance per journal).
-*          The entities of the journal are inspected through a virtual controller populated from the entity snapshots stored in the journal (or from a network state file, File > Load Network State, which replaces them), which also feeds the Network Graph.
+*          The entities of the journal are inspected through a virtual controller hosting the twin of the network: the entities as they were at the selected event, rebuilt by the JournalReplay from the snapshots and the change tracking events of the journal (a network state file, File > Load Network State, replaces the twin), which also feeds the Network Graph.
 */
 class AnalyserWindow : public QMainWindow
 {
@@ -75,13 +83,16 @@ protected:
 
 private:
 	void createMenus();
+	void createReplayToolBar();
 	void createNetworkGraphDock();
 	void createVirtualController();
 	void applyAppearance(Qt::ColorScheme const appearance);
 	void updateStyleSheet();
 	bool loadJournal(QString const& filePath);
-	void loadSnapshotEntities();
-	void unloadSnapshotEntities();
+	void loadTwin(std::size_t const eventIndex);
+	bool loadTwinEntity(la::avdecc::UniqueIdentifier const entityID, nlohmann::json const& document);
+	void unloadTwin(QString const& reason);
+	void updateTwinStatus(qint64 const elapsedMs);
 	void loadNetworkState(QString const& filePath);
 	void loadVirtualEntity(QString const& filePath);
 	void showNetworkGraph();
@@ -99,6 +110,12 @@ private:
 	QAction* _schemeLightAction{ nullptr };
 	QAction* _schemeDarkAction{ nullptr };
 	std::unordered_map<la::avdecc::UniqueIdentifier, EntityInspector*, la::avdecc::UniqueIdentifier::hash> _inspectors{};
-	std::vector<la::avdecc::UniqueIdentifier> _snapshotEntityIDs{}; // Entities loaded from the journal snapshots (unloaded when a network state file replaces them)
-	bool _hasLoadedNetworkState{ false };
+	std::unique_ptr<hive::modelsLibrary::JournalReplay> _replay{};
+	QToolBar* _replayToolBar{ nullptr };
+	QAction* _followSelectionAction{ nullptr };
+	QAction* _latestAction{ nullptr };
+	QLabel* _twinStatusLabel{ nullptr };
+	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _twinEntityIDs{}; // Entities of the twin currently loaded in the virtual controller (unloaded when a network state file replaces the twin)
+	bool _twinEnabled{ false }; // The twin follows the journal (false before a journal with snapshots is loaded, and once a network state file replaced it)
+	bool _hasLoadedNetworkState{ false }; // Entities are available in the virtual controller (from the twin or from a network state file)
 };

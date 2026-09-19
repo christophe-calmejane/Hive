@@ -43,6 +43,7 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/commandsExecutor.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/eventJournal.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/journalReplay.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkInterfacesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/discoveredEntitiesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkTopologyModel.hpp
@@ -61,6 +62,7 @@ set(SOURCE_FILES_COMMON
 	commandsExecutorImpl.cpp
 	controllerManager.cpp
 	eventJournal.cpp
+	journalReplay.cpp
 	networkInterfacesModel.cpp
 	discoveredEntitiesModel.cpp
 	networkTopologyModel.cpp

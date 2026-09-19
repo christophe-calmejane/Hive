@@ -37,6 +37,7 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -51,7 +52,10 @@
 #include <QStyleHints>
 #include <QUrl>
 
+#include <cstdint>
+#include <optional>
 #include <tuple>
+#include <utility>
 
 namespace
 {
@@ -131,6 +135,7 @@ AnalyserWindow::AnalyserWindow(QStringList const& filesToLoad)
 	statusBar()->addPermanentWidget(_journalSummaryLabel);
 
 	createMenus();
+	createReplayToolBar();
 	createNetworkGraphDock();
 	createVirtualController();
 
@@ -234,6 +239,55 @@ void AnalyserWindow::createMenus()
 			{
 				QMessageBox::about(this, QString{ "About %1" }.arg(journalAnalyser::internals::applicationShortName), QString{ "<b>%1</b> %2<br/><br/>Offline analysis of Hive Event Journal files.<br/><br/>%3<br/><a href=\"%4\">%4</a>" }.arg(journalAnalyser::internals::applicationLongName).arg(journalAnalyser::internals::versionString).arg(journalAnalyser::internals::readableCopyright).arg(journalAnalyser::internals::projectURL));
 			});
+	}
+}
+
+void AnalyserWindow::createReplayToolBar()
+{
+	// The twin of the network follows the time cursor: the selected event when following, the double-clicked event otherwise
+	_replayToolBar = addToolBar("Replay");
+	_replayToolBar->setObjectName("replayToolBar");
+	_replayToolBar->setMovable(false);
+	_replayToolBar->setFloatable(false);
+
+	_followSelectionAction = _replayToolBar->addAction("Follow Selection");
+	_followSelectionAction->setCheckable(true);
+	_followSelectionAction->setChecked(true);
+	_followSelectionAction->setToolTip("Load the twin of the network at the selected event (when unchecked, double-click an event to load the twin at that event)");
+	connect(_followSelectionAction, &QAction::toggled, this,
+		[this](bool const checked)
+		{
+			if (checked && _journalView && _replay)
+			{
+				// Catch up with the current selection
+				if (auto const currentEvent = _journalView->currentEventIndex())
+				{
+					loadTwin(static_cast<std::size_t>(*currentEvent));
+				}
+			}
+		});
+
+	_latestAction = _replayToolBar->addAction("Latest");
+	_latestAction->setToolTip("Load the twin of the network at the last event of the journal");
+	connect(_latestAction, &QAction::triggered, this,
+		[this]()
+		{
+			if (_replay && !_replay->events().empty())
+			{
+				loadTwin(_replay->events().size() - 1u);
+			}
+		});
+
+	_replayToolBar->addSeparator();
+	_twinStatusLabel = new QLabel{ _replayToolBar };
+	_twinStatusLabel->setContentsMargins(6, 0, 6, 0);
+	_replayToolBar->addWidget(_twinStatusLabel);
+
+	// Hidden until a journal the twin can be built from is loaded
+	_replayToolBar->hide();
+	if (auto* const viewMenu = menuBar()->findChild<QMenu*>("viewMenu"))
+	{
+		viewMenu->insertAction(viewMenu->actions().isEmpty() ? nullptr : viewMenu->actions().first(), _replayToolBar->toggleViewAction());
 	}
 }
 
@@ -371,9 +425,32 @@ bool AnalyserWindow::loadJournal(QString const& filePath)
 	auto const lastTimestamp = eventCount > 0u ? QDateTime::fromMSecsSinceEpoch(session->events.back().timestamp).toString("yyyy-MM-dd HH:mm:ss") : QString{};
 
 	_journalFilePath = filePath;
+	// The replay keeps its own copy of the events (implicitly shared strings, so the copy is cheap) and reads the snapshots from the file on demand
+	_replay = std::make_unique<hive::modelsLibrary::JournalReplay>(session->events, hive::modelsLibrary::EventJournal::loadSnapshotsIndex(filePath),
+		[filePath](qint64 const snapshotID)
+		{
+			return hive::modelsLibrary::EventJournal::loadSnapshotData(filePath, snapshotID);
+		});
 	_journalView = new EventJournalView{ std::move(*session), filePath };
 	_journalView->setDiagnosticEventsVisible(true); // The analyser is for deep analysis: everything is shown by default
 	connect(_journalView, &EventJournalView::selectEntityRequested, this, &AnalyserWindow::openInspector);
+	connect(_journalView, &EventJournalView::currentEventChanged, this,
+		[this](int const eventIndex)
+		{
+			if (eventIndex >= 0 && _followSelectionAction->isChecked())
+			{
+				loadTwin(static_cast<std::size_t>(eventIndex));
+			}
+		});
+	connect(_journalView, &EventJournalView::eventActivated, this,
+		[this](int const eventIndex)
+		{
+			// Double-clicking an event always brings the twin to that event, so the inspector opened next shows the entity as it was then
+			if (eventIndex >= 0)
+			{
+				loadTwin(static_cast<std::size_t>(eventIndex));
+			}
+		});
 	setCentralWidget(_journalView); // Deletes the placeholder
 	_placeholderLabel = nullptr;
 
@@ -400,98 +477,159 @@ bool AnalyserWindow::loadJournal(QString const& filePath)
 	summary += QString{ ", schema version %1" }.arg(schemaVersion);
 	_journalSummaryLabel->setText(summary);
 
-	// The entity snapshots stored in the journal make it self-contained: they populate the virtual controller unless a network state file was already loaded (an explicit choice, kept as an override)
-	if (!_hasLoadedNetworkState)
-	{
-		loadSnapshotEntities();
-	}
-	if (!_hasLoadedNetworkState)
+	// The entity snapshots stored in the journal make it self-contained: the twin of the network is built from them unless a network state file was already loaded (an explicit choice, kept as an override)
+	if (_replay->snapshotEntitiesCount() == 0u)
 	{
 		statusBar()->showMessage("This journal has no entity snapshots: load a network state file (File > Load Network State) to inspect the entities and display the Network Graph", 10000);
+	}
+	else if (!_hasLoadedNetworkState)
+	{
+		_twinEnabled = true;
+		_replayToolBar->show();
+		// The twin starts at the end of the session, the network as last seen: at the last event that is not a session one, because a session normally ends with the controller stopping, after which nobody is online
+		auto lastIndex = eventCount - 1u;
+		auto const& events = _replay->events();
+		while (lastIndex > 0u && events[lastIndex].category == hive::modelsLibrary::EventJournal::Category::Session)
+		{
+			--lastIndex;
+		}
+		loadTwin(lastIndex);
 	}
 	return true;
 }
 
-void AnalyserWindow::loadSnapshotEntities()
+void AnalyserWindow::loadTwin(std::size_t const eventIndex)
 {
-	using EventJournal = hive::modelsLibrary::EventJournal;
-
-	// The last snapshot of every entity gives the state of the network as last seen during the session (the replay at a given instant comes with the time cursor of the evolution plan)
-	auto latestSnapshots = std::unordered_map<la::avdecc::UniqueIdentifier, EventJournal::SnapshotInfo, la::avdecc::UniqueIdentifier::hash>{};
-	for (auto const& snapshot : EventJournal::loadSnapshotsIndex(_journalFilePath))
-	{
-		if (snapshot.format != EventJournal::SnapshotFormat)
-		{
-			continue;
-		}
-		auto const it = latestSnapshots.find(snapshot.entityID);
-		if (it == latestSnapshots.end() || it->second.timestamp <= snapshot.timestamp)
-		{
-			latestSnapshots[snapshot.entityID] = snapshot;
-		}
-	}
-	if (latestSnapshots.empty())
+	if (!_twinEnabled || !_replay || eventIndex >= _replay->events().size())
 	{
 		return;
 	}
 
-	// la_avdecc only loads virtual entities from files: go through a temporary file
+	auto timer = QElapsedTimer{};
+	timer.start();
+	auto const changes = _replay->seekToEvent(eventIndex);
+
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto const tempFilePath = QDir::temp().filePath(QString{ "JournalAnalyserSnapshot_%1.ave" }.arg(QCoreApplication::applicationPid()));
-	auto loadedCount = std::size_t{ 0u };
-	for (auto const& [entityID, snapshot] : latestSnapshots)
+	for (auto const entityID : changes.removed)
 	{
-		auto const data = EventJournal::loadSnapshotData(_journalFilePath, snapshot.id);
-		if (data.isEmpty())
+		if (_twinEntityIDs.erase(entityID) > 0u)
 		{
-			continue;
-		}
-		{
-			auto file = QFile{ tempFilePath };
-			if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(data) != data.size())
-			{
-				continue;
-			}
-		}
-		auto flags = loadFlags();
-		auto [error, message] = manager.loadVirtualEntityFromJson(tempFilePath, flags);
-		if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
-		{
-			// The snapshot is what the device exposed on the network: load it as it is
-			flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-			std::tie(error, message) = manager.loadVirtualEntityFromJson(tempFilePath, flags);
-		}
-		if (!error)
-		{
-			_snapshotEntityIDs.push_back(entityID);
-			++loadedCount;
+			manager.unloadVirtualEntity(entityID);
 		}
 	}
-	QFile::remove(tempFilePath);
+	auto failedCount = std::size_t{ 0u };
+	for (auto const entityID : changes.updated)
+	{
+		if (auto const* const state = _replay->entityState(entityID))
+		{
+			if (!loadTwinEntity(entityID, state->document))
+			{
+				++failedCount;
+			}
+		}
+	}
 
-	if (loadedCount > 0u)
+	_journalView->setCursorTimestamp(_replay->events()[eventIndex].timestamp);
+	if (!_twinEntityIDs.empty())
 	{
 		_hasLoadedNetworkState = true;
 		showNetworkGraph();
-		statusBar()->showMessage(QString{ "%1 entities loaded from the journal snapshots (%2 in the journal)" }.arg(loadedCount).arg(latestSnapshots.size()), 10000);
 		updatePlaceholder();
+	}
+	updateTwinStatus(timer.elapsed());
+	if (failedCount > 0u)
+	{
+		statusBar()->showMessage(QString{ "%1 entities of the twin could not be loaded in the virtual controller" }.arg(failedCount), 10000);
 	}
 }
 
-void AnalyserWindow::unloadSnapshotEntities()
+bool AnalyserWindow::loadTwinEntity(la::avdecc::UniqueIdentifier const entityID, nlohmann::json const& document)
 {
+	// The virtual controller only loads entities from files: the document goes through a temporary file in the .ave binary format (a few milliseconds per entity)
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
-	for (auto const entityID : _snapshotEntityIDs)
+	if (_twinEntityIDs.erase(entityID) > 0u)
 	{
 		manager.unloadVirtualEntity(entityID);
 	}
-	_snapshotEntityIDs.clear();
+
+	auto const tempFilePath = QDir::temp().filePath(QString{ "JournalAnalyserTwin_%1.ave" }.arg(QCoreApplication::applicationPid()));
+	try
+	{
+		auto const data = nlohmann::json::to_msgpack(document);
+		auto file = QFile{ tempFilePath };
+		if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(reinterpret_cast<char const*>(data.data()), static_cast<qint64>(data.size())) != static_cast<qint64>(data.size()))
+		{
+			return false;
+		}
+	}
+	catch (...)
+	{
+		return false;
+	}
+	auto flags = loadFlags();
+	auto [error, message] = manager.loadVirtualEntityFromJson(tempFilePath, flags);
+	if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
+	{
+		// The snapshot is what the device exposed on the network: load it as it is
+		flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
+		std::tie(error, message) = manager.loadVirtualEntityFromJson(tempFilePath, flags);
+	}
+	QFile::remove(tempFilePath);
+	if (!!error)
+	{
+		return false;
+	}
+	_twinEntityIDs.insert(entityID);
+	return true;
+}
+
+void AnalyserWindow::unloadTwin(QString const& reason)
+{
+	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
+	for (auto const entityID : _twinEntityIDs)
+	{
+		manager.unloadVirtualEntity(entityID);
+	}
+	_twinEntityIDs.clear();
+	_twinEnabled = false;
+	if (_journalView)
+	{
+		_journalView->setCursorTimestamp(std::nullopt);
+	}
+	_followSelectionAction->setEnabled(false);
+	_latestAction->setEnabled(false);
+	_twinStatusLabel->setText(reason);
+}
+
+void AnalyserWindow::updateTwinStatus(qint64 const elapsedMs)
+{
+	auto const cursor = _replay ? _replay->cursor() : std::optional<std::size_t>{};
+	if (!cursor)
+	{
+		_twinStatusLabel->clear();
+		return;
+	}
+	auto appliedPatches = std::size_t{ 0u };
+	auto rejectedPatches = std::size_t{ 0u };
+	for (auto const& [entityID, state] : _replay->entities())
+	{
+		appliedPatches += state.appliedPatches;
+		rejectedPatches += state.rejectedPatches;
+	}
+	auto const& event = _replay->events()[*cursor];
+	auto text = QString{ "Twin at %1 (event %2 of %3): %4 entities online, %5 patches applied" }.arg(QDateTime::fromMSecsSinceEpoch(event.timestamp).toString("yyyy-MM-dd HH:mm:ss.zzz")).arg(*cursor + 1u).arg(_replay->events().size()).arg(_twinEntityIDs.size()).arg(appliedPatches);
+	if (rejectedPatches > 0u)
+	{
+		text += QString{ ", %1 rejected" }.arg(rejectedPatches);
+	}
+	text += QString{ " (%1 ms)" }.arg(elapsedMs);
+	_twinStatusLabel->setText(text);
 }
 
 void AnalyserWindow::loadNetworkState(QString const& filePath)
 {
-	// A network state file is an explicit override of the journal snapshots (the same entities cannot be loaded twice)
-	unloadSnapshotEntities();
+	// A network state file is an explicit override of the twin (the same entities cannot be loaded twice)
+	unloadTwin(QString{ "Twin replaced by '%1'" }.arg(QFileInfo{ filePath }.fileName()));
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto const [error, message] = manager.loadVirtualEntitiesFromJsonNetworkState(filePath, loadFlags());
 	if (!!error)
@@ -507,7 +645,7 @@ void AnalyserWindow::loadNetworkState(QString const& filePath)
 
 void AnalyserWindow::loadVirtualEntity(QString const& filePath)
 {
-	unloadSnapshotEntities();
+	unloadTwin(QString{ "Twin replaced by '%1'" }.arg(QFileInfo{ filePath }.fileName()));
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	auto flags = loadFlags();
 	auto [error, message] = manager.loadVirtualEntityFromJson(filePath, flags);
@@ -546,7 +684,7 @@ void AnalyserWindow::openInspector(la::avdecc::UniqueIdentifier const entityID)
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 	if (!manager.getControlledEntity(entityID))
 	{
-		auto const hint = _hasLoadedNetworkState ? QString{ "it is not part of the loaded network state" } : QString{ "load a network state file first (File > Load Network State)" };
+		auto const hint = _twinEnabled ? QString{ "it is not online at the time of the twin (or the journal has no snapshot of it)" } : (_hasLoadedNetworkState ? QString{ "it is not part of the loaded network state" } : QString{ "load a network state file first (File > Load Network State)" });
 		statusBar()->showMessage(QString{ "Cannot inspect entity %1: %2" }.arg(hive::modelsLibrary::helper::uniqueIdentifierToString(entityID)).arg(hint), 5000);
 		return;
 	}

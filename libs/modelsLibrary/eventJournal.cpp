@@ -756,6 +756,15 @@ public:
 		emit _q->sessionCleared();
 		// Record a marker so the cleared session is not completely empty
 		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Journal cleared");
+		// The snapshots are renewed too: the change tracking events since the previous ones are gone, so the replay needs fresh anchors (and the entities that went offline since must not resurface)
+		query.exec("DELETE FROM snapshots");
+		_snapshotsCount = 0u;
+		_snapshotsBytes = 0u;
+		_snapshotsSerializationMs = 0;
+		for (auto const entityID : onlineEntities())
+		{
+			writeSnapshot(entityID, "cleared");
+		}
 	}
 
 	/* ************************************************************ */

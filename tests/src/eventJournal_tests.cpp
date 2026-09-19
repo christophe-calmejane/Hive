@@ -26,6 +26,7 @@
 #include <hive/modelsLibrary/controllerManager.hpp>
 #include <hive/modelsLibrary/eventJournal.hpp>
 #include <hive/modelsLibrary/helper.hpp>
+#include <hive/modelsLibrary/journalReplay.hpp>
 
 #include <la/avdecc/internals/entityModelControlValues.hpp>
 #include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
@@ -57,6 +58,7 @@
 #include <cstddef>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -518,16 +520,72 @@ public:
 		return events;
 	}
 
-	/** Expects the AVE document rebuilt from the snapshot and the given events to match the entity as the controller sees it now (entity model, state and diagnostics; the statistics change with every command and are not compared). */
-	static void expectReplayMatches(la::avdecc::UniqueIdentifier const entityID, nlohmann::json const& snapshot, std::vector<hive::modelsLibrary::EventJournal::Event> const& events) noexcept
+	/** Expects an AVE document to match the entity as the controller sees it now (entity model, state and diagnostics; the statistics change with every command and are not compared). */
+	static void expectDocumentMatchesEntity(nlohmann::json const& document, la::avdecc::UniqueIdentifier const entityID) noexcept
 	{
-		auto const replayed = applyPatches(snapshot, events);
 		auto const current = currentDocument(entityID);
 		for (auto const* const key : { "entity_model", "state", "diagnostics", "compatibility_flags" })
 		{
-			auto const diff = nlohmann::json::diff(replayed.value(key, nlohmann::json{}), current.value(key, nlohmann::json{}));
+			auto const diff = nlohmann::json::diff(document.value(key, nlohmann::json{}), current.value(key, nlohmann::json{}));
 			EXPECT_TRUE(diff.empty()) << "The replayed '" << key << "' differs from the current entity: " << diff.dump();
 		}
+	}
+
+	/** Expects the AVE document rebuilt from the snapshot and the given events to match the entity as the controller sees it now. */
+	static void expectReplayMatches(la::avdecc::UniqueIdentifier const entityID, nlohmann::json const& snapshot, std::vector<hive::modelsLibrary::EventJournal::Event> const& events) noexcept
+	{
+		expectDocumentMatchesEntity(applyPatches(snapshot, events), entityID);
+	}
+
+	/** Exports the current session to the given file and builds a replay of it (the snapshots are read from the file on demand). */
+	static std::unique_ptr<hive::modelsLibrary::JournalReplay> exportAndReplay(QString const& filePath) noexcept
+	{
+		using EventJournal = hive::modelsLibrary::EventJournal;
+		QFile::remove(filePath);
+		if (!EventJournal::getInstance().exportCurrentSession(filePath))
+		{
+			ADD_FAILURE() << "Cannot export the session";
+			return {};
+		}
+		auto session = EventJournal::loadSession(filePath);
+		if (!session)
+		{
+			ADD_FAILURE() << "Cannot load the exported session";
+			return {};
+		}
+		return std::make_unique<hive::modelsLibrary::JournalReplay>(std::move(session->events), EventJournal::loadSnapshotsIndex(filePath),
+			[filePath](qint64 const snapshotID)
+			{
+				return EventJournal::loadSnapshotData(filePath, snapshotID);
+			});
+	}
+
+	/** Finds the index of the last event of the given entity whose summary starts with the given text (std::nullopt if none). */
+	static std::optional<std::size_t> lastEventIndex(std::vector<hive::modelsLibrary::EventJournal::Event> const& events, la::avdecc::UniqueIdentifier const entityID, QString const& summaryPrefix) noexcept
+	{
+		auto found = std::optional<std::size_t>{};
+		for (auto index = std::size_t{ 0u }; index < events.size(); ++index)
+		{
+			if (events[index].entityID == entityID && events[index].summary.startsWith(summaryPrefix))
+			{
+				found = index;
+			}
+		}
+		return found;
+	}
+
+	/** Unloads the given virtual entity and waits until the journal has journaled it offline. */
+	void unloadEntity(la::avdecc::UniqueIdentifier const entityID)
+	{
+		auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+		auto const offlineCountBefore = eventsSince(hive::modelsLibrary::EventJournal::Category::Entity, entityID, "Entity went offline").size();
+		ASSERT_TRUE(controllerManager.unloadVirtualEntity(entityID));
+		auto const deadline = QDeadlineTimer{ 5000 };
+		while (!deadline.hasExpired() && eventsSince(hive::modelsLibrary::EventJournal::Category::Entity, entityID, "Entity went offline").size() == offlineCountBefore)
+		{
+			QTest::qWait(10);
+		}
+		ASSERT_EQ(offlineCountBefore + 1u, eventsSince(hive::modelsLibrary::EventJournal::Category::Entity, entityID, "Entity went offline").size()) << "The entity was not journaled offline";
 	}
 
 	/** Advances the simulated clock. */
@@ -2334,4 +2392,309 @@ TEST_F(EventJournal_F, AecpResponseTime_IsJournaledOnLargeChanges)
 	// Back to the baseline: journaled again (the difference to the last journaled value is 60 ms)
 	emit controllerManager.aecpResponseAverageTimeChanged(entityID, baseline, la::avdecc::controller::InterfaceType::Primary);
 	EXPECT_EQ(std::size_t{ 2u }, responseTimeEvents().size());
+}
+
+/* *********************************
+   Replay engine (phase 4b)
+*/
+// The state of an entity at an event is its last snapshot plus the patches journaled since: at the last event it matches the live entity, at its online event it is the bare snapshot, and it follows the cursor both ways
+TEST_F(EventJournal_F, Replay_StateFollowsTheCursor)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	auto const talkerID = la::avdecc::UniqueIdentifier{ TalkerEntityID };
+	loadConnectedFixture();
+	auto const snapshotID = entityOnlineDetails(entityID).value("snapshot_id").toVariant().toLongLong();
+	ASSERT_GT(snapshotID, 0);
+
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	controllerManager.setEntityName(entityID, "Replayed listener");
+	controllerManager.setStreamInputName(entityID, 0u, 1u, "Replayed input");
+	controllerManager.setClockSource(entityID, TestClockDomainIndex, 1u);
+	waitForEvents(EventJournal::Category::Configuration, entityID, 3u);
+	// The talker leaves before the end of the session
+	unloadEntity(talkerID);
+
+	auto const filePath = QDir::temp().filePath("HiveEventJournalTests_replay.hej");
+	auto const replay = exportAndReplay(filePath);
+	ASSERT_TRUE(!!replay);
+	auto const& events = replay->events();
+	ASSERT_FALSE(events.empty());
+	EXPECT_FALSE(replay->cursor().has_value());
+	EXPECT_GE(replay->snapshotEntitiesCount(), std::size_t{ 2u });
+
+	// At the last event: the listener is the live entity, the talker is gone
+	{
+		auto const changes = replay->seekToEvent(events.size() - 1u);
+		EXPECT_EQ(events.size() - 1u, replay->cursor().value_or(0u));
+		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), entityID));
+		EXPECT_TRUE(changes.removed.empty());
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(snapshotID, state->snapshotID);
+		EXPECT_EQ(QString{ "online" }, state->snapshotReason);
+		EXPECT_GE(state->appliedPatches, std::size_t{ 3u });
+		EXPECT_EQ(std::size_t{ 0u }, state->rejectedPatches);
+		expectDocumentMatchesEntity(state->document, entityID);
+		EXPECT_EQ(nullptr, replay->entityState(talkerID));
+		EXPECT_EQ(replay->entities().end(), replay->entities().find(talkerID));
+	}
+
+	// At the online event of the listener: the bare snapshot, and the talker is still there
+	auto const onlineIndex = lastEventIndex(events, entityID, "Entity is online");
+	ASSERT_TRUE(onlineIndex.has_value());
+	auto const renameIndex = lastEventIndex(events, entityID, "Entity name changed to 'Replayed listener'");
+	ASSERT_TRUE(renameIndex.has_value());
+	auto const talkerOfflineIndex = lastEventIndex(events, talkerID, "Entity went offline");
+	ASSERT_TRUE(talkerOfflineIndex.has_value());
+	auto snapshotDocument = nlohmann::json{};
+	{
+		auto const changes = replay->seekToEvent(*onlineIndex);
+		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), entityID));
+		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), talkerID));
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(snapshotID, state->snapshotID);
+		EXPECT_EQ(std::size_t{ 0u }, state->appliedPatches);
+		EXPECT_EQ(std::string{ "P1 152" }, state->document.at("entity_model").at("entity_descriptor").at("dynamic").at("entity_name").get<std::string>());
+		snapshotDocument = state->document;
+		EXPECT_NE(nullptr, replay->entityState(talkerID));
+	}
+
+	// Moving forward from the same snapshot applies only the patches in between (the rename, then the rest)
+	{
+		auto const changes = replay->seekToEvent(*renameIndex);
+		EXPECT_EQ(std::vector<la::avdecc::UniqueIdentifier>{ entityID }, changes.updated);
+		EXPECT_TRUE(changes.removed.empty());
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(std::size_t{ 1u }, state->appliedPatches);
+		EXPECT_EQ(std::string{ "Replayed listener" }, state->document.at("entity_model").at("entity_descriptor").at("dynamic").at("entity_name").get<std::string>());
+	}
+	{
+		// Same position again: nothing changes
+		auto const changes = replay->seekToEvent(*renameIndex);
+		EXPECT_TRUE(changes.updated.empty());
+		EXPECT_TRUE(changes.removed.empty());
+	}
+	{
+		auto const changes = replay->seekToEvent(events.size() - 1u);
+		EXPECT_EQ(std::vector<la::avdecc::UniqueIdentifier>{ talkerID }, changes.removed);
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		expectDocumentMatchesEntity(state->document, entityID);
+	}
+
+	// Moving backward rebuilds from the snapshot: same document as the first visit
+	{
+		auto const changes = replay->seekToEvent(*onlineIndex);
+		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), entityID));
+		EXPECT_NE(changes.updated.end(), std::find(changes.updated.begin(), changes.updated.end(), talkerID));
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(snapshotDocument, state->document);
+	}
+
+	// Stepping through every event gives the same final document as the direct seek (the incremental path is consistent)
+	{
+		for (auto index = *onlineIndex; index < events.size(); ++index)
+		{
+			replay->seekToEvent(index);
+			if (index == *talkerOfflineIndex)
+			{
+				EXPECT_EQ(nullptr, replay->entityState(talkerID));
+			}
+			else if (index < *talkerOfflineIndex)
+			{
+				EXPECT_NE(nullptr, replay->entityState(talkerID));
+			}
+		}
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		expectDocumentMatchesEntity(state->document, entityID);
+	}
+
+	// Before the first event: nobody
+	{
+		auto const changes = replay->seekToTimestamp(events.front().timestamp - 1);
+		EXPECT_FALSE(replay->cursor().has_value());
+		EXPECT_NE(changes.removed.end(), std::find(changes.removed.begin(), changes.removed.end(), entityID));
+		EXPECT_TRUE(replay->entities().empty());
+	}
+	// By timestamp: the last event at or before the rename
+	{
+		replay->seekToTimestamp(events[*renameIndex].timestamp);
+		ASSERT_TRUE(replay->cursor().has_value());
+		EXPECT_GE(*replay->cursor(), *renameIndex);
+		EXPECT_EQ(events[*renameIndex].timestamp, events[*replay->cursor()].timestamp);
+	}
+	// Out of range: ignored
+	{
+		auto const cursor = replay->cursor();
+		EXPECT_TRUE(replay->seekToEvent(events.size()).updated.empty());
+		EXPECT_EQ(cursor, replay->cursor());
+	}
+	QFile::remove(filePath);
+}
+
+// An entity that goes offline is absent from the replay until it comes back, and then its new snapshot is the anchor
+TEST_F(EventJournal_F, Replay_OfflineEntity_ComesBackWithItsNewSnapshot)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto const firstSnapshotID = entityOnlineDetails(entityID).value("snapshot_id").toVariant().toLongLong();
+	ASSERT_GT(firstSnapshotID, 0);
+
+	// Keep the entity to reload it as it is now, then take it offline and bring it back
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto const entityFilePath = QDir::temp().filePath("HiveEventJournalTests_replayEntity.ave");
+	QFile::remove(entityFilePath);
+	{
+		auto const [error, message] = controllerManager.serializeControlledEntityAsJson(entityID, entityFilePath, snapshotFlags(), "Unit Tests");
+		ASSERT_FALSE(!!error) << message;
+	}
+	unloadEntity(entityID);
+	auto const onlineCountBefore = entityOnlineCount();
+	{
+		auto const [error, message] = controllerManager.loadVirtualEntityFromJson(entityFilePath, snapshotFlags());
+		ASSERT_EQ(la::avdecc::jsonSerializer::DeserializationError::NoError, error) << "Failed to load the entity back: " << message;
+	}
+	QFile::remove(entityFilePath);
+	waitForEntitiesOnline(onlineCountBefore + 1u);
+	auto const secondSnapshotID = entityOnlineDetails(entityID).value("snapshot_id").toVariant().toLongLong();
+	ASSERT_GT(secondSnapshotID, firstSnapshotID);
+	controllerManager.setEntityName(entityID, "Back online");
+	waitForEvents(EventJournal::Category::Configuration, entityID, 1u);
+
+	auto const filePath = QDir::temp().filePath("HiveEventJournalTests_replayOffline.hej");
+	auto const replay = exportAndReplay(filePath);
+	ASSERT_TRUE(!!replay);
+	auto const& events = replay->events();
+	auto const offlineIndex = lastEventIndex(events, entityID, "Entity went offline");
+	auto const onlineIndex = lastEventIndex(events, entityID, "Entity is online");
+	ASSERT_TRUE(offlineIndex.has_value());
+	ASSERT_TRUE(onlineIndex.has_value());
+	ASSERT_LT(*offlineIndex, *onlineIndex);
+
+	// Present before going offline, from the first snapshot
+	{
+		replay->seekToEvent(*offlineIndex - 1u);
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(firstSnapshotID, state->snapshotID);
+	}
+	// Absent at the offline event
+	{
+		auto const changes = replay->seekToEvent(*offlineIndex);
+		EXPECT_EQ(std::vector<la::avdecc::UniqueIdentifier>{ entityID }, changes.removed);
+		EXPECT_EQ(nullptr, replay->entityState(entityID));
+	}
+	// Back with the new snapshot, and up to date at the end
+	{
+		auto const changes = replay->seekToEvent(*onlineIndex);
+		EXPECT_EQ(std::vector<la::avdecc::UniqueIdentifier>{ entityID }, changes.updated);
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(secondSnapshotID, state->snapshotID);
+		EXPECT_EQ(QString{ "online" }, state->snapshotReason);
+		EXPECT_EQ(std::size_t{ 0u }, state->appliedPatches);
+	}
+	{
+		replay->seekToEvent(events.size() - 1u);
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(secondSnapshotID, state->snapshotID);
+		EXPECT_EQ(std::string{ "Back online" }, state->document.at("entity_model").at("entity_descriptor").at("dynamic").at("entity_name").get<std::string>());
+		expectDocumentMatchesEntity(state->document, entityID);
+	}
+	// Straight from the end to before the offline event: rebuilt from the first snapshot
+	{
+		auto const changes = replay->seekToEvent(*offlineIndex - 1u);
+		EXPECT_EQ(std::vector<la::avdecc::UniqueIdentifier>{ entityID }, changes.updated);
+		auto const* const state = replay->entityState(entityID);
+		ASSERT_NE(nullptr, state);
+		EXPECT_EQ(firstSnapshotID, state->snapshotID);
+		EXPECT_EQ(std::string{ "P1 152" }, state->document.at("entity_model").at("entity_descriptor").at("dynamic").at("entity_name").get<std::string>());
+	}
+
+	// The controller stopping ends the presence of every entity (they are not journaled offline one by one), until they come back online after the restart
+	controllerManager.destroyController();
+	{
+		auto const deadline = QDeadlineTimer{ 5000 };
+		while (!deadline.hasExpired() && !summariesSince(EventJournal::Category::Session).contains("Controller stopped"))
+		{
+			QTest::qWait(10);
+		}
+		ASSERT_TRUE(summariesSince(EventJournal::Category::Session).contains("Controller stopped"));
+	}
+	try
+	{
+		controllerManager.createController(la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Unit Tests", 0x0001, la::avdecc::UniqueIdentifier::getNullUniqueIdentifier(), "en", nullptr);
+	}
+	catch (la::avdecc::controller::Controller::Exception const&)
+	{
+		ASSERT_FALSE(true);
+	}
+	{
+		auto const deadline = QDeadlineTimer{ 5000 };
+		while (!deadline.hasExpired() && !summariesSince(EventJournal::Category::Session).contains("Controller restarted"))
+		{
+			QTest::qWait(10);
+		}
+		ASSERT_TRUE(summariesSince(EventJournal::Category::Session).contains("Controller restarted"));
+	}
+	auto const restartedReplay = exportAndReplay(filePath);
+	ASSERT_TRUE(!!restartedReplay);
+	auto const stopIndex = lastEventIndex(restartedReplay->events(), la::avdecc::UniqueIdentifier{}, "Controller stopped");
+	ASSERT_TRUE(stopIndex.has_value());
+	restartedReplay->seekToEvent(*stopIndex - 1u);
+	EXPECT_NE(nullptr, restartedReplay->entityState(entityID));
+	auto const changes = restartedReplay->seekToEvent(*stopIndex);
+	EXPECT_EQ(std::size_t{ 2u }, changes.removed.size()); // The listener and the talker
+	EXPECT_NE(changes.removed.end(), std::find(changes.removed.begin(), changes.removed.end(), entityID));
+	EXPECT_TRUE(restartedReplay->entities().empty());
+	restartedReplay->seekToEvent(restartedReplay->events().size() - 1u);
+	EXPECT_TRUE(restartedReplay->entities().empty());
+	QFile::remove(filePath);
+}
+
+// Clearing the session renews the snapshots (the patches since the previous ones are gone), so the replay of a cleared journal starts from the 'cleared' snapshots at its first event
+TEST_F(EventJournal_F, Session_Clear_RenewsTheSnapshots)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto& journal = EventJournal::getInstance();
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	auto const talkerID = la::avdecc::UniqueIdentifier{ TalkerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	controllerManager.setEntityName(entityID, "Named before the clear");
+	waitForEvents(EventJournal::Category::Configuration, entityID, 1u);
+
+	journal.clearCurrentSession();
+	auto const events = journal.currentSessionEvents();
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Journal cleared" }, events[0].summary);
+	EXPECT_EQ(QString{ "2" }, journal.currentSessionMetadata().value("snapshots_count"));
+
+	auto const filePath = QDir::temp().filePath("HiveEventJournalTests_cleared.hej");
+	auto const replay = exportAndReplay(filePath);
+	ASSERT_TRUE(!!replay);
+	auto const index = EventJournal::loadSnapshotsIndex(filePath);
+	ASSERT_EQ(std::size_t{ 2u }, index.size());
+	for (auto const& info : index)
+	{
+		EXPECT_EQ(QString{ "cleared" }, info.reason);
+		EXPECT_GE(info.timestamp, events[0].timestamp);
+	}
+
+	// The snapshots were written after the first event but describe the entities from that event on
+	auto const changes = replay->seekToEvent(0u);
+	EXPECT_EQ(std::size_t{ 2u }, changes.updated.size());
+	auto const* const state = replay->entityState(entityID);
+	ASSERT_NE(nullptr, state);
+	EXPECT_EQ(QString{ "cleared" }, state->snapshotReason);
+	EXPECT_EQ(std::string{ "Named before the clear" }, state->document.at("entity_model").at("entity_descriptor").at("dynamic").at("entity_name").get<std::string>());
+	EXPECT_NE(nullptr, replay->entityState(talkerID));
+	QFile::remove(filePath);
 }

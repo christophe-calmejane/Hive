@@ -130,7 +130,7 @@ public:
 		qint64 id{ 0 }; /**< Row id, referenced by the 'snapshot_id' details key of the 'Entity is online' event */
 		qint64 timestamp{ 0 }; /**< Milliseconds since Unix epoch, UTC */
 		la::avdecc::UniqueIdentifier entityID{};
-		QString reason{}; /**< online, session_start or manual */
+		QString reason{}; /**< online, session_start, cleared or manual */
 		QString format{}; /**< Serialization format (see SnapshotFormat) */
 		qint64 uncompressedSize{ 0 }; /**< Size of the serialized entity before compression */
 		qint64 compressedSize{ 0 }; /**< Size of the stored blob */
@@ -248,6 +248,7 @@ public:
 	/**
 	* @brief Clears all events recorded so far in the current session.
 	* @details Wipes the events from the session file and from memory, then records a "Journal cleared" marker event.
+	*          The entity snapshots are wiped too and every online entity is snapshotted again (reason 'cleared'), so the journal stays self-contained for the replay.
 	*          The tracking baselines are kept, so ongoing states are not re-reported. The session keeps recording.
 	*          No-op if not recording.
 	*/

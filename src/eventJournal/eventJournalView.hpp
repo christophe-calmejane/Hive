@@ -35,6 +35,8 @@
 #include <QTableView>
 #include <QWidget>
 
+#include <optional>
+
 /**
 * @brief Widget displaying the events of a journal session, with filtering.
 * @details Default constructed (eg. when embedded in the MainWindow dock), the view follows the live recording
@@ -60,9 +62,19 @@ public:
 	/** Texts of the quick markers offered by the Mark button (and usable by any caller of EventJournal::addMarker). */
 	static QStringList quickMarkers() noexcept;
 
+	/** Sets the time cursor drawn on the timeline (the instant the analyser's twin of the network shows), pass std::nullopt to hide it. */
+	void setCursorTimestamp(std::optional<qint64> const& timestamp);
+
+	/** Returns the index in the session of the current event (the selected row), or std::nullopt if none. */
+	std::optional<int> currentEventIndex() const;
+
 	/* Signals */
 	/** Emitted when the user requests to select an entity (eg. by double-clicking one of its events). */
 	Q_SIGNAL void selectEntityRequested(la::avdecc::UniqueIdentifier const entityID);
+	/** Emitted when the current event changes (eventIndex is the index of the event in the session, -1 when no event is current). */
+	Q_SIGNAL void currentEventChanged(int const eventIndex);
+	/** Emitted when the user activates an event (double-click), before selectEntityRequested (eventIndex is the index of the event in the session). */
+	Q_SIGNAL void eventActivated(int const eventIndex);
 
 private:
 	void buildUi(bool const isLiveMode);

@@ -35,7 +35,8 @@
 *          Interactions: mouse wheel zooms around the cursor, left drag pans, double-click fits the whole session,
 *          hovering a marker shows the event details (including the time since the previous event of the same lane),
 *          clicking a marker selects the event (eventClicked signal, used to synchronize the events table).
-*          The markers written by the user (Marker category) are also drawn as labeled ticks across every lane.
+*          The markers written by the user (Marker category) are also drawn as labeled ticks across every lane, and the
+*          time cursor of the analyser (the instant its twin of the network shows) as a solid line.
 */
 class EventJournalTimeline : public QWidget
 {
@@ -51,6 +52,9 @@ public:
 
 	/** Pans the view (if needed) so the marker of the given model row becomes visible on the timeline. */
 	void ensureRowVisible(int const row);
+
+	/** Sets the time cursor, drawn as a solid line across every lane (pass std::nullopt to hide it). */
+	void setCursorTimestamp(std::optional<qint64> const& timestamp);
 
 	/* Signals */
 	Q_SIGNAL void eventClicked(int row);
@@ -105,6 +109,7 @@ private:
 	qint64 _viewEnd{ 0 };
 	bool _autoFit{ true };
 	std::optional<int> _selectedRow{};
+	std::optional<qint64> _cursorTimestamp{};
 	std::optional<QPoint> _panLastPosition{};
 	bool _panned{ false };
 };

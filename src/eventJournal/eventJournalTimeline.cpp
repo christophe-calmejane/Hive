@@ -107,6 +107,16 @@ void EventJournalTimeline::setSelectedRow(std::optional<int> const& row)
 	update();
 }
 
+void EventJournalTimeline::setCursorTimestamp(std::optional<qint64> const& timestamp)
+{
+	if (_cursorTimestamp == timestamp)
+	{
+		return;
+	}
+	_cursorTimestamp = timestamp;
+	update();
+}
+
 void EventJournalTimeline::ensureRowVisible(int const row)
 {
 	// Find the marker of that model row
@@ -442,6 +452,17 @@ void EventJournalTimeline::paintEvent(QPaintEvent*)
 			auto const label = fontMetrics.elidedText(_userMarkers[index].text, Qt::ElideRight, static_cast<int>(std::max(availableWidth, 24.0)));
 			painter.setPen(palette().color(QPalette::Text));
 			painter.drawText(QRectF(markerX + 3.0, plot.top(), plot.right() - markerX - 3.0, laneHeight), Qt::AlignVCenter | Qt::AlignLeft, label);
+		}
+	}
+
+	// Time cursor: a solid line across every lane, drawn under the markers so the event it is on stays visible
+	if (_cursorTimestamp)
+	{
+		auto const cursorX = timeToX(*_cursorTimestamp);
+		if (cursorX >= plot.left() && cursorX <= plot.right())
+		{
+			painter.setPen(QPen{ palette().color(QPalette::Highlight), 2.0 });
+			painter.drawLine(QPointF(cursorX, plot.top()), QPointF(cursorX, plot.bottom() + 3));
 		}
 	}
 

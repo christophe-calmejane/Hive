@@ -626,6 +626,21 @@ void EventJournalView::handleModelReset()
 	}
 }
 
+void EventJournalView::setCursorTimestamp(std::optional<qint64> const& timestamp)
+{
+	_timeline.setCursorTimestamp(timestamp);
+}
+
+std::optional<int> EventJournalView::currentEventIndex() const
+{
+	auto const currentIndex = _tableView.selectionModel()->currentIndex();
+	if (!currentIndex.isValid())
+	{
+		return std::nullopt;
+	}
+	return _filterProxyModel.mapToSource(currentIndex).row();
+}
+
 void EventJournalView::handleSelectionChanged()
 {
 	auto const currentIndex = _tableView.selectionModel()->currentIndex();
@@ -633,6 +648,7 @@ void EventJournalView::handleSelectionChanged()
 	{
 		_detailsTextEdit.clear();
 		_timeline.setSelectedRow(std::nullopt);
+		emit currentEventChanged(-1);
 		return;
 	}
 	_timeline.setSelectedRow(currentIndex.row());
@@ -640,6 +656,7 @@ void EventJournalView::handleSelectionChanged()
 	_timeline.ensureRowVisible(currentIndex.row());
 	auto const sourceIndex = _filterProxyModel.mapToSource(currentIndex);
 	auto const& event = _model.eventAtRow(sourceIndex.row());
+	emit currentEventChanged(sourceIndex.row());
 
 	auto text = QString{};
 	text += QString{ "Time:      %1\n" }.arg(QDateTime::fromMSecsSinceEpoch(event.timestamp).toString("yyyy-MM-dd HH:mm:ss.zzz"));
@@ -674,6 +691,7 @@ void EventJournalView::handleEventDoubleClicked(QModelIndex const& index)
 	}
 	auto const sourceIndex = _filterProxyModel.mapToSource(index);
 	auto const& event = _model.eventAtRow(sourceIndex.row());
+	emit eventActivated(sourceIndex.row());
 	// Requesting the selection of the entity activates it in the entities list, which in turn activates it in the inspector
 	if (event.entityID)
 	{
