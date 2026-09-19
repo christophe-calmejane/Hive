@@ -1149,9 +1149,13 @@ TEST_F(EventJournal_F, Session_WriterRoundTrip)
 	ASSERT_TRUE(session.has_value());
 	EXPECT_EQ(EventJournal::CurrentSchemaVersion, session->schemaVersion());
 	EXPECT_EQ(journal.currentSessionMetadata(), session->metadata);
+	// The export is journaled in the live session once the copy is taken, so the exported file holds every event but that one
 	auto const liveEvents = journal.currentSessionEvents();
-	ASSERT_EQ(liveEvents.size(), session->events.size());
-	for (auto index = std::size_t{ 0u }; index < liveEvents.size(); ++index)
+	ASSERT_EQ(liveEvents.size(), session->events.size() + 1u);
+	EXPECT_EQ(QString{ "Journal exported" }, liveEvents.back().summary);
+	EXPECT_EQ(EventJournal::Category::Session, liveEvents.back().category);
+	EXPECT_EQ(QString{ "HiveEventJournalTests_schema_v2.hej" }, eventDetails(liveEvents.back()).value("file_name").toString());
+	for (auto index = std::size_t{ 0u }; index < session->events.size(); ++index)
 	{
 		EXPECT_EQ(liveEvents[index].timestamp, session->events[index].timestamp);
 		EXPECT_EQ(liveEvents[index].category, session->events[index].category);
@@ -1248,6 +1252,8 @@ TEST_F(EventJournal_F, EntityOnline_DetailsDescribeTheEntity)
 	EXPECT_FALSE(details.value("vendor").toString().isEmpty());
 	EXPECT_EQ(QString{ "2.12.0.48" }, details.value("firmware_version").toString());
 	EXPECT_TRUE(details.contains("enumeration_time_ms"));
+	ASSERT_TRUE(details.contains("is_controller"));
+	EXPECT_FALSE(details.value("is_controller").toBool(true));
 
 	auto const avbInterfaces = details.value("avb_interfaces").toArray();
 	ASSERT_EQ(1, avbInterfaces.size());
@@ -1397,7 +1403,11 @@ TEST_F(EventJournal_F, ChangeTracking_NameChanges_ReplayOntoTheSnapshot)
 	ASSERT_EQ(std::size_t{ 12u }, events.size());
 
 	EXPECT_EQ(QString{ "Entity name changed to 'Renamed listener'" }, events[0].summary);
-	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	for (auto index = std::size_t{ 1u }; index < events.size(); ++index)
+	{
+		EXPECT_EQ(EventJournal::Level::Diagnostic, events[index].level) << events[index].summary.toStdString();
+	}
 	EXPECT_EQ(QString{ "Renamed listener" }, events[0].entityName);
 	EXPECT_EQ(std::string{ "Renamed listener" }, patchValue(events[0], "/entity_model/entity_descriptor/dynamic/entity_name").get<std::string>());
 	EXPECT_EQ(std::string{ "Stage left" }, patchValue(events[1], "/entity_model/entity_descriptor/dynamic/group_name").get<std::string>());
@@ -1453,7 +1463,10 @@ TEST_F(EventJournal_F, ChangeTracking_ConfigurationAndControlChanges_ReplayOntoT
 	ASSERT_EQ(std::size_t{ 4u }, events.size());
 
 	EXPECT_EQ(QString{ "Stream format changed to %1" }.arg(hive::modelsLibrary::helper::toHexQString(newFormat.getValue(), true, true)), events[0].summary);
-	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	for (auto const& event : events)
+	{
+		EXPECT_EQ(EventJournal::Level::User, event.level) << event.summary.toStdString();
+	}
 	EXPECT_TRUE(events[0].subject.startsWith("Input Stream 0"));
 	EXPECT_EQ(hive::modelsLibrary::helper::toHexQString(newFormat.getValue(), true, true).toStdString(), patchValue(events[0], "/stream_input_descriptors/0/dynamic/stream_format").get<std::string>());
 	EXPECT_EQ(QString{ "Sampling rate changed to 48000 Hz" }, events[1].summary);
@@ -1471,7 +1484,7 @@ TEST_F(EventJournal_F, ChangeTracking_ConfigurationAndControlChanges_ReplayOntoT
 	auto controlEvents = waitForEvents(EventJournal::Category::Control, entityID, 1u);
 	ASSERT_EQ(std::size_t{ 1u }, controlEvents.size());
 	EXPECT_EQ(QString{ "Entity locked by this controller" }, controlEvents[0].summary);
-	EXPECT_EQ(EventJournal::Level::Diagnostic, controlEvents[0].level);
+	EXPECT_EQ(EventJournal::Level::User, controlEvents[0].level);
 	EXPECT_EQ(std::string{ "LOCKED" }, patchValue(controlEvents[0], "/state/lock_state").get<std::string>());
 	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(controllerManager.getControllerEID()).toStdString(), patchValue(controlEvents[0], "/state/locking_controller_id").get<std::string>());
 	auto const lockedDocument = applyPatches(snapshot, controlEvents);
@@ -2067,4 +2080,131 @@ TEST_F(EventJournal_F, MediaClock_EventsCarryTheClockSource)
 	EXPECT_EQ(2, details.value("clock_source_stream_index").toInt());
 	EXPECT_EQ(hive::modelsLibrary::helper::uniqueIdentifierToString(la::avdecc::UniqueIdentifier{ TalkerEntityID }), details.value("clock_source_talker_id").toString());
 	EXPECT_EQ(expectedTalkerStreamIndex, details.value("clock_source_talker_stream_index").toInt());
+}
+
+/* *********************************
+   Control: operator changes, acknowledged counters, refresh and identify requests
+*/
+// The changes an operator makes during a show are journaled at user level (with their patch), the other model changes stay diagnostic
+TEST_F(EventJournal_F, Control_OperatorChanges_AreJournaledAtUserLevel)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto& journal = EventJournal::getInstance();
+
+	// User level recording only
+	journal.setRecordingLevel(EventJournal::Level::User);
+	controllerManager.setEntityName(entityID, "Show name");
+	controllerManager.setStreamInputName(entityID, 0u, 0u, "Diagnostic only"); // A descriptor name is diagnostic material
+	controllerManager.setAudioUnitSamplingRate(entityID, 0u, la::avdecc::entity::model::SamplingRate{ 0u, 48000u });
+	controllerManager.setClockSource(entityID, 0u, 1u);
+	controllerManager.stopStreamInput(entityID, 2u);
+	auto const events = waitForEvents(EventJournal::Category::Configuration, entityID, 4u);
+	journal.setRecordingLevel(EventJournal::Level::Diagnostic);
+	ASSERT_EQ(std::size_t{ 4u }, events.size());
+	EXPECT_EQ(QString{ "Entity name changed to 'Show name'" }, events[0].summary);
+	EXPECT_EQ(QString{ "Sampling rate changed to 48000 Hz" }, events[1].summary);
+	EXPECT_TRUE(events[2].summary.startsWith("Clock source changed to Clock Source 1")) << events[2].summary.toStdString();
+	EXPECT_EQ(QString{ "Stream stopped" }, events[3].summary);
+	for (auto const& event : events)
+	{
+		EXPECT_EQ(EventJournal::Level::User, event.level) << event.summary.toStdString();
+		EXPECT_FALSE(eventPatch(event).empty()) << event.summary.toStdString();
+	}
+
+	// Acquire and lock are user level too
+	controllerManager.lockEntity(entityID);
+	auto const controlEvents = waitForEvents(EventJournal::Category::Control, entityID, 1u);
+	ASSERT_EQ(std::size_t{ 1u }, controlEvents.size());
+	EXPECT_EQ(QString{ "Entity locked by this controller" }, controlEvents[0].summary);
+	EXPECT_EQ(EventJournal::Level::User, controlEvents[0].level);
+	controllerManager.unlockEntity(entityID);
+	waitForEvents(EventJournal::Category::Control, entityID, 2u);
+}
+
+// Acknowledging the error counters in the UI is journaled with the values that were displayed, so the next increase of the same counter (journaled from zero) stays interpretable
+TEST_F(EventJournal_F, Control_AcknowledgedCounters_AreJournaled)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// Two error counters flagged (MEDIA_UNLOCKED is covered by the stream lock rule for this stream, so only STREAM_INTERRUPTED is an error event here)
+	auto errorCounters = hive::modelsLibrary::ControllerManager::StreamInputErrorCounters{};
+	errorCounters[la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked] = 2u;
+	errorCounters[la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted] = 1u;
+	emit controllerManager.streamInputErrorCounterChanged(entityID, TestStreamIndex, errorCounters);
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Counters, entityID).size());
+	EXPECT_TRUE(eventsSince(EventJournal::Category::Control, entityID).empty());
+
+	// One counter acknowledged
+	errorCounters.erase(la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked);
+	emit controllerManager.streamInputErrorCounterChanged(entityID, TestStreamIndex, errorCounters);
+	auto events = eventsSince(EventJournal::Category::Control, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Error counters acknowledged: Media Unlocked (2)" }, events[0].summary);
+	EXPECT_EQ(EventJournal::Severity::Info, events[0].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	EXPECT_TRUE(events[0].subject.startsWith("Input Stream 0"));
+	auto const counters = eventDetails(events[0]).value("counters").toArray();
+	ASSERT_EQ(1, counters.size());
+	EXPECT_EQ(QString{ "Media Unlocked" }, counters[0].toObject().value("counter").toString());
+	EXPECT_EQ(2, counters[0].toObject().value("value").toInt());
+
+	// All the counters acknowledged, then nothing left to acknowledge
+	emit controllerManager.streamInputErrorCounterChanged(entityID, TestStreamIndex, {});
+	emit controllerManager.streamInputErrorCounterChanged(entityID, TestStreamIndex, {});
+	events = eventsSince(EventJournal::Category::Control, entityID);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "Error counters acknowledged: Stream Interrupted (1)" }, events[1].summary);
+
+	// The next increase is journaled from zero
+	errorCounters = {};
+	errorCounters[la::avdecc::entity::StreamInputCounterValidFlag::StreamInterrupted] = 1u;
+	emit controllerManager.streamInputErrorCounterChanged(entityID, TestStreamIndex, errorCounters);
+	auto const counterEvents = eventsSince(EventJournal::Category::Counters, entityID);
+	ASSERT_EQ(std::size_t{ 2u }, counterEvents.size());
+	EXPECT_EQ(QString{ "'Stream Interrupted' error counter increased to 1" }, counterEvents[1].summary);
+	EXPECT_EQ(0, eventDetails(counterEvents[1]).value("previous_value").toInt());
+
+	// Statistics counters go through the same rule
+	auto statistics = hive::modelsLibrary::ControllerManager::StatisticsErrorCounters{};
+	statistics[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpRetries] = 3u;
+	emit controllerManager.statisticsErrorCounterChanged(entityID, statistics);
+	emit controllerManager.statisticsErrorCounterChanged(entityID, {});
+	events = eventsSince(EventJournal::Category::Control, entityID);
+	ASSERT_EQ(std::size_t{ 3u }, events.size());
+	EXPECT_EQ(QString{ "Error counters acknowledged: AECP Retries (3)" }, events[2].summary);
+	EXPECT_EQ(QString{ "Statistics" }, events[2].subject);
+}
+
+// Refreshing and identifying an entity leave no trace in its model: the requests are journaled
+TEST_F(EventJournal_F, Control_RefreshAndIdentifyRequests_AreJournaled)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	controllerManager.identifyEntity(entityID, std::chrono::milliseconds{ 100 });
+	auto events = waitForEvents(EventJournal::Category::Control, entityID, 1u);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "Entity identify requested" }, events[0].summary);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+
+	// The refresh request comes before the entity goes offline and online again
+	auto const onlineCountBefore = entityOnlineCount();
+	ASSERT_TRUE(controllerManager.refreshEntity(entityID));
+	events = waitForEvents(EventJournal::Category::Control, entityID, 2u);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "Entity refresh requested" }, events[1].summary);
+	waitForEntitiesOnline(onlineCountBefore + 1u);
+	auto const entityEvents = eventsSince(EventJournal::Category::Entity, entityID);
+	ASSERT_EQ(std::size_t{ 3u }, entityEvents.size());
+	EXPECT_EQ(QString{ "Entity went offline" }, entityEvents[1].summary);
+	EXPECT_EQ(QString{ "Entity is online" }, entityEvents[2].summary);
+	EXPECT_LE(events[1].timestamp, entityEvents[1].timestamp);
 }

@@ -31,6 +31,7 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -706,7 +707,15 @@ public:
 		auto escapedPath = filePath;
 		escapedPath.replace("'", "''");
 		auto query = QSqlQuery{ _db };
-		return query.exec(QString{ "VACUUM INTO '%1'" }.arg(escapedPath));
+		if (!query.exec(QString{ "VACUUM INTO '%1'" }.arg(escapedPath)))
+		{
+			return false;
+		}
+		// Journaled after the copy, so the live session tells an export was taken (the exported file ends just before it)
+		auto details = QJsonObject{};
+		details["file_name"] = QFileInfo{ filePath }.fileName();
+		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Journal exported", details);
+		return true;
 	}
 
 	void clearCurrentSession() noexcept
@@ -851,18 +860,15 @@ public:
 		auto const previousName = entityNameFor(entityID);
 		_entityNames[entityID] = entityName;
 		upsertEntity(entityID, entityName);
-		if (!isDiagnosticRecording())
-		{
-			return;
-		}
 
+		// An operator action during a show (the other names are diagnostic material, see handleObjectNameChanged)
 		auto patch = Patch{};
 		patch.replace(QString{ "%1/dynamic/entity_name" }.arg(avePatch::entityDescriptorPointer()), la::avdecc::entity::model::AvdeccFixedString{ entityName.toStdString() });
 		auto details = QJsonObject{};
 		details["previous_name"] = previousName;
 		details["new_name"] = entityName;
 		patch.storeIn(details);
-		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), {}, QString{ "Entity name changed to '%1'" }.arg(entityName), details, Level::Diagnostic);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), {}, QString{ "Entity name changed to '%1'" }.arg(entityName), details);
 	}
 
 	void handleEntityGroupNameChanged(la::avdecc::UniqueIdentifier const entityID, QString const& groupName) noexcept
@@ -1161,16 +1167,12 @@ public:
 		{
 			return;
 		}
-		if (!isDiagnosticRecording())
-		{
-			return;
-		}
 		auto details = QJsonObject{};
 		details["stream_format"] = helper::toHexQString(streamFormat.getValue(), true, true);
 		auto patch = Patch{};
 		patch.replace(dynamicPointer(entityID, descriptorType, streamIndex, "stream_format"), streamFormat);
 		patch.storeIn(details);
-		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), streamSubject(entityID, descriptorType, streamIndex), QString{ "Stream format changed to %1" }.arg(details["stream_format"].toString()), details, Level::Diagnostic);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), streamSubject(entityID, descriptorType, streamIndex), QString{ "Stream format changed to %1" }.arg(details["stream_format"].toString()), details);
 	}
 
 	void handleStreamDynamicInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamIndex const streamIndex, la::avdecc::entity::model::StreamDynamicInfo const& info) noexcept
@@ -1207,15 +1209,11 @@ public:
 		{
 			return;
 		}
-		if (!isDiagnosticRecording())
-		{
-			return;
-		}
 		auto details = QJsonObject{};
 		auto patch = Patch{};
 		patch.replace(dynamicPointer(entityID, descriptorType, streamIndex, "stream_running"), isRunning);
 		patch.storeIn(details);
-		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), streamSubject(entityID, descriptorType, streamIndex), isRunning ? "Stream started" : "Stream stopped", details, Level::Diagnostic);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), streamSubject(entityID, descriptorType, streamIndex), isRunning ? "Stream started" : "Stream stopped", details);
 	}
 
 	void handleAudioUnitSamplingRateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::SamplingRate const samplingRate) noexcept
@@ -1228,17 +1226,13 @@ public:
 		{
 			return;
 		}
-		if (!isDiagnosticRecording())
-		{
-			return;
-		}
 		auto details = QJsonObject{};
 		auto const nominalSampleRate = static_cast<qint64>(samplingRate.getNominalSampleRate());
 		details["sampling_rate"] = nominalSampleRate;
 		auto patch = Patch{};
 		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::AudioUnit, audioUnitIndex, "current_sampling_rate"), samplingRate);
 		patch.storeIn(details);
-		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Audio Unit %1" }.arg(audioUnitIndex), QString{ "Sampling rate changed to %1 Hz" }.arg(nominalSampleRate), details, Level::Diagnostic);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Audio Unit %1" }.arg(audioUnitIndex), QString{ "Sampling rate changed to %1 Hz" }.arg(nominalSampleRate), details);
 	}
 
 	void handleClockSourceChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::ClockSourceIndex const clockSourceIndex) noexcept
@@ -1251,16 +1245,12 @@ public:
 		{
 			return;
 		}
-		if (!isDiagnosticRecording())
-		{
-			return;
-		}
 		auto details = QJsonObject{};
 		details["clock_source_index"] = static_cast<int>(clockSourceIndex);
 		auto patch = Patch{};
 		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::ClockDomain, clockDomainIndex, "clock_source_index"), clockSourceIndex);
 		patch.storeIn(details);
-		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), QString{ "Clock source changed to %1" }.arg(clockSourceSubject(entityID, clockSourceIndex)), details, Level::Diagnostic);
+		addEvent(Category::Configuration, Severity::Info, entityID, entityNameFor(entityID), QString{ "Clock Domain %1" }.arg(clockDomainIndex), QString{ "Clock source changed to %1" }.arg(clockSourceSubject(entityID, clockSourceIndex)), details);
 	}
 
 	void handleMediaClockReferenceInfoChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::ClockDomainIndex const clockDomainIndex, la::avdecc::entity::model::MediaClockReferenceInfo const& info) noexcept
@@ -1418,10 +1408,6 @@ public:
 		{
 			return;
 		}
-		if (!isDiagnosticRecording())
-		{
-			return;
-		}
 		auto details = QJsonObject{};
 		details["acquire_state"] = acquireStateToKey(acquireState);
 		details["owning_controller_id"] = helper::uniqueIdentifierToString(owningEntity);
@@ -1445,7 +1431,7 @@ public:
 				summary = QString{ "Entity acquire state changed to %1" }.arg(acquireStateToKey(acquireState));
 				break;
 		}
-		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, summary, details, Level::Diagnostic);
+		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, summary, details);
 	}
 
 	void handleLockStateChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::model::LockState const lockState, la::avdecc::UniqueIdentifier const lockingEntity) noexcept
@@ -1460,10 +1446,6 @@ public:
 			return;
 		}
 		if (!trackChange(_lockStates, entityID, std::make_pair(lockState, lockingEntity)))
-		{
-			return;
-		}
-		if (!isDiagnosticRecording())
 		{
 			return;
 		}
@@ -1490,7 +1472,7 @@ public:
 				summary = QString{ "Entity lock state changed to %1" }.arg(lockStateToKey(lockState));
 				break;
 		}
-		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, summary, details, Level::Diagnostic);
+		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, summary, details);
 	}
 
 	void handleCompatibilityChanged(la::avdecc::UniqueIdentifier const entityID, la::avdecc::controller::ControlledEntity::CompatibilityFlags const compatibilityFlags, la::avdecc::entity::model::MilanVersion const& milanVersion) noexcept
@@ -1870,6 +1852,7 @@ public:
 		}();
 
 		auto& previousCounters = _streamInputErrorCounters[entityID][descriptorIndex];
+		journalAcknowledgedCounters(entityID, inputStreamSubject(entityID, descriptorIndex), previousCounters, errorCounters, &streamInputCounterName);
 		for (auto const& [flag, value] : errorCounters)
 		{
 			if (flag == la::avdecc::entity::StreamInputCounterValidFlag::MediaUnlocked && isLockTracked)
@@ -1887,7 +1870,6 @@ public:
 				addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), inputStreamSubject(entityID, descriptorIndex), QString{ "'%1' error counter increased to %2" }.arg(streamInputCounterName(flag)).arg(value), details);
 			}
 		}
-		// Counters disappearing from the map means the user acknowledged them in the UI: silently forget them
 		previousCounters = errorCounters;
 	}
 
@@ -1898,28 +1880,81 @@ public:
 			return;
 		}
 
+		auto& previousCounters = _statisticsErrorCounters[entityID];
+		journalAcknowledgedCounters(entityID, "Statistics", previousCounters, errorCounters, &statisticsCounterName);
+
 		// In redundant (dual interface) mode, statistics error counter increases are journaled from the per-counter signals (handleStatisticsCounterIncreased) so they carry the interface they occurred on
-		if (ControllerManager::getInstance().isRedundantController())
+		if (!ControllerManager::getInstance().isRedundantController())
+		{
+			for (auto const& [flag, value] : errorCounters)
+			{
+				auto const previousIt = previousCounters.find(flag);
+				auto const previousValue = (previousIt != previousCounters.end()) ? previousIt->second : std::uint64_t{ 0u };
+				if (previousIt == previousCounters.end() || value > previousValue)
+				{
+					auto details = QJsonObject{};
+					details["counter"] = statisticsCounterName(flag);
+					details["previous_value"] = static_cast<qint64>(previousValue);
+					details["value"] = static_cast<qint64>(value);
+					addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), "Statistics", QString{ "'%1' error counter increased to %2" }.arg(statisticsCounterName(flag)).arg(value), details);
+				}
+			}
+		}
+		previousCounters = errorCounters;
+	}
+
+	/**
+	* @brief Journals the error counters the user acknowledged in the UI: the flags of the previous error counters map missing from the new one, with the values that were displayed.
+	* @details The error counters are the values since the last acknowledgement (what Hive displays), so an acknowledgement resets them: the event tells why the next increase of the same counter is journaled from zero.
+	*/
+	template<typename CountersType, typename NameFunction>
+	void journalAcknowledgedCounters(la::avdecc::UniqueIdentifier const entityID, QString const& subject, CountersType const& previousCounters, CountersType const& newCounters, NameFunction const& counterName) noexcept
+	{
+		auto names = QStringList{};
+		auto counters = QJsonArray{};
+		for (auto const& [flag, value] : previousCounters)
+		{
+			if (newCounters.count(flag) > 0u)
+			{
+				continue;
+			}
+			auto object = QJsonObject{};
+			object["counter"] = counterName(flag);
+			object["value"] = static_cast<qint64>(value);
+			counters.push_back(object);
+			names.push_back(QString{ "%1 (%2)" }.arg(counterName(flag)).arg(value));
+		}
+		if (counters.isEmpty())
 		{
 			return;
 		}
+		auto details = QJsonObject{};
+		details["counters"] = counters;
+		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), subject, QString{ "Error counters acknowledged: %1" }.arg(names.join(", ")), details);
+	}
 
-		auto& previousCounters = _statisticsErrorCounters[entityID];
-		for (auto const& [flag, value] : errorCounters)
+	void handleEntityRefreshRequested(la::avdecc::UniqueIdentifier const entityID) noexcept
+	{
+		if (!isRecording())
 		{
-			auto const previousIt = previousCounters.find(flag);
-			auto const previousValue = (previousIt != previousCounters.end()) ? previousIt->second : std::uint64_t{ 0u };
-			if (previousIt == previousCounters.end() || value > previousValue)
-			{
-				auto details = QJsonObject{};
-				details["counter"] = statisticsCounterName(flag);
-				details["previous_value"] = static_cast<qint64>(previousValue);
-				details["value"] = static_cast<qint64>(value);
-				addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), "Statistics", QString{ "'%1' error counter increased to %2" }.arg(statisticsCounterName(flag)).arg(value), details);
-			}
+			return;
 		}
-		// Counters disappearing from the map means the user acknowledged them in the UI: silently forget them
-		previousCounters = errorCounters;
+		// The entity is about to go offline and come back online: this event tells the operator asked for it
+		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, "Entity refresh requested");
+	}
+
+	void handleBeginAecpCommand(la::avdecc::UniqueIdentifier const entityID, ControllerManager::AecpCommandType const commandType) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		// The identification of an entity leaves no trace in its model, so the request itself is journaled (ControllerManager::identifyEntity always emits the begin signal, it has no begin handler overriding it). The other commands are visible through the changes they make.
+		if (commandType != ControllerManager::AecpCommandType::IdentifyEntity)
+		{
+			return;
+		}
+		addEvent(Category::Control, Severity::Info, entityID, entityNameFor(entityID), {}, "Entity identify requested");
 	}
 
 	void handleStatisticsCounterIncreased(la::avdecc::UniqueIdentifier const entityID, ControllerManager::StatisticsErrorCounterFlag const flag, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue) noexcept
@@ -2658,6 +2693,7 @@ public:
 		auto details = QJsonObject{};
 		auto const& entity = controlledEntity.getEntity();
 		details["entity_model_id"] = helper::uniqueIdentifierToString(entity.getEntityModelID());
+		details["is_controller"] = entity.getControllerCapabilities().test(la::avdecc::entity::ControllerCapability::Implemented);
 		details["vendor"] = helper::getVendorName(entity.getEntityID());
 		if (controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 		{
@@ -2810,6 +2846,9 @@ public:
 		_entityCapabilities[entityID] = controlledEntity.getEntity().getEntityCapabilities();
 		_rawCounters.erase(entityID);
 		_controlValuesStates.erase(entityID);
+		// The error counters Hive displays restart from zero when an entity is enumerated (a controller reload keeps the journal state without an offline notification)
+		_streamInputErrorCounters.erase(entityID);
+		_statisticsErrorCounters.erase(entityID);
 
 		try
 		{
@@ -3070,6 +3109,16 @@ EventJournal::EventJournal()
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			_pImpl->handleEntityOffline(entityID);
+		});
+	connect(&manager, &ControllerManager::entityRefreshRequested, this,
+		[this](la::avdecc::UniqueIdentifier const entityID)
+		{
+			_pImpl->handleEntityRefreshRequested(entityID);
+		});
+	connect(&manager, &ControllerManager::beginAecpCommand, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, ControllerManager::AecpCommandType const commandType, la::avdecc::entity::model::DescriptorIndex const /*descriptorIndex*/)
+		{
+			_pImpl->handleBeginAecpCommand(entityID, commandType);
 		});
 	connect(&manager, &ControllerManager::entityNameChanged, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, QString const& entityName)

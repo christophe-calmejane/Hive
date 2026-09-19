@@ -1289,7 +1289,12 @@ private:
 		auto controller = getController();
 		if (controller)
 		{
-			return controller->refreshEntity(entityID);
+			// The offline and online notifications of the refresh are queued to the main thread from the network thread, so the signal emitted here comes first
+			if (controller->refreshEntity(entityID))
+			{
+				emit entityRefreshRequested(entityID);
+				return true;
+			}
 		}
 		return false;
 	}
