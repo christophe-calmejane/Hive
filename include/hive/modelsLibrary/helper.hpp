@@ -105,6 +105,8 @@ QString inputStreamName(la::avdecc::controller::ControlledEntity const& controll
 QString redundantOutputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 QString redundantInputName(la::avdecc::controller::model::VirtualIndex const redundantIndex) noexcept;
 QString getComputerName() noexcept;
+/** Returns the resident memory (working set) of the current process in bytes, or 0 if it cannot be read. */
+std::uint64_t getProcessResidentMemory() noexcept;
 
 } // namespace helper
 } // namespace modelsLibrary

@@ -25,6 +25,7 @@
 
 #include <la/avdecc/avdecc.hpp>
 #include <la/avdecc/internals/jsonTypes.hpp>
+#include <la/networkInterfaceHelper/networkInterfaceHelper.hpp>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -110,6 +111,10 @@ constexpr auto StreamDataMinEvaluationInterval = std::chrono::milliseconds{ 900 
 constexpr auto StreamDataResyncFactor = std::uint64_t{ 10u }; // An increment above this multiple of the expected increment (counter reset by a rebind, value jump) only resynchronizes the reference sample
 
 // Change tracking events (see docs/EventJournal.md): every dynamic model change is journaled at diagnostic level with a JSON Patch, so the analyser can rebuild the state of an entity at any time of the session from its last snapshot
+// Session context (see docs/EventJournal.md): the heartbeat proves the controller was alive during the silences of a journal and tells how loaded it was, the AECP response time of an entity tells how responsive the network and the device were
+constexpr auto HeartbeatInterval = std::chrono::minutes{ 5 }; // Period of the diagnostic level 'Heartbeat' session events
+constexpr auto AecpResponseTimeChangeThreshold = std::chrono::milliseconds{ 50 }; // An AECP average response time is journaled when it moved by at least this much since the last journaled value (a few milliseconds on a healthy network)
+
 constexpr auto ControlValuesRateLimitInterval = std::chrono::milliseconds{ 1000 }; // A control journals at most one value change per interval (faders and meters can be very chatty): the last value wins, the coalesced changes are counted
 constexpr auto LivenessCounterNames = std::array<char const*, 3>{ "FRAMES_RX", "FRAMES_TX", "TIMESTAMP_VALID" }; // Counters moving on every notification of a streaming device (about 300 notifications per second on the field rig): a notification where only those moved is never journaled as a raw counters event, the FRAMES_RX increments feed the stream data loss rule instead
 
@@ -386,6 +391,8 @@ QString categoryToKey(EventJournal::Category const category) noexcept
 			return "configuration";
 		case EventJournal::Category::Control:
 			return "control";
+		case EventJournal::Category::Marker:
+			return "marker";
 		default:
 			return "unknown";
 	}
@@ -406,6 +413,7 @@ std::optional<EventJournal::Category> categoryFromKey(QString const& key) noexce
 		{ "streaming", EventJournal::Category::Streaming },
 		{ "configuration", EventJournal::Category::Configuration },
 		{ "control", EventJournal::Category::Control },
+		{ "marker", EventJournal::Category::Marker },
 	};
 	if (auto const it = s_map.find(key); it != s_map.end())
 	{
@@ -539,7 +547,19 @@ class EventJournal::Private
 public:
 	Private(EventJournal* q) noexcept
 		: _q{ q }
+		, _networkInterfacesObserver{ q, this }
 	{
+	}
+
+	~Private() noexcept
+	{
+		la::networkInterface::NetworkInterfaceHelper::getInstance().unregisterObserver(&_networkInterfacesObserver);
+	}
+
+	/** Starts observing the network interfaces of the computer (the registration replays the existing interfaces), so the link state changes of the controller interfaces are journaled. */
+	void observeNetworkInterfaces() noexcept
+	{
+		la::networkInterface::NetworkInterfaceHelper::getInstance().registerObserver(&_networkInterfacesObserver);
 	}
 
 	/* ************************************************************ */
@@ -619,6 +639,10 @@ public:
 		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Recording started");
 		emit _q->recordingStarted(_sessionFilePath);
 
+		_eventsSinceHeartbeat = 0u;
+		_notificationsAtHeartbeat = totalUnsolicitedNotifications();
+		_heartbeatTimer.start(_heartbeatInterval);
+
 		// Entities already online when the recording starts get a snapshot too, so the journal is self-contained whatever the startup order
 		for (auto const entityID : onlineEntities())
 		{
@@ -628,6 +652,7 @@ public:
 
 	void stopSession() noexcept
 	{
+		_heartbeatTimer.stop();
 		if (isRecording())
 		{
 			flushPendingControlValues(true);
@@ -733,6 +758,270 @@ public:
 		addEvent(Category::Session, Severity::Info, {}, {}, {}, "Journal cleared");
 	}
 
+	/* ************************************************************ */
+	/* Markers, heartbeat and controller side context               */
+	/* ************************************************************ */
+	bool addMarker(QString const& text) noexcept
+	{
+		auto const trimmed = text.trimmed();
+		if (!isRecording() || trimmed.isEmpty())
+		{
+			return false;
+		}
+		auto details = QJsonObject{};
+		details["author"] = _metadata.value("computer_name");
+		addEvent(Category::Marker, Severity::Info, {}, {}, {}, trimmed, details);
+		return true;
+	}
+
+	void setHeartbeatInterval(std::chrono::milliseconds const interval) noexcept
+	{
+		_heartbeatInterval = interval;
+		if (_heartbeatTimer.isActive())
+		{
+			_heartbeatTimer.start(_heartbeatInterval);
+		}
+	}
+
+	/** Heartbeat period elapsed: the event is written by a zero timer, so the delay before it runs measures the latency of the event loop (the queue of notifications waiting for the main thread). */
+	void handleHeartbeatTimeout() noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		auto const scheduled = std::chrono::steady_clock::now();
+		QTimer::singleShot(0, _q,
+			[this, scheduled]()
+			{
+				writeHeartbeat(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - scheduled));
+			});
+	}
+
+	/** Writes the 'Heartbeat' session event (diagnostic level) with the figures accumulated since the previous one, then restarts the counters (at user level the counters are restarted too, so a switch to diagnostic recording starts with a meaningful period). */
+	void writeHeartbeat(std::chrono::milliseconds const eventLoopLatency) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		auto const notifications = totalUnsolicitedNotifications();
+		if (isDiagnosticRecording())
+		{
+			auto details = QJsonObject{};
+			details["entities_online"] = static_cast<qint64>(onlineEntities().size());
+			details["events_since_last"] = static_cast<qint64>(_eventsSinceHeartbeat);
+			details["notifications_since_last"] = static_cast<qint64>(notifications >= _notificationsAtHeartbeat ? notifications - _notificationsAtHeartbeat : notifications);
+			details["event_loop_latency_ms"] = static_cast<qint64>(eventLoopLatency.count());
+			details["process_rss_mb"] = static_cast<qint64>(helper::getProcessResidentMemory() / (1024u * 1024u));
+			addEvent(Category::Session, Severity::Info, {}, {}, {}, "Heartbeat", details, Level::Diagnostic);
+		}
+		_eventsSinceHeartbeat = 0u;
+		_notificationsAtHeartbeat = notifications;
+	}
+
+	/** Sums the unsolicited notifications (AEM and MVU, every controller interface) received from the entities currently online, as counted by the controller statistics. */
+	static std::uint64_t totalUnsolicitedNotifications() noexcept
+	{
+		auto total = std::uint64_t{ 0u };
+		auto& manager = ControllerManager::getInstance();
+		for (auto const entityID : onlineEntities())
+		{
+			for (auto const& statistics : manager.getPerInterfaceStatistics(entityID))
+			{
+				total += statistics.aemAecpUnsolicitedCounter + statistics.mvuAecpUnsolicitedCounter;
+			}
+		}
+		return total;
+	}
+
+	/** Network interface of the computer, as known from the NetworkInterfaceHelper (updated on the main thread). */
+	struct ControllerInterfaceState
+	{
+		QString name{};
+		bool isEnabled{ false };
+		bool isConnected{ false };
+	};
+
+	/**
+	* @brief Observer of the network interfaces of the computer, forwarding the notifications to the main thread (the journal is only used from there).
+	* @details Only the interfaces the controller runs on (the interface_id and secondary_interface_id session metadata) produce events: a link down on the controller computer explains the entities going offline right after.
+	*/
+	class NetworkInterfacesObserver final : public la::networkInterface::NetworkInterfaceHelper::Observer
+	{
+	public:
+		NetworkInterfacesObserver(EventJournal* const q, Private* const impl) noexcept
+			: _q{ q }
+			, _impl{ impl }
+		{
+		}
+
+	private:
+		virtual void onInterfaceAdded(la::networkInterface::Interface const& intfc) noexcept override
+		{
+			forward(
+				[id = intfc.id, name = QString::fromStdString(intfc.alias), isEnabled = intfc.isEnabled, isConnected = intfc.isConnected](Private& impl)
+				{
+					impl._controllerInterfaces[id] = ControllerInterfaceState{ name, isEnabled, isConnected };
+				});
+		}
+		virtual void onInterfaceRemoved(la::networkInterface::Interface const& intfc) noexcept override
+		{
+			forward(
+				[id = intfc.id](Private& impl)
+				{
+					impl.handleControllerInterfaceRemoved(id);
+				});
+		}
+		virtual void onInterfaceEnabledStateChanged(la::networkInterface::Interface const& intfc, bool const isEnabled) noexcept override
+		{
+			forward(
+				[id = intfc.id, isEnabled](Private& impl)
+				{
+					impl.handleControllerInterfaceEnabledStateChanged(id, isEnabled);
+				});
+		}
+		virtual void onInterfaceConnectedStateChanged(la::networkInterface::Interface const& intfc, bool const isConnected) noexcept override
+		{
+			forward(
+				[id = intfc.id, isConnected](Private& impl)
+				{
+					impl.handleControllerInterfaceConnectedStateChanged(id, isConnected);
+				});
+		}
+		virtual void onInterfaceAliasChanged(la::networkInterface::Interface const& intfc, std::string const& alias) noexcept override
+		{
+			forward(
+				[id = intfc.id, name = QString::fromStdString(alias)](Private& impl)
+				{
+					if (auto const it = impl._controllerInterfaces.find(id); it != impl._controllerInterfaces.end())
+					{
+						it->second.name = name;
+					}
+				});
+		}
+		virtual void onInterfaceIPAddressInfosChanged(la::networkInterface::Interface const& /*intfc*/, la::networkInterface::Interface::IPAddressInfos const& /*ipAddressInfos*/) noexcept override {}
+		virtual void onInterfaceGateWaysChanged(la::networkInterface::Interface const& /*intfc*/, la::networkInterface::Interface::Gateways const& /*gateways*/) noexcept override {}
+
+		/** Runs the given function on the main thread (the notifications come from the helper's own thread). */
+		template<typename FunctionType>
+		void forward(FunctionType&& function) noexcept
+		{
+			QMetaObject::invokeMethod(_q,
+				[impl = _impl, function = std::forward<FunctionType>(function)]()
+				{
+					function(*impl);
+				},
+				Qt::QueuedConnection);
+		}
+
+		EventJournal* _q{ nullptr };
+		Private* _impl{ nullptr };
+	};
+
+	/** Returns the subject of the events of a controller interface ("Primary Interface" / "Secondary Interface"), or std::nullopt if the interface is not one the current session's controller runs on. */
+	std::optional<QString> controllerInterfaceSubject(std::string const& interfaceID) const noexcept
+	{
+		auto const id = QString::fromStdString(interfaceID);
+		if (!id.isEmpty() && _metadata.value("interface_id") == id)
+		{
+			return QString{ "Primary Interface" };
+		}
+		if (!id.isEmpty() && _metadata.value("secondary_interface_id") == id)
+		{
+			return QString{ "Secondary Interface" };
+		}
+		return std::nullopt;
+	}
+
+	/** Builds the details of a controller interface event. */
+	QJsonObject controllerInterfaceDetails(std::string const& interfaceID) const noexcept
+	{
+		auto details = QJsonObject{};
+		details["interface_id"] = QString::fromStdString(interfaceID);
+		if (auto const it = _controllerInterfaces.find(interfaceID); it != _controllerInterfaces.end())
+		{
+			details["interface_name"] = it->second.name;
+		}
+		return details;
+	}
+
+	void handleControllerInterfaceRemoved(std::string const& interfaceID) noexcept
+	{
+		if (isRecording())
+		{
+			if (auto const subject = controllerInterfaceSubject(interfaceID))
+			{
+				addEvent(Category::Link, Severity::Warning, {}, {}, *subject, "Controller interface removed", controllerInterfaceDetails(interfaceID));
+			}
+		}
+		_controllerInterfaces.erase(interfaceID);
+	}
+
+	void handleControllerInterfaceEnabledStateChanged(std::string const& interfaceID, bool const isEnabled) noexcept
+	{
+		auto& state = _controllerInterfaces[interfaceID];
+		if (state.isEnabled == isEnabled)
+		{
+			return;
+		}
+		state.isEnabled = isEnabled;
+		if (!isRecording())
+		{
+			return;
+		}
+		if (auto const subject = controllerInterfaceSubject(interfaceID))
+		{
+			addEvent(Category::Link, isEnabled ? Severity::Info : Severity::Warning, {}, {}, *subject, isEnabled ? "Controller interface enabled" : "Controller interface disabled", controllerInterfaceDetails(interfaceID));
+		}
+	}
+
+	void handleControllerInterfaceConnectedStateChanged(std::string const& interfaceID, bool const isConnected) noexcept
+	{
+		auto& state = _controllerInterfaces[interfaceID];
+		if (state.isConnected == isConnected)
+		{
+			return;
+		}
+		state.isConnected = isConnected;
+		if (!isRecording())
+		{
+			return;
+		}
+		if (auto const subject = controllerInterfaceSubject(interfaceID))
+		{
+			addEvent(Category::Link, isConnected ? Severity::Recovered : Severity::Error, {}, {}, *subject, isConnected ? "Controller interface link up" : "Controller interface link down", controllerInterfaceDetails(interfaceID));
+		}
+	}
+
+	/** AECP average response time of an entity on one controller interface: journaled at diagnostic level when it moved by AecpResponseTimeChangeThreshold since the last journaled value (the baseline is seeded when the entity comes online). */
+	void handleAecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+		auto& journaled = _aecpResponseTimes[entityID];
+		auto const it = journaled.find(interfaceType);
+		if (it == journaled.end())
+		{
+			journaled[interfaceType] = value;
+			return;
+		}
+		auto const previous = it->second;
+		auto const difference = value > previous ? value - previous : previous - value;
+		if (difference < AecpResponseTimeChangeThreshold)
+		{
+			return;
+		}
+		it->second = value;
+		auto details = QJsonObject{};
+		details["interface"] = helper::interfaceTypeName(interfaceType);
+		details["previous_average_ms"] = static_cast<qint64>(previous.count());
+		details["average_ms"] = static_cast<qint64>(value.count());
+		addEvent(Category::Entity, Severity::Info, entityID, entityNameFor(entityID), QString{ "%1 Interface" }.arg(helper::interfaceTypeName(interfaceType)), QString{ "AECP response time changed to %1 ms" }.arg(value.count()), details, Level::Diagnostic);
+	}
+
 	void setRecordingLevel(Level const level) noexcept
 	{
 		if (level == _recordingLevel)
@@ -827,6 +1116,7 @@ public:
 		_gptpGmChangedStates.erase(entityID);
 		_clockLockStates.erase(entityID);
 		_streamLockStates.erase(entityID);
+		_aecpResponseTimes.erase(entityID);
 		_streamConnections.erase(entityID);
 		_streamInputErrorCounters.erase(entityID);
 		_streamDataStates.erase(entityID);
@@ -2221,6 +2511,7 @@ public:
 		_insertEventQuery.exec();
 
 		_events.push_back(event);
+		++_eventsSinceHeartbeat;
 		emit _q->eventAdded(event);
 	}
 
@@ -2849,6 +3140,11 @@ public:
 		// The error counters Hive displays restart from zero when an entity is enumerated (a controller reload keeps the journal state without an offline notification)
 		_streamInputErrorCounters.erase(entityID);
 		_statisticsErrorCounters.erase(entityID);
+		_aecpResponseTimes[entityID] = { { la::avdecc::controller::InterfaceType::Primary, controlledEntity.getAecpResponseAverageTime(la::avdecc::controller::InterfaceType::Primary) } };
+		if (ControllerManager::getInstance().isRedundantController())
+		{
+			_aecpResponseTimes[entityID][la::avdecc::controller::InterfaceType::Secondary] = controlledEntity.getAecpResponseAverageTime(la::avdecc::controller::InterfaceType::Secondary);
+		}
 
 		try
 		{
@@ -2970,6 +3266,7 @@ public:
 		_gptpGmChangedStates.clear();
 		_clockLockStates.clear();
 		_streamLockStates.clear();
+		_aecpResponseTimes.clear();
 		_streamConnections.clear();
 		_streamInputErrorCounters.clear();
 		_streamDataStates.clear();
@@ -3062,6 +3359,15 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<CounterKey, json>, la::avdecc::UniqueIdentifier::hash> _rawCounters{}; // Last journaled raw counters of every descriptor, as serialized in the AVE document
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::entity::model::ControlIndex, ControlValuesState>, la::avdecc::UniqueIdentifier::hash> _controlValuesStates{};
 	QTimer _controlValuesFlushTimer{}; // Single shot, journals the pending control values once their rate limiting interval elapsed
+
+	// Session context: heartbeat, controller interfaces, AECP response times
+	QTimer _heartbeatTimer{}; // Repeating, see handleHeartbeatTimeout
+	std::chrono::milliseconds _heartbeatInterval{ HeartbeatInterval };
+	std::uint64_t _eventsSinceHeartbeat{ 0u };
+	std::uint64_t _notificationsAtHeartbeat{ 0u }; // Unsolicited notifications total at the previous heartbeat
+	NetworkInterfacesObserver _networkInterfacesObserver;
+	std::map<std::string, ControllerInterfaceState> _controllerInterfaces{}; // Every network interface of the computer, by identifier
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::controller::InterfaceType, std::chrono::milliseconds>, la::avdecc::UniqueIdentifier::hash> _aecpResponseTimes{}; // Last journaled (or seeded) AECP average response time per controller interface
 };
 
 /* ************************************************************ */
@@ -3084,6 +3390,12 @@ EventJournal::EventJournal()
 		{
 			_pImpl->flushPendingControlValues(false);
 		});
+	connect(&_pImpl->_heartbeatTimer, &QTimer::timeout, this,
+		[this]()
+		{
+			_pImpl->handleHeartbeatTimeout();
+		});
+	_pImpl->observeNetworkInterfaces();
 
 	connect(&manager, &ControllerManager::controllerOnline, this,
 		[this]()
@@ -3109,6 +3421,11 @@ EventJournal::EventJournal()
 		[this](la::avdecc::UniqueIdentifier const entityID)
 		{
 			_pImpl->handleEntityOffline(entityID);
+		});
+	connect(&manager, &ControllerManager::aecpResponseAverageTimeChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value, la::avdecc::controller::InterfaceType const interfaceType)
+		{
+			_pImpl->handleAecpResponseAverageTimeChanged(entityID, value, interfaceType);
 		});
 	connect(&manager, &ControllerManager::entityRefreshRequested, this,
 		[this](la::avdecc::UniqueIdentifier const entityID)
@@ -3418,6 +3735,8 @@ QString EventJournal::categoryToString(Category const category) noexcept
 			return "Configuration";
 		case Category::Control:
 			return "Control";
+		case Category::Marker:
+			return "Marker";
 		default:
 			return "Unknown";
 	}
@@ -3642,6 +3961,16 @@ void EventJournal::setSessionMetadata(QString const& key, QString const& value) 
 bool EventJournal::exportCurrentSession(QString const& filePath) noexcept
 {
 	return _pImpl->exportSession(filePath);
+}
+
+bool EventJournal::addMarker(QString const& text) noexcept
+{
+	return _pImpl->addMarker(text);
+}
+
+void EventJournal::setHeartbeatInterval(std::chrono::milliseconds const interval) noexcept
+{
+	_pImpl->setHeartbeatInterval(interval);
 }
 
 void EventJournal::setMonotonicClock(std::function<std::chrono::steady_clock::time_point()> clock) noexcept

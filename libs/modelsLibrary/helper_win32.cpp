@@ -23,6 +23,10 @@
 #include <la/networkInterfaceHelper/windowsHelper.hpp>
 
 #include <Windows.h>
+#include <Psapi.h>
+#ifdef _MSC_VER
+#	pragma comment(lib, "Psapi.lib")
+#endif // _MSC_VER
 
 namespace hive
 {
@@ -47,6 +51,17 @@ QString getComputerName() noexcept
 	}
 
 	return {};
+}
+
+std::uint64_t getProcessResidentMemory() noexcept
+{
+	auto counters = PROCESS_MEMORY_COUNTERS{};
+	counters.cb = sizeof(counters);
+	if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters)))
+	{
+		return static_cast<std::uint64_t>(counters.WorkingSetSize);
+	}
+	return 0u;
 }
 
 } // namespace helper

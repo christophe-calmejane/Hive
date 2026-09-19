@@ -44,7 +44,7 @@ constexpr auto MarkerHitDistance = 6;
 constexpr auto MinimumViewSpan = qint64{ 1000 }; // 1 second
 
 /** All categories, in display order (defines the lanes order) */
-constexpr std::array<EventJournal::Category, 12> AllCategories{ EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy, EventJournal::Category::Streaming, EventJournal::Category::Configuration, EventJournal::Category::Control };
+constexpr std::array<EventJournal::Category, 13> AllCategories{ EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy, EventJournal::Category::Streaming, EventJournal::Category::Configuration, EventJournal::Category::Control, EventJournal::Category::Marker };
 
 /** Formats a duration in a human readable way (eg. "2 min 13 s") */
 QString formatDuration(qint64 const milliseconds)
@@ -157,6 +157,7 @@ QSize EventJournalTimeline::minimumSizeHint() const
 void EventJournalTimeline::rebuild()
 {
 	_markers.clear();
+	_userMarkers.clear();
 	_lanes.clear();
 
 	auto const rowCount = _model ? _model->rowCount() : 0;
@@ -203,6 +204,11 @@ void EventJournalTimeline::rebuild()
 			marker.previousInLane = previousInLane[static_cast<std::size_t>(marker.laneIndex)];
 			previousInLane[static_cast<std::size_t>(marker.laneIndex)] = marker.timestamp;
 			_markers.push_back(marker);
+			// The markers written by the user are also drawn as labeled ticks across every lane, so what was heard or done lines up with the events
+			if (static_cast<EventJournal::Category>(category) == EventJournal::Category::Marker)
+			{
+				_userMarkers.push_back(UserMarker{ marker.timestamp, _model->index(row, static_cast<int>(EventJournalModel::Column::Summary)).data().toString() });
+			}
 		}
 	}
 
@@ -410,6 +416,34 @@ void EventJournalTimeline::paintEvent(QPaintEvent*)
 		painter.drawText(QRectF(tickX - 60, plot.bottom() + 2, 120, AxisHeight - 2), Qt::AlignHCenter | Qt::AlignVCenter, QDateTime::fromMSecsSinceEpoch(tick).toString(timeFormat));
 	}
 	painter.setClipRect(QRectF(plot.left(), 0, plot.width(), height()));
+
+	// User markers: a tick across every lane with the text of the marker next to it
+	if (!_userMarkers.empty())
+	{
+		auto tickColor = palette().color(QPalette::Highlight);
+		tickColor.setAlpha(160);
+		auto tickPen = QPen{ tickColor, 1.0, Qt::DashLine };
+		auto const fontMetrics = painter.fontMetrics();
+		for (auto index = std::size_t{ 0 }; index < _userMarkers.size(); ++index)
+		{
+			auto const markerX = timeToX(_userMarkers[index].timestamp);
+			if (markerX < plot.left() || markerX > plot.right())
+			{
+				continue;
+			}
+			painter.setPen(tickPen);
+			painter.drawLine(QPointF(markerX, plot.top()), QPointF(markerX, plot.bottom()));
+			// The label is drawn to the right of the tick, elided to the room left before the next marker (the markers are in time order) or the plot edge
+			auto availableWidth = plot.right() - markerX - 4.0;
+			if (index + 1 < _userMarkers.size())
+			{
+				availableWidth = std::min(availableWidth, timeToX(_userMarkers[index + 1].timestamp) - markerX - 4.0);
+			}
+			auto const label = fontMetrics.elidedText(_userMarkers[index].text, Qt::ElideRight, static_cast<int>(std::max(availableWidth, 24.0)));
+			painter.setPen(palette().color(QPalette::Text));
+			painter.drawText(QRectF(markerX + 3.0, plot.top(), plot.right() - markerX - 3.0, laneHeight), Qt::AlignVCenter | Qt::AlignLeft, label);
+		}
+	}
 
 	// Markers
 	for (auto const& marker : _markers)

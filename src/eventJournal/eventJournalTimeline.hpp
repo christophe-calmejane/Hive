@@ -35,6 +35,7 @@
 *          Interactions: mouse wheel zooms around the cursor, left drag pans, double-click fits the whole session,
 *          hovering a marker shows the event details (including the time since the previous event of the same lane),
 *          clicking a marker selects the event (eventClicked signal, used to synchronize the events table).
+*          The markers written by the user (Marker category) are also drawn as labeled ticks across every lane.
 */
 class EventJournalTimeline : public QWidget
 {
@@ -77,6 +78,13 @@ private:
 		qint64 previousInLane{ -1 }; /**< Timestamp of the previous marker in the same lane (-1 if none) */
 	};
 
+	/** Marker written by the user (Marker category event), drawn as a labeled tick across every lane */
+	struct UserMarker
+	{
+		qint64 timestamp{ 0 };
+		QString text{};
+	};
+
 	void rebuild();
 	void fitToData();
 	void zoom(double const factor, qint64 const anchorTime);
@@ -89,6 +97,7 @@ private:
 
 	QAbstractItemModel* _model{ nullptr };
 	std::vector<Marker> _markers{};
+	std::vector<UserMarker> _userMarkers{};
 	std::vector<hive::modelsLibrary::EventJournal::Category> _lanes{};
 	qint64 _dataStart{ 0 };
 	qint64 _dataEnd{ 0 };

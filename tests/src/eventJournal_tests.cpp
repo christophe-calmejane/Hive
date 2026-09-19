@@ -2208,3 +2208,130 @@ TEST_F(EventJournal_F, Control_RefreshAndIdentifyRequests_AreJournaled)
 	EXPECT_EQ(QString{ "Entity is online" }, entityEvents[2].summary);
 	EXPECT_LE(events[1].timestamp, entityEvents[1].timestamp);
 }
+
+/* *********************************
+   Markers, heartbeat and controller side context
+*/
+// A marker is a user level event whose summary is the text, signed with the computer name
+TEST_F(EventJournal_F, Markers_AreJournaledWithTheAuthor)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto& journal = EventJournal::getInstance();
+	auto const countBefore = journal.currentSessionEvents().size();
+
+	EXPECT_TRUE(journal.addMarker("  Show start  "));
+	EXPECT_FALSE(journal.addMarker(""));
+	EXPECT_FALSE(journal.addMarker("   "));
+	auto const events = journal.currentSessionEvents();
+	ASSERT_EQ(countBefore + 1u, events.size());
+	auto const& marker = events.back();
+	EXPECT_EQ(EventJournal::Category::Marker, marker.category);
+	EXPECT_EQ(EventJournal::Severity::Info, marker.severity);
+	EXPECT_EQ(EventJournal::Level::User, marker.level);
+	EXPECT_FALSE(marker.entityID);
+	EXPECT_EQ(QString{ "Show start" }, marker.summary);
+	EXPECT_EQ(journal.currentSessionMetadata().value("computer_name"), eventDetails(marker).value("author").toString());
+	EXPECT_EQ(QString{ "Marker" }, EventJournal::categoryToString(marker.category));
+}
+
+// The heartbeat is a diagnostic session event written at every period, with the figures accumulated since the previous one
+TEST_F(EventJournal_F, Heartbeat_FollowsThePeriod)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto& journal = EventJournal::getInstance();
+	loadConnectedFixture();
+	auto const heartbeats = [&journal]()
+	{
+		auto events = std::vector<EventJournal::Event>{};
+		for (auto const& event : journal.currentSessionEvents())
+		{
+			if (event.category == EventJournal::Category::Session && event.summary == "Heartbeat")
+			{
+				events.push_back(event);
+			}
+		}
+		return events;
+	};
+	auto const countBefore = heartbeats().size();
+	auto const waitForHeartbeats = [&heartbeats](std::size_t const count)
+	{
+		auto const deadline = QDeadlineTimer{ 2000 };
+		while (!deadline.hasExpired() && heartbeats().size() < count)
+		{
+			QTest::qWait(10);
+		}
+		return heartbeats();
+	};
+
+	journal.setHeartbeatInterval(std::chrono::milliseconds{ 100 });
+	auto events = waitForHeartbeats(countBefore + 1u);
+	ASSERT_EQ(countBefore + 1u, events.size());
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events.back().level);
+	auto details = eventDetails(events.back());
+	EXPECT_EQ(2, details.value("entities_online").toInt());
+	EXPECT_LE(0, details.value("events_since_last").toInt());
+	EXPECT_LE(0, details.value("notifications_since_last").toInt());
+	EXPECT_LE(0, details.value("event_loop_latency_ms").toInt());
+	EXPECT_LT(0, details.value("process_rss_mb").toInt());
+
+	// The next one only counts the events written since the previous heartbeat
+	journal.addMarker("Between two heartbeats");
+	events = waitForHeartbeats(countBefore + 2u);
+	ASSERT_EQ(countBefore + 2u, events.size());
+	EXPECT_EQ(1, eventDetails(events.back()).value("events_since_last").toInt());
+
+	// Not written at user level (the period is stretched first, so no heartbeat is in flight when the level changes)
+	journal.setHeartbeatInterval(std::chrono::minutes{ 5 });
+	journal.setRecordingLevel(EventJournal::Level::User);
+	journal.setHeartbeatInterval(std::chrono::milliseconds{ 100 });
+	QTest::qWait(350);
+	EXPECT_EQ(countBefore + 2u, heartbeats().size());
+	journal.setHeartbeatInterval(std::chrono::minutes{ 5 });
+	journal.setRecordingLevel(EventJournal::Level::Diagnostic);
+}
+
+// The AECP average response time of an entity is journaled at diagnostic level when it moved by 50 ms or more since the last journaled value
+TEST_F(EventJournal_F, AecpResponseTime_IsJournaledOnLargeChanges)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+	auto baseline = std::chrono::milliseconds{};
+	{
+		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
+		ASSERT_TRUE(!!controlledEntity);
+		baseline = controlledEntity->getAecpResponseAverageTime(la::avdecc::controller::InterfaceType::Primary);
+	}
+	auto const responseTimeEvents = [this, entityID]()
+	{
+		auto events = eventsSince(EventJournal::Category::Entity, entityID);
+		events.erase(std::remove_if(events.begin(), events.end(),
+									 [](EventJournal::Event const& event)
+									 {
+										 return !event.summary.startsWith("AECP response time changed");
+									 }),
+			events.end());
+		return events;
+	};
+
+	// Below the threshold: nothing
+	emit controllerManager.aecpResponseAverageTimeChanged(entityID, baseline + std::chrono::milliseconds{ 20 }, la::avdecc::controller::InterfaceType::Primary);
+	EXPECT_TRUE(responseTimeEvents().empty());
+
+	// Above: journaled with the previous journaled value (the baseline, not the intermediate value)
+	emit controllerManager.aecpResponseAverageTimeChanged(entityID, baseline + std::chrono::milliseconds{ 60 }, la::avdecc::controller::InterfaceType::Primary);
+	auto events = responseTimeEvents();
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "AECP response time changed to %1 ms" }.arg((baseline + std::chrono::milliseconds{ 60 }).count()), events[0].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
+	EXPECT_EQ(QString{ "Primary Interface" }, events[0].subject);
+	auto const details = eventDetails(events[0]);
+	EXPECT_EQ(static_cast<int>(baseline.count()), details.value("previous_average_ms").toInt());
+	EXPECT_EQ(static_cast<int>(baseline.count() + 60), details.value("average_ms").toInt());
+	EXPECT_EQ(QString{ "Primary" }, details.value("interface").toString());
+
+	// Back to the baseline: journaled again (the difference to the last journaled value is 60 ms)
+	emit controllerManager.aecpResponseAverageTimeChanged(entityID, baseline, la::avdecc::controller::InterfaceType::Primary);
+	EXPECT_EQ(std::size_t{ 2u }, responseTimeEvents().size());
+}

@@ -78,6 +78,7 @@ public:
 		Streaming = 9, /**< Stream data reception (frames missing, detected from the FRAMES_RX counter increments) */
 		Configuration = 10, /**< Entity configuration changes (names, stream formats, sampling rates, clock sources, control values, audio mappings, ...), diagnostic level */
 		Control = 11, /**< Controller actions on an entity (acquire, lock) */
+		Marker = 12, /**< Markers written by the user during the session (the summary is the text of the marker) */
 	};
 
 	/** Severity of a journaled event. */
@@ -221,6 +222,21 @@ public:
 	* @return The number of entities snapshotted.
 	*/
 	std::size_t snapshotAllEntities() noexcept;
+
+	/**
+	* @brief Writes a marker in the current session: what the user saw or did at that moment ("Show start", "Glitch heard", ...).
+	* @details A Marker category event of severity Info at user level, whose summary is the text and whose details carry the computer name (details.author). No-op if not recording or if the text is empty.
+	* @param[in] text Text of the marker (trimmed).
+	* @return True if the marker was written.
+	*/
+	bool addMarker(QString const& text) noexcept;
+
+	/**
+	* @brief Overrides the period of the heartbeat events (five minutes by default).
+	* @details Only meant for unit tests, which cannot wait for the default period. The heartbeat is a diagnostic level session event proving the controller was alive and telling how loaded it was (see docs/EventJournal.md).
+	* @param[in] interval The new period, applied at once to the running session.
+	*/
+	void setHeartbeatInterval(std::chrono::milliseconds const interval) noexcept;
 
 	/**
 	* @brief Overrides the monotonic clock used to timestamp the arrival of the counter notifications (stream data loss rule).

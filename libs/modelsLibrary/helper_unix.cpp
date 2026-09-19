@@ -23,6 +23,8 @@
 #include <unistd.h>
 #include <limits.h>
 
+#include <fstream>
+
 namespace hive
 {
 namespace modelsLibrary
@@ -34,6 +36,29 @@ QString getComputerName() noexcept
 	char hostname[HOST_NAME_MAX];
 	gethostname(hostname, HOST_NAME_MAX);
 	return QString{ hostname };
+}
+
+std::uint64_t getProcessResidentMemory() noexcept
+{
+	// /proc/self/statm: total program size then resident set size, in pages
+	try
+	{
+		auto file = std::ifstream{ "/proc/self/statm" };
+		auto size = std::uint64_t{ 0u };
+		auto resident = std::uint64_t{ 0u };
+		if (file >> size >> resident)
+		{
+			auto const pageSize = sysconf(_SC_PAGESIZE);
+			if (pageSize > 0)
+			{
+				return resident * static_cast<std::uint64_t>(pageSize);
+			}
+		}
+	}
+	catch (...)
+	{
+	}
+	return 0u;
 }
 
 } // namespace helper

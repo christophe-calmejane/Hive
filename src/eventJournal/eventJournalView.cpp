@@ -30,6 +30,7 @@
 #include <QFontDatabase>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QInputDialog>
 #include <QJsonDocument>
 #include <QMessageBox>
 #include <QSignalBlocker>
@@ -122,15 +123,31 @@ EventJournalView::EventJournalView(QWidget* parent)
 			_statusLabel.setText(QString{ "Snapshot of %1 entities taken" }.arg(count));
 		});
 
+	// Markers: what the user heard or did, written in the journal to line up with the events (a custom text, or one of the quick markers)
+	connect(_markMenu.addAction("Custom Marker..."), &QAction::triggered, this, &EventJournalView::promptMarker);
+	_markMenu.addSeparator();
+	for (auto const& text : quickMarkers())
+	{
+		connect(_markMenu.addAction(text), &QAction::triggered, this,
+			[this, text]()
+			{
+				writeMarker(text);
+			});
+	}
+	_markButton.setMenu(&_markMenu);
+	_markButton.setToolTip("Write a marker in the journal: what you heard or did at this moment, so it lines up with the events");
+
 	_exportJournalAction->setEnabled(journal.isRecording());
 	_clearButton.setEnabled(journal.isRecording());
 	updateSnapshotButton();
+	updateMarkButton();
 	connect(&journal, &EventJournal::recordingStarted, this,
 		[this](QString const&)
 		{
 			_exportJournalAction->setEnabled(true);
 			_clearButton.setEnabled(true);
 			updateSnapshotButton();
+			updateMarkButton();
 		});
 	connect(&journal, &EventJournal::recordingStopped, this,
 		[this]()
@@ -138,6 +155,7 @@ EventJournalView::EventJournalView(QWidget* parent)
 			_exportJournalAction->setEnabled(false);
 			_clearButton.setEnabled(false);
 			updateSnapshotButton();
+			updateMarkButton();
 		});
 	connect(_exportJournalAction, &QAction::triggered, this,
 		[this]()
@@ -176,6 +194,37 @@ EventJournalView::EventJournalView(EventJournal::Session&& session, QString cons
 void EventJournalView::setDiagnosticEventsVisible(bool const visible)
 {
 	_showDiagnosticButton.setChecked(visible);
+}
+
+QStringList EventJournalView::quickMarkers() noexcept
+{
+	return { "Show start", "Show end", "Glitch heard", "Network work start", "Network work end" };
+}
+
+void EventJournalView::promptMarker()
+{
+	if (!_isLiveMode)
+	{
+		return;
+	}
+	auto ok = false;
+	auto const text = QInputDialog::getText(this, "Journal Marker", "What happened (written in the journal at this moment):", QLineEdit::Normal, {}, &ok);
+	if (ok)
+	{
+		writeMarker(text);
+	}
+}
+
+void EventJournalView::writeMarker(QString const& text)
+{
+	if (EventJournal::getInstance().addMarker(text))
+	{
+		_statusLabel.setText(QString{ "Marker written: %1" }.arg(text.trimmed()));
+	}
+	else
+	{
+		_statusLabel.setText("Marker not written (the journal is not recording, or the text is empty)");
+	}
 }
 
 void EventJournalView::buildUi(bool const isLiveMode)
@@ -219,12 +268,14 @@ void EventJournalView::buildUi(bool const isLiveMode)
 		_recordDiagnosticButton.setToolTip("Also record the diagnostic level events (everything needed for deep analysis, much larger journal files). The choice is remembered for the next sessions.");
 		filterLayout->addWidget(&_snapshotButton);
 		_snapshotButton.setToolTip("Store a snapshot of every online entity in the journal now (diagnostic recording only), as a fresh reference point for the analysis");
+		filterLayout->addWidget(&_markButton);
 	}
 	else
 	{
 		_clearButton.hide();
 		_recordDiagnosticButton.hide();
 		_snapshotButton.hide();
+		_markButton.hide();
 	}
 
 	// Degraded mode banner (file mode, journal written by a newer schema)
@@ -403,7 +454,7 @@ void EventJournalView::createSeverityFilterMenu()
 
 void EventJournalView::createCategoryFilterMenu()
 {
-	for (auto const category : { EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy, EventJournal::Category::Streaming, EventJournal::Category::Configuration, EventJournal::Category::Control })
+	for (auto const category : { EventJournal::Category::Session, EventJournal::Category::Entity, EventJournal::Category::Connection, EventJournal::Category::Counters, EventJournal::Category::MediaClock, EventJournal::Category::Gptp, EventJournal::Category::Link, EventJournal::Category::Latency, EventJournal::Category::Redundancy, EventJournal::Category::Streaming, EventJournal::Category::Configuration, EventJournal::Category::Control, EventJournal::Category::Marker })
 	{
 		auto* action = _categoryFilterMenu.addAction(EventJournal::categoryToString(category));
 		action->setCheckable(true);
@@ -521,6 +572,11 @@ void EventJournalView::updateSnapshotButton()
 {
 	auto const& journal = EventJournal::getInstance();
 	_snapshotButton.setEnabled(journal.isRecording() && journal.recordingLevel() == EventJournal::Level::Diagnostic);
+}
+
+void EventJournalView::updateMarkButton()
+{
+	_markButton.setEnabled(EventJournal::getInstance().isRecording());
 }
 
 void EventJournalView::handleRowsInserted(int const firstRow, int const lastRow)

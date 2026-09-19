@@ -799,6 +799,14 @@ void MainWindowImpl::createViewMenu()
 	menuView->addAction(eventJournalDockWidget->toggleViewAction());
 	menuView->addSeparator();
 
+	// The journal marker action lives in the menu bar so its shortcut works whatever the visibility of the journal dock
+	{
+		menuTools->addSeparator();
+		auto* const addMarkerAction = menuTools->addAction("Add Event Journal &Marker...");
+		addMarkerAction->setShortcut(QKeySequence{ "Ctrl+Shift+M" });
+		connect(addMarkerAction, &QAction::triggered, eventJournalView, &EventJournalView::promptMarker);
+	}
+
 	// Appearance in a sub menu and exclusive action group
 	{
 		auto* appearanceMenu = new QMenu("Appearance", menuView);

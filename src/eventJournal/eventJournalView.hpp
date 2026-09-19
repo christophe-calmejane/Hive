@@ -54,6 +54,12 @@ public:
 	/** Shows or hides the diagnostic level events (hidden by default, the analyser shows them by default). */
 	void setDiagnosticEventsVisible(bool const visible);
 
+	/** Asks the user for the text of a marker and writes it in the live journal (live mode only, the application binds a menu action with a shortcut to it so it works whatever the visibility of the journal dock). */
+	void promptMarker();
+
+	/** Texts of the quick markers offered by the Mark button (and usable by any caller of EventJournal::addMarker). */
+	static QStringList quickMarkers() noexcept;
+
 	/* Signals */
 	/** Emitted when the user requests to select an entity (eg. by double-clicking one of its events). */
 	Q_SIGNAL void selectEntityRequested(la::avdecc::UniqueIdentifier const entityID);
@@ -67,6 +73,8 @@ private:
 	void updateTimeRangeFilter();
 	void updateStatusLabel();
 	void updateSnapshotButton();
+	void updateMarkButton();
+	void writeMarker(QString const& text);
 	void handleRowsInserted(int const firstRow, int const lastRow);
 	void handleModelReset();
 	void handleSelectionChanged();
@@ -84,6 +92,8 @@ private:
 	QPushButton _clearButton{ "Clear", this };
 	QPushButton _recordDiagnosticButton{ "Record Diagnostic", this };
 	QPushButton _snapshotButton{ "Snapshot Now", this };
+	QPushButton _markButton{ "Mark", this };
+	QMenu _markMenu{ this };
 	QLabel _schemaBannerLabel{ this };
 	QMenu _exportMenu{ this };
 	QAction* _exportJournalAction{ nullptr };
