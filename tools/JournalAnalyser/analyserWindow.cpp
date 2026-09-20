@@ -50,6 +50,9 @@
 #include <QProcess>
 #include <QStatusBar>
 #include <QStyleHints>
+#include <QTextCursor>
+#include <QTextDocument>
+#include <QTextStream>
 #include <QUrl>
 
 #include <cstdint>
@@ -62,6 +65,7 @@ namespace
 constexpr auto JournalFileExtension = hive::modelsLibrary::EventJournal::JournalFileExtension;
 constexpr auto NetworkStateFileExtension = "ans";
 constexpr auto VirtualEntityFileExtension = "ave";
+constexpr auto EventLinkScheme = "event"; // Links of the findings report to the events ("event:<index>")
 
 /** Flags used to load network state and virtual entity files, same as Hive. */
 la::avdecc::entity::model::jsonSerializer::Flags loadFlags() noexcept
@@ -137,6 +141,7 @@ AnalyserWindow::AnalyserWindow(QStringList const& filesToLoad)
 	createMenus();
 	createReplayToolBar();
 	createNetworkGraphDock();
+	createFindingsDock();
 	createVirtualController();
 
 	// Appearance (the stylesheet depends on the theme color and on the resulting color scheme)
@@ -186,6 +191,14 @@ void AnalyserWindow::createMenus()
 					loadFiles({ filePath });
 				}
 			});
+
+		fileMenu->addSeparator();
+
+		_exportReportAction = fileMenu->addAction("&Export Report...");
+		_exportReportAction->setShortcut(QKeySequence{ "Ctrl+E" });
+		_exportReportAction->setToolTip("Writes the findings of the journal as a Markdown report");
+		_exportReportAction->setEnabled(false);
+		connect(_exportReportAction, &QAction::triggered, this, &AnalyserWindow::exportReport);
 
 		fileMenu->addSeparator();
 
@@ -320,6 +333,29 @@ void AnalyserWindow::createNetworkGraphDock()
 		});
 }
 
+void AnalyserWindow::createFindingsDock()
+{
+	// The report of the analysis, rendered from Markdown; its times are links to the events
+	_findingsBrowser = new QTextBrowser{ this };
+	_findingsBrowser->setOpenLinks(false);
+	_findingsBrowser->setOpenExternalLinks(false);
+	connect(_findingsBrowser, &QTextBrowser::anchorClicked, this, &AnalyserWindow::handleFindingsLink);
+	_findingsDock = new QDockWidget{ "Findings", this };
+	_findingsDock->setObjectName("findingsDock");
+	_findingsDock->setWidget(_findingsBrowser);
+	addDockWidget(Qt::BottomDockWidgetArea, _findingsDock);
+	// Hidden until a journal is analyzed
+	_findingsDock->hide();
+
+	if (auto* const viewMenu = menuBar()->findChild<QMenu*>("viewMenu"))
+	{
+		auto* const toggleAction = _findingsDock->toggleViewAction();
+		// After the Network Graph action, before the separator
+		auto const actions = viewMenu->actions();
+		viewMenu->insertAction(actions.size() > 1 ? actions.at(1) : nullptr, toggleAction);
+	}
+}
+
 void AnalyserWindow::createVirtualController()
 {
 	// A virtual controller never touches the network: it only hosts the entities loaded from files
@@ -425,6 +461,7 @@ bool AnalyserWindow::loadJournal(QString const& filePath)
 	auto const lastTimestamp = eventCount > 0u ? QDateTime::fromMSecsSinceEpoch(session->events.back().timestamp).toString("yyyy-MM-dd HH:mm:ss") : QString{};
 
 	_journalFilePath = filePath;
+	_session = *session;
 	// The replay keeps its own copy of the events (implicitly shared strings, so the copy is cheap) and reads the snapshots from the file on demand
 	_replay = std::make_unique<hive::modelsLibrary::JournalReplay>(session->events, hive::modelsLibrary::EventJournal::loadSnapshotsIndex(filePath),
 		[filePath](qint64 const snapshotID)
@@ -476,6 +513,11 @@ bool AnalyserWindow::loadJournal(QString const& filePath)
 	}
 	summary += QString{ ", schema version %1" }.arg(schemaVersion);
 	_journalSummaryLabel->setText(summary);
+
+	// The findings: the rack and branch mapping comes from the journal itself (schema version 2), or from a network state file loaded before or after the journal
+	_topology.addSession(_session);
+	runAnalysis();
+	_exportReportAction->setEnabled(true);
 
 	// The entity snapshots stored in the journal make it self-contained: the twin of the network is built from them unless a network state file was already loaded (an explicit choice, kept as an override)
 	if (_replay->snapshotEntitiesCount() == 0u)
@@ -641,6 +683,7 @@ void AnalyserWindow::loadNetworkState(QString const& filePath)
 	showNetworkGraph();
 	statusBar()->showMessage(QString{ "Loaded network state '%1'" }.arg(QFileInfo{ filePath }.fileName()), 5000);
 	updatePlaceholder();
+	addTopologyFromFile(filePath, true);
 }
 
 void AnalyserWindow::loadVirtualEntity(QString const& filePath)
@@ -666,6 +709,102 @@ void AnalyserWindow::loadVirtualEntity(QString const& filePath)
 	showNetworkGraph();
 	statusBar()->showMessage(QString{ "Loaded virtual entity '%1'" }.arg(QFileInfo{ filePath }.fileName()), 5000);
 	updatePlaceholder();
+	addTopologyFromFile(filePath, false);
+}
+
+void AnalyserWindow::addTopologyFromFile(QString const& filePath, bool const isNetworkState)
+{
+	// The files are the .ave binary format (MessagePack), the format of the journal snapshots: the analysis reads the AsPath and the connections of the entities from them
+	auto file = QFile{ filePath };
+	if (!file.open(QIODevice::ReadOnly))
+	{
+		return;
+	}
+	auto const data = file.readAll();
+	auto added = std::size_t{ 0u };
+	try
+	{
+		auto const document = nlohmann::json::from_msgpack(data.begin(), data.end());
+		added = isNetworkState ? _topology.addNetworkState(document) : (_topology.addEntityDocument(document) ? 1u : 0u);
+	}
+	catch (...)
+	{
+		// Not a MessagePack document (a JSON file, or a corrupted one): the virtual controller already reported it if it could not load it either
+	}
+	if (added > 0u && _journalView)
+	{
+		runAnalysis();
+	}
+}
+
+void AnalyserWindow::runAnalysis()
+{
+	auto timer = QElapsedTimer{};
+	timer.start();
+	_analysis = std::make_unique<hive::modelsLibrary::JournalAnalysis>(_session, _topology);
+	auto options = hive::modelsLibrary::JournalAnalysis::ReportOptions{};
+	options.title = QString{ "Findings of %1" }.arg(QFileInfo{ _journalFilePath }.fileName());
+	options.eventLinks = true;
+	auto const report = _analysis->markdownReport(_session, options);
+	_findingsBrowser->document()->setMarkdown(report, QTextDocument::MarkdownDialectGitHub);
+	_findingsBrowser->moveCursor(QTextCursor::Start);
+	if (!_findingsDock->isVisible())
+	{
+		_findingsDock->show();
+		// The report is long: give the findings a good share of the window the first time they are shown
+		resizeDocks({ _findingsDock }, { height() * 2 / 5 }, Qt::Vertical);
+	}
+	auto message = QString{ "Findings computed in %1 ms" }.arg(timer.elapsed());
+	if (!_topology.hasAsPaths())
+	{
+		message += " (no topology: load a network state file for the rack and branch figures)";
+	}
+	statusBar()->showMessage(message, 10000);
+}
+
+void AnalyserWindow::exportReport()
+{
+	if (!_analysis)
+	{
+		return;
+	}
+	auto const defaultPath = QString{ "%1/%2_Report.md" }.arg(QFileInfo{ _journalFilePath }.absolutePath(), QFileInfo{ _journalFilePath }.completeBaseName());
+	auto const filePath = QFileDialog::getSaveFileName(this, "Export Report", defaultPath, "Markdown Files (*.md)");
+	if (filePath.isEmpty())
+	{
+		return;
+	}
+	auto options = hive::modelsLibrary::JournalAnalysis::ReportOptions{};
+	options.title = QString{ "Analysis of %1" }.arg(QFileInfo{ _journalFilePath }.fileName());
+	auto const report = _analysis->markdownReport(_session, options);
+	auto file = QFile{ filePath };
+	if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+	{
+		QMessageBox::warning(this, "Failed to export the report", QString{ "Cannot write '%1'" }.arg(filePath));
+		return;
+	}
+	auto stream = QTextStream{ &file };
+	stream << report;
+	statusBar()->showMessage(QString{ "Report exported to '%1'" }.arg(QFileInfo{ filePath }.fileName()), 5000);
+}
+
+void AnalyserWindow::handleFindingsLink(QUrl const& url)
+{
+	if (url.scheme() != EventLinkScheme || !_journalView)
+	{
+		return;
+	}
+	auto ok = false;
+	auto const eventIndex = url.path().toInt(&ok);
+	if (!ok)
+	{
+		return;
+	}
+	// Selecting the event moves the twin to it when following the selection
+	if (!_journalView->selectEvent(eventIndex))
+	{
+		statusBar()->showMessage(QString{ "Event %1 is hidden by the current filters of the journal" }.arg(eventIndex + 1), 5000);
+	}
 }
 
 void AnalyserWindow::showNetworkGraph()

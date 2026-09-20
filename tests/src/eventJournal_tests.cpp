@@ -1337,6 +1337,8 @@ TEST_F(EventJournal_F, EntityOnline_DetailsDescribeTheEntity)
 		EXPECT_EQ(QString{ "0x001B92FFFE02233B" }, stream.value("talker_entity_id").toString());
 		EXPECT_EQ(stream.value("index").toInt(), stream.value("talker_stream_index").toInt());
 		EXPECT_FALSE(stream.value("name").toString().isEmpty());
+		// The plane of the stream: the fixture entity has a single AVB interface
+		EXPECT_EQ(0, stream.value("avb_interface_index").toInt(-1));
 	}
 	// The talker entity has no connected input
 	EXPECT_EQ(0, entityOnlineDetails(la::avdecc::UniqueIdentifier{ TalkerEntityID }).value("stream_inputs").toArray().size());
@@ -1732,6 +1734,17 @@ TEST_F(EventJournal_F, ChangeTracking_ConnectionAndGptpEvents_CarryTheirPatch)
 	EXPECT_EQ(std::string{ "0xFFFFFFFFFFFFFFFF" }, patchValue(events[0], "/stream_input_descriptors/0/dynamic/connected_talker").value("entity_id", std::string{})); // Null identifier
 	auto patched = applyPatches(snapshot, events);
 	EXPECT_EQ(std::string{ "NOT_CONNECTED" }, patched.at(nlohmann::json::json_pointer{ "/entity_model/entity_descriptor/configuration_descriptors/0/stream_input_descriptors/0/dynamic/connection_state" }).get<std::string>());
+
+	// Reconnecting journals the talker and the plane of the stream (the streams connected during the session are mapped like the ones listed by the 'Entity is online' details)
+	info.state = la::avdecc::entity::model::StreamInputConnectionInfo::State::Connected;
+	info.talkerStream = { talkerID, TestStreamIndex };
+	emit controllerManager.streamInputConnectionChanged({ entityID, TestStreamIndex }, info);
+	events = eventsSince(EventJournal::Category::Connection, entityID);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_TRUE(events[1].summary.startsWith("Connected to talker"));
+	auto const connectedDetails = QJsonDocument::fromJson(events[1].details.toUtf8()).object();
+	EXPECT_EQ(QString{ "0x001B92FFFE02233B" }, connectedDetails.value("talker_id").toString());
+	EXPECT_EQ(0, connectedDetails.value("avb_interface_index").toInt(-1));
 
 	// gPTP: grandmaster and domain
 	auto const newGrandmasterID = la::avdecc::UniqueIdentifier{ 0x001122FFFE00AAAAu };

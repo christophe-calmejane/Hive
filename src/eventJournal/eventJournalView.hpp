@@ -68,6 +68,13 @@ public:
 	/** Returns the index in the session of the current event (the selected row), or std::nullopt if none. */
 	std::optional<int> currentEventIndex() const;
 
+	/**
+	* @brief Selects an event and scrolls to it (the analyser navigates from its findings to the events).
+	* @param[in] eventIndex Index of the event in the session.
+	* @return False if the event is hidden by the current filters (or out of range), in which case nothing changes.
+	*/
+	bool selectEvent(int const eventIndex);
+
 	/* Signals */
 	/** Emitted when the user requests to select an entity (eg. by double-clicking one of its events). */
 	Q_SIGNAL void selectEntityRequested(la::avdecc::UniqueIdentifier const entityID);

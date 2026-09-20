@@ -44,6 +44,7 @@ set(HEADER_FILES_PUBLIC
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/controllerManager.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/eventJournal.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/journalReplay.hpp
+	${CU_ROOT_DIR}/include/hive/modelsLibrary/journalAnalysis.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkInterfacesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/discoveredEntitiesModel.hpp
 	${CU_ROOT_DIR}/include/hive/modelsLibrary/networkTopologyModel.hpp
@@ -51,6 +52,7 @@ set(HEADER_FILES_PUBLIC
 
 set(HEADER_FILES_COMMON
 	avePatch.hpp
+	journalAnalysisPrivate.hpp
 	commandsExecutorImpl.hpp
 	virtualController.hpp
 )
@@ -63,6 +65,8 @@ set(SOURCE_FILES_COMMON
 	controllerManager.cpp
 	eventJournal.cpp
 	journalReplay.cpp
+	journalAnalysis.cpp
+	journalAnalysisReport.cpp
 	networkInterfacesModel.cpp
 	discoveredEntitiesModel.cpp
 	networkTopologyModel.cpp

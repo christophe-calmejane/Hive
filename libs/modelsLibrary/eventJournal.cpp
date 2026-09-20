@@ -1272,6 +1272,11 @@ public:
 			auto details = QJsonObject{};
 			details["talker_id"] = helper::uniqueIdentifierToString(info.talkerStream.entityID);
 			details["talker_stream_index"] = static_cast<int>(info.talkerStream.streamIndex);
+			// The plane of the stream, for the streams connected after the entity came online (the 'Entity is online' details only list the connected ones)
+			if (auto const avbInterfaceIndex = streamInputAvbInterfaceIndex(entityID, streamIndex))
+			{
+				details["avb_interface_index"] = static_cast<int>(*avbInterfaceIndex);
+			}
 			patch.storeIn(details);
 			addEvent(Category::Connection, Severity::Info, entityID, entityNameFor(entityID), inputStreamSubject(entityID, streamIndex), QString{ "Connected to talker %1 (output stream %2)" }.arg(entityNameFor(info.talkerStream.entityID)).arg(info.talkerStream.streamIndex), details);
 		}
@@ -3001,6 +3006,25 @@ public:
 		return std::nullopt;
 	}
 
+	/** Returns the AVB interface an input stream of an entity is attached to (its network plane), or std::nullopt if the entity is offline or has no such stream. */
+	static std::optional<la::avdecc::entity::model::AvbInterfaceIndex> streamInputAvbInterfaceIndex(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
+	{
+		auto& manager = ControllerManager::getInstance();
+		if (auto controlledEntity = manager.getControlledEntity(entityID))
+		{
+			try
+			{
+				auto const& entityNode = controlledEntity->getEntityNode();
+				return controlledEntity->getStreamInputNode(entityNode.dynamicModel.currentConfiguration, streamIndex).staticModel.avbInterfaceIndex;
+			}
+			catch (...)
+			{
+				// Entity without a current configuration, or unknown stream index
+			}
+		}
+		return std::nullopt;
+	}
+
 	/** Restarts the stream data loss learning of the given input stream (the next notification only provides the previous value). */
 	void resetStreamDataState(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept
 	{
@@ -3087,6 +3111,8 @@ public:
 				auto object = QJsonObject{};
 				object["index"] = static_cast<int>(streamIndex);
 				object["name"] = helper::inputStreamName(controlledEntity, streamIndex);
+				// The interface the stream is attached to is the network plane of the stream (the analysis attributes the stream events to a plane with it, instead of guessing from the stream name)
+				object["avb_interface_index"] = static_cast<int>(streamNode.staticModel.avbInterfaceIndex);
 				object["talker_entity_id"] = helper::uniqueIdentifierToString(connectionInfo.talkerStream.entityID);
 				object["talker_stream_index"] = static_cast<int>(connectionInfo.talkerStream.streamIndex);
 				streamInputs.push_back(object);

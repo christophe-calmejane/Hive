@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <hive/modelsLibrary/eventJournal.hpp>
+#include <hive/modelsLibrary/journalAnalysis.hpp>
 #include <hive/modelsLibrary/journalReplay.hpp>
 
 #include <la/avdecc/internals/uniqueIdentifier.hpp>
@@ -34,7 +36,9 @@
 #include <QMainWindow>
 #include <QString>
 #include <QStringList>
+#include <QTextBrowser>
 #include <QToolBar>
+#include <QUrl>
 
 #include <cstddef>
 #include <memory>
@@ -50,6 +54,7 @@ class NetworkGraphView;
 * @brief Main window of the Journal Analyser: one Event Journal file, standalone Entity Inspectors and the Network Graph.
 * @details The window analyzes a single journal file (the application runs one instance per journal).
 *          The entities of the journal are inspected through a virtual controller hosting the twin of the network: the entities as they were at the selected event, rebuilt by the JournalReplay from the snapshots and the change tracking events of the journal (a network state file, File > Load Network State, replaces the twin), which also feeds the Network Graph.
+*          The Findings dock shows the report of the JournalAnalysis (the computations of the after show reports), with links to the events; File > Export Report writes it as a Markdown file.
 */
 class AnalyserWindow : public QMainWindow
 {
@@ -85,6 +90,7 @@ private:
 	void createMenus();
 	void createReplayToolBar();
 	void createNetworkGraphDock();
+	void createFindingsDock();
 	void createVirtualController();
 	void applyAppearance(Qt::ColorScheme const appearance);
 	void updateStyleSheet();
@@ -95,17 +101,27 @@ private:
 	void updateTwinStatus(qint64 const elapsedMs);
 	void loadNetworkState(QString const& filePath);
 	void loadVirtualEntity(QString const& filePath);
+	void addTopologyFromFile(QString const& filePath, bool const isNetworkState);
+	void runAnalysis();
+	void exportReport();
+	void handleFindingsLink(QUrl const& url);
 	void showNetworkGraph();
 	void openInspector(la::avdecc::UniqueIdentifier const entityID);
 	void spawnNewInstance(QString const& filePath);
 	void updatePlaceholder();
 
 	QString _journalFilePath{};
+	hive::modelsLibrary::EventJournal::Session _session{}; // The loaded session (the events are implicitly shared with the view and the replay), for the analysis
 	EventJournalView* _journalView{ nullptr };
 	QLabel* _placeholderLabel{ nullptr };
 	QLabel* _journalSummaryLabel{ nullptr };
 	QDockWidget* _networkGraphDock{ nullptr };
 	NetworkGraphView* _networkGraphView{ nullptr };
+	QDockWidget* _findingsDock{ nullptr };
+	QTextBrowser* _findingsBrowser{ nullptr };
+	QAction* _exportReportAction{ nullptr };
+	hive::modelsLibrary::JournalAnalysis::Topology _topology{}; // From the journal, completed by the network state and virtual entity files loaded
+	std::unique_ptr<hive::modelsLibrary::JournalAnalysis> _analysis{};
 	QAction* _schemeSystemAction{ nullptr };
 	QAction* _schemeLightAction{ nullptr };
 	QAction* _schemeDarkAction{ nullptr };

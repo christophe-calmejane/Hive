@@ -31,6 +31,7 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QItemSelectionModel>
 #include <QJsonDocument>
 #include <QMessageBox>
 #include <QSignalBlocker>
@@ -639,6 +640,22 @@ std::optional<int> EventJournalView::currentEventIndex() const
 		return std::nullopt;
 	}
 	return _filterProxyModel.mapToSource(currentIndex).row();
+}
+
+bool EventJournalView::selectEvent(int const eventIndex)
+{
+	if (eventIndex < 0 || eventIndex >= _model.rowCount())
+	{
+		return false;
+	}
+	auto const proxyIndex = _filterProxyModel.mapFromSource(_model.index(eventIndex, 0));
+	if (!proxyIndex.isValid())
+	{
+		return false;
+	}
+	_tableView.selectionModel()->setCurrentIndex(proxyIndex, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+	_tableView.scrollTo(proxyIndex, QAbstractItemView::PositionAtCenter);
+	return true;
 }
 
 void EventJournalView::handleSelectionChanged()
