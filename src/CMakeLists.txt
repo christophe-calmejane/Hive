@@ -297,9 +297,6 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES
 # Enable precompiled headers
 cu_set_precompiled_headers(${PROJECT_NAME}_static ${PCH_HEADER_NAME})
 
-# Additional compile definitions
-target_compile_definitions(${PROJECT_NAME}_static PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
-
 # Link libraries
 target_link_libraries(${PROJECT_NAME}_static PUBLIC Qt${QT_MAJOR_VERSION}::Widgets Qt${QT_MAJOR_VERSION}::Network Hive_models_static QtMate_static Hive_widget_models_static la_avdecc_controller_cxx ${BUGREPORTER_LINK_LIBRARIES} libmarkdown)
 if(ADD_LINK_LIBS)
@@ -318,6 +315,9 @@ if(BUILD_HIVE_APPLICATION)
 
 	# Setup common options
 	cu_setup_executable_options(${PROJECT_NAME})
+
+	# Additional compile definitions
+	target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCES_ROOT_DIR="${HIVE_RESOURCES_FOLDER}")
 
 	# Additional compile definitions
 	if(HIVE_IS_RELEASE_VERSION)
