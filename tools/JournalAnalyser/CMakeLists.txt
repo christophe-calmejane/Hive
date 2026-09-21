@@ -28,12 +28,10 @@ if(WIN32)
 		${CMAKE_CURRENT_BINARY_DIR}/JournalAnalyser.rc
 	)
 elseif(APPLE)
-	# The journal icon is both the application icon and the document icon
-	set(ICON_FILE Icon_HEJ.icns)
-	set(ICON_PATH ${HIVE_RESOURCES_FOLDER}/macOS/${ICON_FILE})
-	set_source_files_properties(${ICON_PATH} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+	# Add icons for file associations
+	set_source_files_properties(${HIVE_RESOURCES_FOLDER}/macOS/Icon_HEJ.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 	list(APPEND RESOURCE_FILES
-		${ICON_PATH}
+		${HIVE_RESOURCES_FOLDER}/macOS/Icon_HEJ.icns
 	)
 endif()
 
@@ -86,8 +84,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "Tools")
 
 # Configure Icon and PList files for macOS bundle
 if(APPLE)
+	set(ICON_FILE_NAME JournalAnalyser)
+
+	# Generate asset catalog on the fly (from source images) - Currently only Mac OSX, but someday we'll do the same for windows
+	cu_compile_asset_catalog(${PROJECT_NAME} SOURCES ${HIVE_RESOURCES_FOLDER}/macOS/${ICON_FILE_NAME}.icon ${HIVE_RESOURCES_FOLDER}/macOS/Assets.xcassets PLATFORM macosx)
+
 	set_target_properties(${PROJECT_NAME} PROPERTIES
-		MACOSX_BUNDLE_ICON_FILE ${ICON_FILE}
+		MACOSX_BUNDLE_ICON_FILE ${ICON_FILE_NAME}
 		MACOSX_BUNDLE_INFO_PLIST ${HIVE_RESOURCES_FOLDER}/macOS/JournalAnalyser.plist.in
 	)
 endif()

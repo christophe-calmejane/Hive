@@ -24,4 +24,5 @@ BEGIN
   END
 END
 
-IDI_ICON1 ICON "${CU_ROOT_DIR}/resources/win32/Icon_HEJ.ico"
+IDI_ICON1 ICON "${CU_ROOT_DIR}/resources/win32/JournalAnalyser.ico"
+IDI_ICON2 ICON "${CU_ROOT_DIR}/resources/win32/Icon_HEJ.ico"
