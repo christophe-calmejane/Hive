@@ -1257,7 +1257,7 @@ private:
 	{
 		heading(2, "How this analysis was produced");
 		auto const& options = _analysis.options;
-		paragraph("Computed by the Journal Analyser from the events of the journal only, with the following rules (the same as the hand written reports of the touring rig):");
+		paragraph("Computed by the Journal Analyser from the events of the journal only, with the following rules:");
 		bullet("Stream events are attributed to a plane from the AVB interface of the stream (the topology) or, failing that, from the naming of the stream (Primary / Secondary); entities are mapped to their rack and branch switch from the gPTP AsPath of the 'Entity is online' details or of a loaded network state file.");
 		bullet(QString{ "Hits: media unlock events of the same entity and plane less than %1 apart. Incidents: hits of the entities of the same rack and plane less than %1 apart. Storms: incidents of the same rack and plane less than %2 apart. Runs: storms of the same branch and plane less than %3 apart, racks in order of first appearance." }.arg(duration(options.hitWindowMs), duration(options.stormGapMs), duration(options.runGapMs)));
 		bullet(QString{ "System wide events: entities touched (stream level or clock domain unlock) less than %1 apart, at least %2 % of the entities reporting hits in the session (%3 at least) across several racks, extended by the hits of the same entities within %4 of the end (the relock wave); their incidents are excluded from the storms and runs." }.arg(duration(options.systemWideGapMs)).arg(static_cast<int>(options.systemWideMinShare * 100.0)).arg(options.systemWideMinEntities).arg(duration(options.systemWideTailMs)));
