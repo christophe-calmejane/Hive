@@ -65,6 +65,15 @@ QPushButton#DisconnectButton:disabled {
 QPushButton#DisconnectButton:pressed {
 	color: %5;
 }
+QPushButton:checked,
+QPushButton:checked:hover,
+QPushButton:checked:pressed {
+	background-color: %1;
+	color: %2;
+	border: 1px solid %1;
+	border-radius: 2px;
+	padding: 3px;
+}
 connectionMatrix--View {
 	selection-background-color: %3;
 }
