@@ -81,6 +81,11 @@ else()
 	list(APPEND SOURCE_FILES_COMMON helper_unix.cpp)
 endif()
 
+# 64 bits visual studio requires /bigobj to be used for this file (too many sections in the object file), but let's set the flag for 32 bits as well
+if(MSVC)
+	set_source_files_properties(eventJournal.cpp PROPERTIES COMPILE_FLAGS "/bigobj")
+endif()
+
 # Group source files
 source_group("Header Files\\Public" FILES ${HEADER_FILES_PUBLIC})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX "Header Files" FILES ${HEADER_FILES_COMMON})
