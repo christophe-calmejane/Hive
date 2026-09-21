@@ -54,6 +54,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1154,6 +1155,7 @@ public:
 		_gptpStates.erase(entityID);
 		_asPaths.erase(entityID);
 		_avbInterfaceInfos.erase(entityID);
+		_nullPropagationDelays.erase(entityID);
 		_linkStates.erase(entityID);
 		_gptpGmChangedStates.erase(entityID);
 		_clockLockStates.erase(entityID);
@@ -1422,16 +1424,34 @@ public:
 		auto patch = Patch{};
 		patch.replace(dynamicPointer(entityID, la::avdecc::entity::model::DescriptorType::AvbInterface, avbInterfaceIndex, "avb_interface_info"), info);
 		patch.storeIn(details);
-		if (previous.propagationDelay != info.propagationDelay)
+		auto const subject = QString{ "AVB Interface %1" }.arg(avbInterfaceIndex);
+		auto const wasNull = previous.propagationDelay == 0u;
+		auto const isNull = info.propagationDelay == 0u;
+		if (wasNull != isNull)
 		{
-			// The propagation delay of a link jitters by a few nanoseconds between measurements (5 to 16 ns on the field rig), so its changes are diagnostic material rather than user events
+			// Only a link to a bridge embedded in the same unit legitimately reports a null propagation delay, and such a link never measures one: a link whose delay drops to zero is the measurement anomaly the Network Graph flags as suspicious
 			details["previous_propagation_delay"] = static_cast<qint64>(previous.propagationDelay);
 			details["new_propagation_delay"] = static_cast<qint64>(info.propagationDelay);
-			addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "gPTP propagation delay changed", details, Level::Diagnostic);
+			auto& warned = _nullPropagationDelays[entityID];
+			if (isNull)
+			{
+				warned.insert(avbInterfaceIndex);
+				addEvent(Category::Gptp, Severity::Warning, entityID, entityNameFor(entityID), subject, QString{ "gPTP propagation delay became null (was %1 ns)" }.arg(previous.propagationDelay), details);
+			}
+			else
+			{
+				// Recovered when it closes a journaled null delay; otherwise the delay was already null when the entity was enumerated (a link that had just come up, or a persistent anomaly that resolved), which is worth knowing too
+				auto const closesWarning = warned.erase(avbInterfaceIndex) > 0u;
+				addEvent(Category::Gptp, closesWarning ? Severity::Recovered : Severity::Info, entityID, entityNameFor(entityID), subject, QString{ "gPTP propagation delay measured (%1 ns)" }.arg(info.propagationDelay), details);
+			}
+			return;
 		}
-		else
+		// The propagation delay of a link jitters by a few nanoseconds between measurements (5 to 16 ns on the field rig, on every link, all the time): those changes are not journaled at all, the next event of the interface patches the value. The other fields (flags, MSRP mappings) are diagnostic material
+		auto sameButDelay = info;
+		sameButDelay.propagationDelay = previous.propagationDelay;
+		if (!(sameButDelay == previous))
 		{
-			addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), QString{ "AVB Interface %1" }.arg(avbInterfaceIndex), "AVB interface info changed", details, Level::Diagnostic);
+			addEvent(Category::Gptp, Severity::Info, entityID, entityNameFor(entityID), subject, "AVB interface info changed", details, Level::Diagnostic);
 		}
 	}
 
@@ -3330,6 +3350,7 @@ public:
 		_gptpStates.clear();
 		_asPaths.clear();
 		_avbInterfaceInfos.clear();
+		_nullPropagationDelays.clear();
 		_linkStates.clear();
 		_gptpGmChangedStates.clear();
 		_clockLockStates.clear();
@@ -3394,6 +3415,7 @@ public:
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, std::pair<la::avdecc::UniqueIdentifier, std::uint8_t>>, la::avdecc::UniqueIdentifier::hash> _gptpStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::model::AsPath>, la::avdecc::UniqueIdentifier::hash> _asPaths{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, la::avdecc::entity::model::AvbInterfaceInfo>, la::avdecc::UniqueIdentifier::hash> _avbInterfaceInfos{};
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_set<la::avdecc::entity::model::AvbInterfaceIndex>, la::avdecc::UniqueIdentifier::hash> _nullPropagationDelays{}; // AVB interfaces whose propagation delay became null during the session (a journaled warning, closed when the delay is measured again)
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, CounterPairState>, la::avdecc::UniqueIdentifier::hash> _linkStates{}; // Link state of the AVB interfaces, derived from their LINK_UP / LINK_DOWN counters
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::AvbInterfaceIndex, GptpGmChangedState>, la::avdecc::UniqueIdentifier::hash> _gptpGmChangedStates{};
 	std::unordered_map<la::avdecc::UniqueIdentifier, std::unordered_map<la::avdecc::entity::model::ClockDomainIndex, CounterPairState>, la::avdecc::UniqueIdentifier::hash> _clockLockStates{}; // Media clock lock state of the clock domains, derived from their LOCKED / UNLOCKED counters

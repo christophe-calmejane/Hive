@@ -64,6 +64,8 @@ public:
 		GrandmasterChange,
 		GrandmasterCounter,
 		AsPathChange,
+		PropagationDelayNull, /**< The propagation delay of a link dropped to zero (a measurement anomaly) */
+		PropagationDelayMeasured, /**< Measured again (Recovered) or for the first time (Info) */
 		StreamDataLoss,
 		StreamDataMonitoring,
 		Latency,

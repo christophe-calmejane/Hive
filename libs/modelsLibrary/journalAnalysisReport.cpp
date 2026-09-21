@@ -1011,6 +1011,20 @@ private:
 			paragraph(QString{ "%1 link downs:" }.arg(_results.linkIntervals.size()));
 			table({ "Time", "Entity", "Interface", "Down for" }, rows);
 		}
+		if (!_results.nullPropagationDelayIntervals.empty())
+		{
+			auto rows = std::vector<QStringList>{};
+			for (auto const& interval : _results.nullPropagationDelayIntervals)
+			{
+				if (rows.size() >= options.listingSize)
+				{
+					break;
+				}
+				rows.push_back({ eventTime(interval.startEvent), name(interval.entityID), interval.subject, interval.isClosed ? optionalDuration(interval.durationMs) : QString{ "still null at the end of the session" } });
+			}
+			paragraph(QString{ "%1 links whose gPTP propagation delay dropped to zero (a null delay is only expected on a link to a bridge embedded in the same unit, and such a link never measures one: a measurement anomaly of the peer delay mechanism, the same family as the null delays the Network Graph flags):" }.arg(_results.nullPropagationDelayIntervals.size()));
+			table({ "Time", "Entity", "Interface", "Null for" }, rows);
+		}
 
 		heading(3, "Packet loss counters");
 		if (_results.packetLossPerCounter.empty())

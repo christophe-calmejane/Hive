@@ -580,6 +580,9 @@ TEST(JournalAnalysis, Intervals_StreamPairsAndInferredEvents)
 	builder.clockLocked(start + Minute, amplifier(1u), true);
 	builder.add(start + 3 * Minute, Category::Link, Severity::Error, amplifier(3u), builder.name(amplifier(3u)), "AVB Interface 1", "Link down");
 	builder.add(start + 3 * Minute + 5 * Second, Category::Link, Severity::Recovered, amplifier(3u), builder.name(amplifier(3u)), "AVB Interface 1", "Link up");
+	// A propagation delay dropping to zero, measured again 2 minutes later
+	builder.add(start + 5 * Minute, Category::Gptp, Severity::Warning, amplifier(4u), builder.name(amplifier(4u)), "AVB Interface 0", "gPTP propagation delay became null (was 8 ns)", QJsonObject{ { "previous_propagation_delay", 8 }, { "new_propagation_delay", 0 } });
+	builder.add(start + 7 * Minute, Category::Gptp, Severity::Recovered, amplifier(4u), builder.name(amplifier(4u)), "AVB Interface 0", "gPTP propagation delay measured (9 ns)", QJsonObject{ { "previous_propagation_delay", 0 }, { "new_propagation_delay", 9 } });
 	// Legacy 'Media Unlocked' error counter (journals recorded before the pairs): a hit without a pair
 	builder.add(start + 4 * Minute, Category::Counters, Severity::Error, amplifier(4u), builder.name(amplifier(4u)), builder.streamSubject(0), "'Media Unlocked' error counter increased to 3", QJsonObject{ { "counter", "Media Unlocked" }, { "previous_value", 2 }, { "value", 3 } });
 	builder.finish(Base + 2 * Hour);
@@ -619,6 +622,10 @@ TEST(JournalAnalysis, Intervals_StreamPairsAndInferredEvents)
 	ASSERT_EQ(1u, results.linkIntervals.size());
 	EXPECT_EQ(5 * Second, results.linkIntervals.front().durationMs.value());
 	EXPECT_EQ(1, results.linkIntervals.front().plane);
+	ASSERT_EQ(1u, results.nullPropagationDelayIntervals.size());
+	EXPECT_EQ(2 * Minute, results.nullPropagationDelayIntervals.front().durationMs.value());
+	EXPECT_EQ(0, results.nullPropagationDelayIntervals.front().plane);
+	EXPECT_EQ(1u, results.familyCounts.at("gPTP propagation delay became null"));
 	// The families of the breakdown strip the values
 	EXPECT_EQ(1u, results.familyCounts.at("'Media Unlocked' error counter increased"));
 	EXPECT_EQ(4u, results.familyCounts.at("Media unlocked"));

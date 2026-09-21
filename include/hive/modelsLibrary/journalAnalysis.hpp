@@ -514,6 +514,7 @@ public:
 		std::size_t grandmasterCounterIncreases{ 0u };
 		std::size_t asPathChanges{ 0u };
 		std::vector<Interval> linkIntervals{};
+		std::vector<Interval> nullPropagationDelayIntervals{}; /**< Links whose propagation delay dropped to zero, closed when measured again */
 		std::vector<SubjectCount> packetLossCounts{}; /**< Per counter, entity, subject; by descending count */
 		std::map<QString, std::size_t> packetLossPerCounter{};
 		std::map<std::pair<QString, Plane>, std::size_t> packetLossPerCounterAndPlane{};

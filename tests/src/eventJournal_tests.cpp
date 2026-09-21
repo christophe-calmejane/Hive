@@ -1384,23 +1384,37 @@ TEST_F(EventJournal_F, Gptp_AsPathAndPropagationDelayChanges_AreJournaled)
 	ASSERT_EQ(3, details.value("new_as_path").toArray().size());
 	EXPECT_EQ(QString{ "0x001122FFFE0000D0" }, details.value("new_as_path").toArray()[1].toString());
 
-	// Propagation delay: same information silent, new delay journaled at diagnostic level
+	// Propagation delay: the same information and the jitter of the measurement (a few nanoseconds, on every link, all the time) are silent
 	auto info = avbInterfaceInfo(entityID, 0u);
 	ASSERT_EQ(20u, info.propagationDelay);
 	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
 	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Gptp, entityID).size());
 	info.propagationDelay = 25u;
 	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
+	EXPECT_EQ(std::size_t{ 1u }, eventsSince(EventJournal::Category::Gptp, entityID).size());
+
+	// A delay dropping to zero is the measurement anomaly the Network Graph flags: a user level warning, closed when the delay is measured again (the patch carries the whole information)
+	info.propagationDelay = 0u;
+	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
 	events = eventsSince(EventJournal::Category::Gptp, entityID);
 	ASSERT_EQ(std::size_t{ 2u }, events.size());
-	EXPECT_EQ(QString{ "gPTP propagation delay changed" }, events[1].summary);
-	EXPECT_EQ(EventJournal::Level::Diagnostic, events[1].level);
+	EXPECT_EQ(QString{ "gPTP propagation delay became null (was 25 ns)" }, events[1].summary);
+	EXPECT_EQ(EventJournal::Severity::Warning, events[1].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[1].level);
 	details = QJsonDocument::fromJson(events[1].details.toUtf8()).object();
-	EXPECT_EQ(20, details.value("previous_propagation_delay").toInt());
-	EXPECT_EQ(25, details.value("new_propagation_delay").toInt());
-	EXPECT_EQ(25, patchValue(events[1], "/avb_interface_descriptors/0/dynamic/avb_interface_info").value("propagation_delay", 0));
+	EXPECT_EQ(25, details.value("previous_propagation_delay").toInt());
+	EXPECT_EQ(0, details.value("new_propagation_delay").toInt());
+	EXPECT_EQ(0, patchValue(events[1], "/avb_interface_descriptors/0/dynamic/avb_interface_info").value("propagation_delay", 1));
+	info.propagationDelay = 30u;
+	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
+	events = eventsSince(EventJournal::Category::Gptp, entityID);
+	ASSERT_EQ(std::size_t{ 3u }, events.size());
+	EXPECT_EQ(QString{ "gPTP propagation delay measured (30 ns)" }, events[2].summary);
+	EXPECT_EQ(EventJournal::Severity::Recovered, events[2].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[2].level);
+	EXPECT_EQ(30, patchValue(events[2], "/avb_interface_descriptors/0/dynamic/avb_interface_info").value("propagation_delay", 0));
 
-	// Another field of the information (the flags) changed without the delay: a generic event
+	// Another field of the information (the flags) changed without the delay: a generic diagnostic event
 	if (info.flags.test(la::avdecc::entity::AvbInfoFlag::AvtpDown))
 	{
 		info.flags.reset(la::avdecc::entity::AvbInfoFlag::AvtpDown);
@@ -1411,9 +1425,21 @@ TEST_F(EventJournal_F, Gptp_AsPathAndPropagationDelayChanges_AreJournaled)
 	}
 	emit controllerManager.avbInterfaceInfoChanged(entityID, 0u, info);
 	events = eventsSince(EventJournal::Category::Gptp, entityID);
-	ASSERT_EQ(std::size_t{ 3u }, events.size());
-	EXPECT_EQ(QString{ "AVB interface info changed" }, events[2].summary);
-	EXPECT_EQ(EventJournal::Level::Diagnostic, events[2].level);
+	ASSERT_EQ(std::size_t{ 4u }, events.size());
+	EXPECT_EQ(QString{ "AVB interface info changed" }, events[3].summary);
+	EXPECT_EQ(EventJournal::Level::Diagnostic, events[3].level);
+
+	// An entity enumerated with a null delay (the second entity of the fixture) that gets measured: informative, not a recovery (nothing was journaled before)
+	auto const otherEntityID = la::avdecc::UniqueIdentifier{ TopologyEntityA + 1u };
+	auto otherInfo = avbInterfaceInfo(otherEntityID, 0u);
+	ASSERT_EQ(0u, otherInfo.propagationDelay);
+	otherInfo.propagationDelay = 12u;
+	emit controllerManager.avbInterfaceInfoChanged(otherEntityID, 0u, otherInfo);
+	auto const measuredEvents = eventsSince(EventJournal::Category::Gptp, otherEntityID);
+	ASSERT_EQ(std::size_t{ 1u }, measuredEvents.size());
+	EXPECT_EQ(QString{ "gPTP propagation delay measured (12 ns)" }, measuredEvents[0].summary);
+	EXPECT_EQ(EventJournal::Severity::Info, measuredEvents[0].severity);
+	EXPECT_EQ(EventJournal::Level::User, measuredEvents[0].level);
 }
 
 // A manual snapshot stores every online entity and journals a session event

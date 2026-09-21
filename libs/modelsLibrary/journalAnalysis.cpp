@@ -812,6 +812,14 @@ Info JournalAnalysis::Private::parse(EventJournal::Event const& event) noexcept
 			{
 				info.kind = Kind::GrandmasterCounter;
 			}
+			else if (summary.startsWith(QLatin1String{ "gPTP propagation delay became null" }))
+			{
+				info.kind = Kind::PropagationDelayNull;
+			}
+			else if (summary.startsWith(QLatin1String{ "gPTP propagation delay measured" }))
+			{
+				info.kind = Kind::PropagationDelayMeasured;
+			}
 			else if (event.level == Level::Diagnostic)
 			{
 				info.kind = Kind::ChangeTracking;
@@ -1262,6 +1270,7 @@ void JournalAnalysis::Private::computeIntervals(std::vector<EventJournal::Event>
 	pair(Kind::ClockUnlock, Kind::ClockLock, false, results.clockDomainIntervals);
 	pair(Kind::MediaUnlock, Kind::MediaLock, true, results.streamIntervals);
 	pair(Kind::LinkDown, Kind::LinkUp, false, results.linkIntervals);
+	pair(Kind::PropagationDelayNull, Kind::PropagationDelayMeasured, false, results.nullPropagationDelayIntervals);
 }
 
 void JournalAnalysis::Private::computeSystemWideEvents(std::vector<EventJournal::Event> const& events)
