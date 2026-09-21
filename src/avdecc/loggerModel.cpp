@@ -24,6 +24,9 @@
 #include <la/avdecc/controller/internals/logItems.hpp>
 
 #include <unordered_map>
+#include <mutex>
+#include <utility>
+#include <iterator>
 #include <QTime>
 #include <QFile>
 #include <QTextStream>
@@ -174,19 +177,45 @@ public:
 
 	virtual void onLogItem(la::avdecc::logger::Level const level, la::avdecc::logger::LogItem const* const item) noexcept override
 	{
-		QMetaObject::invokeMethod(this,
-			[this, layer = item->getLayer(), level, message = item->getMessage()]()
-			{
-				Q_Q(LoggerModel);
-				auto const count = q->rowCount();
-				q->beginInsertRows({}, count, count);
-				auto const timestamp = QString("%1 - %2").arg(QDate::currentDate().toString(Qt::ISODate), QTime::currentTime().toString(Qt::ISODate));
-				_entries.push_back({ timestamp, layer, level, QString::fromStdString(message) });
-				q->endInsertRows();
-			});
+		// Called from any thread: the entry is queued and the main thread inserts all pending entries at once.
+		// One row insertion per entry made a full controller re-enumeration at Trace level (tens of thousands of entries) blow the memory up to several GB: on macOS, every rowsInserted rebuilds the accessibility elements of the whole table when an accessibility client is active (AltTab, VoiceOver...), and the objects only get released when the event loop returns.
+		auto const timestamp = QString("%1 - %2").arg(QDate::currentDate().toString(Qt::ISODate), QTime::currentTime().toString(Qt::ISODate));
+		auto flushScheduled = bool{};
+		{
+			auto const lg = std::lock_guard{ _pendingLock };
+			_pendingEntries.push_back({ timestamp, item->getLayer(), level, QString::fromStdString(item->getMessage()) });
+			flushScheduled = std::exchange(_flushScheduled, true);
+		}
+		if (!flushScheduled)
+		{
+			QMetaObject::invokeMethod(this,
+				[this]()
+				{
+					flushPendingEntries();
+				});
+		}
 	}
 
 private:
+	void flushPendingEntries()
+	{
+		auto pending = decltype(_pendingEntries){};
+		{
+			auto const lg = std::lock_guard{ _pendingLock };
+			pending.swap(_pendingEntries);
+			_flushScheduled = false;
+		}
+		if (pending.empty())
+		{
+			return;
+		}
+		Q_Q(LoggerModel);
+		auto const count = q->rowCount();
+		q->beginInsertRows({}, count, count + static_cast<int>(pending.size()) - 1);
+		_entries.insert(_entries.end(), std::make_move_iterator(pending.begin()), std::make_move_iterator(pending.end()));
+		q->endInsertRows();
+	}
+
 	LoggerModel* const q_ptr{ nullptr };
 	Q_DECLARE_PUBLIC(LoggerModel)
 
@@ -201,6 +230,9 @@ private:
 	};
 
 	std::vector<LogInfo> _entries;
+	std::mutex _pendingLock{};
+	std::vector<LogInfo> _pendingEntries{}; // Entries logged since the last flush, guarded by _pendingLock
+	bool _flushScheduled{ false }; // A flush is posted to the main thread, guarded by _pendingLock
 };
 
 LoggerModel::LoggerModel(QObject* parent)

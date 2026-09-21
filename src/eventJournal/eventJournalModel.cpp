@@ -25,6 +25,8 @@
 
 #include <QDateTime>
 
+#include <iterator>
+
 using EventJournal = hive::modelsLibrary::EventJournal;
 
 /* ************************************************************ */
@@ -39,37 +41,59 @@ void EventJournalModel::followLiveSession()
 {
 	auto& journal = EventJournal::getInstance();
 
+	// The events of a burst (a controller reload, an entity going offline with all its streams) are queued and inserted in one range once the burst has been dispatched: every rowsInserted costs the views a pass over the whole table (timeline rebuild, and on macOS the accessibility elements of every row when an accessibility client is active), so one insertion per event is quadratic
 	connect(&journal, &EventJournal::eventAdded, this,
 		[this](EventJournal::Event const& event)
 		{
-			auto const row = static_cast<int>(_events.size());
-			beginInsertRows({}, row, row);
-			_events.push_back(event);
-			endInsertRows();
+			_pendingEvents.push_back(event);
+			if (!_flushScheduled)
+			{
+				_flushScheduled = true;
+				QMetaObject::invokeMethod(this,
+					[this]()
+					{
+						flushPendingEvents();
+					},
+					Qt::QueuedConnection);
+			}
 		});
 	connect(&journal, &EventJournal::recordingStarted, this,
 		[this](QString const&)
 		{
-			auto& journal = EventJournal::getInstance();
-			beginResetModel();
-			_events = journal.currentSessionEvents();
-			_metadata = journal.currentSessionMetadata();
-			endResetModel();
+			resetToLiveSession();
 		});
 	connect(&journal, &EventJournal::sessionCleared, this,
 		[this]()
 		{
-			auto& journal = EventJournal::getInstance();
-			beginResetModel();
-			_events = journal.currentSessionEvents();
-			_metadata = journal.currentSessionMetadata();
-			endResetModel();
+			resetToLiveSession();
 		});
 
+	resetToLiveSession();
+}
+
+void EventJournalModel::resetToLiveSession()
+{
+	auto& journal = EventJournal::getInstance();
+	// The session events already contain whatever is still pending
+	_pendingEvents.clear();
 	beginResetModel();
 	_events = journal.currentSessionEvents();
 	_metadata = journal.currentSessionMetadata();
 	endResetModel();
+}
+
+void EventJournalModel::flushPendingEvents()
+{
+	_flushScheduled = false;
+	if (_pendingEvents.empty())
+	{
+		return;
+	}
+	auto const row = static_cast<int>(_events.size());
+	beginInsertRows({}, row, row + static_cast<int>(_pendingEvents.size()) - 1);
+	_events.insert(_events.end(), std::make_move_iterator(_pendingEvents.begin()), std::make_move_iterator(_pendingEvents.end()));
+	_pendingEvents.clear();
+	endInsertRows();
 }
 
 void EventJournalModel::setSession(EventJournal::Session&& session)

@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Channel Based Routing intersections no longer reporting the errors of the Stream connection carrying them (MSRP failure, wrong domain, stream format mismatch, interface down, latency error) nor their Media Locked state, in the matrix colors and in the tooltip
 - Connection matrix taking a very long time to populate on large networks while displayed in Stream Based Routing mode
 - User feedback when failing to save the log file
+- Memory usage climbing to several GB on macOS during an enumeration of many entities with a verbose log level, the log entries and the journal events being now inserted in their views by batch (every insertion rebuilt the accessibility elements of the whole table, and the journal timeline)
 - [Localized strings now fetched from the configuration being inspected instead of the active one](https://github.com/christophe-calmejane/Hive/issues/178)
 
 ## [1.4.0] - 2025-12-19

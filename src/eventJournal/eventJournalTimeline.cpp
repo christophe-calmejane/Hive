@@ -93,7 +93,12 @@ void EventJournalTimeline::setModel(QAbstractItemModel* model)
 		{
 			rebuild();
 		};
-		connect(_model, &QAbstractItemModel::rowsInserted, this, triggerRebuild);
+		// Appended rows leave the existing markers valid, so the rebuild of a burst of insertions is coalesced into a single one once the burst has been dispatched (the rebuild walks the whole model)
+		connect(_model, &QAbstractItemModel::rowsInserted, this,
+			[this]()
+			{
+				scheduleRebuild();
+			});
 		connect(_model, &QAbstractItemModel::rowsRemoved, this, triggerRebuild);
 		connect(_model, &QAbstractItemModel::modelReset, this, triggerRebuild);
 		connect(_model, &QAbstractItemModel::layoutChanged, this, triggerRebuild);
@@ -162,6 +167,22 @@ QSize EventJournalTimeline::minimumSizeHint() const
 	// Enough height for one readable label per lane
 	auto const lanesHeight = static_cast<int>(std::max(_lanes.size(), std::size_t{ 3 })) * 13;
 	return QSize{ 200, TopMargin + AxisHeight + lanesHeight };
+}
+
+void EventJournalTimeline::scheduleRebuild()
+{
+	if (_rebuildScheduled)
+	{
+		return;
+	}
+	_rebuildScheduled = true;
+	QMetaObject::invokeMethod(this,
+		[this]()
+		{
+			_rebuildScheduled = false;
+			rebuild();
+		},
+		Qt::QueuedConnection);
 }
 
 void EventJournalTimeline::rebuild()

@@ -82,8 +82,13 @@ public:
 	virtual QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
 private:
+	void resetToLiveSession();
+	void flushPendingEvents();
+
 	std::vector<hive::modelsLibrary::EventJournal::Event> _events{};
 	QMap<QString, QString> _metadata{};
+	std::vector<hive::modelsLibrary::EventJournal::Event> _pendingEvents{}; // Live session events journaled since the last flush
+	bool _flushScheduled{ false }; // A flush of the pending events is queued on the event loop
 };
 
 /**

@@ -89,6 +89,7 @@ private:
 		QString text{};
 	};
 
+	void scheduleRebuild();
 	void rebuild();
 	void fitToData();
 	void zoom(double const factor, qint64 const anchorTime);
@@ -112,4 +113,5 @@ private:
 	std::optional<qint64> _cursorTimestamp{};
 	std::optional<QPoint> _panLastPosition{};
 	bool _panned{ false };
+	bool _rebuildScheduled{ false }; // A rebuild is queued on the event loop (rows appended)
 };
