@@ -133,7 +133,7 @@ public:
 		std::size_t listenerCount{ 0u }; /**< Number of listeners whose path could be resolved on the topology */
 		bool isRunning{ true }; /**< False when the stream is connected but not streaming */
 		bool isClassB{ false }; /**< SR class of the stream: Class B if the stream only supports Class B, Class A otherwise (IEEE1722.1 default) */
-		std::uint64_t reservedBandwidth{ 0u }; /**< Estimated reserved bandwidth (bits per second) of the stream, transport overhead included, computed from the stream format and SR class (0 if unknown) */
+		std::uint64_t reservedBandwidth{ 0u }; /**< Bandwidth (bits per second) reserved on each traversed link by the stream, transport overhead included (see computeStreamReservedBandwidth, 0 if unknown) */
 		std::size_t talkerNodeIndex{ 0u }; /**< Node of the talker interface the stream originates from */
 		std::vector<std::size_t> nodeIndices{}; /**< Multicast tree of the stream: all the nodes it transits through (talker, listeners and intermediates) */
 		std::vector<std::size_t> edgeIndices{}; /**< Multicast tree of the stream: all the edges it transits through (each edge carries the stream exactly once) */
@@ -165,6 +165,17 @@ public:
 
 	/** Gets the current networks snapshot, ordered by AVB interface index (valid until the next topologyChanged() signal). */
 	std::vector<Network> const& networks() const noexcept;
+
+	/**
+	* @brief Gets the bandwidth reserved on the network by a stream of the given format and SR class.
+	* @details Computed with the rules of the Milan specification (Milan 1.2, clause 4.3.3.2), which match what a bridge really sets aside for the stream.
+	*          MSRP reserves per SR class measurement interval (125us for Class A, 250us for Class B) and the MaxIntervalFrames parameter of the Talker attribute cannot be lower than one, so a stream never reserves less than one full frame per measurement interval, whatever the rate it really transmits at.
+	*          This is why a media clock stream, that only sends a few hundred packets per second, still reserves 5632 kb/s.
+	* @param[in] streamFormat The format of the stream.
+	* @param[in] isClassB True if the stream uses SR Class B, false for SR Class A.
+	* @return The reserved bandwidth in bits per second, 0 if the stream format is not supported.
+	*/
+	static std::uint64_t computeStreamReservedBandwidth(la::avdecc::entity::model::StreamFormat const& streamFormat, bool const isClassB) noexcept;
 
 	/** Emitted every time a new networks snapshot has been computed. */
 	Q_SIGNAL void topologyChanged();

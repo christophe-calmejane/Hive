@@ -38,6 +38,7 @@
 #endif
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -294,4 +295,62 @@ TEST_F(NetworkTopology_F, NullPropagationDelay_IsFlaggedSuspiciousUnlessExplaine
 		ASSERT_TRUE(entityNode.has_value());
 		EXPECT_EQ(expectedFlag, getTopology().nodes[*entityNode].hasSuspiciousPropagationDelay) << "Wrong suspicious propagation delay flag for entity " << la::avdecc::utils::toHexString(entityID, true, true);
 	}
+}
+
+/* *********************************
+   Stream reserved bandwidth
+*/
+namespace
+{
+// Stream formats used by the reserved bandwidth tests
+constexpr auto Crf48kHz_1TimestampPerPdu_500PacketsPerSecond = la::avdecc::entity::model::StreamFormat::value_type{ 0x041060010000BB80u }; // CRF_AUDIO_SAMPLE, 48kHz base frequency, timestamp interval of 96 events
+constexpr auto Crf48kHz_1TimestampPerPdu_300PacketsPerSecond = la::avdecc::entity::model::StreamFormat::value_type{ 0x0410A0010000BB80u }; // Same, with a timestamp interval of 160 events
+constexpr auto Crf48kHz_6TimestampsPerPdu = la::avdecc::entity::model::StreamFormat::value_type{ 0x041060060000BB80u }; // Same, packing 6 timestamps in each AVTPDU
+constexpr auto AafPcm32_48kHz_1Channel = la::avdecc::entity::model::StreamFormat::value_type{ 0x0205022000406000u };
+constexpr auto AafPcm32_48kHz_8Channels = la::avdecc::entity::model::StreamFormat::value_type{ 0x0205022002006000u };
+constexpr auto AafPcm24_48kHz_8Channels = la::avdecc::entity::model::StreamFormat::value_type{ 0x0205031802006000u };
+constexpr auto AafPcm32_96kHz_2Channels = la::avdecc::entity::model::StreamFormat::value_type{ 0x020702200080C000u };
+
+std::uint64_t computeReservedBandwidth(la::avdecc::entity::model::StreamFormat::value_type const streamFormat, bool const isClassB = false) noexcept
+{
+	return hive::modelsLibrary::NetworkTopologyModel::computeStreamReservedBandwidth(la::avdecc::entity::model::StreamFormat{ streamFormat }, isClassB);
+}
+} // namespace
+
+// MSRP reserves one frame per SR class measurement interval, so the bandwidth reserved by a media clock stream doesn't depend on the packet rate defined by its format: a CRF stream only sends a few hundred packets per second but still reserves the 5632 kb/s given by the Milan specification (Milan 1.2, table 4.4)
+TEST(NetworkTopology, CrfStreamBandwidth_DoesNotDependOnThePacketRate)
+{
+	constexpr auto ExpectedBandwidth = std::uint64_t{ 5632000u };
+
+	EXPECT_EQ(ExpectedBandwidth, computeReservedBandwidth(Crf48kHz_1TimestampPerPdu_500PacketsPerSecond));
+	EXPECT_EQ(ExpectedBandwidth, computeReservedBandwidth(Crf48kHz_1TimestampPerPdu_300PacketsPerSecond)) << "A slower CRF stream carrying the same AVTPDU must reserve the exact same bandwidth";
+}
+
+// A CRF AVTPDU is smaller than the smallest tagged Ethernet frame, the reservation must be computed on the padded frame (68 bytes) and not on the useful payload
+TEST(NetworkTopology, CrfStreamBandwidth_AccountsForTheMinimumFrameSize)
+{
+	// 6 timestamps per PDU is a 69 bytes AVTPDU (Milan margin included), ie. a 91 bytes frame that doesn't need any padding
+	EXPECT_EQ(7104000u, computeReservedBandwidth(Crf48kHz_6TimestampsPerPdu));
+}
+
+// Reference values of the Milan specification (Milan 1.2, table 4.4): AAF PCM32 48kHz is 1536*N + 4288 kb/s, AAF PCM24 48kHz is 1152*N + 4288 kb/s and AAF PCM32 96kHz is 3072*N + 4288 kb/s
+TEST(NetworkTopology, AudioStreamBandwidth_MatchesTheMilanReferenceValues)
+{
+	EXPECT_EQ(5824000u, computeReservedBandwidth(AafPcm32_48kHz_1Channel));
+	EXPECT_EQ(16576000u, computeReservedBandwidth(AafPcm32_48kHz_8Channels));
+	EXPECT_EQ(13504000u, computeReservedBandwidth(AafPcm24_48kHz_8Channels));
+	EXPECT_EQ(10432000u, computeReservedBandwidth(AafPcm32_96kHz_2Channels));
+}
+
+// The Class B measurement interval is twice the Class A one: an audio stream packs twice as many samples in each of its AVTPDUs, a media clock stream keeps the same AVTPDU
+TEST(NetworkTopology, StreamBandwidth_AccountsForTheClassBMeasurementInterval)
+{
+	EXPECT_EQ(14432000u, computeReservedBandwidth(AafPcm32_48kHz_8Channels, true));
+	EXPECT_EQ(2816000u, computeReservedBandwidth(Crf48kHz_1TimestampPerPdu_500PacketsPerSecond, true));
+}
+
+// A stream format that is not supported (or not known) must not reserve any bandwidth, so it is not displayed at all
+TEST(NetworkTopology, StreamBandwidth_IsNullForAnUnsupportedFormat)
+{
+	EXPECT_EQ(0u, computeReservedBandwidth(la::avdecc::entity::model::StreamFormat::value_type{ 0u }));
 }

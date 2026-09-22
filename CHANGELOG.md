@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Network Graph window (View menu) displaying the network topology inferred from the gPTP information exposed by the entities (AsPath, grandmaster, propagation delay), with grandmaster and error indicators
   - One tab per network (Primary/Secondary, following Milan redundancy AVB interface indices)
   - Entity selection synchronized with the Discovered Entities list
-  - Stream connections displayed on the edges they transit through, with accumulated estimated reserved bandwidth (SR class aware)
+  - Stream connections displayed on the edges they transit through, with the accumulated bandwidth they reserve on the link (SR class aware, following the Milan computation rules)
   - Talker to Listener stream path highlighting (click an edge, or right-click to pick a single stream)
   - Interconnected networks detection (clock identity seen in multiple networks, grandmaster following another grandmaster)
 - Event Journal recording important network events to a crash-safe database file for after-show analysis (entities online/offline, stream connections, error counters, media clock lock, gPTP changes, link status, latency and redundancy issues)
