@@ -782,8 +782,6 @@ private:
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 
-		auto const entityID = entity->getEntity().getEntityID();
-
 		// As we don't want to manipulate stored counter errors from this thread, we have to check for which counter flag we'll want to detect a change
 		auto checkForChange = la::avdecc::entity::model::StreamInputCounters{};
 		for (auto const [flag, counter] : counters)
@@ -1581,7 +1579,7 @@ private:
 	}
 
 	/* Discovery Protocol (ADP) */
-	virtual bool enableEntityAdvertising(std::uint32_t const availableDuration, std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex) noexcept
+	virtual bool enableEntityAdvertising(std::uint32_t const availableDuration, std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
@@ -1598,7 +1596,7 @@ private:
 		return false;
 	}
 
-	virtual void disableEntityAdvertising(std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex) noexcept
+	virtual void disableEntityAdvertising(std::optional<la::avdecc::entity::model::AvbInterfaceIndex> const interfaceIndex) noexcept override
 	{
 		auto controller = getController();
 		if (controller)
@@ -1607,7 +1605,7 @@ private:
 		}
 	}
 
-	virtual bool discoverRemoteEntities() const noexcept
+	virtual bool discoverRemoteEntities() const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
@@ -1617,7 +1615,7 @@ private:
 		return false;
 	}
 
-	virtual bool discoverRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	virtual bool discoverRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
@@ -1627,7 +1625,7 @@ private:
 		return false;
 	}
 
-	virtual bool forgetRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept
+	virtual bool forgetRemoteEntity(la::avdecc::UniqueIdentifier const entityID) const noexcept override
 	{
 		auto controller = getController();
 		if (controller)
@@ -1637,7 +1635,7 @@ private:
 		return false;
 	}
 
-	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept
+	virtual void setAutomaticDiscoveryDelay(std::chrono::milliseconds const delay) noexcept override
 	{
 		_discoveryDelay = delay;
 		// No need to re-create the controller, simply update this live parameter if the controller has been created
@@ -2971,7 +2969,7 @@ private:
 		if (controller)
 		{
 			controller->requestExclusiveAccess(entityID, type,
-				[this, entityID, handler](auto const* const /*entity*/, auto const status, auto&& token) noexcept
+				[entityID, handler](auto const* const /*entity*/, auto const status, auto&& token) noexcept
 				{
 					la::avdecc::utils::invokeProtectedHandler(handler, entityID, status, std::move(token));
 				});
