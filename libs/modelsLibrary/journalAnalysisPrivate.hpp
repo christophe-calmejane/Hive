@@ -91,7 +91,7 @@ public:
 		QString name{}; /**< Counter name */
 		qint64 value{ 0 }; /**< missing_ms (stream data loss), event_loop_latency_ms (heartbeat) */
 		qint64 secondaryValue{ 0 }; /**< elapsed_ms (stream data loss), entities_online (heartbeat) */
-		qint64 increment{ 0 }; /**< Stream data loss increment */
+		qint64 increment{ 0 }; /**< Stream data loss increment, or the count of lost unsolicited notifications of a controller counter event */
 		qint64 expected{ 0 }; /**< Stream data expected increment */
 		EntityID from{}; /**< Previous grandmaster, or the talker of a stream data event */
 		EntityID to{}; /**< New grandmaster */

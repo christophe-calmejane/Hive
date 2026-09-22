@@ -1065,6 +1065,10 @@ private:
 		{
 			lines.push_back(QString{ "%1 '%2' increases on %3 entities%4" }.arg(entry.count).arg(entry.name).arg(entry.entities).arg(entry.plane != JournalAnalysis::UnknownPlane ? QString{ " (%1 interface)" }.arg(planeName(entry.plane)) : QString{}));
 		}
+		if (_results.unsolicitedNotificationsLost > 0u)
+		{
+			lines.push_back(QString{ "%1 unsolicited notifications actually lost (the counters count the detections, the sequence IDs of the messages tell the notifications)" }.arg(_results.unsolicitedNotificationsLost));
+		}
 		if (_results.transportErrors > 0u)
 		{
 			lines.push_back(QString{ "%1 transport errors on the controller interfaces" }.arg(_results.transportErrors));

@@ -768,6 +768,8 @@ Info JournalAnalysis::Private::parse(EventJournal::Event const& event) noexcept
 				{
 					info.kind = Kind::ControllerCounter;
 					info.detailsPlane = planeFromInterfaceName(details().value("interface").toString());
+					// The unsolicited notification loss events tell how many notifications were actually lost (the counter itself only counts the detections)
+					info.increment = details().value("lost_count").toInteger();
 				}
 				else if (event.severity == Severity::Error && info.name == "Media Unlocked")
 				{
@@ -2128,6 +2130,10 @@ void JournalAnalysis::Private::computeOtherFamilies(std::vector<EventJournal::Ev
 				++entry.count;
 				entry.events.push_back(i);
 				controllerEntities[key].insert(event.entityID);
+				if (info.increment > 0)
+				{
+					results.unsolicitedNotificationsLost += static_cast<std::size_t>(info.increment);
+				}
 				break;
 			}
 			case Kind::Latency:

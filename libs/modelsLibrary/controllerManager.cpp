@@ -967,7 +967,7 @@ private:
 
 		emit aemAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), total, interfaceType, value);
 	}
-	virtual void onAemAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
+	virtual void onAemAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::protocol::AecpSequenceID const expectedSequenceID, la::avdecc::protocol::AecpSequenceID const receivedSequenceID, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
 		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
 		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getAemAecpUnsolicitedLossCounter);
@@ -975,7 +975,7 @@ private:
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType]()
+			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType, expectedSequenceID, receivedSequenceID]()
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
@@ -985,7 +985,7 @@ private:
 					}
 				}
 
-				emit aemAecpUnsolicitedLossCounterChanged(entityID, total, interfaceType, value);
+				emit aemAecpUnsolicitedLossCounterChanged(entityID, total, interfaceType, value, expectedSequenceID, receivedSequenceID);
 			});
 	}
 	virtual void onMvuAecpUnsolicitedCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
@@ -995,7 +995,7 @@ private:
 
 		emit mvuAecpUnsolicitedCounterChanged(entity->getEntity().getEntityID(), total, interfaceType, value);
 	}
-	virtual void onMvuAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
+	virtual void onMvuAecpUnsolicitedLossCounterChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::uint64_t const value, la::avdecc::protocol::AecpSequenceID const expectedSequenceID, la::avdecc::protocol::AecpSequenceID const receivedSequenceID, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
 		// The value is the counter of the interface the event occurred on: compute the entity-wide total right now (the entity is still locked)
 		auto const total = computeStatisticsTotal(entity, &la::avdecc::controller::ControlledEntity::getMvuAecpUnsolicitedLossCounter);
@@ -1003,7 +1003,7 @@ private:
 		// Invoke all the code manipulating class members to the main thread, as onEntityOnline and onEntityOffline can happen at the same time from different threads (as of current avdecc_controller library)
 		// We don't want a class member to be reset by onEntityOffline while the entity is going Online again at the same time, so invoke in a queued manner in the same (main) thread
 		QMetaObject::invokeMethod(this,
-			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType]()
+			[this, entityID = entity->getEntity().getEntityID(), total, value, interfaceType, expectedSequenceID, receivedSequenceID]()
 			{
 				if (auto* entityCache = entityCachedData(entityID))
 				{
@@ -1013,7 +1013,7 @@ private:
 					}
 				}
 
-				emit mvuAecpUnsolicitedLossCounterChanged(entityID, total, interfaceType, value);
+				emit mvuAecpUnsolicitedLossCounterChanged(entityID, total, interfaceType, value, expectedSequenceID, receivedSequenceID);
 			});
 	}
 	// Diagnostics

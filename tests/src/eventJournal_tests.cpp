@@ -2226,6 +2226,50 @@ TEST_F(EventJournal_F, Control_OperatorChanges_AreJournaledAtUserLevel)
 	waitForEvents(EventJournal::Category::Control, entityID, 2u);
 }
 
+// The unsolicited notification loss counter only counts the detections: the event tells how many notifications were actually lost and which sequence IDs they had, so the journal can be matched with a network capture
+TEST_F(EventJournal_F, Counters_UnsolicitedLoss_TellsWhichNotificationsWereLost)
+{
+	using EventJournal = hive::modelsLibrary::EventJournal;
+	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
+	loadConnectedFixture();
+	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
+
+	// Three AEM unsolicited notifications lost (sequence IDs 41, 42 and 43), detected when the one with sequence ID 44 arrived
+	emit controllerManager.aemAecpUnsolicitedLossCounterChanged(entityID, 1u, la::avdecc::controller::InterfaceType::Primary, 1u, 41u, 44u);
+	auto events = eventsSince(EventJournal::Category::Counters, entityID);
+	ASSERT_EQ(std::size_t{ 1u }, events.size());
+	EXPECT_EQ(QString{ "'AEM Unsolicited Response Losses' error counter increased to 1 (3 notifications lost, sequence IDs 41 to 43)" }, events[0].summary);
+	EXPECT_EQ(EventJournal::Severity::Error, events[0].severity);
+	EXPECT_EQ(EventJournal::Level::User, events[0].level);
+	EXPECT_EQ(QString{ "Statistics" }, events[0].subject);
+	auto details = eventDetails(events[0]);
+	EXPECT_EQ(QString{ "AEM Unsolicited Response Losses" }, details.value("counter").toString());
+	EXPECT_EQ(1, details.value("value").toInt());
+	EXPECT_EQ(3, details.value("lost_count").toInt());
+	EXPECT_EQ(41, details.value("expected_sequence_id").toInt());
+	EXPECT_EQ(44, details.value("received_sequence_id").toInt());
+	EXPECT_FALSE(details.contains("interface")); // Single interface mode: the interface is only told in redundant mode
+
+	// One MVU unsolicited notification lost, the sequence space wrapping at 16 bits
+	emit controllerManager.mvuAecpUnsolicitedLossCounterChanged(entityID, 1u, la::avdecc::controller::InterfaceType::Primary, 1u, 65535u, 0u);
+	events = eventsSince(EventJournal::Category::Counters, entityID);
+	ASSERT_EQ(std::size_t{ 2u }, events.size());
+	EXPECT_EQ(QString{ "'MVU Unsolicited Response Losses' error counter increased to 1 (1 notification lost, sequence ID 65535)" }, events[1].summary);
+	EXPECT_EQ(1, eventDetails(events[1]).value("lost_count").toInt());
+
+	// The aggregated statistics signal does not journal these two counters a second time (it knows nothing about the lost notifications), the other counters still going through it
+	auto statistics = hive::modelsLibrary::ControllerManager::StatisticsErrorCounters{};
+	statistics[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses] = 1u;
+	statistics[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses] = 1u;
+	emit controllerManager.statisticsErrorCounterChanged(entityID, statistics);
+	EXPECT_EQ(std::size_t{ 2u }, eventsSince(EventJournal::Category::Counters, entityID).size());
+	statistics[hive::modelsLibrary::ControllerManager::StatisticsErrorCounterFlag::AecpTimeouts] = 2u;
+	emit controllerManager.statisticsErrorCounterChanged(entityID, statistics);
+	events = eventsSince(EventJournal::Category::Counters, entityID);
+	ASSERT_EQ(std::size_t{ 3u }, events.size());
+	EXPECT_EQ(QString{ "'AECP Timeouts' error counter increased to 2" }, events[2].summary);
+}
+
 // Acknowledging the error counters in the UI is journaled with the values that were displayed, so the next increase of the same counter (journaled from zero) stays interpretable
 TEST_F(EventJournal_F, Control_AcknowledgedCounters_AreJournaled)
 {
@@ -2754,7 +2798,7 @@ TEST_F(EventJournal_F, Session_Clear_RenewsTheSnapshots)
 /* *********************************
    Notification origin (phase 8)
 */
-// The events journaled from a notification of la_avdecc carry its origin: an AEM unsolicited notification received on the interface of the controller gives details.origin 'unsolicited' and details.interface 'Primary', while a change made through the virtual controller (no message received) carries no origin
+// The events journaled from a notification of la_avdecc carry its origin: an AEM unsolicited notification received on the interface of the controller gives details.origin 'unsolicited', details.interface 'Primary' and the details.sequence_id of the message, while a change made through the virtual controller (no message received) carries no origin
 TEST_F(EventJournal_F, NotificationOrigin_IsJournaledWithTheEvent)
 {
 	using EventJournal = hive::modelsLibrary::EventJournal;
@@ -2780,7 +2824,7 @@ TEST_F(EventJournal_F, NotificationOrigin_IsJournaledWithTheEvent)
 		unsolicited.setStatus(la::avdecc::protocol::AecpStatus::Success);
 		unsolicited.setTargetEntityID(entityID);
 		unsolicited.setControllerEntityID(controllerEID);
-		unsolicited.setSequenceID(0u);
+		unsolicited.setSequenceID(42u);
 		unsolicited.setCommandType(la::avdecc::protocol::AemCommandType::SetName);
 		unsolicited.setUnsolicited(true);
 		unsolicited.setCommandSpecificData(payload.data(), payload.usedBytes());
@@ -2792,6 +2836,7 @@ TEST_F(EventJournal_F, NotificationOrigin_IsJournaledWithTheEvent)
 	auto details = eventDetails(events[0]);
 	EXPECT_EQ(QString{ "unsolicited" }, details.value("origin").toString());
 	EXPECT_EQ(QString{ "Primary" }, details.value("interface").toString());
+	EXPECT_EQ(42, details.value("sequence_id").toInt()); // The sequence_id of the message that carried the change, to match the event with a network capture
 
 	// A change made through the virtual controller is not carried by a message: no origin
 	controllerManager.setEntityName(entityID, "Renamed by the test");
@@ -2800,6 +2845,7 @@ TEST_F(EventJournal_F, NotificationOrigin_IsJournaledWithTheEvent)
 	details = eventDetails(events[1]);
 	EXPECT_FALSE(details.contains("origin"));
 	EXPECT_FALSE(details.contains("interface"));
+	EXPECT_FALSE(details.contains("sequence_id"));
 
 	// Outside of a signal of the controller, nothing is known either
 	EXPECT_EQ(la::avdecc::controller::NotificationOrigin::Source::Unknown, controllerManager.currentNotificationOrigin().source);

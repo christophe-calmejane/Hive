@@ -655,8 +655,9 @@ TEST(JournalAnalysis, OtherFamilies_PacketLossControllerSideAndOperatorActions)
 		auto const to = i < 2 ? (plane == 0 ? BranchPrimary : BranchSecondary) : (plane == 0 ? GrandmasterPrimary : GrandmasterSecondary);
 		builder.add(start + 2 * Second + i * Second, Category::Gptp, Severity::Warning, amplifier(2u), builder.name(amplifier(2u)), QString{ "AVB Interface %1" }.arg(plane), QString{ "gPTP grandmaster changed from %1 to %2" }.arg(idString(from), idString(to)), QJsonObject{ { "previous_grandmaster_id", idString(from) }, { "new_grandmaster_id", idString(to) } });
 	}
-	builder.add(start + 10 * Minute, Category::Counters, Severity::Error, amplifier(0u), builder.name(amplifier(0u)), "Statistics", "'AEM/MVU Unsolicited Response Losses' error counter increased on the Primary interface (interface total: 1)", QJsonObject{ { "counter", "AEM/MVU Unsolicited Response Losses" }, { "interface", "Primary" }, { "interface_value", 1 }, { "value", 1 } });
-	builder.add(start + 10 * Minute, Category::Counters, Severity::Error, amplifier(1u), builder.name(amplifier(1u)), "Statistics", "'AEM/MVU Unsolicited Response Losses' error counter increased on the Primary interface (interface total: 1)", QJsonObject{ { "counter", "AEM/MVU Unsolicited Response Losses" }, { "interface", "Primary" }, { "interface_value", 1 }, { "value", 1 } });
+	builder.add(start + 10 * Minute, Category::Counters, Severity::Error, amplifier(0u), builder.name(amplifier(0u)), "Statistics", "'AEM Unsolicited Response Losses' error counter increased on the Primary interface (interface total: 1, 3 notifications lost, sequence IDs 41 to 43)", QJsonObject{ { "counter", "AEM Unsolicited Response Losses" }, { "interface", "Primary" }, { "interface_value", 1 }, { "value", 1 }, { "lost_count", 3 }, { "expected_sequence_id", 41 }, { "received_sequence_id", 44 } });
+	// A journal recorded before the sequence IDs were journaled: the detection counts, the lost notifications are unknown
+	builder.add(start + 10 * Minute, Category::Counters, Severity::Error, amplifier(1u), builder.name(amplifier(1u)), "Statistics", "'AEM Unsolicited Response Losses' error counter increased on the Primary interface (interface total: 1)", QJsonObject{ { "counter", "AEM Unsolicited Response Losses" }, { "interface", "Primary" }, { "interface_value", 1 }, { "value", 1 } });
 	builder.add(start + 11 * Minute, Category::Redundancy, Severity::Warning, amplifier(0u), builder.name(amplifier(0u)), "Primary Interface", "No longer receiving unsolicited notifications on the Primary interface");
 	builder.add(start + 12 * Minute, Category::Redundancy, Severity::Warning, amplifier(3u), builder.name(amplifier(3u)), "Secondary Interface", "Entity is offline on one redundant interface (still online on the other)");
 	builder.add(start + 20 * Minute, Category::Control, Severity::Info, amplifier(0u), builder.name(amplifier(0u)), {}, "Entity acquired by this controller");
@@ -691,7 +692,8 @@ TEST(JournalAnalysis, OtherFamilies_PacketLossControllerSideAndOperatorActions)
 	EXPECT_EQ(2u, results.controllerCounts.front().count);
 	EXPECT_EQ(2u, results.controllerCounts.front().entities);
 	EXPECT_EQ(0, results.controllerCounts.front().plane);
-	EXPECT_EQ("AEM/MVU Unsolicited Response Losses", results.controllerCounts.front().name);
+	EXPECT_EQ("AEM Unsolicited Response Losses", results.controllerCounts.front().name);
+	EXPECT_EQ(3u, results.unsolicitedNotificationsLost); // Only the detection telling its sequence IDs says how many notifications were lost
 	EXPECT_EQ(1u, results.unsolicitedLossesPerInterface.at(0));
 	EXPECT_EQ(1u, results.offlineOnOneInterface.at(1));
 	EXPECT_EQ(1u, results.latencyErrors);

@@ -527,6 +527,12 @@ QString statisticsCounterName(ControllerManager::StatisticsErrorCounterFlag cons
 	}
 }
 
+/** Returns whether a statistics error counter is one of the unsolicited notification loss counters, journaled from their own signals (they tell which notifications were lost). */
+bool isUnsolicitedLossCounter(ControllerManager::StatisticsErrorCounterFlag const flag) noexcept
+{
+	return flag == ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses || flag == ControllerManager::StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses;
+}
+
 /** Default arrival time source of the counter notifications (the unit tests substitute a simulated clock). */
 std::chrono::steady_clock::time_point steadyClockNow() noexcept
 {
@@ -558,7 +564,7 @@ QString notificationOriginKey(la::avdecc::controller::NotificationOrigin::Source
 	}
 }
 
-/** Adds to the details of an event the origin of the la_avdecc notification it is journaled from, when there is one (see ControllerManager::currentNotificationOrigin): which kind of message carried the change (details.origin) and on which interface it was received (details.interface, kept when the event already tells it). */
+/** Adds to the details of an event the origin of the la_avdecc notification it is journaled from, when there is one (see ControllerManager::currentNotificationOrigin): which kind of message carried the change (details.origin), on which interface it was received (details.interface, kept when the event already tells it) and the sequence_id of that message (details.sequence_id), so an event can be matched with a network capture. */
 QJsonObject withNotificationOrigin(QJsonObject details) noexcept
 {
 	auto const origin = ControllerManager::getInstance().currentNotificationOrigin();
@@ -571,6 +577,10 @@ QJsonObject withNotificationOrigin(QJsonObject details) noexcept
 	if (origin.interfaceType && !details.contains("interface"))
 	{
 		details["interface"] = helper::interfaceTypeName(*origin.interfaceType);
+	}
+	if (origin.sequenceID)
+	{
+		details["sequence_id"] = static_cast<int>(*origin.sequenceID);
 	}
 	return details;
 }
@@ -2245,6 +2255,11 @@ public:
 		{
 			for (auto const& [flag, value] : errorCounters)
 			{
+				// The unsolicited notification losses have their own rule, telling which notifications were lost (handleUnsolicitedLossCounterIncreased, in both modes)
+				if (isUnsolicitedLossCounter(flag))
+				{
+					continue;
+				}
 				auto const previousIt = previousCounters.find(flag);
 				auto const previousValue = (previousIt != previousCounters.end()) ? previousIt->second : std::uint64_t{ 0u };
 				if (previousIt == previousCounters.end() || value > previousValue)
@@ -2327,6 +2342,12 @@ public:
 			return;
 		}
 
+		// The unsolicited notification losses have their own rule, telling which notifications were lost (handleUnsolicitedLossCounterIncreased, in both modes)
+		if (isUnsolicitedLossCounter(flag))
+		{
+			return;
+		}
+
 		auto const interfaceName = helper::interfaceTypeName(interfaceType);
 		auto details = QJsonObject{};
 		details["counter"] = statisticsCounterName(flag);
@@ -2334,6 +2355,40 @@ public:
 		details["interface_value"] = static_cast<qint64>(interfaceValue);
 		details["value"] = static_cast<qint64>(value);
 		addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), "Statistics", QString{ "'%1' error counter increased on the %2 interface (interface total: %3)" }.arg(statisticsCounterName(flag)).arg(interfaceName).arg(interfaceValue), details);
+	}
+
+	/**
+	* @brief Journals a loss of unsolicited notifications, told by the sequence IDs of the messages.
+	* @details The counter only counts the detections: the sequence IDs tell how many notifications were actually lost (the ones from expectedSequenceID up to receivedSequenceID, excluded, the sequence space wrapping at 16 bits), which is what tells how much of the model of the entity may have been missed, and where to look in a network capture.
+	*          Journaled in both modes (unlike the other statistics counters), each controller interface having its own sequence space and its own counter.
+	*/
+	void handleUnsolicitedLossCounterIncreased(la::avdecc::UniqueIdentifier const entityID, ControllerManager::StatisticsErrorCounterFlag const flag, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue, la::avdecc::protocol::AecpSequenceID const expectedSequenceID, la::avdecc::protocol::AecpSequenceID const receivedSequenceID) noexcept
+	{
+		if (!isRecording())
+		{
+			return;
+		}
+
+		auto const counterName = statisticsCounterName(flag);
+		auto const lostCount = static_cast<la::avdecc::protocol::AecpSequenceID>(receivedSequenceID - expectedSequenceID);
+		auto const lost = (lostCount == 1u) ? QString{ "1 notification lost, sequence ID %1" }.arg(expectedSequenceID) : QString{ "%1 notifications lost, sequence IDs %2 to %3" }.arg(lostCount).arg(expectedSequenceID).arg(static_cast<la::avdecc::protocol::AecpSequenceID>(receivedSequenceID - 1u));
+		auto details = QJsonObject{};
+		details["counter"] = counterName;
+		details["value"] = static_cast<qint64>(value);
+		details["lost_count"] = static_cast<int>(lostCount);
+		details["expected_sequence_id"] = static_cast<int>(expectedSequenceID);
+		details["received_sequence_id"] = static_cast<int>(receivedSequenceID);
+		if (ControllerManager::getInstance().isRedundantController())
+		{
+			auto const interfaceName = helper::interfaceTypeName(interfaceType);
+			details["interface"] = interfaceName;
+			details["interface_value"] = static_cast<qint64>(interfaceValue);
+			addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), "Statistics", QString{ "'%1' error counter increased on the %2 interface (interface total: %3, %4)" }.arg(counterName).arg(interfaceName).arg(interfaceValue).arg(lost), details);
+		}
+		else
+		{
+			addEvent(Category::Counters, Severity::Error, entityID, entityNameFor(entityID), "Statistics", QString{ "'%1' error counter increased to %2 (%3)" }.arg(counterName).arg(value).arg(lost), details);
+		}
 	}
 
 	void handleInterfaceTransportError(la::avdecc::controller::InterfaceType const interfaceType) noexcept
@@ -3760,15 +3815,16 @@ EventJournal::EventJournal()
 		{
 			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::AecpUnexpectedResponses, value, interfaceType, interfaceValue);
 		});
+	// The unsolicited notification losses are journaled from their own signals in both modes, the sequence IDs telling which notifications were lost
 	connect(&manager, &ControllerManager::aemAecpUnsolicitedLossCounterChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue)
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue, la::avdecc::protocol::AecpSequenceID const expectedSequenceID, la::avdecc::protocol::AecpSequenceID const receivedSequenceID)
 		{
-			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses, value, interfaceType, interfaceValue);
+			_pImpl->handleUnsolicitedLossCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::AemAecpUnsolicitedLosses, value, interfaceType, interfaceValue, expectedSequenceID, receivedSequenceID);
 		});
 	connect(&manager, &ControllerManager::mvuAecpUnsolicitedLossCounterChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue)
+		[this](la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue, la::avdecc::protocol::AecpSequenceID const expectedSequenceID, la::avdecc::protocol::AecpSequenceID const receivedSequenceID)
 		{
-			_pImpl->handleStatisticsCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, value, interfaceType, interfaceValue);
+			_pImpl->handleUnsolicitedLossCounterIncreased(entityID, ControllerManager::StatisticsErrorCounterFlag::MvuAecpUnsolicitedLosses, value, interfaceType, interfaceValue, expectedSequenceID, receivedSequenceID);
 		});
 	connect(&manager, &ControllerManager::entityRedundantInterfaceOffline, this,
 		[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AvbInterfaceIndex const avbInterfaceIndex)

@@ -519,6 +519,7 @@ public:
 		std::map<QString, std::size_t> packetLossPerCounter{};
 		std::map<std::pair<QString, Plane>, std::size_t> packetLossPerCounterAndPlane{};
 		std::vector<SubjectCount> controllerCounts{}; /**< Controller side counters (Statistics subject), per counter and interface */
+		std::size_t unsolicitedNotificationsLost{ 0u }; /**< Unsolicited notifications actually lost, as told by the sequence IDs of the loss events (the counters only count the detections; zero for the journals recorded before the sequence IDs were journaled) */
 		std::size_t latencyErrors{ 0u };
 		std::size_t redundancyWarnings{ 0u };
 		std::map<Plane, std::size_t> offlineOnOneInterface{};
