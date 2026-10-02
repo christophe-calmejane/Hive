@@ -912,7 +912,14 @@ private:
 		// find out the connected streams:
 		for (auto const& stream : sourceStreams)
 		{
-			auto const& streamInput = controlledEntity->getCurrentConfigurationNode().streamInputs.at(stream.first);
+			// Some entities report mappings to a stream that does not exist, ignore them
+			auto const& streamInputs = controlledEntity->getCurrentConfigurationNode().streamInputs;
+			auto const streamInputIt = streamInputs.find(stream.first);
+			if (streamInputIt == streamInputs.end())
+			{
+				continue;
+			}
+			auto const& streamInput = streamInputIt->second;
 			auto const& streamInputDynamicModel = streamInput.dynamicModel;
 			auto connectedTalker = streamInputDynamicModel.connectionInfo.talkerStream.entityID;
 			auto connectedTalkerStreamIndex = streamInputDynamicModel.connectionInfo.talkerStream.streamIndex;
