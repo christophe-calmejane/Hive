@@ -1,0 +1,1140 @@
+{
+	"adp_information": {
+		"common": {
+			"association_id": null,
+			"controller_capabilities": null,
+			"entity_capabilities": [
+				"ADDRESS_ACCESS_SUPPORTED",
+				"AEM_SUPPORTED",
+				"VENDOR_UNIQUE_SUPPORTED",
+				"CLASS_A_SUPPORTED",
+				"GPTP_SUPPORTED",
+				"AEM_INTERFACE_INDEX_VALID"
+			],
+			"entity_id": "0x001B92FFFF000001",
+			"entity_model_id": "0x001B9200020A0000",
+			"listener_capabilities": [
+				"IMPLEMENTED",
+				"AUDIO_SINK"
+			],
+			"listener_stream_sinks": 10,
+			"talker_capabilities": [
+				"IMPLEMENTED",
+				"MEDIA_CLOCK_SOURCE",
+				"AUDIO_SOURCE"
+			],
+			"talker_stream_sources": 1
+		},
+		"interfaces": [
+			{
+				"available_index": 0,
+				"avb_interface_index": 0,
+				"gptp_domain_number": 0,
+				"gptp_grandmaster_id": "0x001B92FFFF000000",
+				"mac_address": "00:1B:92:00:00:01",
+				"valid_time": 10
+			}
+		]
+	},
+	"compatibility_flags": [
+		"IEEE17221",
+		"MILAN"
+	],
+	"dump_version": 1,
+	"entity_model": {
+		"entity_descriptor": {
+			"configuration_descriptors": [
+				{
+					"_index (informative)": 0,
+					"audio_unit_descriptors": [
+						{
+							"_index (informative)": 0,
+							"dynamic": {
+								"current_sampling_rate": "0x00017700",
+								"object_name": ""
+							},
+							"static": {
+								"clock_domain_index": 0,
+								"localized_description": {
+									"index": 4,
+									"offset": 0
+								},
+								"sampling_rates": [
+									"0x00017700"
+								]
+							},
+							"stream_port_input_descriptors": [
+								{
+									"_index (informative)": 0,
+									"audio_cluster_descriptors": [
+										{
+											"_index (informative)": 0,
+											"dynamic": {
+												"object_name": "In 1"
+											},
+											"static": {
+												"block_latency": 0,
+												"channel_count": 1,
+												"format": "MBLA",
+												"localized_description": null,
+												"path_latency": 0,
+												"signal_index": 0,
+												"signal_output": 0,
+												"signal_type": "INVALID"
+											}
+										},
+										{
+											"_index (informative)": 1,
+											"dynamic": {
+												"object_name": "In 2"
+											},
+											"static": {
+												"block_latency": 0,
+												"channel_count": 1,
+												"format": "MBLA",
+												"localized_description": null,
+												"path_latency": 0,
+												"signal_index": 0,
+												"signal_output": 0,
+												"signal_type": "INVALID"
+											}
+										},
+										{
+											"_index (informative)": 2,
+											"dynamic": {
+												"object_name": "In 3"
+											},
+											"static": {
+												"block_latency": 0,
+												"channel_count": 1,
+												"format": "MBLA",
+												"localized_description": null,
+												"path_latency": 0,
+												"signal_index": 0,
+												"signal_output": 0,
+												"signal_type": "INVALID"
+											}
+										},
+										{
+											"_index (informative)": 3,
+											"dynamic": {
+												"object_name": "In 4"
+											},
+											"static": {
+												"block_latency": 0,
+												"channel_count": 1,
+												"format": "MBLA",
+												"localized_description": null,
+												"path_latency": 0,
+												"signal_index": 0,
+												"signal_output": 0,
+												"signal_type": "INVALID"
+											}
+										}
+									],
+									"audio_map_descriptors": null,
+									"dynamic": {
+										"dynamic_mappings": [
+											{
+												"cluster_channel": 0,
+												"cluster_offset": 0,
+												"stream_channel": 0,
+												"stream_index": 0
+											},
+											{
+												"cluster_channel": 0,
+												"cluster_offset": 1,
+												"stream_channel": 0,
+												"stream_index": 9
+											},
+											{
+												"cluster_channel": 0,
+												"cluster_offset": 2,
+												"stream_channel": 0,
+												"stream_index": 8
+											},
+											{
+												"cluster_channel": 1,
+												"cluster_offset": 3,
+												"stream_channel": 1,
+												"stream_index": 0
+											},
+											{
+												"cluster_channel": 0,
+												"cluster_offset": 4,
+												"stream_channel": 2,
+												"stream_index": 0
+											}
+										]
+									},
+									"static": {
+										"clock_domain_index": 0,
+										"flags": [
+											"CLOCK_SYNC_SOURCE",
+											"SYNC_SAMPLE_RATE_CONV"
+										]
+									}
+								}
+							],
+							"stream_port_output_descriptors": null
+						}
+					],
+					"avb_interface_descriptors": [
+						{
+							"_index (informative)": 0,
+							"dynamic": {
+								"as_path": [
+									"0x001B92FFFF000000",
+									"0x001B92FFFF000001"
+								],
+								"gptp_domain_number": 0,
+								"gptp_grandmaster_id": "0x001B92FFFF000000",
+								"avb_interface_info": {
+									"flags": [
+										"AS_CAPABLE",
+										"GPTP_ENABLED",
+										"SRP_ENABLED"
+									],
+									"msrp_mappings": [
+										{
+											"priority": 3,
+											"traffic_class": 6,
+											"vlan_id": 2
+										}
+									],
+									"propagation_delay": 0
+								},
+								"counters": {
+									"GPTP_GM_CHANGED": 1,
+									"LINK_DOWN": 0,
+									"LINK_UP": 1
+								},
+								"object_name": ""
+							},
+							"static": {
+								"clock_accuracy": 254,
+								"clock_class": 248,
+								"clock_identity": "0x001B92FFFF000001",
+								"domain_number": 0,
+								"flags": [
+									"GPTP_GRANDMASTER_SUPPORTED",
+									"GPTP_SUPPORTED",
+									"SRP_SUPPORTED"
+								],
+								"localized_description": {
+									"index": 4,
+									"offset": 5
+								},
+								"log_announce_interval": 0,
+								"log_pdelay_interval": 0,
+								"log_sync_interval": 253,
+								"mac_address": "00:1B:92:00:00:01",
+								"offset_scaled_log_variance": 17258,
+								"port_number": 1,
+								"priority1": 248,
+								"priority2": 248
+							}
+						},
+						{
+							"_index (informative)": 1,
+							"dynamic": {
+								"as_path": [
+									"0x001B92FFFF010000",
+									"0x001B92FFFF000001"
+								],
+								"gptp_domain_number": 0,
+								"gptp_grandmaster_id": "0x001B92FFFF010000",
+								"avb_interface_info": {
+									"flags": [
+										"AS_CAPABLE",
+										"GPTP_ENABLED",
+										"SRP_ENABLED"
+									],
+									"msrp_mappings": [
+										{
+											"priority": 3,
+											"traffic_class": 6,
+											"vlan_id": 2
+										}
+									],
+									"propagation_delay": 0
+								},
+								"counters": {
+									"GPTP_GM_CHANGED": 1,
+									"LINK_DOWN": 0,
+									"LINK_UP": 1
+								},
+								"object_name": ""
+							},
+							"static": {
+								"clock_accuracy": 254,
+								"clock_class": 248,
+								"clock_identity": "0x001B92FFFF000001",
+								"domain_number": 0,
+								"flags": [
+									"GPTP_GRANDMASTER_SUPPORTED",
+									"GPTP_SUPPORTED",
+									"SRP_SUPPORTED"
+								],
+								"localized_description": {
+									"index": 4,
+									"offset": 5
+								},
+								"log_announce_interval": 0,
+								"log_pdelay_interval": 0,
+								"log_sync_interval": 253,
+								"mac_address": "00:1B:92:00:01:01",
+								"offset_scaled_log_variance": 17258,
+								"port_number": 1,
+								"priority1": 248,
+								"priority2": 248
+							}
+						}
+					],
+					"clock_domain_descriptors": [
+						{
+							"_index (informative)": 0,
+							"dynamic": {
+								"clock_source_index": 0,
+								"counters": {
+									"LOCKED": 0,
+									"UNLOCKED": 0
+								},
+								"object_name": ""
+							},
+							"static": {
+								"clock_sources": [
+									0
+								],
+								"localized_description": {
+									"index": 6,
+									"offset": 8
+								}
+							}
+						}
+					],
+					"clock_source_descriptors": [
+						{
+							"_index (informative)": 0,
+							"dynamic": {
+								"clock_source_flags": [
+									"LOCAL_ID"
+								],
+								"clock_source_identifier": "0x0000000000000000",
+								"object_name": "AVB Audio Stream"
+							},
+							"static": {
+								"clock_source_location_index": 0,
+								"clock_source_location_type": "STREAM_INPUT",
+								"clock_source_type": "INPUT_STREAM",
+								"localized_description": {
+									"index": 3,
+									"offset": 6
+								}
+							}
+						}
+					],
+					"dynamic": {
+						"object_name": ""
+					},
+					"locale_descriptors": [
+						{
+							"_index (informative)": 0,
+							"static": {
+								"_base_string_descriptor (informative)": 0,
+								"locale_id": "en-US"
+							},
+							"strings_descriptors": [
+								{
+									"_index (informative)": 0,
+									"static": {
+										"strings": [
+											"L-ACOUSTICS",
+											"LA12X",
+											"Configuration 0",
+											"Configuration 1",
+											"Audio Unit",
+											"Input Stream 0",
+											"Input Stream 1"
+										]
+									}
+								},
+								{
+									"_index (informative)": 1,
+									"static": {
+										"strings": [
+											"Input Stream 2",
+											"Input Stream 3",
+											"Input Stream 4",
+											"Input Stream 5",
+											"Input Stream 6",
+											"Input Stream 7",
+											"Input Stream 8"
+										]
+									}
+								},
+								{
+									"_index (informative)": 2,
+									"static": {
+										"strings": [
+											"Input Stream 9",
+											"Input Stream 10",
+											"Input Stream 11",
+											"Input Stream 12",
+											"Input Stream 13",
+											"Input Stream 14",
+											"Input Stream 15"
+										]
+									}
+								},
+								{
+									"_index (informative)": 3,
+									"static": {
+										"strings": [
+											"Input Stream 16",
+											"Output Stream 0",
+											"Output Stream 1",
+											"Output Stream 2",
+											"Output Stream 3",
+											"Output Stream 4",
+											"Output Stream 5"
+										]
+									}
+								},
+								{
+									"_index (informative)": 4,
+									"static": {
+										"strings": [
+											"Output Stream 6",
+											"Output Stream 7",
+											"Output Stream 8",
+											"Output Stream 9",
+											"Output Stream 10",
+											"Output Stream 11",
+											"Output Stream 12"
+										]
+									}
+								},
+								{
+									"_index (informative)": 5,
+									"static": {
+										"strings": [
+											"Output Stream 13",
+											"Output Stream 14",
+											"Output Stream 15",
+											"Output Stream 16",
+											"AVB Interface 0",
+											"AVB Interface 1",
+											"Identification"
+										]
+									}
+								},
+								{
+									"_index (informative)": 6,
+									"static": {
+										"strings": [
+											"Manufacturer logo",
+											"Entity logo",
+											"Internal",
+											"AVB Input Stream 0",
+											"AVB Input Stream 1",
+											"AVB Input Stream 2",
+											"AVB Input Stream 3"
+										]
+									}
+								},
+								{
+									"_index (informative)": 7,
+									"static": {
+										"strings": [
+											"AVB Input Stream 4",
+											"AVB Input Stream 5",
+											"AVB Input Stream 6",
+											"AVB Input Stream 7",
+											"AVB Input Stream 8",
+											"AVB Input Stream 9",
+											"AVB Input Stream 10"
+										]
+									}
+								},
+								{
+									"_index (informative)": 8,
+									"static": {
+										"strings": [
+											"AVB Input Stream 11",
+											"AVB Input Stream 12",
+											"AVB Input Stream 13",
+											"AVB Input Stream 14",
+											"AVB Input Stream 15",
+											"AVB Input Stream 16",
+											"Clock Domain"
+										]
+									}
+								}
+							]
+						},
+						{
+							"_index (informative)": 1,
+							"static": {
+								"_base_string_descriptor (informative)": 9,
+								"locale_id": "fr-FR"
+							},
+							"strings_descriptors": null
+						}
+					],
+					"memory_object_descriptors": [
+						{
+							"_index (informative)": 0,
+							"dynamic": {
+								"length": 39300,
+								"object_name": ""
+							},
+							"static": {
+								"localized_description": {
+									"index": 0,
+									"offset": 6
+								},
+								"maximum_length": 39300,
+								"memory_object_type": "PNG_MANUFACTURER",
+								"start_address": "0x0000000000000000",
+								"target_descriptor_index": 0,
+								"target_descriptor_type": "ENTITY"
+							}
+						},
+						{
+							"_index (informative)": 1,
+							"dynamic": {
+								"length": 34337,
+								"object_name": ""
+							},
+							"static": {
+								"localized_description": {
+									"index": 1,
+									"offset": 6
+								},
+								"maximum_length": 34337,
+								"memory_object_type": "PNG_ENTITY",
+								"start_address": "0x0000000000009984",
+								"target_descriptor_index": 0,
+								"target_descriptor_type": "ENTITY"
+							}
+						}
+					],
+					"static": {
+						"localized_description": {
+							"index": 2,
+							"offset": 0
+						}
+					},
+					"stream_input_descriptors": [
+						{
+							"_index (informative)": 0,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Nominal",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200200C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 0,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 1,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Other Format",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200180C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 0,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 2,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Other Domain",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200200C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 1,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 3,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Other Format / Domain",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200180C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 1,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 4,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Nominal Pri",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200200C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 0,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"redundant_streams": [
+									5
+								],
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 5,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Nominal Sec",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200200C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 1,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"redundant_streams": [
+									4
+								],
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 6,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Other Format Pri",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200180C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 0,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"redundant_streams": [
+									7
+								],
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 7,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "Other Format Sec",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x020702200180C000",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 1,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x020702200180C000",
+									"0x020702200200C000",
+									"0x0215022002006000",
+									"0x021702200200C000"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"redundant_streams": [
+									6
+								],
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						},
+						{
+							"_index (informative)": 8,
+							"dynamic": {
+								"connected_talker": {
+									"entity_id": "0xFFFFFFFFFFFFFFFF",
+									"stream_index": 0
+								},
+								"connection_state": "NOT_CONNECTED",
+								"object_name": "CRF In",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"msrp_accumulated_latency": 0,
+									"msrp_failure_bridge_id": "0x0000000000000000",
+									"msrp_failure_code": 0,
+									"probing_status": 0,
+									"stream_dest_mac": "00:00:00:00:00:00",
+									"stream_id": "0x0000000000000000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x041060010000BB80",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 0,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 2166000,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x041060010000BB80"
+								],
+								"localized_description": {
+									"index": 5,
+									"offset": 0
+								},
+								"stream_flags": [
+									"CLOCK_SYNC_SOURCE",
+									"CLASS_A"
+								]
+							}
+						}
+					],
+					"stream_output_descriptors": [
+						{
+							"_index (informative)": 0,
+							"dynamic": {
+								"counters": {
+									"FRAMES_TX": 0,
+									"MEDIA_RESET": 0,
+									"STREAM_START": 0,
+									"STREAM_STOP": 0,
+									"TIMESTAMP_UNCERTAIN": 0
+								},
+								"object_name": "CRF Out",
+								"stream_dynamic_info": {
+									"acmp_status": "SUCCESS",
+									"are_pdus_encrypted": false,
+									"does_support_encrypted": false,
+									"flags_ex": null,
+									"has_saved_state": false,
+									"has_talker_failed": false,
+									"is_class_b": false,
+									"last_received_flags": [
+										"MSRP_ACC_LAT_VALID",
+										"STREAM_ID_VALID",
+										"STREAM_FORMAT_VALID"
+									],
+									"msrp_accumulated_latency": 2000000,
+									"msrp_failure_code": null,
+									"probing_status": 0,
+									"stream_id": "0x001B92050EFE0000",
+									"stream_vlan_id": null
+								},
+								"stream_format": "0x041060010000BB80",
+								"stream_running": true
+							},
+							"static": {
+								"avb_interface_index": 0,
+								"backedup_talker_entity_id": "0x0000000000000000",
+								"backedup_talker_unique": 0,
+								"backup_talker_entity_id_0": "0x0000000000000000",
+								"backup_talker_entity_id_1": "0x0000000000000000",
+								"backup_talker_entity_id_2": "0x0000000000000000",
+								"backup_talker_unique_id_0": 0,
+								"backup_talker_unique_id_1": 0,
+								"backup_talker_unique_id_2": 0,
+								"buffer_length": 0,
+								"clock_domain_index": 0,
+								"formats": [
+									"0x041060010000BB80"
+								],
+								"localized_description": {
+									"index": 2,
+									"offset": 5
+								},
+								"stream_flags": [
+									"CLASS_A"
+								]
+							}
+						}
+					]
+				}
+			],
+			"dynamic": {
+				"counters": {},
+				"current_configuration": 0,
+				"entity_name": "Listener",
+				"firmware_version": "V2.10.0",
+				"group_name": "",
+				"serial_number": "000001"
+			},
+			"static": {
+				"model_name_string": {
+					"index": 1,
+					"offset": 0
+				},
+				"vendor_name_string": {
+					"index": 0,
+					"offset": 0
+				}
+			}
+		}
+	},
+	"milan_information": {
+		"certification_version": "1.0.0.0",
+		"flags": [
+			"REDUNDANCY"
+		],
+		"protocol_version": 1
+	},
+	"state": {
+		"acquire_state": "NOT_SUPPORTED",
+		"active_configuration": 0,
+		"lock_state": "NOT_LOCKED",
+		"locking_controller_id": "0xFFFFFFFFFFFFFFFF",
+		"owning_controller_id": "0xFFFFFFFFFFFFFFFF",
+		"subscribed_unsol": true
+	}
+}

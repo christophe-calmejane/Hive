@@ -47,5 +47,6 @@ private:
 	la::avdecc::entity::model::AudioUnitIndex const _audioUnitIndex{ 0u };
 	la::avdecc::entity::model::DescriptorType const _streamPortType{ la::avdecc::entity::model::DescriptorType::Entity };
 	la::avdecc::entity::model::StreamPortIndex const _streamPortIndex{ 0u };
+	QTreeWidgetItem* _mappingsItem{ nullptr };
 	QListWidget* _mappingsList{ nullptr };
 };

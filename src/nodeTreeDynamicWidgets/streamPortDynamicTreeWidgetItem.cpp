@@ -24,6 +24,9 @@
 #include "streamPortDynamicTreeWidgetItem.hpp"
 #include "mappingMatrix.hpp"
 #include "avdecc/mappingsHelper.hpp"
+
+#include <QtMate/material/color.hpp>
+
 #include <algorithm>
 #include <vector>
 #include <set>
@@ -54,11 +57,11 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		connect(editMappingsButton, &QPushButton::clicked, this, &StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked);
 		parent->setItemWidget(editMappings, 1, editMappingsButton);
 
-		auto* mappingsItem = new QTreeWidgetItem(this);
-		mappingsItem->setText(0, "Dynamic Mappings");
+		_mappingsItem = new QTreeWidgetItem(this);
+		_mappingsItem->setText(0, "Dynamic Mappings");
 		_mappingsList = new QListWidget;
 		_mappingsList->setSelectionMode(QAbstractItemView::NoSelection);
-		parent->setItemWidget(mappingsItem, 1, _mappingsList);
+		parent->setItemWidget(_mappingsItem, 1, _mappingsList);
 
 		// Update info right now
 		updateMappings();
@@ -81,6 +84,17 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const descriptorType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex)
 			{
 				if (entityID == _entityID && descriptorType == _streamPortType && streamPortIndex == _streamPortIndex)
+				{
+					// Update mappings
+					updateMappings();
+				}
+			});
+
+		// Listen for streamFormatChanged, as the validity of a mapping depends on the current format of the stream
+		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamFormatChanged, this,
+			[this](la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::DescriptorType const /*descriptorType*/, la::avdecc::entity::model::StreamIndex const /*streamIndex*/, la::avdecc::entity::model::StreamFormat const /*streamFormat*/)
+			{
+				if (entityID == _entityID)
 				{
 					// Update mappings
 					updateMappings();
@@ -262,6 +276,8 @@ void StreamPortDynamicTreeWidgetItem::updateMappings()
 	constexpr auto showRedundantMappings = true;
 
 	_mappingsList->clear();
+	auto const errorColor = qtMate::material::color::foregroundErrorColorValue(qtMate::material::color::backgroundColorName(), qtMate::material::color::colorSchemeShade());
+	auto countInvalidMappings = 0;
 
 	try
 	{
@@ -297,7 +313,15 @@ void StreamPortDynamicTreeWidgetItem::updateMappings()
 
 			for (auto const& mapping : mappings)
 			{
-				_mappingsList->addItem(QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel));
+				auto* const item = new QListWidgetItem{ QString("%1.%2 > %3.%4").arg(mapping.streamIndex).arg(mapping.streamChannel).arg(mapping.clusterOffset).arg(mapping.clusterChannel), _mappingsList };
+
+				// Highlight a mapping referencing something that does not exist
+				if (auto const errors = avdecc::mappingsHelper::getAudioMappingErrors(entity, _streamPortType, _streamPortIndex, mapping); !errors.isEmpty())
+				{
+					item->setForeground(errorColor);
+					item->setToolTip(errors.join("\n"));
+					++countInvalidMappings;
+				}
 			}
 		}
 	}
@@ -306,4 +330,16 @@ void StreamPortDynamicTreeWidgetItem::updateMappings()
 	}
 
 	_mappingsList->sortItems();
+
+	// Also highlight the field itself, as invalid mappings might be hidden in the scrolled list
+	if (countInvalidMappings > 0)
+	{
+		_mappingsItem->setForeground(0, errorColor);
+		_mappingsItem->setToolTip(0, QString("%1 invalid or dangling mapping(s), referencing something that does not exist").arg(countInvalidMappings));
+	}
+	else
+	{
+		_mappingsItem->setForeground(0, qtMate::material::color::foregroundColor());
+		_mappingsItem->setToolTip(0, {});
+	}
 }

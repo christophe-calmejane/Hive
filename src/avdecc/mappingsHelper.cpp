@@ -824,6 +824,66 @@ la::avdecc::entity::model::AudioMappings buildIdentityAudioMappings(la::avdecc::
 	return {};
 }
 
+template<class StreamNodeType>
+QStringList getAudioMappingErrors(std::map<la::avdecc::entity::model::StreamIndex, StreamNodeType> const& streamNodes, QString const& streamName, la::avdecc::controller::model::StreamPortNode const& streamPortNode, QString const& streamPortName, la::avdecc::entity::model::AudioMapping const& mapping) noexcept
+{
+	auto errors = QStringList{};
+
+	// Stream side
+	if (auto const streamIt = streamNodes.find(mapping.streamIndex); streamIt == streamNodes.end())
+	{
+		errors << QString("Invalid mapping: %1 %2 does not exist").arg(streamName).arg(mapping.streamIndex);
+	}
+	else
+	{
+		auto const formatInfo = la::avdecc::entity::model::StreamFormatInfo::create(streamIt->second.dynamicModel.streamFormat);
+		auto const formatType = formatInfo->getType();
+		// The channels of an unknown format cannot be checked
+		if (formatType != la::avdecc::entity::model::StreamFormatInfo::Type::None && formatType != la::avdecc::entity::model::StreamFormatInfo::Type::Unsupported && mapping.streamChannel >= formatInfo->getChannelsCount())
+		{
+			errors << QString("Dangling mapping: channel %1 does not exist in the current format of %2 %3 (channel count: %4)").arg(mapping.streamChannel).arg(streamName).arg(mapping.streamIndex).arg(formatInfo->getChannelsCount());
+		}
+	}
+
+	// Cluster side
+	if (mapping.clusterOffset >= streamPortNode.staticModel.numberOfClusters)
+	{
+		errors << QString("Invalid mapping: cluster offset %1 does not exist in %2 %3 (cluster count: %4)").arg(mapping.clusterOffset).arg(streamPortName).arg(streamPortNode.descriptorIndex).arg(streamPortNode.staticModel.numberOfClusters);
+	}
+	else if (auto const clusterIt = streamPortNode.audioClusters.find(streamPortNode.staticModel.baseCluster + mapping.clusterOffset); clusterIt != streamPortNode.audioClusters.end() && mapping.clusterChannel >= clusterIt->second.staticModel.channelCount)
+	{
+		errors << QString("Invalid mapping: channel %1 does not exist in Audio Cluster %2 (channel count: %3)").arg(mapping.clusterChannel).arg(clusterIt->first).arg(clusterIt->second.staticModel.channelCount);
+	}
+
+	return errors;
+}
+
+QStringList getAudioMappingErrors(la::avdecc::controller::ControlledEntity const& entity, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMapping const& mapping) noexcept
+{
+	try
+	{
+		auto const& configurationNode = entity.getCurrentConfigurationNode();
+		if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortInput)
+		{
+			return getAudioMappingErrors(configurationNode.streamInputs, "Stream Input", entity.getStreamPortInputNode(configurationNode.descriptorIndex, streamPortIndex), "Stream Port Input", mapping);
+		}
+		else if (streamPortType == la::avdecc::entity::model::DescriptorType::StreamPortOutput)
+		{
+			return getAudioMappingErrors(configurationNode.streamOutputs, "Stream Output", entity.getStreamPortOutputNode(configurationNode.descriptorIndex, streamPortIndex), "Stream Port Output", mapping);
+		}
+		else
+		{
+			AVDECC_ASSERT(false, "Unsupported StreamPort type");
+		}
+	}
+	catch (la::avdecc::controller::ControlledEntity::Exception const&)
+	{
+		// Invalid StreamPort, nothing to report
+	}
+
+	return {};
+}
+
 la::avdecc::entity::model::AudioMappings getMaximumAudioMappings(la::avdecc::entity::model::AudioMappings const& mappings, size_t const offset) noexcept
 {
 	auto const nbMappings = mappings.size();

@@ -32,6 +32,7 @@
 #include <set>
 #include <utility>
 #include <QObject>
+#include <QStringList>
 #include <optional>
 
 namespace avdecc
@@ -41,6 +42,8 @@ namespace mappingsHelper
 void showMappingsEditor(QObject* obj, la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, std::optional<la::avdecc::entity::model::StreamPortIndex> const streamPortIndex, la::avdecc::entity::model::StreamIndex const streamIndex) noexcept;
 /** Builds the Identity audio mappings for the specified StreamPort (first stream channel mapped to first cluster channel, second one to second one, ...). Only the editable streams are used (matching ClockDomain, valid StreamFormat and primary stream of a Redundant Set). Returns an empty list if no mapping can be built. */
 la::avdecc::entity::model::AudioMappings buildIdentityAudioMappings(la::avdecc::controller::ControlledEntity const& entity, la::avdecc::entity::model::AudioUnitIndex const audioUnitIndex, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex) noexcept;
+/** Returns the errors of the specified mapping of a StreamPort of the current Configuration, or an empty list if the mapping is valid. A mapping is invalid if it references a Stream, an Audio Cluster or an Audio Cluster channel that does not exist in the model, and dangling (forbidden by Milan) if it references a channel that does not exist in the current format of the Stream. */
+QStringList getAudioMappingErrors(la::avdecc::controller::ControlledEntity const& entity, la::avdecc::entity::model::DescriptorType const streamPortType, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMapping const& mapping) noexcept;
 la::avdecc::entity::model::AudioMappings getMaximumAudioMappings(la::avdecc::entity::model::AudioMappings const& mappings, size_t const offset) noexcept;
 /** Adds new input audio mappings. Entity is expected to be under ExclusiveAccess. */
 void batchAddInputAudioMappings(la::avdecc::UniqueIdentifier const entityID, la::avdecc::entity::model::StreamPortIndex const streamPortIndex, la::avdecc::entity::model::AudioMappings const& mappings, hive::modelsLibrary::ControllerManager::AddStreamPortInputAudioMappingsHandler const& handler = {}) noexcept;
