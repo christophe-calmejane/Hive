@@ -407,10 +407,12 @@ int main(int argc, char* argv[])
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	} while (splash.isVisible() && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() <= SPLASH_DELAY);
 
-	/* Now finish the splashscreen and show the main window */
-	splash.finish(&window);
+	/* Now show the main window and finish the splashscreen */
+	// Show the main window before closing the splashscreen, so the application is never left without a single visible window.
+	// Some window managers (eg. mutter on wayland) lose the application association of the new window when that happens, which breaks the taskbar icon.
 	window.setReady();
 	window.show();
+	splash.finish(&window);
 
 	auto retValue = int{ 0u };
 #ifndef BUGREPORTER_CATCH_EXCEPTIONS
