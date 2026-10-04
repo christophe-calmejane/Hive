@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Connection matrix taking a very long time to populate on large networks while displayed in Stream Based Routing mode
 - User feedback when failing to save the log file
 - [Localized strings now fetched from the configuration being inspected instead of the active one](https://github.com/christophe-calmejane/Hive/issues/178)
+- Discovered Entities column headers being truncated when the UI font is larger than the default, columns are now at least as wide as their header text
 
 ## [1.4.0] - 2025-12-19
 ### Added

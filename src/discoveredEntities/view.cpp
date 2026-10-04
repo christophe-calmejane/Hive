@@ -117,6 +117,17 @@ void View::setupView(hive::VisibilityDefaults const& defaults, bool const firstS
 	setColumnWidth(ControllerModelEntityColumn_MediaClockName, defaults::ui::AdvancedView::ColumnWidth_Name);
 	setColumnWidth(ControllerModelEntityColumn_ClockDomainLockState, defaults::ui::AdvancedView::ColumnWidth_SquareIcon);
 
+	// The column widths above are hardcoded pixel values, so a header label may not fit depending on the UI font and screen scaling.
+	// Widen any column that is too narrow for its own header text (sectionSizeHint accounts for the font, the style margins and the sort indicator).
+	for (auto column = 0; column < model()->columnCount(); ++column)
+	{
+		auto const headerWidth = _dynamicHeaderView.sectionSizeHint(column);
+		if (columnWidth(column) < headerWidth)
+		{
+			setColumnWidth(column, headerWidth);
+		}
+	}
+
 	// Connect all signals
 	auto& manager = hive::modelsLibrary::ControllerManager::getInstance();
 
