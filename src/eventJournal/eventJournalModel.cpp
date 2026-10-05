@@ -214,33 +214,68 @@ EventJournalFilterProxyModel::EventJournalFilterProxyModel(QObject* parent)
 
 void EventJournalFilterProxyModel::setHiddenSeverities(QSet<int> const& severities)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	beginFilterChange();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 	_hiddenSeverities = severities;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	endFilterChange();
+#else //QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
 	invalidateFilter();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 }
 
 void EventJournalFilterProxyModel::setHiddenCategories(QSet<int> const& categories)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	beginFilterChange();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 	_hiddenCategories = categories;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	endFilterChange();
+#else //QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
 	invalidateFilter();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 }
 
 void EventJournalFilterProxyModel::setHiddenEntities(QSet<QString> const& entityNames)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	beginFilterChange();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 	_hiddenEntities = entityNames;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	endFilterChange();
+#else //QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
 	invalidateFilter();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 }
 
 void EventJournalFilterProxyModel::setSearchPattern(QString const& pattern)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	beginFilterChange();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 	_searchPattern = QRegularExpression{ pattern, QRegularExpression::CaseInsensitiveOption };
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	endFilterChange();
+#else //QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
 	invalidateFilter();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 }
 
 void EventJournalFilterProxyModel::setTimeRange(std::optional<qint64> const& from, std::optional<qint64> const& to)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	beginFilterChange();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 	_timeFrom = from;
 	_timeTo = to;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+	endFilterChange();
+#else //QT_VERSION < QT_VERSION_CHECK(6, 10, 0)
 	invalidateFilter();
+#endif //QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
 }
 
 bool EventJournalFilterProxyModel::filterAcceptsRow(int sourceRow, QModelIndex const& sourceParent) const
