@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Connection matrix taking a very long time to populate on large networks while displayed in Stream Based Routing mode
 - User feedback when failing to save the log file
 - [Localized strings now fetched from the configuration being inspected instead of the active one](https://github.com/christophe-calmejane/Hive/issues/178)
+- Missing taskbar icon on linux Wayland sessions, caused by the splashscreen being closed before the main window was shown (also reduces the startup time by about one second)
 
 ## [1.4.0] - 2025-12-19
 ### Added
