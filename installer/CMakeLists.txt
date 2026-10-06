@@ -1,12 +1,15 @@
 # Hive Installer CMake file
 
 # We must redefine the variables to take marketing digits/postfix into account (didn't do it before because cu_setup_project_version_variables is a macro and it would have defined the variables for all targets)
-cu_setup_project_version_variables(${HIVE_VERSION} MARKETING_VERSION_DIGITS ${MARKETING_VERSION_DIGITS} MARKETING_VERSION_POSTFIX ${MARKETING_VERSION_POSTFIX})
+cu_setup_project_version_variables(${HIVE_VERSION} MARKETING_VERSION_DIGITS ${MARKETING_VERSION_DIGITS} MARKETING_VERSION_POSTFIX ${MARKETING_VERSION_POSTFIX} MARKETING_VERSION ${MARKETING_VERSION})
 
 # Set Install Key (used to detect if a previous version should be uninstalled first)
 set(CU_INSTALL_KEY "${PROJECT_NAME}")
-if(CU_PROJECT_MARKETING_VERSION)
-	string(APPEND CU_INSTALL_KEY " ${CU_PROJECT_MARKETING_VERSION}")
+if(CU_PROJECT_USER_MARKETING_VERSION)
+	string(APPEND CU_INSTALL_KEY " ${CU_PROJECT_USER_MARKETING_VERSION}") # Append the digit-processed user defined marketing version to the install key
+	set(CU_PROJECT_MARKETING_VERSION ${MARKETING_VERSION}) # Set the marketing version to the user defined version (full provided version)
+elseif(CU_PROJECT_MARKETING_VERSION)
+	string(APPEND CU_INSTALL_KEY " ${CU_PROJECT_MARKETING_VERSION}") # Append the marketing version to the install key
 endif()
 
 include(${CU_BASE_DIR}/cpack/productbuild/ChmodBPF.cmake REQUIRED)
@@ -81,6 +84,10 @@ macro(configure_PRODUCTBUILD_extra_components)
 	cu_chmodbpf_add_component()
 endmacro()
 
+# Declare a function that will be called before generating the DragNDrop package, to include custom commands
+macro(configure_DragNDrop_extra_commands)
+endmacro()
+
 # Declare a function that will be called before generating the IFW package, to include custom components
 macro(configure_IFW_extra_components)
 	if(WIN32)
@@ -99,6 +106,10 @@ macro(configure_IFW_extra_components)
 	endif()
 endmacro()
 
+if(APPLE)
+	set(USE_DRAGDROP_GENERATOR ON) # Use DragNDrop generator on macOS
+endif()
+
 set(CU_INSTALL_LICENSE_FILE_PATH "${CU_ROOT_DIR}/COPYING.LESSER.txt")
 if(WIN32)
 	set(CU_INSTALL_ICO_FILE_PATH "${CU_ROOT_DIR}/resources/win32/Icon.ico")
@@ -107,6 +118,9 @@ if(WIN32)
 	set(CPACK_CU_NSIS_MULTIUSER_ENABLED 0)
 elseif(APPLE)
 	set(CU_INSTALL_PRODUCTBUILD_BACKGROUND_FILE_PATH "background.png")
+  set(CU_INSTALL_DND_BACKGROUND_FILE_NAME "background.png")
+  set(CU_INSTALL_DND_APP_ICON_POSITION "{192, 352}")
+  set(CU_INSTALL_DND_SHORTCUT_ICON_POSITION "{448, 352}")
 endif()
 
 # Include common installer settings
