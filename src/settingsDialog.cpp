@@ -222,6 +222,7 @@ private:
 		const std::map<la::avdecc::protocol::ProtocolInterface::Type, QString> protocolInterfaceName{
 			{ la::avdecc::protocol::ProtocolInterface::Type::PCap, "PCap" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNative, "MacOS Native" },
+			{ la::avdecc::protocol::ProtocolInterface::Type::MacOSNCap, "MacOS NCap" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::Proxy, "Proxy" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::Virtual, "Virtual" },
 			{ la::avdecc::protocol::ProtocolInterface::Type::Serial, "Serial Port" },

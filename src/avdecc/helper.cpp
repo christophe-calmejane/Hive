@@ -39,6 +39,8 @@ QString protocolInterfaceTypeName(la::avdecc::protocol::ProtocolInterface::Type 
 			return "PCap";
 		case la::avdecc::protocol::ProtocolInterface::Type::MacOSNative:
 			return "MacOS Native";
+		case la::avdecc::protocol::ProtocolInterface::Type::MacOSNCap:
+			return "MacOS NCap";
 		case la::avdecc::protocol::ProtocolInterface::Type::Proxy:
 			return "Proxy";
 		case la::avdecc::protocol::ProtocolInterface::Type::Virtual:
