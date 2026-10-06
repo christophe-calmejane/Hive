@@ -32,3 +32,5 @@ ehthumbs.db
 # Ignore CMakeUser presets
 CMakeUserPresets.json
 
+# Ignore provisionprofile files
+/*.provisionprofile

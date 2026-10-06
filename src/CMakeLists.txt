@@ -359,6 +359,11 @@ if(BUILD_HIVE_APPLICATION)
 			MACOSX_BUNDLE_ICON_FILE ${ICON_FILE_NAME}
 			MACOSX_BUNDLE_INFO_PLIST ${HIVE_RESOURCES_FOLDER}/macOS/Info.plist.in
 		)
+
+		# Restricted entitlements (required by the MacOSNCap protocol interface and to observe the local network topology) are only claimed when a provisioning profile allowing them is provided, as macOS kills the application at launch otherwise
+		if(CU_PROVISIONING_PROFILE)
+			set(HIVE_SIGNING_PARAMETERS CODESIGN_ENTITLEMENTS "${HIVE_RESOURCES_FOLDER}/macOS/Hive.entitlements" PROVISION_PROFILE "${CU_PROVISIONING_PROFILE}")
+		endif()
 	endif()
 
 	if(ENABLE_HIVE_FEATURE_SPARKLE)
@@ -366,7 +371,7 @@ if(BUILD_HIVE_APPLICATION)
 	endif()
 
 	# Deploy and install target and its runtime dependencies (call this AFTER ALL dependencies have been added to the target)
-	cu_setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS})
+	cu_setup_deploy_runtime(${PROJECT_NAME} INSTALL ${SIGN_FLAG} ${SDR_PARAMETERS} ${HIVE_SIGNING_PARAMETERS})
 endif()
 
 ################

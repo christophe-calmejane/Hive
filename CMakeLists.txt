@@ -103,6 +103,7 @@ set(BUILD_AVDECC_CONTROLLER ON CACHE BOOL "Build avdecc controller library." FOR
 set(BUILD_AVDECC_INTERFACE_PCAP ON CACHE BOOL "Build the pcap protocol interface." FORCE)
 set(BUILD_AVDECC_INTERFACE_PCAP_DYNAMIC_LINKING ON CACHE BOOL "Pcap protocol interface uses dynamic shared library linking (instead of static linking)." FORCE)
 set(BUILD_AVDECC_INTERFACE_MAC ON CACHE BOOL "Build the macOS native protocol interface (macOS only)." FORCE)
+set(BUILD_AVDECC_INTERFACE_MAC_NCAP ON CACHE BOOL "Build the macOS native protocol interface based on Network.framework (NWEthernetChannel, macOS 10.15+ only)." FORCE)
 set(BUILD_AVDECC_INTERFACE_PROXY OFF CACHE BOOL "Build the proxy protocol interface." FORCE)
 set(BUILD_AVDECC_INTERFACE_VIRTUAL ON CACHE BOOL "Build the virtual protocol interface (for unit tests)." FORCE)
 set(BUILD_AVDECC_INTERFACE_SERIAL ON CACHE BOOL "Build the serial protocol interface (macOS and linux only)." FORCE)

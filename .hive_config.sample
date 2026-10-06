@@ -5,6 +5,9 @@
 # Signing identity to be used, run './gen_cmake.sh -ids' to get the list of valid identities on this computer (copy the printed identity without adding quotes)
 #identity=
 
+# macOS provisioning profile to embed in the application bundle (path relative to the project root folder, or absolute), required to use restricted entitlements (MacOSNCap protocol interface, network topology observation). Defaults to "" which will not embed any profile
+#provisioning_profile=
+
 # Windows signing tool to use, supported values are "signtool" and "azuresigntool". Default is "signtool"
 #signing_tool=signtool
 
