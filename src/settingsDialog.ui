@@ -61,7 +61,7 @@
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Primarily Preferred Locale (Coming loon)</string>
+         <string>Primarily Preferred Locale (Coming later)</string>
         </property>
        </widget>
       </item>
@@ -78,7 +78,7 @@
          <bool>false</bool>
         </property>
         <property name="text">
-         <string>Secondarily Preferred Locale (Coming loon)</string>
+         <string>Secondarily Preferred Locale (Coming later)</string>
         </property>
        </widget>
       </item>
