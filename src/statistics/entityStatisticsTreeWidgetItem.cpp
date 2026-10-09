@@ -82,7 +82,7 @@ EntityStatisticsTreeWidgetItem::EntityStatisticsTreeWidgetItem(la::avdecc::Uniqu
 			}
 		});
 	connect(&manager, &hive::modelsLibrary::ControllerManager::aecpResponseAverageTimeChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value, la::avdecc::controller::InterfaceType const interfaceType)
+		[this](la::avdecc::UniqueIdentifier const entityID, std::chrono::microseconds const& value, la::avdecc::controller::InterfaceType const interfaceType)
 		{
 			if (entityID == _entityID)
 			{
@@ -202,17 +202,18 @@ void EntityStatisticsTreeWidgetItem::updateAecpUnexpectedResponseCounter(std::ui
 
 void EntityStatisticsTreeWidgetItem::updateAecpResponseAverageTime() noexcept
 {
-	auto const& primaryValue = _perInterfaceStatistics[la::avdecc::utils::to_integral(la::avdecc::controller::InterfaceType::Primary)].aecpResponseAverageTime;
+	// Displayed in milliseconds with a fractional part (the averages have a microsecond resolution)
+	auto const primaryValue = std::chrono::duration<double, std::milli>{ _perInterfaceStatistics[la::avdecc::utils::to_integral(la::avdecc::controller::InterfaceType::Primary)].aecpResponseAverageTime }.count();
 	auto text = QString{};
 	if (_showPerInterfaceStatistics)
 	{
 		// Each interface maintains its own average, there is no meaningful entity-wide value
-		auto const& secondaryValue = _perInterfaceStatistics[la::avdecc::utils::to_integral(la::avdecc::controller::InterfaceType::Secondary)].aecpResponseAverageTime;
-		text = QString{ "Primary: %1 msec, Secondary: %2 msec" }.arg(primaryValue.count()).arg(secondaryValue.count());
+		auto const secondaryValue = std::chrono::duration<double, std::milli>{ _perInterfaceStatistics[la::avdecc::utils::to_integral(la::avdecc::controller::InterfaceType::Secondary)].aecpResponseAverageTime }.count();
+		text = QString{ "Primary: %1 msec, Secondary: %2 msec" }.arg(primaryValue, 0, 'f', 3).arg(secondaryValue, 0, 'f', 3);
 	}
 	else
 	{
-		text = QString::number(primaryValue.count()) + " msec";
+		text = QString::number(primaryValue, 'f', 3) + " msec";
 	}
 	_aecpResponseAverageTimeItem.setText(1, text);
 }

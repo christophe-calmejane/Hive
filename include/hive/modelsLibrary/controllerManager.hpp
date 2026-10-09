@@ -65,7 +65,7 @@ public:
 		std::uint64_t aecpRetryCounter{ 0ull };
 		std::uint64_t aecpTimeoutCounter{ 0ull };
 		std::uint64_t aecpUnexpectedResponseCounter{ 0ull };
-		std::chrono::milliseconds aecpResponseAverageTime{};
+		std::chrono::microseconds aecpResponseAverageTime{};
 		std::uint64_t aemAecpUnsolicitedCounter{ 0ull };
 		std::uint64_t aemAecpUnsolicitedLossCounter{ 0ull };
 		std::uint64_t mvuAecpUnsolicitedCounter{ 0ull };
@@ -463,7 +463,7 @@ public:
 	Q_SIGNAL void aecpRetryCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
 	Q_SIGNAL void aecpTimeoutCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
 	Q_SIGNAL void aecpUnexpectedResponseCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
-	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value, la::avdecc::controller::InterfaceType const interfaceType); // value is the average response time of the given interface (each interface maintains its own average)
+	Q_SIGNAL void aecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::microseconds const& value, la::avdecc::controller::InterfaceType const interfaceType); // value is the average response time of the given interface (each interface maintains its own average)
 	Q_SIGNAL void aemAecpUnsolicitedCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue);
 	/* The two unsolicited loss signals also tell which notifications were lost: the ones from expectedSequenceID up to receivedSequenceID (excluded), the sequence space wrapping at 16 bits */
 	Q_SIGNAL void aemAecpUnsolicitedLossCounterChanged(la::avdecc::UniqueIdentifier const entityID, std::uint64_t const value, la::avdecc::controller::InterfaceType const interfaceType, std::uint64_t const interfaceValue, la::avdecc::protocol::AecpSequenceID const expectedSequenceID, la::avdecc::protocol::AecpSequenceID const receivedSequenceID);

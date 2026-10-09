@@ -954,7 +954,7 @@ private:
 				emit aecpUnexpectedResponseCounterChanged(entityID, total, interfaceType, value);
 			});
 	}
-	virtual void onAecpResponseAverageTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::chrono::milliseconds const& value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
+	virtual void onAecpResponseAverageTimeChanged(la::avdecc::controller::Controller const* const /*controller*/, la::avdecc::controller::ControlledEntity const* const entity, std::chrono::microseconds const& value, la::avdecc::controller::InterfaceType const interfaceType) noexcept override
 	{
 		emit aecpResponseAverageTimeChanged(entity->getEntity().getEntityID(), value, interfaceType);
 	}

@@ -2443,7 +2443,7 @@ TEST_F(EventJournal_F, AecpResponseTime_IsJournaledOnLargeChanges)
 	auto const entityID = la::avdecc::UniqueIdentifier{ ConnectedListenerEntityID };
 	loadConnectedFixture();
 	auto& controllerManager = hive::modelsLibrary::ControllerManager::getInstance();
-	auto baseline = std::chrono::milliseconds{};
+	auto baseline = std::chrono::microseconds{};
 	{
 		auto const controlledEntity = controllerManager.getControlledEntity(entityID);
 		ASSERT_TRUE(!!controlledEntity);
@@ -2469,12 +2469,14 @@ TEST_F(EventJournal_F, AecpResponseTime_IsJournaledOnLargeChanges)
 	emit controllerManager.aecpResponseAverageTimeChanged(entityID, baseline + std::chrono::milliseconds{ 60 }, la::avdecc::controller::InterfaceType::Primary);
 	auto events = responseTimeEvents();
 	ASSERT_EQ(std::size_t{ 1u }, events.size());
-	EXPECT_EQ(QString{ "AECP response time changed to %1 ms" }.arg((baseline + std::chrono::milliseconds{ 60 }).count()), events[0].summary);
+	EXPECT_EQ(QString{ "AECP response time changed to %1 ms" }.arg(std::chrono::duration<double, std::milli>{ baseline + std::chrono::milliseconds{ 60 } }.count(), 0, 'f', 3), events[0].summary);
 	EXPECT_EQ(EventJournal::Level::Diagnostic, events[0].level);
 	EXPECT_EQ(QString{ "Primary Interface" }, events[0].subject);
 	auto const details = eventDetails(events[0]);
-	EXPECT_EQ(static_cast<int>(baseline.count()), details.value("previous_average_ms").toInt());
-	EXPECT_EQ(static_cast<int>(baseline.count() + 60), details.value("average_ms").toInt());
+	auto const baselineMsec = std::chrono::duration<double, std::milli>{ baseline }.count();
+	auto const changedMsec = std::chrono::duration<double, std::milli>{ baseline + std::chrono::milliseconds{ 60 } }.count();
+	EXPECT_DOUBLE_EQ(baselineMsec, details.value("previous_average_ms").toDouble());
+	EXPECT_DOUBLE_EQ(changedMsec, details.value("average_ms").toDouble());
 	EXPECT_EQ(QString{ "Primary" }, details.value("interface").toString());
 
 	// Back to the baseline: journaled again (the difference to the last journaled value is 60 ms)

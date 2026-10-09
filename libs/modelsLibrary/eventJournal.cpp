@@ -1048,7 +1048,7 @@ public:
 	}
 
 	/** AECP average response time of an entity on one controller interface: journaled at diagnostic level when it moved by AecpResponseTimeChangeThreshold since the last journaled value (the baseline is seeded when the entity comes online). */
-	void handleAecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept
+	void handleAecpResponseAverageTimeChanged(la::avdecc::UniqueIdentifier const entityID, std::chrono::microseconds const value, la::avdecc::controller::InterfaceType const interfaceType) noexcept
 	{
 		if (!isRecording())
 		{
@@ -1070,9 +1070,12 @@ public:
 		it->second = value;
 		auto details = QJsonObject{};
 		details["interface"] = helper::interfaceTypeName(interfaceType);
-		details["previous_average_ms"] = static_cast<qint64>(previous.count());
-		details["average_ms"] = static_cast<qint64>(value.count());
-		addEvent(Category::Entity, Severity::Info, entityID, entityNameFor(entityID), QString{ "%1 Interface" }.arg(helper::interfaceTypeName(interfaceType)), QString{ "AECP response time changed to %1 ms" }.arg(value.count()), details, Level::Diagnostic);
+		// Milliseconds with a fractional part (the averages have a microsecond resolution)
+		auto const previousMsec = std::chrono::duration<double, std::milli>{ previous }.count();
+		auto const valueMsec = std::chrono::duration<double, std::milli>{ value }.count();
+		details["previous_average_ms"] = previousMsec;
+		details["average_ms"] = valueMsec;
+		addEvent(Category::Entity, Severity::Info, entityID, entityNameFor(entityID), QString{ "%1 Interface" }.arg(helper::interfaceTypeName(interfaceType)), QString{ "AECP response time changed to %1 ms" }.arg(valueMsec, 0, 'f', 3), details, Level::Diagnostic);
 	}
 
 	void setRecordingLevel(Level const level) noexcept
@@ -3512,7 +3515,7 @@ public:
 	std::uint64_t _notificationsAtHeartbeat{ 0u }; // Unsolicited notifications total at the previous heartbeat
 	NetworkInterfacesObserver _networkInterfacesObserver;
 	std::map<std::string, ControllerInterfaceState> _controllerInterfaces{}; // Every network interface of the computer, by identifier
-	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::controller::InterfaceType, std::chrono::milliseconds>, la::avdecc::UniqueIdentifier::hash> _aecpResponseTimes{}; // Last journaled (or seeded) AECP average response time per controller interface
+	std::unordered_map<la::avdecc::UniqueIdentifier, std::map<la::avdecc::controller::InterfaceType, std::chrono::microseconds>, la::avdecc::UniqueIdentifier::hash> _aecpResponseTimes{}; // Last journaled (or seeded) AECP average response time per controller interface
 };
 
 /* ************************************************************ */
@@ -3568,7 +3571,7 @@ EventJournal::EventJournal()
 			_pImpl->handleEntityOffline(entityID);
 		});
 	connect(&manager, &ControllerManager::aecpResponseAverageTimeChanged, this,
-		[this](la::avdecc::UniqueIdentifier const entityID, std::chrono::milliseconds const& value, la::avdecc::controller::InterfaceType const interfaceType)
+		[this](la::avdecc::UniqueIdentifier const entityID, std::chrono::microseconds const& value, la::avdecc::controller::InterfaceType const interfaceType)
 		{
 			_pImpl->handleAecpResponseAverageTimeChanged(entityID, value, interfaceType);
 		});
