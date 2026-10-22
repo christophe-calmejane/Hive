@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Enhanced connection matrix red color with MSRP Failure status](https://github.com/christophe-calmejane/Hive/issues/149)
 - Vendor names now also resolved from the IEEE MA-M (OUI-28) and MA-S/IAB (OUI-36) registries, not just MA-L (OUI-24)
 - Entity connection summaries also report Channel connections that are only missing their Talker dynamic mappings
+- Updated WinSparkle to 0.9.4, Windows updates are now signed using EdDSA (ed25519) instead of DSA
 
 ### Fixed
 - Channel Based Routing matrix displaying a Listener Channel as connected to every Channel of the Talker Entity, instead of the Talker Channel it is actually connected to
