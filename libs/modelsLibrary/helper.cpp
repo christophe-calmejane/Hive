@@ -360,8 +360,8 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 		return *name;
 	}
 
-	// If not found, convert to hex string
-	return toHexQString(entityID.getVendorID<la::avdecc::OuiType::Oui24>(), true, true);
+	// If not found, convert the OUI-24 to hex string (zero filled to its own 6 digits, not to the 8 digits of the integer type holding it)
+	return QString{ "0x%1" }.arg(QString::number(entityID.getVendorID<la::avdecc::OuiType::Oui24>(), 16).toUpper(), 6, QChar{ '0' });
 }
 
 } // namespace helper

@@ -24,6 +24,7 @@
 
 #include <gtest/gtest.h>
 #include <avdecc/helper.hpp>
+#include <hive/modelsLibrary/helper.hpp>
 
 // Reserved bits (out of specification device, or newer specification) must be displayed with their value
 TEST(Helper, FlagsToStringUnknownBit)
@@ -61,4 +62,11 @@ TEST(Helper, EnumToStringUnknownValue)
 	EXPECT_EQ(QString{ "Unknown 0x42" }, avdecc::helper::msrpFailureCodeToString(static_cast<la::avdecc::entity::model::MsrpFailureCode>(0x42)));
 	EXPECT_EQ(QString{ "Unknown 0x07" }, avdecc::helper::probingStatusToString(static_cast<la::avdecc::entity::model::ProbingStatus>(0x07)));
 	EXPECT_EQ(QString{ "Unknown 0x0100" }, avdecc::helper::memoryObjectTypeToString(static_cast<la::avdecc::entity::model::MemoryObjectType>(0x0100)));
+}
+
+// An unknown vendor is displayed as its OUI-24, which is 6 hex digits wide (not zero filled to the 8 digits of the integer type holding it)
+TEST(Helper, VendorNameUnknownOui)
+{
+	// Locally administered OUI (never assigned by the IEEE), with a leading zero digit
+	EXPECT_EQ(QString{ "0x0A1234" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x0A1234FFFE000001u }));
 }
