@@ -237,6 +237,48 @@ bool JournalAnalysis::Topology::hasAsPaths() const noexcept
 	return false;
 }
 
+bool JournalAnalysis::Topology::Interface::hasInconsistentClockIdentity() const noexcept
+{
+	// The AsPath starts with the grandmaster: an interface whose AsPath has more than one element is not the grandmaster, so it cannot have the identity of the first element
+	return asPath.size() >= 2u && clockIdentity && clockIdentity == asPath.front() && clockIdentity != asPath.back();
+}
+
+EntityID JournalAnalysis::Topology::clockIdentity(EntityID const entityID, Plane const plane) const noexcept
+{
+	if (plane < 0)
+	{
+		return {};
+	}
+	auto const entityIt = entities.find(entityID);
+	if (entityIt == entities.end())
+	{
+		return {};
+	}
+	auto const interfaceIt = entityIt->second.interfaces.find(static_cast<la::avdecc::entity::model::AvbInterfaceIndex>(plane));
+	if (interfaceIt == entityIt->second.interfaces.end())
+	{
+		return {};
+	}
+	auto const& interface = interfaceIt->second;
+	if (!interface.hasInconsistentClockIdentity())
+	{
+		return interface.clockIdentity;
+	}
+	// Most implementations end the AsPath with their own clock identity. For the ones that don't, the last element is their upstream neighbor: it is detected when that neighbor is another entity (the clock identity then remains unknown), but not when it is a switch
+	auto const& lastClockIdentity = interface.asPath.back();
+	for (auto const& [otherEntityID, otherEntity] : entities)
+	{
+		for (auto const& [otherIndex, otherInterface] : otherEntity.interfaces)
+		{
+			if (otherInterface.clockIdentity == lastClockIdentity)
+			{
+				return {};
+			}
+		}
+	}
+	return lastClockIdentity;
+}
+
 std::vector<EntityID> JournalAnalysis::Topology::hops(EntityID const entityID, Plane const plane) const noexcept
 {
 	if (plane < 0)
@@ -254,8 +296,8 @@ std::vector<EntityID> JournalAnalysis::Topology::hops(EntityID const entityID, P
 		return {};
 	}
 	auto hops = interfaceIt->second.asPath;
-	// Most implementations end the AsPath with the entity's own clock identity
-	if (!hops.empty() && interfaceIt->second.clockIdentity && hops.back() == interfaceIt->second.clockIdentity)
+	// Most implementations end the AsPath with the entity's own clock identity (the deduced one when the reported one is inconsistent: it would otherwise be taken as the switch the entity is plugged into)
+	if (auto const ownClockIdentity = clockIdentity(entityID, plane); !hops.empty() && ownClockIdentity && hops.back() == ownClockIdentity)
 	{
 		hops.pop_back();
 	}
@@ -287,8 +329,8 @@ std::optional<EntityID> JournalAnalysis::Topology::rackSwitch(EntityID const ent
 	if (std::find(upstream.begin(), upstream.end(), path.back()) != upstream.end())
 	{
 		// Plugged directly into a switch serving other racks: a rack of one, identified by the entity (its clock identity when known, since racks are clock identities)
-		auto const& interface = entities.at(entityID).interfaces.at(static_cast<la::avdecc::entity::model::AvbInterfaceIndex>(plane));
-		return interface.clockIdentity ? interface.clockIdentity : entityID;
+		auto const ownClockIdentity = clockIdentity(entityID, plane);
+		return ownClockIdentity ? ownClockIdentity : entityID;
 	}
 	return path.back();
 }

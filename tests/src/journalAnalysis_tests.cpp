@@ -368,6 +368,41 @@ TEST(JournalAnalysis, Topology_FromAnEntityDocument)
 	EXPECT_FALSE(other.addEntityDocument(nlohmann::json::object()));
 }
 
+// An entity reporting the clock identity of its grandmaster as its own (seen in the field) is mapped with the clock identity deduced from the end of its AsPath: its real clock identity must not be taken as the switch it is plugged into
+TEST(JournalAnalysis, Topology_GrandmasterClockIdentityReportedAsOwn)
+{
+	auto topology = JournalAnalysis::Topology{};
+	// Two amplifiers of the same rack, the second one reporting the clock identity of its grandmaster (and ending its AsPath with its real one)
+	auto& consistent = topology.entities[amplifier(0u)].interfaces[0u];
+	consistent.clockIdentity = clockIdentity(amplifier(0u), 0);
+	consistent.asPath = { EntityID{ GrandmasterPrimary }, EntityID{ BranchPrimary }, EntityID{ Rack1Primary }, clockIdentity(amplifier(0u), 0) };
+	auto& inconsistent = topology.entities[amplifier(1u)].interfaces[0u];
+	inconsistent.clockIdentity = EntityID{ GrandmasterPrimary };
+	inconsistent.asPath = { EntityID{ GrandmasterPrimary }, EntityID{ BranchPrimary }, EntityID{ Rack1Primary }, clockIdentity(amplifier(1u), 0) };
+
+	EXPECT_FALSE(consistent.hasInconsistentClockIdentity());
+	EXPECT_TRUE(inconsistent.hasInconsistentClockIdentity());
+	EXPECT_EQ(clockIdentity(amplifier(0u), 0), topology.clockIdentity(amplifier(0u), 0));
+	EXPECT_EQ(clockIdentity(amplifier(1u), 0), topology.clockIdentity(amplifier(1u), 0));
+	// Both amplifiers are in the same rack, behind the same branch
+	EXPECT_EQ(3u, topology.hops(amplifier(1u), 0).size());
+	EXPECT_EQ(EntityID{ Rack1Primary }, topology.rackSwitch(amplifier(1u), 0).value());
+	EXPECT_EQ(EntityID{ BranchPrimary }, topology.branchSwitch(amplifier(1u), 0).value());
+	EXPECT_EQ(EntityID{ Rack1Primary }, topology.rackSwitch(amplifier(0u), 0).value()) << "The rack switch must not become an upstream switch because of the real clock identity of the inconsistent entity";
+
+	// An amplifier daisy chained behind the first one, reporting the clock identity of its grandmaster and not ending its AsPath with its own: the last element is the first amplifier, it must not be taken as its clock identity
+	auto daisyChained = JournalAnalysis::Topology{};
+	daisyChained.entities[amplifier(0u)].interfaces[0u] = consistent;
+	auto& chained = daisyChained.entities[amplifier(2u)].interfaces[0u];
+	chained.clockIdentity = EntityID{ GrandmasterPrimary };
+	chained.asPath = { EntityID{ GrandmasterPrimary }, EntityID{ BranchPrimary }, EntityID{ Rack1Primary }, clockIdentity(amplifier(0u), 0) };
+	EXPECT_TRUE(chained.hasInconsistentClockIdentity());
+	EXPECT_FALSE(daisyChained.clockIdentity(amplifier(2u), 0).isValid());
+	// Same rack than a consistent entity daisy chained behind the first amplifier: the switch embedded in that amplifier
+	EXPECT_EQ(clockIdentity(amplifier(0u), 0), daisyChained.rackSwitch(amplifier(2u), 0).value());
+	EXPECT_EQ(daisyChained.rackSwitch(amplifier(0u), 0).value(), daisyChained.rackSwitch(amplifier(2u), 0).value());
+}
+
 TEST(JournalAnalysis, Hits_IncidentsStormsAndRuns)
 {
 	auto builder = SessionBuilder{};
@@ -894,4 +929,23 @@ TEST(JournalAnalysis, Report_HasTheSectionsAndTheEventLinks)
 	// An empty session has a report too
 	auto const empty = JournalAnalysis{ EventJournal::Session{}, JournalAnalysis::Topology{} };
 	EXPECT_TRUE(empty.markdownReport(EventJournal::Session{}).contains("no event"));
+}
+
+// The interfaces reporting the clock identity of their grandmaster as their own are listed in the topology section, and still mapped to their rack
+TEST(JournalAnalysis, Report_ListsTheInconsistentClockIdentities)
+{
+	auto builder = SessionBuilder{};
+	builder.standardStart();
+	builder.finish(Base + Hour);
+	auto topology = topologyOf(builder.session);
+	topology.entities.at(amplifier(1u)).interfaces.at(0u).clockIdentity = EntityID{ GrandmasterPrimary };
+
+	auto const analysis = JournalAnalysis{ builder.session, topology };
+	auto options = JournalAnalysis::ReportOptions{};
+	options.timeZone = QTimeZone::utc();
+	auto const report = analysis.markdownReport(builder.session, options);
+
+	EXPECT_TRUE(report.contains("Inconsistent clock identity reported by 1 interface(s)"));
+	EXPECT_TRUE(report.contains(QString{ "Amp 2 (%1: reports %2, deduced %3)" }.arg(JournalAnalysis::planeName(0), idString(GrandmasterPrimary), idString(clockIdentity(amplifier(1u), 0)))));
+	EXPECT_TRUE(report.contains("Amp 1/2/3"));
 }

@@ -75,6 +75,9 @@ public:
 			EntityID clockIdentity{}; /**< Clock identity of the interface (the AsPath usually ends with it) */
 			EntityID grandmasterID{}; /**< Grandmaster of the plane as seen by the interface */
 			std::vector<EntityID> asPath{}; /**< Clock identities from the grandmaster down to the entity (empty when unknown) */
+
+			/** Returns true if the reported clock identity contradicts the AsPath: it is the one of the grandmaster (the first element of the AsPath) while the AsPath shows the interface is not the grandmaster (a device bug seen in the field). */
+			bool hasInconsistentClockIdentity() const noexcept;
 		};
 		struct StreamInput
 		{
@@ -95,6 +98,9 @@ public:
 
 		/** Returns true if at least one interface has an AsPath (the rack and branch computations need it). */
 		bool hasAsPaths() const noexcept;
+
+		/** Returns the clock identity of an interface: the reported one, or the one deduced from the end of the AsPath when the reported one is inconsistent (see Interface::hasInconsistentClockIdentity), invalid when unknown. */
+		EntityID clockIdentity(EntityID const entityID, Plane const plane) const noexcept;
 
 		/** Returns the hops of an interface from the grandmaster down to the switch the entity is plugged into (the AsPath without the entity's own clock identity), or an empty vector when unknown. */
 		std::vector<EntityID> hops(EntityID const entityID, Plane const plane) const noexcept;

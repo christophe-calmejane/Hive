@@ -569,6 +569,25 @@ private:
 			rows.push_back({ planeName(key.first), identifier(key.second), QString::number(racks.size()), labels.join("; ") });
 		}
 		table({ "Plane", "Branch switch", "Racks", "Racks (entities)" }, rows);
+		// Interfaces reporting the clock identity of their grandmaster as their own: the analysis uses the one deduced from their AsPath
+		auto inconsistencies = QStringList{};
+		for (auto const& [entityID, entity] : topology.entities)
+		{
+			for (auto const& [index, interface] : entity.interfaces)
+			{
+				if (interface.hasInconsistentClockIdentity())
+				{
+					auto const plane = static_cast<Plane>(index);
+					auto const deduced = topology.clockIdentity(entityID, plane);
+					inconsistencies.push_back(QString{ "%1 (%2: reports %3, %4)" }.arg(name(entityID), planeName(plane), identifier(interface.clockIdentity), deduced ? "deduced " + identifier(deduced) : QString{ "real one unknown" }));
+				}
+			}
+		}
+		if (!inconsistencies.isEmpty())
+		{
+			inconsistencies.sort();
+			paragraph(QString{ "Inconsistent clock identity reported by %1 interface(s): the clock identity of their grandmaster is reported as their own while their AsPath shows they are not the grandmaster (a device bug), the one deduced from their AsPath is used instead: %2." }.arg(inconsistencies.size()).arg(inconsistencies.join("; ")));
+		}
 		if (_results.asPathChanges > 0u)
 		{
 			paragraph(QString{ "%1 'gPTP AsPath changed' events: the mapping changed during the session (a re-patch), the table shows the paths at the end of it." }.arg(_results.asPathChanges));
@@ -1276,7 +1295,7 @@ private:
 		heading(2, "How this analysis was produced");
 		auto const& options = _analysis.options;
 		paragraph("Computed by the Journal Analyser from the events of the journal only, with the following rules:");
-		bullet("Stream events are attributed to a plane from the AVB interface of the stream (the topology) or, failing that, from the naming of the stream (Primary / Secondary); entities are mapped to their rack and branch switch from the gPTP AsPath of the 'Entity is online' details or of a loaded network state file.");
+		bullet("Stream events are attributed to a plane from the AVB interface of the stream (the topology) or, failing that, from the naming of the stream (Primary / Secondary); entities are mapped to their rack and branch switch from the gPTP AsPath of the 'Entity is online' details or of a loaded network state file (with the clock identity deduced from the AsPath for an interface reporting the one of its grandmaster as its own).");
 		bullet(QString{ "Hits: media unlock events of the same entity and plane less than %1 apart. Incidents: hits of the entities of the same rack and plane less than %1 apart. Storms: incidents of the same rack and plane less than %2 apart. Runs: storms of the same branch and plane less than %3 apart, racks in order of first appearance." }.arg(duration(options.hitWindowMs), duration(options.stormGapMs), duration(options.runGapMs)));
 		bullet(QString{ "System wide events: entities touched (stream level or clock domain unlock) less than %1 apart, at least %2 % of the entities reporting hits in the session (%3 at least) across several racks, extended by the hits of the same entities within %4 of the end (the relock wave); their incidents are excluded from the storms and runs." }.arg(duration(options.systemWideGapMs)).arg(static_cast<int>(options.systemWideMinShare * 100.0)).arg(options.systemWideMinEntities).arg(duration(options.systemWideTailMs)));
 		bullet(QString{ "Both planes: a primary and a secondary hit of the same entity less than %1 apart, simultaneous below %2. Accompanying events: within %3 of each other on the same entity (or stream)." }.arg(duration(options.bothPlanesWindowMs), duration(options.simultaneousMs), duration(options.accompanyingWindowMs)));
