@@ -361,8 +361,8 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 	auto const& maps = getVendorNameMaps();
 	auto const vendorIdentifier = getVendorIdentifier(entityID);
 
-	// Search each OUI size in turn. The IEEE never assigns overlapping blocks (a 24 bits block is either assigned as a whole, or subdivided into smaller ones), so at most one table can match.
-	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui24>(maps.oui24ToName, vendorIdentifier); name != nullptr)
+	// Search the longest prefix first: the MA-M (OUI-28) and MA-S (OUI-36) blocks are subdivisions of MA-L (OUI-24) blocks registered to the IEEE Registration Authority itself, so the most specific assignment must win if both are in the database
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui36>(maps.oui36ToName, vendorIdentifier); name != nullptr)
 	{
 		return *name;
 	}
@@ -370,7 +370,7 @@ QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 	{
 		return *name;
 	}
-	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui36>(maps.oui36ToName, vendorIdentifier); name != nullptr)
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui24>(maps.oui24ToName, vendorIdentifier); name != nullptr)
 	{
 		return *name;
 	}
