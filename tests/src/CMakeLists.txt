@@ -20,11 +20,19 @@ set(TESTS_SOURCE
 	networkTopology_tests.cpp
 )
 
+# Resource files (the OUI database used by the vendor name lookups)
+set(RESOURCE_FILES
+	tests.qrc
+)
+
 # Define target
-add_executable(Tests MACOSX_BUNDLE ${TESTS_SOURCE})
+add_executable(Tests MACOSX_BUNDLE ${TESTS_SOURCE} ${RESOURCE_FILES})
 
 # Setup common options
 cu_setup_executable_options(Tests)
+
+# Automatically generate RCC
+set_target_properties(Tests PROPERTIES AUTORCC ON)
 
 # Set IDE folder
 set_target_properties(Tests PROPERTIES FOLDER "Tests")

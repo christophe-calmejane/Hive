@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="oui.json">../../resources/oui.json</file>
+    </qresource>
+</RCC>

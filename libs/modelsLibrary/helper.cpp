@@ -330,6 +330,20 @@ QString const* findVendorName(MapType const& ouiToName, la::avdecc::UniqueIdenti
 	auto const nameIt = ouiToName.find(entityID.getVendorID<Type>());
 	return nameIt == ouiToName.end() ? nullptr : &nameIt->second;
 }
+
+// Returns the identifier whose leading bits are the VendorID of the given one.
+// Most gPTP clock identities and many EntityIDs are an EUI-48 (the MAC address of the device) encapsulated in an EUI-64, by inserting 0xFFFE after its first 3 octets (the IEEE reserves this value for that use, it is never part of an assigned EUI-64).
+// Only the OUI-24 is left untouched by this encapsulation, the bits following it are the inserted 0xFFFE and not the remaining bits of an OUI-28 or OUI-36: the EUI-48 is extracted and left aligned so every OUI size can be looked up.
+la::avdecc::UniqueIdentifier getVendorIdentifier(la::avdecc::UniqueIdentifier const identifier) noexcept
+{
+	auto const value = identifier.getValue();
+	if (((value >> 24) & 0xFFFFu) != 0xFFFEu)
+	{
+		return identifier;
+	}
+	auto const eui48 = ((value >> 16) & 0x0000FFFFFF000000u) | (value & 0x0000000000FFFFFFu);
+	return la::avdecc::UniqueIdentifier{ eui48 << 16 };
+}
 } // namespace
 
 void warmUpVendorNamesCache() noexcept
@@ -345,23 +359,24 @@ void warmUpVendorNamesCache() noexcept
 QString getVendorName(la::avdecc::UniqueIdentifier const entityID) noexcept
 {
 	auto const& maps = getVendorNameMaps();
+	auto const vendorIdentifier = getVendorIdentifier(entityID);
 
 	// Search each OUI size in turn. The IEEE never assigns overlapping blocks (a 24 bits block is either assigned as a whole, or subdivided into smaller ones), so at most one table can match.
-	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui24>(maps.oui24ToName, entityID); name != nullptr)
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui24>(maps.oui24ToName, vendorIdentifier); name != nullptr)
 	{
 		return *name;
 	}
-	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui28>(maps.oui28ToName, entityID); name != nullptr)
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui28>(maps.oui28ToName, vendorIdentifier); name != nullptr)
 	{
 		return *name;
 	}
-	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui36>(maps.oui36ToName, entityID); name != nullptr)
+	if (auto const* const name = findVendorName<la::avdecc::OuiType::Oui36>(maps.oui36ToName, vendorIdentifier); name != nullptr)
 	{
 		return *name;
 	}
 
 	// If not found, convert the OUI-24 to hex string (zero filled to its own 6 digits, not to the 8 digits of the integer type holding it)
-	return QString{ "0x%1" }.arg(QString::number(entityID.getVendorID<la::avdecc::OuiType::Oui24>(), 16).toUpper(), 6, QChar{ '0' });
+	return QString{ "0x%1" }.arg(QString::number(vendorIdentifier.getVendorID<la::avdecc::OuiType::Oui24>(), 16).toUpper(), 6, QChar{ '0' });
 }
 
 } // namespace helper
