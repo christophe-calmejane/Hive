@@ -332,12 +332,12 @@ QString const* findVendorName(MapType const& ouiToName, la::avdecc::UniqueIdenti
 }
 
 // Returns the identifier whose leading bits are the VendorID of the given one.
-// Most gPTP clock identities and many EntityIDs are an EUI-48 (the MAC address of the device) encapsulated in an EUI-64, by inserting 0xFFFE after its first 3 octets (the IEEE reserves this value for that use, it is never part of an assigned EUI-64).
-// Only the OUI-24 is left untouched by this encapsulation, the bits following it are the inserted 0xFFFE and not the remaining bits of an OUI-28 or OUI-36: the EUI-48 is extracted and left aligned so every OUI size can be looked up.
+// Most gPTP clock identities and many EntityIDs are the MAC address of the device encapsulated in an EUI-64, by inserting 0xFFFE (EUI-48 encapsulation) or 0xFFFF (MAC-48 encapsulation, deprecated but still used for many EntityIDs) after its first 3 octets (the IEEE reserves both values for that use, they are never part of an assigned EUI-64).
+// Only the OUI-24 is left untouched by this encapsulation, the bits following it are the inserted ones and not the remaining bits of an OUI-28 or OUI-36: the MAC address is extracted and left aligned so every OUI size can be looked up.
 la::avdecc::UniqueIdentifier getVendorIdentifier(la::avdecc::UniqueIdentifier const identifier) noexcept
 {
 	auto const value = identifier.getValue();
-	if (((value >> 24) & 0xFFFFu) != 0xFFFEu)
+	if (auto const insertedBits = (value >> 24) & 0xFFFFu; insertedBits != 0xFFFEu && insertedBits != 0xFFFFu)
 	{
 		return identifier;
 	}

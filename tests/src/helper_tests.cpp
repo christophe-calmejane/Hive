@@ -71,17 +71,23 @@ TEST(Helper, VendorNameUnknownOui)
 	EXPECT_EQ(QString{ "0x0A1234" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x0A1234FFFE000001u }));
 }
 
-// Every OUI size is resolved, whether the identifier is a native EUI-64 or an EUI-48 encapsulated in an EUI-64 (0xFFFE inserted after its first 3 octets, like most gPTP clock identities and many EntityIDs)
+// Every OUI size is resolved, whether the identifier is a native EUI-64 or a MAC address encapsulated in an EUI-64 (0xFFFE or 0xFFFF inserted after its first 3 octets, like most gPTP clock identities and many EntityIDs)
 TEST(Helper, VendorNameAllOuiSizes)
 {
-	// OUI-24 (MA-L)
+	// OUI-24 (MA-L): encapsulated with 0xFFFE (clock identity) and 0xFFFF (EntityID)
 	EXPECT_EQ(QString{ "L-Acoustics" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x001B92FFFE050E61u }));
-	// OUI-28 (MA-M): native, then encapsulated (MAC address 48:0B:B2:D8:00:00)
-	EXPECT_EQ(QString{ "M2Lab" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x480BB2D000000001u }));
+	EXPECT_EQ(QString{ "L-Acoustics" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x001B92FFFF0373F8u }));
+	// OUI-28 (MA-M): native whatever the bits following it, then encapsulated with 0xFFFE and 0xFFFF (MAC address 48:0B:B2:D8:00:00)
+	EXPECT_EQ(QString{ "M2Lab" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x480BB2D000000000u }));
+	EXPECT_EQ(QString{ "M2Lab" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x480BB2DFFFFFFFFFu }));
 	EXPECT_EQ(QString{ "M2Lab" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x480BB2FFFED80000u }));
-	// OUI-36 (MA-S): native, then encapsulated (MAC address 00:50:C2:9C:91:23)
-	EXPECT_EQ(QString{ "Luminex" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x0050C29C90000001u }));
+	EXPECT_EQ(QString{ "M2Lab" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x480BB2FFFFD80000u }));
+	// OUI-36 (MA-S): native whatever the bits following it, then encapsulated with 0xFFFE and 0xFFFF (MAC address 00:50:C2:9C:91:23)
+	EXPECT_EQ(QString{ "Luminex" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x0050C29C90000000u }));
+	EXPECT_EQ(QString{ "Luminex" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x0050C29C9FFFFFFFu }));
 	EXPECT_EQ(QString{ "Luminex" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x0050C2FFFE9C9123u }));
-	// Another OUI-28 of the same OUI-24 block (MAC address 48:0B:B2:A0:00:00), not registered: falls back to the OUI-24
+	EXPECT_EQ(QString{ "Luminex" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x0050C2FFFF9C9123u }));
+	// Other OUI-28 of the same OUI-24 block, not registered: falls back to the OUI-24 (MAC address 48:0B:B2:A0:00:00, and native EUI-64 of the 48:0B:B2:1 block)
 	EXPECT_EQ(QString{ "0x480BB2" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x480BB2FFFEA00000u }));
+	EXPECT_EQ(QString{ "0x480BB2" }, hive::modelsLibrary::helper::getVendorName(la::avdecc::UniqueIdentifier{ 0x480BB21234D80000u }));
 }
