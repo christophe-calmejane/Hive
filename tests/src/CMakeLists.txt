@@ -14,6 +14,7 @@ set(TESTS_SOURCE
 	main.cpp
 	connectionMatrix_tests.cpp
 	eventJournal_tests.cpp
+	helper_tests.cpp
 	journalAnalysis_tests.cpp
 	mappingsHelper_tests.cpp
 	networkTopology_tests.cpp

@@ -1,0 +1,64 @@
+/*
+* Copyright (C) 2017-2026, Emilien Vallot, Christophe Calmejane and other contributors
+
+* This file is part of Hive.
+
+* Hive is free software: you can redistribute it and/or modify
+* it under the terms of the GNU Lesser General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+
+* Hive is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU Lesser General Public License for more details.
+
+* You should have received a copy of the GNU Lesser General Public License
+* along with Hive.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/**
+* @file helper_tests.cpp
+* @author Christophe Calmejane
+*/
+
+#include <gtest/gtest.h>
+#include <avdecc/helper.hpp>
+
+// Reserved bits (out of specification device, or newer specification) must be displayed with their value
+TEST(Helper, FlagsToStringUnknownBit)
+{
+	auto flags = la::avdecc::entity::StreamInfoFlagsEx{};
+	flags.assign(0x00040001u);
+	EXPECT_EQ(QString{ "Registering | Unknown 0x00040000" }, avdecc::helper::flagsToString(flags));
+}
+
+TEST(Helper, FlagsToStringAvbInterfaceFlags)
+{
+	auto const flags = la::avdecc::entity::AvbInterfaceFlags{ la::avdecc::entity::AvbInterfaceFlag::GptpGrandmasterSupported, la::avdecc::entity::AvbInterfaceFlag::GptpSupported, la::avdecc::entity::AvbInterfaceFlag::SrpSupported, la::avdecc::entity::AvbInterfaceFlag::FqtssNotSupported, la::avdecc::entity::AvbInterfaceFlag::ScheduledTrafficSupported, la::avdecc::entity::AvbInterfaceFlag::CanListenToSelf, la::avdecc::entity::AvbInterfaceFlag::CanListenToOtherSelf };
+	EXPECT_EQ(QString{ "GptpGrandmasterSupported | GptpSupported | SrpSupported | FqtssNotSupported | ScheduledTrafficSupported | CanListenToSelf | CanListenToOtherSelf" }, avdecc::helper::flagsToString(flags));
+}
+
+TEST(Helper, FlagsToStringAvbInfoFlags)
+{
+	auto const flags = la::avdecc::entity::AvbInfoFlags{ la::avdecc::entity::AvbInfoFlag::AsCapable, la::avdecc::entity::AvbInfoFlag::AvtpDown, la::avdecc::entity::AvbInfoFlag::AvtpDownValid };
+	EXPECT_EQ(QString{ "AS Capable | Avtp Down | Avtp Down Valid" }, avdecc::helper::flagsToString(flags));
+}
+
+TEST(Helper, CapabilitiesToStringUnknownBit)
+{
+	auto caps = la::avdecc::entity::ControllerCapabilities{};
+	caps.assign(0x00000003u);
+	EXPECT_EQ(QString{ "Implemented | Unknown 0x00000002" }, avdecc::helper::capabilitiesToString(caps));
+}
+
+// Values not defined by the specification must be displayed with their value
+TEST(Helper, EnumToStringUnknownValue)
+{
+	EXPECT_EQ(QString{ "Unknown 0x1234" }, avdecc::helper::jackTypeToString(static_cast<la::avdecc::entity::model::JackType>(0x1234)));
+	EXPECT_EQ(QString{ "Unknown 0x00F0" }, avdecc::helper::clockSourceTypeToString(static_cast<la::avdecc::entity::model::ClockSourceType>(0x00F0)));
+	EXPECT_EQ(QString{ "Unknown 0x7F" }, avdecc::helper::audioClusterFormatToString(static_cast<la::avdecc::entity::model::AudioClusterFormat>(0x7F)));
+	EXPECT_EQ(QString{ "Unknown 0x42" }, avdecc::helper::msrpFailureCodeToString(static_cast<la::avdecc::entity::model::MsrpFailureCode>(0x42)));
+	EXPECT_EQ(QString{ "Unknown 0x07" }, avdecc::helper::probingStatusToString(static_cast<la::avdecc::entity::model::ProbingStatus>(0x07)));
+	EXPECT_EQ(QString{ "Unknown 0x0100" }, avdecc::helper::memoryObjectTypeToString(static_cast<la::avdecc::entity::model::MemoryObjectType>(0x0100)));
+}

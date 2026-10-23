@@ -256,6 +256,13 @@ inline void concatenateFlags(QString& flags, QString const& flag) noexcept
 	flags += flag;
 }
 
+// Value not defined by the specification (reserved bit, newer specification, out of specification device), displayed as raw value
+template<typename EnumType>
+inline QString unknownValueToString(EnumType const value) noexcept
+{
+	return "Unknown " + hive::modelsLibrary::helper::toHexQString(la::avdecc::utils::to_integral(value), true, true);
+}
+
 QString flagsToString(la::avdecc::entity::JackFlags const flags) noexcept
 {
 	QString str;
@@ -274,8 +281,7 @@ QString flagsToString(la::avdecc::entity::JackFlags const flags) noexcept
 				concatenateFlags(str, "Captive");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -303,9 +309,20 @@ QString flagsToString(la::avdecc::entity::AvbInterfaceFlags const flags) noexcep
 			case la::avdecc::entity::AvbInterfaceFlag::SrpSupported:
 				concatenateFlags(str, "SrpSupported");
 				break;
+			case la::avdecc::entity::AvbInterfaceFlag::FqtssNotSupported:
+				concatenateFlags(str, "FqtssNotSupported");
+				break;
+			case la::avdecc::entity::AvbInterfaceFlag::ScheduledTrafficSupported:
+				concatenateFlags(str, "ScheduledTrafficSupported");
+				break;
+			case la::avdecc::entity::AvbInterfaceFlag::CanListenToSelf:
+				concatenateFlags(str, "CanListenToSelf");
+				break;
+			case la::avdecc::entity::AvbInterfaceFlag::CanListenToOtherSelf:
+				concatenateFlags(str, "CanListenToOtherSelf");
+				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -333,9 +350,14 @@ QString flagsToString(la::avdecc::entity::AvbInfoFlags const flags) noexcept
 			case la::avdecc::entity::AvbInfoFlag::SrpEnabled:
 				concatenateFlags(str, "Srp Enabled");
 				break;
+			case la::avdecc::entity::AvbInfoFlag::AvtpDown:
+				concatenateFlags(str, "Avtp Down");
+				break;
+			case la::avdecc::entity::AvbInfoFlag::AvtpDownValid:
+				concatenateFlags(str, "Avtp Down Valid");
+				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -361,8 +383,7 @@ QString flagsToString(la::avdecc::entity::ClockSourceFlags const flags) noexcept
 				concatenateFlags(str, "Local");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -391,8 +412,7 @@ QString flagsToString(la::avdecc::entity::PortFlags const flags) noexcept
 				concatenateFlags(str, "SyncSampleRateConv");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -439,8 +459,7 @@ QString flagsToString(la::avdecc::entity::PtpInstanceFlags const flags) noexcept
 				concatenateFlags(str, "GrandmasterCapable");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -511,8 +530,7 @@ QString flagsToString(la::avdecc::entity::PtpPortFlags const flags) noexcept
 				concatenateFlags(str, "SupportsUnicastNegotiate");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -601,8 +619,7 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlags const flags) noexcept
 				concatenateFlags(str, "StreamFormatValid");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -625,8 +642,7 @@ QString flagsToString(la::avdecc::entity::StreamInfoFlagsEx const flags) noexcep
 				concatenateFlags(str, "Registering");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -658,8 +674,7 @@ QString flagsToString(la::avdecc::entity::MilanInfoFeaturesFlags const flags) no
 				concatenateFlags(str, "TalkerSignalPresence");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(flag));
 				break;
 		}
 	}
@@ -712,8 +727,7 @@ QString msrpFailureCodeToString(la::avdecc::entity::model::MsrpFailureCode const
 		case la::avdecc::entity::model::MsrpFailureCode::SrClassPriorityMismatch:
 			return "SR Class Priority Mismatch";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(msrpFailureCode);
 	}
 }
 
@@ -730,8 +744,7 @@ QString probingStatusToString(la::avdecc::entity::model::ProbingStatus const sta
 		case la::avdecc::entity::model::ProbingStatus::Completed:
 			return "Completed";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(status);
 	}
 }
 
@@ -825,8 +838,7 @@ QString capabilitiesToString(la::avdecc::entity::EntityCapabilities const caps) 
 				concatenateFlags(str, "AemConfigurationIndexValid");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(cap));
 				break;
 		}
 	}
@@ -870,8 +882,7 @@ QString capabilitiesToString(la::avdecc::entity::TalkerCapabilities const caps) 
 				concatenateFlags(str, "VideoSource");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(cap));
 				break;
 		}
 	}
@@ -915,8 +926,7 @@ QString capabilitiesToString(la::avdecc::entity::ListenerCapabilities const caps
 				concatenateFlags(str, "VideoSink");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(cap));
 				break;
 		}
 	}
@@ -939,8 +949,7 @@ QString capabilitiesToString(la::avdecc::entity::ControllerCapabilities const ca
 				concatenateFlags(str, "Implemented");
 				break;
 			default:
-				concatenateFlags(str, "Unknown");
-				AVDECC_ASSERT(false, "Not handled!");
+				concatenateFlags(str, unknownValueToString(cap));
 				break;
 		}
 	}
@@ -1031,9 +1040,9 @@ QString jackTypeToString(la::avdecc::entity::model::JackType const type) noexcep
 		case la::avdecc::entity::model::JackType::Expansion:
 			return "Expansion";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
+			break;
 	}
-	return "Unknown";
+	return unknownValueToString(type);
 }
 
 QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const type) noexcept
@@ -1049,9 +1058,9 @@ QString clockSourceTypeToString(la::avdecc::entity::model::ClockSourceType const
 		case la::avdecc::entity::model::ClockSourceType::Expansion:
 			return "Expansion";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
+			break;
 	}
-	return "Unknown";
+	return unknownValueToString(type);
 }
 
 QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat const format) noexcept
@@ -1067,8 +1076,7 @@ QString audioClusterFormatToString(la::avdecc::entity::model::AudioClusterFormat
 		case la::avdecc::entity::model::AudioClusterFormat::Smpte:
 			return "SMPTE";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(format);
 	}
 }
 
@@ -1199,8 +1207,7 @@ QString controlTypeToString(la::avdecc::entity::model::ControlType const& contro
 			case la::avdecc::entity::model::StandardControlType::Polarization:
 				return "Polarization";
 			default:
-				AVDECC_ASSERT(false, "Not handled!");
-				return "Unknown Standard Control Type";
+				return "Unknown Standard Control Type: " + QString::fromStdString(la::avdecc::utils::toHexString<std::uint64_t, 10>(controlType.getVendorValue<la::avdecc::OuiType::Oui24>(), true, true));
 		}
 	}
 	else
@@ -1290,8 +1297,7 @@ QString controlValueTypeToString(la::avdecc::entity::model::ControlValueType::Ty
 		case la::avdecc::entity::model::ControlValueType::Type::Expansion:
 			return "Expansion";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(controlValueType);
 	}
 }
 
@@ -1438,8 +1444,7 @@ QString controlValueUnitToString(la::avdecc::entity::model::ControlValueUnit::Un
 		case la::avdecc::entity::model::ControlValueUnit::Unit::DbA:
 			return "dB(A)";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(controlValueUnit);
 	}
 }
 
@@ -1454,8 +1459,7 @@ QString timingAlgorithmToString(la::avdecc::entity::model::TimingAlgorithm const
 		case la::avdecc::entity::model::TimingAlgorithm::Combined:
 			return "Combined";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(algorithm);
 	}
 }
 
@@ -1488,8 +1492,7 @@ QString ptpPortTypeToString(la::avdecc::entity::model::PtpPortType const ptpPort
 		case la::avdecc::entity::model::PtpPortType::E2EUnicastUdpV6:
 			return "E2EUnicastUdpV6";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(ptpPortType);
 	}
 }
 
@@ -1528,8 +1531,7 @@ QString memoryObjectTypeToString(la::avdecc::entity::model::MemoryObjectType con
 		case la::avdecc::entity::model::MemoryObjectType::DaeGeneric:
 			return "Dae Generic";
 		default:
-			AVDECC_ASSERT(false, "Not handled!");
-			return "Unknown";
+			return unknownValueToString(type);
 	}
 }
 

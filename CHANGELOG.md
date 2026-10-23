@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - An entity is only flagged as unsubscribed from unsolicited notifications (hatched in the Discovered Entities list) when no interface holds a subscription anymore, and a controller transport error is only fatal when both interfaces failed
 - [Display cable length estimation based on prop delay](https://github.com/christophe-calmejane/Hive/issues/181)
 - Missing EntityCapabilities flags
+- Missing AvbInterface and AvbInfo flags
 - Invalid and dangling audio mappings displayed in red in the Dynamic Mappings list of the Entity Inspector, with a tooltip telling what does not exist (Stream, Audio Cluster, Audio Cluster channel, or stream channel in the current format of the Stream)
 
 ### Changed
@@ -52,6 +53,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Crash when opening the Device Details dialog of an entity having a mapping to a Stream Input that does not exist
 - Compatibility Change Events (and the related warning in the Discovered Entities list) missing the compatibility changes detected at the end of the enumeration of an entity
 - No error reported when failing to load a `.json` file (Virtual Entity or Network State)
+- Assert when displaying a flag or a value not defined by the specification (reserved bit, out of specification device), now displayed with its raw value
 
 ## [1.4.0] - 2025-12-19
 ### Added
