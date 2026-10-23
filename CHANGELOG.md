@@ -51,6 +51,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Localized strings now fetched from the configuration being inspected instead of the active one](https://github.com/christophe-calmejane/Hive/issues/178)
 - Crash when opening the Device Details dialog of an entity having a mapping to a Stream Input that does not exist
 - Compatibility Change Events (and the related warning in the Discovered Entities list) missing the compatibility changes detected at the end of the enumeration of an entity
+- No error reported when failing to load a `.json` file (Virtual Entity or Network State)
 
 ## [1.4.0] - 2025-12-19
 ### Added

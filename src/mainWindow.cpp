@@ -615,6 +615,7 @@ void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
 		auto flags = la::avdecc::entity::model::jsonSerializer::Flags{ la::avdecc::entity::model::jsonSerializer::Flag::ProcessADP, la::avdecc::entity::model::jsonSerializer::Flag::ProcessCompatibility, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDynamicModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessMilan, la::avdecc::entity::model::jsonSerializer::Flag::ProcessState, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStaticModel, la::avdecc::entity::model::jsonSerializer::Flag::ProcessStatistics, la::avdecc::entity::model::jsonSerializer::Flag::ProcessDiagnostics };
 		// Start with AVE file type
 		auto [error, message] = loadEntity(fileName, flags);
+		auto title = QString{ "Failed to load Entity" };
 		if (!!error)
 		{
 			if (error == la::avdecc::jsonSerializer::DeserializationError::NotCompliant)
@@ -631,13 +632,45 @@ void MainWindowImpl::loadFile(QString const& fileName, bool const silent)
 				if (choice == QMessageBox::StandardButton::Yes)
 				{
 					flags.set(la::avdecc::entity::model::jsonSerializer::Flag::IgnoreAEMSanityChecks);
-					loadEntity(fileName, flags);
+					auto const result = loadEntity(fileName, flags);
+					error = std::get<0>(result);
+					message = std::get<1>(result);
+					// Fallthrough to warning message
 				}
 			}
 			else
 			{
 				// Then try ANS file type
-				loadNetworkState(fileName, flags);
+				auto const [ansError, ansMessage] = loadNetworkState(fileName, flags);
+				if (!ansError)
+				{
+					error = la::avdecc::jsonSerializer::DeserializationError::NoError;
+				}
+				// The file was read as a Network State but some entities could not be loaded, so this is definitively an ANS file
+				else if (ansError == la::avdecc::jsonSerializer::DeserializationError::Incomplete || ansError == la::avdecc::jsonSerializer::DeserializationError::DuplicateEntityID)
+				{
+					title = "Failed to load Network State";
+					error = ansError;
+					message = ansMessage;
+				}
+				// Impossible to know the type of the file, report both errors
+				else
+				{
+					title = "Failed to load File";
+					error = ansError;
+					message = QString("Not a valid Entity file: %1\nNot a valid Network State file: %2").arg(message).arg(ansMessage);
+				}
+			}
+			if (!!error)
+			{
+				if (silent)
+				{
+					LOG_HIVE_WARN(QString("[%1] Error loading file: %2").arg(fileName).arg(message));
+				}
+				else
+				{
+					QMessageBox::warning(_parent, title, QString("Error loading JSON file '%1':\n%2").arg(fileName).arg(message));
+				}
 			}
 		}
 	}
