@@ -52,6 +52,7 @@ struct InterfaceInfo
 	bool isListener{ false };
 	bool isStreaming{ false };
 	la::avdecc::UniqueIdentifier clockIdentity{};
+	la::avdecc::UniqueIdentifier inconsistentClockIdentity{}; /**< Clock identity reported by the entity when it contradicts its AsPath (see the detection in recompute), clockIdentity then being the one deduced from the AsPath */
 	la::avdecc::UniqueIdentifier gptpGrandmasterID{};
 	std::optional<std::uint8_t> gptpDomainNumber{};
 	NetworkTopologyModel::ClockLockState clockLockState{ NetworkTopologyModel::ClockLockState::Unknown };
@@ -151,6 +152,7 @@ NetworkTopologyModel::Topology buildTopologyForNetwork(std::vector<InterfaceInfo
 		node.propagationDelay = info.propagationDelay;
 		node.hasSuspiciousPropagationDelay = info.hasSuspiciousPropagationDelay;
 		node.hasAsPath = info.asPath.size() >= 2;
+		node.inconsistentClockIdentity = info.inconsistentClockIdentity;
 		node.errorCounter = info.errorCounter;
 
 		auto const nodeIndex = topology.nodes.size();
@@ -974,6 +976,35 @@ void NetworkTopologyModel::recompute() noexcept
 			info.asPath = interfaceCache.asPath;
 
 			interfaces.push_back(std::move(info));
+		}
+	}
+
+	// Inconsistent clock identity detection (seen in the field: an entity reporting the clock identity of its grandmaster as its own): the AsPath starts with the grandmaster, so an interface whose AsPath has more than one element is not the grandmaster and cannot have the identity of the first element.
+	// Trusting such a clock identity would merge the entity with its grandmaster: every node attached to the grandmaster would be attached to the entity instead, and the real clock identity of the entity (ending its AsPath) would be drawn as an unknown bridge.
+	// The clock identity is deduced from the AsPath instead, and the inconsistency is reported to the user. This must be done before anything else uses the clock identity (bridged endpoint detection, topology building).
+	{
+		// Clock identities reported by the entities: a deduced clock identity must never be the one of another entity
+		auto reportedClockIdentities = std::set<la::avdecc::UniqueIdentifier>{};
+		for (auto const& info : interfaces)
+		{
+			if (info.clockIdentity)
+			{
+				reportedClockIdentities.insert(info.clockIdentity);
+			}
+		}
+
+		for (auto& info : interfaces)
+		{
+			if (info.asPath.size() < 2 || !info.clockIdentity || info.clockIdentity != info.asPath.front() || info.clockIdentity == info.asPath.back())
+			{
+				continue;
+			}
+
+			info.inconsistentClockIdentity = info.clockIdentity;
+			// Most entities end their AsPath with their own clock identity. For the ones that don't, the last element is their upstream neighbor: it can be detected when that neighbor is another entity (the clock identity then remains unknown and the entity is attached to that neighbor),
+			// but not when it is a bridge (the entity then takes the place of that bridge in the topology, which is wrong but harmless)
+			auto const& lastClockIdentity = info.asPath.back();
+			info.clockIdentity = reportedClockIdentities.count(lastClockIdentity) > 0 ? la::avdecc::UniqueIdentifier{} : lastClockIdentity;
 		}
 	}
 

@@ -37,6 +37,7 @@
 #	pragma warning(pop)
 #endif
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -294,6 +295,119 @@ TEST_F(NetworkTopology_F, NullPropagationDelay_IsFlaggedSuspiciousUnlessExplaine
 		auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ entityID });
 		ASSERT_TRUE(entityNode.has_value());
 		EXPECT_EQ(expectedFlag, getTopology().nodes[*entityNode].hasSuspiciousPropagationDelay) << "Wrong suspicious propagation delay flag for entity " << la::avdecc::utils::toHexString(entityID, true, true);
+	}
+}
+
+/* *********************************
+   Inconsistent clock identity handling
+*/
+namespace
+{
+// Identities of the 'data/networkTopology/2-GrandmasterClockIdentityReportedAsOwn.json' test file (same grandmaster than the first test file)
+constexpr auto BridgeClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000B0u }; // The bridge EntityB is attached to
+constexpr auto EntityAConsistent = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000001u }; // Reports its own clock identity, attached to the grandmaster
+constexpr auto EntityBEndingItsAsPath = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000002u }; // Reports the grandmaster clock identity, attached to the bridge, ends its AsPath with its own clock identity (same value than its EntityID)
+constexpr auto EntityCDaisyChained = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000003u }; // Reports the grandmaster clock identity, daisy chained behind EntityA, doesn't end its AsPath with its own clock identity
+
+constexpr auto InconsistentClockIdentityTestFilePath = "data/networkTopology/2-GrandmasterClockIdentityReportedAsOwn.json";
+constexpr auto InconsistentClockIdentityTestFileEntityCount = std::size_t{ 3u };
+} // namespace
+
+// An entity reporting the clock identity of its grandmaster must not be merged with the grandmaster: the grandmaster stays a node on its own, and the entities attached to it are not attached to that entity
+TEST_F(NetworkTopology_F, GrandmasterClockIdentityReportedAsOwn_GrandmasterIsNotMergedWithTheEntity)
+{
+	loadNetworkState(InconsistentClockIdentityTestFilePath, InconsistentClockIdentityTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	auto const grandmasterNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ GrandmasterClockIdentity });
+	ASSERT_TRUE(grandmasterNode.has_value()) << "The grandmaster must be part of the topology";
+	EXPECT_EQ(hive::modelsLibrary::NetworkTopologyModel::NodeType::InferredBridge, getTopology().nodes[*grandmasterNode].type);
+	EXPECT_TRUE(getTopology().nodes[*grandmasterNode].isGrandmaster);
+
+	auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ EntityAConsistent });
+	ASSERT_TRUE(entityNode.has_value());
+	auto const upstreamNode = findUpstreamNode(*entityNode);
+	ASSERT_TRUE(upstreamNode.has_value());
+	EXPECT_EQ(*grandmasterNode, *upstreamNode);
+}
+
+// The clock identity of an entity reporting the one of its grandmaster is deduced from the end of its AsPath, so the entity is placed at its real position (and not drawn twice, as itself and as an unknown bridge)
+TEST_F(NetworkTopology_F, GrandmasterClockIdentityReportedAsOwn_EntityIsPlacedFromItsAsPath)
+{
+	loadNetworkState(InconsistentClockIdentityTestFilePath, InconsistentClockIdentityTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ EntityBEndingItsAsPath });
+	ASSERT_TRUE(entityNode.has_value());
+	auto const& node = getTopology().nodes[*entityNode];
+	EXPECT_EQ(la::avdecc::UniqueIdentifier{ EntityBEndingItsAsPath }, node.clockIdentity);
+	EXPECT_FALSE(node.isGrandmaster);
+	auto const nodesWithClockIdentity = std::count_if(getTopology().nodes.begin(), getTopology().nodes.end(),
+		[](auto const& topologyNode)
+		{
+			return topologyNode.clockIdentity == la::avdecc::UniqueIdentifier{ EntityBEndingItsAsPath };
+		});
+	EXPECT_EQ(1, nodesWithClockIdentity) << "The real clock identity of the entity must not be drawn as an unknown bridge";
+
+	auto const bridgeNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ BridgeClockIdentity });
+	ASSERT_TRUE(bridgeNode.has_value());
+	auto const upstreamNode = findUpstreamNode(*entityNode);
+	ASSERT_TRUE(upstreamNode.has_value());
+	EXPECT_EQ(*bridgeNode, *upstreamNode);
+
+	auto const grandmasterNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ GrandmasterClockIdentity });
+	ASSERT_TRUE(grandmasterNode.has_value());
+	auto const bridgeUpstreamNode = findUpstreamNode(*bridgeNode);
+	ASSERT_TRUE(bridgeUpstreamNode.has_value());
+	EXPECT_EQ(*grandmasterNode, *bridgeUpstreamNode);
+}
+
+// An entity not ending its AsPath with its own clock identity has its upstream neighbor as last AsPath element: when that neighbor is another entity, it must not be taken as the clock identity of the entity, which stays unknown, and the entity is attached to that neighbor
+TEST_F(NetworkTopology_F, GrandmasterClockIdentityReportedAsOwn_ClockIdentityOfAnotherEntityIsNotDeduced)
+{
+	loadNetworkState(InconsistentClockIdentityTestFilePath, InconsistentClockIdentityTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ EntityCDaisyChained });
+	ASSERT_TRUE(entityNode.has_value());
+	EXPECT_FALSE(getTopology().nodes[*entityNode].clockIdentity.isValid());
+	EXPECT_FALSE(getTopology().nodes[*entityNode].isGrandmaster);
+
+	auto const neighborNode = findEntityNode(la::avdecc::UniqueIdentifier{ EntityAConsistent });
+	ASSERT_TRUE(neighborNode.has_value());
+	auto const upstreamNode = findUpstreamNode(*entityNode);
+	ASSERT_TRUE(upstreamNode.has_value());
+	EXPECT_EQ(*neighborNode, *upstreamNode);
+}
+
+// The inconsistency is reported on the entities reporting the clock identity of their grandmaster, and only on them
+TEST_F(NetworkTopology_F, GrandmasterClockIdentityReportedAsOwn_IsReported)
+{
+	loadNetworkState(InconsistentClockIdentityTestFilePath, InconsistentClockIdentityTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	auto const expectedReportedClockIdentities = std::vector<std::pair<la::avdecc::UniqueIdentifier::value_type, la::avdecc::UniqueIdentifier>>{
+		{ EntityAConsistent, la::avdecc::UniqueIdentifier{} }, // Consistent clock identity, nothing to report
+		{ EntityBEndingItsAsPath, la::avdecc::UniqueIdentifier{ GrandmasterClockIdentity } },
+		{ EntityCDaisyChained, la::avdecc::UniqueIdentifier{ GrandmasterClockIdentity } },
+	};
+	for (auto const& [entityID, expectedClockIdentity] : expectedReportedClockIdentities)
+	{
+		auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ entityID });
+		ASSERT_TRUE(entityNode.has_value());
+		EXPECT_EQ(expectedClockIdentity, getTopology().nodes[*entityNode].inconsistentClockIdentity) << "Wrong inconsistent clock identity for entity " << la::avdecc::utils::toHexString(entityID, true, true);
 	}
 }
 

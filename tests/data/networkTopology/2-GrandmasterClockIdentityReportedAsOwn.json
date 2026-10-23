@@ -1,0 +1,400 @@
+{
+    "_dump_source (informative)": "Hive Unit Tests (hand crafted)",
+    "dump_version": 1,
+    "entities": [
+        {
+            "adp_information": {
+                "common": {
+                    "association_id": null,
+                    "controller_capabilities": null,
+                    "entity_capabilities": [
+                        "AEM_SUPPORTED",
+                        "CLASS_A_SUPPORTED",
+                        "GPTP_SUPPORTED",
+                        "AEM_INTERFACE_INDEX_VALID"
+                    ],
+                    "entity_id": "0x001122FFFE000001",
+                    "entity_model_id": "0x0011220000000001",
+                    "listener_capabilities": null,
+                    "listener_stream_sinks": 0,
+                    "talker_capabilities": null,
+                    "talker_stream_sources": 0
+                },
+                "interfaces": [
+                    {
+                        "available_index": 1,
+                        "avb_interface_index": 0,
+                        "gptp_domain_number": 0,
+                        "gptp_grandmaster_id": "0x001122FFFE0000FF",
+                        "mac_address": "00:11:22:00:00:01",
+                        "valid_time": 10
+                    }
+                ]
+            },
+            "compatibility_flags": [
+                "IEEE17221"
+            ],
+            "dump_version": 1,
+            "entity_model": {
+                "entity_descriptor": {
+                    "configuration_descriptors": [
+                        {
+                            "_index (informative)": 0,
+                            "avb_interface_descriptors": [
+                                {
+                                    "_index (informative)": 0,
+                                    "dynamic": {
+                                        "as_path": [
+                                            "0x001122FFFE0000FF",
+                                            "0x001122FFFE000001"
+                                        ],
+                                        "avb_interface_info": {
+                                            "flags": [
+                                                "AS_CAPABLE",
+                                                "GPTP_ENABLED",
+                                                "SRP_ENABLED"
+                                            ],
+                                            "msrp_mappings": [
+                                                {
+                                                    "priority": 3,
+                                                    "traffic_class": 6,
+                                                    "vlan_id": 2
+                                                }
+                                            ],
+                                            "propagation_delay": 20
+                                        },
+                                        "counters": {},
+                                        "gptp_domain_number": 0,
+                                        "gptp_grandmaster_id": "0x001122FFFE0000FF",
+                                        "object_name": ""
+                                    },
+                                    "static": {
+                                        "clock_accuracy": 34,
+                                        "clock_class": 248,
+                                        "clock_identity": "0x001122FFFE000001",
+                                        "domain_number": 0,
+                                        "flags": [
+                                            "GPTP_SUPPORTED",
+                                            "SRP_SUPPORTED"
+                                        ],
+                                        "localized_description": {
+                                            "index": 0,
+                                            "offset": 0
+                                        },
+                                        "log_announce_interval": 0,
+                                        "log_pdelay_interval": 0,
+                                        "log_sync_interval": 253,
+                                        "mac_address": "00:11:22:00:00:01",
+                                        "offset_scaled_log_variance": 17258,
+                                        "port_number": 1,
+                                        "priority1": 248,
+                                        "priority2": 248
+                                    }
+                                }
+                            ],
+                            "dynamic": {
+                                "object_name": ""
+                            },
+                            "static": {
+                                "localized_description": {
+                                    "index": 0,
+                                    "offset": 0
+                                }
+                            }
+                        }
+                    ],
+                    "dynamic": {
+                        "counters": {},
+                        "current_configuration": 0,
+                        "entity_name": "Entity A",
+                        "firmware_version": "1.0.0",
+                        "group_name": "",
+                        "serial_number": "00000001"
+                    },
+                    "static": {
+                        "model_name_string": {
+                            "index": 0,
+                            "offset": 0
+                        },
+                        "vendor_name_string": {
+                            "index": 0,
+                            "offset": 0
+                        }
+                    }
+                }
+            },
+            "entity_model_id": "0x0011220000000001",
+            "state": {
+                "acquire_state": "NOT_SUPPORTED",
+                "active_configuration": 0,
+                "lock_state": "NOT_SUPPORTED",
+                "locking_controller_id": "0x0000000000000000",
+                "owning_controller_id": "0x0000000000000000",
+                "subscribed_unsol": false
+            }
+        },
+        {
+            "adp_information": {
+                "common": {
+                    "association_id": null,
+                    "controller_capabilities": null,
+                    "entity_capabilities": [
+                        "AEM_SUPPORTED",
+                        "CLASS_A_SUPPORTED",
+                        "GPTP_SUPPORTED",
+                        "AEM_INTERFACE_INDEX_VALID"
+                    ],
+                    "entity_id": "0x001122FFFE000002",
+                    "entity_model_id": "0x0011220000000002",
+                    "listener_capabilities": null,
+                    "listener_stream_sinks": 0,
+                    "talker_capabilities": null,
+                    "talker_stream_sources": 0
+                },
+                "interfaces": [
+                    {
+                        "available_index": 1,
+                        "avb_interface_index": 0,
+                        "gptp_domain_number": 0,
+                        "gptp_grandmaster_id": "0x001122FFFE0000FF",
+                        "mac_address": "00:11:22:00:00:02",
+                        "valid_time": 10
+                    }
+                ]
+            },
+            "compatibility_flags": [
+                "IEEE17221"
+            ],
+            "dump_version": 1,
+            "entity_model": {
+                "entity_descriptor": {
+                    "configuration_descriptors": [
+                        {
+                            "_index (informative)": 0,
+                            "avb_interface_descriptors": [
+                                {
+                                    "_index (informative)": 0,
+                                    "dynamic": {
+                                        "as_path": [
+                                            "0x001122FFFE0000FF",
+                                            "0x001122FFFE0000B0",
+                                            "0x001122FFFE000002"
+                                        ],
+                                        "avb_interface_info": {
+                                            "flags": [
+                                                "AS_CAPABLE",
+                                                "GPTP_ENABLED",
+                                                "SRP_ENABLED"
+                                            ],
+                                            "msrp_mappings": [
+                                                {
+                                                    "priority": 3,
+                                                    "traffic_class": 6,
+                                                    "vlan_id": 2
+                                                }
+                                            ],
+                                            "propagation_delay": 30
+                                        },
+                                        "counters": {},
+                                        "gptp_domain_number": 0,
+                                        "gptp_grandmaster_id": "0x001122FFFE0000FF",
+                                        "object_name": ""
+                                    },
+                                    "static": {
+                                        "clock_accuracy": 34,
+                                        "clock_class": 248,
+                                        "clock_identity": "0x001122FFFE0000FF",
+                                        "domain_number": 0,
+                                        "flags": [
+                                            "GPTP_SUPPORTED",
+                                            "SRP_SUPPORTED"
+                                        ],
+                                        "localized_description": {
+                                            "index": 0,
+                                            "offset": 0
+                                        },
+                                        "log_announce_interval": 0,
+                                        "log_pdelay_interval": 0,
+                                        "log_sync_interval": 253,
+                                        "mac_address": "00:11:22:00:00:02",
+                                        "offset_scaled_log_variance": 17258,
+                                        "port_number": 1,
+                                        "priority1": 248,
+                                        "priority2": 248
+                                    }
+                                }
+                            ],
+                            "dynamic": {
+                                "object_name": ""
+                            },
+                            "static": {
+                                "localized_description": {
+                                    "index": 0,
+                                    "offset": 0
+                                }
+                            }
+                        }
+                    ],
+                    "dynamic": {
+                        "counters": {},
+                        "current_configuration": 0,
+                        "entity_name": "Entity B",
+                        "firmware_version": "1.0.0",
+                        "group_name": "",
+                        "serial_number": "00000002"
+                    },
+                    "static": {
+                        "model_name_string": {
+                            "index": 0,
+                            "offset": 0
+                        },
+                        "vendor_name_string": {
+                            "index": 0,
+                            "offset": 0
+                        }
+                    }
+                }
+            },
+            "entity_model_id": "0x0011220000000002",
+            "state": {
+                "acquire_state": "NOT_SUPPORTED",
+                "active_configuration": 0,
+                "lock_state": "NOT_SUPPORTED",
+                "locking_controller_id": "0x0000000000000000",
+                "owning_controller_id": "0x0000000000000000",
+                "subscribed_unsol": false
+            }
+        },
+        {
+            "adp_information": {
+                "common": {
+                    "association_id": null,
+                    "controller_capabilities": null,
+                    "entity_capabilities": [
+                        "AEM_SUPPORTED",
+                        "CLASS_A_SUPPORTED",
+                        "GPTP_SUPPORTED",
+                        "AEM_INTERFACE_INDEX_VALID"
+                    ],
+                    "entity_id": "0x001122FFFE000003",
+                    "entity_model_id": "0x0011220000000003",
+                    "listener_capabilities": null,
+                    "listener_stream_sinks": 0,
+                    "talker_capabilities": null,
+                    "talker_stream_sources": 0
+                },
+                "interfaces": [
+                    {
+                        "available_index": 1,
+                        "avb_interface_index": 0,
+                        "gptp_domain_number": 0,
+                        "gptp_grandmaster_id": "0x001122FFFE0000FF",
+                        "mac_address": "00:11:22:00:00:03",
+                        "valid_time": 10
+                    }
+                ]
+            },
+            "compatibility_flags": [
+                "IEEE17221"
+            ],
+            "dump_version": 1,
+            "entity_model": {
+                "entity_descriptor": {
+                    "configuration_descriptors": [
+                        {
+                            "_index (informative)": 0,
+                            "avb_interface_descriptors": [
+                                {
+                                    "_index (informative)": 0,
+                                    "dynamic": {
+                                        "as_path": [
+                                            "0x001122FFFE0000FF",
+                                            "0x001122FFFE000001"
+                                        ],
+                                        "avb_interface_info": {
+                                            "flags": [
+                                                "AS_CAPABLE",
+                                                "GPTP_ENABLED",
+                                                "SRP_ENABLED"
+                                            ],
+                                            "msrp_mappings": [
+                                                {
+                                                    "priority": 3,
+                                                    "traffic_class": 6,
+                                                    "vlan_id": 2
+                                                }
+                                            ],
+                                            "propagation_delay": 25
+                                        },
+                                        "counters": {},
+                                        "gptp_domain_number": 0,
+                                        "gptp_grandmaster_id": "0x001122FFFE0000FF",
+                                        "object_name": ""
+                                    },
+                                    "static": {
+                                        "clock_accuracy": 34,
+                                        "clock_class": 248,
+                                        "clock_identity": "0x001122FFFE0000FF",
+                                        "domain_number": 0,
+                                        "flags": [
+                                            "GPTP_SUPPORTED",
+                                            "SRP_SUPPORTED"
+                                        ],
+                                        "localized_description": {
+                                            "index": 0,
+                                            "offset": 0
+                                        },
+                                        "log_announce_interval": 0,
+                                        "log_pdelay_interval": 0,
+                                        "log_sync_interval": 253,
+                                        "mac_address": "00:11:22:00:00:03",
+                                        "offset_scaled_log_variance": 17258,
+                                        "port_number": 1,
+                                        "priority1": 248,
+                                        "priority2": 248
+                                    }
+                                }
+                            ],
+                            "dynamic": {
+                                "object_name": ""
+                            },
+                            "static": {
+                                "localized_description": {
+                                    "index": 0,
+                                    "offset": 0
+                                }
+                            }
+                        }
+                    ],
+                    "dynamic": {
+                        "counters": {},
+                        "current_configuration": 0,
+                        "entity_name": "Entity C",
+                        "firmware_version": "1.0.0",
+                        "group_name": "",
+                        "serial_number": "00000003"
+                    },
+                    "static": {
+                        "model_name_string": {
+                            "index": 0,
+                            "offset": 0
+                        },
+                        "vendor_name_string": {
+                            "index": 0,
+                            "offset": 0
+                        }
+                    }
+                }
+            },
+            "entity_model_id": "0x0011220000000003",
+            "state": {
+                "acquire_state": "NOT_SUPPORTED",
+                "active_configuration": 0,
+                "lock_state": "NOT_SUPPORTED",
+                "locking_controller_id": "0x0000000000000000",
+                "owning_controller_id": "0x0000000000000000",
+                "subscribed_unsol": false
+            }
+        }
+    ]
+}

@@ -105,6 +105,7 @@ public:
 		std::optional<std::uint32_t> propagationDelay{}; /**< Propagation delay (nsec) between this interface and its upstream neighbor */
 		bool hasSuspiciousPropagationDelay{ false }; /**< True when the interface reports a null propagation delay that is not explained by a bridge embedded in the same unit: only such an internal link is expected to have a null delay, so the node is placed at its real position and the delay is reported as a warning */
 		bool hasAsPath{ false }; /**< True if the entity exposes a usable AsPath for this interface */
+		la::avdecc::UniqueIdentifier inconsistentClockIdentity{}; /**< Clock identity reported by the interface when it contradicts its AsPath (the identity of its grandmaster, while the interface is not the grandmaster), invalid otherwise. The clockIdentity field then holds the identity deduced from the AsPath (invalid when it cannot be deduced), and the inconsistency must be reported as a warning */
 		std::uint64_t errorCounter{ 0u }; /**< Aggregated entity level error counter (stream input errors + statistics errors), duplicated on each interface node of the entity */
 		bool isInterconnected{ false }; /**< True when this node reveals a likely interconnection between networks (severe cabling error for redundant networks) */
 		QString interconnectionError{}; /**< Human readable description of the interconnection issue (only set when isInterconnected) */

@@ -167,7 +167,16 @@ QString buildEntityNodeTooltip(TopologyNode const& node)
 		tooltip += QString{ "<br>AVB Interface: %1 (index %2)" }.arg(node.avbInterfaceName.toHtmlEscaped()).arg(node.avbInterfaceIndex);
 	}
 	tooltip += "<br>Media Clock: " + clockLockStateText(node.clockLockState);
-	tooltip += "<br>Clock Identity: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity);
+	if (node.inconsistentClockIdentity)
+	{
+		// The node has been placed using the clock identity deduced from the AsPath, the reported one is displayed as a warning (warning badge of the tile)
+		tooltip += "<br>Clock Identity: " + (node.clockIdentity ? hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity) + " (deduced from the AsPath)" : QStringLiteral("Unknown"));
+		tooltip += QString{ "<br><font color=\"%1\">Reported Clock Identity: %2 (orange badge: inconsistent, this is the grandmaster identity while the AsPath shows the entity is not the grandmaster)</font>" }.arg(backgroundWarningColor().name(), hive::modelsLibrary::helper::uniqueIdentifierToString(node.inconsistentClockIdentity));
+	}
+	else
+	{
+		tooltip += "<br>Clock Identity: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity);
+	}
 	tooltip += "<br>Grandmaster ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.gptpGrandmasterID);
 	if (node.gptpDomainNumber)
 	{
@@ -224,10 +233,11 @@ void showEntityContextMenu(la::avdecc::UniqueIdentifier const entityID, QPoint c
 	}
 }
 
-// Draws the 'GM' tag in the top-right corner of grandmaster nodes and the error badge in the bottom-left corner
+// Draws the 'GM' tag in the top-right corner of grandmaster nodes, and the error then warning badges in the bottom-left corner
 // (both corners are kept free of text by the nodes paint implementations)
-void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGrandmaster, std::uint64_t const errorCounter)
+void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGrandmaster, std::uint64_t const errorCounter, bool const hasWarning)
 {
+	auto badgeLeft = 4.0;
 	if (isGrandmaster)
 	{
 		auto const tagRect = QRectF{ nodeSize.width() - 34.0, 4.0, 30.0, 15.0 };
@@ -245,7 +255,7 @@ void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGra
 	if (errorCounter > 0u)
 	{
 		auto const text = errorCounter > 99u ? QStringLiteral("99+") : QString::number(errorCounter);
-		auto const badgeRect = QRectF{ 4.0, nodeSize.height() - 19.0, 26.0, 15.0 };
+		auto const badgeRect = QRectF{ badgeLeft, nodeSize.height() - 19.0, 26.0, 15.0 };
 		painter->setPen(Qt::NoPen);
 		painter->setBrush(ErrorColor);
 		painter->drawRoundedRect(badgeRect, 7.0, 7.0);
@@ -255,6 +265,21 @@ void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGra
 		painter->setFont(font);
 		painter->setPen(Qt::white);
 		painter->drawText(badgeRect, Qt::AlignCenter, text);
+		badgeLeft += 30.0;
+	}
+
+	if (hasWarning)
+	{
+		auto const badgeRect = QRectF{ badgeLeft, nodeSize.height() - 19.0, 15.0, 15.0 };
+		painter->setPen(Qt::NoPen);
+		painter->setBrush(WarningColor);
+		painter->drawEllipse(badgeRect);
+		auto font = painter->font();
+		font.setPointSizeF(8.0);
+		font.setBold(true);
+		painter->setFont(font);
+		painter->setPen(Qt::white);
+		painter->drawText(badgeRect, Qt::AlignCenter, "!");
 	}
 }
 
@@ -360,7 +385,7 @@ public:
 		painter->setBrush(clockLockStateColor(_node.clockLockState));
 		painter->drawEllipse(QRectF{ rect.width() - 14.0, rect.height() - 14.0, 8.0, 8.0 });
 
-		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter);
+		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter, _node.inconsistentClockIdentity.isValid());
 	}
 
 protected:
@@ -419,7 +444,7 @@ public:
 		painter->setPen(SecondaryTextColor);
 		painter->drawText(QRectF{ 8.0, 24.0, textWidth, 16.0 }, Qt::AlignLeft | Qt::AlignVCenter, hive::modelsLibrary::helper::uniqueIdentifierToString(_node.clockIdentity));
 
-		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u);
+		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u, false);
 	}
 };
 
@@ -588,7 +613,7 @@ public:
 		painter->setFont(smallFont);
 		painter->setPen(SecondaryTextColor);
 		painter->drawText(QRectF{ 8.0, 21.0, textWidth, 14.0 }, Qt::AlignLeft | Qt::AlignVCenter, hive::modelsLibrary::helper::uniqueIdentifierToString(_node.clockIdentity));
-		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u);
+		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u, false);
 
 		// Entity rows
 		for (auto rowIndex = std::size_t{ 0u }; rowIndex < _rows.size(); ++rowIndex)
@@ -771,7 +796,7 @@ private:
 		auto const halfWidth = borderPen.widthF() / 2.0;
 		painter->drawRoundedRect(plate.adjusted(halfWidth, halfWidth, -halfWidth, -halfWidth), 4.0, 4.0);
 
-		// Right side decorations: media clock lock state dot, then optional GM tag and error badge
+		// Right side decorations: media clock lock state dot, then optional GM tag, error badge and warning badge
 		auto const centerY = plate.center().y();
 		auto rightEdge = plate.right() - 4.0;
 		painter->setPen(Qt::NoPen);
@@ -804,6 +829,17 @@ private:
 			painter->setPen(Qt::white);
 			painter->drawText(badgeRect, Qt::AlignCenter, text);
 			rightEdge -= 28.0;
+		}
+		if (node.inconsistentClockIdentity)
+		{
+			auto const badgeRect = QRectF{ rightEdge - 14.0, centerY - 7.0, 14.0, 14.0 };
+			painter->setPen(Qt::NoPen);
+			painter->setBrush(WarningColor);
+			painter->drawEllipse(badgeRect);
+			painter->setFont(badgeFont);
+			painter->setPen(Qt::white);
+			painter->drawText(badgeRect, Qt::AlignCenter, "!");
+			rightEdge -= 18.0;
 		}
 
 		// Entity name, with the link information of its uplink below it (name vertically centered when there is none)
