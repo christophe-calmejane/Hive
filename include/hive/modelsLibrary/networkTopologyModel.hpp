@@ -249,7 +249,7 @@ private:
 	std::vector<Network> _networks{};
 	QTimer* _recomputeTimer{ nullptr };
 
-	std::unordered_map<la::avdecc::UniqueIdentifier, EntityCache, la::avdecc::UniqueIdentifier::hash> _entityCaches{};
+	std::map<la::avdecc::UniqueIdentifier, EntityCache> _entityCaches{}; /**< Ordered: the topology inference depends on the order the entities are processed in (see buildTopologyForNetwork), an unordered container would give a different topology on each platform (and possibly after each discovery) */
 	std::unordered_set<la::avdecc::UniqueIdentifier, la::avdecc::UniqueIdentifier::hash> _onlineEntities{}; /**< Entities currently online (their snapshot may still be in flight on the snapshot thread) */
 
 	// Snapshot thread state (see buildEntityCache)

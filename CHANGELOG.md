@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Interconnected networks detection (clock identity seen in multiple networks, grandmaster following another grandmaster)
   - Entities reporting the clock identity of their grandmaster as their own placed using the clock identity deduced from their AsPath, and flagged with a warning badge
   - Entities reporting an AsPath that doesn't start with their grandmaster (most probably outdated) flagged with a warning badge, their AsPath being used last so it can no longer detach a part of the network from its grandmaster
+  - Deterministic topology inference: the same network gives the same graph whatever the platform and the discovery order of the entities
 - Event Journal recording important network events to a crash-safe database file for after-show analysis (entities online/offline, stream connections, error counters, media clock lock, gPTP changes, link status, latency and redundancy issues)
   - Event Journal window (View menu) displaying the live session with severity/category/entity/time filters, regex search and per-severity colors
   - Timeline strip plotting events per category over time (zoom/pan, hover details with time since previous occurrence, click to select in the table), making recurring problems and their spacing directly visible

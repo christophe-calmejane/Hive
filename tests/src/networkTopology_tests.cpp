@@ -419,7 +419,7 @@ namespace
 // Identities of the 'data/networkTopology/3-AsPathInconsistentWithGrandmaster.json' test file (same grandmaster than the first test file)
 constexpr auto UpstreamBridgeClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000E0u }; // The bridge attached to the grandmaster
 constexpr auto DownstreamBridgeClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000D0u }; // The bridge attached to the upstream bridge
-constexpr auto EntityAOutdatedAsPath = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000001u }; // Attached to the downstream bridge, reports an AsPath starting with that bridge instead of its grandmaster
+constexpr auto EntityAOutdatedAsPath = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000001u }; // Attached to the downstream bridge, reports an AsPath starting with that bridge instead of its grandmaster (lowest EntityID, so first in the inputs of the topology inference)
 constexpr auto EntityBDownstreamBridge = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000002u }; // Attached to the downstream bridge, consistent AsPath
 constexpr auto EntityCUpstreamBridge = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000003u }; // Attached to the upstream bridge, consistent AsPath
 
