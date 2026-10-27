@@ -77,6 +77,8 @@ auto const SecondaryTextColor = QColor{ 0x757575 };
 auto const GrandmasterColor = QColor{ 0xFFC107 };
 auto const ErrorColor = QColor{ 0xD32F2F };
 auto const WarningColor = QColor{ 0xE65100 }; /**< Material Orange 900, only usable inside the node boxes (opaque light plates), see backgroundWarningColor for the graph background */
+auto const InformationColor = QColor{ 0x607D8B }; /**< Material Blue Grey 500, light notices inside the node boxes */
+auto const NoLiveUpdatesHatchColor = QColor{ 0xBDBDBD }; /**< Material Gray 400, hatching of the entities the controller no longer gets live updates from (same cue than the Discovered Entities list) */
 auto const ClockLockedColor = QColor{ 0x4CAF50 };
 auto const ClockUnlockedColor = QColor{ 0xF44336 };
 auto const ClockUnknownColor = QColor{ 0x9E9E9E };
@@ -140,10 +142,24 @@ QString clockLockStateText(hive::modelsLibrary::NetworkTopologyModel::ClockLockS
 	}
 }
 
-// Returns true when the node has an inconsistency to report with the warning badge (detailed in its tooltip)
+// Returns true when the controller no longer gets live updates from an entity supporting them (subscription to its unsolicited notifications lost, or removed by the entity): its information may be outdated.
+// Displayed like in the Discovered Entities list: a hatched background (and an italic name for the entities not supporting them at all, never updated live)
+bool hasLostLiveUpdates(TopologyNode const& node)
+{
+	return node.areUnsolicitedNotificationsSupported && !node.isSubscribedToUnsolicitedNotifications;
+}
+
+// Returns true when the node has an inconsistency to report with the warning badge (detailed in its tooltip).
+// An AsPath inconsistent with the grandmaster is only an entity bug (its change was not notified) while the controller gets live updates from the entity, it is otherwise merely outdated (see hasInformation)
 bool hasWarning(TopologyNode const& node)
 {
-	return node.inconsistentClockIdentity.isValid() || node.inconsistentAsPathGrandmasterID.isValid();
+	return node.inconsistentClockIdentity.isValid() || (node.inconsistentAsPathGrandmasterID.isValid() && node.isSubscribedToUnsolicitedNotifications);
+}
+
+// Returns true when the node has a light notice to report with the information badge (detailed in its tooltip), only displayed when there is no warning
+bool hasInformation(TopologyNode const& node)
+{
+	return node.inconsistentAsPathGrandmasterID.isValid() && !node.isSubscribedToUnsolicitedNotifications;
 }
 
 // Builds the tooltip of an Entity node (shared by the detailed entity nodes and the aggregated rows)
@@ -153,6 +169,14 @@ QString buildEntityNodeTooltip(TopologyNode const& node)
 	if (node.isInterconnected)
 	{
 		tooltip += QString{ "<br><font color=\"#D32F2F\"><b>%1</b></font>" }.arg(node.interconnectionError.toHtmlEscaped());
+	}
+	if (hasLostLiveUpdates(node))
+	{
+		tooltip += "<br><font color=\"#D32F2F\">No longer getting live updates from the entity (hatched background): its information may be outdated, refresh the entity</font>";
+	}
+	else if (!node.areUnsolicitedNotificationsSupported)
+	{
+		tooltip += "<br><i>Entity does not support unsolicited notifications (italic name): its information is not updated live and may be outdated</i>";
 	}
 	tooltip += "<br>Entity ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.entityID);
 	if (node.isTalker || node.isListener)
@@ -186,7 +210,15 @@ QString buildEntityNodeTooltip(TopologyNode const& node)
 	tooltip += "<br>Grandmaster ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.gptpGrandmasterID);
 	if (node.inconsistentAsPathGrandmasterID)
 	{
-		tooltip += QString{ "<br><font color=\"%1\">AsPath Grandmaster: %2 (orange badge: inconsistent, the AsPath doesn't start with the reported grandmaster, it is probably outdated and the entity may be misplaced)</font>" }.arg(backgroundWarningColor().name(), hive::modelsLibrary::helper::uniqueIdentifierToString(node.inconsistentAsPathGrandmasterID));
+		auto const asPathGrandmaster = hive::modelsLibrary::helper::uniqueIdentifierToString(node.inconsistentAsPathGrandmasterID);
+		if (node.isSubscribedToUnsolicitedNotifications)
+		{
+			tooltip += QString{ "<br><font color=\"%1\">AsPath Grandmaster: %2 (orange badge: the AsPath doesn't start with the reported grandmaster, an entity bug: its AsPath change was not notified, the entity may be misplaced)</font>" }.arg(backgroundWarningColor().name(), asPathGrandmaster);
+		}
+		else
+		{
+			tooltip += QString{ "<br><i>AsPath Grandmaster: %1 (gray badge: the AsPath doesn't start with the reported grandmaster, it is not up to date since the controller doesn't get live updates from the entity, the entity may be misplaced)</i>" }.arg(asPathGrandmaster);
+		}
 	}
 	if (node.gptpDomainNumber)
 	{
@@ -243,9 +275,9 @@ void showEntityContextMenu(la::avdecc::UniqueIdentifier const entityID, QPoint c
 	}
 }
 
-// Draws the 'GM' tag in the top-right corner of grandmaster nodes, and the error then warning badges in the bottom-left corner
+// Draws the 'GM' tag in the top-right corner of grandmaster nodes, and the error then warning (or information) badges in the bottom-left corner
 // (both corners are kept free of text by the nodes paint implementations)
-void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGrandmaster, std::uint64_t const errorCounter, bool const hasWarning)
+void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGrandmaster, std::uint64_t const errorCounter, bool const hasWarning, bool const hasInformation)
 {
 	auto badgeLeft = 4.0;
 	if (isGrandmaster)
@@ -278,19 +310,27 @@ void paintNodeBadges(QPainter* painter, QSizeF const& nodeSize, bool const isGra
 		badgeLeft += 30.0;
 	}
 
-	if (hasWarning)
+	if (hasWarning || hasInformation)
 	{
 		auto const badgeRect = QRectF{ badgeLeft, nodeSize.height() - 19.0, 15.0, 15.0 };
 		painter->setPen(Qt::NoPen);
-		painter->setBrush(WarningColor);
+		painter->setBrush(hasWarning ? WarningColor : InformationColor);
 		painter->drawEllipse(badgeRect);
 		auto font = painter->font();
 		font.setPointSizeF(8.0);
 		font.setBold(true);
 		painter->setFont(font);
 		painter->setPen(Qt::white);
-		painter->drawText(badgeRect, Qt::AlignCenter, "!");
+		painter->drawText(badgeRect, Qt::AlignCenter, hasWarning ? "!" : "i");
 	}
+}
+
+// Hatches the background of an entity the controller no longer gets live updates from (see hasLostLiveUpdates), over its already painted plate
+void paintLostLiveUpdatesHatching(QPainter* painter, QRectF const& plateRect, qreal const radius)
+{
+	painter->setPen(Qt::NoPen);
+	painter->setBrush(QBrush{ NoLiveUpdatesHatchColor, Qt::BDiagPattern });
+	painter->drawRoundedRect(plateRect, radius, radius);
 }
 
 // Base of the topology node items, allowing in-place refresh of the displayed information when the
@@ -370,14 +410,19 @@ public:
 		painter->setPen(borderPen);
 		painter->setBrush(EntityFillColor);
 		painter->drawRoundedRect(borderRect(size(), borderPen), 6.0, 6.0);
+		if (hasLostLiveUpdates(_node))
+		{
+			paintLostLiveUpdatesHatching(painter, borderRect(size(), borderPen), 6.0);
+		}
 
 		auto const textWidth = rect.width() - 16.0;
 		// Keep the top-right corner free of text when the GM tag is displayed
 		auto const nameWidth = _node.isGrandmaster ? textWidth - 34.0 : textWidth;
 
-		// Entity name (bold)
+		// Entity name (bold, italic when the entity doesn't support unsolicited notifications, like in the Discovered Entities list)
 		auto nameFont = painter->font();
 		nameFont.setBold(true);
+		nameFont.setItalic(!_node.areUnsolicitedNotificationsSupported);
 		painter->setFont(nameFont);
 		painter->setPen(TextColor);
 		painter->drawText(QRectF{ 8.0, 4.0, nameWidth, 18.0 }, Qt::AlignLeft | Qt::AlignVCenter, QFontMetricsF{ nameFont }.elidedText(label(), Qt::ElideMiddle, nameWidth));
@@ -385,6 +430,7 @@ public:
 		// Entity ID (the bottom strip below it is reserved for the error badge, left, and the link status dot, right)
 		auto smallFont = painter->font();
 		smallFont.setBold(false);
+		smallFont.setItalic(false);
 		smallFont.setPointSizeF(smallFont.pointSizeF() * 0.85);
 		painter->setFont(smallFont);
 		painter->setPen(SecondaryTextColor);
@@ -395,7 +441,7 @@ public:
 		painter->setBrush(clockLockStateColor(_node.clockLockState));
 		painter->drawEllipse(QRectF{ rect.width() - 14.0, rect.height() - 14.0, 8.0, 8.0 });
 
-		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter, hasWarning(_node));
+		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter, hasWarning(_node), hasInformation(_node));
 	}
 
 protected:
@@ -454,7 +500,7 @@ public:
 		painter->setPen(SecondaryTextColor);
 		painter->drawText(QRectF{ 8.0, 24.0, textWidth, 16.0 }, Qt::AlignLeft | Qt::AlignVCenter, hive::modelsLibrary::helper::uniqueIdentifierToString(_node.clockIdentity));
 
-		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u, false);
+		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u, false, false);
 	}
 };
 
@@ -623,7 +669,7 @@ public:
 		painter->setFont(smallFont);
 		painter->setPen(SecondaryTextColor);
 		painter->drawText(QRectF{ 8.0, 21.0, textWidth, 14.0 }, Qt::AlignLeft | Qt::AlignVCenter, hive::modelsLibrary::helper::uniqueIdentifierToString(_node.clockIdentity));
-		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u, false);
+		paintNodeBadges(painter, size(), _node.isGrandmaster, 0u, false, false);
 
 		// Entity rows
 		for (auto rowIndex = std::size_t{ 0u }; rowIndex < _rows.size(); ++rowIndex)
@@ -806,8 +852,12 @@ private:
 		painter->setBrush(EntityFillColor);
 		auto const halfWidth = borderPen.widthF() / 2.0;
 		painter->drawRoundedRect(plate.adjusted(halfWidth, halfWidth, -halfWidth, -halfWidth), 4.0, 4.0);
+		if (hasLostLiveUpdates(node))
+		{
+			paintLostLiveUpdatesHatching(painter, plate.adjusted(halfWidth, halfWidth, -halfWidth, -halfWidth), 4.0);
+		}
 
-		// Right side decorations: media clock lock state dot, then optional GM tag, error badge and warning badge
+		// Right side decorations: media clock lock state dot, then optional GM tag, error badge and warning (or information) badge
 		auto const centerY = plate.center().y();
 		auto rightEdge = plate.right() - 4.0;
 		painter->setPen(Qt::NoPen);
@@ -841,21 +891,22 @@ private:
 			painter->drawText(badgeRect, Qt::AlignCenter, text);
 			rightEdge -= 28.0;
 		}
-		if (hasWarning(node))
+		if (auto const isWarning = hasWarning(node); isWarning || hasInformation(node))
 		{
 			auto const badgeRect = QRectF{ rightEdge - 14.0, centerY - 7.0, 14.0, 14.0 };
 			painter->setPen(Qt::NoPen);
-			painter->setBrush(WarningColor);
+			painter->setBrush(isWarning ? WarningColor : InformationColor);
 			painter->drawEllipse(badgeRect);
 			painter->setFont(badgeFont);
 			painter->setPen(Qt::white);
-			painter->drawText(badgeRect, Qt::AlignCenter, "!");
+			painter->drawText(badgeRect, Qt::AlignCenter, isWarning ? "!" : "i");
 			rightEdge -= 18.0;
 		}
 
-		// Entity name, with the link information of its uplink below it (name vertically centered when there is none)
+		// Entity name (italic when the entity doesn't support unsolicited notifications, like in the Discovered Entities list), with the link information of its uplink below it (name vertically centered when there is none)
 		auto nameFont = baseFont;
 		nameFont.setPointSizeF(baseFont.pointSizeF() * 0.9);
+		nameFont.setItalic(!node.areUnsolicitedNotificationsSupported);
 		painter->setFont(nameFont);
 		painter->setPen(TextColor);
 		auto const textLeft = plate.left() + 6.0;

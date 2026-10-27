@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Talker to Listener stream path highlighting (click an edge, or right-click to pick a single stream)
   - Interconnected networks detection (clock identity seen in multiple networks, grandmaster following another grandmaster)
   - Entities reporting the clock identity of their grandmaster as their own placed using the clock identity deduced from their AsPath, and flagged with a warning badge
-  - Entities reporting an AsPath that doesn't start with their grandmaster (most probably outdated) flagged with a warning badge, their AsPath being used last so it can no longer detach a part of the network from its grandmaster
+  - Entities reporting an AsPath that doesn't start with their grandmaster (most probably outdated) flagged with a warning badge (an entity bug, its AsPath change was not notified), or with an information badge when the controller doesn't get live updates from the entity, their AsPath being used last so it can no longer detach a part of the network from its grandmaster
+  - Entities the controller doesn't get live updates from displayed like in the Discovered Entities list: hatched background when the subscription to their unsolicited notifications is lost (or removed by the entity), italic name when they don't support them
   - Deterministic topology inference: the same network gives the same graph whatever the platform and the discovery order of the entities
   - View panned by left-dragging anywhere but on a node, including over the edges and their labels (a click on an edge still highlights its streams)
   - Clicking an entity in the graph selects it without scrolling the view (only a selection made outside of the graph brings the entity into view), so the switch group of the clicked entity is no longer dragged along

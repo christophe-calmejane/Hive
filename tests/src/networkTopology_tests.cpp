@@ -419,12 +419,13 @@ namespace
 // Identities of the 'data/networkTopology/3-AsPathInconsistentWithGrandmaster.json' test file (same grandmaster than the first test file)
 constexpr auto UpstreamBridgeClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000E0u }; // The bridge attached to the grandmaster
 constexpr auto DownstreamBridgeClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000D0u }; // The bridge attached to the upstream bridge
-constexpr auto EntityAOutdatedAsPath = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000001u }; // Attached to the downstream bridge, reports an AsPath starting with that bridge instead of its grandmaster (lowest EntityID, so first in the inputs of the topology inference)
+constexpr auto EntityAOutdatedAsPath = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000001u }; // Attached to the downstream bridge, reports an AsPath starting with that bridge instead of its grandmaster while the controller gets live updates from it (lowest EntityID, so first in the inputs of the topology inference)
 constexpr auto EntityBDownstreamBridge = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000002u }; // Attached to the downstream bridge, consistent AsPath
-constexpr auto EntityCUpstreamBridge = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000003u }; // Attached to the upstream bridge, consistent AsPath
+constexpr auto EntityCUpstreamBridge = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000003u }; // Attached to the upstream bridge, consistent AsPath, doesn't support unsolicited notifications
+constexpr auto EntityDNoLiveUpdates = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000004u }; // Same as EntityA, but the controller no longer gets live updates from it (subscription to its unsolicited notifications lost)
 
 constexpr auto InconsistentAsPathTestFilePath = "data/networkTopology/3-AsPathInconsistentWithGrandmaster.json";
-constexpr auto InconsistentAsPathTestFileEntityCount = std::size_t{ 3u };
+constexpr auto InconsistentAsPathTestFileEntityCount = std::size_t{ 4u };
 } // namespace
 
 // An AsPath that doesn't start with the grandmaster of its entity must not detach the bridge it starts with from the rest of the network: that bridge stays attached to its real upstream, as given by the consistent AsPaths
@@ -462,13 +463,38 @@ TEST_F(NetworkTopology_F, AsPathInconsistentWithGrandmaster_EntityIsAttachedToIt
 
 	auto const downstreamBridgeNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity });
 	ASSERT_TRUE(downstreamBridgeNode.has_value());
-	for (auto const entityID : { EntityAOutdatedAsPath, EntityBDownstreamBridge })
+	for (auto const entityID : { EntityAOutdatedAsPath, EntityBDownstreamBridge, EntityDNoLiveUpdates })
 	{
 		auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ entityID });
 		ASSERT_TRUE(entityNode.has_value());
 		auto const upstreamNode = findUpstreamNode(*entityNode);
 		ASSERT_TRUE(upstreamNode.has_value());
 		EXPECT_EQ(*downstreamBridgeNode, *upstreamNode) << "Wrong upstream node for entity " << la::avdecc::utils::toHexString(entityID, true, true);
+	}
+}
+
+// The unsolicited notifications state of each entity is reported, so an inconsistency of an entity the controller doesn't get live updates from is not mistaken for an entity bug (its information is merely outdated)
+TEST_F(NetworkTopology_F, AsPathInconsistentWithGrandmaster_UnsolicitedNotificationsStateIsReported)
+{
+	loadNetworkState(InconsistentAsPathTestFilePath, InconsistentAsPathTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	struct Expected
+	{
+		la::avdecc::UniqueIdentifier::value_type entityID{};
+		bool areUnsolicitedNotificationsSupported{ false };
+		bool isSubscribedToUnsolicitedNotifications{ false };
+	};
+	for (auto const& expected : { Expected{ EntityAOutdatedAsPath, true, true }, Expected{ EntityBDownstreamBridge, true, true }, Expected{ EntityCUpstreamBridge, false, false }, Expected{ EntityDNoLiveUpdates, true, false } })
+	{
+		auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ expected.entityID });
+		ASSERT_TRUE(entityNode.has_value());
+		auto const& node = getTopology().nodes[*entityNode];
+		EXPECT_EQ(expected.areUnsolicitedNotificationsSupported, node.areUnsolicitedNotificationsSupported) << "Wrong unsolicited notifications support for entity " << la::avdecc::utils::toHexString(expected.entityID, true, true);
+		EXPECT_EQ(expected.isSubscribedToUnsolicitedNotifications, node.isSubscribedToUnsolicitedNotifications) << "Wrong unsolicited notifications subscription for entity " << la::avdecc::utils::toHexString(expected.entityID, true, true);
 	}
 }
 
@@ -485,6 +511,7 @@ TEST_F(NetworkTopology_F, AsPathInconsistentWithGrandmaster_IsReported)
 		{ EntityAOutdatedAsPath, la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity } },
 		{ EntityBDownstreamBridge, la::avdecc::UniqueIdentifier{} }, // Consistent AsPath, nothing to report
 		{ EntityCUpstreamBridge, la::avdecc::UniqueIdentifier{} }, // Consistent AsPath, nothing to report
+		{ EntityDNoLiveUpdates, la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity } }, // Reported too, the unsolicited notifications state tells whether it is an entity bug
 	};
 	for (auto const& [entityID, expectedAsPathGrandmaster] : expectedAsPathGrandmasters)
 	{

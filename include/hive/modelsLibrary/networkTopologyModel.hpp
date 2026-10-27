@@ -106,7 +106,9 @@ public:
 		bool hasSuspiciousPropagationDelay{ false }; /**< True when the interface reports a null propagation delay that is not explained by a bridge embedded in the same unit: only such an internal link is expected to have a null delay, so the node is placed at its real position and the delay is reported as a warning */
 		bool hasAsPath{ false }; /**< True if the entity exposes a usable AsPath for this interface */
 		la::avdecc::UniqueIdentifier inconsistentClockIdentity{}; /**< Clock identity reported by the interface when it contradicts its AsPath (the identity of its grandmaster, while the interface is not the grandmaster), invalid otherwise. The clockIdentity field then holds the identity deduced from the AsPath (invalid when it cannot be deduced), and the inconsistency must be reported as a warning */
-		la::avdecc::UniqueIdentifier inconsistentAsPathGrandmasterID{}; /**< Grandmaster according to the AsPath of the interface (its first element) when it is not the reported gptpGrandmasterID, invalid otherwise. The AsPath is then most probably outdated (not updated after a grandmaster change): it is only used after the consistent ones to build the topology (the node may be misplaced), and the inconsistency must be reported as a warning */
+		la::avdecc::UniqueIdentifier inconsistentAsPathGrandmasterID{}; /**< Grandmaster according to the AsPath of the interface (its first element) when it is not the reported gptpGrandmasterID, invalid otherwise. The AsPath is then most probably outdated (not updated after a grandmaster change): it is only used after the consistent ones to build the topology (the node may be misplaced), and the inconsistency must be reported, as an entity bug (the change was not notified) only when isSubscribedToUnsolicitedNotifications is true */
+		bool areUnsolicitedNotificationsSupported{ true }; /**< False when the entity doesn't support unsolicited notifications: the controller never gets live updates from it, the information it reported may be outdated (entity level, duplicated on each interface node) */
+		bool isSubscribedToUnsolicitedNotifications{ true }; /**< False when the controller doesn't get live updates from the entity (unsolicited notifications not supported, or subscription lost or removed by the entity): the information it reported may be outdated (entity level, duplicated on each interface node) */
 		std::uint64_t errorCounter{ 0u }; /**< Aggregated entity level error counter (stream input errors + statistics errors), duplicated on each interface node of the entity */
 		bool isInterconnected{ false }; /**< True when this node reveals a likely interconnection between networks (severe cabling error for redundant networks) */
 		QString interconnectionError{}; /**< Human readable description of the interconnection issue (only set when isInterconnected) */
@@ -222,6 +224,8 @@ private:
 		bool isTalker{ false };
 		bool isListener{ false };
 		la::avdecc::entity::model::MilanVersion milanVersion{};
+		bool areUnsolicitedNotificationsSupported{ false };
+		bool isSubscribedToUnsolicitedNotifications{ false }; /**< Aggregated state: the entity is only unsubscribed when no controller interface holds a subscription anymore */
 		la::avdecc::entity::model::ConfigurationIndex currentConfigurationIndex{ 0u };
 		std::map<la::avdecc::entity::model::ClockDomainIndex, ClockLockState> clockLockStates{}; /**< Lock state of each clock domain, the first one is the entity level state (same rule than the Discovered Entities list) */
 		std::map<la::avdecc::entity::model::AvbInterfaceIndex, InterfaceCache> interfaces{};

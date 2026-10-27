@@ -56,6 +56,8 @@ struct InterfaceInfo
 	la::avdecc::UniqueIdentifier inconsistentClockIdentity{}; /**< Clock identity reported by the entity when it contradicts its AsPath (see the detection in recompute), clockIdentity then being the one deduced from the AsPath */
 	la::avdecc::UniqueIdentifier gptpGrandmasterID{};
 	la::avdecc::UniqueIdentifier inconsistentAsPathGrandmasterID{}; /**< First element of the AsPath when it is not gptpGrandmasterID (see the detection in recompute), the AsPath being most probably outdated */
+	bool areUnsolicitedNotificationsSupported{ true };
+	bool isSubscribedToUnsolicitedNotifications{ true };
 	std::optional<std::uint8_t> gptpDomainNumber{};
 	NetworkTopologyModel::ClockLockState clockLockState{ NetworkTopologyModel::ClockLockState::Unknown };
 	std::optional<std::uint32_t> propagationDelay{};
@@ -156,6 +158,8 @@ NetworkTopologyModel::Topology buildTopologyForNetwork(std::vector<InterfaceInfo
 		node.hasAsPath = info.asPath.size() >= 2;
 		node.inconsistentClockIdentity = info.inconsistentClockIdentity;
 		node.inconsistentAsPathGrandmasterID = info.inconsistentAsPathGrandmasterID;
+		node.areUnsolicitedNotificationsSupported = info.areUnsolicitedNotificationsSupported;
+		node.isSubscribedToUnsolicitedNotifications = info.isSubscribedToUnsolicitedNotifications;
 		node.errorCounter = info.errorCounter;
 
 		auto const nodeIndex = topology.nodes.size();
@@ -639,6 +643,16 @@ NetworkTopologyModel::NetworkTopologyModel(QObject* parent)
 				scheduleRecompute();
 			}
 		});
+	connect(&manager, &ControllerManager::unsolicitedRegistrationChanged, this,
+		[this](la::avdecc::UniqueIdentifier const entityID, bool const isSubscribed, bool const /*triggeredByEntity*/)
+		{
+			// Aggregated state: the controller no longer gets live updates from the entity only when no controller interface holds a subscription anymore
+			if (auto* const cache = findCache(entityID); cache && cache->isSubscribedToUnsolicitedNotifications != isSubscribed)
+			{
+				cache->isSubscribedToUnsolicitedNotifications = isSubscribed;
+				scheduleRecompute();
+			}
+		});
 	connect(&manager, &ControllerManager::streamOutputConnectionsChanged, this,
 		[this](la::avdecc::entity::model::StreamIdentification const& stream, la::avdecc::entity::model::StreamConnections const& connections)
 		{
@@ -847,6 +861,8 @@ std::optional<NetworkTopologyModel::EntityCache> NetworkTopologyModel::buildEnti
 		cache.isTalker = entity.getEntity().getTalkerCapabilities().test(la::avdecc::entity::TalkerCapability::Implemented) && !configurationNode.streamOutputs.empty();
 		cache.isListener = entity.getEntity().getListenerCapabilities().test(la::avdecc::entity::ListenerCapability::Implemented) && !configurationNode.streamInputs.empty();
 		cache.milanVersion = entity.getMilanCompatibilityVersion();
+		cache.areUnsolicitedNotificationsSupported = entity.areUnsolicitedNotificationsSupported();
+		cache.isSubscribedToUnsolicitedNotifications = entity.isSubscribedToUnsolicitedNotifications();
 		cache.currentConfigurationIndex = configurationNode.descriptorIndex;
 
 		for (auto const& [clockDomainIndex, clockDomainNode] : configurationNode.clockDomains)
@@ -985,6 +1001,8 @@ void NetworkTopologyModel::recompute() noexcept
 			info.gptpDomainNumber = interfaceCache.gptpDomainNumber;
 			info.clockLockState = clockLockState;
 			info.milanVersion = cache.milanVersion;
+			info.areUnsolicitedNotificationsSupported = cache.areUnsolicitedNotificationsSupported;
+			info.isSubscribedToUnsolicitedNotifications = cache.isSubscribedToUnsolicitedNotifications;
 			info.propagationDelay = interfaceCache.propagationDelay;
 			info.asPath = interfaceCache.asPath;
 
