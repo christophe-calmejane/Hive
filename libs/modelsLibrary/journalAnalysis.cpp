@@ -505,7 +505,7 @@ std::size_t JournalAnalysis::Topology::addSession(EventJournal::Session const& s
 				described.insert(event.entityID);
 			}
 		}
-		else if (event.category == EventJournal::Category::Gptp && event.summary == "gPTP AsPath changed")
+		else if (event.category == EventJournal::Category::Gptp && (event.summary == "gPTP AsPath changed" || event.summary.startsWith(QLatin1String{ "gPTP grandmaster changed" })))
 		{
 			auto const index = numberAfter(event.subject, QLatin1String{ "AVB Interface " });
 			auto const entityIt = entities.find(event.entityID);
@@ -515,10 +515,18 @@ std::size_t JournalAnalysis::Topology::addSession(EventJournal::Session const& s
 				if (interfaceIt != entityIt->second.interfaces.end())
 				{
 					auto const details = QJsonDocument::fromJson(event.details.toUtf8()).object();
-					interfaceIt->second.asPath.clear();
-					for (auto const& hop : details.value("new_as_path").toArray())
+					if (event.summary == "gPTP AsPath changed")
 					{
-						interfaceIt->second.asPath.push_back(identifierFromString(hop.toString()));
+						interfaceIt->second.asPath.clear();
+						for (auto const& hop : details.value("new_as_path").toArray())
+						{
+							interfaceIt->second.asPath.push_back(identifierFromString(hop.toString()));
+						}
+					}
+					else
+					{
+						// The grandmaster at the end of the session, like the AsPath: an AsPath that followed a grandmaster change must not be compared with the grandmaster known when the entity came online
+						interfaceIt->second.grandmasterID = identifierFromString(details.value("new_grandmaster_id").toString());
 					}
 				}
 			}

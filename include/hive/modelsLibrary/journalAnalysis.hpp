@@ -120,8 +120,8 @@ public:
 		Plane streamPlane(EntityID const entityID, la::avdecc::entity::model::StreamIndex const streamIndex) const noexcept;
 
 		/**
-		* @brief Adds what the 'Entity is online' events of a session tell (schema version 2 journals), and follows the 'gPTP AsPath changed' and 'Connected to talker' events.
-		* @details The AsPath at the end of the session is kept for an entity whose AsPath changed (a re-patch during the session is a topology event the report lists on its own).
+		* @brief Adds what the 'Entity is online' events of a session tell (schema version 2 journals), and follows the 'gPTP grandmaster changed', 'gPTP AsPath changed' and 'Connected to talker' events.
+		* @details The AsPath at the end of the session is kept for an entity whose AsPath changed (a re-patch during the session is a topology event the report lists on its own), and so is the grandmaster (an AsPath must be compared with the grandmaster of the same time).
 		* @param[in] session The session.
 		* @return The number of entities described.
 		*/

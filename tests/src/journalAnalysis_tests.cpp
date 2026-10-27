@@ -436,6 +436,32 @@ TEST(JournalAnalysis, Topology_AsPathInconsistentWithGrandmaster)
 	EXPECT_FALSE(alone.branchSwitch(amplifier(1u), 0).has_value());
 }
 
+// The grandmaster of an interface is followed through the session like its AsPath: an AsPath that followed a grandmaster change is consistent, one that didn't is not
+TEST(JournalAnalysis, Topology_GrandmasterChangesOfTheSession)
+{
+	constexpr auto NewGrandmaster = la::avdecc::UniqueIdentifier::value_type{ 0x001B92FFFE0000A9u };
+	auto builder = SessionBuilder{};
+	builder.standardStart();
+	for (auto const amp : { 0u, 1u })
+	{
+		builder.add(Base + Minute, Category::Gptp, Severity::Warning, amplifier(amp), builder.name(amplifier(amp)), "AVB Interface 0", QString{ "gPTP grandmaster changed from %1 to %2" }.arg(idString(GrandmasterPrimary), idString(NewGrandmaster)), QJsonObject{ { "previous_grandmaster_id", idString(GrandmasterPrimary) }, { "new_grandmaster_id", idString(NewGrandmaster) } });
+	}
+	// Only the first amplifier notifies its new AsPath
+	auto const newAsPath = QJsonArray{ idString(NewGrandmaster), idString(BranchPrimary), idString(Rack1Primary), idString(clockIdentity(amplifier(0u), 0)) };
+	builder.add(Base + Minute + Second, Category::Gptp, Severity::Info, amplifier(0u), builder.name(amplifier(0u)), "AVB Interface 0", "gPTP AsPath changed", QJsonObject{ { "new_as_path", newAsPath } });
+	builder.finish(Base + Hour);
+
+	auto const topology = topologyOf(builder.session);
+	auto const& notified = topology.entities.at(amplifier(0u)).interfaces.at(0u);
+	EXPECT_EQ(EntityID{ NewGrandmaster }, notified.grandmasterID);
+	EXPECT_FALSE(notified.hasInconsistentAsPath());
+	auto const& notNotified = topology.entities.at(amplifier(1u)).interfaces.at(0u);
+	EXPECT_EQ(EntityID{ NewGrandmaster }, notNotified.grandmasterID);
+	EXPECT_TRUE(notNotified.hasInconsistentAsPath());
+	// The other plane is untouched
+	EXPECT_EQ(EntityID{ GrandmasterSecondary }, topology.entities.at(amplifier(0u)).interfaces.at(1u).grandmasterID);
+}
+
 TEST(JournalAnalysis, Hits_IncidentsStormsAndRuns)
 {
 	auto builder = SessionBuilder{};
