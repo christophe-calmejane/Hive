@@ -1193,7 +1193,9 @@ void NetworkGraphPane::notifyEntityItemClicked(la::avdecc::UniqueIdentifier cons
 	if (entityID != _selectedEntityID)
 	{
 		_selectedEntityID = entityID;
-		applySelectionToScene();
+		// The clicked element is already visible, and scrolling the view while the mouse button is down would
+		// drag the clicked item along (the view replays the press as a move once scrolled, the item being movable)
+		applySelectionToScene(false);
 		emit entitySelectionChanged(entityID);
 	}
 }
@@ -1616,10 +1618,10 @@ void NetworkGraphPane::selectEntity(la::avdecc::UniqueIdentifier const entityID)
 		return;
 	}
 	_selectedEntityID = entityID;
-	applySelectionToScene();
+	applySelectionToScene(true);
 }
 
-void NetworkGraphPane::applySelectionToScene()
+void NetworkGraphPane::applySelectionToScene(bool const makeVisible)
 {
 	_changingSelection = true;
 	_scene->clearSelection();
@@ -1641,15 +1643,18 @@ void NetworkGraphPane::applySelectionToScene()
 			}
 		}
 		// Make sure the (first) selected element is visible
-		auto const& first = it->second.front();
-		if (first.row)
+		if (makeVisible)
 		{
-			auto const rowRect = static_cast<SwitchGroupNodeItem*>(first.item)->rowSceneRect(*first.row);
-			_graphView->ensureVisible(rowRect, 50, 50);
-		}
-		else
-		{
-			_graphView->ensureVisible(first.item, 50, 50);
+			auto const& first = it->second.front();
+			if (first.row)
+			{
+				auto const rowRect = static_cast<SwitchGroupNodeItem*>(first.item)->rowSceneRect(*first.row);
+				_graphView->ensureVisible(rowRect, 50, 50);
+			}
+			else
+			{
+				_graphView->ensureVisible(first.item, 50, 50);
+			}
 		}
 	}
 	_changingSelection = false;
@@ -1678,7 +1683,7 @@ void NetworkGraphPane::rebuildScene()
 	}
 
 	// Restore the application wide entity selection and the stream highlight on the freshly created items
-	applySelectionToScene();
+	applySelectionToScene(true);
 	applyHighlightToScene();
 
 	// Never fit synchronously: right after the pane creation (or a tab insertion) the viewport geometry is not

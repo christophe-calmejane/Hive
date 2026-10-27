@@ -154,7 +154,7 @@ private:
 	void applyRowLinkDecorations(std::size_t const nodeIndex);
 	void showLinkContextMenu(std::optional<la::avdecc::UniqueIdentifier> const identifyEntityID, std::optional<std::size_t> const edgeIndex, QPoint const& screenPos);
 	void updateStatsText();
-	void applySelectionToScene();
+	void applySelectionToScene(bool const makeVisible);
 	void applyHighlightToScene();
 	void scheduleFit();
 
