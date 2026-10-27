@@ -140,6 +140,12 @@ QString clockLockStateText(hive::modelsLibrary::NetworkTopologyModel::ClockLockS
 	}
 }
 
+// Returns true when the node has an inconsistency to report with the warning badge (detailed in its tooltip)
+bool hasWarning(TopologyNode const& node)
+{
+	return node.inconsistentClockIdentity.isValid() || node.inconsistentAsPathGrandmasterID.isValid();
+}
+
 // Builds the tooltip of an Entity node (shared by the detailed entity nodes and the aggregated rows)
 QString buildEntityNodeTooltip(TopologyNode const& node)
 {
@@ -178,6 +184,10 @@ QString buildEntityNodeTooltip(TopologyNode const& node)
 		tooltip += "<br>Clock Identity: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.clockIdentity);
 	}
 	tooltip += "<br>Grandmaster ID: " + hive::modelsLibrary::helper::uniqueIdentifierToString(node.gptpGrandmasterID);
+	if (node.inconsistentAsPathGrandmasterID)
+	{
+		tooltip += QString{ "<br><font color=\"%1\">AsPath Grandmaster: %2 (orange badge: inconsistent, the AsPath doesn't start with the reported grandmaster, it is probably outdated and the entity may be misplaced)</font>" }.arg(backgroundWarningColor().name(), hive::modelsLibrary::helper::uniqueIdentifierToString(node.inconsistentAsPathGrandmasterID));
+	}
 	if (node.gptpDomainNumber)
 	{
 		tooltip += QString{ "<br>gPTP Domain: %1" }.arg(*node.gptpDomainNumber);
@@ -385,7 +395,7 @@ public:
 		painter->setBrush(clockLockStateColor(_node.clockLockState));
 		painter->drawEllipse(QRectF{ rect.width() - 14.0, rect.height() - 14.0, 8.0, 8.0 });
 
-		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter, _node.inconsistentClockIdentity.isValid());
+		paintNodeBadges(painter, size(), _node.isGrandmaster, _node.errorCounter, hasWarning(_node));
 	}
 
 protected:
@@ -830,7 +840,7 @@ private:
 			painter->drawText(badgeRect, Qt::AlignCenter, text);
 			rightEdge -= 28.0;
 		}
-		if (node.inconsistentClockIdentity)
+		if (hasWarning(node))
 		{
 			auto const badgeRect = QRectF{ rightEdge - 14.0, centerY - 7.0, 14.0, 14.0 };
 			painter->setPen(Qt::NoPen);

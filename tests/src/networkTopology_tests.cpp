@@ -412,6 +412,89 @@ TEST_F(NetworkTopology_F, GrandmasterClockIdentityReportedAsOwn_IsReported)
 }
 
 /* *********************************
+   AsPath inconsistent with the grandmaster handling
+*/
+namespace
+{
+// Identities of the 'data/networkTopology/3-AsPathInconsistentWithGrandmaster.json' test file (same grandmaster than the first test file)
+constexpr auto UpstreamBridgeClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000E0u }; // The bridge attached to the grandmaster
+constexpr auto DownstreamBridgeClockIdentity = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE0000D0u }; // The bridge attached to the upstream bridge
+constexpr auto EntityAOutdatedAsPath = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000001u }; // Attached to the downstream bridge, reports an AsPath starting with that bridge instead of its grandmaster
+constexpr auto EntityBDownstreamBridge = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000002u }; // Attached to the downstream bridge, consistent AsPath
+constexpr auto EntityCUpstreamBridge = la::avdecc::UniqueIdentifier::value_type{ 0x001122FFFE000003u }; // Attached to the upstream bridge, consistent AsPath
+
+constexpr auto InconsistentAsPathTestFilePath = "data/networkTopology/3-AsPathInconsistentWithGrandmaster.json";
+constexpr auto InconsistentAsPathTestFileEntityCount = std::size_t{ 3u };
+} // namespace
+
+// An AsPath that doesn't start with the grandmaster of its entity must not detach the bridge it starts with from the rest of the network: that bridge stays attached to its real upstream, as given by the consistent AsPaths
+TEST_F(NetworkTopology_F, AsPathInconsistentWithGrandmaster_BridgeIsNotDetachedFromItsUpstream)
+{
+	loadNetworkState(InconsistentAsPathTestFilePath, InconsistentAsPathTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	auto const grandmasterNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ GrandmasterClockIdentity });
+	ASSERT_TRUE(grandmasterNode.has_value()) << "The grandmaster must be part of the topology";
+	auto const upstreamBridgeNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ UpstreamBridgeClockIdentity });
+	ASSERT_TRUE(upstreamBridgeNode.has_value());
+	auto const downstreamBridgeNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity });
+	ASSERT_TRUE(downstreamBridgeNode.has_value());
+
+	auto const downstreamBridgeUpstreamNode = findUpstreamNode(*downstreamBridgeNode);
+	ASSERT_TRUE(downstreamBridgeUpstreamNode.has_value()) << "The bridge must not be detached from the network";
+	EXPECT_EQ(*upstreamBridgeNode, *downstreamBridgeUpstreamNode);
+	auto const upstreamBridgeUpstreamNode = findUpstreamNode(*upstreamBridgeNode);
+	ASSERT_TRUE(upstreamBridgeUpstreamNode.has_value());
+	EXPECT_EQ(*grandmasterNode, *upstreamBridgeUpstreamNode);
+}
+
+// The entity with the inconsistent AsPath is still placed from it: attached to the bridge adjacent to it, along with the entity having a consistent AsPath through that bridge
+TEST_F(NetworkTopology_F, AsPathInconsistentWithGrandmaster_EntityIsAttachedToItsAdjacentBridge)
+{
+	loadNetworkState(InconsistentAsPathTestFilePath, InconsistentAsPathTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	auto const downstreamBridgeNode = findNodeByClockIdentity(la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity });
+	ASSERT_TRUE(downstreamBridgeNode.has_value());
+	for (auto const entityID : { EntityAOutdatedAsPath, EntityBDownstreamBridge })
+	{
+		auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ entityID });
+		ASSERT_TRUE(entityNode.has_value());
+		auto const upstreamNode = findUpstreamNode(*entityNode);
+		ASSERT_TRUE(upstreamNode.has_value());
+		EXPECT_EQ(*downstreamBridgeNode, *upstreamNode) << "Wrong upstream node for entity " << la::avdecc::utils::toHexString(entityID, true, true);
+	}
+}
+
+// The inconsistency is reported on the entities whose AsPath doesn't start with their grandmaster, and only on them
+TEST_F(NetworkTopology_F, AsPathInconsistentWithGrandmaster_IsReported)
+{
+	loadNetworkState(InconsistentAsPathTestFilePath, InconsistentAsPathTestFileEntityCount);
+	if (HasFatalFailure())
+	{
+		return;
+	}
+
+	auto const expectedAsPathGrandmasters = std::vector<std::pair<la::avdecc::UniqueIdentifier::value_type, la::avdecc::UniqueIdentifier>>{
+		{ EntityAOutdatedAsPath, la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity } },
+		{ EntityBDownstreamBridge, la::avdecc::UniqueIdentifier{} }, // Consistent AsPath, nothing to report
+		{ EntityCUpstreamBridge, la::avdecc::UniqueIdentifier{} }, // Consistent AsPath, nothing to report
+	};
+	for (auto const& [entityID, expectedAsPathGrandmaster] : expectedAsPathGrandmasters)
+	{
+		auto const entityNode = findEntityNode(la::avdecc::UniqueIdentifier{ entityID });
+		ASSERT_TRUE(entityNode.has_value());
+		EXPECT_EQ(expectedAsPathGrandmaster, getTopology().nodes[*entityNode].inconsistentAsPathGrandmasterID) << "Wrong inconsistent AsPath grandmaster for entity " << la::avdecc::utils::toHexString(entityID, true, true);
+	}
+}
+
+/* *********************************
    Stream reserved bandwidth
 */
 namespace

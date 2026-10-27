@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <map>
+#include <numeric>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -54,6 +55,7 @@ struct InterfaceInfo
 	la::avdecc::UniqueIdentifier clockIdentity{};
 	la::avdecc::UniqueIdentifier inconsistentClockIdentity{}; /**< Clock identity reported by the entity when it contradicts its AsPath (see the detection in recompute), clockIdentity then being the one deduced from the AsPath */
 	la::avdecc::UniqueIdentifier gptpGrandmasterID{};
+	la::avdecc::UniqueIdentifier inconsistentAsPathGrandmasterID{}; /**< First element of the AsPath when it is not gptpGrandmasterID (see the detection in recompute), the AsPath being most probably outdated */
 	std::optional<std::uint8_t> gptpDomainNumber{};
 	NetworkTopologyModel::ClockLockState clockLockState{ NetworkTopologyModel::ClockLockState::Unknown };
 	std::optional<std::uint32_t> propagationDelay{};
@@ -153,6 +155,7 @@ NetworkTopologyModel::Topology buildTopologyForNetwork(std::vector<InterfaceInfo
 		node.hasSuspiciousPropagationDelay = info.hasSuspiciousPropagationDelay;
 		node.hasAsPath = info.asPath.size() >= 2;
 		node.inconsistentClockIdentity = info.inconsistentClockIdentity;
+		node.inconsistentAsPathGrandmasterID = info.inconsistentAsPathGrandmasterID;
 		node.errorCounter = info.errorCounter;
 
 		auto const nodeIndex = topology.nodes.size();
@@ -193,8 +196,18 @@ NetworkTopologyModel::Topology buildTopologyForNetwork(std::vector<InterfaceInfo
 	};
 
 	// Walk the AsPath of each interface (from the entity towards the grandmaster), creating InferredBridge nodes
-	// for path elements that don't match any known entity, and chaining edges up to the first already known node
-	for (auto interfaceIndex = std::size_t{ 0u }; interfaceIndex < interfaces.size(); ++interfaceIndex)
+	// for path elements that don't match any known entity, and chaining edges up to the first already known node.
+	// The AsPaths contradicting the grandmaster reported by their interface (see the detection in recompute) are walked last, as they are most probably outdated: since a walk stops at the
+	// first known hop, an outdated AsPath walked first would create its own chain of bridges (rooted at its outdated grandmaster), that the up to date AsPaths would then join without ever
+	// attaching it to its real upstream, detaching a whole part of the network from its grandmaster (and losing the streams crossing it). Walked last, it joins the up to date topology.
+	auto walkOrder = std::vector<std::size_t>(interfaces.size());
+	std::iota(walkOrder.begin(), walkOrder.end(), std::size_t{ 0u });
+	std::stable_partition(walkOrder.begin(), walkOrder.end(),
+		[&interfaces](std::size_t const interfaceIndex)
+		{
+			return !interfaces[interfaceIndex].inconsistentAsPathGrandmasterID;
+		});
+	for (auto const interfaceIndex : walkOrder)
 	{
 		auto const& info = interfaces[interfaceIndex];
 		if (info.asPath.size() < 2)
@@ -1005,6 +1018,16 @@ void NetworkTopologyModel::recompute() noexcept
 			// but not when it is a bridge (the entity then takes the place of that bridge in the topology, which is wrong but harmless)
 			auto const& lastClockIdentity = info.asPath.back();
 			info.clockIdentity = reportedClockIdentities.count(lastClockIdentity) > 0 ? la::avdecc::UniqueIdentifier{} : lastClockIdentity;
+		}
+	}
+
+	// Outdated AsPath detection (seen in the field: entities reporting an AsPath that doesn't start with the grandmaster they report, most probably an AsPath not updated after a grandmaster change): the AsPath starts with the grandmaster, so an AsPath starting with another clock identity contradicts the reported grandmaster.
+	// Such an AsPath cannot be fully trusted to build the topology (see buildTopologyForNetwork), and the inconsistency is reported to the user.
+	for (auto& info : interfaces)
+	{
+		if (info.asPath.size() >= 2 && info.gptpGrandmasterID && info.asPath.front() != info.gptpGrandmasterID)
+		{
+			info.inconsistentAsPathGrandmasterID = info.asPath.front();
 		}
 	}
 
