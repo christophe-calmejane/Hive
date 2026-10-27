@@ -31,6 +31,7 @@
 #include <cstdlib>
 #include <functional>
 #include <iterator>
+#include <map>
 #include <set>
 #include <string>
 #include <tuple>
@@ -243,6 +244,12 @@ bool JournalAnalysis::Topology::Interface::hasInconsistentClockIdentity() const 
 	return asPath.size() >= 2u && clockIdentity && clockIdentity == asPath.front() && clockIdentity != asPath.back();
 }
 
+bool JournalAnalysis::Topology::Interface::hasInconsistentAsPath() const noexcept
+{
+	// The AsPath starts with the grandmaster
+	return asPath.size() >= 2u && grandmasterID && asPath.front() != grandmasterID;
+}
+
 EntityID JournalAnalysis::Topology::clockIdentity(EntityID const entityID, Plane const plane) const noexcept
 {
 	if (plane < 0)
@@ -279,6 +286,66 @@ EntityID JournalAnalysis::Topology::clockIdentity(EntityID const entityID, Plane
 	return lastClockIdentity;
 }
 
+namespace
+{
+// Hops above an element of the up to date AsPaths of a plane: the elements before it in the AsPath of an interface (the one of the lowest EntityID, for a deterministic result)
+struct UpstreamHops
+{
+	EntityID entityID{};
+	std::vector<EntityID> hops{};
+};
+using UpstreamHopsMap = std::map<std::pair<EntityID, EntityID>, UpstreamHops>; /**< Key: grandmaster, AsPath element */
+
+UpstreamHopsMap upstreamHopsOfPlane(JournalAnalysis::Topology const& topology, Plane const plane) noexcept
+{
+	auto result = UpstreamHopsMap{};
+	for (auto const& [entityID, entity] : topology.entities)
+	{
+		auto const interfaceIt = entity.interfaces.find(static_cast<la::avdecc::entity::model::AvbInterfaceIndex>(plane));
+		if (interfaceIt == entity.interfaces.end() || !interfaceIt->second.grandmasterID || interfaceIt->second.hasInconsistentAsPath())
+		{
+			continue;
+		}
+		auto const& asPath = interfaceIt->second.asPath;
+		for (auto position = std::size_t{ 1u }; position < asPath.size(); ++position)
+		{
+			auto& upstreamHops = result[std::make_pair(interfaceIt->second.grandmasterID, asPath[position])];
+			if (upstreamHops.hops.empty() || entityID < upstreamHops.entityID)
+			{
+				upstreamHops = UpstreamHops{ entityID, std::vector<EntityID>{ asPath.begin(), asPath.begin() + static_cast<std::ptrdiff_t>(position) } };
+			}
+		}
+	}
+	return result;
+}
+
+// The AsPath of an interface without the entity's own clock identity
+std::vector<EntityID> asPathHops(JournalAnalysis::Topology const& topology, EntityID const entityID, Plane const plane, JournalAnalysis::Topology::Interface const& interface) noexcept
+{
+	auto hops = interface.asPath;
+	// Most implementations end the AsPath with the entity's own clock identity (the deduced one when the reported one is inconsistent: it would otherwise be taken as the switch the entity is plugged into)
+	if (auto const ownClockIdentity = topology.clockIdentity(entityID, plane); !hops.empty() && ownClockIdentity && hops.back() == ownClockIdentity)
+	{
+		hops.pop_back();
+	}
+	return hops;
+}
+
+// An inconsistent AsPath (see Interface::hasInconsistentAsPath) misses the hops above its first element, as it was most probably captured before a grandmaster change (the network above that element changed since):
+// they are taken from an up to date AsPath going through that element, so the hops can be compared with the other ones (branch switch, upstream switches, deepest switch common to the listeners of an incident)
+void completeInconsistentHops(std::vector<EntityID>& hops, JournalAnalysis::Topology::Interface const& interface, UpstreamHopsMap const& upstreamHops) noexcept
+{
+	if (hops.empty())
+	{
+		return;
+	}
+	if (auto const it = upstreamHops.find(std::make_pair(interface.grandmasterID, hops.front())); it != upstreamHops.end())
+	{
+		hops.insert(hops.begin(), it->second.hops.begin(), it->second.hops.end());
+	}
+}
+} // namespace
+
 std::vector<EntityID> JournalAnalysis::Topology::hops(EntityID const entityID, Plane const plane) const noexcept
 {
 	if (plane < 0)
@@ -295,21 +362,36 @@ std::vector<EntityID> JournalAnalysis::Topology::hops(EntityID const entityID, P
 	{
 		return {};
 	}
-	auto hops = interfaceIt->second.asPath;
-	// Most implementations end the AsPath with the entity's own clock identity (the deduced one when the reported one is inconsistent: it would otherwise be taken as the switch the entity is plugged into)
-	if (auto const ownClockIdentity = clockIdentity(entityID, plane); !hops.empty() && ownClockIdentity && hops.back() == ownClockIdentity)
+	auto const& interface = interfaceIt->second;
+	auto hops = asPathHops(*this, entityID, plane, interface);
+	if (interface.hasInconsistentAsPath())
 	{
-		hops.pop_back();
+		completeInconsistentHops(hops, interface, upstreamHopsOfPlane(*this, plane));
 	}
 	return hops;
 }
 
 std::vector<EntityID> JournalAnalysis::Topology::upstreamSwitches(Plane const plane) const noexcept
 {
+	if (plane < 0)
+	{
+		return {};
+	}
+	// Same hops than the ones of hops(), the up to date AsPaths of the plane being indexed once for all the interfaces
+	auto const upstreamHops = upstreamHopsOfPlane(*this, plane);
 	auto switches = std::set<EntityID>{};
 	for (auto const& [entityID, entity] : entities)
 	{
-		auto const path = hops(entityID, plane);
+		auto const interfaceIt = entity.interfaces.find(static_cast<la::avdecc::entity::model::AvbInterfaceIndex>(plane));
+		if (interfaceIt == entity.interfaces.end())
+		{
+			continue;
+		}
+		auto path = asPathHops(*this, entityID, plane, interfaceIt->second);
+		if (interfaceIt->second.hasInconsistentAsPath())
+		{
+			completeInconsistentHops(path, interfaceIt->second, upstreamHops);
+		}
 		for (auto i = std::size_t{ 0u }; i + 1u < path.size(); ++i)
 		{
 			switches.insert(path[i]);

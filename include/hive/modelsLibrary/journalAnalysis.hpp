@@ -78,6 +78,8 @@ public:
 
 			/** Returns true if the reported clock identity contradicts the AsPath: it is the one of the grandmaster (the first element of the AsPath) while the AsPath shows the interface is not the grandmaster (a device bug seen in the field). */
 			bool hasInconsistentClockIdentity() const noexcept;
+			/** Returns true if the AsPath contradicts the reported grandmaster: it doesn't start with it (seen in the field, most probably an AsPath not updated after a grandmaster change). The hops above its first element are then taken from an up to date AsPath (see Topology::hops). */
+			bool hasInconsistentAsPath() const noexcept;
 		};
 		struct StreamInput
 		{
@@ -102,7 +104,7 @@ public:
 		/** Returns the clock identity of an interface: the reported one, or the one deduced from the end of the AsPath when the reported one is inconsistent (see Interface::hasInconsistentClockIdentity), invalid when unknown. */
 		EntityID clockIdentity(EntityID const entityID, Plane const plane) const noexcept;
 
-		/** Returns the hops of an interface from the grandmaster down to the switch the entity is plugged into (the AsPath without the entity's own clock identity), or an empty vector when unknown. */
+		/** Returns the hops of an interface from the grandmaster down to the switch the entity is plugged into (the AsPath without the entity's own clock identity, completed with the hops above its first element taken from an up to date AsPath going through it when it is inconsistent, see Interface::hasInconsistentAsPath), or an empty vector when unknown. */
 		std::vector<EntityID> hops(EntityID const entityID, Plane const plane) const noexcept;
 
 		/** Returns the rack of the entity on the given plane: the switch it is plugged into (the last hop), or the entity's own clock identity when that switch also serves other racks (an entity plugged directly into a branch switch or into the grandmaster is a rack of one), or std::nullopt when unknown. */

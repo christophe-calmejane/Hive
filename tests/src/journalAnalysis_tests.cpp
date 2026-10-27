@@ -403,6 +403,39 @@ TEST(JournalAnalysis, Topology_GrandmasterClockIdentityReportedAsOwn)
 	EXPECT_EQ(daisyChained.rackSwitch(amplifier(0u), 0).value(), daisyChained.rackSwitch(amplifier(2u), 0).value());
 }
 
+// An entity reporting an AsPath that doesn't start with its grandmaster (seen in the field, most probably an AsPath not updated after a grandmaster change) gets the hops above the first element of its AsPath from an up to date AsPath going through it: its branch switch must not be lost, and its path must be comparable with the other ones (deepest switch common to the listeners of an incident)
+TEST(JournalAnalysis, Topology_AsPathInconsistentWithGrandmaster)
+{
+	auto topology = JournalAnalysis::Topology{};
+	// Two amplifiers of the same rack, the second one reporting an AsPath starting with its rack switch
+	auto& consistent = topology.entities[amplifier(0u)].interfaces[0u];
+	consistent.clockIdentity = clockIdentity(amplifier(0u), 0);
+	consistent.grandmasterID = EntityID{ GrandmasterPrimary };
+	consistent.asPath = { EntityID{ GrandmasterPrimary }, EntityID{ BranchPrimary }, EntityID{ Rack1Primary }, clockIdentity(amplifier(0u), 0) };
+	auto& inconsistent = topology.entities[amplifier(1u)].interfaces[0u];
+	inconsistent.clockIdentity = clockIdentity(amplifier(1u), 0);
+	inconsistent.grandmasterID = EntityID{ GrandmasterPrimary };
+	inconsistent.asPath = { EntityID{ Rack1Primary }, clockIdentity(amplifier(1u), 0) };
+
+	EXPECT_FALSE(consistent.hasInconsistentAsPath());
+	EXPECT_TRUE(inconsistent.hasInconsistentAsPath());
+	EXPECT_EQ(topology.hops(amplifier(0u), 0), topology.hops(amplifier(1u), 0));
+	EXPECT_EQ(EntityID{ Rack1Primary }, topology.rackSwitch(amplifier(1u), 0).value());
+	EXPECT_EQ(EntityID{ BranchPrimary }, topology.branchSwitch(amplifier(1u), 0).value());
+	// The upstream switches of the plane are still the grandmaster and the branch
+	auto const upstream = topology.upstreamSwitches(0);
+	ASSERT_EQ(2u, upstream.size());
+	EXPECT_EQ(EntityID{ GrandmasterPrimary }, upstream[0]);
+	EXPECT_EQ(EntityID{ BranchPrimary }, upstream[1]);
+
+	// Without an up to date AsPath going through its first element, the AsPath is used as is
+	auto alone = JournalAnalysis::Topology{};
+	alone.entities[amplifier(1u)].interfaces[0u] = inconsistent;
+	EXPECT_EQ(1u, alone.hops(amplifier(1u), 0).size());
+	EXPECT_EQ(EntityID{ Rack1Primary }, alone.rackSwitch(amplifier(1u), 0).value());
+	EXPECT_FALSE(alone.branchSwitch(amplifier(1u), 0).has_value());
+}
+
 TEST(JournalAnalysis, Hits_IncidentsStormsAndRuns)
 {
 	auto builder = SessionBuilder{};
