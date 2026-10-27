@@ -18,8 +18,11 @@
 */
 
 #include "QtMate/graph/graphView.hpp"
+#include "QtMate/graph/graphNodeItem.hpp"
 
+#include <QApplication>
 #include <QMouseEvent>
+#include <QScrollBar>
 #include <QWheelEvent>
 
 #include <algorithm>
@@ -78,20 +81,84 @@ void GraphView::wheelEvent(QWheelEvent* event)
 
 void GraphView::mousePressEvent(QMouseEvent* event)
 {
-	// Pan when left-pressing an empty area, otherwise let items handle the event (move/select)
-	if (event->button() == Qt::LeftButton && !itemAt(event->pos()))
+	// A left press on a node is handled by the node (move/select). Anywhere else (empty area, edge or edge label, which
+	// would otherwise be dead zones) it may be the start of a pan: the press is held back from the scene so that neither
+	// an item nor the scene acts on it (eg. edge click action, selection clearing) when the user actually drags the view
+	if (event->button() == Qt::LeftButton && !isNodeAt(event->position().toPoint()))
 	{
-		setDragMode(QGraphicsView::ScrollHandDrag);
+		// Drop a gesture whose release has never been received (should not happen)
+		endPanGesture();
+		_pendingPress.reset(event->clone());
+		_lastPanPos = event->position().toPoint();
+		event->accept();
+		return;
 	}
 	QGraphicsView::mousePressEvent(event);
 }
 
+void GraphView::mouseMoveEvent(QMouseEvent* event)
+{
+	// Drop a gesture whose release has never been received (should not happen)
+	if (_pendingPress && !(event->buttons() & Qt::LeftButton))
+	{
+		endPanGesture();
+	}
+	if (_pendingPress)
+	{
+		auto const pos = event->position().toPoint();
+		if (!_isPanning && (pos - _pendingPress->position().toPoint()).manhattanLength() >= QApplication::startDragDistance())
+		{
+			_isPanning = true;
+			viewport()->setCursor(Qt::ClosedHandCursor);
+		}
+		if (_isPanning)
+		{
+			auto const delta = pos - _lastPanPos;
+			horizontalScrollBar()->setValue(horizontalScrollBar()->value() + (isRightToLeft() ? delta.x() : -delta.x()));
+			verticalScrollBar()->setValue(verticalScrollBar()->value() - delta.y());
+			_lastPanPos = pos;
+		}
+		event->accept();
+		return;
+	}
+	QGraphicsView::mouseMoveEvent(event);
+}
+
 void GraphView::mouseReleaseEvent(QMouseEvent* event)
 {
-	QGraphicsView::mouseReleaseEvent(event);
-	if (dragMode() == QGraphicsView::ScrollHandDrag)
+	if (_pendingPress && event->button() == Qt::LeftButton)
 	{
-		setDragMode(QGraphicsView::NoDrag);
+		auto const press = std::move(_pendingPress);
+		auto const wasPanning = _isPanning;
+		endPanGesture();
+		if (wasPanning)
+		{
+			event->accept();
+			return;
+		}
+		// Not dragged: it was a click, deliver the held back press to the scene (the release below completes it)
+		QGraphicsView::mousePressEvent(press.get());
+	}
+	QGraphicsView::mouseReleaseEvent(event);
+}
+
+bool GraphView::isNodeAt(QPoint const& pos) const
+{
+	auto const itemsAtPos = items(pos);
+	return std::any_of(itemsAtPos.begin(), itemsAtPos.end(),
+		[](QGraphicsItem const* const item)
+		{
+			return dynamic_cast<GraphNodeItem const*>(item) != nullptr;
+		});
+}
+
+void GraphView::endPanGesture()
+{
+	_pendingPress.reset();
+	if (_isPanning)
+	{
+		_isPanning = false;
+		viewport()->unsetCursor();
 	}
 }
 

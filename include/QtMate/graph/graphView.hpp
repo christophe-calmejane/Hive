@@ -21,12 +21,17 @@
 
 #include <QGraphicsView>
 
+#include <memory>
+
 namespace qtMate::graph
 {
 /**
 * @brief QGraphicsView with mouse driven zoom and pan, suitable to display any graph.
 * @details Mouse wheel zooms in/out around the cursor position.
-*          Left-dragging an empty area pans the view, items remain movable/selectable.
+*          Left-dragging anywhere but on a node (empty area, edges and their labels) pans the view, nodes
+*          remain movable/selectable. A left press outside of a node is held back from the scene until it
+*          turns out to be a drag (panning the view) or a click (then delivered to the scene on release), so
+*          the items other than the nodes must react to clicks, not to drags.
 */
 class GraphView : public QGraphicsView
 {
@@ -41,10 +46,17 @@ public:
 protected:
 	virtual void wheelEvent(QWheelEvent* event) override;
 	virtual void mousePressEvent(QMouseEvent* event) override;
+	virtual void mouseMoveEvent(QMouseEvent* event) override;
 	virtual void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
+	bool isNodeAt(QPoint const& pos) const;
+	void endPanGesture();
+
 	qreal _currentZoom{ 1.0 };
+	std::unique_ptr<QMouseEvent> _pendingPress{}; /**< Left press outside of a node, held back from the scene while it may still turn into a pan */
+	QPoint _lastPanPos{};
+	bool _isPanning{ false };
 };
 
 } // namespace qtMate::graph
