@@ -466,6 +466,9 @@ std::size_t JournalAnalysis::Topology::addSession(EventJournal::Session const& s
 			auto& entity = entities[event.entityID];
 			entity.name = event.entityName;
 			entity.isController = details.value("is_controller").toBool(entity.isController);
+			// A freshly enumerated entity: its information is up to date, then updated live if the controller is subscribed to its unsolicited notifications (assumed when the journal doesn't tell)
+			entity.areUnsolicitedNotificationsSupported = details.value("unsol_supported").toBool(true);
+			entity.isSubscribedToUnsolicitedNotifications = details.value("subscribed_unsol").toBool(true);
 			for (auto const& value : details.value("avb_interfaces").toArray())
 			{
 				auto const object = value.toObject();
@@ -531,6 +534,14 @@ std::size_t JournalAnalysis::Topology::addSession(EventJournal::Session const& s
 				}
 			}
 		}
+		else if (event.category == EventJournal::Category::Entity && (event.summary.startsWith(QLatin1String{ "No longer subscribed to unsolicited notifications" }) || event.summary == "Subscribed to unsolicited notifications again"))
+		{
+			// Aggregated subscription state: the controller no longer gets live updates from the entity only when no controller interface holds a subscription anymore
+			if (auto const entityIt = entities.find(event.entityID); entityIt != entities.end())
+			{
+				entityIt->second.isSubscribedToUnsolicitedNotifications = event.summary == "Subscribed to unsolicited notifications again";
+			}
+		}
 		else if (event.category == EventJournal::Category::Connection && event.summary.startsWith(QLatin1String{ "Connected to talker" }))
 		{
 			auto const index = numberAfter(event.subject, QLatin1String{ "Input Stream " });
@@ -582,6 +593,14 @@ bool JournalAnalysis::Topology::addEntityDocument(nlohmann::json const& document
 					entity.isController = true;
 				}
 			}
+		}
+		if (auto const& supported = nodeAt(document, "/state/unsol_supported"); supported.is_boolean())
+		{
+			entity.areUnsolicitedNotificationsSupported = supported.get<bool>();
+		}
+		if (auto const& subscribed = nodeAt(document, "/state/subscribed_unsol"); subscribed.is_boolean())
+		{
+			entity.isSubscribedToUnsolicitedNotifications = subscribed.get<bool>();
 		}
 		auto configurationIndex = std::size_t{ 0u };
 		if (auto const& current = nodeAt(entityDescriptor, "/dynamic/current_configuration"); current.is_number_unsigned())

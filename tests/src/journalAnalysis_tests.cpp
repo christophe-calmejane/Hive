@@ -322,6 +322,7 @@ TEST(JournalAnalysis, Topology_FromAnEntityDocument)
 	// The AVE document format of the snapshots and of the network state files (descriptor arrays under the current configuration)
 	auto document = nlohmann::json::parse(R"json({
 		"adp_information": { "common": { "entity_id": "0x001B92FFFF000300", "controller_capabilities": ["IMPLEMENTED"] } },
+		"state": { "subscribed_unsol": false, "unsol_supported": true },
 		"entity_model": { "entity_descriptor": {
 			"dynamic": { "entity_name": "Console", "current_configuration": 0 },
 			"configuration_descriptors": [ {
@@ -347,6 +348,8 @@ TEST(JournalAnalysis, Topology_FromAnEntityDocument)
 	auto const& entity = topology.entities.at(entityID);
 	EXPECT_EQ("Console", entity.name);
 	EXPECT_TRUE(entity.isController);
+	EXPECT_TRUE(entity.areUnsolicitedNotificationsSupported);
+	EXPECT_FALSE(entity.isSubscribedToUnsolicitedNotifications);
 	ASSERT_EQ(2u, entity.interfaces.size());
 	EXPECT_EQ(3u, entity.interfaces.at(0u).asPath.size());
 	EXPECT_EQ(EntityID{ BranchPrimary }, topology.rackSwitch(entityID, 0).value()); // The branch of the other tests is a plain rack here: nothing is behind it
@@ -1007,4 +1010,40 @@ TEST(JournalAnalysis, Report_ListsTheInconsistentClockIdentities)
 	EXPECT_TRUE(report.contains("Inconsistent clock identity reported by 1 interface(s)"));
 	EXPECT_TRUE(report.contains(QString{ "Amp 2 (%1: reports %2, deduced %3)" }.arg(JournalAnalysis::planeName(0), idString(GrandmasterPrimary), idString(clockIdentity(amplifier(1u), 0)))));
 	EXPECT_TRUE(report.contains("Amp 1/2/3"));
+}
+
+// The interfaces whose AsPath doesn't start with their grandmaster are listed in the topology section, as a device bug only when the controller got live updates from the entity at the end of the session
+TEST(JournalAnalysis, Report_ListsTheInconsistentAsPaths)
+{
+	constexpr auto NewGrandmaster = la::avdecc::UniqueIdentifier::value_type{ 0x001B92FFFE0000A9u };
+	auto builder = SessionBuilder{};
+	builder.standardStart();
+	// The grandmaster of the primary plane changes for three amplifiers, none of them notifying its new AsPath
+	for (auto const amp : { 0u, 1u, 2u })
+	{
+		builder.add(Base + Minute, Category::Gptp, Severity::Warning, amplifier(amp), builder.name(amplifier(amp)), "AVB Interface 0", QString{ "gPTP grandmaster changed from %1 to %2" }.arg(idString(GrandmasterPrimary), idString(NewGrandmaster)), QJsonObject{ { "previous_grandmaster_id", idString(GrandmasterPrimary) }, { "new_grandmaster_id", idString(NewGrandmaster) } });
+	}
+	// The controller no longer gets live updates from the second and third ones, until the third one is subscribed again
+	for (auto const amp : { 1u, 2u })
+	{
+		builder.add(Base + 2 * Minute, Category::Entity, Severity::Error, amplifier(amp), builder.name(amplifier(amp)), {}, "No longer subscribed to unsolicited notifications (entity updates may be missed, consider refreshing the entity)", QJsonObject{ { "triggered_by_entity", true } });
+	}
+	builder.add(Base + 3 * Minute, Category::Entity, Severity::Recovered, amplifier(2u), builder.name(amplifier(2u)), {}, "Subscribed to unsolicited notifications again", QJsonObject{ { "triggered_by_entity", false } });
+	builder.finish(Base + Hour);
+
+	auto const topology = topologyOf(builder.session);
+	EXPECT_TRUE(topology.entities.at(amplifier(0u)).isSubscribedToUnsolicitedNotifications);
+	EXPECT_FALSE(topology.entities.at(amplifier(1u)).isSubscribedToUnsolicitedNotifications);
+	EXPECT_TRUE(topology.entities.at(amplifier(2u)).isSubscribedToUnsolicitedNotifications);
+
+	auto const analysis = JournalAnalysis{ builder.session, topology };
+	auto options = JournalAnalysis::ReportOptions{};
+	options.timeZone = QTimeZone::utc();
+	auto const report = analysis.markdownReport(builder.session, options);
+
+	EXPECT_TRUE(report.contains("Inconsistent AsPath reported by 2 interface(s)"));
+	EXPECT_TRUE(report.contains(QString{ "Amp 1 (%1: starts with %2)" }.arg(JournalAnalysis::planeName(0), idString(GrandmasterPrimary))));
+	EXPECT_TRUE(report.contains(QString{ "Amp 3 (%1: starts with %2)" }.arg(JournalAnalysis::planeName(0), idString(GrandmasterPrimary))));
+	EXPECT_TRUE(report.contains("AsPath not up to date for 1 interface(s)"));
+	EXPECT_TRUE(report.contains(QString{ "Amp 2 (%1: starts with %2, subscription lost)" }.arg(JournalAnalysis::planeName(0), idString(GrandmasterPrimary))));
 }

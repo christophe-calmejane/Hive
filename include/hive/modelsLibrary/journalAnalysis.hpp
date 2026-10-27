@@ -78,7 +78,7 @@ public:
 
 			/** Returns true if the reported clock identity contradicts the AsPath: it is the one of the grandmaster (the first element of the AsPath) while the AsPath shows the interface is not the grandmaster (a device bug seen in the field). */
 			bool hasInconsistentClockIdentity() const noexcept;
-			/** Returns true if the AsPath contradicts the reported grandmaster: it doesn't start with it (seen in the field, most probably an AsPath not updated after a grandmaster change). The hops above its first element are then taken from an up to date AsPath (see Topology::hops). */
+			/** Returns true if the AsPath contradicts the reported grandmaster: it doesn't start with it (seen in the field, an AsPath not updated after a grandmaster change: a device bug when the controller gets live updates from the entity, see Entity::isSubscribedToUnsolicitedNotifications). The hops above its first element are then taken from an up to date AsPath (see Topology::hops). */
 			bool hasInconsistentAsPath() const noexcept;
 		};
 		struct StreamInput
@@ -90,6 +90,8 @@ public:
 		{
 			QString name{};
 			bool isController{ false }; /**< The entity implements a controller (another Hive, a management tool) */
+			bool areUnsolicitedNotificationsSupported{ true }; /**< False when the entity doesn't support unsolicited notifications (assumed supported when unknown) */
+			bool isSubscribedToUnsolicitedNotifications{ true }; /**< False when the controller no longer got live updates from the entity at the end of the session (not supported, or subscription lost or removed by the entity): its information may be outdated, so an inconsistency in it is not an entity bug. Assumed subscribed when unknown (journals recorded before this information was added) */
 			std::map<la::avdecc::entity::model::AvbInterfaceIndex, Interface> interfaces{};
 			std::map<la::avdecc::entity::model::StreamIndex, StreamInput> streamInputs{};
 			std::map<la::avdecc::entity::model::ClockDomainIndex, la::avdecc::entity::model::StreamIndex> clockSourceStreams{}; /**< Input stream carrying the media clock of each clock domain (when the clock source is an input stream) */

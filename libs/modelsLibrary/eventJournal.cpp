@@ -3129,6 +3129,9 @@ public:
 		auto const& entity = controlledEntity.getEntity();
 		details["entity_model_id"] = helper::uniqueIdentifierToString(entity.getEntityModelID());
 		details["is_controller"] = entity.getControllerCapabilities().test(la::avdecc::entity::ControllerCapability::Implemented);
+		// Whether the controller gets live updates from the entity (same keys than the state of the snapshot): the information it reports is otherwise not updated, so an inconsistency in it is not necessarily an entity bug
+		details["unsol_supported"] = controlledEntity.areUnsolicitedNotificationsSupported();
+		details["subscribed_unsol"] = controlledEntity.isSubscribedToUnsolicitedNotifications();
 		details["vendor"] = helper::getVendorName(entity.getEntityID());
 		if (controlledEntity.getCompatibilityFlags().test(la::avdecc::controller::ControlledEntity::CompatibilityFlag::Milan))
 		{
