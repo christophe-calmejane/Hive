@@ -639,7 +639,8 @@ protected:
 		// A click on a row plate selects its entity application wide. A click on the connector zone at the left
 		// of a plate (where the tree guide lies) highlights the streams of the entity uplink, same interaction
 		// than clicking an edge (the uplink of an aggregated entity has no edge item). The base handler then
-		// also performs the usual scene selection of the whole item and allows dragging the group.
+		// also performs the usual scene selection of the whole item and allows dragging the group (unless the
+		// layout is locked).
 		if (event->button() == Qt::LeftButton)
 		{
 			if (auto const row = rowAt(event->pos()))
@@ -1210,6 +1211,19 @@ void NetworkGraphPane::fitToContents()
 	_graphView->fitToContents();
 }
 
+void NetworkGraphPane::setLayoutLocked(bool const locked)
+{
+	if (locked != _layoutLocked)
+	{
+		_layoutLocked = locked;
+		// The aggregated rows share the item of their switch group, setting its flag several times is harmless
+		for (auto const& representation : _nodeRepresentations)
+		{
+			representation.item->setFlag(QGraphicsItem::ItemIsMovable, !locked);
+		}
+	}
+}
+
 QString NetworkGraphPane::statsText() const
 {
 	return _statsText;
@@ -1738,6 +1752,7 @@ void NetworkGraphPane::rebuildDetailedScene()
 		{
 			item = new BridgeGraphNodeItem{ node };
 		}
+		item->setFlag(QGraphicsItem::ItemIsMovable, !_layoutLocked);
 		item->setPos(positions[slotForNode[nodeIndex]]);
 		_scene->addItem(item);
 		_nodeRepresentations[nodeIndex] = NodeRepresentation{ item, std::nullopt };
@@ -1840,6 +1855,7 @@ void NetworkGraphPane::rebuildAggregatedScene()
 			_itemsForEntity[node.entityID].push_back(NodeRepresentation{ item, std::nullopt });
 			_entityForItem.emplace(item, node.entityID);
 		}
+		item->setFlag(QGraphicsItem::ItemIsMovable, !_layoutLocked);
 		item->setPos(positions[slot]);
 		_scene->addItem(item);
 		_nodeRepresentations[nodeIndex] = NodeRepresentation{ item, std::nullopt };

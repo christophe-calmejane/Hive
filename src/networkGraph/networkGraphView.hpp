@@ -65,6 +65,7 @@ private:
 	qtMate::widgets::FlatIconButton _aggregatedLayoutButton{ "Material Icons", "dns", this };
 	qtMate::widgets::FlatIconButton _relayoutButton{ "Material Icons", "account_tree", this };
 	qtMate::widgets::FlatIconButton _fitButton{ "Material Icons", "zoom_out_map", this };
+	qtMate::widgets::FlatIconButton _lockLayoutButton{ "Material Icons", "lock", this };
 	qtMate::widgets::FlatIconButton _clearHighlightButton{ "Material Icons", "highlight_off", this };
 	qtMate::widgets::FlatIconButton _streamInfoButton{ "Material Icons", "label", this };
 	qtMate::widgets::FlatIconButton _delayAsDistanceButton{ "Material Icons", "straighten", this };

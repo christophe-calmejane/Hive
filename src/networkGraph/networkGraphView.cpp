@@ -90,6 +90,10 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 
 	_relayoutButton.setToolTip("Re-layout the graph");
 	_fitButton.setToolTip("Zoom to fit");
+	// Locked by default, so a node is not moved by mistake when selecting an entity
+	_lockLayoutButton.setToolTip("Lock/Unlock the layout (prevents moving the nodes by mistake)");
+	_lockLayoutButton.setCheckable(true);
+	_lockLayoutButton.setChecked(true);
 	_clearHighlightButton.setToolTip("Clear stream highlight (Esc)");
 	// Highlighted (checked) when a stream highlight is active, showing the button has an effect. The checked
 	// state is entirely driven by the panes highlightChanged signal, the click toggle is always overridden.
@@ -102,7 +106,7 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 	_delayAsDistanceButton.setCheckable(true);
 	_delayAsDistanceButton.setEnabled(_streamInfoButton.isChecked());
 
-	for (auto* const button : { &_relayoutButton, &_fitButton, &_clearHighlightButton, &_detailedLayoutButton, &_aggregatedLayoutButton, &_streamInfoButton, &_delayAsDistanceButton })
+	for (auto* const button : { &_relayoutButton, &_fitButton, &_lockLayoutButton, &_clearHighlightButton, &_detailedLayoutButton, &_aggregatedLayoutButton, &_streamInfoButton, &_delayAsDistanceButton })
 	{
 		button->setStyleSheet(ToolbarButtonStyle);
 	}
@@ -112,6 +116,7 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 	toolbarLayout->setContentsMargins(2, 2, 2, 2);
 	toolbarLayout->addWidget(&_relayoutButton);
 	toolbarLayout->addWidget(&_fitButton);
+	toolbarLayout->addWidget(&_lockLayoutButton);
 	toolbarLayout->addWidget(&_clearHighlightButton);
 	toolbarLayout->addWidget(createToolbarSeparator(this));
 	toolbarLayout->addWidget(&_detailedLayoutButton);
@@ -152,6 +157,15 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 			if (auto* const pane = currentPane())
 			{
 				pane->fitToContents();
+			}
+		});
+	connect(&_lockLayoutButton, &QPushButton::toggled, this,
+		[this](bool const checked)
+		{
+			_lockLayoutButton.setText(checked ? "lock" : "lock_open");
+			for (auto const& [avbInterfaceIndex, pane] : _panes)
+			{
+				pane->setLayoutLocked(checked);
 			}
 		});
 	connect(&_clearHighlightButton, &QPushButton::clicked, this,
@@ -304,6 +318,7 @@ void NetworkGraphView::rebuildPanes()
 			pane->setShowStreamInfo(_streamInfoButton.isChecked());
 			pane->setShowDelayAsDistance(_delayAsDistanceButton.isChecked());
 			pane->setLayoutMode(layoutModeFromAggregated(_aggregatedLayoutButton.isChecked()));
+			pane->setLayoutLocked(_lockLayoutButton.isChecked());
 		}
 		_panes[networkIndex].second->setTopology(network.topology);
 	}

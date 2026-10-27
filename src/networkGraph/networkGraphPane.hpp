@@ -79,6 +79,9 @@ public:
 	/** Zooms and centers the view so the whole graph is visible. */
 	void fitToContents();
 
+	/** Locks/unlocks the layout: the nodes of a locked layout cannot be moved (so they can't be moved by mistake when selecting an entity). */
+	void setLayoutLocked(bool const locked);
+
 	/** Highlights the path of all the streams transiting through the given edge (dims the rest of the graph). */
 	void highlightStreamsOfEdge(std::size_t const edgeIndex);
 
@@ -187,6 +190,7 @@ private:
 	bool _pendingFit{ false };
 	bool _showStreamInfo{ true };
 	bool _showDelayAsDistance{ false };
+	bool _layoutLocked{ true };
 
 	// Stream path highlight state
 	std::set<StreamKey> _highlightedStreamKeys{};

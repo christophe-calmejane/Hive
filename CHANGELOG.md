@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Deterministic topology inference: the same network gives the same graph whatever the platform and the discovery order of the entities
   - View panned by left-dragging anywhere but on a node, including over the edges and their labels (a click on an edge still highlights its streams)
   - Clicking an entity in the graph selects it without scrolling the view (only a selection made outside of the graph brings the entity into view), so the switch group of the clicked entity is no longer dragged along
+  - Layout lock toggle (locked by default) preventing the nodes from being moved by mistake when selecting an entity
 - Event Journal recording important network events to a crash-safe database file for after-show analysis (entities online/offline, stream connections, error counters, media clock lock, gPTP changes, link status, latency and redundancy issues)
   - Event Journal window (View menu) displaying the live session with severity/category/entity/time filters, regex search and per-severity colors
   - Timeline strip plotting events per category over time (zoom/pan, hover details with time since previous occurrence, click to select in the table), making recurring problems and their spacing directly visible
