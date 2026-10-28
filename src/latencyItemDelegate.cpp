@@ -18,6 +18,9 @@
 */
 
 #include "latencyItemDelegate.hpp"
+#include "deviceDetailsLatencyTableModel.hpp"
+
+#include <QCoreApplication>
 
 #include <cmath>
 
@@ -41,6 +44,8 @@ QWidget* LatencyItemDelegate::createEditor(QWidget* parent, const QStyleOptionVi
 	}
 
 	auto* combobox = new LatencyComboBox(parent);
+	// The editor is displayed in the cell, assistive technologies can't associate it with the stream of its row
+	combobox->setAccessibleName(QCoreApplication::translate("LatencyItemDelegate", "%1 Latency", nullptr).arg(index.siblingAtColumn(static_cast<int>(DeviceDetailsLatencyTableModelColumn::StreamName)).data().toString()));
 	if (dynamicModel)
 	{
 		combobox->updatePossibleLatencyValues(dynamicModel->streamFormat);

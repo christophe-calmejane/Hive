@@ -12,6 +12,9 @@ find_package(Qt${QT_MAJOR_VERSION} COMPONENTS Test REQUIRED)
 ### Unit Tests
 set(TESTS_SOURCE
 	main.cpp
+	accessibilityAudit.cpp
+	accessibilityAudit.hpp
+	accessibility_tests.cpp
 	connectionMatrix_tests.cpp
 	eventJournal_tests.cpp
 	helper_tests.cpp
@@ -40,6 +43,14 @@ set_target_properties(Tests PROPERTIES FOLDER "Tests")
 # Link with required libraries
 target_link_libraries(Tests PRIVATE gtest ${PROJECT_NAME}_static)
 target_link_libraries(Tests PRIVATE Qt${QT_MAJOR_VERSION}::Test)
+
+# The accessibility tests include widgets of the static library whose uic generated headers live in the autogen directory of that library (per configuration with multi-config generators)
+get_target_property(HIVE_STATIC_BINARY_DIR ${PROJECT_NAME}_static BINARY_DIR)
+if(CMAKE_CONFIGURATION_TYPES)
+	target_include_directories(Tests PRIVATE "${HIVE_STATIC_BINARY_DIR}/${PROJECT_NAME}_static_autogen/include_$<CONFIG>")
+else()
+	target_include_directories(Tests PRIVATE "${HIVE_STATIC_BINARY_DIR}/${PROJECT_NAME}_static_autogen/include")
+endif()
 
 # Copy test data
 add_custom_command(

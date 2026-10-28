@@ -564,6 +564,8 @@ QWidget* StreamFormatItemDelegate::createEditor(QWidget* parent, const QStyleOpt
 	}
 
 	auto* formatComboBox = new StreamFormatComboBox(parent);
+	// The editor is displayed in the cell, assistive technologies can't associate it with the stream of its row
+	formatComboBox->setAccessibleName(QCoreApplication::translate("StreamFormatItemDelegate", "%1 Format", nullptr).arg(index.siblingAtColumn(static_cast<int>(DeviceDetailsStreamFormatTableModelColumn::StreamName)).data().toString()));
 	if (staticModel)
 	{
 		formatComboBox->setStreamFormats(staticModel->formats);

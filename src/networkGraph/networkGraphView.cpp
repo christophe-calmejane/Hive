@@ -111,6 +111,19 @@ NetworkGraphView::NetworkGraphView(QWidget* parent)
 		button->setStyleSheet(ToolbarButtonStyle);
 	}
 
+	// Icon only buttons: their text is the name of the glyph in the icons font (which even changes with the checked state of some of them).
+	// The names stay the same whatever the state, the checkable buttons expose their checked state.
+	_relayoutButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Re-layout", nullptr));
+	_fitButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Zoom to Fit", nullptr));
+	_fitButton.setAccessibleDescription(QCoreApplication::translate("NetworkGraphView", "Zooms and centers the graph so it is entirely visible", nullptr));
+	_lockLayoutButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Lock Layout", nullptr));
+	_clearHighlightButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Clear Stream Highlight", nullptr));
+	_clearHighlightButton.setAccessibleDescription(QCoreApplication::translate("NetworkGraphView", "Clears the stream path highlight (Esc), checked while a highlight is active", nullptr));
+	_detailedLayoutButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Detailed Layout", nullptr));
+	_aggregatedLayoutButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Aggregated Layout", nullptr));
+	_streamInfoButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Show Link Information", nullptr));
+	_delayAsDistanceButton.setAccessibleName(QCoreApplication::translate("NetworkGraphView", "Propagation Delay in Meters", nullptr));
+
 	// Three sections: graph actions, layout choice, link information visibility
 	auto* const toolbarLayout = new QHBoxLayout{};
 	toolbarLayout->setContentsMargins(2, 2, 2, 2);

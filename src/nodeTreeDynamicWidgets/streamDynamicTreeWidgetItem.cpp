@@ -22,6 +22,7 @@
 #include "latencyComboBox.hpp"
 #include "talkerStreamConnectionWidget.hpp"
 #include "nodeTreeWidget.hpp"
+#include "accessibilityHelper.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>
 #include <QtMate/material/color.hpp>
@@ -66,7 +67,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 
 		auto* formatComboBox = new StreamFormatComboBox{};
 		formatComboBox->setStreamFormats(staticModel->formats);
-		parent->setItemWidget(currentFormatItem, 1, formatComboBox);
+		accessibility::setTreeItemWidget(parent, currentFormatItem, 1, formatComboBox);
 
 		// Send changes
 		formatComboBox->setDataChangedHandler(
@@ -175,7 +176,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 			_connectionState->setText(0, "Connection State");
 		}
 		_connectionStateWidget = new ListenerStreamConnectionWidget({ _entityID, _streamIndex }, inputDynamicModel->connectionInfo, parent);
-		parent->setItemWidget(_connectionState, 1, _connectionStateWidget);
+		accessibility::setTreeItemWidget(parent, _connectionState, 1, _connectionStateWidget);
 		connect(parent, &QTreeWidget::itemSelectionChanged, this,
 			[this, parent]()
 			{
@@ -193,7 +194,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 			currentPTOItem->setText(0, "Presentation Time Offset");
 
 			auto* latencyComboBox = new LatencyComboBox{};
-			parent->setItemWidget(currentPTOItem, 1, latencyComboBox);
+			accessibility::setTreeItemWidget(parent, currentPTOItem, 1, latencyComboBox);
 
 			// Send changes
 			latencyComboBox->setDataChangedHandler(
@@ -248,7 +249,7 @@ StreamDynamicTreeWidgetItem::StreamDynamicTreeWidgetItem(la::avdecc::UniqueIdent
 		item->setText(0, "Connections");
 		_connections = new QListWidget;
 		_connections->setSelectionMode(QAbstractItemView::NoSelection);
-		parent->setItemWidget(item, 1, _connections);
+		accessibility::setTreeItemWidget(parent, item, 1, _connections);
 
 		// Update info right now
 		updateConnections(outputDynamicModel->connections);

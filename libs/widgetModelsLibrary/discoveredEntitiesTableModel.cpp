@@ -25,6 +25,9 @@
 
 #include <hive/modelsLibrary/discoveredEntitiesModel.hpp>
 #include <hive/modelsLibrary/helper.hpp>
+
+#include <QCoreApplication>
+
 namespace hive
 {
 namespace widgetModelsLibrary
@@ -338,6 +341,45 @@ static QString getErrorTooltip(modelsLibrary::DiscoveredEntitiesModel::Entity co
 	return tooltip.join("\n");
 }
 
+static QString getErrorTypeText(ErrorIconItemDelegate::ErrorType const errorType) noexcept
+{
+	switch (errorType)
+	{
+		case ErrorIconItemDelegate::ErrorType::Error:
+			return QCoreApplication::translate("DiscoveredEntitiesTableModel", "Error", nullptr);
+		case ErrorIconItemDelegate::ErrorType::Warning:
+			return QCoreApplication::translate("DiscoveredEntitiesTableModel", "Warning", nullptr);
+		case ErrorIconItemDelegate::ErrorType::Information:
+			return QCoreApplication::translate("DiscoveredEntitiesTableModel", "Information", nullptr);
+		default:
+			return QCoreApplication::translate("DiscoveredEntitiesTableModel", "No Issue", nullptr);
+	}
+}
+
+static QString getCompatibilityTooltip(modelsLibrary::DiscoveredEntitiesModel::Entity const& e) noexcept
+{
+	switch (e.protocolCompatibility)
+	{
+		case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving:
+			return "Entity is sending incoherent values that can cause undefined behavior";
+		case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan:
+			//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant:
+			return "MILAN compatible";
+		case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning:
+			return "IEEE 1722.1 with warnings";
+		case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified:
+			//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant:
+			return "MILAN certified";
+		case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning:
+			//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant:
+			return "MILAN with warnings";
+		case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE:
+			return "IEEE 1722.1 compatible";
+		default:
+			return "Not fully IEEE 1722.1 compliant";
+	}
+}
+
 QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) const
 {
 	auto const row = static_cast<std::size_t>(index.row());
@@ -594,28 +636,7 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								return getErrorTooltip(entity);
 							}
 							case EntityDataFlag::Compatibility:
-							{
-								switch (entity.protocolCompatibility)
-								{
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Misbehaving:
-										return "Entity is sending incoherent values that can cause undefined behavior";
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::Milan:
-										//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanRedundant:
-										return "MILAN compatible";
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEEWarning:
-										return "IEEE 1722.1 with warnings";
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertified:
-										//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanCertifiedRedundant:
-										return "MILAN certified";
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarning:
-										//case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::MilanWarningRedundant:
-										return "MILAN with warnings";
-									case modelsLibrary::DiscoveredEntitiesModel::ProtocolCompatibility::IEEE:
-										return "IEEE 1722.1 compatible";
-									default:
-										return "Not fully IEEE 1722.1 compliant";
-								}
-							}
+								return getCompatibilityTooltip(entity);
 							case EntityDataFlag::AcquireState:
 								return entity.acquireInfo.tooltip;
 							case EntityDataFlag::LockState:
@@ -704,6 +725,34 @@ QVariant DiscoveredEntitiesTableModel::data(QModelIndex const& index, int role) 
 								return entity.clockDomainInfo.tooltip;
 							default:
 								break;
+						}
+						break;
+					}
+					// The columns only displaying an icon need a textual equivalent for assistive technologies (the status column would otherwise expose its sorting value)
+					case Qt::AccessibleTextRole:
+					{
+						switch (entityDataFlag)
+						{
+							case EntityDataFlag::EntityStatus:
+								return getErrorTypeText(getErrorType(entity));
+							case EntityDataFlag::Compatibility:
+								return getCompatibilityTooltip(entity);
+							case EntityDataFlag::AcquireState:
+								return entity.acquireInfo.tooltip;
+							case EntityDataFlag::LockState:
+								return entity.lockInfo.tooltip;
+							case EntityDataFlag::ClockDomainLockState:
+								return entity.clockDomainInfo.tooltip;
+							default:
+								break;
+						}
+						break;
+					}
+					case Qt::AccessibleDescriptionRole:
+					{
+						if (entityDataFlag == EntityDataFlag::EntityStatus)
+						{
+							return getErrorTooltip(entity);
 						}
 						break;
 					}

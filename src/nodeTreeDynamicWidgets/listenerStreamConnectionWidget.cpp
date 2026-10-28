@@ -21,6 +21,7 @@
 
 #include <hive/modelsLibrary/helper.hpp>
 
+#include <QCoreApplication>
 #include <QMenu>
 #include <QStyle>
 
@@ -38,6 +39,9 @@ ListenerStreamConnectionWidget::ListenerStreamConnectionWidget(la::avdecc::entit
 	_streamConnectionLabel.setObjectName("StreamConnectionLabel");
 	_entityNameLabel.setObjectName("EntityNameLabel");
 	_disconnectButton.setObjectName("DisconnectButton");
+	// Icon only button: its text is the name of the glyph in the icons font
+	_disconnectButton.setAccessibleName(QCoreApplication::translate("ListenerStreamConnectionWidget", "Disconnect", nullptr));
+	_disconnectButton.setAccessibleDescription(QCoreApplication::translate("ListenerStreamConnectionWidget", "Removes a ghost connection (the talker is offline)", nullptr));
 
 	// Update info right now
 	updateData();

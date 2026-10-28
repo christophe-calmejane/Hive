@@ -695,6 +695,39 @@ QVariant DomainTreeModelPrivate::data(QModelIndex const& index, int role) const
 	if (!index.isValid())
 		return QVariant();
 
+	// The delegates paint the cells from the item pointer, give assistive technologies a textual equivalent of what they paint
+	if (role == Qt::AccessibleTextRole)
+	{
+		auto const column = static_cast<DomainTreeModelColumn>(index.column());
+		auto* treeItem = static_cast<AbstractTreeItem*>(index.internalPointer());
+		if (treeItem->type() == AbstractTreeItem::Domain)
+		{
+			auto* domainTreeItem = static_cast<DomainTreeItem*>(treeItem);
+			if (column == DomainTreeModelColumn::Domain)
+			{
+				auto const& domainSamplingRate = domainTreeItem->domainSamplingRate();
+				return domainSamplingRate.first ? QString{ "%1, %2" }.arg(domainTreeItem->domain().getDisplayName()).arg(domainSamplingRate.second) : domainTreeItem->domain().getDisplayName();
+			}
+		}
+		else if (treeItem->type() == AbstractTreeItem::Entity)
+		{
+			auto* entityTreeItem = static_cast<EntityTreeItem*>(treeItem);
+			auto* parentDomainTreeItem = static_cast<DomainTreeItem*>(entityTreeItem->parentItem());
+			if (column == DomainTreeModelColumn::Domain)
+			{
+				// The sampling rate of the entity is only displayed when its domain has none
+				auto const& entitySampleRate = entityTreeItem->sampleRate();
+				return (!parentDomainTreeItem->domainSamplingRate().first && entitySampleRate) ? QString{ "%1, %2" }.arg(entityTreeItem->entityName()).arg(entitySampleRate->second) : entityTreeItem->entityName();
+			}
+			if (column == DomainTreeModelColumn::MediaClockMaster)
+			{
+				auto const isMediaClockMaster = entityTreeItem->entityId() == parentDomainTreeItem->domain().getMediaClockDomainMaster();
+				return isMediaClockMaster ? QCoreApplication::translate("DomainTreeModel", "Master", nullptr) : QCoreApplication::translate("DomainTreeModel", "Not Master", nullptr);
+			}
+		}
+		return QVariant();
+	}
+
 	if (role != Qt::DisplayRole)
 		return QVariant();
 

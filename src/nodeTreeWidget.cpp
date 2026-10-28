@@ -23,6 +23,7 @@
 #include "avdecc/stringValidator.hpp"
 #include "avdecc/euiValidator.hpp"
 #include "avdecc/numberValidator.hpp"
+#include "accessibilityHelper.hpp"
 #include "nodeTreeDynamicWidgets/milanDynamicStateTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/audioUnitDynamicTreeWidgetItem.hpp"
 #include "nodeTreeDynamicWidgets/avbInterfaceDynamicTreeWidgetItem.hpp"
@@ -474,7 +475,7 @@ private:
 					return QString::number(configurationIndex);
 				});
 
-			q->setItemWidget(currentConfigurationItem, 1, configurationComboBox);
+			accessibility::setTreeItemWidget(q, currentConfigurationItem, 1, configurationComboBox);
 
 			// Send changes
 			configurationComboBox->setDataChangedHandler(
@@ -882,7 +883,7 @@ private:
 
 			auto* listWidget = new QListWidget;
 
-			q->setItemWidget(mappingsIndexItem, 1, listWidget);
+			accessibility::setTreeItemWidget(q, mappingsIndexItem, 1, listWidget);
 
 			for (auto const& mapping : model.mappings)
 			{
@@ -1024,7 +1025,7 @@ private:
 						return QString::number(sourceIndex);
 					});
 
-				q->setItemWidget(currentSourceItem, 1, sourceComboBox);
+				accessibility::setTreeItemWidget(q, currentSourceItem, 1, sourceComboBox);
 
 				// Send changes
 				sourceComboBox->setDataChangedHandler(
@@ -1387,7 +1388,7 @@ public:
 
 		auto* textEntry = new AecpCommandTextEntry(itemValue, validator);
 
-		q->setItemWidget(item, 1, textEntry);
+		accessibility::setTreeItemWidget(q, item, 1, textEntry);
 
 		textEntry->setDataChangedHandler(
 			[this, textEntry, commandType, descriptorIndex, customData](QString const& oldText, QString const& newText)
@@ -1807,7 +1808,7 @@ public:
 
 		auto* textEntry = new AecpCommandTextEntry(itemValue, validator);
 
-		q->setItemWidget(item, 1, textEntry);
+		accessibility::setTreeItemWidget(q, item, 1, textEntry);
 
 		textEntry->setDataChangedHandler(
 			[this, textEntry, commandType, customData](QString const& oldText, QString const& newText)
@@ -1919,7 +1920,7 @@ public:
 		auto* label = new Label;
 		label->setFixedHeight(96);
 		label->setImage(image);
-		q->setItemWidget(item, 1, label);
+		accessibility::setTreeItemWidget(q, item, 1, label);
 
 		connect(label, &Label::clicked, label,
 			[this, requestedType = type]()
@@ -1978,7 +1979,7 @@ public:
 						dialog.exec();
 					}
 				});
-			q->setItemWidget(item, 1, uploadButton);
+			accessibility::setTreeItemWidget(q, item, 1, uploadButton);
 		}
 	}
 

@@ -19,12 +19,19 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="qtMate::widgets::TableView" name="controllerTableView"/>
+     <widget class="qtMate::widgets::TableView" name="controllerTableView">
+      <property name="accessibleName">
+       <string>Discovered Entities</string>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
   <widget class="QToolBar" name="controllerToolBar">
    <property name="windowTitle">
+    <string>Controller Toolbar</string>
+   </property>
+   <property name="accessibleName">
     <string>Controller Toolbar</string>
    </property>
    <attribute name="toolBarArea">

@@ -68,6 +68,9 @@
        <height>0</height>
       </size>
      </property>
+     <property name="accessibleName">
+      <string>Domain Sampling Rate</string>
+     </property>
     </widget>
    </item>
   </layout>

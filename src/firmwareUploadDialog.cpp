@@ -62,6 +62,8 @@ public:
 	void setText(QString const& text)
 	{
 		_label.setText(text);
+		// The progress bar is identified by the device and state the label displays (assistive technologies are notified of the change)
+		_progressBar.setAccessibleName(text);
 	}
 
 	void setProgress(int const progress)

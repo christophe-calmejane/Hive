@@ -23,6 +23,7 @@
 
 #include <hive/modelsLibrary/helper.hpp>
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QFile>
 #include <QFileDialog>
@@ -312,6 +313,13 @@ void EventJournalView::buildUi(bool const isLiveMode)
 
 	_searchLineEdit.setPlaceholderText("Search (regular expression)");
 	_searchLineEdit.setClearButtonEnabled(true);
+	// The placeholder is only exposed as a description, a search field needs a name
+	_searchLineEdit.setAccessibleName(QCoreApplication::translate("EventJournalView", "Search Events", nullptr));
+
+	// The visible texts of the filter menu buttons are also the titles of table columns, tell what they act on
+	_severityFilterButton.setAccessibleName(QCoreApplication::translate("EventJournalView", "Severity Filter", nullptr));
+	_categoryFilterButton.setAccessibleName(QCoreApplication::translate("EventJournalView", "Category Filter", nullptr));
+	_entityFilterButton.setAccessibleName(QCoreApplication::translate("EventJournalView", "Entity Filter", nullptr));
 	connect(&_searchLineEdit, &QLineEdit::textChanged, this,
 		[this](QString const& text)
 		{
@@ -329,6 +337,9 @@ void EventJournalView::buildUi(bool const isLiveMode)
 	timeLayout->addStretch();
 	timeLayout->addWidget(&_statusLabel);
 
+	// The date time fields are labeled by the check boxes enabling them, which assistive technologies can't associate with them
+	_fromDateTimeEdit.setAccessibleName(QCoreApplication::translate("EventJournalView", "From Time", nullptr));
+	_toDateTimeEdit.setAccessibleName(QCoreApplication::translate("EventJournalView", "To Time", nullptr));
 	for (auto* dateTimeEdit : { &_fromDateTimeEdit, &_toDateTimeEdit })
 	{
 		dateTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm:ss");
@@ -360,6 +371,7 @@ void EventJournalView::buildUi(bool const isLiveMode)
 	setupTimeCheckBox(_toCheckBox, _toDateTimeEdit, false);
 
 	// Events table
+	_tableView.setAccessibleName(QCoreApplication::translate("EventJournalView", "Events", nullptr));
 	_tableView.setModel(&_filterProxyModel);
 	_tableView.setSelectionBehavior(QAbstractItemView::SelectRows);
 	_tableView.setSelectionMode(QAbstractItemView::SingleSelection);
@@ -390,8 +402,12 @@ void EventJournalView::buildUi(bool const isLiveMode)
 	_detailsTextEdit.setReadOnly(true);
 	_detailsTextEdit.setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	_detailsTextEdit.setPlaceholderText("Select an event to display its details");
+	_detailsTextEdit.setAccessibleName(QCoreApplication::translate("EventJournalView", "Event Details", nullptr));
 
 	// Timeline (visualizes the filtered events, synchronized with the table selection)
+	// Its markers are only painted and mouse driven: point assistive technologies to the table listing the same events
+	_timeline.setAccessibleName(QCoreApplication::translate("EventJournalView", "Event Timeline", nullptr));
+	_timeline.setAccessibleDescription(QCoreApplication::translate("EventJournalView", "Graphical view of the filtered events over time, the same events are listed in the Events table", nullptr));
 	_timeline.setModel(&_filterProxyModel);
 	connect(&_timeline, &EventJournalTimeline::eventClicked, this,
 		[this](int const row)

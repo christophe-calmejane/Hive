@@ -149,6 +149,9 @@
    <property name="windowTitle">
     <string>Controller Toolbar</string>
    </property>
+   <property name="accessibleName">
+    <string>Controller Toolbar</string>
+   </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
    </attribute>
@@ -158,6 +161,9 @@
   </widget>
   <widget class="QToolBar" name="utilitiesToolBar">
    <property name="windowTitle">
+    <string>Utilities Toolbar</string>
+   </property>
+   <property name="accessibleName">
     <string>Utilities Toolbar</string>
    </property>
    <attribute name="toolBarArea">

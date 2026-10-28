@@ -20,6 +20,7 @@
 #include "milanDynamicStateTreeWidgetItem.hpp"
 #include "avdecc/euiValidator.hpp"
 #include "avdecc/stringValidator.hpp"
+#include "accessibilityHelper.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>
 
@@ -32,12 +33,12 @@ MilanDynamicStateTreeWidgetItem::MilanDynamicStateTreeWidgetItem(la::avdecc::Uni
 	auto* systemUniqueIDItem = new QTreeWidgetItem(this);
 	systemUniqueIDItem->setText(0, "System Unique ID");
 	_systemUniqueID = new AecpCommandTextEntry("", avdecc::EUIValidator::getSharedInstance());
-	parent->setItemWidget(systemUniqueIDItem, 1, _systemUniqueID);
+	accessibility::setTreeItemWidget(parent, systemUniqueIDItem, 1, _systemUniqueID);
 
 	auto* systemNameItem = new QTreeWidgetItem(this);
 	systemNameItem->setText(0, "System Name");
 	_systemName = new AecpCommandTextEntry("", avdecc::AvdeccStringValidator::getSharedInstance());
-	parent->setItemWidget(systemNameItem, 1, _systemName);
+	accessibility::setTreeItemWidget(parent, systemNameItem, 1, _systemName);
 
 	// Send changes
 	_systemUniqueID->setDataChangedHandler(

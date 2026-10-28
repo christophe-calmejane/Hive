@@ -19,6 +19,7 @@
 
 #include "compatibilityChangeEventsDialog.hpp"
 
+#include <QCoreApplication>
 #include <QDialog>
 #include <QTableView>
 #include <QAbstractTableModel>
@@ -195,6 +196,7 @@ private:
 		_parent->resize(1000, 400);
 
 		// Setup table view
+		_tableView->setAccessibleName(QCoreApplication::translate("CompatibilityChangeEventsDialog", "Compatibility Change Events", nullptr));
 		_tableView->setModel(_tableModel);
 		_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
 		_tableView->setAlternatingRowColors(true);

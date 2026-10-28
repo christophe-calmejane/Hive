@@ -19,11 +19,13 @@
 
 #include "entityDiagnosticsTreeWidgetItem.hpp"
 #include "compatibilityChangeEventsDialog.hpp"
+#include "accessibilityHelper.hpp"
 
 #include <QtMate/material/color.hpp>
 #include <hive/modelsLibrary/helper.hpp>
 
 #include <map>
+#include <QCoreApplication>
 #include <QMenu>
 #include <QMessageBox>
 
@@ -37,8 +39,9 @@ EntityDiagnosticsTreeWidgetItem::EntityDiagnosticsTreeWidgetItem(la::avdecc::Uni
 	auto* compatibilityChangeEvents = new QTreeWidgetItem(this);
 	compatibilityChangeEvents->setText(0, "Compatibility Change Events");
 	_compatibilityLogButton = new QPushButton("Show Events");
+	_compatibilityLogButton->setAccessibleName(QCoreApplication::translate("EntityDiagnosticsTreeWidgetItem", "Show Compatibility Change Events", nullptr));
 	connect(_compatibilityLogButton, &QPushButton::clicked, this, &EntityDiagnosticsTreeWidgetItem::showCompatibilityChangeEvents);
-	parent->setItemWidget(compatibilityChangeEvents, 1, _compatibilityLogButton);
+	accessibility::setTreeItemWidget(parent, compatibilityChangeEvents, 1, _compatibilityLogButton);
 	// Disable the button if there are no events
 	if (compatibilityChangedEvents.empty())
 	{

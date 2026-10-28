@@ -79,6 +79,10 @@ CornerWidget::CornerWidget(QWidget* parent)
 	_verticalPlaceholder.setFixedWidth(20);
 	_title.setAlignment(Qt::AlignHCenter);
 	_removeAllConnectionsButton.setToolTip(QCoreApplication::translate("CornerWidget", "Remove all active connections", nullptr));
+	// Icon only buttons: their text is the name of the glyph in the icons font (the expand/collapse ones are named by updateAccessibleNames, their target depends on the transposition)
+	_removeAllConnectionsButton.setAccessibleName(QCoreApplication::translate("CornerWidget", "Remove All Connections", nullptr));
+	_searchLineEdit.setAccessibleName(QCoreApplication::translate("CornerWidget", "Entity Name Filter", nullptr));
+	updateAccessibleNames();
 	// Prevent the button from expanding
 	_removeAllConnectionsButton.setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
@@ -211,6 +215,7 @@ void CornerWidget::setColor(qtMate::material::color::Name const name)
 void CornerWidget::setTransposed(bool const isTransposed)
 {
 	_isTransposed = isTransposed;
+	updateAccessibleNames();
 	update();
 }
 
@@ -227,6 +232,22 @@ QString CornerWidget::filterText() const
 QLineEdit* CornerWidget::filterLineEdit() noexcept
 {
 	return &_searchLineEdit;
+}
+
+void CornerWidget::updateAccessibleNames()
+{
+	// The horizontal buttons act on the vertical header (talkers, unless transposed) and the vertical ones on the horizontal header (listeners, unless transposed)
+	auto const verticalHeaderIsTalkers = !_isTransposed;
+	auto const expandTalkers = QCoreApplication::translate("CornerWidget", "Expand All Talkers", nullptr);
+	auto const collapseTalkers = QCoreApplication::translate("CornerWidget", "Collapse All Talkers", nullptr);
+	auto const expandListeners = QCoreApplication::translate("CornerWidget", "Expand All Listeners", nullptr);
+	auto const collapseListeners = QCoreApplication::translate("CornerWidget", "Collapse All Listeners", nullptr);
+
+	// Setting a different name notifies assistive technologies (QAccessible::NameChanged)
+	_horizontalExpandButton.setAccessibleName(verticalHeaderIsTalkers ? expandTalkers : expandListeners);
+	_horizontalCollapseButton.setAccessibleName(verticalHeaderIsTalkers ? collapseTalkers : collapseListeners);
+	_verticalExpandButton.setAccessibleName(verticalHeaderIsTalkers ? expandListeners : expandTalkers);
+	_verticalCollapseButton.setAccessibleName(verticalHeaderIsTalkers ? collapseListeners : collapseTalkers);
 }
 
 void CornerWidget::paintEvent(QPaintEvent*)

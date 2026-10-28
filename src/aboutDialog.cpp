@@ -72,6 +72,7 @@ private:
 		auto dialog = QDialog{ _parent };
 		auto layout = QVBoxLayout{ &dialog };
 		auto view = QTextBrowser{};
+		view.setAccessibleName(QCoreApplication::translate("AboutDialog", "Legal Notices", nullptr));
 		layout.addWidget(&view);
 		dialog.setWindowTitle(hive::internals::applicationShortName + " - Legal Notices");
 		dialog.resize(800, 600);

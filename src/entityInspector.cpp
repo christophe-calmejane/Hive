@@ -23,6 +23,7 @@
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
+#include <QCoreApplication>
 #include <QHeaderView>
 #include <QIODevice>
 
@@ -44,6 +45,12 @@ EntityInspector::EntityInspector(QWidget* parent)
 
 	_nodeTreeWiget.setColumnCount(2);
 	_nodeTreeWiget.setHeaderLabels({ "", "" });
+
+	_controlledEntityTreeWiget.setAccessibleName(QCoreApplication::translate("EntityInspector", "Entity Model", nullptr));
+	_nodeTreeWiget.setAccessibleName(QCoreApplication::translate("EntityInspector", "Descriptor Properties", nullptr));
+	// The header sections are intentionally left blank, but assistive technologies announce the column of a cell
+	_nodeTreeWiget.headerItem()->setData(0, Qt::AccessibleTextRole, QCoreApplication::translate("EntityInspector", "Property", nullptr));
+	_nodeTreeWiget.headerItem()->setData(1, Qt::AccessibleTextRole, QCoreApplication::translate("EntityInspector", "Value", nullptr));
 
 	connect(_controlledEntityTreeWiget.selectionModel(), &QItemSelectionModel::currentChanged, this,
 		[this](QModelIndex const& index, QModelIndex const&)

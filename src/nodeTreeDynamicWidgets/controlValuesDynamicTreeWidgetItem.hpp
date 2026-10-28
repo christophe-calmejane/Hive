@@ -26,6 +26,7 @@
 #include "aecpCommandSpinBox.hpp"
 #include "aecpCommandSlider.hpp"
 #include "avdecc/hiveLogItems.hpp"
+#include "accessibilityHelper.hpp"
 
 #include <la/avdecc/controller/internals/avdeccControlledEntity.hpp>
 #include <la/avdecc/internals/entityModelControlValuesTraits.hpp>
@@ -101,7 +102,9 @@ public:
 				else
 				{
 					auto* widget = new WidgetType{};
-					parent->setItemWidget(item, 1, widget);
+					// Every value has a "Current Value" item, name the widget after the value it edits
+					widget->setAccessibleName(valueItem->text(0));
+					accessibility::setTreeItemWidget(parent, item, 1, widget);
 
 					auto const range = static_cast<value_size>(staticVal.maximum - staticVal.minimum);
 					auto stepsCount = size_t{ 1 };
@@ -299,7 +302,7 @@ public:
 			else
 			{
 				auto* widget = new WidgetType{};
-				parent->setItemWidget(valueItem, 1, widget);
+				accessibility::setTreeItemWidget(parent, valueItem, 1, widget);
 
 				{
 					auto data = typename std::remove_pointer_t<decltype(widget)>::Data{};
@@ -466,7 +469,9 @@ public:
 				else
 				{
 					auto* widget = new WidgetType{};
-					parent->setItemWidget(item, 1, widget);
+					// Every value has a "Current Value" item, name the widget after the value it edits
+					widget->setAccessibleName(valueItem->text(0));
+					accessibility::setTreeItemWidget(parent, item, 1, widget);
 
 					auto const range = static_cast<size_t>(staticVal.maximum - staticVal.minimum);
 					auto stepsCount = size_t{ 1 };
@@ -660,7 +665,7 @@ public:
 			else
 			{
 				auto* widget = new WidgetType{ text, avdecc::ControlUTF8StringValidator::getSharedInstance() };
-				parent->setItemWidget(item, 1, widget);
+				accessibility::setTreeItemWidget(parent, item, 1, widget);
 
 				// Send changes
 				widget->setDataChangedHandler(

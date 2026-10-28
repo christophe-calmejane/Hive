@@ -24,6 +24,7 @@
 #include "streamPortDynamicTreeWidgetItem.hpp"
 #include "mappingMatrix.hpp"
 #include "avdecc/mappingsHelper.hpp"
+#include "accessibilityHelper.hpp"
 
 #include <QtMate/material/color.hpp>
 
@@ -55,13 +56,13 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		editMappings->setText(0, "Edit Dynamic Mappings");
 		auto* editMappingsButton = new QPushButton("Edit");
 		connect(editMappingsButton, &QPushButton::clicked, this, &StreamPortDynamicTreeWidgetItem::editMappingsButtonClicked);
-		parent->setItemWidget(editMappings, 1, editMappingsButton);
+		accessibility::setTreeItemWidget(parent, editMappings, 1, editMappingsButton);
 
 		_mappingsItem = new QTreeWidgetItem(this);
 		_mappingsItem->setText(0, "Dynamic Mappings");
 		_mappingsList = new QListWidget;
 		_mappingsList->setSelectionMode(QAbstractItemView::NoSelection);
-		parent->setItemWidget(_mappingsItem, 1, _mappingsList);
+		accessibility::setTreeItemWidget(parent, _mappingsItem, 1, _mappingsList);
 
 		// Update info right now
 		updateMappings();
@@ -71,13 +72,13 @@ StreamPortDynamicTreeWidgetItem::StreamPortDynamicTreeWidgetItem(la::avdecc::Uni
 		auto* setIdentityMappingsButton = new QPushButton("Set Identity");
 		setIdentityMappingsButton->setToolTip("Set the Dynamic Mappings so each stream channel is mapped to the cluster channel at the same position");
 		connect(setIdentityMappingsButton, &QPushButton::clicked, this, &StreamPortDynamicTreeWidgetItem::setIdentityMappingsButtonClicked);
-		parent->setItemWidget(setIdentityMappings, 1, setIdentityMappingsButton);
+		accessibility::setTreeItemWidget(parent, setIdentityMappings, 1, setIdentityMappingsButton);
 
 		auto* clearMappings = new QTreeWidgetItem(this);
 		clearMappings->setText(0, "Clear All Dynamic Mappings");
 		auto* clearMappingsButton = new QPushButton("Clear");
 		connect(clearMappingsButton, &QPushButton::clicked, this, &StreamPortDynamicTreeWidgetItem::clearMappingsButtonClicked);
-		parent->setItemWidget(clearMappings, 1, clearMappingsButton);
+		accessibility::setTreeItemWidget(parent, clearMappings, 1, clearMappingsButton);
 
 		// Listen for streamPortAudioMappingsChanged
 		connect(&hive::modelsLibrary::ControllerManager::getInstance(), &hive::modelsLibrary::ControllerManager::streamPortAudioMappingsChanged, this,

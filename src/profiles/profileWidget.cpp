@@ -25,12 +25,86 @@
 #include <QGuiApplication>
 #include <QStyleHints>
 #include <QStyle>
+#include <QAccessible>
+#include <QAccessibleWidget>
+
+#include <mutex>
 
 namespace profiles
 {
+namespace
+{
+/**
+* @brief Accessible interface of a ProfileWidget.
+* @details The default interface of a QFrame describes a border with a few labels, while the widget is a clickable card.
+*          Expose it as a button (named after the profile title, described by the profile description) that assistive
+*          technologies can press. The labels being the visual representation of the button (the icon one even displays
+*          the name of a glyph of the icons font), they are not exposed as children.
+*/
+class ProfileWidgetAccessibleInterface final : public QAccessibleWidget
+{
+public:
+	explicit ProfileWidgetAccessibleInterface(ProfileWidget* const widget)
+		: QAccessibleWidget{ widget, QAccessible::Button }
+	{
+	}
+
+	// QAccessibleInterface overrides
+	virtual int childCount() const override
+	{
+		return 0;
+	}
+
+	virtual QAccessibleInterface* child(int /*index*/) const override
+	{
+		return nullptr;
+	}
+
+	virtual int indexOfChild(QAccessibleInterface const* /*child*/) const override
+	{
+		return -1;
+	}
+
+	// QAccessibleActionInterface overrides
+	virtual QStringList actionNames() const override
+	{
+		return QStringList{ QAccessibleActionInterface::pressAction() } + QAccessibleWidget::actionNames();
+	}
+
+	virtual void doAction(QString const& actionName) override
+	{
+		if (actionName == QAccessibleActionInterface::pressAction())
+		{
+			emit static_cast<ProfileWidget*>(widget())->clicked();
+			return;
+		}
+		QAccessibleWidget::doAction(actionName);
+	}
+};
+
+QAccessibleInterface* profileWidgetAccessibleFactory(QString const& className, QObject* const object)
+{
+	if (object != nullptr && object->isWidgetType() && className == QLatin1StringView{ ProfileWidget::staticMetaObject.className() })
+	{
+		return new ProfileWidgetAccessibleInterface{ static_cast<ProfileWidget*>(object) };
+	}
+	return nullptr;
+}
+} // namespace
+
 ProfileWidget::ProfileWidget(QString const& title, QString const& description, QString const& icon, QWidget* parent)
 	: QFrame{ parent }
 {
+	// Install the factory of our accessible interface before anything queries the default one (it would be cached)
+	static auto s_accessibleFactoryInstalled = std::once_flag{};
+	std::call_once(s_accessibleFactoryInstalled,
+		[]()
+		{
+			QAccessible::installFactory(&profileWidgetAccessibleFactory);
+		});
+	setAccessibleName(title);
+	setAccessibleDescription(description);
+
 	_layout.addWidget(&_title, 0, 1);
 	_layout.addWidget(&_description, 1, 1);
 	_layout.addWidget(&_icon, 0, 0, -1, 1);

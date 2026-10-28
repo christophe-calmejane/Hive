@@ -52,6 +52,7 @@ View::View(QWidget* parent)
 	setSelectionMode(QAbstractItemView::NoSelection);
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setMouseTracking(true);
+	setAccessibleName(QCoreApplication::translate("connectionMatrix::View", "Connection Matrix", nullptr));
 
 	// Take care of the top left corner widget
 	setCornerButtonEnabled(false);

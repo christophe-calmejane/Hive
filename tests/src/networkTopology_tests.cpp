@@ -508,8 +508,7 @@ TEST_F(NetworkTopology_F, AsPathInconsistentWithGrandmaster_IsReported)
 	}
 
 	auto const expectedAsPathGrandmasters = std::vector<std::pair<la::avdecc::UniqueIdentifier::value_type, la::avdecc::UniqueIdentifier>>{
-		{ EntityAOutdatedAsPath, la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity } },
-		{ EntityBDownstreamBridge, la::avdecc::UniqueIdentifier{} }, // Consistent AsPath, nothing to report
+		{ EntityAOutdatedAsPath, la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity } }, { EntityBDownstreamBridge, la::avdecc::UniqueIdentifier{} }, // Consistent AsPath, nothing to report
 		{ EntityCUpstreamBridge, la::avdecc::UniqueIdentifier{} }, // Consistent AsPath, nothing to report
 		{ EntityDNoLiveUpdates, la::avdecc::UniqueIdentifier{ DownstreamBridgeClockIdentity } }, // Reported too, the unsolicited notifications state tells whether it is an entity bug
 	};

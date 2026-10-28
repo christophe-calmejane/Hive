@@ -26,6 +26,7 @@
 #include <hive/modelsLibrary/helper.hpp>
 #include <hive/modelsLibrary/controllerManager.hpp>
 
+#include <QCoreApplication>
 #include <QDebug>
 
 #include <deque>
@@ -353,6 +354,70 @@ QString intersectionDataErrorTooltip(Model::IntersectionData const& intersection
 	if (stringList.isEmpty())
 	{
 		return {};
+	}
+
+	return stringList.join("\n");
+}
+
+bool isOfflineOutputStreamIntersection(Model::IntersectionData const& intersectionData)
+{
+	switch (intersectionData.type)
+	{
+		case Model::IntersectionData::Type::OfflineOutputStream_Entity:
+		case Model::IntersectionData::Type::OfflineOutputStream_Redundant:
+		case Model::IntersectionData::Type::OfflineOutputStream_RedundantStream:
+		case Model::IntersectionData::Type::OfflineOutputStream_RedundantChannel:
+		case Model::IntersectionData::Type::OfflineOutputStream_SingleStream:
+		case Model::IntersectionData::Type::OfflineOutputStream_SingleChannel:
+			return true;
+		default:
+			return false;
+	}
+}
+
+// Builds the textual equivalent of the connection state an intersection paints, for assistive technologies (the talker and listener are exposed by the header cells)
+QString intersectionDataAccessibleText(Model::IntersectionData const& intersectionData)
+{
+	auto const isNotConnected = intersectionData.state == Model::IntersectionData::State::NotConnected;
+	auto const isForbidden = intersectionData.type == Model::IntersectionData::Type::RedundantStream_RedundantStream_Forbidden || intersectionData.type == Model::IntersectionData::Type::RedundantChannel_RedundantChannel_Forbidden;
+
+	// No connection can be made to an offline talker, nor between redundant streams of different networks (forbidden by Milan), but an existing one can still be removed
+	if (intersectionData.type == Model::IntersectionData::Type::None || (isNotConnected && (isForbidden || isOfflineOutputStreamIntersection(intersectionData))))
+	{
+		return QCoreApplication::translate("connectionMatrix::Model", "Not Connectable", nullptr);
+	}
+
+	switch (intersectionData.state)
+	{
+		case Model::IntersectionData::State::Connected:
+			return QCoreApplication::translate("connectionMatrix::Model", "Connected", nullptr);
+		case Model::IntersectionData::State::FastConnecting:
+			return QCoreApplication::translate("connectionMatrix::Model", "Fast Connecting", nullptr);
+		case Model::IntersectionData::State::PartiallyConnected:
+			return QCoreApplication::translate("connectionMatrix::Model", "Partially Connected", nullptr);
+		default:
+			return QCoreApplication::translate("connectionMatrix::Model", "Not Connected", nullptr);
+	}
+}
+
+// Builds the textual equivalent of the additional information an intersection paints (offline talker, media locked state, errors), for assistive technologies
+QString intersectionDataAccessibleDescription(Model::IntersectionData const& intersectionData)
+{
+	auto stringList = QStringList{};
+
+	if (isOfflineOutputStreamIntersection(intersectionData))
+	{
+		stringList << QCoreApplication::translate("connectionMatrix::Model", "Talker Offline", nullptr);
+	}
+
+	if (intersectionData.flags.test(Model::IntersectionData::Flag::MediaLocked))
+	{
+		stringList << QCoreApplication::translate("connectionMatrix::Model", "Media Locked", nullptr);
+	}
+
+	if (auto const errors = intersectionDataErrorTooltip(intersectionData); !errors.isEmpty())
+	{
+		stringList << errors;
 	}
 
 	return stringList.join("\n");
@@ -4760,7 +4825,27 @@ QVariant Model::data([[maybe_unused]] QModelIndex const& index, [[maybe_unused]]
 	}
 #endif
 
+	// The intersections are only painted, give assistive technologies a textual equivalent
+	if (role == Qt::AccessibleTextRole)
+	{
+		return intersectionAccessibleText(this->intersectionData(index));
+	}
+	if (role == Qt::AccessibleDescriptionRole)
+	{
+		return intersectionAccessibleDescription(this->intersectionData(index));
+	}
+
 	return {};
+}
+
+QString Model::intersectionAccessibleText(IntersectionData const& intersectionData)
+{
+	return priv::intersectionDataAccessibleText(intersectionData);
+}
+
+QString Model::intersectionAccessibleDescription(IntersectionData const& intersectionData)
+{
+	return priv::intersectionDataAccessibleDescription(intersectionData);
 }
 
 QVariant Model::headerData(int section, Qt::Orientation orientation, int role) const

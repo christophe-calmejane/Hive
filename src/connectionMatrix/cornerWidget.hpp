@@ -56,6 +56,7 @@ signals:
 	void verticalCollapseClicked();
 
 private:
+	void updateAccessibleNames();
 	virtual void paintEvent(QPaintEvent*) override;
 
 	// settings::SettingsManager::Observer overrides

@@ -26,6 +26,7 @@
 #include <QtMate/graph/treeLayout.hpp>
 #include <QtMate/material/color.hpp>
 
+#include <QCoreApplication>
 #include <QFontMetricsF>
 #include <QGraphicsSceneContextMenuEvent>
 #include <QGraphicsSceneHoverEvent>
@@ -1082,6 +1083,9 @@ NetworkGraphPane::NetworkGraphPane(QWidget* parent)
 	_scene = new QGraphicsScene{ this };
 	_graphView = new qtMate::graph::GraphView{ this };
 	_graphView->setScene(_scene);
+	// The nodes are graphics items, not exposed to assistive technologies: point to an accessible equivalent
+	_graphView->setAccessibleName(QCoreApplication::translate("NetworkGraphPane", "Network Topology Graph", nullptr));
+	_graphView->setAccessibleDescription(QCoreApplication::translate("NetworkGraphPane", "Graphical view of the network topology, the entities are also listed in the Discovered Entities view", nullptr));
 
 	auto* const layout = new QVBoxLayout{ this };
 	layout->setContentsMargins(0, 0, 0, 0);

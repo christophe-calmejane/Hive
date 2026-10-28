@@ -148,6 +148,7 @@ set(HEADER_FILES_COMMON
 	latencyComboBox.hpp
 	visibilitySettings.hpp
 	listViewMatrixViewController.hpp
+	accessibilityHelper.hpp
 	application.hpp
 )
 
@@ -231,6 +232,7 @@ set(SOURCE_FILES_COMMON
 	nodeDispatcher.cpp
 	windowsNpfHelper.cpp
 	listViewMatrixViewController.cpp
+	accessibilityHelper.cpp
 	application.cpp
 )
 

@@ -26,6 +26,7 @@
 #include <QtMate/flow/flowInput.hpp>
 #include <QtMate/flow/flowOutput.hpp>
 
+#include <QCoreApplication>
 #include <QPushButton>
 #include <QDialog>
 #include <QGridLayout>
@@ -69,6 +70,9 @@ public:
 		auto* scene = new qtMate::flow::FlowScene{ delegate, this };
 		auto* view = new qtMate::flow::FlowView{ scene, this };
 		view->setDragMode(QGraphicsView::ScrollHandDrag);
+		// The nodes and sockets are graphics items, not exposed to assistive technologies
+		view->setAccessibleName(QCoreApplication::translate("MappingMatrix", "Mappings", nullptr));
+		view->setAccessibleDescription(QCoreApplication::translate("MappingMatrix", "Graphical editor of the mappings, connect an output socket to an input socket by dragging it with the mouse", nullptr));
 
 		auto* layout = new QHBoxLayout{ this };
 		layout->setContentsMargins(0, 0, 0, 0);

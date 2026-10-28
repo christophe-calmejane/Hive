@@ -888,6 +888,12 @@ void MainWindowImpl::createToolbars()
 		_controllerEntityIDTitleLabel.setAlignment(Qt::AlignVCenter | Qt::AlignRight);
 		_controllerEntityIDLabel.setMinimumWidth(100);
 
+		// The short visible labels only make sense next to their combo box, give assistive technologies the full meaning
+		interfaceLabel->setBuddy(&_interfaceComboBox);
+		_interfaceComboBox.setAccessibleName(QCoreApplication::translate("MainWindow", "Primary Network Interface", nullptr));
+		secondaryInterfaceLabel->setBuddy(&_secondaryInterfaceComboBox);
+		_secondaryInterfaceComboBox.setAccessibleName(QCoreApplication::translate("MainWindow", "Secondary Network Interface", nullptr));
+
 		controllerToolBar->setMinimumHeight(30);
 		controllerToolBar->addWidget(interfaceLabel);
 		controllerToolBar->addWidget(&_interfaceComboBox);
@@ -906,6 +912,18 @@ void MainWindowImpl::createToolbars()
 		_openMcmdDialogButton.setToolTip("Media Clock Management");
 		_openSettingsButton.setToolTip("Settings");
 		_openMultiFirmwareUpdateDialogButton.setToolTip("Device Firmware Update");
+
+		// Icon only buttons: their text is the name of the glyph in the icons font, never a meaningful name
+		_refreshControllerButton.setAccessibleName(QCoreApplication::translate("MainWindow", "Reload Controller", nullptr));
+		_refreshControllerButton.setAccessibleDescription(QCoreApplication::translate("MainWindow", "Recreates the controller on the selected network interfaces", nullptr));
+		_discoverButton.setAccessibleName(QCoreApplication::translate("MainWindow", "Discover Entities", nullptr));
+		_discoverButton.setAccessibleDescription(QCoreApplication::translate("MainWindow", "Asks the entities on the network to advertise themselves", nullptr));
+		_openMcmdDialogButton.setAccessibleName(QCoreApplication::translate("MainWindow", "Media Clock Management", nullptr));
+		_openMcmdDialogButton.setAccessibleDescription(QCoreApplication::translate("MainWindow", "Opens the Media Clock Management dialog", nullptr));
+		_openSettingsButton.setAccessibleName(QCoreApplication::translate("MainWindow", "Settings", nullptr));
+		_openSettingsButton.setAccessibleDescription(QCoreApplication::translate("MainWindow", "Opens the Settings dialog", nullptr));
+		_openMultiFirmwareUpdateDialogButton.setAccessibleName(QCoreApplication::translate("MainWindow", "Device Firmware Update", nullptr));
+		_openMultiFirmwareUpdateDialogButton.setAccessibleDescription(QCoreApplication::translate("MainWindow", "Opens the Device Firmware Update dialog", nullptr));
 
 		// Controller
 		utilitiesToolBar->setMinimumHeight(30);
@@ -1586,6 +1604,7 @@ void MainWindowImpl::showChangeLog(QString const title, QString const versionStr
 	QDialog dialog{ _parent };
 	QVBoxLayout layout{ &dialog };
 	QTextBrowser view;
+	view.setAccessibleName(title);
 	layout.addWidget(&view);
 	dialog.setWindowTitle(hive::internals::applicationShortName + " - " + title);
 	dialog.resize(800, 600);
@@ -1641,6 +1660,7 @@ void MainWindowImpl::showNewsFeed(QString const& news)
 	QDialog dialog{ _parent };
 	QVBoxLayout layout{ &dialog };
 	QTextBrowser view;
+	view.setAccessibleName(QCoreApplication::translate("MainWindow", "News", nullptr));
 	layout.addWidget(&view);
 	dialog.setWindowTitle(hive::internals::applicationShortName + " - " + "News");
 	dialog.resize(800, 600);

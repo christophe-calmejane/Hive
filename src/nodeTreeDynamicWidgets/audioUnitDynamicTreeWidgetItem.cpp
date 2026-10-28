@@ -18,6 +18,7 @@
 */
 
 #include "audioUnitDynamicTreeWidgetItem.hpp"
+#include "accessibilityHelper.hpp"
 
 #include <QMenu>
 
@@ -32,7 +33,7 @@ AudioUnitDynamicTreeWidgetItem::AudioUnitDynamicTreeWidgetItem(la::avdecc::Uniqu
 	currentSamplingRateItem->setText(0, "Sampling Rate");
 
 	_samplingRate = new AecpCommandComboBox<la::avdecc::entity::model::SamplingRate>();
-	parent->setItemWidget(currentSamplingRateItem, 1, _samplingRate);
+	accessibility::setTreeItemWidget(parent, currentSamplingRateItem, 1, _samplingRate);
 	_samplingRate->setAllData(staticModel->samplingRates,
 		[](auto const& samplingRate)
 		{

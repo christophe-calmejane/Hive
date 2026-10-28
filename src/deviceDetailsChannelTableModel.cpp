@@ -396,6 +396,31 @@ QVariant DeviceDetailsChannelTableModelPrivate::data(QModelIndex const& index, i
 	{
 		return Qt::AlignAbsolute;
 	}
+	// The connection columns hold lists painted by their delegates, give assistive technologies a textual equivalent
+	if (role == Qt::AccessibleTextRole)
+	{
+		auto texts = QStringList{};
+		if (column == DeviceDetailsChannelTableModelColumn::Connection)
+		{
+			for (auto const& connectionLine : data(index, Qt::DisplayRole).toList())
+			{
+				texts << connectionLine.toString();
+			}
+		}
+		else if (column == DeviceDetailsChannelTableModelColumn::ConnectionStatus)
+		{
+			for (auto const& connectionStatus : data(index, Qt::DisplayRole).toList())
+			{
+				auto const status = connectionStatus.value<DeviceDetailsChannelTableModel::ConnectionStatus>();
+				auto intersectionData = connectionMatrix::Model::IntersectionData{};
+				intersectionData.type = status.type;
+				intersectionData.state = status.state;
+				intersectionData.flags = status.flags;
+				texts << connectionMatrix::Model::intersectionAccessibleText(intersectionData);
+			}
+		}
+		return texts.join(", ");
+	}
 	switch (column)
 	{
 		case DeviceDetailsChannelTableModelColumn::ChannelName:

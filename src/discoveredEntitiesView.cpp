@@ -52,6 +52,8 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 		{
 			horizontalLayout->addWidget(&_searchLineEdit);
 			_searchLineEdit.setPlaceholderText(QCoreApplication::translate("DiscoveredEntitiesView", "Entity Name Filter (RegEx)", nullptr));
+			// The placeholder is only exposed as a description, a filter field needs a name
+			_searchLineEdit.setAccessibleName(QCoreApplication::translate("DiscoveredEntitiesView", "Entity Name Filter", nullptr));
 		}
 		{
 			horizontalLayout->addWidget(&_filterLinkedCheckbox);
@@ -67,10 +69,14 @@ DiscoveredEntitiesView::DiscoveredEntitiesView(QWidget* parent)
 		{
 			horizontalLayout->addWidget(&_clearAllErrorsButton);
 			_clearAllErrorsButton.setToolTip(QCoreApplication::translate("DiscoveredEntitiesView", "Clear all error counters", nullptr));
+			// Icon only button: its text is the name of the glyph in the icons font
+			_clearAllErrorsButton.setAccessibleName(QCoreApplication::translate("DiscoveredEntitiesView", "Clear Error Counters", nullptr));
+			_clearAllErrorsButton.setAccessibleDescription(QCoreApplication::translate("DiscoveredEntitiesView", "Clears the error counters of all the discovered entities", nullptr));
 		}
 		verticalLayout->addLayout(horizontalLayout);
 	}
 	verticalLayout->addWidget(&_entitiesView);
+	_entitiesView.setAccessibleName(QCoreApplication::translate("DiscoveredEntitiesView", "Discovered Entities", nullptr));
 
 	// Setup components
 	_searchFilterProxyModel.setSourceModel(_entitiesView.model());

@@ -171,6 +171,12 @@ public:
 	// Returns intersection data for the given index
 	IntersectionData const& intersectionData(QModelIndex const& index) const;
 
+	// Returns the textual equivalent of the connection state an intersection paints, for assistive technologies (also exposed as Qt::AccessibleTextRole)
+	static QString intersectionAccessibleText(IntersectionData const& intersectionData);
+
+	// Returns the textual equivalent of the additional information an intersection paints (offline talker, media locked, errors), for assistive technologies (also exposed as Qt::AccessibleDescriptionRole)
+	static QString intersectionAccessibleDescription(IntersectionData const& intersectionData);
+
 	// Set the model mode
 	void setMode(Mode const mode);
 

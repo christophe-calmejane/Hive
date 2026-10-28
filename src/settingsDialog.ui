@@ -43,6 +43,9 @@
         <property name="text">
          <string>Descriptor Index Starts at 0 (Coming later)</string>
         </property>
+        <property name="buddy">
+         <cstring>descriptorIndexStartsAt0CheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="0" column="1">
@@ -63,6 +66,9 @@
         <property name="text">
          <string>Primarily Preferred Locale (Coming later)</string>
         </property>
+        <property name="buddy">
+         <cstring>primarilyPreferredLocaleComboBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="1" column="1">
@@ -80,6 +86,9 @@
         <property name="text">
          <string>Secondarily Preferred Locale (Coming later)</string>
         </property>
+        <property name="buddy">
+         <cstring>secondarilyPreferredLocaleComboBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="2" column="1">
@@ -93,6 +102,9 @@
        <widget class="QLabel" name="automaticPNGDownloadLabel">
         <property name="text">
          <string>Automatic Entity Logo Download</string>
+        </property>
+        <property name="buddy">
+         <cstring>automaticPNGDownloadCheckBox</cstring>
         </property>
        </widget>
       </item>
@@ -121,6 +133,9 @@
         <property name="text">
          <string>Automatic Check For Updates</string>
         </property>
+        <property name="buddy">
+         <cstring>automaticCheckForUpdatesCheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="5" column="1">
@@ -133,6 +148,9 @@
         </property>
         <property name="text">
          <string>Check For Beta Versions</string>
+        </property>
+        <property name="buddy">
+         <cstring>checkForBetaVersionsCheckBox</cstring>
         </property>
        </widget>
       </item>
@@ -147,6 +165,9 @@
        <widget class="QLabel" name="themeColorLabel">
         <property name="text">
          <string>Accent Color</string>
+        </property>
+        <property name="buddy">
+         <cstring>themeColorComboBox</cstring>
         </property>
        </widget>
       </item>
@@ -173,6 +194,9 @@
         <property name="text">
          <string>Show Talkers On Top</string>
         </property>
+        <property name="buddy">
+         <cstring>transposeConnectionMatrixCheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="0" column="1">
@@ -182,6 +206,9 @@
        <widget class="QLabel" name="alwaysShowArrowTipConnectionMatrixLabel">
         <property name="text">
          <string>Always Show Arrow Tip</string>
+        </property>
+        <property name="buddy">
+         <cstring>alwaysShowArrowTipConnectionMatrixCheckBox</cstring>
         </property>
        </widget>
       </item>
@@ -193,6 +220,9 @@
         <property name="text">
          <string>Always Show Arrow End</string>
         </property>
+        <property name="buddy">
+         <cstring>alwaysShowArrowEndConnectionMatrixCheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="2" column="1">
@@ -202,6 +232,9 @@
        <widget class="QLabel" name="showMediaLockedDotLabel">
         <property name="text">
          <string>Show Media Locked State (Dot) In Intersection</string>
+        </property>
+        <property name="buddy">
+         <cstring>showMediaLockedDotCheckBox</cstring>
         </property>
        </widget>
       </item>
@@ -213,6 +246,9 @@
         <property name="text">
          <string>Allow CRF-Audio Connection</string>
         </property>
+        <property name="buddy">
+         <cstring>allowCRFAudioConnectionCheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="4" column="1">
@@ -223,6 +259,9 @@
         <property name="text">
          <string>Collapsed by Default</string>
         </property>
+        <property name="buddy">
+         <cstring>collapsedByDefaultCheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="5" column="1">
@@ -232,6 +271,9 @@
        <widget class="QLabel" name="showEntitySummaryLabel">
         <property name="text">
          <string>Show Entity Summary</string>
+        </property>
+        <property name="buddy">
+         <cstring>showEntitySummaryCheckBox</cstring>
         </property>
        </widget>
       </item>
@@ -261,6 +303,9 @@
         <property name="text">
          <string>Enable AEM Cache</string>
         </property>
+        <property name="buddy">
+         <cstring>enableAEMCacheCheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="1" column="1">
@@ -273,6 +318,9 @@
         </property>
         <property name="text">
          <string>Enable Advertising</string>
+        </property>
+        <property name="buddy">
+         <cstring>enableAdvertisingCheckBox</cstring>
         </property>
        </widget>
       </item>
@@ -291,6 +339,9 @@
         <property name="text">
          <string>Controller Sub ID (if possible)</string>
         </property>
+        <property name="buddy">
+         <cstring>controllerIDLineEdit</cstring>
+        </property>
        </widget>
       </item>
       <item row="5" column="1">
@@ -308,6 +359,9 @@
         <property name="text">
          <string>Full AEM Enumeration</string>
         </property>
+        <property name="buddy">
+         <cstring>fullAEMEnumerationCheckBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="3" column="1">
@@ -317,6 +371,9 @@
        <widget class="QLabel" name="discoveryDelayLabel">
         <property name="text">
          <string>Discovery Delay (in sec, 0=manual)</string>
+        </property>
+        <property name="buddy">
+         <cstring>discoveryDelayLineEdit</cstring>
         </property>
        </widget>
       </item>
@@ -331,6 +388,9 @@
        <widget class="QLabel" name="enableFastEnumerationLabel">
         <property name="text">
          <string>Enable Fast Enumeration</string>
+        </property>
+        <property name="buddy">
+         <cstring>enableFastEnumerationCheckBox</cstring>
         </property>
        </widget>
       </item>
@@ -352,6 +412,9 @@
         <property name="text">
          <string>Protocol</string>
         </property>
+        <property name="buddy">
+         <cstring>protocolComboBox</cstring>
+        </property>
        </widget>
       </item>
       <item row="0" column="1">
@@ -361,6 +424,9 @@
        <widget class="QLabel" name="interfaceTypesLabel">
         <property name="text">
          <string>Interface Types</string>
+        </property>
+        <property name="buddy">
+         <cstring>interfaceTypeList</cstring>
         </property>
        </widget>
       </item>
@@ -377,6 +443,9 @@
           <width>16777215</width>
           <height>80</height>
          </size>
+        </property>
+        <property name="accessibleName">
+         <string>Interface Types</string>
         </property>
         <property name="selectionMode">
          <enum>QAbstractItemView::NoSelection</enum>

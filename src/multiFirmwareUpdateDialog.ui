@@ -52,7 +52,11 @@ Then click the 'Choose Firmware File' button to proceed.</string>
     </widget>
    </item>
    <item>
-    <widget class="QTableView" name="controllerTableView"/>
+    <widget class="QTableView" name="controllerTableView">
+     <property name="accessibleName">
+      <string>Devices</string>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">

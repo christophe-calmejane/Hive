@@ -260,6 +260,8 @@ void AnalyserWindow::createReplayToolBar()
 	// The twin of the network follows the time cursor: the selected event when following, the double-clicked event otherwise
 	_replayToolBar = addToolBar("Replay");
 	_replayToolBar->setObjectName("replayToolBar");
+	// The title of a tool bar is not exposed to assistive technologies
+	_replayToolBar->setAccessibleName(QCoreApplication::translate("AnalyserWindow", "Replay", nullptr));
 	_replayToolBar->setMovable(false);
 	_replayToolBar->setFloatable(false);
 
@@ -337,6 +339,7 @@ void AnalyserWindow::createFindingsDock()
 {
 	// The report of the analysis, rendered from Markdown; its times are links to the events
 	_findingsBrowser = new QTextBrowser{ this };
+	_findingsBrowser->setAccessibleName(QCoreApplication::translate("AnalyserWindow", "Findings", nullptr));
 	_findingsBrowser->setOpenLinks(false);
 	_findingsBrowser->setOpenExternalLinks(false);
 	connect(_findingsBrowser, &QTextBrowser::anchorClicked, this, &AnalyserWindow::handleFindingsLink);

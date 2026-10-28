@@ -205,6 +205,8 @@ void MainWindowImpl::createToolbars()
 		controllerToolBar->setMinimumHeight(30);
 		controllerToolBar->addWidget(interfaceLabel);
 		controllerToolBar->addWidget(&_interfaceComboBox);
+		// Name the combo box after its label for assistive technologies
+		interfaceLabel->setBuddy(&_interfaceComboBox);
 	}
 }
 

@@ -21,6 +21,7 @@
 #include "asPathWidget.hpp"
 #include "nodeTreeWidget.hpp"
 #include "avdecc/helper.hpp"
+#include "accessibilityHelper.hpp"
 
 #include <hive/modelsLibrary/helper.hpp>
 
@@ -119,7 +120,7 @@ AvbInterfaceDynamicTreeWidgetItem::AvbInterfaceDynamicTreeWidgetItem(la::avdecc:
 		_asPathItem->setText(0, "As Path");
 		_asPath = new QListWidget;
 		_asPath->setSelectionMode(QAbstractItemView::NoSelection);
-		parent->setItemWidget(_asPathItem, 1, _asPath);
+		accessibility::setTreeItemWidget(parent, _asPathItem, 1, _asPath);
 
 		// Update info right now
 		if (dynamicModel->asPath)
