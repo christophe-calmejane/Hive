@@ -2165,6 +2165,44 @@ TEST_F(ConnectionMatrix_F, EntityEntitySummary_NormalNormal_ConnectedMsrpFailure
 	validateIntersectionData(5, 0, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::MsrpFailure });
 }
 
+TEST_F(ConnectionMatrix_F, SingleStreamSingleStream_NormalNormal_ConnectedMsrpFailure_NoError)
+{
+	loadNetworkState("data/connectionMatrix/40-Normal_Normal-ConnectedMsrpFailure_NoError.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// Talker Stream0 - Listener Stream0 (connected, the Listener Stream reports an SRP registration failure)
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::SingleStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::MsrpFailure });
+	// Talker Stream1 - Listener Stream0 (not connected, so no MSRP failure reported, only the format mismatch between the 48kHz Talker Stream and the 96kHz Listener Stream)
+	validateIntersectionData(7, 1, connectionMatrix::Model::IntersectionData::Type::SingleStream_SingleStream, connectionMatrix::Model::IntersectionData::State::NotConnected, connectionMatrix::Model::IntersectionData::Flags{ connectionMatrix::Model::IntersectionData::Flag::WrongFormatPossible });
+
+	// The tooltip gives the detailed failure code of the Listener Stream
+	auto& model = getModel();
+	auto const tooltip = model.data(model.getIntersectionIndex(6, 1), Qt::ToolTipRole).toString();
+	EXPECT_TRUE(tooltip.contains("MSRP Failure: Insufficient Bandwidth")) << "Actual tooltip: " << tooltip.toStdString();
+}
+
+TEST_F(ConnectionMatrix_F, SingleStreamSingleStream_NormalNormal_ConnectedStaleMsrpFailureCode_NoError)
+{
+	// The Listener Stream0 holds an MSRP failure code left over from a previous registration failure, but its last received stream info no longer reports an SRP registration failure (as dumped by la_avdecc before it cleared the failure fields along with the failure flag)
+	loadNetworkState("data/connectionMatrix/41-Normal_Normal-ConnectedStaleMsrpFailureCode_NoError.json");
+	if (HasFatalFailure())
+	{
+		return;
+	}
+	// The MSRP Failure follows the SRP registration failure flag, not the presence of a failure code
+	validateIntersectionData(6, 1, connectionMatrix::Model::IntersectionData::Type::SingleStream_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{});
+	validateIntersectionData(5, 1, connectionMatrix::Model::IntersectionData::Type::Entity_SingleStream, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{});
+	validateIntersectionData(5, 0, connectionMatrix::Model::IntersectionData::Type::Entity_Entity, connectionMatrix::Model::IntersectionData::State::Connected, connectionMatrix::Model::IntersectionData::Flags{});
+
+	// No error to report, so the tooltip mentions no failure and ends with its last line of text (trailing empty lines would make it taller than its text)
+	auto& model = getModel();
+	auto const tooltip = model.data(model.getIntersectionIndex(6, 1), Qt::ToolTipRole).toString();
+	EXPECT_FALSE(tooltip.contains("MSRP Failure")) << "Actual tooltip: " << tooltip.toStdString();
+	EXPECT_FALSE(tooltip.endsWith('\n')) << "Actual tooltip: " << tooltip.toStdString();
+}
+
 /* *********************************
    Channel Based Routing
 */

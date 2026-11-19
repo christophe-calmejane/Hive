@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - No error reported when failing to load a `.json` file (Virtual Entity or Network State)
 - Assert when displaying a flag or a value not defined by the specification (reserved bit, out of specification device), now displayed with its raw value
 - Unknown vendors displayed with an OUI zero filled to 8 digits instead of 6 (eg. `0x00480BB2` instead of `0x480BB2`)
+- Stream Input dynamic information still displaying the MSRP Failure Code and Bridge ID of a registration failure that is over (the connection matrix rightly no longer reporting it)
 
 ## [1.4.0] - 2025-12-19
 ### Added

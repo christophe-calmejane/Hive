@@ -4815,7 +4815,13 @@ QVariant Model::data([[maybe_unused]] QModelIndex const& index, [[maybe_unused]]
 	if (role == Qt::ToolTipRole)
 	{
 		auto const& intersectionData = this->intersectionData(index);
-		return priv::intersectionDataToString(intersectionData) + "\n\n" + priv::intersectionDataErrorTooltip(intersectionData);
+		auto tooltip = priv::intersectionDataToString(intersectionData);
+		// Only separate the errors with a blank line when there are some, trailing empty lines would make the tooltip taller than its text
+		if (auto const errors = priv::intersectionDataErrorTooltip(intersectionData); !errors.isEmpty())
+		{
+			tooltip += "\n\n" + errors;
+		}
+		return tooltip;
 	}
 #else
 	if (role == Qt::ToolTipRole)

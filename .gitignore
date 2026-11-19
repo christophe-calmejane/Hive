@@ -34,3 +34,9 @@ CMakeUserPresets.json
 
 # Ignore provisionprofile files
 /*.provisionprofile
+
+# Ignore hive files (force them if needed in the repo)
+*.hej
+*.ans
+*.ave
+
